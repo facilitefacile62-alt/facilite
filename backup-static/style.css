@@ -1,0 +1,55 @@
+/* Conteneur principal */
+.slider-container {
+    width: 100%;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.slider-container:active {
+    cursor: grabbing;
+}
+
+/* La piste de défilement */
+.slider-track {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    
+    /* Masquer la scrollbar (Firefox, IE, Edge) */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+/* Masquer la scrollbar (Chrome, Safari, Opera) */
+.slider-track::-webkit-scrollbar {
+    display: none;
+}
+
+/* Les cartes individuelles */
+.slide-item {
+    flex: 0 0 auto; /* Empêche les éléments de s'écraser */
+    background-color: #ffffff; /* Fond blanc */
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* Ombre fine */
+    border: 1px solid #f3f4f6;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.slide-item:hover {
+    transform: translateY(-5px);
+    border-color: #E4B8F9;
+}
+
+/* L'image dans la carte */
+.slide-img {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: top;
+    background-color: #f3f4f6;
+    pointer-events: none; /* Crucial pour ne pas bloquer le glisser-déposer (drag) de la souris */
+}

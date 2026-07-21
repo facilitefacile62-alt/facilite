@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #1F2937;
+}
+
+@theme {
+  --color-navbg: #FAF6F1;
+  --color-bannerbg: #E3DBCC;
+  --color-primary: #10E688;
+  --color-secondary: #E4B8F9;
+  --color-dark: #1F2937;
+  
+  --animate-fade-in-up: fadeInUp 0.8s ease-out forwards;
+  --animate-blink: blink 1.5s infinite;
+
+  @keyframes fadeInUp {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Conteneur principal */
+.slider-container {
+  width: 100%;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.slider-container:active {
+  cursor: grabbing;
+}
+
+/* La piste de défilement */
+.slider-track {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  
+  /* Masquer la scrollbar (Firefox, IE, Edge) */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Masquer la scrollbar (Chrome, Safari, Opera) */
+.slider-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* Les cartes individuelles */
+.slide-item {
+  flex: 0 0 auto; /* Empêche les éléments de s'écraser */
+  background-color: #ffffff; /* Fond blanc */
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* Ombre fine */
+  border: 1px solid #f3f4f6;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.slide-item:hover {
+  transform: translateY(-5px);
+  border-color: #E4B8F9;
+}
+
+/* Perspective 3D pour le suivi interactif */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.tilt-card {
+  transition: transform 0.2s cubic-bezier(0.1, 0.4, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+/* Badge Recommended Animated Shine */
+@keyframes badgeShine {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-gradient-badge {
+  background-size: 200% 200%;
+  animation: badgeShine 3s ease infinite;
+}
+
+/* L'image dans la carte */
+.slide-img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: top;
+  background-color: #f3f4f6;
+  pointer-events: none; /* Crucial pour ne pas bloquer le glisser-déposer (drag) de la souris */
+}
+
+/* Masquer initialement pour l'animation */
+.animate-fade-in-up {
+  opacity: 0;
+}
+
+/* Transition douce pour le compteur JS */
+#user-count {
+  transition: opacity 0.2s ease-in-out;
+}

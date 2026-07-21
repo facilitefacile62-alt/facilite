@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facilite - Création de CV</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuration Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navbg: '#FAF6F1',
+                        bannerbg: '#E3DBCC',
+                        primary: '#10E688',
+                        secondary: '#E4B8F9',
+                        dark: '#1F2937'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                        'blink': 'blink 1.5s infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.3' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-400 { animation-delay: 400ms; }
+        
+        /* Masquer initialement pour l'animation */
+        .animate-fade-in-up { opacity: 0; }
+        
+        /* Transition douce pour le compteur JS */
+        #user-count { transition: opacity 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-white text-dark min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-navbg px-4 py-2.5 md:px-8 flex justify-between items-center shadow-sm fixed top-0 left-0 w-full z-50">
+        <!-- Logo -->
+        <div class="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition">
+            <!-- Image Logo -->
+            <img src="logo.jpeg" alt="Logo Facilite" class="w-8 h-8 rounded-full object-cover">
+            <span class="text-xl font-bold tracking-tight text-gray-900">Facilite</span>
+        </div>
+
+        <!-- Liens Desktop -->
+        <div class="hidden md:flex items-center space-x-6 text-sm">
+            <a href="#" id="contact-btn" class="flex items-center space-x-2 text-gray-700 hover:text-primary transition font-semibold">
+                <i class="fa-regular fa-comment-dots text-lg"></i>
+                <span>Contactez-nous</span>
+            </a>
+            <a href="#" class="flex items-center space-x-2 text-gray-700 hover:text-secondary transition font-semibold">
+                <i class="fa-regular fa-user text-lg"></i>
+                <span>Se connecter</span>
+            </a>
+        </div>
+
+        <!-- Bouton Menu Mobile -->
+        <button id="mobile-menu-btn" class="md:hidden text-gray-700 focus:outline-none hover:text-primary transition">
+            <i class="fa-solid fa-bars text-2xl"></i>
+        </button>
+
+        <!-- Menu Déroulant Mobile -->
+        <div id="mobile-menu" class="absolute top-full left-0 w-full bg-navbg shadow-lg hidden flex-col py-4 px-4 space-y-4 md:hidden border-t border-gray-200">
+            <a href="#" id="contact-btn-mobile" class="flex items-center space-x-3 text-gray-800 hover:text-primary transition font-semibold p-3 rounded-xl hover:bg-white/50">
+                <i class="fa-regular fa-comment-dots text-xl w-6"></i>
+                <span>Contactez-nous</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 text-gray-800 hover:text-secondary transition font-semibold p-3 rounded-xl hover:bg-white/50">
+                <i class="fa-regular fa-user text-xl w-6"></i>
+                <span>Se connecter</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Contenu Principal -->
+    <main class="flex-grow flex flex-col pt-[52px]">
+        <!-- Section Hero -->
+        <section class="flex-grow flex flex-col md:flex-row items-center justify-center px-4 py-12 md:py-16 md:px-12 max-w-7xl mx-auto gap-12 lg:gap-20 w-full">
+            
+            <!-- Contenu Texte (À gauche sur Desktop) -->
+            <div class="w-full md:w-1/2 flex flex-col space-y-8 animate-fade-in-up">
+                
+                <h1 class="text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.15] text-gray-900">
+                    Créez ou modifiez votre CV en 
+                    <span class="text-primary inline-block relative whitespace-nowrap">
+                        quelques minutes
+                        <!-- Décoration sous le texte -->
+                        <svg class="absolute w-full h-3 -bottom-1 left-0 text-secondary opacity-40" viewBox="0 0 100 10" preserveAspectRatio="none">
+                            <path d="M0 5 Q 50 10 100 5" stroke="currentColor" stroke-width="6" fill="transparent" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                </h1>
+
+                <ul class="space-y-5 text-lg text-gray-700 font-medium animate-fade-in-up delay-100">
+                    <li class="flex items-center space-x-4">
+                        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                            <i class="fa-solid fa-check text-sm"></i>
+                        </span>
+                        <span>Sélectionnez un modèle de CV</span>
+                    </li>
+                    <li class="flex items-center space-x-4">
+                        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-secondary/30 flex items-center justify-center text-secondary">
+                            <i class="fa-solid fa-check text-sm"></i>
+                        </span>
+                        <span>Utilisez les phrases prêtes à l'emploi</span>
+                    </li>
+                    <li class="flex items-center space-x-4">
+                        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                            <i class="fa-solid fa-check text-sm"></i>
+                        </span>
+                        <span>Téléchargez et postulez</span>
+                    </li>
+                </ul>
+
+                <!-- Selecteur de langue -->
+                <div class="inline-flex items-center space-x-4 p-3 border border-gray-200 rounded-2xl bg-white self-start animate-fade-in-up delay-200 shadow-sm">
+                    <span class="text-sm font-bold text-gray-700">Choisissez la langue de votre CV</span>
+                    <div class="flex space-x-2">
+                        <!-- Français -->
+                        <button class="flex items-center space-x-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full hover:border-primary transition hover:shadow-sm" title="Français">
+                            <img src="francais.avif" alt="FR" class="w-5 h-5 rounded-full object-cover">
+                            <span class="text-xs font-bold text-gray-800">FR</span>
+                        </button>
+                        <!-- Anglais -->
+                        <button class="flex items-center space-x-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full hover:border-secondary transition hover:shadow-sm opacity-60 hover:opacity-100" title="Anglais">
+                            <img src="anglais.jpeg" alt="GB" class="w-5 h-5 rounded-full object-cover">
+                            <span class="text-xs font-bold text-gray-800">GB</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex flex-col sm:flex-row gap-4 pt-2 animate-fade-in-up delay-300">
+                    <button class="bg-primary text-gray-900 font-bold py-4 px-8 rounded-full text-lg shadow-[0_10px_20px_rgba(16,230,136,0.3)] hover:shadow-[0_15px_25px_rgba(16,230,136,0.4)] hover:-translate-y-1 transition-all transform duration-300 w-full sm:w-auto">
+                        Créer votre CV
+                    </button>
+                    <button class="bg-secondary text-gray-900 font-bold py-4 px-8 rounded-full text-lg shadow-[0_10px_20px_rgba(228,184,249,0.4)] hover:shadow-[0_15px_25px_rgba(228,184,249,0.5)] hover:-translate-y-1 transition-all transform duration-300 w-full sm:w-auto">
+                        Importer et modifier votre CV
+                    </button>
+                </div>
+
+                <!-- Preuve sociale -->
+                <div class="flex items-center space-x-3 text-sm text-gray-600 font-medium animate-fade-in-up delay-400 bg-gray-50/80 p-3 rounded-xl w-fit border border-gray-100">
+                    <span class="w-3 h-3 bg-primary rounded-full animate-blink inline-block shadow-[0_0_8px_rgba(16,230,136,0.8)]"></span>
+                    <p><span id="user-count" class="font-extrabold text-gray-900 text-base">248</span> personnes créent actuellement leur CV.</p>
+                </div>
+            </div>
+
+            <!-- Contenu Image (À droite sur Desktop) -->
+            <div class="w-full md:w-1/2 flex justify-center animate-fade-in-up delay-200">
+                <div class="relative w-full max-w-[500px] aspect-[4/5] sm:aspect-auto sm:h-[600px] group">
+                    <!-- Décorations d'arrière-plan de l'image -->
+                    <div class="absolute inset-0 bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-[2.5rem] transform rotate-3 scale-105 -z-10 transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110"></div>
+                    <div class="absolute inset-0 bg-gradient-to-bl from-secondary/20 to-primary/20 rounded-[2.5rem] transform -rotate-2 scale-105 -z-20"></div>
+                    
+                    <img src="photo1.jpg" alt="Femme travaillant sur son CV" class="w-full h-full object-cover rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-[6px] border-white transition-transform duration-500 group-hover:-translate-y-2" onerror="this.src='https://images.unsplash.com/photo-1586281380349-632531db7ed4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'">
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Bandeau de Réassurance (Fait partie de Section 1) -->
+        <div class="w-full bg-bannerbg py-4 px-4 text-center shadow-inner mt-4 md:mt-6">
+            <div class="max-w-4xl mx-auto flex flex-col items-center animate-fade-in-up delay-300">
+                <h2 class="text-sm md:text-base font-bold text-gray-900 mb-1 tracking-tight">
+                    📣 ❤️ 95 % de nos utilisateurs recommandent Facilite après avoir créé leur CV.*
+                </h2>
+                <p class="text-[10px] md:text-xs text-gray-600 font-medium">
+                    *Basé sur une enquête de satisfaction menée en 2026.
+                </p>
+            </div>
+        </div>
+
+        <!-- Section 2: Nos Modèles de CV Professionnels -->
+        <section class="w-full bg-[#050B20] py-16 md:py-24 px-4 md:px-12 z-10 relative overflow-hidden">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
+                
+                <!-- Colonne Gauche : Titre + CTA -->
+                <div class="w-full md:w-1/3 text-left flex flex-col items-start gap-8">
+                    <h2 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-[1.15]">
+                        Des modèles professionnels pour convaincre les recruteurs
+                    </h2>
+                    <button class="bg-primary text-gray-900 font-bold py-4 px-10 rounded-full text-lg shadow-[0_10px_20px_rgba(16,230,136,0.3)] hover:shadow-[0_15px_25px_rgba(16,230,136,0.5)] hover:-translate-y-1 transition-all transform duration-300">
+                        Créer votre CV
+                    </button>
+                </div>
+
+                <!-- Colonne Droite : Slider & CTA -->
+                <div class="w-full md:w-2/3 relative flex items-center">
+                    
+                    <!-- Flèche Gauche -->
+                    <button id="slider-prev" class="absolute -left-4 md:-left-6 z-20 w-12 h-12 bg-primary rounded-full flex items-center justify-center text-gray-900 hover:scale-110 transition shadow-[0_0_15px_rgba(16,230,136,0.4)]">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+
+                    <!-- Slider -->
+                    <div class="slider-container w-full" id="slider-container">
+                        <div class="slider-track flex gap-6 px-8 py-4" id="slider-track">
+                            <!-- Modèle 1 -->
+                            <div class="slide-item w-[280px] md:w-[320px] flex-shrink-0 relative group cursor-pointer"
+                                 data-preview="https://canva.link/g1nh60hb6ddtx96"
+                                 data-img="model1.png"
+                                 data-title="Modèle 1 — Moderne et photographique">
+                                <div class="bg-white rounded-xl overflow-hidden relative h-full border-2 border-transparent transition-all group-hover:border-primary">
+                                    <img src="model1.png" alt="Modèle 1" class="w-full h-[450px] object-cover object-top pointer-events-none" onerror="this.src='https://images.unsplash.com/photo-1586281380117-5a60ae2050cc?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'">
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <span class="text-white font-bold text-lg bg-white/20 backdrop-blur-sm px-5 py-2 rounded-full border border-white/40">👁 Voir le modèle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modèle 2 -->
+                            <div class="slide-item w-[280px] md:w-[320px] flex-shrink-0 opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
+                                 data-preview="https://canva.link/g1nh60hb6ddtx96"
+                                 data-img="model2.png"
+                                 data-title="Modèle 2 — Épuré et institutionnel">
+                                <div class="bg-white rounded-xl shadow-lg overflow-hidden h-full border-2 border-transparent transition-all hover:border-secondary group relative">
+                                    <img src="model2.png" alt="Modèle 2" class="w-full h-[450px] object-cover object-top pointer-events-none" onerror="this.src='https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'">
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <span class="text-white font-bold text-lg bg-white/20 backdrop-blur-sm px-5 py-2 rounded-full border border-white/40">👁 Voir le modèle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modèle 3 -->
+                            <div class="slide-item w-[280px] md:w-[320px] flex-shrink-0 opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
+                                 data-preview="https://canva.link/g1nh60hb6ddtx96"
+                                 data-img="model3.png"
+                                 data-title="Modèle 3 — Classique et structuré">
+                                <div class="bg-white rounded-xl shadow-lg overflow-hidden h-full border-2 border-transparent transition-all hover:border-secondary group relative">
+                                    <img src="model3.png" alt="Modèle 3" class="w-full h-[450px] object-cover object-top pointer-events-none" onerror="this.src='https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'">
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <span class="text-white font-bold text-lg bg-white/20 backdrop-blur-sm px-5 py-2 rounded-full border border-white/40">👁 Voir le modèle</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modèle 4 -->
+                            <div class="slide-item w-[280px] md:w-[320px] flex-shrink-0 opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
+                                 data-preview="https://canva.link/g1nh60hb6ddtx96"
+                                 data-img="model4.png"
+                                 data-title="Modèle 4 — Nouveau design">
+                                <div class="bg-white rounded-xl shadow-lg overflow-hidden h-full border-2 border-transparent transition-all hover:border-primary group relative">
+                                    <img src="model4.png" alt="Modèle 4" class="w-full h-[450px] object-cover object-top pointer-events-none" onerror="this.src='https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'">
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <span class="text-white font-bold text-lg bg-white/20 backdrop-blur-sm px-5 py-2 rounded-full border border-white/40">👁 Voir le modèle</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Flèche Droite -->
+                    <button id="slider-next" class="absolute -right-4 md:-right-6 z-20 w-12 h-12 bg-primary rounded-full flex items-center justify-center text-gray-900 hover:scale-110 transition shadow-[0_0_15px_rgba(16,230,136,0.4)]">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Nos Tarifs de Prestations -->
+        <section class="w-full bg-[#FAF6F1] py-16 md:py-24 px-4 md:px-12 z-10 relative border-t border-gray-100">
+            <div class="max-w-7xl mx-auto flex flex-col items-center">
+                
+                <!-- En-tête de section -->
+                <div class="text-center mb-12 max-w-3xl mx-auto">
+                    <span class="text-blue-600 font-extrabold tracking-widest uppercase text-xs mb-2 block">Tarification Claire</span>
+                    <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">Nos Tarifs de Prestations</h2>
+                    <p class="text-gray-600 text-sm md:text-base font-medium">Des offres adaptées à tous vos besoins, sans aucun frais caché.</p>
+                </div>
+
+                <!-- Grille de Tarifs -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full items-stretch">
+                    
+                    <!-- Carte 1 : CV Professionnel -->
+                    <div class="group bg-white rounded-[1.5rem] p-6 shadow-sm border border-gray-200 hover:border-blue-600 hover:shadow-lg transition-all duration-300 relative flex flex-col justify-between">
+                        <!-- Badge Recommandé -->
+                        <div class="absolute -top-3.5 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-orange-500 to-pink-500 text-white text-[10px] font-bold py-1 px-4 rounded-full uppercase tracking-wider whitespace-nowrap">
+                            Recommandé
+                        </div>
+                        <div>
+                            <div class="text-center mb-5">
+                                <h3 class="text-xl font-bold text-gray-800 mb-1">CV Professionnel</h3>
+                                <p class="text-xs text-gray-500 min-h-[32px] px-2">Idéal pour valoriser votre parcours sur le marché national.</p>
+                                <div class="flex items-baseline justify-center mt-3">
+                                    <span class="text-3xl font-black text-gray-900">1500</span>
+                                    <span class="text-sm font-bold text-gray-500 ml-1">FCFA</span>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-100 pt-5 mb-6">
+                                <ul class="space-y-3.5 text-xs text-gray-600 text-left">
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Conception et rédaction complète.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Mise en page moderne et attractive.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Valorisation des compétences clés.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Correction orthographique rigoureuse.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <button class="w-full border border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_4px_12px_rgba(37,99,235,0.2)]">
+                            Choisir cette offre
+                        </button>
+                    </div>
+
+                    <!-- Carte 2 : Lettre de Motivation -->
+                    <div class="group bg-white rounded-[1.5rem] p-6 shadow-sm border border-gray-200 hover:border-blue-600 hover:shadow-lg transition-all duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="text-center mb-5">
+                                <h3 class="text-xl font-bold text-gray-800 mb-1">Lettre de Motivation</h3>
+                                <p class="text-xs text-gray-500 min-h-[32px] px-2">Pour accompagner votre candidature avec un maximum d'impact.</p>
+                                <div class="flex items-baseline justify-center mt-3">
+                                    <span class="text-3xl font-black text-gray-900">1000</span>
+                                    <span class="text-sm font-bold text-gray-500 ml-1">FCFA</span>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-100 pt-5 mb-6">
+                                <ul class="space-y-3.5 text-xs text-gray-600 text-left">
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Rédaction sur mesure selon le poste.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Structure professionnelle et accrocheuse.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Argumentation solide pour convaincre.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Prête à l'envoi.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <button class="w-full border border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_4px_12px_rgba(37,99,235,0.2)]">
+                            Choisir cette offre
+                        </button>
+                    </div>
+
+                    <!-- Carte 3 : CV Version Anglaise -->
+                    <div class="group bg-white rounded-[1.5rem] p-6 shadow-sm border border-gray-200 hover:border-blue-600 hover:shadow-lg transition-all duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="text-center mb-5">
+                                <h3 class="text-xl font-bold text-gray-800 mb-1">CV Version Anglaise</h3>
+                                <p class="text-xs text-gray-500 min-h-[32px] px-2">Pour ouvrir vos opportunités professionnelles à l'international.</p>
+                                <div class="flex items-baseline justify-center mt-3">
+                                    <span class="text-3xl font-black text-gray-900">2000</span>
+                                    <span class="text-sm font-bold text-gray-500 ml-1">FCFA</span>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-100 pt-5 mb-6">
+                                <ul class="space-y-3.5 text-xs text-gray-600 text-left">
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Traduction intégrale et technique.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Adaptation stricte aux normes (Resume).</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Vocabulaire professionnel optimisé.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Relecture linguistique approfondie.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <button class="w-full border border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_4px_12px_rgba(37,99,235,0.2)]">
+                            Choisir cette offre
+                        </button>
+                    </div>
+
+                    <!-- Carte 4 : CV Canadien -->
+                    <div class="group bg-white rounded-[1.5rem] p-6 shadow-sm border border-gray-200 hover:border-blue-600 hover:shadow-lg transition-all duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="text-center mb-5">
+                                <h3 class="text-xl font-bold text-gray-800 mb-1">CV Canadien</h3>
+                                <p class="text-xs text-gray-500 min-h-[32px] px-2">Conçu spécifiquement pour le marché du travail canadien.</p>
+                                <div class="flex items-baseline justify-center mt-3">
+                                    <span class="text-3xl font-black text-gray-900">2000</span>
+                                    <span class="text-sm font-bold text-gray-500 ml-1">FCFA</span>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-100 pt-5 mb-6">
+                                <ul class="space-y-3.5 text-xs text-gray-600 text-left">
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Format et structure aux normes canadiennes.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Retrait des données discriminatoires.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Focus approfondi sur vos réalisations.</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2.5">
+                                        <i class="fa-solid fa-circle-check text-blue-600 text-base flex-shrink-0"></i>
+                                        <span>Optimisation pour la compatibilité ATS.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <button class="w-full border border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_4px_12px_rgba(37,99,235,0.2)]">
+                            Choisir cette offre
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Principal -->
+    <footer class="bg-black text-gray-400 py-16 px-6 md:px-12 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
+            <!-- Colonne 1: À propos de Facilite -->
+            <div class="flex flex-col">
+                <h3 class="text-white text-lg font-bold mb-4">À propos de Facilite</h3>
+                <p class="text-sm leading-relaxed mb-6">
+                    Facilite est votre allié de confiance pour concevoir des CV percutants et professionnels. Grâce à nos outils intuitifs et nos modèles optimisés, propulsez votre carrière et décrochez l'emploi de vos rêves en quelques clics.
+                </p>
+                <div class="flex flex-col space-y-2 text-sm">
+                    <a href="#" class="hover:text-primary transition">À propos de nous</a>
+                    <a href="#" class="hover:text-primary transition">Politique de confidentialité</a>
+                    <a href="#" class="hover:text-primary transition">Conditions d'utilisation</a>
+                </div>
+            </div>
+
+            <!-- Colonne 2: Horaires & Support -->
+            <div class="flex flex-col">
+                <h3 class="text-white text-lg font-bold mb-4">Horaires & Support</h3>
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="p-2.5 bg-gray-900 rounded-full text-primary">
+                        <i class="fa-solid fa-phone text-lg"></i>
+                    </span>
+                    <a href="tel:+221771400000" class="text-white text-xl font-bold hover:text-primary transition">+221 77 140 00 00</a>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between border-b border-gray-900 pb-1">
+                        <span class="font-medium text-gray-300">Lundi - Vendredi</span>
+                        <span>8h - 22h</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-900 pb-1">
+                        <span class="font-medium text-gray-300">Samedi - Dimanche</span>
+                        <span>9h - 21h</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colonne 3: Restez en contact avec nous -->
+            <div class="flex flex-col">
+                <h3 class="text-white text-lg font-bold mb-4">Restez en contact avec nous</h3>
+                <p class="text-sm mb-4">Suivez-nous sur nos réseaux sociaux pour ne rien rater de nos actualités.</p>
+                <div class="flex space-x-4">
+                    <!-- Facebook -->
+                    <a href="#" class="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white hover:bg-primary hover:text-black transition" aria-label="Facebook">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                            <path d="M9 8H7v3h2v9h4v-9h3.61L17 8h-3V6.23c0-.85.34-1.23 1.08-1.23H17V1H14.12C11.53 1 10 2.5 10 5v3z"/>
+                        </svg>
+                    </a>
+                    <!-- YouTube -->
+                    <a href="#" class="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white hover:bg-primary hover:text-black transition" aria-label="YouTube">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                            <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.52 3.5 12 3.5 12 3.5s-7.52 0-9.388.555a3.002 3.002 0 0 0-2.11 2.108C0 8.03 0 12 0 12s0 3.97.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.48 20.5 12 20.5 12 20.5s7.52 0 9.388-.555a3.003 3.003 0 0 0 2.11-2.108C24 15.97 24 12 24 12s0-3.97-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-900 text-center text-sm text-gray-500">
+            <p>© 2026 Facilite. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+
+
+
+
+
+    <!-- Modal de Contact -->
+    <div id="contact-modal" class="fixed inset-0 z-[600] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-lg p-6 md:p-8 relative shadow-2xl transition-all duration-300 scale-95 flex flex-col">
+            <!-- Bouton fermer -->
+            <button id="contact-close" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <!-- Titre du formulaire -->
+            <div class="mb-6">
+                <h3 class="text-2xl font-extrabold text-gray-900 mb-1">Contactez-nous</h3>
+                <p class="text-xs text-gray-500 font-medium">Une question ou une suggestion ? Notre équipe vous répond sous 24h.</p>
+            </div>
+
+            <!-- Formulaire -->
+            <form id="contact-form" class="space-y-4">
+                <!-- Nom -->
+                <div>
+                    <label for="contact-name" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nom complet</label>
+                    <input type="text" id="contact-name" required
+                           class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 transition"
+                           placeholder="Ex. Mamadou Sarr">
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label for="contact-email" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Adresse email</label>
+                    <input type="email" id="contact-email" required
+                           class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 transition"
+                           placeholder="Ex. mamadou@example.com">
+                </div>
+
+                <!-- Objet -->
+                <div>
+                    <label for="contact-subject" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Objet du message</label>
+                    <input type="text" id="contact-subject" required
+                           class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 transition"
+                           placeholder="Ex. Demande de renseignement">
+                </div>
+
+                <!-- Message -->
+                <div>
+                    <label for="contact-message" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Votre message</label>
+                    <textarea id="contact-message" rows="4" required
+                              class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 transition resize-none"
+                              placeholder="Comment pouvons-nous vous aider ?"></textarea>
+                </div>
+
+                <!-- Bouton Envoyer -->
+                <button type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] hover:shadow-[0_6px_16px_rgba(37,99,235,0.3)] mt-2">
+                    Envoyer le message
+                </button>
+            </form>
+
+            <!-- Message de Succès (Masqué par défaut) -->
+            <div id="contact-success" class="hidden flex-col items-center text-center py-8">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4 animate-bounce">
+                    <i class="fa-solid fa-check text-3xl"></i>
+                </div>
+                <h4 class="text-xl font-bold text-gray-900 mb-1">Message envoyé !</h4>
+                <p class="text-xs text-gray-500 max-w-xs leading-relaxed">Merci pour votre message. Notre équipe d'assistance vous contactera très rapidement.</p>
+                <button id="contact-success-close"
+                        class="mt-6 border border-gray-200 text-gray-700 font-bold py-2 px-6 rounded-xl text-xs hover:bg-gray-50 transition">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('contact-btn');
+            const btnMobile = document.getElementById('contact-btn-mobile');
+            const modal = document.getElementById('contact-modal');
+            const close = document.getElementById('contact-close');
+            const successClose = document.getElementById('contact-success-close');
+            const form = document.getElementById('contact-form');
+            const success = document.getElementById('contact-success');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            if (modal) {
+                const openModal = (e) => {
+                    if (e) e.preventDefault();
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    document.body.style.overflow = 'hidden';
+
+                    if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+                        mobileMenu.classList.add('hidden');
+                        mobileMenu.classList.remove('flex');
+                        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+                        if (mobileMenuBtn) {
+                            const icon = mobileMenuBtn.querySelector('i');
+                            if (icon) {
+                                icon.classList.remove('fa-xmark');
+                                icon.classList.add('fa-bars');
+                            }
+                        }
+                    }
+                };
+
+                const closeModal = () => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    document.body.style.overflow = '';
+                    setTimeout(() => {
+                        if (form) {
+                            form.reset();
+                            form.classList.remove('hidden');
+                        }
+                        if (success) {
+                            success.classList.add('hidden');
+                        }
+                    }, 300);
+                };
+
+                if (btn) btn.addEventListener('click', openModal);
+                if (btnMobile) btnMobile.addEventListener('click', openModal);
+                if (close) close.addEventListener('click', closeModal);
+                if (successClose) successClose.addEventListener('click', closeModal);
+
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeModal();
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                        closeModal();
+                    }
+                });
+
+                if (form) {
+                    form.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        form.classList.add('hidden');
+                        success.classList.remove('hidden');
+                        success.classList.add('flex');
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
