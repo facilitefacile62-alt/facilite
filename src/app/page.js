@@ -89,6 +89,8 @@ const translations = {
     toastLangGB: "Language changed to English",
     toastDemoDownloaded: "Le modèle démo a été téléchargé en PDF !",
     toastOfferSelected: "Offre sélectionnée avec succès !",
+    searchPlaceholder: "Rechercher...",
+    searchNoResults: "Aucun modèle de CV trouvé.",
   },
   GB: {
     navContact: "Contact us",
@@ -174,6 +176,8 @@ const translations = {
     toastLangGB: "Language changed to English",
     toastDemoDownloaded: "Demo template downloaded as PDF!",
     toastOfferSelected: "Offer selected successfully!",
+    searchPlaceholder: "Search...",
+    searchNoResults: "No CV templates found.",
   }
 };
 
@@ -193,6 +197,11 @@ export default function Home() {
 
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
+
+  // Search System
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const triggerToast = (message, icon = "fa-circle-check") => {
     setToast({ show: true, message, icon });
@@ -223,6 +232,30 @@ export default function Home() {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // --- RECHERCHE EN TEMPS RÉEL ---
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const query = searchQuery.toLowerCase();
+    const filtered = slides.filter(slide => {
+      const title = (selectedLang === "FR" ? slide.titleFR : slide.titleEN).toLowerCase();
+      const desc = (selectedLang === "FR" ? slide.descFR : slide.descEN).toLowerCase();
+      return title.includes(query) || desc.includes(query);
+    });
+    setSearchResults(filtered);
+  }, [searchQuery, selectedLang]);
+
+  const handleSearchResultClick = (slide) => {
+    handleOpenPreview(slide);
+    const origIdx = slides.findIndex(s => s.id === slide.id);
+    if (origIdx !== -1) {
+      setCurrentIndex(origIdx + 2);
+    }
+    setSearchQuery("");
+  };
 
   // --- CARROUSEL 360° ---
   const slides = [
@@ -530,6 +563,58 @@ export default function Home() {
           <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
         </div>
 
+        {/* Barre de recherche Desktop */}
+        <div className="hidden md:block relative w-64 lg:w-80 mx-4">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+              <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+              className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
+              placeholder={t.searchPlaceholder}
+            />
+          </div>
+          {/* Résultats de recherche flottants */}
+          {searchFocused && searchQuery && (
+            <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-[100]">
+              <div className="py-2 max-h-60 overflow-y-auto">
+                {searchResults.length > 0 ? (
+                  searchResults.map((slide) => (
+                    <button
+                      key={slide.id}
+                      onMouseDown={() => handleSearchResultClick(slide)}
+                      className="w-full px-4 py-2 hover:bg-gray-50 flex items-center space-x-3 text-left transition cursor-pointer"
+                    >
+                      <img
+                        src={`/${slide.img}`}
+                        alt={selectedLang === "FR" ? slide.titleFR : slide.titleEN}
+                        className="w-8 h-10 object-cover rounded bg-gray-100 border border-gray-200"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-900 truncate">
+                          {selectedLang === "FR" ? slide.titleFR : slide.titleEN}
+                        </p>
+                        <p className="text-[10px] text-gray-500 truncate">
+                          {selectedLang === "FR" ? slide.descFR : slide.descEN}
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-xs text-gray-500 text-center font-medium">
+                    {t.searchNoResults}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Liens Desktop */}
         <div className="hidden md:flex items-center space-x-8 text-sm">
           <a
@@ -561,6 +646,57 @@ export default function Home() {
             mobileMenuOpen ? "flex" : "hidden"
           }`}
         >
+          {/* Barre de recherche Mobile */}
+          <div className="relative w-full px-1">
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
+                placeholder={t.searchPlaceholder}
+              />
+            </div>
+            {/* Résultats de recherche flottants Mobile */}
+            {searchFocused && searchQuery && (
+              <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-[100]">
+                <div className="py-2 max-h-48 overflow-y-auto">
+                  {searchResults.length > 0 ? (
+                    searchResults.map((slide) => (
+                      <button
+                        key={slide.id}
+                        onMouseDown={() => handleSearchResultClick(slide)}
+                        className="w-full px-4 py-2 hover:bg-gray-50 flex items-center space-x-3 text-left transition cursor-pointer"
+                      >
+                        <img
+                          src={`/${slide.img}`}
+                          alt={selectedLang === "FR" ? slide.titleFR : slide.titleEN}
+                          className="w-8 h-10 object-cover rounded bg-gray-100 border border-gray-200"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-gray-900 truncate">
+                            {selectedLang === "FR" ? slide.titleFR : slide.titleEN}
+                          </p>
+                          <p className="text-[10px] text-gray-500 truncate">
+                            {selectedLang === "FR" ? slide.descFR : slide.descEN}
+                          </p>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-xs text-gray-500 text-center font-medium">
+                      {t.searchNoResults}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <a
             href="#"
             onClick={handleOpenModal}
