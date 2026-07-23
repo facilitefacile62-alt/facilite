@@ -1020,8 +1020,8 @@ export default function Home() {
               <span className="p-3 bg-gray-900 rounded-full text-[#10E688] border border-gray-800">
                 <i className="fa-solid fa-phone text-lg"></i>
               </span>
-              <a href="tel:+221771400000" className="text-white text-2xl font-black hover:text-[#10E688] transition-colors">
-                +221 77 140 00 00
+              <a href="tel:+221771400832" className="text-white text-2xl font-black hover:text-[#10E688] transition-colors">
+                +221 77 140 08 32
               </a>
             </div>
             <div className="space-y-3 text-sm font-medium">
