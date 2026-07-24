@@ -235,6 +235,20 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
 
+  // --- ÉTATS EXPÉRIENCE (LINKEDIN STYLE) ---
+  const [experienceModalOpen, setExperienceModalOpen] = useState(false);
+  const [experiences, setExperiences] = useState([]);
+  const [expTitle, setExpTitle] = useState("");
+  const [expCompany, setExpCompany] = useState("");
+  const [expLocation, setExpLocation] = useState("");
+  const [expLocationType, setExpLocationType] = useState("Sur site");
+  const [expEmploymentType, setExpEmploymentType] = useState("CDI");
+  const [expIsCurrent, setExpIsCurrent] = useState(true);
+  const [expStartMonth, setExpStartMonth] = useState("juillet");
+  const [expStartYear, setExpStartYear] = useState("2026");
+  const [expSkills, setExpSkills] = useState([]);
+  const [expSkillInput, setExpSkillInput] = useState("");
+
   // Spontaneous Recruitment Modal
   const [recruitmentModalOpen, setRecruitmentModalOpen] = useState(false);
   const [isRecruitmentSubmitting, setIsRecruitmentSubmitting] = useState(false);
@@ -276,6 +290,72 @@ export default function Home() {
       setSelectedLang(savedLang);
     }
   }, []);
+
+  // Sync experiences with localStorage
+  useEffect(() => {
+    const savedExps = localStorage.getItem("user_experiences");
+    if (savedExps) {
+      try {
+        setExperiences(JSON.parse(savedExps));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const handleAddExperience = (e) => {
+    e.preventDefault();
+    if (!expTitle || !expCompany) {
+      triggerToast("Veuillez remplir les champs obligatoires (*)", "fa-triangle-exclamation");
+      return;
+    }
+    
+    const newExp = {
+      id: Date.now(),
+      title: expTitle,
+      company: expCompany,
+      location: expLocation,
+      locationType: expLocationType,
+      employmentType: expEmploymentType,
+      isCurrent: expIsCurrent,
+      startMonth: expStartMonth,
+      startYear: expStartYear,
+      skills: expSkills
+    };
+
+    const updatedExps = [newExp, ...experiences];
+    setExperiences(updatedExps);
+    localStorage.setItem("user_experiences", JSON.stringify(updatedExps));
+    
+    // Clear form
+    setExpTitle("");
+    setExpCompany("");
+    setExpLocation("");
+    setExpLocationType("Sur site");
+    setExpEmploymentType("CDI");
+    setExpIsCurrent(true);
+    setExpStartMonth("juillet");
+    setExpStartYear("2026");
+    setExpSkills([]);
+    setExpSkillInput("");
+    
+    setExperienceModalOpen(false);
+    triggerToast("Expérience ajoutée avec succès !", "fa-briefcase");
+  };
+
+  const handleDeleteExperience = (id) => {
+    const updatedExps = experiences.filter(exp => exp.id !== id);
+    setExperiences(updatedExps);
+    localStorage.setItem("user_experiences", JSON.stringify(updatedExps));
+    triggerToast("Expérience supprimée.", "fa-trash-can");
+  };
+
+  const handleAddSkill = () => {
+    if (expSkillInput.trim() && !expSkills.includes(expSkillInput.trim())) {
+      setExpSkills([...expSkills, expSkillInput.trim()]);
+      setExpSkillInput("");
+    }
+  };
 
   const triggerToast = (message, icon = "fa-circle-check") => {
     setToast({ show: true, message, icon });
@@ -589,13 +669,62 @@ export default function Home() {
                 
                 {/* Bouton Ajouter Expérience */}
                 <button
-                  onClick={() => triggerToast("Expérience ajoutée au profil temporaire.", "fa-user-plus")}
-                  className="w-full border border-dashed border-gray-400 hover:border-blue-600 text-gray-700 hover:text-blue-600 font-extrabold py-2 px-4 rounded-lg text-xs transition flex items-center justify-center space-x-2 cursor-pointer bg-white"
+                  onClick={() => setExperienceModalOpen(true)}
+                  className="w-full border border-dashed border-gray-400 hover:border-blue-600 text-gray-700 hover:text-blue-600 font-extrabold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-2 cursor-pointer bg-white"
                 >
                   <span>{t.profileExperienceBtn}</span>
                 </button>
               </div>
             </div>
+
+            {/* Carte Expériences (Dynamique) */}
+            {experiences.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                  <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Expérience</h3>
+                  <i className="fa-solid fa-briefcase text-gray-400 text-xs"></i>
+                </div>
+                <div className="space-y-4">
+                  {experiences.map((exp) => (
+                    <div key={exp.id} className="relative flex items-start space-x-3 text-left">
+                      <div className="w-8 h-8 rounded bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0 text-sm font-bold border border-gray-200">
+                        {exp.company.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-grow min-w-0 pr-5">
+                        <h4 className="text-xs font-extrabold text-gray-900 truncate">{exp.title}</h4>
+                        <p className="text-[10px] text-gray-700 font-bold truncate">{exp.company}</p>
+                        <p className="text-[9px] text-gray-400 font-semibold mt-0.5">
+                          {exp.startMonth} {exp.startYear} — {exp.isCurrent ? "Présent" : "Terminé"}
+                        </p>
+                        {exp.location && (
+                          <p className="text-[9px] text-gray-400 font-semibold mt-0.5">
+                            {exp.location} ({exp.locationType})
+                          </p>
+                        )}
+                        {exp.skills && exp.skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {exp.skills.map((skill, sIdx) => (
+                              <span key={sIdx} className="text-[8px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Bouton de suppression */}
+                      <button
+                        onClick={() => handleDeleteExperience(exp.id)}
+                        className="text-gray-300 hover:text-red-500 transition p-1 cursor-pointer absolute top-0 right-0"
+                        title="Supprimer cette expérience"
+                      >
+                        <i className="fa-solid fa-trash-can text-[10px]"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Carte Statistiques */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs">
@@ -1244,6 +1373,245 @@ export default function Home() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Ajoutez un poste à votre profil (Style LinkedIn) */}
+      {experienceModalOpen && (
+        <div
+          className="fixed inset-0 z-[600] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target.id === "exp-modal-wrapper") setExperienceModalOpen(false);
+          }}
+          id="exp-modal-wrapper"
+        >
+          <div className="bg-white rounded-[2rem] w-full max-w-xl p-6 md:p-8 relative shadow-2xl transition-all duration-300 flex flex-col border border-gray-100 animate-fade-in-up">
+            {/* Bouton de fermeture */}
+            <button
+              onClick={() => setExperienceModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+            >
+              <i className="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div className="mb-5">
+              <h3 className="text-xl font-bold text-gray-900">Ajoutez un poste à votre profil</h3>
+            </div>
+
+            <form onSubmit={handleAddExperience} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Intitulé du poste */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">
+                    Intitulé du poste*
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={expTitle}
+                    onChange={(e) => setExpTitle(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition font-medium text-gray-900"
+                    placeholder="Exemple : Chef de produit senior"
+                  />
+                </div>
+
+                {/* Organisation */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">
+                    Organisation*
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={expCompany}
+                    onChange={(e) => setExpCompany(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition font-medium text-gray-900"
+                    placeholder="Exemple : Microsoft"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Lieu */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">
+                    Lieu
+                  </label>
+                  <input
+                    type="text"
+                    value={expLocation}
+                    onChange={(e) => setExpLocation(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition font-medium text-gray-900"
+                    placeholder="Ville ou région"
+                  />
+                </div>
+
+                {/* Type de lieu */}
+                <div className="relative">
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">
+                    Type de lieu
+                  </label>
+                  <select
+                    value={expLocationType}
+                    onChange={(e) => setExpLocationType(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition font-bold text-gray-700 cursor-pointer appearance-none"
+                  >
+                    <option value="Sur site">Sur site</option>
+                    <option value="Hybride">Hybride</option>
+                    <option value="À distance">À distance</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-3 pt-6 flex items-center pointer-events-none text-gray-500 text-xs">
+                    <i className="fa-solid fa-chevron-down"></i>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Type d'emploi */}
+                <div className="relative col-span-1 md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">
+                    Type d'emploi
+                  </label>
+                  <select
+                    value={expEmploymentType}
+                    onChange={(e) => setExpEmploymentType(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition font-bold text-gray-700 cursor-pointer appearance-none"
+                  >
+                    <option value="CDI">CDI</option>
+                    <option value="CDD">CDD</option>
+                    <option value="Stage">Stage</option>
+                    <option value="Alternance">Alternance</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Temps partiel">Temps partiel</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-3 pt-6 flex items-center pointer-events-none text-gray-500 text-xs">
+                    <i className="fa-solid fa-chevron-down"></i>
+                  </div>
+                </div>
+              </div>
+
+              {/* Case à cocher Poste Actuel */}
+              <div className="flex items-center space-x-2 py-1">
+                <label className="relative flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={expIsCurrent}
+                    onChange={(e) => setExpIsCurrent(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-5 h-5 bg-white border border-gray-300 rounded peer-checked:bg-emerald-600 peer-checked:border-emerald-600 transition flex items-center justify-center">
+                    <i className="fa-solid fa-check text-white text-xs scale-0 peer-checked:scale-100 transition duration-150"></i>
+                  </div>
+                  <span className="ml-2.5 text-xs font-bold text-gray-700">Ceci est mon poste actuel</span>
+                </label>
+              </div>
+
+              {/* Date de début */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">
+                    Mois de début*
+                  </label>
+                  <select
+                    value={expStartMonth}
+                    onChange={(e) => setExpStartMonth(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition font-bold text-gray-700 cursor-pointer appearance-none"
+                  >
+                    <option value="janvier">janvier</option>
+                    <option value="février">février</option>
+                    <option value="mars">mars</option>
+                    <option value="avril">avril</option>
+                    <option value="mai">mai</option>
+                    <option value="juin">juin</option>
+                    <option value="juillet">juillet</option>
+                    <option value="août">août</option>
+                    <option value="septembre">septembre</option>
+                    <option value="octobre">octobre</option>
+                    <option value="novembre">novembre</option>
+                    <option value="décembre">décembre</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-3 pt-6 flex items-center pointer-events-none text-gray-500 text-xs">
+                    <i className="fa-solid fa-chevron-down"></i>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">
+                    Année de début*
+                  </label>
+                  <select
+                    value={expStartYear}
+                    onChange={(e) => setExpStartYear(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition font-bold text-gray-700 cursor-pointer appearance-none"
+                  >
+                    {Array.from({ length: 15 }, (_, i) => 2026 - i).map((yr) => (
+                      <option key={yr} value={yr}>{yr}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-3 pt-6 flex items-center pointer-events-none text-gray-500 text-xs">
+                    <i className="fa-solid fa-chevron-down"></i>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section Compétences */}
+              <div className="pt-2 border-t border-gray-150">
+                <h4 className="text-xs font-extrabold text-gray-800">Compétences</h4>
+                <p className="text-[10px] text-gray-500 mb-2 font-medium">Ajoutez des compétences pour afficher vos points forts.</p>
+                
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={expSkillInput}
+                    onChange={(e) => setExpSkillInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSkill();
+                      }
+                    }}
+                    className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-full text-xs focus:outline-none focus:border-blue-600 transition font-medium text-gray-900"
+                    placeholder="Ex. Communication, Management, React..."
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddSkill}
+                    className="border border-blue-600 hover:bg-blue-50 text-blue-600 font-bold px-4 py-2 rounded-full text-xs transition cursor-pointer"
+                  >
+                    Ajouter une compétence
+                  </button>
+                </div>
+
+                {/* Tags des compétences ajoutées */}
+                {expSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                    {expSkills.map((skill, sIdx) => (
+                      <span key={sIdx} className="flex items-center space-x-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full">
+                        <span>{skill}</span>
+                        <button
+                          type="button"
+                          onClick={() => setExpSkills(expSkills.filter((_, idx) => idx !== sIdx))}
+                          className="hover:text-red-500 transition text-[9px]"
+                        >
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Bouton de sauvegarde */}
+              <div className="pt-4 border-t border-gray-100 flex">
+                <button
+                  type="submit"
+                  className="bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold py-2 px-6 rounded-full text-xs transition ml-auto cursor-pointer shadow-sm"
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
