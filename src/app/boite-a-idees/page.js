@@ -290,10 +290,10 @@ export default function BoiteAIdees() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
-        <div className="max-w-[1128px] mx-auto w-full flex items-center justify-between">
-          {/* Logo et Recherche alignés à gauche */}
-          <div className="flex items-center space-x-3 flex-1 md:flex-initial">
+      <nav className="bg-[#FAF6F1] px-4 md:px-6 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
+        <div className="max-w-[1180px] mx-auto w-full flex items-center justify-between">
+          {/* Groupe Gauche : Logo + Recherche */}
+          <div className="flex items-center space-x-3">
             {/* Logo */}
             <a href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
@@ -301,7 +301,7 @@ export default function BoiteAIdees() {
             </a>
 
             {/* Barre de recherche Desktop */}
-            <div className="hidden md:block relative w-64 lg:w-72">
+            <div className="hidden md:block relative w-60 lg:w-72">
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
                   <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
@@ -353,12 +353,12 @@ export default function BoiteAIdees() {
             </div>
           </div>
 
-          {/* Liens Desktop (Style LinkedIn : Icône au-dessus du texte) */}
-          <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
+          {/* Groupe Centre : Liens principaux */}
+          <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
             {/* Accueil */}
             <a
               href="/"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
             >
               <i className="fa-solid fa-house text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
@@ -367,7 +367,7 @@ export default function BoiteAIdees() {
             {/* Service */}
             <Link
               href="/service"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
             >
               <i className="fa-solid fa-briefcase text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
@@ -377,7 +377,7 @@ export default function BoiteAIdees() {
             <a
               href="#"
               onClick={handleOpenRecruitmentModal}
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
             >
               <i className="fa-solid fa-user-tie text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
@@ -387,16 +387,18 @@ export default function BoiteAIdees() {
             <a
               href="#"
               onClick={handleOpenModal}
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
             >
               <i className="fa-regular fa-comment-dots text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">Contact</span>
             </a>
+          </div>
 
-            {/* Se connecter */}
+          {/* Groupe Droit : Se connecter */}
+          <div className="hidden md:flex items-center">
             <a
               href="#"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
             >
               <i className="fa-regular fa-user text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
