@@ -22,8 +22,8 @@ const translations = {
     recruitmentSuccessDesc: "Nous avons bien reçu votre candidature spontanée. Notre équipe RH l'étudiera avec la plus grande attention.",
     recruitmentSubmit: "Soumettre ma candidature",
     recruitmentSending: "Envoi de la candidature...",
-    searchPlaceholder: "Rechercher un service ou modèle...",
-    searchNoResults: "Aucun résultat trouvé.",
+    searchPlaceholder: "Rechercher une offre d'emploi...",
+    searchNoResults: "Aucune offre ne correspond à vos critères.",
     modalTitle: "Contactez-nous",
     modalSubtitle: "Une question ou une suggestion ? Notre équipe vous répond sous 24h.",
     modalLabelName: "Nom complet",
@@ -50,24 +50,29 @@ const translations = {
     toastLangFR: "Langue modifiée en Français",
     toastLangGB: "Language changed to English",
     
-    // Gateway page specific
-    gatewayPre: "Votre réussite commence ici",
-    gatewayTitleStart: "Faites briller votre ",
-    gatewayTitleHighlight: "parcours professionnel",
-    gatewayDesc: "Facilite vous aide à concevoir des CV percutants, rédiger des lettres de motivation sur-mesure et propulser vos candidatures vers le succès.",
-    gatewayCTA1: "Accéder à nos services",
-    gatewayCTA2: "Voir nos tarifs",
-    gatewaySocialCount: "569 personnes rédigent leur CV en ce moment.",
-    gatewayReassurance: "📣 ❤️ 95 % de nos utilisateurs recommandent Facilite après avoir créé leur CV.*",
-    gatewayReassuranceFootnote: "*Basé sur une enquête de satisfaction menée en 2026.",
-    
-    whyTitle: "Pourquoi choisir Facilite ?",
-    whyCard1Title: "Modèles Professionnels",
-    whyCard1Desc: "Des designs modernes, structurés et épurés, entièrement personnalisables sur Canva et compatibles avec les filtres ATS des recruteurs.",
-    whyCard2Title: "Rédaction Premium",
-    whyCard2Desc: "Des lettres de motivation percutantes et des traductions professionnelles en anglais adaptées aux standards internationaux.",
-    whyCard3Title: "Rapidité & Simplicité",
-    whyCard3Desc: "Un parcours intuitif pour obtenir des documents impeccables et optimisés pour le marché de l'emploi en quelques clics."
+    // Job Board specific
+    jobBoardTitle: "Fil d'attente des offres d'emploi",
+    jobBoardSubtitle: "Découvrez les dernières opportunités et postulez en quelques secondes.",
+    searchJobPlaceholder: "Titre du poste, mots-clés...",
+    filterLocation: "Localisation",
+    filterContract: "Contrat",
+    allLocations: "Toutes les villes",
+    allContracts: "Tous les contrats",
+    profileTitle: "faciliter facile",
+    profileSubtitle: "Étudiant(e) à lycée de pikine",
+    profileLocation: "Pikine, Région de Dakar",
+    profileExperienceBtn: "+ Expérience",
+    statsTitle: "Statistiques",
+    statsViews: "Vues du profil",
+    statsImpressions: "Impressions du post",
+    premiumPromoTitle: "Boostez votre recherche d'emploi",
+    premiumPromoText: "Réactivez Premium : - 50 %",
+    applyNow: "Postuler rapidement",
+    applySuccess: "Candidature envoyée avec succès pour le poste de ",
+    createCvRequired: "Vous devez disposer d'un CV professionnel pour postuler. Souhaitez-vous concevoir un CV sur nos modèles ?",
+    createCvBtn: "Créer mon CV maintenant",
+    trendingJobsTitle: "Offres recommandées",
+    noCvTitle: "CV requis pour postuler",
   },
   GB: {
     navHome: "Home",
@@ -85,8 +90,8 @@ const translations = {
     recruitmentSuccessDesc: "We have received your spontaneous application. Our HR team will review it with the utmost care.",
     recruitmentSubmit: "Submit My Application",
     recruitmentSending: "Sending Application...",
-    searchPlaceholder: "Search services or templates...",
-    searchNoResults: "No results found.",
+    searchPlaceholder: "Search job offers...",
+    searchNoResults: "No jobs match your search criteria.",
     modalTitle: "Contact us",
     modalSubtitle: "A question or suggestion? Our team will reply within 24 hours.",
     modalLabelName: "Full name",
@@ -113,32 +118,113 @@ const translations = {
     toastLangFR: "Langue modifiée en Français",
     toastLangGB: "Language changed to English",
     
-    // Gateway page specific
-    gatewayPre: "Your success starts here",
-    gatewayTitleStart: "Highlight your ",
-    gatewayTitleHighlight: "professional career",
-    gatewayDesc: "Facilite helps you design impactful resumes, write custom cover letters, and propel your applications toward success.",
-    gatewayCTA1: "Access our services",
-    gatewayCTA2: "View our pricing",
-    gatewaySocialCount: "569 people are writing their resume right now.",
-    gatewayReassurance: "📣 ❤️ 95% of our users recommend Facilite after creating their resume.*",
-    gatewayReassuranceFootnote: "*Based on a satisfaction survey conducted in 2026.",
-    
-    whyTitle: "Why choose Facilite?",
-    whyCard1Title: "Professional Templates",
-    whyCard1Desc: "Modern, structured and clean designs, fully customizable on Canva and optimized for recruiter ATS filters.",
-    whyCard2Title: "Premium Writing",
-    whyCard2Desc: "Impactful cover letters and professional English translations tailored to international market standards.",
-    whyCard3Title: "Speed & Simplicity",
-    whyCard3Desc: "An intuitive workflow to get flawless and optimized employment documents in just a few clicks."
+    // Job Board specific
+    jobBoardTitle: "Job Opportunity Feed",
+    jobBoardSubtitle: "Browse the latest job openings and apply in a few clicks.",
+    searchJobPlaceholder: "Job title, keywords...",
+    filterLocation: "Location",
+    filterContract: "Contract",
+    allLocations: "All locations",
+    allContracts: "All contracts",
+    profileTitle: "faciliter facile",
+    profileSubtitle: "Student at Lycée de Pikine",
+    profileLocation: "Pikine, Dakar Region",
+    profileExperienceBtn: "+ Experience",
+    statsTitle: "Statistics",
+    statsViews: "Profile views",
+    statsImpressions: "Post impressions",
+    premiumPromoTitle: "Boost your job search",
+    premiumPromoText: "Reactivate Premium: - 50 %",
+    applyNow: "Quick Apply",
+    applySuccess: "Application successfully sent for the position of ",
+    createCvRequired: "You need a professional resume to apply. Would you like to create one using our templates?",
+    createCvBtn: "Create My Resume Now",
+    trendingJobsTitle: "Recommended Jobs",
+    noCvTitle: "Resume required to apply",
   }
 };
 
-const slides = [
-  { id: "s1", img: "model1.png", titleFR: "Modèle 1 — Moderne et photographique", titleEN: "Template 1 — Modern and photographic", descFR: "Parfait pour les profils créatifs et exécutifs exigeant une mise en avant visuelle élégante.", descEN: "Perfect for creative and executive profiles seeking elegant visual presentation." },
-  { id: "s2", img: "model2.png", titleFR: "Modèle 2 — Épuré et institutionnel", titleEN: "Template 2 — Clean and professional", descFR: "Design minimaliste axé sur l'impact des réalisations et la clarté de lecture pour recruteurs.", descEN: "Minimalist design focused on achievement impact and recruiter readability." },
-  { id: "s3", img: "model3.png", titleFR: "Modèle 3 — Classique et structuré", titleEN: "Template 3 — Classic and structured", descFR: "Structure équilibrée idéale pour l'ingénierie, la finance et le management stratégique.", descEN: "Balanced layout ideal for engineering, finance, and strategic management." },
-  { id: "s4", img: "model4.png", titleFR: "Modèle 4 — Nouveau design international", titleEN: "Template 4 — New international design", descFR: "Format optimisé pour les candidatures globales, normes anglo-saxonnes et compatibilité ATS.", descEN: "Optimized format for global applications, western standards and ATS compatibility." },
+const initialJobs = [
+  {
+    id: 1,
+    titleFR: "Conseiller Clientèle Télécom",
+    titleEN: "Telecom Customer Advisor",
+    company: "Orange Sénégal",
+    logoColor: "bg-orange-500",
+    initials: "OS",
+    location: "Dakar",
+    timeFR: "Il y a 2 heures",
+    timeEN: "2 hours ago",
+    contract: "CDI",
+    descFR: "Gérer le portefeuille client, répondre aux requêtes téléphoniques et par chat, et promouvoir les nouveaux forfaits mobiles et offres internet en français et wolof.",
+    descEN: "Manage customer portfolio, answer calls and chats, and promote new mobile plans and internet packages in French and Wolof.",
+    tags: ["Dakar", "CDI", "Full-time"],
+    salary: "320 000 FCFA / mois"
+  },
+  {
+    id: 2,
+    titleFR: "Développeur Front-End React / Next.js",
+    titleEN: "React / Next.js Front-End Developer",
+    company: "Facilite Corporation",
+    logoColor: "bg-emerald-500",
+    initials: "FC",
+    location: "Pikine",
+    timeFR: "Il y a 5 heures",
+    timeEN: "5 hours ago",
+    contract: "Stage",
+    descFR: "Participer à la conception et à l'optimisation de nos interfaces de CV interactifs. Collaboration étroite avec l'équipe design pour un rendu Pixel-Perfect.",
+    descEN: "Participate in designing and optimizing our interactive CV interfaces. Work closely with the design team for a Pixel-Perfect rendering.",
+    tags: ["Pikine", "Stage", "Hybride"],
+    salary: "150 000 FCFA / mois"
+  },
+  {
+    id: 3,
+    titleFR: "Comptable & Gestionnaire de Paie",
+    titleEN: "Accountant & Payroll Administrator",
+    company: "Senelec",
+    logoColor: "bg-blue-600",
+    initials: "SL",
+    location: "Dakar",
+    timeFR: "Hier",
+    timeEN: "Yesterday",
+    contract: "CDI",
+    descFR: "Supervision des écritures comptables mensuelles, traitement de la paie du personnel sénégalais, établissement des déclarations fiscales et sociales.",
+    descEN: "Supervision of monthly accounting entries, payroll processing for Senegalese staff, preparation of tax and social security declarations.",
+    tags: ["Dakar", "CDI", "On-site"],
+    salary: "450 000 FCFA / mois"
+  },
+  {
+    id: 4,
+    titleFR: "Chargé de Clientèle & Support Utilisateurs",
+    titleEN: "Customer Support Associate",
+    company: "Wave Mobile Money",
+    logoColor: "bg-sky-400",
+    initials: "W",
+    location: "Thies",
+    timeFR: "Il y a 2 jours",
+    timeEN: "2 days ago",
+    contract: "CDD",
+    descFR: "Fournir une assistance téléphonique rapide et claire aux agents et utilisateurs de l'application Wave. Résolution d'incidents techniques de niveau 1.",
+    descEN: "Provide quick and clear phone assistance to agents and users of the Wave app. Resolution of level 1 technical incidents.",
+    tags: ["Thies", "CDD", "Plein temps"],
+    salary: "280 000 FCFA / mois"
+  },
+  {
+    id: 5,
+    titleFR: "Assistant Administratif H/F",
+    titleEN: "Administrative Assistant M/F",
+    company: "Bred Sénégal",
+    logoColor: "bg-indigo-600",
+    initials: "BS",
+    location: "Dakar",
+    timeFR: "Il y a 3 jours",
+    timeEN: "3 days ago",
+    contract: "CDD",
+    descFR: "Secrétariat classique, accueil des partenaires, gestion de l'agenda de la direction générale et organisation logistique des déplacements d'affaires.",
+    descEN: "Classic secretarial duties, welcoming partners, managing executive schedule, and logistical organization of business travel.",
+    tags: ["Dakar", "CDD", "Office"],
+    salary: "250 000 FCFA / mois"
+  }
 ];
 
 export default function Home() {
@@ -164,10 +250,15 @@ export default function Home() {
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
 
-  // Search System
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchFocused, setSearchFocused] = useState(false);
+  // CV Required Apply Modal
+  const [noCvModalOpen, setNoCvModalOpen] = useState(false);
+  const [selectedJobToApply, setSelectedJobToApply] = useState(null);
+
+  // Search and Filter States for Job Board
+  const [jobs, setJobs] = useState(initialJobs);
+  const [keyword, setKeyword] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [contractFilter, setContractFilter] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -193,22 +284,41 @@ export default function Home() {
     }, 3500);
   };
 
-  // --- RECHERCHE EN TEMPS RÉEL ---
+  // --- FILTRAGE DES OFFRES D'EMPLOI ---
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    const query = searchQuery.toLowerCase();
-    const filtered = slides.filter(slide => {
-      const title = (selectedLang === "FR" ? slide.titleFR : slide.titleEN).toLowerCase();
-      const desc = (selectedLang === "FR" ? slide.descFR : slide.descEN).toLowerCase();
-      return title.includes(query) || desc.includes(query);
-    });
-    setSearchResults(filtered);
-  }, [searchQuery, selectedLang]);
+    let filtered = initialJobs;
 
-  const handleSearchResultClick = (slide) => {
+    // Filtre mot-clé (titre ou entreprise ou description)
+    if (keyword.trim()) {
+      const key = keyword.toLowerCase();
+      filtered = filtered.filter(job => {
+        const title = (selectedLang === "FR" ? job.titleFR : job.titleEN).toLowerCase();
+        const desc = (selectedLang === "FR" ? job.descFR : job.descEN).toLowerCase();
+        return title.includes(key) || job.company.toLowerCase().includes(key) || desc.includes(key);
+      });
+    }
+
+    // Filtre Localisation
+    if (locationFilter) {
+      filtered = filtered.filter(job => job.location.toLowerCase() === locationFilter.toLowerCase());
+    }
+
+    // Filtre Contrat
+    if (contractFilter) {
+      filtered = filtered.filter(job => job.contract.toLowerCase() === contractFilter.toLowerCase());
+    }
+
+    setJobs(filtered);
+  }, [keyword, locationFilter, contractFilter, selectedLang]);
+
+  const handleApplyClick = (job) => {
+    setSelectedJobToApply(job);
+    setNoCvModalOpen(true);
+  };
+
+  const handleConfirmApply = () => {
+    setNoCvModalOpen(false);
+    // Redirect to services page where they can choose a template to create their CV
     window.location.href = "/service";
   };
 
@@ -285,11 +395,12 @@ export default function Home() {
       if (e.key === "Escape") {
         if (contactModalOpen) handleCloseModal();
         if (recruitmentModalOpen) handleCloseRecruitmentModal();
+        if (noCvModalOpen) setNoCvModalOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [contactModalOpen, recruitmentModalOpen]);
+  }, [contactModalOpen, recruitmentModalOpen, noCvModalOpen]);
 
   return (
     <>
@@ -314,7 +425,7 @@ export default function Home() {
           <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
         </div>
 
-        {/* Barre de recherche Desktop */}
+        {/* Barre de recherche de la Navbar (recherche d'offres directement) */}
         <div className="hidden md:block relative w-64 lg:w-80 mx-4">
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
@@ -322,48 +433,12 @@ export default function Home() {
             </span>
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
               placeholder={t.searchPlaceholder}
             />
           </div>
-          {/* Résultats de recherche flottants */}
-          {searchFocused && searchQuery && (
-            <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-[100]">
-              <div className="py-2 max-h-60 overflow-y-auto">
-                {searchResults.length > 0 ? (
-                  searchResults.map((slide) => (
-                    <button
-                      key={slide.id}
-                      onMouseDown={() => handleSearchResultClick(slide)}
-                      className="w-full px-4 py-2 hover:bg-gray-50 flex items-center space-x-3 text-left transition cursor-pointer"
-                    >
-                      <img
-                        src={`/${slide.img}`}
-                        alt={selectedLang === "FR" ? slide.titleFR : slide.titleEN}
-                        className="w-8 h-10 object-cover rounded bg-gray-100 border border-gray-200"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-gray-900 truncate">
-                          {selectedLang === "FR" ? slide.titleFR : slide.titleEN}
-                        </p>
-                        <p className="text-[10px] text-gray-500 truncate">
-                          {selectedLang === "FR" ? slide.descFR : slide.descEN}
-                        </p>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-4 py-3 text-xs text-gray-500 text-center font-medium">
-                    {t.searchNoResults}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Liens Desktop */}
@@ -374,7 +449,7 @@ export default function Home() {
               e.preventDefault();
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
-            className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-semibold"
+            className="flex items-center space-x-2 text-[#10E688] hover:text-[#0fd57d] transition font-bold"
           >
             <img src="/accueil.png" alt="Accueil" className="w-5 h-5 object-contain" />
             <span>{t.navHome}</span>
@@ -423,57 +498,6 @@ export default function Home() {
             mobileMenuOpen ? "flex" : "hidden"
           }`}
         >
-          {/* Barre de recherche Mobile */}
-          <div className="relative w-full px-1">
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
-                <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
-                placeholder={t.searchPlaceholder}
-              />
-            </div>
-            {/* Résultats de recherche flottants Mobile */}
-            {searchFocused && searchQuery && (
-              <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-[100]">
-                <div className="py-2 max-h-48 overflow-y-auto">
-                  {searchResults.length > 0 ? (
-                    searchResults.map((slide) => (
-                      <button
-                        key={slide.id}
-                        onMouseDown={() => handleSearchResultClick(slide)}
-                        className="w-full px-4 py-2 hover:bg-gray-50 flex items-center space-x-3 text-left transition cursor-pointer"
-                      >
-                        <img
-                          src={`/${slide.img}`}
-                          alt={selectedLang === "FR" ? slide.titleFR : slide.titleEN}
-                          className="w-8 h-10 object-cover rounded bg-gray-100 border border-gray-200"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-gray-900 truncate">
-                            {selectedLang === "FR" ? slide.titleFR : slide.titleEN}
-                          </p>
-                          <p className="text-[10px] text-gray-500 truncate">
-                            {selectedLang === "FR" ? slide.descFR : slide.descEN}
-                          </p>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 py-3 text-xs text-gray-500 text-center font-medium">
-                      {t.searchNoResults}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
           <a
             href="#"
             onClick={(e) => {
@@ -481,7 +505,7 @@ export default function Home() {
               setMobileMenuOpen(false);
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
-            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-semibold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-[#10E688] font-bold p-3 rounded-xl hover:bg-white/60"
           >
             <img src="/accueil.png" alt="Accueil" className="w-6 h-6 object-contain" />
             <span>{t.navHome}</span>
@@ -520,125 +544,247 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Gateway Page Content */}
-      <main className="flex-grow pt-[52px] bg-white">
-        
-        {/* Cinematic Hero Section */}
-        <section className="relative overflow-hidden py-20 lg:py-32 px-6 md:px-12 bg-linear-to-b from-[#FAF6F1] to-white border-b border-gray-100">
-          <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+      {/* Main Job Board Feed (LinkedIn Style) */}
+      <main className="min-h-screen bg-[#F4F2EE] pt-[76px] pb-16 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 items-start">
+          
+          {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
+          <aside className="w-full lg:w-1/4 flex flex-col space-y-4">
             
-            {/* Text Box */}
-            <div className="w-full lg:w-1/2 flex flex-col space-y-6 text-left">
-              <div className="inline-flex items-center space-x-2 bg-emerald-50 border border-emerald-200/80 px-3.5 py-1.5 rounded-full text-emerald-800 text-xs font-bold w-fit shadow-xs">
-                <span className="w-1.5 h-1.5 bg-[#10E688] rounded-full animate-ping"></span>
-                <span>{t.gatewayPre}</span>
+            {/* Carte Profil */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
+              {/* Image de couverture en hauteur (Ciel étoilé avec lune comme dans la capture) */}
+              <div
+                className="h-20 bg-cover bg-center bg-no-repeat relative"
+                style={{ backgroundImage: "url('/stellar-cover.png')" }}
+              >
+                {/* Fallback color gradient if cover image is not loaded */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-indigo-950 opacity-90"></div>
               </div>
               
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 tracking-tight leading-none">
-                {t.gatewayTitleStart}
-                <span className="relative inline-block text-gray-900">
-                  <span className="relative z-10">{t.gatewayTitleHighlight}</span>
-                  <span className="absolute bottom-1 left-0 w-full h-3 bg-[#10E688]/40 -skew-x-6 z-0"></span>
-                </span>
-              </h1>
-              
-              <p className="text-gray-600 text-base md:text-lg leading-relaxed font-medium max-w-xl">
-                {t.gatewayDesc}
-              </p>
-
-              {/* CTAs */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
-                <Link
-                  href="/service"
-                  className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-4 px-8 rounded-2xl text-center text-sm transition-all shadow-[0_6px_20px_rgba(16,230,136,0.3)] hover:shadow-[0_8px_24px_rgba(16,230,136,0.45)] hover:-translate-y-0.5"
+              <div className="px-4 pb-6 pt-0 relative flex flex-col items-center text-center">
+                {/* Photo de profil (Logo Facilite avec bord blanc chevauchant la couverture) */}
+                <div className="-mt-11 mb-3.5 relative z-10 w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden bg-white">
+                  <img
+                    src="/logo.jpeg"
+                    alt="Facilite Logo Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                
+                <h2 className="text-lg font-extrabold text-gray-900">{t.profileTitle}</h2>
+                <p className="text-xs text-gray-500 font-semibold mt-1">{t.profileSubtitle}</p>
+                <p className="text-[10px] text-gray-400 font-medium mt-0.5 mb-4">{t.profileLocation}</p>
+                
+                {/* Bouton Ajouter Expérience */}
+                <button
+                  onClick={() => triggerToast("Expérience ajoutée au profil temporaire.", "fa-user-plus")}
+                  className="w-full border border-dashed border-gray-400 hover:border-blue-600 text-gray-700 hover:text-blue-600 font-extrabold py-2 px-4 rounded-lg text-xs transition flex items-center justify-center space-x-2 cursor-pointer bg-white"
                 >
-                  {t.gatewayCTA1}
-                </Link>
-                <Link
-                  href="/service#section-tarification"
-                  className="bg-[#E4B8F9]/60 hover:bg-[#E4B8F9]/90 text-purple-950 font-extrabold py-4 px-8 rounded-2xl text-center text-sm transition-all hover:-translate-y-0.5 border border-purple-200/30"
-                >
-                  {t.gatewayCTA2}
-                </Link>
-              </div>
-
-              {/* Online pulse indicators */}
-              <div className="flex items-center space-x-3.5 pt-4 text-xs font-bold text-gray-500">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10E688] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#10E688]"></span>
-                </span>
-                <span>{t.gatewaySocialCount}</span>
+                  <span>{t.profileExperienceBtn}</span>
+                </button>
               </div>
             </div>
 
-            {/* Premium visual image column */}
-            <div className="w-full lg:w-1/2 flex justify-center">
-              <div className="relative max-w-md md:max-w-lg lg:max-w-full">
-                <div className="absolute -inset-1.5 bg-gradient-to-r from-[#10E688] to-[#E4B8F9] rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-40 transition duration-1000 animate-tilt"></div>
-                <div className="relative bg-white border border-gray-100 p-3 rounded-[2.5rem] shadow-2xl">
-                  <img
-                    src="/accueil.jpeg"
-                    alt="Facilite Dashboard Preview"
-                    className="rounded-[2rem] w-full object-cover shadow-inner max-h-[450px]"
-                  />
+            {/* Carte Statistiques */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">{t.statsTitle}</h3>
+                <i className="fa-solid fa-chevron-right text-gray-400 text-xs cursor-pointer"></i>
+              </div>
+              <div className="space-y-3.5 font-bold text-xs">
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-gray-500">{t.statsViews}</span>
+                  <span className="text-blue-600 font-extrabold text-sm">5</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-t border-gray-100">
+                  <span className="text-gray-500">{t.statsImpressions}</span>
+                  <span className="text-blue-600 font-extrabold text-sm">2</span>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
 
-        {/* Reassurance Banner */}
-        <section className="w-full bg-[#E3DBCC] py-3.5 px-6 text-center select-none">
-          <p className="text-xs md:text-sm font-bold text-gray-800">
-            {t.gatewayReassurance}
-            <span className="text-[10px] text-gray-500 block sm:inline sm:ml-1 font-medium">{t.gatewayReassuranceFootnote}</span>
-          </p>
-        </section>
-
-        {/* Highlights Section */}
-        <section className="py-20 px-6 md:px-12 max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
-              {t.whyTitle}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Card 1 */}
-            <div className="bg-white rounded-3xl p-8 border border-gray-150 shadow-md hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#10E688] flex items-center justify-center border border-emerald-100 shadow-xs">
-                <i className="fa-solid fa-layer-group text-xl"></i>
+            {/* Carte Premium Promotion (Avec carré orange) */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col space-y-2.5">
+              <div className="flex items-center space-x-2">
+                {/* Carré orange décoratif comme dans la capture */}
+                <div className="w-4 h-4 bg-amber-500 rounded-sm flex-shrink-0 flex items-center justify-center text-[10px] text-white font-black">
+                  P
+                </div>
+                <span className="text-xs font-bold text-gray-500">{t.premiumPromoTitle}</span>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">{t.whyCard1Title}</h3>
-              <p className="text-sm text-gray-500 font-medium leading-relaxed flex-grow">
-                {t.whyCard1Desc}
+              <p className="text-xs font-black text-gray-800 hover:text-blue-600 cursor-pointer transition">
+                {t.premiumPromoText}
               </p>
             </div>
 
-            {/* Card 2 */}
-            <div className="bg-white rounded-3xl p-8 border border-gray-150 shadow-md hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-500 flex items-center justify-center border border-purple-100 shadow-xs">
-                <i className="fa-solid fa-pen-nib text-xl"></i>
+          </aside>
+
+          {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
+          <section className="w-full lg:w-2/4 flex flex-col space-y-4">
+            
+            {/* Barre de Recherche Intégrée au Flux */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col space-y-3.5">
+              <h3 className="text-sm font-extrabold text-gray-900">{t.jobBoardTitle}</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                {/* Mot-clé */}
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i className="fa-solid fa-magnifying-glass text-gray-400 text-xs"></i>
+                  </span>
+                  <input
+                    type="text"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    placeholder={t.searchJobPlaceholder}
+                    className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-900 focus:outline-none focus:border-blue-600 transition"
+                  />
+                </div>
+                
+                {/* Localisation */}
+                <div className="relative">
+                  <select
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:outline-none focus:border-blue-600 transition appearance-none cursor-pointer"
+                  >
+                    <option value="">{t.allLocations}</option>
+                    <option value="dakar">Dakar</option>
+                    <option value="pikine">Pikine</option>
+                    <option value="thies">Thies</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-500 text-[10px]">
+                    <i className="fa-solid fa-chevron-down"></i>
+                  </div>
+                </div>
+
+                {/* Contrat */}
+                <div className="relative">
+                  <select
+                    value={contractFilter}
+                    onChange={(e) => setContractFilter(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:outline-none focus:border-blue-600 transition appearance-none cursor-pointer"
+                  >
+                    <option value="">{t.allContracts}</option>
+                    <option value="cdi">CDI</option>
+                    <option value="cdd">CDD</option>
+                    <option value="stage">Stage</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-500 text-[10px]">
+                    <i className="fa-solid fa-chevron-down"></i>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">{t.whyCard2Title}</h3>
-              <p className="text-sm text-gray-500 font-medium leading-relaxed flex-grow">
-                {t.whyCard2Desc}
-              </p>
             </div>
 
-            {/* Card 3 */}
-            <div className="bg-white rounded-3xl p-8 border border-gray-150 shadow-md hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center border border-blue-100 shadow-xs">
-                <i className="fa-solid fa-bolt text-xl"></i>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900">{t.whyCard3Title}</h3>
-              <p className="text-sm text-gray-500 font-medium leading-relaxed flex-grow">
-                {t.whyCard3Desc}
-              </p>
+            {/* Liste des Offres d'emploi */}
+            <div className="space-y-4">
+              {jobs.length > 0 ? (
+                jobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs hover:shadow-md transition duration-300 flex flex-col space-y-4"
+                  >
+                    {/* Header Offre */}
+                    <div className="flex items-start space-x-3.5">
+                      {/* Logo Entreprise (Initiale dans un carré de couleur) */}
+                      <div className={`w-11 h-11 rounded-lg ${job.logoColor} flex items-center justify-center text-white font-extrabold text-sm shadow-xs flex-shrink-0`}>
+                        {job.initials}
+                      </div>
+                      
+                      <div className="flex-grow min-w-0">
+                        <h4 className="text-sm font-extrabold text-gray-900 leading-snug">
+                          {selectedLang === "FR" ? job.titleFR : job.titleEN}
+                        </h4>
+                        <p className="text-xs text-gray-700 font-bold mt-0.5">{job.company}</p>
+                        <p className="text-[10px] text-gray-400 font-medium mt-0.5 flex items-center space-x-1.5">
+                          <span>{job.location}</span>
+                          <span>•</span>
+                          <span>{selectedLang === "FR" ? job.timeFR : job.timeEN}</span>
+                        </p>
+                      </div>
+
+                      {/* Badge Contrat */}
+                      <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase">
+                        {job.contract}
+                      </span>
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-xs text-gray-600 font-semibold leading-relaxed">
+                      {selectedLang === "FR" ? job.descFR : job.descEN}
+                    </p>
+
+                    {/* Footer Offre */}
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-2">
+                      <span className="text-xs font-black text-gray-800 bg-gray-50 border border-gray-150 px-3 py-1.5 rounded-lg">
+                        💰 {job.salary}
+                      </span>
+                      
+                      <button
+                        onClick={() => handleApplyClick(job)}
+                        className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
+                      >
+                        <i className="fa-regular fa-paper-plane text-xs"></i>
+                        <span>{t.applyNow}</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-xs text-gray-500 font-bold shadow-xs">
+                  <i className="fa-solid fa-folder-open text-3xl text-gray-300 mb-2"></i>
+                  <p>{t.searchNoResults}</p>
+                </div>
+              )}
             </div>
-          </div>
-        </section>
+
+          </section>
+
+          {/* --- COLONNE DE DROITE : Offres recommandées & Publicité --- */}
+          <aside className="w-full lg:w-1/4 flex flex-col space-y-4">
+            
+            {/* Offres Recommandées */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs">
+              <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider mb-4">{t.trendingJobsTitle}</h3>
+              
+              <div className="space-y-4 font-bold text-xs">
+                {initialJobs.slice(0, 3).map((job) => (
+                  <div
+                    key={`trend-${job.id}`}
+                    onClick={() => handleApplyClick(job)}
+                    className="group cursor-pointer flex flex-col space-y-1 hover:bg-gray-50 p-2 rounded-lg transition"
+                  >
+                    <span className="text-gray-950 font-extrabold group-hover:text-blue-600 transition truncate">
+                      {selectedLang === "FR" ? job.titleFR : job.titleEN}
+                    </span>
+                    <span className="text-gray-500 text-[10px]">{job.company} — {job.location}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Aide et raccourcis rapides */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs text-center flex flex-col items-center space-y-3.5">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
+                <i className="fa-regular fa-lightbulb text-lg"></i>
+              </div>
+              <h4 className="text-xs font-extrabold text-gray-800">Prêt pour votre candidature ?</h4>
+              <p className="text-[10px] text-gray-500 leading-relaxed font-semibold">
+                Utilisez nos services de création pour générer des CV percutants optimisés pour les recruteurs.
+              </p>
+              <Link
+                href="/service"
+                className="w-full bg-[#E4B8F9] hover:bg-[#db9ff7] text-purple-950 font-extrabold py-2 px-4 rounded-lg text-[10px] transition text-center shadow-xs cursor-pointer"
+              >
+                Concevoir mon CV
+              </Link>
+            </div>
+
+          </aside>
+
+        </div>
       </main>
 
       {/* Footer Éléments Sombre & Informations */}
@@ -747,6 +893,54 @@ export default function Home() {
           <p>{t.footerCopyright}</p>
         </div>
       </footer>
+
+      {/* Modal 1: CV Requis pour postuler */}
+      {noCvModalOpen && (
+        <div
+          className="fixed inset-0 z-[600] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4"
+          onClick={(e) => {
+            if (e.target.id === "nocv-modal-wrapper") setNoCvModalOpen(false);
+          }}
+          id="nocv-modal-wrapper"
+        >
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 md:p-8 relative shadow-2xl transition-all duration-300 flex flex-col border border-gray-100 animate-fade-in-up text-center space-y-6">
+            <button
+              onClick={() => setNoCvModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+            >
+              <i className="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center border border-amber-100 shadow-xs mx-auto">
+              <i className="fa-solid fa-circle-exclamation text-3xl"></i>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-extrabold text-gray-900">{t.noCvTitle}</h3>
+              <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                {t.createCvRequired}
+              </p>
+            </div>
+
+            {selectedJobToApply && (
+              <div className="p-3 bg-gray-50 border border-gray-150 rounded-xl text-left">
+                <span className="text-[10px] font-bold text-gray-400 block uppercase">Poste sélectionné</span>
+                <span className="text-xs font-extrabold text-gray-800 block">
+                  {selectedLang === "FR" ? selectedJobToApply.titleFR : selectedJobToApply.titleEN}
+                </span>
+                <span className="text-[10px] font-bold text-gray-500 block">{selectedJobToApply.company}</span>
+              </div>
+            )}
+
+            <button
+              onClick={handleConfirmApply}
+              className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all shadow-[0_6px_16px_rgba(16,230,136,0.3)] hover:shadow-[0_8px_20px_rgba(16,230,136,0.4)] cursor-pointer"
+            >
+              {t.createCvBtn}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal 2: Contactez-nous */}
       {contactModalOpen && (
