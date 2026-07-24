@@ -648,7 +648,7 @@ export default function Home() {
       </nav>
 
       {/* Main Job Board Feed (LinkedIn Style) */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-[76px] pb-16 px-4 md:px-8">
+      <main className="min-h-screen bg-[#F4F2EE] pt-[76px] pb-16 px-4">
         <div className="max-w-[1128px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
@@ -665,9 +665,9 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-indigo-950 opacity-90"></div>
               </div>
               
-              <div className="px-4 pb-6 pt-0 relative flex flex-col items-start text-left">
+              <div className="px-4 pb-4 pt-0 relative flex flex-col items-start text-left">
                 {/* Photo de profil (Logo Facilite avec bord blanc chevauchant la couverture) */}
-                <div className="-mt-11 mb-3.5 relative z-10 w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden bg-white">
+                <div className="-mt-8 mb-2.5 relative z-10 w-16 h-16 rounded-full border-2 border-white shadow-sm overflow-hidden bg-white">
                   <img
                     src="/logo.jpeg"
                     alt="Facilite Logo Profile"
@@ -675,15 +675,22 @@ export default function Home() {
                   />
                 </div>
                 
-                <h2 className="text-lg font-extrabold text-gray-900">{t.profileTitle}</h2>
-                <p className="text-xs text-gray-500 font-semibold mt-1">{t.profileSubtitle}</p>
-                <p className="text-[10px] text-gray-400 font-medium mt-0.5 mb-4">{t.profileLocation}</p>
+                <h2 className="text-base font-extrabold text-gray-900 leading-snug">{t.profileTitle}</h2>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">{t.profileSubtitle}</p>
+                <p className="text-[11px] text-gray-400 font-normal mt-0.5 mb-2.5">{t.profileLocation}</p>
                 
+                {/* Micro badge entreprise comme LinkedIn */}
+                <div className="flex items-center space-x-1.5 text-xs text-gray-700 font-bold mb-3">
+                  <img src="/logo.jpeg" alt="facilite logo" className="w-3.5 h-3.5 rounded-xs object-cover" />
+                  <span>facilite</span>
+                </div>
+
                 {/* Bouton Ajouter Expérience */}
                 <button
                   onClick={() => setExperienceModalOpen(true)}
-                  className="w-full border border-dashed border-gray-400 hover:border-blue-600 text-gray-700 hover:text-blue-600 font-extrabold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-2 cursor-pointer bg-white"
+                  className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-1.5 px-3 rounded-full text-xs transition flex items-center justify-center space-x-1.5 cursor-pointer bg-white"
                 >
+                  <i className="fa-solid fa-plus text-[10px] text-gray-500"></i>
                   <span>{t.profileExperienceBtn}</span>
                 </button>
               </div>

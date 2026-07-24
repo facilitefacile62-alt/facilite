@@ -516,8 +516,8 @@ export default function BoiteAIdees() {
       <main className="flex-grow pt-[52px] bg-white">
         
         {/* Banner Section */}
-        <section className="w-full bg-[#E2ECE9]/70 py-12 px-6 md:px-12 border-b border-gray-200/50 relative overflow-hidden">
-          <div className="max-w-7xl mx-auto flex justify-between items-center relative z-10">
+        <section className="w-full bg-[#E2ECE9]/70 py-12 px-4 border-b border-gray-200/50 relative overflow-hidden">
+          <div className="max-w-[1128px] mx-auto flex justify-between items-center relative z-10">
             <div className="flex flex-col space-y-2">
               <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Boîte à idées</h1>
               <div className="flex items-center space-x-2 text-xs md:text-sm text-gray-500 font-semibold">
@@ -538,7 +538,7 @@ export default function BoiteAIdees() {
         </section>
 
         {/* Content Area */}
-        <section className="max-w-7xl mx-auto px-6 py-16 md:py-24 flex flex-col lg:flex-row gap-12 lg:gap-20 items-stretch">
+        <section className="max-w-[1128px] mx-auto px-4 py-16 md:py-24 flex flex-col lg:flex-row gap-12 lg:gap-20 items-stretch">
           
           {/* Left Column */}
           <div className="w-full lg:w-1/2 flex flex-col justify-center space-y-8">

@@ -875,7 +875,7 @@ export default function Home() {
       <main className="flex-grow flex flex-col pt-[52px]">
         
         {/* Section Hero */}
-        <section className="flex-grow flex flex-col md:flex-row items-center justify-center px-4 py-12 md:py-16 md:px-12 max-w-7xl mx-auto gap-12 lg:gap-20 w-full">
+        <section className="flex-grow flex flex-col md:flex-row items-center justify-center px-4 py-12 md:py-16 max-w-[1128px] mx-auto gap-12 lg:gap-20 w-full">
           {/* Contenu Texte */}
           <div className="w-full md:w-1/2 flex flex-col space-y-8 animate-fade-in-up">
             <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.15] text-gray-900">
