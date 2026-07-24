@@ -349,38 +349,53 @@ export default function BoiteAIdees() {
           )}
         </div>
 
-        {/* Liens Desktop */}
-        <div className="hidden md:flex items-center space-x-6 text-sm">
-          <Link href="/" className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-bold">
-            <img src="/accueil.png" alt="Accueil" className="w-5 h-5 object-contain" />
-            <span>{t.navHome}</span>
+        {/* Liens Desktop (Style LinkedIn : Icône au-dessus du texte) */}
+        <div className="hidden md:flex items-center space-x-6">
+          {/* Accueil */}
+          <Link
+            href="/"
+            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+          >
+            <i className="fa-solid fa-house text-xl"></i>
+            <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
           </Link>
+          
+          {/* Service */}
           <Link
             href="/service"
-            className="flex items-center space-x-2 text-gray-700 hover:text-[#10E688] transition font-bold"
+            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
           >
-            <i className="fa-solid fa-briefcase text-lg text-gray-500 hover:text-[#10E688]"></i>
-            <span>{t.navService}</span>
+            <i className="fa-solid fa-briefcase text-xl"></i>
+            <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
           </Link>
+
+          {/* Recrutement Spontané */}
           <a
             href="#"
             onClick={handleOpenRecruitmentModal}
-            className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-bold"
+            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
           >
-            <i className="fa-solid fa-user-tie text-lg text-gray-500 hover:text-purple-600"></i>
-            <span>{t.navRecruitment}</span>
+            <i className="fa-solid fa-user-tie text-xl"></i>
+            <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
           </a>
+
+          {/* Contactez-nous */}
           <a
             href="#"
             onClick={handleOpenModal}
-            className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-bold"
+            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
           >
-            <i className="fa-regular fa-comment-dots text-lg text-gray-500 hover:text-blue-600"></i>
-            <span>{t.navContact}</span>
+            <i className="fa-regular fa-comment-dots text-xl"></i>
+            <span className="text-[11px] font-bold tracking-tight">Contact</span>
           </a>
-          <a href="#" className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-bold">
-            <i className="fa-regular fa-user text-lg text-gray-500 hover:text-purple-600"></i>
-            <span>{t.navLogin}</span>
+
+          {/* Se connecter */}
+          <a
+            href="#"
+            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+          >
+            <i className="fa-regular fa-user text-xl"></i>
+            <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
           </a>
         </div>
 
