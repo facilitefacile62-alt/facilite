@@ -355,13 +355,13 @@ export default function BoiteAIdees() {
             <img src="/accueil.png" alt="Accueil" className="w-5 h-5 object-contain" />
             <span>{t.navHome}</span>
           </Link>
-          <a
-            href="/#section-models"
+          <Link
+            href="/service"
             className="flex items-center space-x-2 text-gray-700 hover:text-[#10E688] transition font-semibold"
           >
             <i className="fa-solid fa-briefcase text-lg text-[#10E688]"></i>
             <span>{t.navService}</span>
-          </a>
+          </Link>
           <a
             href="#"
             onClick={handleOpenRecruitmentModal}
@@ -458,14 +458,14 @@ export default function BoiteAIdees() {
             <img src="/accueil.png" alt="Accueil" className="w-6 h-6 object-contain" />
             <span>{t.navHome}</span>
           </Link>
-          <a
-            href="/#section-models"
+          <Link
+            href="/service"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-semibold p-3 rounded-xl hover:bg-white/60"
           >
             <i className="fa-solid fa-briefcase text-xl w-6 text-[#10E688]"></i>
             <span>{t.navService}</span>
-          </a>
+          </Link>
           <a
             href="#"
             onClick={handleOpenRecruitmentModal}
