@@ -1297,6 +1297,12 @@ export default function Home() {
               >
                 Contact
               </a>
+              <a
+                href="/boite-a-idees"
+                className="hover:text-[#10E688] transition-colors"
+              >
+                Boîte à idées
+              </a>
             </div>
           </div>
 

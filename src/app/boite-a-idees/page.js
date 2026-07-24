@@ -259,6 +259,9 @@ export default function BoiteAIdees() {
               <Link href="/" className="hover:text-[#10E688] transition-colors">
                 Contact
               </Link>
+              <Link href="/boite-a-idees" className="hover:text-[#10E688] transition-colors">
+                Boîte à idées
+              </Link>
             </div>
           </div>
 
