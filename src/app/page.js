@@ -242,7 +242,7 @@ export default function Home() {
   const [expCompany, setExpCompany] = useState("");
   const [expLocation, setExpLocation] = useState("");
   const [expLocationType, setExpLocationType] = useState("Sur site");
-  const [expEmploymentType, setExpEmploymentType] = useState("CDI");
+  const [expEmploymentType, setExpEmploymentType] = useState("Temps plein");
   const [expIsCurrent, setExpIsCurrent] = useState(true);
   const [expStartMonth, setExpStartMonth] = useState("juillet");
   const [expStartYear, setExpStartYear] = useState("2026");
@@ -332,7 +332,7 @@ export default function Home() {
     setExpCompany("");
     setExpLocation("");
     setExpLocationType("Sur site");
-    setExpEmploymentType("CDI");
+    setExpEmploymentType("Temps plein");
     setExpIsCurrent(true);
     setExpStartMonth("juillet");
     setExpStartYear("2026");
@@ -1478,12 +1478,15 @@ export default function Home() {
                     onChange={(e) => setExpEmploymentType(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 transition font-bold text-gray-700 cursor-pointer appearance-none"
                   >
-                    <option value="CDI">CDI</option>
-                    <option value="CDD">CDD</option>
-                    <option value="Stage">Stage</option>
-                    <option value="Alternance">Alternance</option>
-                    <option value="Freelance">Freelance</option>
+                    <option value="">Veuillez sélectionner</option>
+                    <option value="Temps plein">Temps plein</option>
                     <option value="Temps partiel">Temps partiel</option>
+                    <option value="Indépendant">Indépendant</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Contrat">Contrat</option>
+                    <option value="Stage / Alternance">Stage / Alternance</option>
+                    <option value="Apprentissage">Apprentissage</option>
+                    <option value="Saisonnier">Saisonnier</option>
                   </select>
                   <div className="absolute inset-y-0 right-3 pt-6 flex items-center pointer-events-none text-gray-500 text-xs">
                     <i className="fa-solid fa-chevron-down"></i>
