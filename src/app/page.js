@@ -499,7 +499,13 @@ export default function Home() {
         {/* Logo */}
         <div
           className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={() => {
+            if (window.location.pathname === "/") {
+              window.location.reload();
+            } else {
+              window.location.href = "/";
+            }
+          }}
         >
           <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
           <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
@@ -527,7 +533,7 @@ export default function Home() {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              window.scrollTo({ top: 0, behavior: "smooth" });
+              window.location.reload();
             }}
             className="flex flex-col items-center justify-center text-center text-[#10E688] hover:text-[#0fd57d] transition space-y-1 cursor-pointer w-20"
           >
@@ -594,7 +600,7 @@ export default function Home() {
             onClick={(e) => {
               e.preventDefault();
               setMobileMenuOpen(false);
-              window.scrollTo({ top: 0, behavior: "smooth" });
+              window.location.reload();
             }}
             className="flex items-center space-x-3 text-[#10E688] font-bold p-3 rounded-xl hover:bg-white/60"
           >

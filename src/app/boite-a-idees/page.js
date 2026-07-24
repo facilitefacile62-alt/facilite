@@ -292,10 +292,10 @@ export default function BoiteAIdees() {
       {/* Navbar Fixée (#FAF6F1) */}
       <nav className="bg-[#FAF6F1] px-4 py-2.5 md:px-8 flex justify-between items-center shadow-sm fixed top-0 left-0 w-full z-50">
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
+        <a href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
           <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
           <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
-        </Link>
+        </a>
 
         {/* Barre de recherche Desktop */}
         <div className="hidden md:block relative w-64 lg:w-80 mx-4">
@@ -352,13 +352,13 @@ export default function BoiteAIdees() {
         {/* Liens Desktop (Style LinkedIn : Icône au-dessus du texte) */}
         <div className="hidden md:flex items-center space-x-6">
           {/* Accueil */}
-          <Link
+          <a
             href="/"
             className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
           >
             <i className="fa-solid fa-house text-xl"></i>
             <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
-          </Link>
+          </a>
           
           {/* Service */}
           <Link
@@ -465,14 +465,14 @@ export default function BoiteAIdees() {
               </div>
             )}
           </div>
-          <Link
+          <a
             href="/"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-bold p-3 rounded-xl hover:bg-white/60"
           >
             <img src="/accueil.png" alt="Accueil" className="w-6 h-6 object-contain" />
             <span>{t.navHome}</span>
-          </Link>
+          </a>
           <Link
             href="/service"
             onClick={() => setMobileMenuOpen(false)}
