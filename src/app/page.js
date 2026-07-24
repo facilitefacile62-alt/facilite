@@ -758,6 +758,22 @@ export default function Home() {
               </p>
             </div>
 
+            {/* Bouton Déconnexion (Style LinkedIn) */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-start">
+              <button
+                onClick={() => {
+                  triggerToast("Déconnexion réussie ! Redirection...", "fa-right-from-bracket");
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1500);
+                }}
+                className="flex items-center space-x-3 text-[#4A5D78] hover:text-red-600 font-bold text-sm transition cursor-pointer bg-transparent border-none p-0 outline-none w-full text-left"
+              >
+                <i className="fa-solid fa-right-from-bracket text-base"></i>
+                <span>Déconnexion</span>
+              </button>
+            </div>
+
           </aside>
 
           {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
