@@ -440,7 +440,6 @@ export default function Home() {
             />
           </div>
         </div>
-
         {/* Liens Desktop */}
         <div className="hidden md:flex items-center space-x-6 text-sm">
           <a
@@ -456,29 +455,29 @@ export default function Home() {
           </a>
           <Link
             href="/service"
-            className="flex items-center space-x-2 text-gray-700 hover:text-[#10E688] transition font-semibold"
+            className="flex items-center space-x-2 text-gray-700 hover:text-[#10E688] transition font-bold"
           >
-            <i className="fa-solid fa-briefcase text-lg text-[#10E688]"></i>
+            <i className="fa-solid fa-briefcase text-lg text-gray-500 hover:text-[#10E688]"></i>
             <span>{t.navService}</span>
           </Link>
           <a
             href="#"
             onClick={handleOpenRecruitmentModal}
-            className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-semibold"
+            className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-bold"
           >
-            <i className="fa-solid fa-user-tie text-lg text-purple-600"></i>
+            <i className="fa-solid fa-user-tie text-lg text-gray-500 hover:text-purple-600"></i>
             <span>{t.navRecruitment}</span>
           </a>
           <a
             href="#"
             onClick={handleOpenModal}
-            className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-semibold"
+            className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-bold"
           >
-            <i className="fa-regular fa-comment-dots text-lg text-blue-600"></i>
+            <i className="fa-regular fa-comment-dots text-lg text-gray-500 hover:text-blue-600"></i>
             <span>{t.navContact}</span>
           </a>
-          <a href="#" className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-semibold">
-            <i className="fa-regular fa-user text-lg text-purple-600"></i>
+          <a href="#" className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-bold">
+            <i className="fa-regular fa-user text-lg text-gray-500 hover:text-purple-600"></i>
             <span>{t.navLogin}</span>
           </a>
         </div>
@@ -513,32 +512,32 @@ export default function Home() {
           <Link
             href="/service"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-semibold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-bold p-3 rounded-xl hover:bg-white/60"
           >
-            <i className="fa-solid fa-briefcase text-xl w-6 text-[#10E688]"></i>
+            <i className="fa-solid fa-briefcase text-xl w-6 text-gray-500"></i>
             <span>{t.navService}</span>
           </Link>
           <a
             href="#"
             onClick={handleOpenRecruitmentModal}
-            className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-semibold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-bold p-3 rounded-xl hover:bg-white/60"
           >
-            <i className="fa-solid fa-user-tie text-xl w-6 text-purple-600"></i>
+            <i className="fa-solid fa-user-tie text-xl w-6 text-gray-500"></i>
             <span>{t.navRecruitment}</span>
           </a>
           <a
             href="#"
             onClick={handleOpenModal}
-            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-semibold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-bold p-3 rounded-xl hover:bg-white/60"
           >
-            <i className="fa-regular fa-comment-dots text-xl w-6 text-blue-600"></i>
+            <i className="fa-regular fa-comment-dots text-xl w-6 text-gray-500"></i>
             <span>{t.navContact}</span>
           </a>
           <a
             href="#"
-            className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-semibold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-bold p-3 rounded-xl hover:bg-white/60"
           >
-            <i className="fa-regular fa-user text-xl w-6 text-purple-600"></i>
+            <i className="fa-regular fa-user text-xl w-6 text-gray-500"></i>
             <span>{t.navLogin}</span>
           </a>
         </div>

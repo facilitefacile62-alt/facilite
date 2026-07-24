@@ -351,35 +351,35 @@ export default function BoiteAIdees() {
 
         {/* Liens Desktop */}
         <div className="hidden md:flex items-center space-x-6 text-sm">
-          <Link href="/" className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-semibold">
+          <Link href="/" className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-bold">
             <img src="/accueil.png" alt="Accueil" className="w-5 h-5 object-contain" />
             <span>{t.navHome}</span>
           </Link>
           <Link
             href="/service"
-            className="flex items-center space-x-2 text-gray-700 hover:text-[#10E688] transition font-semibold"
+            className="flex items-center space-x-2 text-gray-700 hover:text-[#10E688] transition font-bold"
           >
-            <i className="fa-solid fa-briefcase text-lg text-[#10E688]"></i>
+            <i className="fa-solid fa-briefcase text-lg text-gray-500 hover:text-[#10E688]"></i>
             <span>{t.navService}</span>
           </Link>
           <a
             href="#"
             onClick={handleOpenRecruitmentModal}
-            className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-semibold"
+            className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-bold"
           >
-            <i className="fa-solid fa-user-tie text-lg text-purple-600"></i>
+            <i className="fa-solid fa-user-tie text-lg text-gray-500 hover:text-purple-600"></i>
             <span>{t.navRecruitment}</span>
           </a>
           <a
             href="#"
             onClick={handleOpenModal}
-            className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-semibold"
+            className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-bold"
           >
-            <i className="fa-regular fa-comment-dots text-lg text-blue-600"></i>
+            <i className="fa-regular fa-comment-dots text-lg text-gray-500 hover:text-blue-600"></i>
             <span>{t.navContact}</span>
           </a>
-          <a href="#" className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-semibold">
-            <i className="fa-regular fa-user text-lg text-purple-600"></i>
+          <a href="#" className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-bold">
+            <i className="fa-regular fa-user text-lg text-gray-500 hover:text-purple-600"></i>
             <span>{t.navLogin}</span>
           </a>
         </div>
@@ -453,7 +453,7 @@ export default function BoiteAIdees() {
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-semibold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-bold p-3 rounded-xl hover:bg-white/60"
           >
             <img src="/accueil.png" alt="Accueil" className="w-6 h-6 object-contain" />
             <span>{t.navHome}</span>
