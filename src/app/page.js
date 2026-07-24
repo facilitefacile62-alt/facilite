@@ -765,18 +765,18 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Carte Premium Promotion (Avec carré orange) */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col space-y-2.5">
-              <div className="flex items-center space-x-2">
-                {/* Carré orange décoratif comme dans la capture */}
-                <div className="w-4 h-4 bg-amber-500 rounded-sm flex-shrink-0 flex items-center justify-center text-[10px] text-white font-black">
-                  P
-                </div>
-                <span className="text-xs font-bold text-gray-500">{t.premiumPromoTitle}</span>
-              </div>
-              <p className="text-xs font-black text-gray-800 hover:text-blue-600 cursor-pointer transition">
-                {t.premiumPromoText}
-              </p>
+            {/* Carte Mon profil et mon CV (Mint Green style capture) */}
+            <div
+              className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl p-3.5 px-4 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-3 group"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                triggerToast("Consultation de votre profil et CV...", "fa-user-gear");
+              }}
+            >
+              <i className="fa-regular fa-user text-lg text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
+              <span className="text-sm font-extrabold text-[#047857] tracking-tight">
+                Mon profil et mon CV
+              </span>
             </div>
 
             {/* Bouton Déconnexion (Style LinkedIn) */}
