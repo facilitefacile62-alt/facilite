@@ -6,8 +6,21 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
   FR: {
+    navHome: "Accueil",
+    navService: "Service",
+    navRecruitment: "Recrutement Spontané",
     navContact: "Contactez-nous",
     navLogin: "Se connecter",
+    recruitmentModalTitle: "Recrutement Spontané",
+    recruitmentModalSubtitle: "Envoyez-nous votre profil pour de futures opportunités.",
+    recruitmentLabelCV: "Votre CV (PDF, DOCX)",
+    recruitmentUploadPlaceholder: "Cliquez ou glissez-déposez votre CV ici",
+    recruitmentLabelCoverLetter: "Message d'accompagnement",
+    recruitmentPlaceholderCoverLetter: "Parlez-nous de vos motivations et de vos compétences...",
+    recruitmentSuccessTitle: "Candidature reçue !",
+    recruitmentSuccessDesc: "Nous avons bien reçu votre candidature spontanée. Notre équipe RH l'étudiera avec la plus grande attention.",
+    recruitmentSubmit: "Soumettre ma candidature",
+    recruitmentSending: "Envoi de la candidature...",
     heroSectionNumber: "01",
     heroSectionTitle: "Hero avec titre + bouton CTA",
     heroTitleStart: "Créez ou modifiez votre CV en ",
@@ -93,8 +106,21 @@ const translations = {
     searchNoResults: "Aucun modèle de CV trouvé.",
   },
   GB: {
+    navHome: "Home",
+    navService: "Service",
+    navRecruitment: "Spontaneous Application",
     navContact: "Contact us",
     navLogin: "Sign in",
+    recruitmentModalTitle: "Spontaneous Application",
+    recruitmentModalSubtitle: "Send us your profile for future opportunities.",
+    recruitmentLabelCV: "Your CV (PDF, DOCX)",
+    recruitmentUploadPlaceholder: "Click or drag & drop your CV here",
+    recruitmentLabelCoverLetter: "Cover Message",
+    recruitmentPlaceholderCoverLetter: "Tell us about your motivations and skills...",
+    recruitmentSuccessTitle: "Application Received!",
+    recruitmentSuccessDesc: "We have received your spontaneous application. Our HR team will review it with the utmost care.",
+    recruitmentSubmit: "Submit My Application",
+    recruitmentSending: "Sending Application...",
     heroSectionNumber: "01",
     heroSectionTitle: "Hero with title + CTA button",
     heroTitleStart: "Create or edit your CV in ",
@@ -217,6 +243,61 @@ export default function Home() {
     subject: "",
     message: ""
   });
+
+  // Spontaneous Recruitment Modal
+  const [recruitmentModalOpen, setRecruitmentModalOpen] = useState(false);
+  const [isRecruitmentSubmitting, setIsRecruitmentSubmitting] = useState(false);
+  const [recruitmentFormSubmitted, setRecruitmentFormSubmitted] = useState(false);
+  const [recruitmentFile, setRecruitmentFile] = useState(null);
+  const [recruitmentFormData, setRecruitmentFormData] = useState({
+    name: "",
+    email: "",
+    message: ""
+  });
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setRecruitmentFile(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setRecruitmentFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleOpenRecruitmentModal = (e) => {
+    if (e) e.preventDefault();
+    setRecruitmentModalOpen(true);
+    setMobileMenuOpen(false);
+  };
+
+  const handleCloseRecruitmentModal = () => {
+    setRecruitmentModalOpen(false);
+    setTimeout(() => {
+      setRecruitmentFormSubmitted(false);
+      setIsRecruitmentSubmitting(false);
+      setRecruitmentFile(null);
+      setRecruitmentFormData({ name: "", email: "", message: "" });
+    }, 300);
+  };
+
+  const handleRecruitmentSubmit = (e) => {
+    e.preventDefault();
+    setIsRecruitmentSubmitting(true);
+    setTimeout(() => {
+      setIsRecruitmentSubmitting(false);
+      setRecruitmentFormSubmitted(true);
+      triggerToast(t.recruitmentSuccessTitle, "fa-paper-plane");
+    }, 1200);
+  };
 
   // Obtenir le dictionnaire actif
   const t = translations[selectedLang] || translations.FR;
@@ -534,11 +615,12 @@ export default function Home() {
       if (e.key === "Escape") {
         if (previewModalOpen) handleClosePreview();
         if (contactModalOpen) handleCloseModal();
+        if (recruitmentModalOpen) handleCloseRecruitmentModal();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [contactModalOpen, previewModalOpen]);
+  }, [contactModalOpen, previewModalOpen, recruitmentModalOpen]);
 
   return (
     <>
@@ -616,7 +698,38 @@ export default function Home() {
         </div>
 
         {/* Liens Desktop */}
-        <div className="hidden md:flex items-center space-x-8 text-sm">
+        <div className="hidden md:flex items-center space-x-6 text-sm">
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition font-semibold"
+          >
+            <img src="/accueil.png" alt="Accueil" className="w-5 h-5 object-contain" />
+            <span>{t.navHome}</span>
+          </a>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              const section = document.getElementById("section-models");
+              if (section) section.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex items-center space-x-2 text-gray-700 hover:text-[#10E688] transition font-semibold"
+          >
+            <i className="fa-solid fa-briefcase text-lg text-[#10E688]"></i>
+            <span>{t.navService}</span>
+          </a>
+          <a
+            href="#"
+            onClick={handleOpenRecruitmentModal}
+            className="flex items-center space-x-2 text-gray-700 hover:text-purple-600 transition font-semibold"
+          >
+            <i className="fa-solid fa-user-tie text-lg text-purple-600"></i>
+            <span>{t.navRecruitment}</span>
+          </a>
           <a
             href="#"
             onClick={handleOpenModal}
@@ -697,6 +810,39 @@ export default function Home() {
               </div>
             )}
           </div>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              setMobileMenuOpen(false);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-semibold p-3 rounded-xl hover:bg-white/60"
+          >
+            <img src="/accueil.png" alt="Accueil" className="w-6 h-6 object-contain" />
+            <span>{t.navHome}</span>
+          </a>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              setMobileMenuOpen(false);
+              const section = document.getElementById("section-models");
+              if (section) section.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-semibold p-3 rounded-xl hover:bg-white/60"
+          >
+            <i className="fa-solid fa-briefcase text-xl w-6 text-[#10E688]"></i>
+            <span>{t.navService}</span>
+          </a>
+          <a
+            href="#"
+            onClick={handleOpenRecruitmentModal}
+            className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-semibold p-3 rounded-xl hover:bg-white/60"
+          >
+            <i className="fa-solid fa-user-tie text-xl w-6 text-purple-600"></i>
+            <span>{t.navRecruitment}</span>
+          </a>
           <a
             href="#"
             onClick={handleOpenModal}
@@ -1142,25 +1288,69 @@ export default function Home() {
             <p className="text-sm leading-relaxed mb-6 text-gray-400 font-medium">
               {t.footerAboutDesc}
             </p>
+            <h4 className="text-white text-base font-bold mb-3">Liens utiles</h4>
             <div className="flex flex-col space-y-2.5 text-sm font-semibold">
-              <a href="#" className="hover:text-[#10E688] transition-colors">{t.footerAboutUs}</a>
-              <a href="#" className="hover:text-[#10E688] transition-colors">{t.footerPrivacy}</a>
-              <a href="#" className="hover:text-[#10E688] transition-colors">{t.footerTerms}</a>
+              <a
+                href="#"
+                onClick={handleOpenModal}
+                className="hover:text-[#10E688] transition-colors"
+              >
+                Contact
+              </a>
             </div>
           </div>
 
           {/* Colonne 2 : Horaires & Support */}
-          <div className="flex flex-col">
-            <h3 className="text-white text-lg font-bold mb-4">{t.footerSupportTitle}</h3>
-            <div className="flex items-center space-x-3 mb-6">
-              <span className="p-3 bg-gray-900 rounded-full text-[#10E688] border border-gray-800">
+          <div className="flex flex-col space-y-4">
+            <h3 className="text-white text-lg font-bold mb-2">{t.footerSupportTitle}</h3>
+            
+            {/* Téléphone */}
+            <div className="flex items-center space-x-3">
+              <span className="p-2.5 bg-gray-900 rounded-xl text-[#10E688] border border-gray-800 w-11 h-11 flex items-center justify-center">
                 <i className="fa-solid fa-phone text-lg"></i>
               </span>
-              <a href="tel:+221771400832" className="text-white text-2xl font-black hover:text-[#10E688] transition-colors">
+              <a href="tel:+221771400832" className="text-white text-xl font-black hover:text-[#10E688] transition-colors">
                 +221 77 140 08 32
               </a>
             </div>
-            <div className="space-y-3 text-sm font-medium">
+
+            {/* WhatsApp */}
+            <div className="flex items-center space-x-3">
+              <a
+                href="https://wa.me/message/KQERLEMIO7LKL1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 bg-gray-900 rounded-xl border border-gray-800 w-11 h-11 flex items-center justify-center hover:border-green-500 transition-colors"
+              >
+                <img src="/whtsapp.jpeg" alt="WhatsApp" className="w-full h-full object-cover rounded-lg" />
+              </a>
+              <a
+                href="https://wa.me/message/KQERLEMIO7LKL1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white text-base font-bold hover:text-green-500 transition-colors"
+              >
+                WhatsApp Direct
+              </a>
+            </div>
+
+            {/* Email */}
+            <div className="flex items-center space-x-3 mb-2">
+              <a
+                href="mailto:facilitefacile@gmail.com"
+                className="p-1 bg-gray-900 rounded-xl border border-gray-800 w-11 h-11 flex items-center justify-center hover:border-blue-500 transition-colors"
+              >
+                <img src="/email.png" alt="Email" className="w-full h-full object-contain" />
+              </a>
+              <a
+                href="mailto:facilitefacile@gmail.com"
+                className="text-white text-sm font-bold hover:text-blue-500 transition-colors truncate max-w-[200px]"
+              >
+                facilitefacile@gmail.com
+              </a>
+            </div>
+
+            <div className="space-y-3 text-sm font-medium pt-2">
               <div className="flex justify-between border-b border-gray-800 pb-2">
                 <span className="text-gray-300">{t.footerWeekdays}</span>
                 <span className="text-[#10E688] font-bold">8h - 22h</span>
@@ -1338,9 +1528,29 @@ export default function Home() {
               <>
                 <div className="mb-6">
                   <h3 className="text-2xl font-extrabold text-gray-900 mb-1">{t.modalTitle}</h3>
-                  <p className="text-xs text-gray-500 font-medium">
+                  <p className="text-xs text-gray-500 font-medium mb-4">
                     {t.modalSubtitle}
                   </p>
+                  
+                  {/* Liens de contact direct avec images personnalisées */}
+                  <div className="flex flex-col sm:flex-row gap-3 p-3 bg-gray-50 border border-gray-150 rounded-2xl">
+                    <a
+                      href="https://wa.me/message/KQERLEMIO7LKL1"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center space-x-2.5 bg-white border border-gray-200 hover:border-green-500 hover:shadow-xs p-2.5 rounded-xl transition cursor-pointer"
+                    >
+                      <img src="/whtsapp.jpeg" alt="WhatsApp" className="w-6 h-6 object-cover rounded-md" />
+                      <span className="text-xs font-bold text-gray-700 hover:text-green-600">WhatsApp</span>
+                    </a>
+                    <a
+                      href="mailto:facilitefacile@gmail.com"
+                      className="flex-1 flex items-center justify-center space-x-2.5 bg-white border border-gray-200 hover:border-blue-500 hover:shadow-xs p-2.5 rounded-xl transition cursor-pointer"
+                    >
+                      <img src="/email.png" alt="Email" className="w-6 h-6 object-contain" />
+                      <span className="text-xs font-bold text-gray-700 hover:text-blue-600">Email</span>
+                    </a>
+                  </div>
                 </div>
 
                 <form onSubmit={handleFormSubmit} className="space-y-4">
@@ -1427,6 +1637,161 @@ export default function Home() {
                 </p>
                 <button
                   onClick={handleCloseModal}
+                  className="mt-6 border-2 border-gray-200 text-gray-700 font-extrabold py-2.5 px-8 rounded-xl text-xs hover:bg-gray-50 transition cursor-pointer shadow-xs"
+                >
+                  {t.modalClose}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3: Recrutement Spontané */}
+      {recruitmentModalOpen && (
+        <div
+          className="fixed inset-0 z-[600] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-fade-in-up"
+          onClick={(e) => {
+            if (e.target.id === "recruitment-modal-wrapper") handleCloseRecruitmentModal();
+          }}
+          id="recruitment-modal-wrapper"
+        >
+          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 md:p-8 relative shadow-2xl transition-all duration-300 flex flex-col border border-gray-100 animate-fade-in-up">
+            <button
+              onClick={handleCloseRecruitmentModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+            >
+              <i className="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            {!recruitmentFormSubmitted ? (
+              <>
+                <div className="mb-6">
+                  <h3 className="text-2xl font-extrabold text-gray-900 mb-1">{t.recruitmentModalTitle}</h3>
+                  <p className="text-xs text-gray-500 font-medium">
+                    {t.recruitmentModalSubtitle}
+                  </p>
+                </div>
+
+                <form onSubmit={handleRecruitmentSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1.5">
+                      {t.modalLabelName}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={recruitmentFormData.name}
+                      onChange={(e) => setRecruitmentFormData({ ...recruitmentFormData, name: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition font-medium"
+                      placeholder={t.modalPlaceholderName}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1.5">
+                      {t.modalLabelEmail}
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={recruitmentFormData.email}
+                      onChange={(e) => setRecruitmentFormData({ ...recruitmentFormData, email: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition font-medium"
+                      placeholder={t.modalPlaceholderEmail}
+                    />
+                  </div>
+
+                  {/* Zone de téléversement Drag & Drop */}
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1.5">
+                      {t.recruitmentLabelCV}
+                    </label>
+                    <div
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                      className="border-2 border-dashed border-gray-300 hover:border-[#10E688] rounded-2xl p-6 text-center cursor-pointer bg-gray-50/50 hover:bg-gray-50 transition duration-300"
+                    >
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept=".pdf,.doc,.docx"
+                        className="hidden"
+                        required={!recruitmentFile}
+                      />
+                      {!recruitmentFile ? (
+                        <div className="flex flex-col items-center space-y-2">
+                          <i className="fa-solid fa-cloud-arrow-up text-3xl text-gray-400"></i>
+                          <span className="text-xs text-gray-600 font-semibold">{t.recruitmentUploadPlaceholder}</span>
+                          <span className="text-[10px] text-gray-400">PDF, DOCX jusqu'à 10 Mo</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between bg-white border border-gray-200 p-3 rounded-xl shadow-xs">
+                          <div className="flex items-center space-x-3 text-left">
+                            <i className="fa-regular fa-file-pdf text-red-500 text-2xl"></i>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-gray-800 truncate max-w-[200px]">{recruitmentFile.name}</p>
+                              <p className="text-[10px] text-gray-400">{(recruitmentFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRecruitmentFile(null);
+                            }}
+                            className="text-gray-400 hover:text-red-500 transition p-1 hover:bg-gray-100 rounded-lg"
+                          >
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1.5">
+                      {t.recruitmentLabelCoverLetter}
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={recruitmentFormData.message}
+                      onChange={(e) => setRecruitmentFormData({ ...recruitmentFormData, message: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition resize-none font-medium"
+                      placeholder={t.recruitmentPlaceholderCoverLetter}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isRecruitmentSubmitting}
+                    className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all shadow-[0_6px_16px_rgba(16,230,136,0.3)] hover:shadow-[0_8px_20px_rgba(16,230,136,0.4)] mt-2 flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-75"
+                  >
+                    {isRecruitmentSubmitting ? (
+                      <>
+                        <i className="fa-solid fa-spinner fa-spin text-lg"></i>
+                        <span>{t.recruitmentSending}</span>
+                      </>
+                    ) : (
+                      <span>{t.recruitmentSubmit}</span>
+                    )}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <div className="flex flex-col items-center text-center py-8 animate-fade-in-up">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4 animate-bounce shadow-md">
+                  <i className="fa-solid fa-check text-3xl font-bold"></i>
+                </div>
+                <h4 className="text-2xl font-extrabold text-gray-900 mb-2">{t.recruitmentSuccessTitle}</h4>
+                <p className="text-xs text-gray-500 max-w-xs leading-relaxed font-medium">
+                  {t.recruitmentSuccessDesc}
+                </p>
+                <button
+                  onClick={handleCloseRecruitmentModal}
                   className="mt-6 border-2 border-gray-200 text-gray-700 font-extrabold py-2.5 px-8 rounded-xl text-xs hover:bg-gray-50 transition cursor-pointer shadow-xs"
                 >
                   {t.modalClose}
