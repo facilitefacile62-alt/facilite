@@ -659,25 +659,30 @@ export default function Home() {
             {/* Carte Profil */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
               {/* Image de couverture en hauteur (Ciel étoilé avec lune comme dans la capture) */}
-              <div
-                className="h-20 bg-cover bg-center bg-no-repeat relative"
+              <Link
+                href="/profil"
+                className="h-20 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
                 style={{ backgroundImage: "url('/stellar-cover.png')" }}
               >
-                {/* Fallback color gradient if cover image is not loaded */}
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-indigo-950 opacity-90"></div>
-              </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-indigo-950 opacity-90 group-hover:opacity-75 transition"></div>
+              </Link>
               
               <div className="px-4 pb-5 pt-0 relative flex flex-col items-center text-center">
                 {/* Photo de profil (Logo Facilite avec bord blanc chevauchant la couverture) */}
-                <div className="-mt-10 mb-3 relative z-10 w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden bg-white">
+                <Link
+                  href="/profil"
+                  className="-mt-10 mb-3 relative z-10 w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden bg-white block cursor-pointer group"
+                >
                   <img
                     src="/logo.jpeg"
                     alt="Facilite Logo Profile"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition"
                   />
-                </div>
+                </Link>
                 
-                <h2 className="text-base font-extrabold text-gray-900 leading-snug">{t.profileTitle}</h2>
+                <Link href="/profil" className="group">
+                  <h2 className="text-base font-extrabold text-gray-900 leading-snug group-hover:text-blue-600 transition">{t.profileTitle}</h2>
+                </Link>
                 <p className="text-xs text-gray-500 font-medium mt-0.5">{t.profileSubtitle}</p>
                 <p className="text-[11px] text-gray-400 font-normal mt-0.5 mb-2.5">{t.profileLocation}</p>
                 
@@ -766,18 +771,15 @@ export default function Home() {
             </div>
 
             {/* Carte Mon profil et mon CV (Mint Green style capture) */}
-            <div
-              className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl p-3.5 px-4 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-3 group"
-              onClick={() => {
-                window.scrollTo({ top: 0, behavior: "smooth" });
-                triggerToast("Consultation de votre profil et CV...", "fa-user-gear");
-              }}
+            <Link
+              href="/profil"
+              className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl p-3.5 px-4 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-3 group block"
             >
               <i className="fa-regular fa-user text-lg text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
               <span className="text-sm font-extrabold text-[#047857] tracking-tight">
                 Mon profil et mon CV
               </span>
-            </div>
+            </Link>
 
             {/* Bouton Déconnexion (Style LinkedIn) */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-start">
