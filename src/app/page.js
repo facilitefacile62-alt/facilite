@@ -495,99 +495,105 @@ export default function Home() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 py-2.5 md:px-8 flex justify-between items-center shadow-sm fixed top-0 left-0 w-full z-50">
-        {/* Logo */}
-        <div
-          className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
-          onClick={() => {
-            if (window.location.pathname === "/") {
-              window.location.reload();
-            } else {
-              window.location.href = "/";
-            }
-          }}
-        >
-          <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-          <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
-        </div>
+      <nav className="bg-[#FAF6F1] px-4 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
+        <div className="max-w-[1128px] mx-auto w-full flex items-center justify-between">
+          {/* Logo et Recherche alignés à gauche */}
+          <div className="flex items-center space-x-3 flex-1 md:flex-initial">
+            {/* Logo */}
+            <div
+              className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
+              onClick={() => {
+                if (window.location.pathname === "/") {
+                  window.location.reload();
+                } else {
+                  window.location.href = "/";
+                }
+              }}
+            >
+              <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+            </div>
 
-        {/* Barre de recherche de la Navbar (recherche d'offres directement) */}
-        <div className="hidden md:block relative w-64 lg:w-80 mx-4">
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
-              <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
-            </span>
-            <input
-              type="text"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
-              placeholder={t.searchPlaceholder}
-            />
+            {/* Barre de recherche de la Navbar (recherche d'offres directement) */}
+            <div className="hidden md:block relative w-64 lg:w-72">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                  <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
+                </span>
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
+                  placeholder={t.searchPlaceholder}
+                />
+              </div>
+            </div>
           </div>
+
+          {/* Liens Desktop (Style LinkedIn : Icône au-dessus du texte) */}
+          <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
+            {/* Accueil (Actif sur la page d'accueil) */}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.reload();
+              }}
+              className="flex flex-col items-center justify-center text-center text-[#10E688] hover:text-[#0fd57d] transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-solid fa-house text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
+            </a>
+            
+            {/* Service */}
+            <Link
+              href="/service"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-solid fa-briefcase text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
+            </Link>
+
+            {/* Recrutement Spontané */}
+            <a
+              href="#"
+              onClick={handleOpenRecruitmentModal}
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-solid fa-user-tie text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
+            </a>
+
+            {/* Contactez-nous */}
+            <a
+              href="#"
+              onClick={handleOpenModal}
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-regular fa-comment-dots text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">Contact</span>
+            </a>
+
+            {/* Se connecter */}
+            <a
+              href="#"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-regular fa-user text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
+            </a>
+          </div>
+
+          {/* Bouton Menu Mobile */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden text-gray-700 focus:outline-none hover:text-blue-600 transition"
+            aria-label="Toggle Navigation"
+          >
+            <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-2xl`}></i>
+          </button>
         </div>
-        {/* Liens Desktop (Style LinkedIn : Icône au-dessus du texte) */}
-        <div className="hidden md:flex items-center space-x-6">
-          {/* Accueil (Actif sur la page d'accueil) */}
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.reload();
-            }}
-            className="flex flex-col items-center justify-center text-center text-[#10E688] hover:text-[#0fd57d] transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-solid fa-house text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
-          </a>
-          
-          {/* Service */}
-          <Link
-            href="/service"
-            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-solid fa-briefcase text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
-          </Link>
-
-          {/* Recrutement Spontané */}
-          <a
-            href="#"
-            onClick={handleOpenRecruitmentModal}
-            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-solid fa-user-tie text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
-          </a>
-
-          {/* Contactez-nous */}
-          <a
-            href="#"
-            onClick={handleOpenModal}
-            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-regular fa-comment-dots text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight">Contact</span>
-          </a>
-
-          {/* Se connecter */}
-          <a
-            href="#"
-            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-regular fa-user text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
-          </a>
-        </div>
-
-        {/* Bouton Menu Mobile */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden text-gray-700 focus:outline-none hover:text-blue-600 transition"
-          aria-label="Toggle Navigation"
-        >
-          <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-2xl`}></i>
-        </button>
 
         {/* Menu Déroulant Mobile */}
         <div
@@ -643,10 +649,10 @@ export default function Home() {
 
       {/* Main Job Board Feed (LinkedIn Style) */}
       <main className="min-h-screen bg-[#F4F2EE] pt-[76px] pb-16 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 items-start">
+        <div className="max-w-[1128px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
-          <aside className="w-full lg:w-1/4 flex flex-col space-y-4">
+          <aside className="w-full lg:w-[225px] flex-shrink-0 flex flex-col space-y-4">
             
             {/* Carte Profil */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
@@ -659,7 +665,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-indigo-950 opacity-90"></div>
               </div>
               
-              <div className="px-4 pb-6 pt-0 relative flex flex-col items-center text-center">
+              <div className="px-4 pb-6 pt-0 relative flex flex-col items-start text-left">
                 {/* Photo de profil (Logo Facilite avec bord blanc chevauchant la couverture) */}
                 <div className="-mt-11 mb-3.5 relative z-10 w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden bg-white">
                   <img
@@ -783,7 +789,7 @@ export default function Home() {
           </aside>
 
           {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
-          <section className="w-full lg:w-2/4 flex flex-col space-y-4">
+          <section className="w-full lg:w-[555px] flex-shrink-0 flex flex-col space-y-4">
             
             {/* Barre de Recherche Intégrée au Flux */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col space-y-3.5">
@@ -905,7 +911,7 @@ export default function Home() {
           </section>
 
           {/* --- COLONNE DE DROITE : Offres recommandées & Publicité --- */}
-          <aside className="w-full lg:w-1/4 flex flex-col space-y-4">
+          <aside className="w-full lg:w-[290px] flex-shrink-0 flex flex-col space-y-4">
             
             {/* Offres Recommandées */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs">

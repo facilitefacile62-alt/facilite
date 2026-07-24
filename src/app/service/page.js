@@ -636,131 +636,136 @@ export default function Home() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 py-2.5 md:px-8 flex justify-between items-center shadow-sm fixed top-0 left-0 w-full z-50">
-        {/* Logo */}
-        <a
-          href="/"
-          className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
-        >
-          <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-          <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
-        </a>
+      <nav className="bg-[#FAF6F1] px-4 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
+        <div className="max-w-[1128px] mx-auto w-full flex items-center justify-between">
+          {/* Logo et Recherche alignés à gauche */}
+          <div className="flex items-center space-x-3 flex-1 md:flex-initial">
+            {/* Logo */}
+            <a
+              href="/"
+              className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
+            >
+              <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+            </a>
 
-        {/* Barre de recherche Desktop */}
-        <div className="hidden md:block relative w-64 lg:w-80 mx-4">
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
-              <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
-              placeholder={t.searchPlaceholder}
-            />
-          </div>
-          {/* Résultats de recherche flottants */}
-          {searchFocused && searchQuery && (
-            <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-[100]">
-              <div className="py-2 max-h-60 overflow-y-auto">
-                {searchResults.length > 0 ? (
-                  searchResults.map((slide) => (
-                    <button
-                      key={slide.id}
-                      onMouseDown={() => handleSearchResultClick(slide)}
-                      className="w-full px-4 py-2 hover:bg-gray-50 flex items-center space-x-3 text-left transition cursor-pointer"
-                    >
-                      <img
-                        src={`/${slide.img}`}
-                        alt={selectedLang === "FR" ? slide.titleFR : slide.titleEN}
-                        className="w-8 h-10 object-cover rounded bg-gray-100 border border-gray-200"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-gray-900 truncate">
-                          {selectedLang === "FR" ? slide.titleFR : slide.titleEN}
-                        </p>
-                        <p className="text-[10px] text-gray-500 truncate">
-                          {selectedLang === "FR" ? slide.descFR : slide.descEN}
-                        </p>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-4 py-3 text-xs text-gray-500 text-center font-medium">
-                    {t.searchNoResults}
-                  </div>
-                )}
+            {/* Barre de recherche Desktop */}
+            <div className="hidden md:block relative w-64 lg:w-72">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                  <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
+                </span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
+                  placeholder={t.searchPlaceholder}
+                />
               </div>
+              {/* Résultats de recherche flottants */}
+              {searchFocused && searchQuery && (
+                <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-[100]">
+                  <div className="py-2 max-h-60 overflow-y-auto">
+                    {searchResults.length > 0 ? (
+                      searchResults.map((slide) => (
+                        <button
+                          key={slide.id}
+                          onMouseDown={() => handleSearchResultClick(slide)}
+                          className="w-full px-4 py-2 hover:bg-gray-50 flex items-center space-x-3 text-left transition cursor-pointer"
+                        >
+                          <img
+                            src={`/${slide.img}`}
+                            alt={selectedLang === "FR" ? slide.titleFR : slide.titleEN}
+                            className="w-8 h-10 object-cover rounded bg-gray-100 border border-gray-200"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-gray-900 truncate">
+                              {selectedLang === "FR" ? slide.titleFR : slide.titleEN}
+                            </p>
+                            <p className="text-[10px] text-gray-500 truncate">
+                              {selectedLang === "FR" ? slide.descFR : slide.descEN}
+                            </p>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-xs text-gray-500 text-center font-medium">
+                        {t.searchNoResults}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Liens Desktop (Style LinkedIn : Icône au-dessus du texte) */}
+          <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
+            {/* Accueil */}
+            <a
+              href="/"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-solid fa-house text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
+            </a>
+            
+            {/* Service (Actif sur la page de services) */}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById("section-models");
+                if (section) section.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="flex flex-col items-center justify-center text-center text-[#10E688] hover:text-[#0fd57d] transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-solid fa-briefcase text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
+            </a>
+
+            {/* Recrutement Spontané */}
+            <a
+              href="#"
+              onClick={handleOpenRecruitmentModal}
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-solid fa-user-tie text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
+            </a>
+
+            {/* Contactez-nous */}
+            <a
+              href="#"
+              onClick={handleOpenModal}
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-regular fa-comment-dots text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">Contact</span>
+            </a>
+
+            {/* Se connecter */}
+            <a
+              href="#"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
+            >
+              <i className="fa-regular fa-user text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
+            </a>
+          </div>
+
+          {/* Bouton Menu Mobile */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden text-gray-700 focus:outline-none hover:text-blue-600 transition"
+            aria-label="Toggle Navigation"
+          >
+            <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-2xl`}></i>
+          </button>
         </div>
-
-        {/* Liens Desktop (Style LinkedIn : Icône au-dessus du texte) */}
-        <div className="hidden md:flex items-center space-x-6">
-          {/* Accueil */}
-          <a
-            href="/"
-            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-solid fa-house text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
-          </a>
-          
-          {/* Service (Actif sur la page de services) */}
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              const section = document.getElementById("section-models");
-              if (section) section.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="flex flex-col items-center justify-center text-center text-[#10E688] hover:text-[#0fd57d] transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-solid fa-briefcase text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
-          </a>
-
-          {/* Recrutement Spontané */}
-          <a
-            href="#"
-            onClick={handleOpenRecruitmentModal}
-            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-solid fa-user-tie text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
-          </a>
-
-          {/* Contactez-nous */}
-          <a
-            href="#"
-            onClick={handleOpenModal}
-            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-regular fa-comment-dots text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight">Contact</span>
-          </a>
-
-          {/* Se connecter */}
-          <a
-            href="#"
-            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-20"
-          >
-            <i className="fa-regular fa-user text-xl"></i>
-            <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
-          </a>
-        </div>
-
-        {/* Bouton Menu Mobile */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden text-gray-700 focus:outline-none hover:text-blue-600 transition"
-          aria-label="Toggle Navigation"
-        >
-          <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-2xl`}></i>
-        </button>
 
         {/* Menu Déroulant Mobile */}
         <div
