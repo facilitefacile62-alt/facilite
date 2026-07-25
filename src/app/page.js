@@ -823,24 +823,24 @@ export default function Home() {
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
-          <aside className="hidden lg:flex lg:w-[225px] flex-shrink-0 flex-col space-y-4 sticky top-[92px]">
+          <aside className="hidden lg:flex lg:w-[215px] flex-shrink-0 flex-col space-y-2 sticky top-[92px] lg:max-h-[calc(100vh-115px)] lg:overflow-y-auto no-scrollbar lg:pr-0.5">
             
             {/* Carte Profil */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
               {/* Image de couverture en hauteur (Ciel étoilé avec lune comme dans la capture) */}
               <Link
                 href="/profil"
-                className="h-20 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
+                className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
                 style={{ backgroundImage: "url('/stellar-cover.png')" }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-indigo-950 opacity-90 group-hover:opacity-75 transition"></div>
               </Link>
               
-              <div className="px-4 pb-5 pt-0 relative flex flex-col items-center text-center">
+              <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
                 {/* Photo de profil (Logo Facilite avec bord blanc chevauchant la couverture) */}
                 <Link
                   href="/profil"
-                  className="-mt-10 mb-3 relative z-10 w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden bg-white block cursor-pointer group"
+                  className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white shadow-md overflow-hidden bg-white block cursor-pointer group"
                 >
                   <img
                     src="/logo.jpeg"
@@ -850,23 +850,23 @@ export default function Home() {
                 </Link>
                 
                 <Link href="/profil" className="group">
-                  <h2 className="text-base font-extrabold text-gray-900 leading-snug group-hover:text-blue-600 transition">{t.profileTitle}</h2>
+                  <h2 className="text-sm font-extrabold text-gray-900 leading-tight group-hover:text-blue-600 transition">{t.profileTitle}</h2>
                 </Link>
-                <p className="text-xs text-gray-500 font-medium mt-0.5">{t.profileSubtitle}</p>
-                <p className="text-[11px] text-gray-400 font-normal mt-0.5 mb-2.5">{t.profileLocation}</p>
+                <p className="text-[10px] text-gray-500 font-bold mt-0.5">{t.profileSubtitle}</p>
+                <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">{t.profileLocation}</p>
                 
                 {/* Micro badge entreprise comme dans la capture */}
-                <div className="flex items-center justify-center space-x-1.5 text-xs text-gray-700 font-bold mb-3">
-                  <img src="/logo.jpeg" alt="facilite logo" className="w-3.5 h-3.5 rounded-xs object-cover" />
+                <div className="flex items-center justify-center space-x-1 text-[10px] text-gray-700 font-bold mb-2">
+                  <img src="/logo.jpeg" alt="facilite logo" className="w-3 h-3 rounded-xs object-cover" />
                   <span>facilite</span>
                 </div>
 
                 {/* Bouton Ajouter Expérience */}
                 <button
                   onClick={() => setExperienceModalOpen(true)}
-                  className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-1.5 px-3 rounded-full text-xs transition flex items-center justify-center space-x-1.5 cursor-pointer bg-white"
+                  className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white"
                 >
-                  <i className="fa-solid fa-plus text-[10px] text-gray-500"></i>
+                  <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
                   <span>{t.profileExperienceBtn}</span>
                 </button>
               </div>
@@ -874,32 +874,32 @@ export default function Home() {
 
             {/* Carte Expériences (Dynamique) */}
             {experiences.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col space-y-4">
-                <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                  <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Expérience</h3>
-                  <i className="fa-solid fa-briefcase text-gray-400 text-xs"></i>
+              <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs flex flex-col space-y-2.5">
+                <div className="flex justify-between items-center pb-1.5 border-b border-gray-100">
+                  <h3 className="text-[10px] font-extrabold text-gray-800 uppercase tracking-wider">Expérience</h3>
+                  <i className="fa-solid fa-briefcase text-gray-400 text-[10px]"></i>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {experiences.map((exp) => (
-                    <div key={exp.id} className="relative flex items-start space-x-3 text-left">
-                      <div className="w-8 h-8 rounded bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0 text-sm font-bold border border-gray-200">
+                    <div key={exp.id} className="relative flex items-start space-x-2 text-left">
+                      <div className="w-7 h-7 rounded bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-gray-200">
                         {exp.company.substring(0, 2).toUpperCase()}
                       </div>
-                      <div className="flex-grow min-w-0 pr-5">
-                        <h4 className="text-xs font-extrabold text-gray-900 truncate">{exp.title}</h4>
-                        <p className="text-[10px] text-gray-700 font-bold truncate">{exp.company}</p>
-                        <p className="text-[9px] text-gray-400 font-semibold mt-0.5">
+                      <div className="flex-grow min-w-0 pr-4">
+                        <h4 className="text-[10px] font-extrabold text-gray-900 truncate">{exp.title}</h4>
+                        <p className="text-[9px] text-gray-700 font-bold truncate">{exp.company}</p>
+                        <p className="text-[8px] text-gray-400 font-semibold mt-0.5">
                           {exp.startMonth} {exp.startYear} — {exp.isCurrent ? "Présent" : "Terminé"}
                         </p>
                         {exp.location && (
-                          <p className="text-[9px] text-gray-400 font-semibold mt-0.5">
+                          <p className="text-[8px] text-gray-400 font-semibold mt-0.5">
                             {exp.location} ({exp.locationType})
                           </p>
                         )}
                         {exp.skills && exp.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {exp.skills.map((skill, sIdx) => (
-                              <span key={sIdx} className="text-[8px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
+                          <div className="flex flex-wrap gap-0.5 mt-1">
+                            {exp.skills.slice(0, 2).map((skill, sIdx) => (
+                              <span key={sIdx} className="text-[7px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1 py-0.5 rounded">
                                 {skill}
                               </span>
                             ))}
@@ -910,10 +910,10 @@ export default function Home() {
                       {/* Bouton de suppression */}
                       <button
                         onClick={() => handleDeleteExperience(exp.id)}
-                        className="text-gray-300 hover:text-red-500 transition p-1 cursor-pointer absolute top-0 right-0"
+                        className="text-gray-300 hover:text-red-500 transition p-0.5 cursor-pointer absolute top-0 right-0"
                         title="Supprimer cette expérience"
                       >
-                        <i className="fa-solid fa-trash-can text-[10px]"></i>
+                        <i className="fa-solid fa-trash-can text-[9px]"></i>
                       </button>
                     </div>
                   ))}
@@ -922,19 +922,19 @@ export default function Home() {
             )}
 
             {/* Carte Statistiques */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">{t.statsTitle}</h3>
-                <i className="fa-solid fa-chevron-right text-gray-400 text-xs cursor-pointer"></i>
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-[10px] font-extrabold text-gray-800 uppercase tracking-wider">{t.statsTitle}</h3>
+                <i className="fa-solid fa-chevron-right text-gray-400 text-[10px] cursor-pointer"></i>
               </div>
-              <div className="space-y-3.5 font-bold text-xs">
-                <div className="flex justify-between items-center py-1">
+              <div className="space-y-2 font-bold text-[11px]">
+                <div className="flex justify-between items-center py-0.5">
                   <span className="text-gray-500">{t.statsViews}</span>
-                  <span className="text-blue-600 font-extrabold text-sm">5</span>
+                  <span className="text-blue-600 font-extrabold text-xs">5</span>
                 </div>
-                <div className="flex justify-between items-center py-1 border-t border-gray-100">
+                <div className="flex justify-between items-center py-0.5 border-t border-gray-100">
                   <span className="text-gray-500">{t.statsImpressions}</span>
-                  <span className="text-blue-600 font-extrabold text-sm">2</span>
+                  <span className="text-blue-600 font-extrabold text-xs">2</span>
                 </div>
               </div>
             </div>
@@ -942,16 +942,16 @@ export default function Home() {
             {/* Carte Mon profil et mon CV (Mint Green style capture) */}
             <Link
               href="/profil"
-              className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl p-3.5 px-4 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-3 group block"
+              className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl p-2.5 px-3 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-2.5 group block"
             >
-              <i className="fa-regular fa-user text-lg text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
-              <span className="text-sm font-extrabold text-[#047857] tracking-tight">
+              <i className="fa-regular fa-user text-base text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
+              <span className="text-xs font-bold text-[#047857] tracking-tight">
                 Mon profil et mon CV
               </span>
             </Link>
 
             {/* Bouton Déconnexion (Style LinkedIn) */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-start">
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs flex items-center justify-start">
               <button
                 onClick={() => {
                   triggerToast("Déconnexion réussie ! Redirection...", "fa-right-from-bracket");
@@ -959,9 +959,9 @@ export default function Home() {
                     window.location.reload();
                   }, 1500);
                 }}
-                className="flex items-center space-x-3 text-[#4A5D78] hover:text-red-600 font-bold text-sm transition cursor-pointer bg-transparent border-none p-0 outline-none w-full text-left"
+                className="flex items-center space-x-2 text-[#4A5D78] hover:text-red-600 font-bold text-xs transition cursor-pointer bg-transparent border-none p-0 outline-none w-full text-left"
               >
-                <i className="fa-solid fa-right-from-bracket text-base"></i>
+                <i className="fa-solid fa-right-from-bracket text-sm"></i>
                 <span>Déconnexion</span>
               </button>
             </div>
@@ -1091,40 +1091,40 @@ export default function Home() {
           </section>
 
           {/* --- COLONNE DE DROITE : Offres recommandées & Publicité --- */}
-          <aside className="w-full lg:w-[290px] flex-shrink-0 flex flex-col space-y-4 lg:sticky lg:top-[92px]">
+          <aside className="w-full lg:w-[260px] flex-shrink-0 flex flex-col space-y-3 lg:sticky lg:top-[92px] lg:max-h-[calc(100vh-115px)] lg:overflow-y-auto no-scrollbar lg:pr-0.5">
             
             {/* Offres Recommandées */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs">
-              <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider mb-4">{t.trendingJobsTitle}</h3>
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
+              <h3 className="text-[10px] font-extrabold text-gray-800 uppercase tracking-wider mb-2.5">{t.trendingJobsTitle}</h3>
               
-              <div className="space-y-4 font-bold text-xs">
+              <div className="space-y-2.5 font-bold text-[11px]">
                 {initialJobs.slice(0, 3).map((job) => (
                   <div
                     key={`trend-${job.id}`}
                     onClick={() => handleApplyClick(job)}
-                    className="group cursor-pointer flex flex-col space-y-1 hover:bg-gray-50 p-2 rounded-lg transition"
+                    className="group cursor-pointer flex flex-col space-y-0.5 hover:bg-gray-50 p-1.5 rounded-lg transition"
                   >
-                    <span className="text-gray-950 font-extrabold group-hover:text-blue-600 transition truncate">
+                    <span className="text-gray-955 font-extrabold group-hover:text-blue-600 transition truncate">
                       {selectedLang === "FR" ? job.titleFR : job.titleEN}
                     </span>
-                    <span className="text-gray-500 text-[10px]">{job.company} — {job.location}</span>
+                    <span className="text-gray-500 text-[9px]">{job.company} — {job.location}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Aide et raccourcis rapides */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs text-center flex flex-col items-center space-y-3.5">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
-                <i className="fa-regular fa-lightbulb text-lg"></i>
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs text-center flex flex-col items-center space-y-2.5">
+              <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
+                <i className="fa-regular fa-lightbulb text-base"></i>
               </div>
-              <h4 className="text-xs font-extrabold text-gray-800">Prêt pour votre candidature ?</h4>
-              <p className="text-[10px] text-gray-500 leading-relaxed font-semibold">
+              <h4 className="text-[10px] font-extrabold text-gray-800">Prêt pour votre candidature ?</h4>
+              <p className="text-[9px] text-gray-500 leading-relaxed font-semibold">
                 Utilisez nos services de création pour générer des CV percutants optimisés pour les recruteurs.
               </p>
               <Link
                 href="/service"
-                className="w-full bg-[#E4B8F9] hover:bg-[#db9ff7] text-purple-950 font-extrabold py-2 px-4 rounded-lg text-[10px] transition text-center shadow-xs cursor-pointer"
+                className="w-full bg-[#E4B8F9] hover:bg-[#db9ff7] text-purple-950 font-extrabold py-1.5 px-3 rounded-lg text-[9px] transition text-center shadow-xs cursor-pointer block"
               >
                 Concevoir mon CV
               </Link>

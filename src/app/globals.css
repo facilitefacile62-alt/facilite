@@ -117,3 +117,12 @@ body {
 #user-count {
   transition: opacity 0.2s ease-in-out;
 }
+
+/* Masquer la scrollbar pour les conteneurs scrollables */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
