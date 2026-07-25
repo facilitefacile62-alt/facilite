@@ -599,10 +599,26 @@ export default function Home() {
 
         {/* Menu Déroulant Mobile */}
         <div
-          className={`absolute top-full left-0 w-full bg-[#FAF6F1] shadow-xl flex-col py-4 px-4 space-y-4 md:hidden border-t border-gray-200/80 transition-all ${
+          className={`absolute top-full left-0 w-full bg-[#FAF6F1] shadow-xl flex-col py-4 px-4 space-y-3 md:hidden border-t border-gray-200/80 transition-all ${
             mobileMenuOpen ? "flex" : "hidden"
           }`}
         >
+          {/* Barre de recherche Mobile */}
+          <div className="relative w-full px-1 mb-1">
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
+              </span>
+              <input
+                type="text"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
+                placeholder={t.searchPlaceholder}
+              />
+            </div>
+          </div>
+
           <a
             href="#"
             onClick={(e) => {
@@ -610,42 +626,75 @@ export default function Home() {
               setMobileMenuOpen(false);
               window.location.reload();
             }}
-            className="flex items-center space-x-3 text-[#10E688] font-bold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-[#10E688] font-bold p-2.5 rounded-xl hover:bg-white/60"
           >
             <img src="/accueil.png" alt="Accueil" className="w-6 h-6 object-contain" />
             <span>{t.navHome}</span>
           </a>
+
           <Link
             href="/service"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-bold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-bold p-2.5 rounded-xl hover:bg-white/60"
           >
-            <i className="fa-solid fa-briefcase text-xl w-6 text-gray-500"></i>
+            <i className="fa-solid fa-briefcase text-lg w-6 text-gray-500"></i>
             <span>{t.navService}</span>
           </Link>
+
           <a
             href="#"
             onClick={handleOpenRecruitmentModal}
-            className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-bold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-bold p-2.5 rounded-xl hover:bg-white/60"
           >
-            <i className="fa-solid fa-user-tie text-xl w-6 text-gray-500"></i>
+            <i className="fa-solid fa-user-tie text-lg w-6 text-gray-500"></i>
             <span>{t.navRecruitment}</span>
           </a>
+
           <a
             href="#"
             onClick={handleOpenModal}
-            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-bold p-3 rounded-xl hover:bg-white/60"
+            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-bold p-2.5 rounded-xl hover:bg-white/60"
           >
-            <i className="fa-regular fa-comment-dots text-xl w-6 text-gray-500"></i>
+            <i className="fa-regular fa-comment-dots text-lg w-6 text-gray-500"></i>
             <span>{t.navContact}</span>
           </a>
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-bold p-3 rounded-xl hover:bg-white/60"
+
+          <Link
+            href="/profil"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-bold p-2.5 rounded-xl hover:bg-white/60"
           >
-            <i className="fa-regular fa-user text-xl w-6 text-gray-500"></i>
-            <span>{t.navLogin}</span>
-          </a>
+            <i className="fa-solid fa-circle-user text-lg w-6 text-gray-500"></i>
+            <span>Mon Profil</span>
+          </Link>
+
+          {/* Sélecteur de Langue Mobile */}
+          <div className="flex items-center justify-between pt-3 border-t border-gray-200/80 px-2 mt-1">
+            <span className="text-xs font-bold text-gray-600 flex items-center space-x-1.5">
+              <i className="fa-solid fa-globe text-gray-400"></i>
+              <span>Langue</span>
+            </span>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setSelectedLang("FR")}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
+                  selectedLang === "FR" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white border border-gray-200 text-gray-600"
+                }`}
+              >
+                <img src="/francais.avif" alt="FR" className="w-4 h-4 rounded-full object-cover" />
+                <span>FR</span>
+              </button>
+              <button
+                onClick={() => setSelectedLang("GB")}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
+                  selectedLang === "GB" ? "bg-[#E4B8F9] text-purple-950 shadow-xs" : "bg-white border border-gray-200 text-gray-600"
+                }`}
+              >
+                <img src="/anglais.jpeg" alt="GB" className="w-4 h-4 rounded-full object-cover" />
+                <span>EN</span>
+              </button>
+            </div>
+          </div>
         </div>
       </nav>
 

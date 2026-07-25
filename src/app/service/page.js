@@ -863,6 +863,14 @@ export default function Home() {
             <i className="fa-regular fa-comment-dots text-xl w-6 text-blue-600"></i>
             <span>{t.navContact}</span>
           </a>
+          <Link
+            href="/profil"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-semibold p-3 rounded-xl hover:bg-white/60"
+          >
+            <i className="fa-solid fa-circle-user text-xl w-6 text-gray-500"></i>
+            <span>Mon Profil</span>
+          </Link>
           <a
             href="#"
             className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-semibold p-3 rounded-xl hover:bg-white/60"
@@ -870,6 +878,34 @@ export default function Home() {
             <i className="fa-regular fa-user text-xl w-6 text-purple-600"></i>
             <span>{t.navLogin}</span>
           </a>
+
+          {/* Sélecteur de Langue Mobile */}
+          <div className="flex items-center justify-between pt-3 border-t border-gray-200/80 px-2 mt-1">
+            <span className="text-xs font-bold text-gray-600 flex items-center space-x-1.5">
+              <i className="fa-solid fa-globe text-gray-400"></i>
+              <span>Langue</span>
+            </span>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setSelectedLang("FR")}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
+                  selectedLang === "FR" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white border border-gray-200 text-gray-600"
+                }`}
+              >
+                <img src="/francais.avif" alt="FR" className="w-4 h-4 rounded-full object-cover" />
+                <span>FR</span>
+              </button>
+              <button
+                onClick={() => setSelectedLang("GB")}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
+                  selectedLang === "GB" ? "bg-[#E4B8F9] text-purple-950 shadow-xs" : "bg-white border border-gray-200 text-gray-600"
+                }`}
+              >
+                <img src="/anglais.jpeg" alt="GB" className="w-4 h-4 rounded-full object-cover" />
+                <span>EN</span>
+              </button>
+            </div>
+          </div>
         </div>
       </nav>
 

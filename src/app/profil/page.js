@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 export default function ProfilPage() {
@@ -18,6 +18,15 @@ export default function ProfilPage() {
   const [profileLocation, setProfileLocation] = useState("Pikine, Région de Dakar, Sénégal");
   const [profileBio, setProfileBio] = useState("Étudiant passionné par le développement web, l'ingénierie digitale et la création de CV modernes et percutants. En recherche d'opportunités d'apprentissage et de stages en technologie.");
   const [isEditingBio, setIsEditingBio] = useState(false);
+
+  // Formulaire "Mon profil et mon CV"
+  const [firstName, setFirstName] = useState("faciliter");
+  const [lastName, setLastName] = useState("facile");
+  const [jobTitle, setJobTitle] = useState("");
+  const [city, setCity] = useState("Pikine");
+  const [country, setCountry] = useState("Sénégal");
+  const [uploadedCvFileName, setUploadedCvFileName] = useState(null);
+  const cvFileInputRef = useRef(null);
 
   // Expériences dynamique (localStorage)
   const [experiences, setExperiences] = useState([]);
@@ -162,6 +171,28 @@ export default function ProfilPage() {
     }, 1200);
   };
 
+  const handleCvFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadedCvFileName(file.name);
+      triggerToast(`Fichier "${file.name}" importé avec succès !`, "fa-file-circle-check");
+    }
+  };
+
+  const handleSavePersonalDetails = (e) => {
+    if (e) e.preventDefault();
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    setProfileName(fullName || "faciliter facile");
+    if (jobTitle.trim()) {
+      setProfileSubtitle(jobTitle);
+    }
+    const locationStr = `${city.trim() ? city.trim() + ", " : ""}${country.trim() ? country.trim() : ""}`;
+    if (locationStr) {
+      setProfileLocation(locationStr);
+    }
+    triggerToast("Informations personnelles sauvegardées !", "fa-floppy-disk");
+  };
+
   return (
     <>
       {/* Toast Notification Floating */}
@@ -243,9 +274,102 @@ export default function ProfilPage() {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden text-gray-700 focus:outline-none hover:text-blue-600 transition"
+            aria-label="Toggle Navigation"
           >
             <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-2xl`}></i>
           </button>
+        </div>
+
+        {/* Menu Déroulant Mobile (3 traits) */}
+        <div
+          className={`absolute top-full left-0 w-full bg-[#FAF6F1] shadow-xl flex-col py-4 px-4 space-y-3 md:hidden border-t border-gray-200/80 transition-all ${
+            mobileMenuOpen ? "flex" : "hidden"
+          }`}
+        >
+          {/* Barre de recherche Mobile */}
+          <div className="relative w-full px-1 mb-1">
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
+                placeholder="Rechercher sur Facilite..."
+              />
+            </div>
+          </div>
+
+          <a
+            href="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-bold p-2.5 rounded-xl hover:bg-white/60"
+          >
+            <i className="fa-solid fa-house text-lg w-6 text-gray-500"></i>
+            <span>Accueil</span>
+          </a>
+
+          <Link
+            href="/service"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-bold p-2.5 rounded-xl hover:bg-white/60"
+          >
+            <i className="fa-solid fa-briefcase text-lg w-6 text-gray-500"></i>
+            <span>Service</span>
+          </Link>
+
+          <a
+            href="#"
+            onClick={handleOpenModal}
+            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-bold p-2.5 rounded-xl hover:bg-white/60"
+          >
+            <i className="fa-regular fa-comment-dots text-lg w-6 text-gray-500"></i>
+            <span>Contactez-nous</span>
+          </a>
+
+          <a
+            href="#section-mon-profil-cv"
+            onClick={(e) => {
+              e.preventDefault();
+              setMobileMenuOpen(false);
+              const el = document.getElementById("section-mon-profil-cv");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex items-center space-x-3 text-[#10E688] font-extrabold p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200"
+          >
+            <i className="fa-solid fa-circle-user text-lg w-6 text-[#10E688]"></i>
+            <span>Mon profil & CV</span>
+          </a>
+
+          {/* Sélecteur de langue dans le menu 3 traits */}
+          <div className="flex items-center justify-between pt-3 border-t border-gray-200/80 px-2 mt-1">
+            <span className="text-xs font-bold text-gray-600 flex items-center space-x-1.5">
+              <i className="fa-solid fa-globe text-gray-400"></i>
+              <span>Langue</span>
+            </span>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setSelectedLang("FR")}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
+                  selectedLang === "FR" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white border border-gray-200 text-gray-600"
+                }`}
+              >
+                <img src="/francais.avif" alt="FR" className="w-4 h-4 rounded-full object-cover" />
+                <span>FR</span>
+              </button>
+              <button
+                onClick={() => setSelectedLang("GB")}
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
+                  selectedLang === "GB" ? "bg-[#E4B8F9] text-purple-950 shadow-xs" : "bg-white border border-gray-200 text-gray-600"
+                }`}
+              >
+                <img src="/anglais.jpeg" alt="GB" className="w-4 h-4 rounded-full object-cover" />
+                <span>EN</span>
+              </button>
+            </div>
+          </div>
         </div>
       </nav>
 
@@ -473,6 +597,152 @@ export default function ProfilPage() {
               </div>
             </div>
 
+            {/* SECTION MON PROFIL ET MON CV (CONFORME À LA CAPTURE D'ÉCRAN) */}
+            <div id="section-mon-profil-cv" className="space-y-3 pt-2 scroll-mt-24">
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Mon profil et mon CV</h2>
+                <p className="text-xs md:text-sm text-gray-500 font-medium">Gérez votre identité professionnelle.</p>
+              </div>
+
+              {/* Carte Principale Formulaire */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
+                
+                {/* Bloc Curriculum Vitae + Bouton Importateur */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center space-x-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] border border-[#A7F3D0] flex items-center justify-center text-[#047857] flex-shrink-0">
+                      <i className="fa-regular fa-file-lines text-2xl font-bold"></i>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-gray-900">Curriculum vitae</h3>
+                      <p className="text-xs font-bold flex items-center space-x-1.5 mt-0.5">
+                        {uploadedCvFileName ? (
+                          <>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                            <span className="text-emerald-600 truncate max-w-[200px] sm:max-w-xs">{uploadedCvFileName}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="w-2.5 h-2.5 rounded-full bg-pink-500 inline-block"></span>
+                            <span className="text-pink-500 font-semibold">Aucun fichier</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <input
+                    type="file"
+                    ref={cvFileInputRef}
+                    onChange={handleCvFileChange}
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => cvFileInputRef.current?.click()}
+                    className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer self-stretch sm:self-auto justify-center"
+                  >
+                    <i className="fa-solid fa-arrow-up-from-bracket text-xs"></i>
+                    <span>Importateur</span>
+                  </button>
+                </div>
+
+                <div className="border-b border-gray-100"></div>
+
+                {/* Section Informations Personnelles */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-extrabold text-gray-900 tracking-tight">Informations Personnelles</h3>
+
+                  <form onSubmit={handleSavePersonalDetails} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* PRÉNOM */}
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">
+                          PRÉNOM
+                        </label>
+                        <input
+                          type="text"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-gray-200 rounded-xl text-xs text-gray-900 font-bold focus:outline-none focus:border-[#10E688] focus:bg-white transition"
+                          placeholder="faciliter"
+                        />
+                      </div>
+
+                      {/* NOM */}
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">
+                          NOM
+                        </label>
+                        <input
+                          type="text"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-gray-200 rounded-xl text-xs text-gray-900 font-bold focus:outline-none focus:border-[#10E688] focus:bg-white transition"
+                          placeholder="facile"
+                        />
+                      </div>
+
+                      {/* TITRE PROFESSIONNEL */}
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">
+                          TITRE PROFESSIONNEL (EX : INGÉNIEUR DEVOPS)
+                        </label>
+                        <input
+                          type="text"
+                          value={jobTitle}
+                          onChange={(e) => setJobTitle(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-gray-200 rounded-xl text-xs text-gray-900 font-semibold focus:outline-none focus:border-[#10E688] focus:bg-white transition"
+                          placeholder="Développeur Web / Étudiant(e) à lycée de pikine"
+                        />
+                      </div>
+
+                      {/* VILLE */}
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">
+                          VILLE
+                        </label>
+                        <input
+                          type="text"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-gray-200 rounded-xl text-xs text-gray-900 font-semibold focus:outline-none focus:border-[#10E688] focus:bg-white transition"
+                          placeholder="Pikine"
+                        />
+                      </div>
+
+                      {/* PAYS */}
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">
+                          PAYS
+                        </label>
+                        <input
+                          type="text"
+                          value={country}
+                          onChange={(e) => setCountry(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-gray-200 rounded-xl text-xs text-gray-900 font-semibold focus:outline-none focus:border-[#10E688] focus:bg-white transition"
+                          placeholder="Sénégal"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="submit"
+                        className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-6 py-3 rounded-xl text-xs transition shadow-md cursor-pointer flex items-center space-x-2"
+                      >
+                        <i className="fa-solid fa-check text-xs"></i>
+                        <span>Sauvegarder les modifications</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+              </div>
+            </div>
+
           </div>
 
           {/* COLONNE DROITE : Paramètres de confidentialité & Action rapides */}
@@ -508,10 +778,14 @@ export default function ProfilPage() {
               </button>
             </div>
 
-            {/* Carte Mon profil et mon CV (Mint Green style) */}
+            {/* Carte Mon profil et mon CV (Mint Green style conforme à la capture) */}
             <div
               className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl p-4 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-3 group"
-              onClick={() => triggerToast("Vous êtes sur l'interface de votre profil et CV !", "fa-circle-check")}
+              onClick={() => {
+                const el = document.getElementById("section-mon-profil-cv");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+                triggerToast("Section Mon profil et mon CV affichée !", "fa-circle-check");
+              }}
             >
               <i className="fa-regular fa-user text-lg text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
               <span className="text-sm font-extrabold text-[#047857] tracking-tight">
