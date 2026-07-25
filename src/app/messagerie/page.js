@@ -236,6 +236,58 @@ export default function MessageriePage() {
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const plusDropdownRef = useRef(null);
 
+  // Notifications System (LinkedIn Style)
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
+  const [activeNotifFilter, setActiveNotifFilter] = useState("all");
+  const [unreadNotifCount, setUnreadNotifCount] = useState(3);
+  const [notificationsList, setNotificationsList] = useState([
+    {
+      id: 1,
+      author: "Université de Tours",
+      avatar: "/logo.jpeg",
+      text: "a répondu à votre message concernant les critères de recrutement !",
+      type: "posts",
+      time: "4 min",
+      unread: true
+    },
+    {
+      id: 2,
+      author: "Fatimata Diop",
+      avatar: "/logo.jpeg",
+      text: "vous a envoyé un nouveau message dans la messagerie.",
+      type: "mentions",
+      time: "2 h",
+      unread: true
+    },
+    {
+      id: 3,
+      author: "Joseph Maxime Bilivogui",
+      avatar: "/logo.jpeg",
+      text: "a publié un post : Le monde attend des leaders audacieux et visionnaires.",
+      type: "posts",
+      time: "3 h",
+      unread: true
+    },
+    {
+      id: 4,
+      author: "Wave Sénégal",
+      avatar: "/logo.jpeg",
+      text: "recrute un Conseiller Clientèle Télécom à Dakar.",
+      type: "jobs",
+      time: "6 h",
+      unread: false
+    },
+    {
+      id: 5,
+      author: "Sarah Taylor",
+      avatar: "/logo.jpeg",
+      text: "a réagi à votre message avec un cœur ❤️.",
+      type: "mentions",
+      time: "13 h",
+      unread: false
+    }
+  ]);
+
   // Contact Modal States
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -359,6 +411,14 @@ export default function MessageriePage() {
     }, 1200);
   };
 
+  // Filtered Notifications helper
+  const filteredNotifications = notificationsList.filter(n => {
+    if (activeNotifFilter === "jobs") return n.type === "jobs";
+    if (activeNotifFilter === "posts") return n.type === "posts";
+    if (activeNotifFilter === "mentions") return n.type === "mentions";
+    return true;
+  });
+
   // Esc closes modals & dropdowns
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -366,6 +426,7 @@ export default function MessageriePage() {
         if (contactModalOpen) handleCloseContactModal();
         if (recruitmentModalOpen) handleCloseRecruitmentModal();
         if (plusDropdownOpen) setPlusDropdownOpen(false);
+        if (notificationsModalOpen) setNotificationsModalOpen(false);
       }
     };
     const handleClickOutside = (e) => {
@@ -379,7 +440,7 @@ export default function MessageriePage() {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [contactModalOpen, recruitmentModalOpen, plusDropdownOpen]);
+  }, [contactModalOpen, recruitmentModalOpen, plusDropdownOpen, notificationsModalOpen]);
 
   const toggleFavorite = (id) => {
     setConversations(prev => prev.map(c => {
@@ -664,14 +725,18 @@ export default function MessageriePage() {
             {/* Notifications */}
             <button
               type="button"
-              onClick={() => triggerToast("3 nouvelles notifications", "fa-bell")}
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+              onClick={() => setNotificationsModalOpen(true)}
+              className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
+                notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
             >
               <i className="fa-regular fa-bell text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">Notifications</span>
-              <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white">
-                3
-              </span>
+              {unreadNotifCount > 0 && (
+                <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
+                  {unreadNotifCount}
+                </span>
+              )}
             </button>
 
             {/* Recrutement Spontané */}
@@ -761,21 +826,37 @@ export default function MessageriePage() {
             </Link>
           </div>
 
-          {/* Mobile Right Controls: Search & Hamburger (LinkedIn style icons in circles) */}
+          {/* Mobile Right Controls: Bell & Messagerie */}
           <div className="flex md:hidden items-center space-x-2">
             <button
-              onClick={() => {
-                triggerToast(selectedLang === "FR" ? "Recherche..." : "Search...", "fa-magnifying-glass");
-              }}
-              className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs focus:outline-none transition cursor-pointer"
-              aria-label="Search"
+              type="button"
+              onClick={() => setNotificationsModalOpen(true)}
+              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
+              aria-label="Notifications"
             >
-              <i className="fa-solid fa-magnifying-glass text-sm"></i>
+              <i className="fa-regular fa-bell text-sm"></i>
+              {unreadNotifCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border border-white">
+                  {unreadNotifCount}
+                </span>
+              )}
             </button>
+
+            <Link
+              href="/messagerie"
+              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
+              aria-label="Messagerie"
+            >
+              <i className="fa-regular fa-comments text-sm"></i>
+              <span className="absolute top-1 right-1 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+            </Link>
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-blue-600 shadow-xs focus:outline-none transition cursor-pointer"
+              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-blue-600 shadow-xs focus:outline-none transition cursor-pointer"
               aria-label="Toggle Navigation"
             >
               <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-sm`}></i>
@@ -783,9 +864,8 @@ export default function MessageriePage() {
           </div>
         </div>
 
-        {/* Horizontal Tab Bar on Mobile (LinkedIn-style tabs right under the top header) */}
-        <div className="flex md:hidden items-center justify-around w-full border-t border-gray-200/60 pt-2 mt-2 bg-[#FAF6F1]">
-          {/* Accueil */}
+        {/* Fixed Bottom Mobile Navigation Bar (LinkedIn Mobile Style) */}
+        <div className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl py-2 px-3 items-center justify-around">
           <a
             href="/"
             className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
@@ -794,7 +874,6 @@ export default function MessageriePage() {
             <span className="text-[9px] font-bold tracking-tight">{t.navHome}</span>
           </a>
 
-          {/* Service */}
           <Link
             href="/service"
             className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
@@ -803,34 +882,40 @@ export default function MessageriePage() {
             <span className="text-[9px] font-bold tracking-tight">{t.navService}</span>
           </Link>
 
-          {/* Messagerie - ACTIF */}
           <Link
             href="/messagerie"
             className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-[#10E688] relative"
           >
             <i className="fa-regular fa-comments text-lg"></i>
             <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>
+            <span className="absolute top-0.5 right-2 flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+            </span>
           </Link>
 
-          {/* Recrutement */}
-          <a
-            href="#"
-            onClick={handleOpenRecruitmentModal}
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-16 text-gray-500 hover:text-gray-800"
+          <button
+            type="button"
+            onClick={() => setNotificationsModalOpen(true)}
+            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
           >
-            <i className="fa-solid fa-user-tie text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight truncate max-w-[64px]">Recrutement</span>
-          </a>
+            <i className="fa-regular fa-bell text-lg"></i>
+            <span className="text-[9px] font-bold tracking-tight">Notifs</span>
+            {unreadNotifCount > 0 && (
+              <span className="absolute -top-0.5 right-1.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
+                {unreadNotifCount}
+              </span>
+            )}
+          </button>
 
-          {/* Contact */}
-          <a
-            href="#"
-            onClick={handleOpenContactModal}
-            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 space-y-0.5 cursor-pointer w-14"
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
           >
-            <i className="fa-regular fa-comment-dots text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">{t.navContact}</span>
-          </a>
+            <i className="fa-solid fa-bars text-lg"></i>
+            <span className="text-[9px] font-bold tracking-tight">Plus</span>
+          </button>
         </div>
 
         {/* Menu Déroulant Mobile Plein Écran */}
@@ -1483,6 +1568,144 @@ export default function MessageriePage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Modal/Drawer de Notifications (LinkedIn Style) */}
+      {notificationsModalOpen && (
+        <div className="fixed inset-0 z-[750] bg-black/50 backdrop-blur-xs flex justify-center md:items-start md:pt-16 p-2 sm:p-4 animate-fade-in-up">
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col max-h-[85vh]">
+            {/* Header Modal Notifications */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-[#FAF6F1]">
+              <div className="flex items-center space-x-3">
+                <i className="fa-solid fa-bell text-xl text-[#10E688]"></i>
+                <h3 className="text-lg font-extrabold text-gray-900">Notifications</h3>
+                {unreadNotifCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                    {unreadNotifCount} nouvelle{unreadNotifCount > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                {unreadNotifCount > 0 && (
+                  <button
+                    onClick={() => {
+                      setNotificationsList(prev => prev.map(n => ({ ...n, unread: false })));
+                      setUnreadNotifCount(0);
+                      triggerToast("Toutes les notifications sont marquées comme lues", "fa-check-double");
+                    }}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition mr-2 cursor-pointer"
+                  >
+                    Tout marquer comme lu
+                  </button>
+                )}
+                <button
+                  onClick={() => setNotificationsModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-xmark text-base"></i>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Pills Bar (LinkedIn Mobile Style as in Image 3) */}
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center space-x-2 overflow-x-auto bg-gray-50/70 scrollbar-none">
+              <button
+                onClick={() => setActiveNotifFilter("all")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeNotifFilter === "all" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Toutes
+              </button>
+              <button
+                onClick={() => setActiveNotifFilter("jobs")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeNotifFilter === "jobs" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Offres d'emploi
+              </button>
+              <button
+                onClick={() => setActiveNotifFilter("posts")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeNotifFilter === "posts" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Mes posts
+              </button>
+              <button
+                onClick={() => setActiveNotifFilter("mentions")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeNotifFilter === "mentions" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Mentions
+              </button>
+            </div>
+
+            {/* Notification List */}
+            <div className="overflow-y-auto divide-y divide-gray-100 flex-1">
+              {filteredNotifications.length === 0 ? (
+                <div className="py-12 text-center text-gray-400 font-medium text-sm">
+                  Aucune notification dans cette catégorie.
+                </div>
+              ) : (
+                filteredNotifications.map((notif) => (
+                  <div
+                    key={notif.id}
+                    onClick={() => {
+                      if (notif.unread) {
+                        setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+                        setUnreadNotifCount(prev => Math.max(0, prev - 1));
+                      }
+                    }}
+                    className={`p-4 flex items-start space-x-3.5 hover:bg-blue-50/50 transition cursor-pointer ${
+                      notif.unread ? "bg-blue-50/30" : "bg-white"
+                    }`}
+                  >
+                    {/* Blue Unread Indicator Dot (Image 3 Style) */}
+                    <div className="pt-1.5 w-2 flex-shrink-0">
+                      {notif.unread && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600 block"></span>
+                      )}
+                    </div>
+
+                    {/* Sender Avatar */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-bold text-sm border border-gray-200 shadow-xs overflow-hidden">
+                        {notif.avatar ? (
+                          <img src={notif.avatar} alt={notif.author} className="w-full h-full object-cover" />
+                        ) : (
+                          notif.author.slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notification Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-800 font-normal leading-relaxed">
+                        <span className="font-bold text-gray-900">{notif.author} </span>
+                        {notif.text}
+                      </p>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1 block">{notif.time}</span>
+                    </div>
+
+                    {/* Action Menu */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerToast("Options de notification", "fa-ellipsis");
+                      }}
+                      className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-ellipsis text-sm"></i>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
