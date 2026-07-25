@@ -275,6 +275,7 @@ export default function Home() {
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
+  const [displayLimit, setDisplayLimit] = useState(10);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -392,6 +393,30 @@ export default function Home() {
 
     setJobs(filtered);
   }, [keyword, locationFilter, contractFilter, selectedLang]);
+
+  // Infinite Scroll / Looping Feed listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 400) {
+        setDisplayLimit((prev) => prev + 10);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const getLoopedJobs = () => {
+    if (jobs.length === 0) return [];
+    const looped = [];
+    for (let i = 0; i < displayLimit; i++) {
+      const originalJob = jobs[i % jobs.length];
+      looped.push({
+        ...originalJob,
+        loopId: `${originalJob.id}-${i}`
+      });
+    }
+    return looped;
+  };
 
   const handleApplyClick = (job) => {
     setSelectedJobToApply(job);
@@ -1003,10 +1028,10 @@ export default function Home() {
 
             {/* Liste des Offres d'emploi */}
             <div className="space-y-4">
-              {jobs.length > 0 ? (
-                jobs.map((job) => (
+              {getLoopedJobs().length > 0 ? (
+                getLoopedJobs().map((job) => (
                   <div
-                    key={job.id}
+                    key={job.loopId}
                     className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs hover:shadow-md transition duration-300 flex flex-col space-y-4"
                   >
                     {/* Header Offre */}
