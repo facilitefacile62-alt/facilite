@@ -267,8 +267,8 @@ export default function CreerCv() {
     availability: "",
     cvLang: "Français",
     photoZoom: 1,
-    photoX: 50,
-    photoY: 50,
+    photoX: 0,
+    photoY: 0,
     experiences: [
       {
         id: 1,
@@ -408,93 +408,64 @@ export default function CreerCv() {
 
   // Cropper Modal States
   const [isCropping, setIsCropping] = useState(false);
-  const [cropState, setCropState] = useState({ x: 10, y: 10, size: 80 });
-  const [cropperAction, setCropperAction] = useState({ type: null, startX: 0, startY: 0, startCrop: {} });
+  const [modalZoom, setModalZoom] = useState(1);
+  const [modalX, setModalX] = useState(0);
+  const [modalY, setModalY] = useState(0);
+  const [isDraggingModalImage, setIsDraggingModalImage] = useState(false);
+  const [modalDragStart, setModalDragStart] = useState({ x: 0, y: 0, photoX: 0, photoY: 0 });
 
   const handleOpenCropper = () => {
-    // Reverse-map zoom and X/Y to crop box parameters
-    const size = 100 / (cvData.photoZoom || 1);
-    const x = (cvData.photoX !== undefined ? cvData.photoX : 50) - size / 2;
-    const y = (cvData.photoY !== undefined ? cvData.photoY : 50) - size / 2;
-    
-    setCropState({
-      x: Math.max(0, Math.min(100 - size, x)),
-      y: Math.max(0, Math.min(100 - size, y)),
-      size: size
-    });
+    setModalZoom(cvData.photoZoom || 1);
+    setModalX(cvData.photoX || 0);
+    setModalY(cvData.photoY || 0);
     setIsCropping(true);
   };
 
-  const handleCropBoxDragStart = (e) => {
-    e.stopPropagation();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    setCropperAction({
-      type: "move",
-      startX: clientX,
-      startY: clientY,
-      startCrop: { ...cropState }
-    });
-  };
-
-  const handleCropResizeStart = (e) => {
-    e.stopPropagation();
+  const handleModalImageDragStart = (e) => {
     e.preventDefault();
+    setIsDraggingModalImage(true);
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    setCropperAction({
-      type: "resize",
-      startX: clientX,
-      startY: clientY,
-      startCrop: { ...cropState }
+    setModalDragStart({
+      x: clientX,
+      y: clientY,
+      photoX: modalX,
+      photoY: modalY
     });
   };
 
-  // Bind mouse move / touch move to window so dragging continues smoothly even if cursor leaves the box
+  // Drag the modal image behind the fixed circle
   useEffect(() => {
     const handlePointerMove = (e) => {
-      if (!cropperAction.type) return;
+      if (!isDraggingModalImage) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       
-      const deltaX = clientX - cropperAction.startX;
-      const deltaY = clientY - cropperAction.startY;
+      const deltaX = clientX - modalDragStart.x;
+      const deltaY = clientY - modalDragStart.y;
       
-      // Convert pixels to percentage on 300px box
-      const deltaPercentX = (deltaX / 300) * 100;
-      const deltaPercentY = (deltaY / 300) * 100;
+      const imgElement = document.getElementById("modal-crop-image");
+      if (!imgElement) return;
+      const rect = imgElement.getBoundingClientRect();
+      const imageWidth = rect.width || 300;
+      const imageHeight = rect.height || 300;
 
-      if (cropperAction.type === "move") {
-        const maxPos = 100 - cropperAction.startCrop.size;
-        const newX = Math.max(0, Math.min(maxPos, cropperAction.startCrop.x + deltaPercentX));
-        const newY = Math.max(0, Math.min(maxPos, cropperAction.startCrop.y + deltaPercentY));
-        setCropState(prev => ({
-          ...prev,
-          x: newX,
-          y: newY
-        }));
-      } else if (cropperAction.type === "resize") {
-        // Resize square crop box (we use deltaPercentX as the size delta)
-        const newSize = Math.max(15, Math.min(100, cropperAction.startCrop.size + deltaPercentX));
-        
-        // Ensure box doesn't resize past bounds
-        const maxPos = 100 - newSize;
-        const newX = Math.min(cropperAction.startCrop.x, maxPos);
-        const newY = Math.min(cropperAction.startCrop.y, maxPos);
-        
-        setCropState({
-          x: newX,
-          y: newY,
-          size: newSize
-        });
-      }
+      // Convert drag pixel delta to percentage changes (1:1 cursor movement)
+      const deltaPercentX = (deltaX / imageWidth) * 100;
+      const deltaPercentY = (deltaY / imageHeight) * 100;
+
+      const newX = Math.max(-100, Math.min(100, modalDragStart.photoX + deltaPercentX));
+      const newY = Math.max(-100, Math.min(100, modalDragStart.photoY + deltaPercentY));
+
+      setModalX(newX);
+      setModalY(newY);
     };
 
     const handlePointerUp = () => {
-      setCropperAction({ type: null, startX: 0, startY: 0, startCrop: {} });
+      setIsDraggingModalImage(false);
     };
 
-    if (cropperAction.type) {
+    if (isDraggingModalImage) {
       window.addEventListener("mousemove", handlePointerMove);
       window.addEventListener("mouseup", handlePointerUp);
       window.addEventListener("touchmove", handlePointerMove);
@@ -507,19 +478,14 @@ export default function CreerCv() {
       window.removeEventListener("touchmove", handlePointerMove);
       window.removeEventListener("touchend", handlePointerUp);
     };
-  }, [cropperAction]);
+  }, [isDraggingModalImage, modalDragStart, modalZoom]);
 
   const applyCrop = () => {
-    // Map crop box back to photoZoom, photoX, and photoY
-    const zoom = 100 / cropState.size;
-    const photoX = cropState.x + cropState.size / 2;
-    const photoY = cropState.y + cropState.size / 2;
-    
     setCvData(prev => ({
       ...prev,
-      photoZoom: zoom,
-      photoX: photoX,
-      photoY: photoY
+      photoZoom: modalZoom,
+      photoX: modalX,
+      photoY: modalY
     }));
     setIsCropping(false);
     triggerToast("Photo rognée avec succès !");
@@ -954,8 +920,7 @@ export default function CreerCv() {
                               src={photoPreview}
                               alt="Preview"
                               style={{
-                                objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
-                                transform: `scale(${cvData.photoZoom || 1})`,
+                                transform: `scale(${cvData.photoZoom || 1}) translate(${cvData.photoX || 0}%, ${cvData.photoY || 0}%)`,
                                 transition: "none",
                                 pointerEvents: "none"
                               }}
@@ -2135,8 +2100,7 @@ export default function CreerCv() {
                               onTouchMove={handlePhotoDragMove}
                               onTouchEnd={handlePhotoDragEnd}
                               style={{
-                                objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
-                                transform: `scale(${cvData.photoZoom || 1})`,
+                                transform: `scale(${cvData.photoZoom || 1}) translate(${cvData.photoX || 0}%, ${cvData.photoY || 0}%)`,
                                 transition: "none",
                                 cursor: "move"
                               }}
@@ -2420,85 +2384,70 @@ export default function CreerCv() {
 
             <div className="flex flex-col items-center space-y-4">
               
-              {/* Cropper Box */}
+              {/* Cropper Box Container */}
               <div
-                className="relative bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center select-none border border-gray-200"
+                className="relative bg-slate-950 rounded-2xl overflow-hidden flex items-center justify-center select-none border border-gray-200"
                 style={{ width: "300px", height: "300px" }}
               >
-                {/* Base Original Photo */}
-                <img
-                  src={photoPreview}
-                  alt="Original"
-                  className="w-full h-full object-contain opacity-40 select-none pointer-events-none"
-                />
+                {/* Draggable Photo (placed behind centered crop frame) */}
+                <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                  <img
+                    id="modal-crop-image"
+                    src={photoPreview}
+                    alt="To Crop"
+                    onMouseDown={handleModalImageDragStart}
+                    onTouchStart={handleModalImageDragStart}
+                    style={{
+                      transform: `scale(${modalZoom}) translate(${modalX}%, ${modalY}%)`,
+                      transition: "none",
+                      cursor: isDraggingModalImage ? "grabbing" : "grab",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover"
+                    }}
+                    className="select-none"
+                  />
+                </div>
 
-                {/* Draggable Circle crop area */}
+                {/* Circular Spotlight Overlay mask (Fixed in center) */}
                 <div
-                  onMouseDown={handleCropBoxDragStart}
-                  onTouchStart={handleCropBoxDragStart}
                   style={{
                     position: "absolute",
-                    left: `${cropState.x}%`,
-                    top: `${cropState.y}%`,
-                    width: `${cropState.size}%`,
-                    height: `${cropState.size}%`,
-                    border: "2px solid #10E688",
-                    boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.75)",
+                    left: "60px",
+                    top: "60px",
+                    width: "180px",
+                    height: "180px",
+                    border: "2.5px solid #10E688",
+                    boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.7)",
                     borderRadius: "50%",
-                    cursor: "move",
+                    pointerEvents: "none",
                     zIndex: 20
                   }}
                   className="flex items-center justify-center"
                 >
-                  <div className="absolute inset-0 border-2 border-white/60 rounded-full pointer-events-none"></div>
-                  
-                  {/* Circular resize handle in the bottom-right of the crop box */}
-                  <div
-                    onMouseDown={handleCropResizeStart}
-                    onTouchStart={handleCropResizeStart}
-                    style={{
-                      position: "absolute",
-                      right: "4%",
-                      bottom: "4%",
-                      width: "14px",
-                      height: "14px",
-                      backgroundColor: "#fff",
-                      border: "2.5px solid #10E688",
-                      borderRadius: "50%",
-                      cursor: "se-resize",
-                      zIndex: 30
-                    }}
-                    className="shadow-md"
-                  ></div>
+                  <div className="absolute inset-0 border border-white/40 rounded-full pointer-events-none"></div>
                 </div>
               </div>
 
-              {/* Cadre Size slider */}
+              {/* Photo Zoom slider */}
               <div className="w-full space-y-1">
                 <div className="flex justify-between text-[10px] font-black text-gray-500 uppercase tracking-wide">
-                  <span>Dimension du cercle</span>
-                  <span>{Math.round(100 - cropState.size)}%</span>
+                  <span>Zoom de la photo</span>
+                  <span>{Math.round(modalZoom * 100)}%</span>
                 </div>
                 <input
                   type="range"
-                  min="20"
-                  max="95"
-                  value={cropState.size}
-                  onChange={(e) => {
-                    const newSize = parseFloat(e.target.value);
-                    setCropState(prev => {
-                      const maxPos = 100 - newSize;
-                      const newX = Math.min(prev.x, maxPos);
-                      const newY = Math.min(prev.y, maxPos);
-                      return { ...prev, size: newSize, x: newX, y: newY };
-                    });
-                  }}
+                  min="1"
+                  max="3.5"
+                  step="0.05"
+                  value={modalZoom}
+                  onChange={(e) => setModalZoom(parseFloat(e.target.value))}
                   className="w-full accent-[#10E688] h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
 
               <p className="text-[9px] text-gray-400 font-bold text-center leading-normal">
-                Déplacez le rond vert pour cadrer votre visage et étirez le bouton blanc dans le coin pour zoomer/dézoomer.
+                Cliquez et glissez sur la photo pour la déplacer derrière le cercle de rognage vert, et utilisez le curseur pour l'agrandir.
               </p>
 
               {/* Action buttons */}
