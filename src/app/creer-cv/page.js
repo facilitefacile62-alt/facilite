@@ -818,38 +818,40 @@ export default function CreerCv() {
                 {/* Photo uploader + CV Lang dropdown */}
                 <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 p-4 border border-gray-150 rounded-2xl bg-gray-50/50">
                   <div className="flex items-center space-x-4">
-                    <div
-                      onMouseDown={photoPreview ? handlePhotoDragStart : handlePhotoUploadClick}
-                      onMouseMove={photoPreview ? handlePhotoDragMove : null}
-                      onMouseUp={photoPreview ? handlePhotoDragEnd : null}
-                      onMouseLeave={photoPreview ? handlePhotoDragEnd : null}
-                      onTouchStart={photoPreview ? handlePhotoDragStart : handlePhotoUploadClick}
-                      onTouchMove={photoPreview ? handlePhotoDragMove : null}
-                      onTouchEnd={photoPreview ? handlePhotoDragEnd : null}
-                      className={`w-16 h-16 rounded-full border-2 ${photoPreview ? "border-solid border-[#10E688] cursor-move" : "border-dashed border-gray-300 cursor-pointer"} bg-white flex items-center justify-center overflow-hidden group relative select-none`}
-                    >
-                      {photoPreview ? (
-                        <>
-                          <img
-                            src={photoPreview}
-                            alt="Preview"
-                            style={{
-                              objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
-                              transform: `scale(${cvData.photoZoom || 1})`,
-                              transition: "none",
-                              pointerEvents: "none"
-                            }}
-                            className="w-full h-full object-cover select-none"
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition pointer-events-none">
-                            <i className="fa-solid fa-arrows-up-down-left-right text-white text-xs"></i>
+                    <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-xs border border-gray-200 select-none">
+                      <div
+                        onMouseDown={photoPreview ? handlePhotoDragStart : handlePhotoUploadClick}
+                        onMouseMove={photoPreview ? handlePhotoDragMove : null}
+                        onMouseUp={photoPreview ? handlePhotoDragEnd : null}
+                        onMouseLeave={photoPreview ? handlePhotoDragEnd : null}
+                        onTouchStart={photoPreview ? handlePhotoDragStart : handlePhotoUploadClick}
+                        onTouchMove={photoPreview ? handlePhotoDragMove : null}
+                        onTouchEnd={photoPreview ? handlePhotoDragEnd : null}
+                        className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center relative cursor-pointer bg-slate-50`}
+                      >
+                        {photoPreview ? (
+                          <>
+                            <img
+                              src={photoPreview}
+                              alt="Preview"
+                              style={{
+                                objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
+                                transform: `scale(${cvData.photoZoom || 1})`,
+                                transition: "none",
+                                pointerEvents: "none"
+                              }}
+                              className="w-full h-full object-cover select-none"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition pointer-events-none">
+                              <i className="fa-solid fa-arrows-up-down-left-right text-white text-xs"></i>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center">
+                            <i className="fa-solid fa-user-plus text-gray-400 text-base"></i>
                           </div>
-                        </>
-                      ) : (
-                        <div className="text-center">
-                          <i className="fa-solid fa-user-plus text-gray-400 text-lg"></i>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                     <div>
                       <button
@@ -1645,30 +1647,33 @@ export default function CreerCv() {
                       className="w-[200px] text-white p-5 flex flex-col justify-between flex-shrink-0"
                     >
                       <div>
-                        {/* Profile Picture */}
-                        <div className="w-24 h-24 rounded-full border-2 border-white/20 mx-auto overflow-hidden bg-slate-700/80 mb-5 flex items-center justify-center relative select-none">
-                          {photoPreview ? (
-                            <img
-                              src={photoPreview}
-                              alt="Profile"
-                              onMouseDown={handlePhotoDragStart}
-                              onMouseMove={handlePhotoDragMove}
-                              onMouseUp={handlePhotoDragEnd}
-                              onMouseLeave={handlePhotoDragEnd}
-                              onTouchStart={handlePhotoDragStart}
-                              onTouchMove={handlePhotoDragMove}
-                              onTouchEnd={handlePhotoDragEnd}
-                              style={{
-                                objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
-                                transform: `scale(${cvData.photoZoom || 1})`,
-                                transition: "none",
-                                cursor: "move"
-                              }}
-                              className="w-full h-full object-cover select-none"
-                            />
-                          ) : (
-                            <i className="fa-solid fa-user text-white/50 text-3xl"></i>
-                          )}
+                        {/* Profile Picture (Outer White Circle) */}
+                        <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center mx-auto mb-5 shadow-md flex-shrink-0 relative select-none">
+                          {/* Inner Image Circle */}
+                          <div className="w-[84px] h-[84px] rounded-full overflow-hidden bg-slate-100 flex items-center justify-center relative">
+                            {photoPreview ? (
+                              <img
+                                src={photoPreview}
+                                alt="Profile"
+                                onMouseDown={handlePhotoDragStart}
+                                onMouseMove={handlePhotoDragMove}
+                                onMouseUp={handlePhotoDragEnd}
+                                onMouseLeave={handlePhotoDragEnd}
+                                onTouchStart={handlePhotoDragStart}
+                                onTouchMove={handlePhotoDragMove}
+                                onTouchEnd={handlePhotoDragEnd}
+                                style={{
+                                  objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
+                                  transform: `scale(${cvData.photoZoom || 1})`,
+                                  transition: "none",
+                                  cursor: "move"
+                                }}
+                                className="w-full h-full object-cover select-none"
+                              />
+                            ) : (
+                              <i className="fa-solid fa-user text-gray-400 text-3xl"></i>
+                            )}
+                          </div>
                         </div>
 
                         {/* Coordonnées */}
@@ -1982,29 +1987,33 @@ export default function CreerCv() {
                     
                     {/* Top banner header */}
                     <div style={{ backgroundColor: accentColor }} className="p-6 text-white text-center space-y-2 relative">
-                      <div className="absolute top-6 left-6 w-14 h-14 rounded-full border-2 border-white/20 overflow-hidden bg-slate-700/80 hidden sm:flex items-center justify-center relative select-none">
-                        {photoPreview ? (
-                          <img
-                            src={photoPreview}
-                            alt="Profile"
-                            onMouseDown={handlePhotoDragStart}
-                            onMouseMove={handlePhotoDragMove}
-                            onMouseUp={handlePhotoDragEnd}
-                            onMouseLeave={handlePhotoDragEnd}
-                            onTouchStart={handlePhotoDragStart}
-                            onTouchMove={handlePhotoDragMove}
-                            onTouchEnd={handlePhotoDragEnd}
-                            style={{
-                              objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
-                              transform: `scale(${cvData.photoZoom || 1})`,
-                              transition: "none",
-                              cursor: "move"
-                            }}
-                            className="w-full h-full object-cover select-none"
-                          />
-                        ) : (
-                          <i className="fa-solid fa-user text-white/50 text-xl"></i>
-                        )}
+                      {/* Profile Picture Classic (Outer White Circle) */}
+                      <div className="absolute top-6 left-6 w-14 h-14 rounded-full bg-white hidden sm:flex items-center justify-center shadow-md select-none">
+                        {/* Inner Image Circle */}
+                        <div className="w-[50px] h-[50px] rounded-full overflow-hidden bg-slate-100 flex items-center justify-center relative">
+                          {photoPreview ? (
+                            <img
+                              src={photoPreview}
+                              alt="Profile"
+                              onMouseDown={handlePhotoDragStart}
+                              onMouseMove={handlePhotoDragMove}
+                              onMouseUp={handlePhotoDragEnd}
+                              onMouseLeave={handlePhotoDragEnd}
+                              onTouchStart={handlePhotoDragStart}
+                              onTouchMove={handlePhotoDragMove}
+                              onTouchEnd={handlePhotoDragEnd}
+                              style={{
+                                objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
+                                transform: `scale(${cvData.photoZoom || 1})`,
+                                transition: "none",
+                                cursor: "move"
+                              }}
+                              className="w-full h-full object-cover select-none"
+                            />
+                          ) : (
+                            <i className="fa-solid fa-user text-gray-400 text-xl"></i>
+                          )}
+                        </div>
                       </div>
                       
                       <h1 className="text-2xl font-black tracking-tight capitalize">
