@@ -275,7 +275,7 @@ export default function Home() {
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
-  const [displayLimit, setDisplayLimit] = useState(10);
+  const [displayLimit, setDisplayLimit] = useState(30);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -397,8 +397,8 @@ export default function Home() {
   // Infinite Scroll / Looping Feed listener
   useEffect(() => {
     const handleScroll = () => {
-      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 400) {
-        setDisplayLimit((prev) => prev + 10);
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 1000) {
+        setDisplayLimit((prev) => prev + 15);
       }
     };
     window.addEventListener("scroll", handleScroll);
