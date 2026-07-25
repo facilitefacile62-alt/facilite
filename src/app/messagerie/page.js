@@ -232,6 +232,10 @@ export default function MessageriePage() {
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
+  // Layout & Dropdown States
+  const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
+  const plusDropdownRef = useRef(null);
+
   // Contact Modal States
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -355,17 +359,27 @@ export default function MessageriePage() {
     }, 1200);
   };
 
-  // Esc closes modals
+  // Esc closes modals & dropdowns
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         if (contactModalOpen) handleCloseContactModal();
         if (recruitmentModalOpen) handleCloseRecruitmentModal();
+        if (plusDropdownOpen) setPlusDropdownOpen(false);
+      }
+    };
+    const handleClickOutside = (e) => {
+      if (plusDropdownRef.current && !plusDropdownRef.current.contains(e.target)) {
+        setPlusDropdownOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [contactModalOpen, recruitmentModalOpen]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [contactModalOpen, recruitmentModalOpen, plusDropdownOpen]);
 
   const toggleFavorite = (id) => {
     setConversations(prev => prev.map(c => {
@@ -599,8 +613,9 @@ export default function MessageriePage() {
       <nav className="bg-[#FAF6F1] px-4 md:px-6 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
         <div className="max-w-[1180px] mx-auto w-full flex items-center justify-between">
           
-          {/* Groupe Gauche : Logo */}
+          {/* Groupe Gauche : Logo + Barre de Recherche */}
           <div className="flex items-center space-x-3">
+            {/* Logo */}
             <Link
               href="/"
               className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
@@ -608,9 +623,21 @@ export default function MessageriePage() {
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
               <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
             </Link>
+
+            {/* Barre de recherche */}
+            <div className="hidden sm:block relative w-48 md:w-64">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                <i className="fa-solid fa-magnifying-glass text-xs"></i>
+              </span>
+              <input
+                type="text"
+                className="w-full pl-9 pr-4 py-1.5 bg-white border border-[#E5E7EB] rounded-full text-xs text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
+                placeholder={t.searchPlaceholder || "Rechercher une offre d'emploi..."}
+              />
+            </div>
           </div>
 
-          {/* Groupe Centre : Liens principaux (Accueil, Service, Messagerie, Notifications, Recrutement, Contact) */}
+          {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Recrutement, Plus) */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
             {/* Accueil */}
             <Link
@@ -621,16 +648,7 @@ export default function MessageriePage() {
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
             </Link>
             
-            {/* Service */}
-            <Link
-              href="/service"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-solid fa-briefcase text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
-            </Link>
-
-            {/* Messagerie - ACTIF */}
+            {/* Messagerie (Actif sur la page de messagerie) */}
             <Link
               href="/messagerie"
               className="flex flex-col items-center justify-center text-center text-[#10E688] transition space-y-1 cursor-pointer w-16 relative"
@@ -666,15 +684,48 @@ export default function MessageriePage() {
               <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
             </a>
 
-            {/* Contactez-nous */}
-            <a
-              href="#"
-              onClick={handleOpenContactModal}
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-regular fa-comment-dots text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">Contact</span>
-            </a>
+            {/* Plus Dropdown Menu (Contient Service & Contact) */}
+            <div className="relative" ref={plusDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
+                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
+                  plusDropdownOpen ? "text-gray-900 font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <i className="fa-solid fa-bars text-xl"></i>
+                <div className="flex items-center space-x-1 text-[11px] font-bold tracking-tight">
+                  <span>Plus</span>
+                  <i className={`fa-solid fa-caret-down text-[9px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+                </div>
+              </button>
+
+              {/* Menu Déroulant "Plus" Overlay */}
+              {plusDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl border border-gray-200 shadow-2xl py-1.5 z-[600] animate-fade-in-up">
+                  <Link
+                    href="/service"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                  >
+                    <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
+                    <span>Service</span>
+                  </Link>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPlusDropdownOpen(false);
+                      handleOpenContactModal();
+                    }}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
+                    <span>Contact</span>
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Groupe Droit : Langue & Profil */}
