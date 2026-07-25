@@ -425,8 +425,8 @@ export default function Home() {
 
   const handleConfirmApply = () => {
     setNoCvModalOpen(false);
-    // Redirect to services page where they can choose a template to create their CV
-    window.location.href = "/service";
+    // Redirect to creator page where they can build their CV
+    window.location.href = "/creer-cv";
   };
 
   const handleFileChange = (e) => {

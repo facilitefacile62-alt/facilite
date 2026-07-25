@@ -1028,15 +1028,12 @@ export default function Home() {
 
             {/* Boutons d'action Principaux */}
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
-              <button
-                onClick={() => {
-                  const section2 = document.getElementById("section-models");
-                  if (section2) section2.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="bg-[#10E688] text-gray-900 font-extrabold py-4 px-8 rounded-full text-lg shadow-[0_10px_20px_rgba(16,230,136,0.3)] hover:shadow-[0_15px_25px_rgba(16,230,136,0.45)] hover:-translate-y-1 transition-all transform duration-300 w-full sm:w-auto cursor-pointer"
+              <Link
+                href="/creer-cv"
+                className="bg-[#10E688] text-gray-900 font-extrabold py-4 px-8 rounded-full text-lg shadow-[0_10px_20px_rgba(16,230,136,0.3)] hover:shadow-[0_15px_25px_rgba(16,230,136,0.45)] hover:-translate-y-1 transition-all transform duration-300 w-full sm:w-auto cursor-pointer flex items-center justify-center text-center"
               >
                 {t.heroCreateCV}
-              </button>
+              </Link>
               <button
                 onClick={handleOpenModal}
                 className="bg-[#E4B8F9] text-gray-900 font-extrabold py-4 px-8 rounded-full text-lg shadow-[0_10px_20px_rgba(228,184,249,0.4)] hover:shadow-[0_15px_25px_rgba(228,184,249,0.6)] hover:-translate-y-1 transition-all transform duration-300 w-full sm:w-auto cursor-pointer"
@@ -1597,15 +1594,13 @@ export default function Home() {
                     <span>{t.previewDownloadDemo}</span>
                   </button>
 
-                  <a
-                    href={activePreviewSlide.preview}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    href={`/creer-cv?template=${activePreviewSlide.id}`}
                     className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-3.5 px-4 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-[0_6px_20px_rgba(16,230,136,0.3)] cursor-pointer"
                   >
-                    <i className="fa-solid fa-arrow-up-right-from-square text-sm"></i>
-                    <span>{t.previewOpenCanva}</span>
-                  </a>
+                    <i className="fa-solid fa-pen-to-square text-sm"></i>
+                    <span>{selectedLang === "FR" ? "Personnaliser ce modèle" : "Customize this template"}</span>
+                  </Link>
                 </div>
               </div>
             </div>
