@@ -512,7 +512,7 @@ export default function ImporterCvPage() {
             </div>
           </div>
 
-          {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Plus) */}
+          {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Recrutement, Plus) */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
             {/* Accueil */}
             <Link
@@ -549,7 +549,17 @@ export default function ImporterCvPage() {
               </span>
             </button>
 
-            {/* Plus Dropdown Menu (Inspiré de l'Image 2) */}
+            {/* Recrutement Spontané (Remis à sa place dans la navbar) */}
+            <a
+              href="#"
+              onClick={(e) => { e.preventDefault(); triggerToast("Recrutement Spontané", "fa-user-tie"); }}
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
+            >
+              <i className="fa-solid fa-user-tie text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
+            </a>
+
+            {/* Plus Dropdown Menu (Contient Service & Contact) */}
             <div className="relative" ref={plusDropdownRef}>
               <button
                 type="button"
@@ -565,92 +575,29 @@ export default function ImporterCvPage() {
                 </div>
               </button>
 
-              {/* Menu Déroulant "Plus" Overlay */}
+              {/* Menu Déroulant "Plus" Overlay (Service & Contact) */}
               {plusDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-[600] animate-fade-in-up divide-y divide-gray-100">
-                  {/* Service & Contact & Recrutement */}
-                  <div className="py-1">
-                    <Link
-                      href="/service"
-                      onClick={() => setPlusDropdownOpen(false)}
-                      className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
-                    >
-                      <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
-                      <span>Service</span>
-                    </Link>
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setPlusDropdownOpen(false);
-                        handleOpenContactModal();
-                      }}
-                      className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
-                    >
-                      <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
-                      <span>Contact</span>
-                    </a>
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setPlusDropdownOpen(false);
-                        triggerToast("Recrutement Spontané", "fa-user-tie");
-                      }}
-                      className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
-                    >
-                      <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
-                      <span>Recrutement</span>
-                    </a>
-                  </div>
-
-                  {/* Options additionnelles inspirées de l'Image 2 */}
-                  <div className="py-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPlusDropdownOpen(false);
-                        triggerToast("Jeux de réflexion", "fa-puzzle-piece");
-                      }}
-                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition text-left cursor-pointer"
-                    >
-                      <i className="fa-solid fa-puzzle-piece text-lg text-gray-600 w-5 text-center"></i>
-                      <span>Jeux de réflexion</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPlusDropdownOpen(false);
-                        triggerToast("Groupes d'entraide", "fa-user-group");
-                      }}
-                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition text-left cursor-pointer"
-                    >
-                      <i className="fa-solid fa-user-group text-lg text-gray-600 w-5 text-center"></i>
-                      <span>Groupes</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPlusDropdownOpen(false);
-                        triggerToast("Événements & Webinaires", "fa-calendar-days");
-                      }}
-                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition text-left cursor-pointer"
-                    >
-                      <i className="fa-solid fa-calendar-days text-lg text-gray-600 w-5 text-center"></i>
-                      <span>Événements</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPlusDropdownOpen(false);
-                        triggerToast("Newsletters Carrière", "fa-newspaper");
-                      }}
-                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition text-left cursor-pointer"
-                    >
-                      <i className="fa-solid fa-newspaper text-lg text-gray-600 w-5 text-center"></i>
-                      <span>Newsletters</span>
-                    </button>
-                  </div>
+                <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl border border-gray-200 shadow-2xl py-1.5 z-[600] animate-fade-in-up">
+                  <Link
+                    href="/service"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                  >
+                    <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
+                    <span>Service</span>
+                  </Link>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPlusDropdownOpen(false);
+                      handleOpenContactModal();
+                    }}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
+                    <span>Contact</span>
+                  </a>
                 </div>
               )}
             </div>
