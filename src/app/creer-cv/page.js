@@ -267,8 +267,8 @@ export default function CreerCv() {
     availability: "",
     cvLang: "Français",
     photoZoom: 1,
-    photoX: 0,
-    photoY: 0,
+    photoX: 50,
+    photoY: 50,
     experiences: [
       {
         id: 1,
@@ -353,8 +353,8 @@ export default function CreerCv() {
         setCvData(prev => ({
           ...prev,
           photoZoom: 1,
-          photoX: 0,
-          photoY: 0
+          photoX: 50,
+          photoY: 50
         }));
         triggerToast(t.toastFileUploaded);
       };
@@ -362,9 +362,9 @@ export default function CreerCv() {
     }
   };
 
-  // Profile image interactive drag-to-pan repositioning
+  // Profile image interactive drag-to-pan repositioning using object-position percentages
   const [isDraggingPhoto, setIsDraggingPhoto] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0, photoX: 50, photoY: 50 });
 
   const handlePhotoDragStart = (e) => {
     e.preventDefault();
@@ -372,8 +372,10 @@ export default function CreerCv() {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     setDragStart({
-      x: clientX - (cvData.photoX || 0),
-      y: clientY - (cvData.photoY || 0)
+      x: clientX,
+      y: clientY,
+      photoX: cvData.photoX !== undefined ? cvData.photoX : 50,
+      photoY: cvData.photoY !== undefined ? cvData.photoY : 50
     });
   };
 
@@ -381,8 +383,18 @@ export default function CreerCv() {
     if (!isDraggingPhoto) return;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const newX = clientX - dragStart.x;
-    const newY = clientY - dragStart.y;
+    
+    const deltaX = clientX - dragStart.x;
+    const deltaY = clientY - dragStart.y;
+    
+    // Scale movement speed based on zoom level
+    const zoom = cvData.photoZoom || 1;
+    const sensitivity = 0.85 / zoom; 
+    
+    // Convert drag pixel delta to percentage changes (0% to 100%)
+    const newX = Math.max(0, Math.min(100, dragStart.photoX - deltaX * sensitivity));
+    const newY = Math.max(0, Math.min(100, dragStart.photoY - deltaY * sensitivity));
+    
     setCvData(prev => ({
       ...prev,
       photoX: newX,
@@ -822,7 +834,8 @@ export default function CreerCv() {
                             src={photoPreview}
                             alt="Preview"
                             style={{
-                              transform: `scale(${cvData.photoZoom || 1}) translate(${cvData.photoX || 0}px, ${cvData.photoY || 0}px)`,
+                              objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
+                              transform: `scale(${cvData.photoZoom || 1})`,
                               transition: "none",
                               pointerEvents: "none"
                             }}
@@ -1646,7 +1659,8 @@ export default function CreerCv() {
                               onTouchMove={handlePhotoDragMove}
                               onTouchEnd={handlePhotoDragEnd}
                               style={{
-                                transform: `scale(${cvData.photoZoom || 1}) translate(${cvData.photoX || 0}px, ${cvData.photoY || 0}px)`,
+                                objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
+                                transform: `scale(${cvData.photoZoom || 1})`,
                                 transition: "none",
                                 cursor: "move"
                               }}
@@ -1981,7 +1995,8 @@ export default function CreerCv() {
                             onTouchMove={handlePhotoDragMove}
                             onTouchEnd={handlePhotoDragEnd}
                             style={{
-                              transform: `scale(${cvData.photoZoom || 1}) translate(${cvData.photoX || 0}px, ${cvData.photoY || 0}px)`,
+                              objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
+                              transform: `scale(${cvData.photoZoom || 1})`,
                               transition: "none",
                               cursor: "move"
                             }}
