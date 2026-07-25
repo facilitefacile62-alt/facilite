@@ -339,6 +339,56 @@ export default function CreerCv() {
     }
   }, []);
 
+  // Load imported CV data from localStorage if available
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const importedStr = localStorage.getItem("imported_cv_data");
+      if (importedStr) {
+        try {
+          const imported = JSON.parse(importedStr);
+          if (imported) {
+            setCvData(prev => ({
+              ...prev,
+              firstName: imported.firstName || prev.firstName,
+              lastName: imported.lastName || prev.lastName,
+              email: imported.email || prev.email,
+              phone: imported.phone || prev.phone,
+              profile: imported.summary || prev.profile,
+              experiences: (imported.experiences && imported.experiences.length > 0)
+                ? imported.experiences
+                : prev.experiences,
+              skills: (imported.skills && imported.skills.length > 0)
+                ? imported.skills.map((s, idx) => ({ id: idx + 1, name: s, level: "Avancé" }))
+                : prev.skills,
+            }));
+
+            // Auto-enable toggles for optional fields if they have content in imported data
+            const newToggles = {};
+            if (imported.birthDate) newToggles.birthDate = true;
+            if (imported.drivingLicense) newToggles.drivingLicense = true;
+            if (imported.nationality) newToggles.nationality = true;
+            if (imported.maritalStatus) newToggles.maritalStatus = true;
+            if (imported.linkedin) newToggles.linkedin = true;
+            if (imported.availability) newToggles.availability = true;
+            
+            if (Object.keys(newToggles).length > 0) {
+              setOptionalFields(prev => ({ ...prev, ...newToggles }));
+            }
+
+            setTimeout(() => {
+              triggerToast("Données de CV importées !", "fa-file-circle-check");
+            }, 800);
+
+            // Clean up to prevent duplicate populating on refresh
+            localStorage.removeItem("imported_cv_data");
+          }
+        } catch (e) {
+          console.error("Error parsing imported CV data:", e);
+        }
+      }
+    }
+  }, []);
+
   // Handle profile image upload
   const handlePhotoUploadClick = () => {
     fileInputRef.current.click();

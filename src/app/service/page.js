@@ -1034,12 +1034,12 @@ export default function Home() {
               >
                 {t.heroCreateCV}
               </Link>
-              <button
-                onClick={handleOpenModal}
-                className="bg-[#E4B8F9] text-gray-900 font-extrabold py-4 px-8 rounded-full text-lg shadow-[0_10px_20px_rgba(228,184,249,0.4)] hover:shadow-[0_15px_25px_rgba(228,184,249,0.6)] hover:-translate-y-1 transition-all transform duration-300 w-full sm:w-auto cursor-pointer"
+              <Link
+                href="/importer-cv"
+                className="bg-[#E4B8F9] text-gray-900 font-extrabold py-4 px-8 rounded-full text-lg shadow-[0_10px_20px_rgba(228,184,249,0.4)] hover:shadow-[0_15px_25px_rgba(228,184,249,0.6)] hover:-translate-y-1 transition-all transform duration-300 w-full sm:w-auto cursor-pointer flex items-center justify-center text-center"
               >
                 {t.heroImportCV}
-              </button>
+              </Link>
             </div>
 
             {/* Preuve sociale */}
