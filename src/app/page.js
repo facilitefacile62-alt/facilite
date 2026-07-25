@@ -798,7 +798,7 @@ export default function Home() {
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
-          <aside className="hidden lg:flex lg:w-[225px] flex-shrink-0 flex-col space-y-4">
+          <aside className="hidden lg:flex lg:w-[225px] flex-shrink-0 flex-col space-y-4 sticky top-[92px]">
             
             {/* Carte Profil */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
@@ -1066,7 +1066,7 @@ export default function Home() {
           </section>
 
           {/* --- COLONNE DE DROITE : Offres recommandées & Publicité --- */}
-          <aside className="w-full lg:w-[290px] flex-shrink-0 flex flex-col space-y-4">
+          <aside className="w-full lg:w-[290px] flex-shrink-0 flex flex-col space-y-4 lg:sticky lg:top-[92px]">
             
             {/* Offres Recommandées */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs">
