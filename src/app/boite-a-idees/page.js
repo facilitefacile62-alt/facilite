@@ -9,6 +9,7 @@ const translations = {
   FR: {
     navHome: "Accueil",
     navService: "Service",
+    navMessages: "Messagerie",
     navRecruitment: "Recrutement Spontané",
     navContact: "Contactez-nous",
     navLogin: "Se connecter",
@@ -54,6 +55,7 @@ const translations = {
   GB: {
     navHome: "Home",
     navService: "Service",
+    navMessages: "Messaging",
     navRecruitment: "Spontaneous Application",
     navContact: "Contact us",
     navLogin: "Sign in",
@@ -373,6 +375,19 @@ export default function BoiteAIdees() {
               <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
             </Link>
 
+            {/* Messagerie */}
+            <Link
+              href="/messagerie"
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+            >
+              <i className="fa-regular fa-comments text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
+              <span className="absolute top-0.5 right-2 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+            </Link>
+
             {/* Recrutement Spontané */}
             <a
               href="#"
@@ -405,14 +420,80 @@ export default function BoiteAIdees() {
             </a>
           </div>
 
-          {/* Bouton Menu Mobile */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden text-gray-700 focus:outline-none hover:text-blue-600 transition"
-            aria-label="Toggle Navigation"
+          {/* Mobile Right Controls: Search & Hamburger (LinkedIn style icons in circles) */}
+          <div className="flex md:hidden items-center space-x-2">
+            <button
+              onClick={() => {
+                triggerToast(selectedLang === "FR" ? "Recherche..." : "Search...", "fa-magnifying-glass");
+              }}
+              className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs focus:outline-none transition cursor-pointer"
+              aria-label="Search"
+            >
+              <i className="fa-solid fa-magnifying-glass text-sm"></i>
+            </button>
+
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-blue-600 shadow-xs focus:outline-none transition cursor-pointer"
+              aria-label="Toggle Navigation"
+            >
+              <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-sm`}></i>
+            </button>
+          </div>
+        </div>
+
+        {/* Horizontal Tab Bar on Mobile (LinkedIn-style tabs right under the top header) */}
+        <div className="flex md:hidden items-center justify-around w-full border-t border-gray-200/60 pt-2 mt-2 bg-[#FAF6F1]">
+          {/* Accueil */}
+          <a
+            href="/"
+            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
           >
-            <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-2xl`}></i>
-          </button>
+            <i className="fa-solid fa-house text-lg"></i>
+            <span className="text-[9px] font-bold tracking-tight">{t.navHome}</span>
+          </a>
+
+          {/* Service */}
+          <Link
+            href="/service"
+            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
+          >
+            <i className="fa-solid fa-briefcase text-lg"></i>
+            <span className="text-[9px] font-bold tracking-tight">{t.navService}</span>
+          </Link>
+
+          {/* Messagerie */}
+          <Link
+            href="/messagerie"
+            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
+          >
+            <i className="fa-regular fa-comments text-lg"></i>
+            <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>
+            <span className="absolute top-0.5 right-2 flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+            </span>
+          </Link>
+
+          {/* Recrutement */}
+          <a
+            href="#"
+            onClick={handleOpenRecruitmentModal}
+            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-16 text-gray-500 hover:text-gray-800"
+          >
+            <i className="fa-solid fa-user-tie text-lg"></i>
+            <span className="text-[9px] font-bold tracking-tight truncate max-w-[64px]">Recrutement</span>
+          </a>
+
+          {/* Contact */}
+          <a
+            href="#"
+            onClick={handleOpenModal}
+            className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 space-y-0.5 cursor-pointer w-14"
+          >
+            <i className="fa-regular fa-comment-dots text-lg"></i>
+            <span className="text-[9px] font-bold tracking-tight">Contact</span>
+          </a>
         </div>
 
         {/* Menu Déroulant Mobile */}
@@ -488,6 +569,19 @@ export default function BoiteAIdees() {
             <i className="fa-solid fa-briefcase text-xl w-6 text-[#10E688]"></i>
             <span>{t.navService}</span>
           </Link>
+
+          <Link
+            href="/messagerie"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-semibold p-3 rounded-xl hover:bg-white/60 relative"
+          >
+            <i className="fa-regular fa-comments text-xl w-6 text-gray-500"></i>
+            <span>{t.navMessages}</span>
+            <span className="absolute right-4 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            </span>
+          </Link>
           <a
             href="#"
             onClick={handleOpenRecruitmentModal}
@@ -551,7 +645,7 @@ export default function BoiteAIdees() {
       </nav>
 
       {/* Page Content */}
-      <main className="flex-grow pt-[52px] bg-white">
+      <main className="flex-grow pt-[100px] md:pt-[52px] bg-white">
         
         {/* Banner Section */}
         <section className="w-full bg-[#E2ECE9]/70 py-12 px-4 border-b border-gray-200/50 relative overflow-hidden">
