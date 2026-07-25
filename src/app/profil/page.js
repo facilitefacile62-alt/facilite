@@ -26,6 +26,7 @@ export default function ProfilPage() {
   const [city, setCity] = useState("Pikine");
   const [country, setCountry] = useState("Sénégal");
   const [uploadedCvFileName, setUploadedCvFileName] = useState(null);
+  const [cvPreviewModalOpen, setCvPreviewModalOpen] = useState(false);
   const cvFileInputRef = useRef(null);
 
   // Expériences dynamique (localStorage)
@@ -607,7 +608,7 @@ export default function ProfilPage() {
               {/* Carte Principale Formulaire */}
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
                 
-                {/* Bloc Curriculum Vitae + Bouton Importateur */}
+                {/* Bloc Curriculum Vitae + Icône Œil pour Voir le CV + Bouton Importateur */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div className="flex items-center space-x-3.5">
                     <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] border border-[#A7F3D0] flex items-center justify-center text-[#047857] flex-shrink-0">
@@ -615,16 +616,32 @@ export default function ProfilPage() {
                     </div>
                     <div>
                       <h3 className="text-sm font-extrabold text-gray-900">Curriculum vitae</h3>
-                      <p className="text-xs font-bold flex items-center space-x-1.5 mt-0.5">
+                      <p className="text-xs font-bold flex items-center space-x-2 mt-0.5">
                         {uploadedCvFileName ? (
                           <>
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-                            <span className="text-emerald-600 truncate max-w-[200px] sm:max-w-xs">{uploadedCvFileName}</span>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0"></span>
+                            <span className="text-emerald-600 truncate max-w-[180px] sm:max-w-xs">{uploadedCvFileName}</span>
+                            <button
+                              type="button"
+                              onClick={() => setCvPreviewModalOpen(true)}
+                              className="text-[#047857] hover:text-emerald-900 bg-emerald-100/90 hover:bg-emerald-200 p-1.5 rounded-lg transition cursor-pointer flex items-center justify-center"
+                              title="Voir le CV (Icône Œil)"
+                            >
+                              <i className="fa-solid fa-eye text-xs"></i>
+                            </button>
                           </>
                         ) : (
                           <>
-                            <span className="w-2.5 h-2.5 rounded-full bg-pink-500 inline-block"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-pink-500 inline-block flex-shrink-0"></span>
                             <span className="text-pink-500 font-semibold">Aucun fichier</span>
+                            <button
+                              type="button"
+                              onClick={() => setCvPreviewModalOpen(true)}
+                              className="text-gray-700 hover:text-gray-950 bg-gray-100 hover:bg-gray-200 p-1 rounded-md transition cursor-pointer flex items-center justify-center"
+                              title="Voir l'aperçu du CV"
+                            >
+                              <i className="fa-solid fa-eye text-xs"></i>
+                            </button>
                           </>
                         )}
                       </p>
@@ -639,14 +656,27 @@ export default function ProfilPage() {
                     className="hidden"
                   />
 
-                  <button
-                    type="button"
-                    onClick={() => cvFileInputRef.current?.click()}
-                    className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer self-stretch sm:self-auto justify-center"
-                  >
-                    <i className="fa-solid fa-arrow-up-from-bracket text-xs"></i>
-                    <span>Importateur</span>
-                  </button>
+                  {/* Groupe de boutons d'action : Voir le CV (Icône Œil) & Importateur */}
+                  <div className="flex items-center space-x-2.5 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setCvPreviewModalOpen(true)}
+                      className="bg-emerald-50 hover:bg-emerald-100 text-[#047857] border border-[#A7F3D0] font-extrabold px-3.5 py-2.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer justify-center flex-1 sm:flex-initial"
+                      title="Voir le CV (Icône Œil)"
+                    >
+                      <i className="fa-solid fa-eye text-sm"></i>
+                      <span>Voir</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => cvFileInputRef.current?.click()}
+                      className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center flex-1 sm:flex-initial"
+                    >
+                      <i className="fa-solid fa-arrow-up-from-bracket text-xs"></i>
+                      <span>Importateur</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="border-b border-gray-100"></div>
@@ -1002,6 +1032,103 @@ export default function ProfilPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL APERÇU DU CV (DECLENCHÉ PAR L'ICÔNE OEIL) */}
+      {cvPreviewModalOpen && (
+        <div
+          className="fixed inset-0 z-[750] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={() => setCvPreviewModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl space-y-6 relative border border-gray-100 transform transition-all scale-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Bouton Fermer */}
+            <button
+              onClick={() => setCvPreviewModalOpen(false)}
+              className="absolute top-5 right-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition cursor-pointer"
+            >
+              <i className="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            {/* En-tête Aperçu */}
+            <div className="flex items-center space-x-3 border-b border-gray-100 pb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#047857] flex items-center justify-center font-bold">
+                <i className="fa-solid fa-eye text-lg"></i>
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-gray-900">Aperçu du CV</h3>
+                <p className="text-xs text-gray-500 font-medium">
+                  {uploadedCvFileName ? `Fichier chargé : ${uploadedCvFileName}` : "Aperçu de votre identité professionnelle Facilite"}
+                </p>
+              </div>
+            </div>
+
+            {/* Document Aperçu CV Simulation */}
+            <div className="bg-[#FAF9F6] border border-gray-200 rounded-2xl p-6 md:p-8 shadow-inner space-y-6 max-h-[60vh] overflow-y-auto">
+              <div className="flex justify-between items-start border-b border-gray-300 pb-4">
+                <div>
+                  <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{profileName}</h1>
+                  <p className="text-sm font-bold text-[#047857]">{profileSubtitle}</p>
+                  <p className="text-xs text-gray-500 font-medium mt-1">{profileLocation}</p>
+                </div>
+                <div className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden bg-white">
+                  <img src="/logo.jpeg" alt="Logo" className="w-full h-full object-cover" />
+                </div>
+              </div>
+
+              {/* Bio / Résumé */}
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider">Profil Personnel</h4>
+                <p className="text-xs text-gray-600 leading-relaxed font-medium bg-white p-3 rounded-xl border border-gray-200/80">
+                  {profileBio}
+                </p>
+              </div>
+
+              {/* Expériences */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider">Expériences Professionnelles</h4>
+                {experiences.length > 0 ? (
+                  experiences.map((exp) => (
+                    <div key={exp.id} className="bg-white p-3.5 rounded-xl border border-gray-200/80 space-y-1">
+                      <div className="flex justify-between items-center">
+                        <h5 className="text-xs font-extrabold text-gray-900">{exp.title} — <span className="text-gray-600 font-bold">{exp.company}</span></h5>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">{exp.startMonth} {exp.startYear}</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 font-medium">{exp.location} ({exp.locationType}) • {exp.employmentType}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-400 italic">Aucune expérience enregistrée.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Actions Modal */}
+            <div className="flex justify-between items-center pt-2">
+              <span className="text-xs font-bold text-gray-400">Modèle Facilite HD • Format A4</span>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setCvPreviewModalOpen(false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                >
+                  Fermer
+                </button>
+                <button
+                  onClick={() => {
+                    triggerToast("Téléchargement du CV lancé !", "fa-download");
+                    setCvPreviewModalOpen(false);
+                  }}
+                  className="px-5 py-2 bg-[#10E688] hover:bg-[#0ed67e] text-gray-950 font-extrabold text-xs rounded-xl shadow-sm transition cursor-pointer flex items-center space-x-1.5"
+                >
+                  <i className="fa-solid fa-download text-xs"></i>
+                  <span>Télécharger PDF</span>
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
