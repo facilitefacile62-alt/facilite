@@ -742,6 +742,19 @@ export default function Home() {
               </span>
             </Link>
 
+            {/* Notifications */}
+            <button
+              type="button"
+              onClick={() => triggerToast("3 nouvelles notifications", "fa-bell")}
+              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+            >
+              <i className="fa-regular fa-bell text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">Notifications</span>
+              <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white">
+                3
+              </span>
+            </button>
+
             {/* Recrutement Spontané */}
             <a
               href="#"
