@@ -765,94 +765,115 @@ export default function MessageriePage() {
           </a>
         </div>
 
-        {/* Menu Déroulant Mobile */}
-        <div
-          className={`absolute top-full left-0 w-full bg-[#FAF6F1] shadow-xl flex-col py-4 px-4 space-y-3 md:hidden border-t border-gray-200/80 transition-all ${
-            mobileMenuOpen ? "flex" : "hidden"
-          }`}
-        >
-          <Link
-            href="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] font-bold p-2.5 rounded-xl hover:bg-white/60"
-          >
-            <img src="/accueil.png" alt="Accueil" className="w-6 h-6 object-contain" />
-            <span>{t.navHome}</span>
-          </Link>
+        {/* Menu Déroulant Mobile Plein Écran */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-[600] bg-[#F4F2EE] flex flex-col md:hidden animate-fade-in-up">
+            {/* Entête du Menu */}
+            <div className="bg-white px-4 py-3 border-b border-gray-200 flex items-center justify-between shadow-xs">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-gray-700 hover:text-gray-900 focus:outline-none cursor-pointer flex items-center"
+                >
+                  <i className="fa-solid fa-chevron-left text-xl"></i>
+                </button>
+                <h1 className="text-lg font-extrabold text-gray-900">Menu</h1>
+              </div>
+              
+              <div className="flex items-center space-x-4 text-blue-600">
+                <button
+                  onClick={() => triggerToast("Tri...", "fa-arrow-up-down")}
+                  className="hover:opacity-85 focus:outline-none cursor-pointer"
+                >
+                  <i className="fa-solid fa-arrow-up-down text-lg"></i>
+                </button>
+                <button
+                  onClick={() => triggerToast("Recherche...", "fa-magnifying-glass")}
+                  className="hover:opacity-85 focus:outline-none cursor-pointer"
+                >
+                  <i className="fa-solid fa-magnifying-glass text-lg"></i>
+                </button>
+              </div>
+            </div>
 
-          <Link
-            href="/service"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-bold p-2.5 rounded-xl hover:bg-white/60"
-          >
-            <i className="fa-solid fa-briefcase text-lg w-6 text-gray-500"></i>
-            <span>{t.navService}</span>
-          </Link>
-
-          <Link
-            href="/messagerie"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center space-x-3 text-[#10E688] font-bold p-2.5 rounded-xl hover:bg-white/60"
-          >
-            <i className="fa-regular fa-comments text-lg w-6 text-[#10E688]"></i>
-            <span>{t.navMessages}</span>
-          </Link>
-
-          <a
-            href="#"
-            onClick={handleOpenRecruitmentModal}
-            className="flex items-center space-x-3 text-gray-800 hover:text-purple-600 transition font-bold p-2.5 rounded-xl hover:bg-white/60"
-          >
-            <i className="fa-solid fa-user-tie text-lg w-6 text-gray-500"></i>
-            <span>{t.navRecruitment}</span>
-          </a>
-
-          <a
-            href="#"
-            onClick={handleOpenContactModal}
-            className="flex items-center space-x-3 text-gray-800 hover:text-blue-600 transition font-bold p-2.5 rounded-xl hover:bg-white/60"
-          >
-            <i className="fa-regular fa-comment-dots text-lg w-6 text-gray-500"></i>
-            <span>{t.navContact}</span>
-          </a>
-
-          <Link
-            href="/profil"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center space-x-3 text-gray-800 hover:text-[#10E688] transition font-bold p-2.5 rounded-xl hover:bg-white/60"
-          >
-            <i className="fa-solid fa-circle-user text-lg w-6 text-gray-500"></i>
-            <span>Profil</span>
-          </Link>
-
-          {/* Sélecteur de Langue Mobile */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-200/80 px-2 mt-1">
-            <span className="text-xs font-bold text-gray-600 flex items-center space-x-1.5">
-              <i className="fa-solid fa-globe text-gray-400"></i>
-              <span>Langue</span>
-            </span>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => handleLangChange("FR")}
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
-                  selectedLang === "FR" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white border border-gray-200 text-gray-600"
-                }`}
+            {/* Corps du Menu */}
+            <div className="flex-grow p-4 space-y-3 overflow-y-auto">
+              {/* Card 1 : Profil */}
+              <Link
+                href="/profil"
+                onClick={() => setMobileMenuOpen(false)}
+                className="bg-white rounded-xl p-4 flex items-center space-x-4 border border-gray-200 shadow-xs active:bg-gray-50 transition"
               >
-                <img src="/francais.avif" alt="FR" className="w-4 h-4 rounded-full object-cover" />
-                <span>FR</span>
+                {/* Cercle Avatar Violet */}
+                <div className="w-12 h-12 rounded-full bg-[#D946EF] flex-shrink-0 flex items-center justify-center text-white font-extrabold text-lg">
+                  M
+                </div>
+                <div className="flex-grow text-left">
+                  <h3 className="text-sm font-extrabold text-gray-900">Macoumba Samak</h3>
+                  <span className="text-xs text-gray-500 font-medium">Voir votre profil</span>
+                </div>
+              </Link>
+
+              {/* Card 2 : Inviter des amis */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerToast("Lien d'invitation copié !", "fa-heart");
+                  if (navigator.clipboard) {
+                    navigator.clipboard.writeText(window.location.origin);
+                  }
+                }}
+                className="w-full bg-white rounded-xl p-4 flex items-center space-x-4 border border-gray-205 shadow-xs active:bg-gray-50 transition text-left cursor-pointer"
+              >
+                <span className="text-2xl flex-shrink-0">❤️</span>
+                <span className="text-sm font-extrabold text-gray-955">Inviter des ami(e)s</span>
               </button>
+            </div>
+
+            {/* Bas du Menu (Options fixes au bas) */}
+            <div className="bg-white border-t border-gray-200 divide-y divide-gray-150 mt-auto">
+              {/* Option 1: Paramètres */}
+              <div className="flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => triggerToast("Paramètres", "fa-gear")}
+                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                >
+                  <div className="flex items-center space-x-3.5">
+                    <i className="fa-solid fa-gear text-gray-400 text-lg"></i>
+                    <span>Paramètres et confidentialité</span>
+                  </div>
+                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                </button>
+              </div>
+
+              {/* Option 2: Aide */}
+              <div className="flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => triggerToast("Aide & Assistance", "fa-circle-question")}
+                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                >
+                  <div className="flex items-center space-x-3.5">
+                    <i className="fa-regular fa-circle-question text-gray-400 text-lg"></i>
+                    <span>Aide et assistance</span>
+                  </div>
+                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                </button>
+              </div>
+
+              {/* Option 3: Ajouter un compte */}
               <button
-                onClick={() => handleLangChange("GB")}
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition ${
-                  selectedLang === "GB" ? "bg-[#E4B8F9] text-purple-950 shadow-xs" : "bg-white border border-gray-200 text-gray-600"
-                }`}
+                type="button"
+                onClick={() => triggerToast("Ajouter un compte...", "fa-user-plus")}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
               >
-                <img src="/anglais.jpeg" alt="GB" className="w-4 h-4 rounded-full object-cover" />
-                <span>EN</span>
+                <i className="fa-solid fa-user-plus text-gray-400 text-lg"></i>
+                <span>Ajouter un compte</span>
               </button>
             </div>
           </div>
-        </div>
+        )}
       </nav>
 
       {/* Interface de Messagerie */}
