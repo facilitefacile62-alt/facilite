@@ -406,6 +406,125 @@ export default function CreerCv() {
     setIsDraggingPhoto(false);
   };
 
+  // Cropper Modal States
+  const [isCropping, setIsCropping] = useState(false);
+  const [cropState, setCropState] = useState({ x: 10, y: 10, size: 80 });
+  const [cropperAction, setCropperAction] = useState({ type: null, startX: 0, startY: 0, startCrop: {} });
+
+  const handleOpenCropper = () => {
+    // Reverse-map zoom and X/Y to crop box parameters
+    const size = 100 / (cvData.photoZoom || 1);
+    const x = (cvData.photoX !== undefined ? cvData.photoX : 50) - size / 2;
+    const y = (cvData.photoY !== undefined ? cvData.photoY : 50) - size / 2;
+    
+    setCropState({
+      x: Math.max(0, Math.min(100 - size, x)),
+      y: Math.max(0, Math.min(100 - size, y)),
+      size: size
+    });
+    setIsCropping(true);
+  };
+
+  const handleCropBoxDragStart = (e) => {
+    e.stopPropagation();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setCropperAction({
+      type: "move",
+      startX: clientX,
+      startY: clientY,
+      startCrop: { ...cropState }
+    });
+  };
+
+  const handleCropResizeStart = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setCropperAction({
+      type: "resize",
+      startX: clientX,
+      startY: clientY,
+      startCrop: { ...cropState }
+    });
+  };
+
+  // Bind mouse move / touch move to window so dragging continues smoothly even if cursor leaves the box
+  useEffect(() => {
+    const handlePointerMove = (e) => {
+      if (!cropperAction.type) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const deltaX = clientX - cropperAction.startX;
+      const deltaY = clientY - cropperAction.startY;
+      
+      // Convert pixels to percentage on 300px box
+      const deltaPercentX = (deltaX / 300) * 100;
+      const deltaPercentY = (deltaY / 300) * 100;
+
+      if (cropperAction.type === "move") {
+        const maxPos = 100 - cropperAction.startCrop.size;
+        const newX = Math.max(0, Math.min(maxPos, cropperAction.startCrop.x + deltaPercentX));
+        const newY = Math.max(0, Math.min(maxPos, cropperAction.startCrop.y + deltaPercentY));
+        setCropState(prev => ({
+          ...prev,
+          x: newX,
+          y: newY
+        }));
+      } else if (cropperAction.type === "resize") {
+        // Resize square crop box (we use deltaPercentX as the size delta)
+        const newSize = Math.max(15, Math.min(100, cropperAction.startCrop.size + deltaPercentX));
+        
+        // Ensure box doesn't resize past bounds
+        const maxPos = 100 - newSize;
+        const newX = Math.min(cropperAction.startCrop.x, maxPos);
+        const newY = Math.min(cropperAction.startCrop.y, maxPos);
+        
+        setCropState({
+          x: newX,
+          y: newY,
+          size: newSize
+        });
+      }
+    };
+
+    const handlePointerUp = () => {
+      setCropperAction({ type: null, startX: 0, startY: 0, startCrop: {} });
+    };
+
+    if (cropperAction.type) {
+      window.addEventListener("mousemove", handlePointerMove);
+      window.addEventListener("mouseup", handlePointerUp);
+      window.addEventListener("touchmove", handlePointerMove);
+      window.addEventListener("touchend", handlePointerUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+      window.removeEventListener("touchmove", handlePointerMove);
+      window.removeEventListener("touchend", handlePointerUp);
+    };
+  }, [cropperAction]);
+
+  const applyCrop = () => {
+    // Map crop box back to photoZoom, photoX, and photoY
+    const zoom = 100 / cropState.size;
+    const photoX = cropState.x + cropState.size / 2;
+    const photoY = cropState.y + cropState.size / 2;
+    
+    setCvData(prev => ({
+      ...prev,
+      photoZoom: zoom,
+      photoX: photoX,
+      photoY: photoY
+    }));
+    setIsCropping(false);
+    triggerToast("Photo rognée avec succès !");
+  };
+
   // Toggle optional fields
   const toggleOptionalField = (field) => {
     setOptionalFields(prev => ({ ...prev, [field]: !prev[field] }));
@@ -827,7 +946,7 @@ export default function CreerCv() {
                         onTouchStart={photoPreview ? handlePhotoDragStart : handlePhotoUploadClick}
                         onTouchMove={photoPreview ? handlePhotoDragMove : null}
                         onTouchEnd={photoPreview ? handlePhotoDragEnd : null}
-                        className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center relative cursor-pointer bg-slate-50`}
+                        className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center relative cursor-pointer bg-transparent`}
                       >
                         {photoPreview ? (
                           <>
@@ -863,31 +982,44 @@ export default function CreerCv() {
                       </button>
                       <p className="text-[10px] text-gray-400 mt-1">Fichiers recommandés : JPG, PNG (Max 2MB)</p>
                       
-                      {/* Zoom range slider */}
+                      {/* Zoom range slider & Cropper trigger */}
                       {photoPreview && (
-                        <div className="mt-3 flex flex-col space-y-1.5 p-2.5 bg-gray-100/60 rounded-xl border border-gray-200/50">
-                          <span className="text-[9px] font-black text-gray-500 uppercase tracking-wide">Ajuster le Zoom :</span>
-                          <div className="flex items-center space-x-2">
-                            <i className="fa-solid fa-magnifying-glass-minus text-[10px] text-gray-400"></i>
-                            <input
-                              type="range"
-                              min="1"
-                              max="3.5"
-                              step="0.05"
-                              value={cvData.photoZoom || 1}
-                              onChange={(e) => handlePersonalChange("photoZoom", parseFloat(e.target.value))}
-                              className="w-24 accent-[#10E688] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                            />
-                            <i className="fa-solid fa-magnifying-glass-plus text-[10px] text-gray-400"></i>
-                            <span className="text-[9px] font-black text-gray-600">{Math.round((cvData.photoZoom || 1) * 100)}%</span>
+                        <div className="mt-3 flex flex-col space-y-2 p-2.5 bg-gray-100/60 rounded-xl border border-gray-200/50">
+                          <div>
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-wide">Ajuster le Zoom :</span>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <i className="fa-solid fa-magnifying-glass-minus text-[10px] text-gray-400"></i>
+                              <input
+                                type="range"
+                                min="1"
+                                max="3.5"
+                                step="0.05"
+                                value={cvData.photoZoom || 1}
+                                onChange={(e) => handlePersonalChange("photoZoom", parseFloat(e.target.value))}
+                                className="w-24 accent-[#10E688] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                              />
+                              <i className="fa-solid fa-magnifying-glass-plus text-[10px] text-gray-400"></i>
+                              <span className="text-[9px] font-black text-gray-600">{Math.round((cvData.photoZoom || 1) * 100)}%</span>
+                            </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setCvData(prev => ({ ...prev, photoZoom: 1, photoX: 0, photoY: 0 }))}
-                            className="text-[9px] font-black text-blue-600 hover:text-blue-800 text-left pt-0.5"
-                          >
-                            Réinitialiser
-                          </button>
+
+                          <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-gray-200/60 mt-1">
+                            <button
+                              type="button"
+                              onClick={handleOpenCropper}
+                              className="flex-1 py-1.5 px-2.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-600 font-extrabold rounded-lg text-[9px] flex items-center justify-center space-x-1 transition cursor-pointer"
+                            >
+                              <i className="fa-solid fa-crop-simple"></i>
+                              <span>Rogner et ajuster</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setCvData(prev => ({ ...prev, photoZoom: 1, photoX: 50, photoY: 50 }))}
+                              className="py-1.5 px-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-500 font-extrabold rounded-lg text-[9px] transition cursor-pointer"
+                            >
+                              Réinitialiser
+                            </button>
+                          </div>
                         </div>
                       )}
                       <input
@@ -1650,7 +1782,7 @@ export default function CreerCv() {
                         {/* Profile Picture (Outer White Circle) */}
                         <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center mx-auto mb-5 shadow-md flex-shrink-0 relative select-none">
                           {/* Inner Image Circle */}
-                          <div className="w-[84px] h-[84px] rounded-full overflow-hidden bg-slate-100 flex items-center justify-center relative">
+                          <div className="w-[84px] h-[84px] rounded-full overflow-hidden bg-transparent flex items-center justify-center relative">
                             {photoPreview ? (
                               <img
                                 src={photoPreview}
@@ -1990,7 +2122,7 @@ export default function CreerCv() {
                       {/* Profile Picture Classic (Outer White Circle) */}
                       <div className="absolute top-6 left-6 w-14 h-14 rounded-full bg-white hidden sm:flex items-center justify-center shadow-md select-none">
                         {/* Inner Image Circle */}
-                        <div className="w-[50px] h-[50px] rounded-full overflow-hidden bg-slate-100 flex items-center justify-center relative">
+                        <div className="w-[50px] h-[50px] rounded-full overflow-hidden bg-transparent flex items-center justify-center relative">
                           {photoPreview ? (
                             <img
                               src={photoPreview}
@@ -2265,6 +2397,126 @@ export default function CreerCv() {
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+      {/* PHOTO CROPPER MODAL */}
+      {isCropping && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 p-4 no-print">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-150 animate-fadeIn">
+            
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-black text-gray-900 flex items-center uppercase tracking-wider">
+                <i className="fa-solid fa-crop-simple text-[#10E688] mr-2 text-base"></i>
+                Ajuster & Rogner la Photo
+              </h3>
+              <button
+                onClick={() => setIsCropping(false)}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-base"></i>
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center space-y-4">
+              
+              {/* Cropper Box */}
+              <div
+                className="relative bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center select-none border border-gray-200"
+                style={{ width: "300px", height: "300px" }}
+              >
+                {/* Base Original Photo */}
+                <img
+                  src={photoPreview}
+                  alt="Original"
+                  className="w-full h-full object-contain opacity-40 select-none pointer-events-none"
+                />
+
+                {/* Draggable Circle crop area */}
+                <div
+                  onMouseDown={handleCropBoxDragStart}
+                  onTouchStart={handleCropBoxDragStart}
+                  style={{
+                    position: "absolute",
+                    left: `${cropState.x}%`,
+                    top: `${cropState.y}%`,
+                    width: `${cropState.size}%`,
+                    height: `${cropState.size}%`,
+                    border: "2px solid #10E688",
+                    boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.75)",
+                    borderRadius: "50%",
+                    cursor: "move",
+                    zIndex: 20
+                  }}
+                  className="flex items-center justify-center"
+                >
+                  <div className="absolute inset-0 border-2 border-white/60 rounded-full pointer-events-none"></div>
+                  
+                  {/* Circular resize handle in the bottom-right of the crop box */}
+                  <div
+                    onMouseDown={handleCropResizeStart}
+                    onTouchStart={handleCropResizeStart}
+                    style={{
+                      position: "absolute",
+                      right: "4%",
+                      bottom: "4%",
+                      width: "14px",
+                      height: "14px",
+                      backgroundColor: "#fff",
+                      border: "2.5px solid #10E688",
+                      borderRadius: "50%",
+                      cursor: "se-resize",
+                      zIndex: 30
+                    }}
+                    className="shadow-md"
+                  ></div>
+                </div>
+              </div>
+
+              {/* Cadre Size slider */}
+              <div className="w-full space-y-1">
+                <div className="flex justify-between text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                  <span>Dimension du cercle</span>
+                  <span>{Math.round(100 - cropState.size)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="20"
+                  max="95"
+                  value={cropState.size}
+                  onChange={(e) => {
+                    const newSize = parseFloat(e.target.value);
+                    setCropState(prev => {
+                      const maxPos = 100 - newSize;
+                      const newX = Math.min(prev.x, maxPos);
+                      const newY = Math.min(prev.y, maxPos);
+                      return { ...prev, size: newSize, x: newX, y: newY };
+                    });
+                  }}
+                  className="w-full accent-[#10E688] h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              <p className="text-[9px] text-gray-400 font-bold text-center leading-normal">
+                Déplacez le rond vert pour cadrer votre visage et étirez le bouton blanc dans le coin pour zoomer/dézoomer.
+              </p>
+
+              {/* Action buttons */}
+              <div className="flex space-x-2.5 w-full pt-1.5">
+                <button
+                  onClick={() => setIsCropping(false)}
+                  className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold rounded-xl text-xs transition cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={applyCrop}
+                  className="flex-1 py-2.5 px-4 bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold rounded-xl text-xs transition shadow-md shadow-[#10E688]/20 cursor-pointer"
+                >
+                  Valider
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
