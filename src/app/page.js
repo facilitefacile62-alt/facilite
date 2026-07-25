@@ -253,6 +253,7 @@ export default function Home() {
 
   // Spontaneous Recruitment Modal
   const [recruitmentModalOpen, setRecruitmentModalOpen] = useState(false);
+  const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const [isRecruitmentSubmitting, setIsRecruitmentSubmitting] = useState(false);
   const [recruitmentFormSubmitted, setRecruitmentFormSubmitted] = useState(false);
   const [recruitmentFile, setRecruitmentFile] = useState(null);
@@ -262,6 +263,7 @@ export default function Home() {
     message: ""
   });
   const fileInputRef = useRef(null);
+  const plusDropdownRef = useRef(null);
 
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
@@ -503,11 +505,21 @@ export default function Home() {
         if (contactModalOpen) handleCloseModal();
         if (recruitmentModalOpen) handleCloseRecruitmentModal();
         if (noCvModalOpen) setNoCvModalOpen(false);
+        if (plusDropdownOpen) setPlusDropdownOpen(false);
+      }
+    };
+    const handleClickOutside = (e) => {
+      if (plusDropdownRef.current && !plusDropdownRef.current.contains(e.target)) {
+        setPlusDropdownOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [contactModalOpen, recruitmentModalOpen, noCvModalOpen]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [contactModalOpen, recruitmentModalOpen, noCvModalOpen, plusDropdownOpen]);
 
   return (
     <>
@@ -558,7 +570,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Groupe Centre : Liens principaux (Accueil, Service, Recrutement, Contact) */}
+          {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Plus) */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
             {/* Accueil (Actif sur la page d'accueil) */}
             <a
@@ -572,15 +584,6 @@ export default function Home() {
               <i className="fa-solid fa-house text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
             </a>
-            
-            {/* Service */}
-            <Link
-              href="/service"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-solid fa-briefcase text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
-            </Link>
 
             {/* Messagerie */}
             <Link
@@ -608,25 +611,111 @@ export default function Home() {
               </span>
             </button>
 
-            {/* Recrutement Spontané */}
-            <a
-              href="#"
-              onClick={handleOpenRecruitmentModal}
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-solid fa-user-tie text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
-            </a>
+            {/* Plus Dropdown Menu (Inspiré de l'Image 2) */}
+            <div className="relative" ref={plusDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
+                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
+                  plusDropdownOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <i className="fa-solid fa-bars text-xl"></i>
+                <div className="flex items-center space-x-1 text-[11px] font-bold tracking-tight">
+                  <span>Plus</span>
+                  <i className={`fa-solid fa-caret-down text-[9px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+                </div>
+              </button>
 
-            {/* Contactez-nous */}
-            <a
-              href="#"
-              onClick={handleOpenModal}
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-regular fa-comment-dots text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">Contact</span>
-            </a>
+              {/* Menu Déroulant "Plus" Overlay */}
+              {plusDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-[600] animate-fade-in-up divide-y divide-gray-100">
+                  {/* Service & Contact & Recrutement */}
+                  <div className="py-1">
+                    <Link
+                      href="/service"
+                      onClick={() => setPlusDropdownOpen(false)}
+                      className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                    >
+                      <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Service</span>
+                    </Link>
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPlusDropdownOpen(false);
+                        handleOpenModal();
+                      }}
+                      className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                    >
+                      <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Contact</span>
+                    </a>
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPlusDropdownOpen(false);
+                        handleOpenRecruitmentModal();
+                      }}
+                      className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                    >
+                      <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Recrutement</span>
+                    </a>
+                  </div>
+
+                  {/* Options additionnelles inspirées de l'Image 2 */}
+                  <div className="py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlusDropdownOpen(false);
+                        triggerToast("Jeux de réflexion", "fa-puzzle-piece");
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition text-left cursor-pointer"
+                    >
+                      <i className="fa-solid fa-puzzle-piece text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Jeux de réflexion</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlusDropdownOpen(false);
+                        triggerToast("Groupes d'entraide", "fa-user-group");
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition text-left cursor-pointer"
+                    >
+                      <i className="fa-solid fa-user-group text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Groupes</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlusDropdownOpen(false);
+                        triggerToast("Événements & Webinaires", "fa-calendar-days");
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition text-left cursor-pointer"
+                    >
+                      <i className="fa-solid fa-calendar-days text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Événements</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlusDropdownOpen(false);
+                        triggerToast("Newsletters Carrière", "fa-newspaper");
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition text-left cursor-pointer"
+                    >
+                      <i className="fa-solid fa-newspaper text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Newsletters</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Groupe Droit : Se connecter */}
