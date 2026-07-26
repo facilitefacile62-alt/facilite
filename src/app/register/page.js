@@ -4,47 +4,41 @@
 import { useState } from "react";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Exemple d'e-mail existant pour simuler les différents états de la capture
-  const existingUsers = ["william@example.com", "mamadou@example.com"];
-
   const handleSubmit = (e) => {
     e.preventDefault();
     setErrorMessage("");
+
+    if (password !== confirmPassword) {
+      setErrorMessage("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+
     setIsLoading(true);
 
     setTimeout(() => {
       setIsLoading(false);
-
-      if (!email.includes("@")) {
-        setErrorMessage("Veuillez saisir une adresse email valide.");
-        return;
-      }
-
-      if (!existingUsers.includes(email.toLowerCase())) {
-        setErrorMessage("No account found with this email. Please sign up.");
-        return;
-      }
-
-      if (password.length < 6) {
-        setErrorMessage("Mot de passe incorrect.");
-        return;
-      }
-
       setIsSuccess(true);
     }, 800);
   };
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col justify-between items-center relative overflow-hidden">
-      {/* Grille de fond subtile inspirée des cartes de l'image */}
+      {/* Grille de fond subtile */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-40" 
         style={{
@@ -61,19 +55,19 @@ export default function LoginPage() {
         </Link>
 
         <Link
-          href="/"
+          href="/login"
           className="text-xs font-bold text-gray-600 hover:text-gray-900 bg-white border border-gray-200 px-4 py-2 rounded-full shadow-xs hover:shadow-sm transition flex items-center space-x-1.5"
         >
           <i className="fa-solid fa-arrow-left text-[11px]"></i>
-          <span>Retour à l'accueil</span>
+          <span>Retour au Login</span>
         </Link>
       </header>
 
-      {/* Conteneur Principal / Carte de Login */}
+      {/* Conteneur Principal / Carte d'Inscription */}
       <main className="w-full max-w-md px-4 py-8 z-10">
         <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300">
           
-          {/* Icône Éclair Haute Félidité */}
+          {/* Icône Éclair */}
           <div className="flex justify-center mb-5">
             <div className="w-14 h-14 rounded-full bg-[#FAF6F1] border border-gray-200/80 flex items-center justify-center shadow-xs">
               <span className="text-2xl select-none">⚡</span>
@@ -83,10 +77,10 @@ export default function LoginPage() {
           {/* Titre & Sous-titre */}
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
-              Login
+              Sign Up
             </h1>
             <p className="text-sm font-medium text-gray-500">
-              Enter your details to login.
+              Create your account to get started.
             </p>
           </div>
 
@@ -95,72 +89,61 @@ export default function LoginPage() {
               <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
                 ✓
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Connexion réussie !</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Compte créé avec succès !</h2>
               <p className="text-sm text-gray-600 mb-6">
-                Ravi de vous revoir sur Facilite. Redirection en cours...
+                Bienvenue sur Facilite. Vous pouvez maintenant vous connecter.
               </p>
               <Link
-                href="/profil"
-                className="inline-block w-full py-3.5 bg-gray-900 text-white rounded-2xl font-bold text-sm hover:bg-black transition shadow-lg"
+                href="/login"
+                className="inline-block w-full py-3.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md transition-all duration-200"
               >
-                Accéder à mon espace
+                Se connecter
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Champ Nom Complet */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  placeholder="Enter your full name"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                />
+              </div>
+
               {/* Champ Email */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">
                   Email
                 </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (errorMessage) setErrorMessage("");
-                    }}
-                    required
-                    placeholder="Enter your Email"
-                    className={`w-full px-4 py-3 bg-white border ${
-                      errorMessage && errorMessage.includes("email")
-                        ? "border-red-400 ring-2 ring-red-100 text-red-900"
-                        : "border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                    } rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none transition`}
-                  />
-                </div>
-                {/* Message d'erreur sous l'email si compte non trouvé */}
-                {errorMessage && errorMessage.includes("email") && (
-                  <p className="mt-1.5 text-xs font-semibold text-red-500 flex items-center space-x-1">
-                    <span>{errorMessage}</span>
-                  </p>
-                )}
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="Enter your Email"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                />
               </div>
 
               {/* Champ Mot de Passe */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-gray-700">
-                    Password
-                  </label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs font-semibold text-gray-600 hover:text-gray-900 hover:underline transition"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Password
+                </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (errorMessage && !errorMessage.includes("email")) setErrorMessage("");
-                    }}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="Enter your password"
+                    placeholder="Create a password"
                     className="w-full pl-4 pr-10 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
                   />
                   <button
@@ -171,24 +154,39 @@ export default function LoginPage() {
                     <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-chevron-down"} text-xs`}></i>
                   </button>
                 </div>
-                {/* Autre message d'erreur */}
-                {errorMessage && !errorMessage.includes("email") && (
-                  <p className="mt-1.5 text-xs font-semibold text-red-500">
-                    {errorMessage}
-                  </p>
-                )}
               </div>
+
+              {/* Champ Confirmation Mot de Passe */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Confirm Password
+                </label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  placeholder="Confirm your password"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                />
+              </div>
+
+              {errorMessage && (
+                <p className="text-xs font-semibold text-red-500 pt-1">
+                  {errorMessage}
+                </p>
+              )}
 
               {/* Bouton de Soumission Principal */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2"
+                className="w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-4"
               >
                 {isLoading ? (
                   <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
                 ) : (
-                  <span>Log In</span>
+                  <span>Create Account</span>
                 )}
               </button>
 
@@ -203,7 +201,7 @@ export default function LoginPage() {
               {/* Bouton Google */}
               <button
                 type="button"
-                onClick={() => alert("Connexion avec Google sélectionnée")}
+                onClick={() => alert("Inscription avec Google sélectionnée")}
                 className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -230,22 +228,22 @@ export default function LoginPage() {
               {/* Bouton Apple */}
               <button
                 type="button"
-                onClick={() => alert("Connexion avec Apple sélectionnée")}
+                onClick={() => alert("Inscription avec Apple sélectionnée")}
                 className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
               >
                 <i className="fa-brands fa-apple text-base text-gray-900"></i>
                 <span>Continue with Apple</span>
               </button>
 
-              {/* Inscription Sign up */}
+              {/* Redirection Log in */}
               <div className="text-center pt-2">
                 <p className="text-xs text-gray-500 font-medium">
-                  Don't have an account yet?{" "}
+                  Already have an account?{" "}
                   <Link
-                    href="/register"
+                    href="/login"
                     className="font-extrabold text-gray-900 hover:underline cursor-pointer"
                   >
-                    Sign up
+                    Log In
                   </Link>
                 </p>
               </div>
