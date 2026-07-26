@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 export default function ProfilPage() {
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -281,15 +284,67 @@ export default function ProfilPage() {
             </a>
           </div>
 
-          {/* Groupe Droit : Mon Profil (Actif) */}
-          <div className="hidden md:flex items-center">
-            <Link
-              href="/profil"
-              className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+          {/* Groupe Droit : Mon Profil (Actif avec Menu Déroulant / Popup de déconnexion) */}
+          <div className="hidden md:flex items-center relative" ref={userMenuRef}>
+            <button
+              type="button"
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
+                userMenuOpen ? "text-[#10E688] font-black scale-105" : "text-[#10E688] font-bold hover:opacity-85"
+              }`}
             >
               <i className="fa-solid fa-circle-user text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Profil</span>
-            </Link>
+              <div className="flex items-center space-x-0.5 text-[11px] font-bold tracking-tight">
+                <span>Profil</span>
+                <i className={`fa-solid fa-caret-down text-[9px] transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}></i>
+              </div>
+            </button>
+
+            {/* Menu Popover au clic sur Profil */}
+            {userMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-gray-200 shadow-2xl p-3 z-[600] animate-fade-in-up">
+                <div className="flex items-center space-x-3 pb-3 border-b border-gray-100 px-1">
+                  <div className="w-10 h-10 rounded-full bg-[#10E688]/20 text-[#047857] font-extrabold flex items-center justify-center text-sm border border-[#10E688]/40">
+                    {profileName ? profileName.charAt(0) : "U"}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <h4 className="text-xs font-black text-gray-900 truncate">{profileName}</h4>
+                    <p className="text-[11px] text-gray-500 truncate">{profileSubtitle}</p>
+                  </div>
+                </div>
+
+                <div className="py-2 space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      const el = document.getElementById("section-mon-profil-cv");
+                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition flex items-center space-x-2.5 cursor-pointer"
+                  >
+                    <i className="fa-regular fa-user text-gray-400 text-sm"></i>
+                    <span>Voir mon profil & CV</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setUserMenuOpen(false);
+                      await supabase.auth.signOut();
+                      triggerToast("Déconnexion réussie !", "fa-right-from-bracket");
+                      setTimeout(() => {
+                        window.location.href = "/login";
+                      }, 800);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition flex items-center space-x-2.5 cursor-pointer"
+                  >
+                    <i className="fa-solid fa-right-from-bracket text-red-500 text-sm"></i>
+                    <span>Déconnexion</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Mobile Right Controls: Search & Hamburger (LinkedIn style icons in circles) */}
