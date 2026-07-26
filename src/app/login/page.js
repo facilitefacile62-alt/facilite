@@ -48,10 +48,10 @@ export default function LoginPage() {
 
       if (data?.session) {
         setIsSuccess(true);
-        // Redirection vers le profil / tableau de bord avec rechargement propre
+        // Redirection immédiate vers le tableau de bord personnel principal (sans conserver l'écran login dans l'historique)
         setTimeout(() => {
-          window.location.href = "/profil";
-        }, 800);
+          window.location.replace("/");
+        }, 500);
       }
     } catch (err) {
       console.error("Erreur de connexion d'exception:", err);

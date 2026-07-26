@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -1178,12 +1178,11 @@ export default function Home() {
                 {/* Bouton Déconnexion */}
                 <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs flex items-center justify-start">
                   <button
-                    onClick={async () => {
-                      await supabase.auth.signOut();
-                      triggerToast("Déconnexion réussie !", "fa-right-from-bracket");
+                    onClick={() => {
+                      triggerToast("Déconnexion en cours...", "fa-right-from-bracket");
                       setTimeout(() => {
-                        window.location.reload();
-                      }, 1000);
+                        handleGlobalSignOut();
+                      }, 500);
                     }}
                     className="flex items-center space-x-2 text-[#4A5D78] hover:text-red-600 font-bold text-xs transition cursor-pointer bg-transparent border-none p-0 outline-none w-full text-left"
                   >

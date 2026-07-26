@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 
 export default function ProfilPage() {
   const [selectedLang, setSelectedLang] = useState("FR");
@@ -371,14 +371,12 @@ export default function ProfilPage() {
                   </button>
 
                   <button
-                    type="button"
-                    onClick={async () => {
+                    onClick={() => {
                       setUserMenuOpen(false);
-                      await supabase.auth.signOut();
-                      triggerToast("Déconnexion réussie !", "fa-right-from-bracket");
+                      triggerToast("Déconnexion...", "fa-right-from-bracket");
                       setTimeout(() => {
-                        window.location.href = "/login";
-                      }, 800);
+                        handleGlobalSignOut();
+                      }, 400);
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition flex items-center space-x-2.5 cursor-pointer"
                   >

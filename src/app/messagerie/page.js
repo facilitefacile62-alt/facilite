@@ -341,6 +341,53 @@ export default function MessageriePage() {
     triggerToast(lang === "FR" ? translations.FR.toastLangFR : translations.GB.toastLangGB, "fa-globe");
   };
 
+  // Protection stricte et isolation des messages par l'ID d'utilisateur Supabase
+  const [userSession, setUserSession] = useState(null);
+
+  useEffect(() => {
+    async function loadUserSessionAndMessages() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.replace("/login");
+        return;
+      }
+      setUserSession(session);
+
+      // Charger uniquement les messages appartenant à cet utilisateur authentifié
+      try {
+        const { data: userMessages } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("sender_id", session.user.id)
+          .order("created_at", { ascending: true });
+
+        if (userMessages && userMessages.length > 0) {
+          // Fusionner ou mettre à jour la conversation active avec les vrais messages de l'utilisateur
+          setConversations(prev => prev.map(c => {
+            if (c.id === "conv1") {
+              const formattedDbMsgs = userMessages.map(m => ({
+                id: m.id,
+                sender: "me",
+                text: m.content,
+                time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: m.is_read ? "read" : "sent"
+              }));
+              return {
+                ...c,
+                messages: [...c.messages, ...formattedDbMsgs]
+              };
+            }
+            return c;
+          }));
+        }
+      } catch (err) {
+        console.error("Erreur de chargement des messages utilisateur:", err);
+      }
+    }
+
+    loadUserSessionAndMessages();
+  }, []);
+
   // Scroll to bottom of chat whenever active conversation or messages or typing state changes
   useEffect(() => {
     if (chatBottomRef.current) {
