@@ -3,6 +3,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
@@ -13,8 +15,9 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
 
@@ -30,10 +33,42 @@ export default function RegisterPage() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+
       setIsLoading(false);
+
+      if (error) {
+        setErrorMessage(error.message || "Erreur lors de la création du compte.");
+        return;
+      }
+
       setIsSuccess(true);
-    }, 800);
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMessage("Une erreur imprévue est survenue.");
+    }
+  };
+
+  const handleOAuthSignUp = async (provider) => {
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          redirectTo: `${window.location.origin}/profil`,
+        },
+      });
+    } catch (err) {
+      setErrorMessage(`Erreur lors de l'inscription via ${provider}`);
+    }
   };
 
   return (
@@ -89,7 +124,7 @@ export default function RegisterPage() {
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Compte créé avec succès !</h2>
               <p className="text-sm text-gray-600 mb-6">
-                Bienvenue sur Facilite. Vous pouvez maintenant vous connecter.
+                Vos informations ont bien été enregistrées sur Supabase. Vous pouvez maintenant vous connecter.
               </p>
               <Link
                 href="/login"
@@ -170,8 +205,8 @@ export default function RegisterPage() {
               </div>
 
               {errorMessage && (
-                <p className="text-xs font-semibold text-red-500 pt-1">
-                  {errorMessage}
+                <p className="text-xs font-semibold text-red-500 bg-red-50 p-2.5 rounded-lg border border-red-100 mt-2">
+                  ⚠️ {errorMessage}
                 </p>
               )}
 
@@ -199,7 +234,7 @@ export default function RegisterPage() {
               {/* Bouton Google */}
               <button
                 type="button"
-                onClick={() => alert("Inscription avec Google sélectionnée")}
+                onClick={() => handleOAuthSignUp("google")}
                 className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -226,7 +261,7 @@ export default function RegisterPage() {
               {/* Bouton Apple */}
               <button
                 type="button"
-                onClick={() => alert("Inscription avec Apple sélectionnée")}
+                onClick={() => handleOAuthSignUp("apple")}
                 className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
               >
                 <i className="fa-brands fa-apple text-base text-gray-900"></i>

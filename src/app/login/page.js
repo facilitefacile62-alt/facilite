@@ -3,6 +3,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -11,40 +13,52 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const router = useRouter();
 
-  // Exemple d'e-mail existant pour simuler les différents états de la capture
-  const existingUsers = ["william@example.com", "mamadou@example.com"];
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
       setIsLoading(false);
 
-      if (!email.includes("@")) {
-        setErrorMessage("Veuillez saisir une adresse email valide.");
-        return;
-      }
-
-      if (!existingUsers.includes(email.toLowerCase())) {
-        setErrorMessage("No account found with this email. Please sign up.");
-        return;
-      }
-
-      if (password.length < 6) {
-        setErrorMessage("Mot de passe incorrect.");
+      if (error) {
+        setErrorMessage(error.message || "Email ou mot de passe incorrect.");
         return;
       }
 
       setIsSuccess(true);
-    }, 800);
+      setTimeout(() => {
+        router.push("/profil");
+      }, 1200);
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMessage("Une erreur est survenue lors de la connexion.");
+    }
+  };
+
+  const handleOAuthLogin = async (provider) => {
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          redirectTo: `${window.location.origin}/profil`,
+        },
+      });
+    } catch (err) {
+      setErrorMessage(`Erreur de connexion via ${provider}`);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col justify-between items-center relative overflow-hidden">
-      {/* Grille de fond subtile inspirée des cartes de l'image */}
+      {/* Grille de fond subtile */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-40" 
         style={{
@@ -95,11 +109,11 @@ export default function LoginPage() {
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Connexion réussie !</h2>
               <p className="text-sm text-gray-600 mb-6">
-                Ravi de vous revoir sur Facilite. Redirection en cours...
+                Bienvenue sur Facilite. Redirection vers votre profil...
               </p>
               <Link
                 href="/profil"
-                className="inline-block w-full py-3.5 bg-gray-900 text-white rounded-2xl font-bold text-sm hover:bg-black transition shadow-lg"
+                className="inline-block w-full py-3.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md transition-all duration-200"
               >
                 Accéder à mon espace
               </Link>
@@ -122,18 +136,12 @@ export default function LoginPage() {
                     required
                     placeholder="Enter your Email"
                     className={`w-full px-4 py-3 bg-white border ${
-                      errorMessage && errorMessage.includes("email")
+                      errorMessage
                         ? "border-red-400 ring-2 ring-red-100 text-red-900"
                         : "border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                     } rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none transition`}
                   />
                 </div>
-                {/* Message d'erreur sous l'email si compte non trouvé */}
-                {errorMessage && errorMessage.includes("email") && (
-                  <p className="mt-1.5 text-xs font-semibold text-red-500 flex items-center space-x-1">
-                    <span>{errorMessage}</span>
-                  </p>
-                )}
               </div>
 
               {/* Champ Mot de Passe */}
@@ -155,7 +163,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
-                      if (errorMessage && !errorMessage.includes("email")) setErrorMessage("");
+                      if (errorMessage) setErrorMessage("");
                     }}
                     required
                     placeholder="Enter your password"
@@ -169,10 +177,9 @@ export default function LoginPage() {
                     <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-chevron-down"} text-xs`}></i>
                   </button>
                 </div>
-                {/* Autre message d'erreur */}
-                {errorMessage && !errorMessage.includes("email") && (
-                  <p className="mt-1.5 text-xs font-semibold text-red-500">
-                    {errorMessage}
+                {errorMessage && (
+                  <p className="mt-2 text-xs font-semibold text-red-500 bg-red-50 p-2.5 rounded-lg border border-red-100">
+                    ⚠️ {errorMessage}
                   </p>
                 )}
               </div>
@@ -201,7 +208,7 @@ export default function LoginPage() {
               {/* Bouton Google */}
               <button
                 type="button"
-                onClick={() => alert("Connexion avec Google sélectionnée")}
+                onClick={() => handleOAuthLogin("google")}
                 className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -228,7 +235,7 @@ export default function LoginPage() {
               {/* Bouton Apple */}
               <button
                 type="button"
-                onClick={() => alert("Connexion avec Apple sélectionnée")}
+                onClick={() => handleOAuthLogin("apple")}
                 className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
               >
                 <i className="fa-brands fa-apple text-base text-gray-900"></i>
