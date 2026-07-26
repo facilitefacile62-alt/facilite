@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -218,6 +219,21 @@ export default function Home() {
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+
+  // Sync Supabase Auth session
+  const [userSession, setUserSession] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Aperçu Modèle Modal
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -788,35 +804,39 @@ export default function Home() {
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
             </a>
 
-            {/* Messagerie */}
-            <Link
-              href="/messagerie"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
-            >
-              <i className="fa-regular fa-comments text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
-              <span className="absolute top-0.5 right-2 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
-            </Link>
-
-            {/* Notifications */}
-            <button
-              type="button"
-              onClick={() => setNotificationsModalOpen(true)}
-              className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
-                notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <i className="fa-regular fa-bell text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">Notifications</span>
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
-                  {unreadNotifCount}
+            {/* Messagerie (Visible uniquement pour les utilisateurs connectés) */}
+            {userSession && (
+              <Link
+                href="/messagerie"
+                className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+              >
+                <i className="fa-regular fa-comments text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
+                <span className="absolute top-0.5 right-2 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
-              )}
-            </button>
+              </Link>
+            )}
+
+            {/* Notifications (Visibles uniquement pour les utilisateurs connectés) */}
+            {userSession && (
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(true)}
+                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
+                  notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <i className="fa-regular fa-bell text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">Notifications</span>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Recrutement Spontané */}
             <a
@@ -877,15 +897,32 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Groupe Droit : Se connecter */}
-          <div className="hidden md:flex items-center">
-            <Link
-              href="/login"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-regular fa-user text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
-            </Link>
+          {/* Groupe Droit : Rendu conditionnel selon la session Supabase */}
+          <div className="hidden md:flex items-center space-x-3">
+            {userSession ? (
+              <Link
+                href="/profil"
+                className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+              >
+                <i className="fa-solid fa-circle-user text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
+              </Link>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link
+                  href="/login"
+                  className="text-xs font-extrabold text-gray-800 hover:text-gray-900 bg-white border border-gray-200 px-3.5 py-2 rounded-full shadow-xs hover:border-gray-300 transition cursor-pointer"
+                >
+                  Connexion
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-xs font-extrabold text-gray-900 bg-[#10E688] hover:bg-[#0fd57d] px-4 py-2 rounded-full shadow-xs transition cursor-pointer"
+                >
+                  S'inscrire
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile Right Controls: Bell & Messagerie */}

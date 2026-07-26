@@ -346,8 +346,7 @@ export default function Home() {
   const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
-    async function loadSessionAndProfile() {
-      const { data: { session } } = await supabase.auth.getSession();
+    async function loadSessionAndProfile(session) {
       setUserSession(session);
 
       if (session?.user) {
@@ -373,7 +372,15 @@ export default function Home() {
       }
     }
 
-    loadSessionAndProfile();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadSessionAndProfile(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadSessionAndProfile(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleAddExperience = (e) => {
@@ -787,33 +794,37 @@ export default function Home() {
 
           {/* Mobile Header Right Controls (Image 2 style: Bell & Messagerie icons) */}
           <div className="flex md:hidden items-center space-x-2">
-            {/* Notification Bell Icon */}
-            <button
-              type="button"
-              onClick={() => setNotificationsModalOpen(true)}
-              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
-              aria-label="Notifications"
-            >
-              <i className="fa-regular fa-bell text-sm"></i>
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border border-white">
-                  {unreadNotifCount}
-                </span>
-              )}
-            </button>
+            {/* Notification Bell Icon (Visible uniquement pour les utilisateurs connectés) */}
+            {userSession && (
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(true)}
+                className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
+                aria-label="Notifications"
+              >
+                <i className="fa-regular fa-bell text-sm"></i>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border border-white">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+            )}
 
-            {/* Messagerie Icon */}
-            <Link
-              href="/messagerie"
-              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
-              aria-label="Messagerie"
-            >
-              <i className="fa-regular fa-comments text-sm"></i>
-              <span className="absolute top-1 right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
-            </Link>
+            {/* Messagerie Icon (Visible uniquement pour les utilisateurs connectés) */}
+            {userSession && (
+              <Link
+                href="/messagerie"
+                className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
+                aria-label="Messagerie"
+              >
+                <i className="fa-regular fa-comments text-sm"></i>
+                <span className="absolute top-1 right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+              </Link>
+            )}
 
             {/* Mobile Hamburger Menu */}
             <button
@@ -850,33 +861,37 @@ export default function Home() {
             <span className="text-[9px] font-bold tracking-tight">{t.navService}</span>
           </Link>
 
-          {/* Messagerie */}
-          <Link
-            href="/messagerie"
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
-          >
-            <i className="fa-regular fa-comments text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>
-            <span className="absolute top-0.5 right-2 flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
-            </span>
-          </Link>
-
-          {/* Notifications */}
-          <button
-            type="button"
-            onClick={() => setNotificationsModalOpen(true)}
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
-          >
-            <i className="fa-regular fa-bell text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">Notifs</span>
-            {unreadNotifCount > 0 && (
-              <span className="absolute -top-0.5 right-1.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
-                {unreadNotifCount}
+          {/* Messagerie (Visible uniquement pour les utilisateurs connectés) */}
+          {userSession && (
+            <Link
+              href="/messagerie"
+              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
+            >
+              <i className="fa-regular fa-comments text-lg"></i>
+              <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>
+              <span className="absolute top-0.5 right-2 flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
               </span>
-            )}
-          </button>
+            </Link>
+          )}
+
+          {/* Notifications (Visibles uniquement pour les utilisateurs connectés) */}
+          {userSession && (
+            <button
+              type="button"
+              onClick={() => setNotificationsModalOpen(true)}
+              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
+            >
+              <i className="fa-regular fa-bell text-lg"></i>
+              <span className="text-[9px] font-bold tracking-tight">Notifs</span>
+              {unreadNotifCount > 0 && (
+                <span className="absolute -top-0.5 right-1.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
+                  {unreadNotifCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Plus */}
           <button
@@ -922,21 +937,42 @@ export default function Home() {
 
             {/* Corps du Menu */}
             <div className="flex-grow p-4 space-y-3 overflow-y-auto">
-              {/* Card 1 : Profil */}
-              <Link
-                href="/profil"
-                onClick={() => setMobileMenuOpen(false)}
-                className="bg-white rounded-xl p-4 flex items-center space-x-4 border border-gray-200 shadow-xs active:bg-gray-50 transition"
-              >
-                {/* Cercle Avatar Violet */}
-                <div className="w-12 h-12 rounded-full bg-[#D946EF] flex-shrink-0 flex items-center justify-center text-white font-extrabold text-lg">
-                  M
+              {/* Card 1 : Profil (Rendu conditionnel selon la session) */}
+              {userSession ? (
+                <Link
+                  href="/profil"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="bg-white rounded-xl p-4 flex items-center space-x-4 border border-gray-200 shadow-xs active:bg-gray-50 transition"
+                >
+                  {/* Cercle Avatar Violet */}
+                  <div className="w-12 h-12 rounded-full bg-[#D946EF] flex-shrink-0 flex items-center justify-center text-white font-extrabold text-lg">
+                    {(userProfile?.full_name || userSession.user.email || "?").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-grow text-left">
+                    <h3 className="text-sm font-extrabold text-gray-900">
+                      {userProfile?.full_name || userSession.user.email}
+                    </h3>
+                    <span className="text-xs text-gray-500 font-medium">Voir votre profil</span>
+                  </div>
+                </Link>
+              ) : (
+                <div className="bg-white rounded-xl p-4 flex items-center space-x-3 border border-gray-200 shadow-xs">
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 text-center text-xs font-extrabold text-gray-800 hover:text-gray-900 bg-white border border-gray-200 px-3.5 py-2 rounded-full shadow-xs hover:border-gray-300 transition"
+                  >
+                    Connexion
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 text-center text-xs font-extrabold text-gray-900 bg-[#10E688] hover:bg-[#0fd57d] px-4 py-2 rounded-full shadow-xs transition"
+                  >
+                    S'inscrire
+                  </Link>
                 </div>
-                <div className="flex-grow text-left">
-                  <h3 className="text-sm font-extrabold text-gray-900">Macoumba Samak</h3>
-                  <span className="text-xs text-gray-500 font-medium">Voir votre profil</span>
-                </div>
-              </Link>
+              )}
 
               {/* Card 2 : Inviter des amis */}
               <button
