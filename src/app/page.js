@@ -1039,24 +1039,22 @@ export default function Home() {
                 <p className="text-[10px] text-gray-500 font-bold mt-0.5">
                   {userProfile?.headline || (userSession ? "Complétez votre profil" : "Créez votre CV en ligne")}
                 </p>
-                <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
-                  {userProfile?.location || (userSession ? "Localisation non renseignée" : "Dakar, Sénégal")}
-                </p>
-                
-                {/* Micro badge entreprise comme dans la capture */}
-                <div className="flex items-center justify-center space-x-1 text-[10px] text-gray-700 font-bold mb-2">
-                  <img src="/logo.jpeg" alt="facilite logo" className="w-3 h-3 rounded-xs object-cover" />
-                  <span>facilite</span>
-                </div>
+                {(userProfile?.location || userSession) && (
+                  <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
+                    {userProfile?.location || "Localisation non renseignée"}
+                  </p>
+                )}
 
-                {/* Bouton Ajouter Expérience */}
-                <button
-                  onClick={() => setExperienceModalOpen(true)}
-                  className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white"
-                >
-                  <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
-                  <span>{t.profileExperienceBtn}</span>
-                </button>
+                {/* Bouton Ajouter Expérience (visible uniquement si connecté) */}
+                {userSession && (
+                  <button
+                    onClick={() => setExperienceModalOpen(true)}
+                    className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white"
+                  >
+                    <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
+                    <span>{t.profileExperienceBtn}</span>
+                  </button>
+                )}
               </div>
             </div>
 
