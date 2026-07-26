@@ -55,44 +55,39 @@ export default function ProfilPage() {
     setTimeout(() => setToast({ show: false, message: "", icon: "" }), 3000);
   };
 
-  // Synchroniser les données depuis Supabase pour le compte connecté
+  // Synchroniser les données depuis Supabase et protéger la route
   useEffect(() => {
     async function loadUserProfile() {
       const { data: { session } } = await supabase.auth.getSession();
       setUserSession(session);
 
-      if (session?.user) {
-        // Récupérer le profil réel depuis la table Supabase
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
+      if (!session) {
+        // Redirection stricte vers /login si le visiteur n'est pas connecté
+        window.location.href = "/login";
+        return;
+      }
 
-        if (profile) {
-          setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
-          setProfileSubtitle(profile.headline || "");
-          setProfileLocation(profile.location || "");
-          setProfileBio(profile.bio || "");
-          setExperiences(profile.experiences || []);
+      // Récupérer le profil réel depuis la table Supabase
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
 
-          if (profile.full_name) {
-            const parts = profile.full_name.split(" ");
-            setFirstName(parts[0] || "");
-            setLastName(parts.slice(1).join(" ") || "");
-          }
-        } else {
-          setProfileName(session.user.email?.split("@")[0] || "");
+      if (profile) {
+        setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
+        setProfileSubtitle(profile.headline || "");
+        setProfileLocation(profile.location || "");
+        setProfileBio(profile.bio || "");
+        setExperiences(profile.experiences || []);
+
+        if (profile.full_name) {
+          const parts = profile.full_name.split(" ");
+          setFirstName(parts[0] || "");
+          setLastName(parts.slice(1).join(" ") || "");
         }
       } else {
-        // Si non connecté, tout reste vide
-        setProfileName("");
-        setProfileSubtitle("");
-        setProfileLocation("");
-        setProfileBio("");
-        setExperiences([]);
-        setFirstName("");
-        setLastName("");
+        setProfileName(session.user.email?.split("@")[0] || "");
       }
     }
 

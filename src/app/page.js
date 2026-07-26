@@ -488,9 +488,16 @@ export default function Home() {
     return looped;
   };
 
+  const [authRequiredModalOpen, setAuthRequiredModalOpen] = useState(false);
+
   const handleApplyClick = (job) => {
     setSelectedJobToApply(job);
-    setNoCvModalOpen(true);
+    if (!userSession) {
+      // Si déconnecté, bloquer la candidature et afficher le modal de création de compte
+      setAuthRequiredModalOpen(true);
+    } else {
+      setNoCvModalOpen(true);
+    }
   };
 
   const handleConfirmApply = () => {
@@ -662,35 +669,39 @@ export default function Home() {
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
             </a>
 
-            {/* Messagerie */}
-            <Link
-              href="/messagerie"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
-            >
-              <i className="fa-regular fa-comments text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
-              <span className="absolute top-0.5 right-2 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
-            </Link>
-
-            {/* Notifications */}
-            <button
-              type="button"
-              onClick={() => setNotificationsModalOpen(true)}
-              className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
-                notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <i className="fa-regular fa-bell text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">Notifications</span>
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
-                  {unreadNotifCount}
+            {/* Messagerie (Visible uniquement pour les utilisateurs connectés) */}
+            {userSession && (
+              <Link
+                href="/messagerie"
+                className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+              >
+                <i className="fa-regular fa-comments text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
+                <span className="absolute top-0.5 right-2 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
-              )}
-            </button>
+              </Link>
+            )}
+
+            {/* Notifications (Visibles uniquement pour les utilisateurs connectés) */}
+            {userSession && (
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(true)}
+                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
+                  notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <i className="fa-regular fa-bell text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">Notifications</span>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Recrutement Spontané */}
             <a
@@ -746,15 +757,32 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Groupe Droit : Se connecter */}
-          <div className="hidden md:flex items-center">
-            <Link
-              href="/login"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-regular fa-user text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
-            </Link>
+          {/* Groupe Droit : Rendu conditionnel selon la session Supabase */}
+          <div className="hidden md:flex items-center space-x-3">
+            {userSession ? (
+              <Link
+                href="/profil"
+                className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+              >
+                <i className="fa-solid fa-circle-user text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
+              </Link>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link
+                  href="/login"
+                  className="text-xs font-extrabold text-gray-800 hover:text-gray-900 bg-white border border-gray-200 px-3.5 py-2 rounded-full shadow-xs hover:border-gray-300 transition cursor-pointer"
+                >
+                  Connexion
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-xs font-extrabold text-gray-900 bg-[#10E688] hover:bg-[#0fd57d] px-4 py-2 rounded-full shadow-xs transition cursor-pointer"
+                >
+                  S'inscrire
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile Header Right Controls (Image 2 style: Bell & Messagerie icons) */}
@@ -1081,50 +1109,73 @@ export default function Home() {
               </div>
             )}
 
-            {/* Carte Statistiques */}
-            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-[10px] font-extrabold text-gray-800 uppercase tracking-wider">{t.statsTitle}</h3>
-                <i className="fa-solid fa-chevron-right text-gray-400 text-[10px] cursor-pointer"></i>
-              </div>
-              <div className="space-y-2 font-bold text-[11px]">
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-gray-500">{t.statsViews}</span>
-                  <span className="text-blue-600 font-extrabold text-xs">5</span>
+            {/* Conditionnel : Statistiques & Déconnexion uniquement si connecté, sinon Bloc Call-to-Action */}
+            {userSession ? (
+              <>
+                {/* Carte Statistiques */}
+                <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-[10px] font-extrabold text-gray-800 uppercase tracking-wider">{t.statsTitle}</h3>
+                    <i className="fa-solid fa-chevron-right text-gray-400 text-[10px] cursor-pointer"></i>
+                  </div>
+                  <div className="space-y-2 font-bold text-[11px]">
+                    <div className="flex justify-between items-center py-0.5">
+                      <span className="text-gray-500">{t.statsViews}</span>
+                      <span className="text-blue-600 font-extrabold text-xs">5</span>
+                    </div>
+                    <div className="flex justify-between items-center py-0.5 border-t border-gray-100">
+                      <span className="text-gray-500">{t.statsImpressions}</span>
+                      <span className="text-blue-600 font-extrabold text-xs">2</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center py-0.5 border-t border-gray-100">
-                  <span className="text-gray-500">{t.statsImpressions}</span>
-                  <span className="text-blue-600 font-extrabold text-xs">2</span>
+
+                {/* Carte Mon profil et mon CV */}
+                <Link
+                  href="/profil"
+                  className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl p-2.5 px-3 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-2.5 group block"
+                >
+                  <i className="fa-regular fa-user text-base text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
+                  <span className="text-xs font-bold text-[#047857] tracking-tight">
+                    Mon profil et mon CV
+                  </span>
+                </Link>
+
+                {/* Bouton Déconnexion */}
+                <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs flex items-center justify-start">
+                  <button
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      triggerToast("Déconnexion réussie !", "fa-right-from-bracket");
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 1000);
+                    }}
+                    className="flex items-center space-x-2 text-[#4A5D78] hover:text-red-600 font-bold text-xs transition cursor-pointer bg-transparent border-none p-0 outline-none w-full text-left"
+                  >
+                    <i className="fa-solid fa-right-from-bracket text-sm"></i>
+                    <span>Déconnexion</span>
+                  </button>
                 </div>
+              </>
+            ) : (
+              /* Bloc Call-to-Action pour visiteurs non connectés */
+              <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-2xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
+                <div className="flex items-center space-x-2">
+                  <span className="p-2 bg-[#10E688]/20 text-[#10E688] rounded-lg text-lg">🚀</span>
+                  <h3 className="text-xs font-black text-white leading-tight">Créez un compte</h3>
+                </div>
+                <p className="text-[11px] text-gray-300 font-medium leading-relaxed">
+                  Rejoignez Facilité pour enregistrer vos CVs, postuler en 1 clic et suivre l'impact de vos candidatures auprès des recruteurs.
+                </p>
+                <Link
+                  href="/register"
+                  className="block w-full py-2.5 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs text-center rounded-xl transition shadow-sm"
+                >
+                  S'inscrire gratuitement
+                </Link>
               </div>
-            </div>
-
-            {/* Carte Mon profil et mon CV (Mint Green style capture) */}
-            <Link
-              href="/profil"
-              className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl p-2.5 px-3 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-2.5 group block"
-            >
-              <i className="fa-regular fa-user text-base text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
-              <span className="text-xs font-bold text-[#047857] tracking-tight">
-                Mon profil et mon CV
-              </span>
-            </Link>
-
-            {/* Bouton Déconnexion (Style LinkedIn) */}
-            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs flex items-center justify-start">
-              <button
-                onClick={() => {
-                  triggerToast("Déconnexion réussie ! Redirection...", "fa-right-from-bracket");
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 1500);
-                }}
-                className="flex items-center space-x-2 text-[#4A5D78] hover:text-red-600 font-bold text-xs transition cursor-pointer bg-transparent border-none p-0 outline-none w-full text-left"
-              >
-                <i className="fa-solid fa-right-from-bracket text-sm"></i>
-                <span>Déconnexion</span>
-              </button>
-            </div>
+            )}
 
           </aside>
 
@@ -1986,6 +2037,48 @@ export default function Home() {
           </div>
         </div>
       )}
+      {/* MODAL : VISITEUR NON CONNECTÉ / CRÉATION DE COMPTE REQUISE */}
+      {authRequiredModalOpen && (
+        <div className="fixed inset-0 z-[800] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-100 text-center space-y-5 animate-scale-up relative">
+            <button
+              onClick={() => setAuthRequiredModalOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 flex items-center justify-center transition cursor-pointer"
+            >
+              <i className="fa-solid fa-xmark text-sm"></i>
+            </button>
+
+            <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-800 rounded-full flex items-center justify-center mx-auto text-3xl">
+              💼
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-gray-900 leading-tight">
+                Créez un compte pour postuler
+              </h3>
+              <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                Vous devez être connecté(e) pour postuler à l'offre <span className="font-bold text-gray-900">"{selectedJobToApply?.titleFR || selectedJobToApply?.titleEN}"</span> et transmettre votre CV aux recruteurs.
+              </p>
+            </div>
+
+            <div className="space-y-2.5 pt-2">
+              <Link
+                href="/register"
+                className="block w-full py-3.5 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs rounded-2xl shadow-md transition-all cursor-pointer"
+              >
+                S'inscrire gratuitement
+              </Link>
+              <Link
+                href="/login"
+                className="block w-full py-3 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 font-bold text-xs rounded-2xl transition cursor-pointer"
+              >
+                Déjà un compte ? Se connecter
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal/Drawer de Notifications (LinkedIn Style) */}
       {notificationsModalOpen && (
         <div className="fixed inset-0 z-[750] bg-black/50 backdrop-blur-xs flex justify-center md:items-start md:pt-16 p-2 sm:p-4 animate-fade-in-up">
