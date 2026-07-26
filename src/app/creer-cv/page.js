@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 // --- DICTIONNAIRE DE TRADUCTION POUR LE CREATEUR DE CV ---
 const translations = {
@@ -658,10 +659,29 @@ export default function CreerCv() {
     if (activeStep > 0) setActiveStep(activeStep - 1);
   };
 
-  // Final Download as PDF
-  const handleDownloadPdf = () => {
+  // Final Download as PDF & Sync to Supabase
+  const handleDownloadPdf = async () => {
     // Open loading state or modal
     setDownloadModalOpen(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resumeTitle = cvData.personal.firstName && cvData.personal.lastName 
+        ? `CV - ${cvData.personal.firstName} ${cvData.personal.lastName}` 
+        : "Mon CV Facilité";
+
+      await supabase.from("resumes").insert({
+        user_id: session?.user?.id || null,
+        title: resumeTitle,
+        type: "created",
+        content: cvData,
+        ats_score: 95,
+      });
+
+      triggerToast("CV sauvegardé sur votre compte Supabase !", "fa-cloud-arrow-up");
+    } catch (e) {
+      console.error("Erreur de sauvegarde Supabase CV:", e);
+    }
     
     // Execute page print natively to export PDF
     setTimeout(() => {

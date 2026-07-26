@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -488,6 +489,20 @@ export default function MessageriePage() {
 
     setMessageText("");
     setShowEmojiPicker(false);
+
+    // Synchronisation avec la table Supabase messages
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase.from("messages").insert({
+          sender_id: session.user.id,
+          content: userMessageText,
+          is_read: false
+        });
+      }
+    } catch (err) {
+      console.error("Erreur d'envoi du message sur Supabase:", err);
+    }
 
     // Update status to delivered quickly
     setTimeout(() => {

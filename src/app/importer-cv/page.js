@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 const translations = {
   FR: {
@@ -466,9 +467,30 @@ export default function ImporterCvPage() {
     }));
   };
 
-  // Submit and export data to localStorage
-  const handleFinalSubmit = () => {
+  // Submit and export data to Supabase & localStorage
+  const handleFinalSubmit = async () => {
     localStorage.setItem("imported_cv_data", JSON.stringify(parsedData));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resumeTitle = parsedData.personal.firstName && parsedData.personal.lastName
+        ? `CV Importé - ${parsedData.personal.firstName} ${parsedData.personal.lastName}`
+        : "CV Importé Facilité";
+
+      await supabase.from("resumes").insert({
+        user_id: session?.user?.id || null,
+        title: resumeTitle,
+        type: "imported",
+        content: parsedData,
+        file_url: uploadedFile?.name || null,
+        ats_score: Math.floor(Math.random() * (99 - 88 + 1)) + 88,
+      });
+
+      triggerToast("CV importé sauvegardé dans Supabase !", "fa-cloud-arrow-up");
+    } catch (e) {
+      console.error("Erreur d'enregistrement Supabase CV importé:", e);
+    }
+
     triggerToast(selectedLang === "FR" ? "Données transmises au Builder !" : "Data sent to Builder!", "fa-circle-check");
     setTimeout(() => {
       window.location.href = "/creer-cv";
