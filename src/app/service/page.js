@@ -1778,16 +1778,16 @@ export default function Home() {
       {/* Modal 2: Contactez-nous avec Validation & Traitement en Temps Réel */}
       {contactModalOpen && (
         <div
-          className="fixed inset-0 z-[600] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-fade-in-up"
+          className="fixed inset-0 z-[600] flex items-center justify-center bg-black/65 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-fade-in-up"
           onClick={(e) => {
             if (e.target.id === "contact-modal-wrapper") handleCloseModal();
           }}
           id="contact-modal-wrapper"
         >
-          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 md:p-8 relative shadow-2xl transition-all duration-300 flex flex-col border border-gray-100">
+          <div className="bg-white rounded-[2rem] w-full max-w-lg max-h-[85vh] p-5 sm:p-7 md:p-8 relative shadow-2xl transition-all duration-300 flex flex-col border border-gray-100 overflow-y-auto">
             <button
               onClick={handleCloseModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 cursor-pointer z-10"
             >
               <i className="fa-solid fa-xmark text-xl"></i>
             </button>
