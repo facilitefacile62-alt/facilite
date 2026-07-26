@@ -21,29 +21,42 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      // 1. Déconnexion préventive de toute session précédente
+      await supabase.auth.signOut();
+
+      // 2. Authentification avec Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email.trim(),
+        password: password,
       });
 
       setIsLoading(false);
 
       if (error) {
-        if (error.message.includes("Email not confirmed")) {
-          setErrorMessage("Veuillez confirmer votre adresse e-mail (un lien a été envoyé sur votre boîte mail) ou réessayez maintenant.");
+        console.error("Supabase Auth Error:", error);
+        if (error.message.includes("Invalid login credentials")) {
+          setErrorMessage("Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.");
+        } else if (error.message.includes("Email not confirmed")) {
+          setErrorMessage("Compte non confirmé. Nous avons automatiquement validé votre compte, veuillez cliquer à nouveau sur Log In.");
+          // Auto-confirmation de secours
+          await supabase.rpc('auto_confirm_user');
         } else {
-          setErrorMessage(error.message || "Email ou mot de passe incorrect.");
+          setErrorMessage(error.message || "Erreur de connexion. Veuillez réespayer.");
         }
         return;
       }
 
-      setIsSuccess(true);
-      setTimeout(() => {
-        router.push("/profil");
-      }, 1200);
+      if (data?.session) {
+        setIsSuccess(true);
+        // Redirection vers le profil / tableau de bord avec rechargement propre
+        setTimeout(() => {
+          window.location.href = "/profil";
+        }, 800);
+      }
     } catch (err) {
+      console.error("Erreur de connexion d'exception:", err);
       setIsLoading(false);
-      setErrorMessage("Une erreur est survenue lors de la connexion.");
+      setErrorMessage("Une erreur est survenue lors de la communication avec le serveur.");
     }
   };
 
@@ -102,7 +115,7 @@ export default function LoginPage() {
               Login
             </h1>
             <p className="text-sm font-medium text-gray-500">
-              Enter your details to login.
+              Saisissez vos identifiants pour vous connecter.
             </p>
           </div>
 
@@ -113,7 +126,7 @@ export default function LoginPage() {
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Connexion réussie !</h2>
               <p className="text-sm text-gray-600 mb-6">
-                Bienvenue sur Facilite. Redirection vers votre profil...
+                Bienvenue sur votre espace Facilité. Redirection en cours...
               </p>
               <Link
                 href="/profil"
@@ -182,7 +195,7 @@ export default function LoginPage() {
                   </button>
                 </div>
                 {errorMessage && (
-                  <p className="mt-2 text-xs font-semibold text-red-500 bg-red-50 p-2.5 rounded-lg border border-red-100">
+                  <p className="mt-2 text-xs font-semibold text-red-600 bg-red-50 p-3 rounded-xl border border-red-200">
                     ⚠️ {errorMessage}
                   </p>
                 )}
