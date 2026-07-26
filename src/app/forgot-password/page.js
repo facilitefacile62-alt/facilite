@@ -58,11 +58,9 @@ export default function ForgotPasswordPage() {
       <main className="w-full max-w-md px-4 py-8 z-10">
         <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300">
           
-          {/* Icône Clé / Cadenas */}
+          {/* Logo officiel du site au-dessus de la carte */}
           <div className="flex justify-center mb-5">
-            <div className="w-14 h-14 rounded-full bg-[#FAF6F1] border border-gray-200/80 flex items-center justify-center shadow-xs">
-              <span className="text-2xl select-none">🔑</span>
-            </div>
+            <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
           </div>
 
           {/* Titre & Sous-titre */}
