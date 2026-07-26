@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -10,7 +10,7 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
 
@@ -21,10 +21,23 @@ export default function ForgotPasswordPage() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/login?reset=true`,
+      });
+
       setIsLoading(false);
+
+      if (error) {
+        setErrorMessage(error.message || "Erreur lors de l'envoi de l'e-mail de réinitialisation.");
+        return;
+      }
+
       setIsSuccess(true);
-    }, 800);
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMessage("Une erreur imprévue est survenue.");
+    }
   };
 
   return (

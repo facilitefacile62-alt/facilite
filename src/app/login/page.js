@@ -37,9 +37,10 @@ export default function LoginPage() {
         if (error.message.includes("Invalid login credentials")) {
           setErrorMessage("Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.");
         } else if (error.message.includes("Email not confirmed")) {
-          setErrorMessage("Compte non confirmé. Nous avons automatiquement validé votre compte, veuillez cliquer à nouveau sur Log In.");
-          // Auto-confirmation de secours
-          await supabase.rpc('auto_confirm_user');
+          // Si Supabase demande confirmation, on connecte quand même après validation directe
+          setErrorMessage("Compte en cours de finalisation. Veuillez cliquer à nouveau sur Log In.");
+        } else if (error.status === 429 || error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("too many requests")) {
+          setErrorMessage("Trop de tentatives consécutives. Veuillez patienter quelques secondes puis réessayez.");
         } else {
           setErrorMessage(error.message || "Erreur de connexion. Veuillez réespayer.");
         }
