@@ -118,116 +118,8 @@ const translations = {
   }
 };
 
-const initialConversations = [
-  {
-    id: 1,
-    name: "Fatimata Diop",
-    title: "Directrice des Ressources Humaines",
-    company: "Orange Sénégal",
-    avatarColor: "bg-orange-500",
-    avatarInitials: "FD",
-    logo: "/logo.jpeg",
-    lastMessage: "Bonjour faciliter, votre CV nous intéresse beaucoup. Êtes-vous disponible pour un appel ?",
-    time: "14:32",
-    unreadCount: 1,
-    online: true,
-    favorite: true,
-    messages: [
-      { id: 101, sender: "them", text: "Bonjour ! Nous avons vu votre profil sur Facilite.", time: "14:28", status: "read" },
-      { id: 102, sender: "me", text: "Bonjour Mme Diop, ravi de vous lire. Quel aspect de mon profil a retenu votre attention ?", time: "14:30", status: "read" },
-      { id: 103, sender: "them", text: "Bonjour faciliter, votre CV nous intéresse beaucoup. Êtes-vous disponible pour un appel ?", time: "14:32", status: "delivered" }
-    ],
-    responsesFR: [
-      "Merci pour votre message ! Je vais examiner vos disponibilités et je reviens vers vous rapidement pour planifier notre échange téléphonique.",
-      "Parfait, noté. Je vous envoie une invitation Google Meet pour notre échange.",
-      "N'hésitez pas à préparer vos questions sur nos opportunités chez Orange Sénégal."
-    ],
-    responsesEN: [
-      "Thank you for your reply! I will check your availability and get back to you shortly to schedule our call.",
-      "Perfect, noted. I'll send you a Google Meet invitation for our discussion.",
-      "Feel free to prepare any questions you have about opportunities at Orange Senegal."
-    ]
-  },
-  {
-    id: 2,
-    name: "Moussa Ndiaye",
-    title: "Lead Front-end Developer",
-    company: "Wave Mobile Money",
-    avatarColor: "bg-emerald-500",
-    avatarInitials: "MN",
-    lastMessage: "Salut ! J'ai bien aimé votre projet. Pourriez-vous m'envoyer votre dépôt GitHub ?",
-    time: "Hier",
-    unreadCount: 1,
-    online: true,
-    favorite: false,
-    messages: [
-      { id: 201, sender: "them", text: "Salut ! J'ai vu tes réalisations de maquettes 1:1 Pixel Perfect.", time: "Hier", status: "read" },
-      { id: 202, sender: "them", text: "Salut ! J'ai bien aimé votre projet. Pourriez-vous m'envoyer votre dépôt GitHub ?", time: "Hier", status: "delivered" }
-    ],
-    responsesFR: [
-      "Super, merci pour le lien. Je regarde votre code et j'en parle à l'équipe technique.",
-      "Impressionnant ! Votre maîtrise de Next.js et de Tailwind CSS correspond exactement à ce que nous recherchons.",
-      "Êtes-vous disponible pour faire une démonstration technique de votre projet dans la semaine ?"
-    ],
-    responsesEN: [
-      "Great, thanks for the link. I'll check your code and discuss it with the engineering team.",
-      "Impressive! Your mastery of Next.js and Tailwind CSS matches exactly what we're looking for.",
-      "Are you available for a technical demo of your project sometime this week?"
-    ]
-  },
-  {
-    id: 3,
-    name: "Amadou Sow",
-    title: "Directeur Général RH",
-    company: "Senelec",
-    avatarColor: "bg-blue-600",
-    avatarInitials: "AS",
-    lastMessage: "Bonjour, nous recherchons un comptable stagiaire à Pikine. Seriez-vous intéressé ?",
-    time: "24 Juil.",
-    unreadCount: 0,
-    online: false,
-    favorite: false,
-    messages: [
-      { id: 301, sender: "them", text: "Bonjour, nous recherchons un comptable stagiaire à Pikine. Seriez-vous intéressé ?", time: "24 Juil.", status: "read" }
-    ],
-    responsesFR: [
-      "Merci de votre intérêt. Pouvez-vous me préciser vos dates de disponibilité pour ce stage ?",
-      "Bien reçu. Notre service recrutement va analyser votre dossier complet.",
-      "Merci pour ces précisions. Je transmets vos coordonnées au responsable de service comptabilité."
-    ],
-    responsesEN: [
-      "Thank you for your interest. Could you please specify your availability dates for this internship?",
-      "Well received. Our recruitment department will analyze your complete file.",
-      "Thank you for these details. I will forward your contact information to the accounting department manager."
-    ]
-  },
-  {
-    id: 4,
-    name: "Sarah Taylor",
-    title: "Community Coach",
-    company: "Facilite Corporation",
-    avatarColor: "bg-purple-500",
-    avatarInitials: "ST",
-    lastMessage: "Welcome to Facilite! How can I help you build your resume today?",
-    time: "20 Juil.",
-    unreadCount: 0,
-    online: true,
-    favorite: true,
-    messages: [
-      { id: 401, sender: "them", text: "Welcome to Facilite! How can I help you build your resume today?", time: "20 Juil.", status: "read" }
-    ],
-    responsesFR: [
-      "Excellent ! N'hésite pas si tu as besoin de conseils sur la structure ou la mise en page de ton CV.",
-      "Tu peux aussi jeter un coup d'œil à nos modèles Premium, ils sont optimisés pour passer les filtres ATS des recruteurs.",
-      "Des questions sur l'intégration de tes expériences ? Je suis là pour t'aider."
-    ],
-    responsesEN: [
-      "Excellent! Don't hesitate if you need advice on the structure or layout of your resume.",
-      "You can also check out our Premium templates, they are optimized to pass recruiters' ATS filters.",
-      "Any questions about adding your experiences? I'm here to help."
-    ]
-  }
-];
+// Initialisation à vide (zéro donnée de test globale par défaut)
+const initialConversations = [];
 
 export default function MessageriePage() {
   const [selectedLang, setSelectedLang] = useState("FR");
@@ -237,57 +129,11 @@ export default function MessageriePage() {
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const plusDropdownRef = useRef(null);
 
-  // Notifications System (LinkedIn Style)
+  // Notifications System (LinkedIn Style - initialisé à vide)
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [activeNotifFilter, setActiveNotifFilter] = useState("all");
-  const [unreadNotifCount, setUnreadNotifCount] = useState(3);
-  const [notificationsList, setNotificationsList] = useState([
-    {
-      id: 1,
-      author: "Université de Tours",
-      avatar: "/logo.jpeg",
-      text: "a répondu à votre message concernant les critères de recrutement !",
-      type: "posts",
-      time: "4 min",
-      unread: true
-    },
-    {
-      id: 2,
-      author: "Fatimata Diop",
-      avatar: "/logo.jpeg",
-      text: "vous a envoyé un nouveau message dans la messagerie.",
-      type: "mentions",
-      time: "2 h",
-      unread: true
-    },
-    {
-      id: 3,
-      author: "Joseph Maxime Bilivogui",
-      avatar: "/logo.jpeg",
-      text: "a publié un post : Le monde attend des leaders audacieux et visionnaires.",
-      type: "posts",
-      time: "3 h",
-      unread: true
-    },
-    {
-      id: 4,
-      author: "Wave Sénégal",
-      avatar: "/logo.jpeg",
-      text: "recrute un Conseiller Clientèle Télécom à Dakar.",
-      type: "jobs",
-      time: "6 h",
-      unread: false
-    },
-    {
-      id: 5,
-      author: "Sarah Taylor",
-      avatar: "/logo.jpeg",
-      text: "a réagi à votre message avec un cœur ❤️.",
-      type: "mentions",
-      time: "13 h",
-      unread: false
-    }
-  ]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [notificationsList, setNotificationsList] = useState([]);
 
   // Contact Modal States
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -353,6 +199,15 @@ export default function MessageriePage() {
       }
       setUserSession(session);
 
+      // Écouter également les changements de session en temps réel
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+        if (!currentSession) {
+          window.location.replace("/login");
+        } else {
+          setUserSession(currentSession);
+        }
+      });
+
       // Charger uniquement les messages appartenant à cet utilisateur authentifié
       try {
         const { data: userMessages } = await supabase
@@ -362,27 +217,40 @@ export default function MessageriePage() {
           .order("created_at", { ascending: true });
 
         if (userMessages && userMessages.length > 0) {
-          // Fusionner ou mettre à jour la conversation active avec les vrais messages de l'utilisateur
-          setConversations(prev => prev.map(c => {
-            if (c.id === "conv1") {
-              const formattedDbMsgs = userMessages.map(m => ({
-                id: m.id,
-                sender: "me",
-                text: m.content,
-                time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                status: m.is_read ? "read" : "sent"
-              }));
-              return {
-                ...c,
-                messages: [...c.messages, ...formattedDbMsgs]
-              };
-            }
-            return c;
+          const formattedMsgs = userMessages.map(m => ({
+            id: m.id,
+            sender: "me",
+            text: m.content,
+            time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: m.is_read ? "read" : "sent"
           }));
+
+          const userConv = {
+            id: 1,
+            name: "Support RH Facilité",
+            title: "Assistance & Recrutement",
+            company: "Facilite Corporation",
+            avatarColor: "bg-[#10E688]",
+            avatarInitials: "FC",
+            logo: "/logo.jpeg",
+            lastMessage: formattedMsgs[formattedMsgs.length - 1].text,
+            time: formattedMsgs[formattedMsgs.length - 1].time,
+            unreadCount: 0,
+            online: true,
+            favorite: true,
+            messages: formattedMsgs
+          };
+
+          setConversations([userConv]);
+          setActiveConvId(1);
+        } else {
+          setConversations([]);
         }
       } catch (err) {
         console.error("Erreur de chargement des messages utilisateur:", err);
       }
+
+      return () => subscription.unsubscribe();
     }
 
     loadUserSessionAndMessages();
@@ -879,13 +747,24 @@ export default function MessageriePage() {
               </button>
             </div>
 
-            <Link
-              href="/login"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-regular fa-user text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
-            </Link>
+            {userSession ? (
+              <Link
+                href="/profil"
+                className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+              >
+                <i className="fa-solid fa-circle-user text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
+              </Link>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link
+                  href="/login"
+                  className="text-xs font-extrabold text-gray-800 hover:text-gray-900 bg-white border border-gray-200 px-3.5 py-2 rounded-full shadow-xs hover:border-gray-300 transition cursor-pointer"
+                >
+                  Connexion
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile Right Controls: Bell & Messagerie */}
