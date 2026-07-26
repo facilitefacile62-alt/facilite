@@ -460,7 +460,7 @@ export default function MessageriePage() {
   };
 
   // Send Message Logic
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!messageText.trim()) return;
 
