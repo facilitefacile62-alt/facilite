@@ -732,13 +732,13 @@ export default function Home() {
 
           {/* Groupe Droit : Se connecter */}
           <div className="hidden md:flex items-center">
-            <a
-              href="#"
+            <Link
+              href="/login"
               className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
             >
               <i className="fa-regular fa-user text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
-            </a>
+            </Link>
           </div>
 
           {/* Mobile Header Right Controls (Image 2 style: Bell & Messagerie icons) */}
