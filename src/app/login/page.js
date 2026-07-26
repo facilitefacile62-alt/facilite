@@ -169,7 +169,7 @@ export default function LoginPage() {
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-xs font-semibold text-gray-600 hover:text-gray-900 hover:underline transition"
+                    className="text-xs font-extrabold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200 cursor-pointer"
                   >
                     Forgot password?
                   </Link>
@@ -260,12 +260,12 @@ export default function LoginPage() {
               </button>
 
               {/* Inscription Sign up */}
-              <div className="text-center pt-2">
-                <p className="text-xs text-gray-500 font-medium">
-                  Don't have an account yet?{" "}
+              <div className="text-center pt-4 border-t border-gray-100 mt-4">
+                <p className="text-xs text-gray-600 font-semibold flex items-center justify-center space-x-1.5">
+                  <span>Don't have an account yet?</span>
                   <Link
                     href="/register"
-                    className="font-extrabold text-gray-900 hover:underline cursor-pointer"
+                    className="font-extrabold text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-all duration-200 cursor-pointer"
                   >
                     Sign up
                   </Link>
