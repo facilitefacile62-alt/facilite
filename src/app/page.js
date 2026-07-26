@@ -1216,6 +1216,28 @@ export default function Home() {
           {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
           <section className="w-full lg:w-[555px] flex-shrink-0 flex flex-col space-y-4">
             
+            {/* Message d'accueil personnalisé si connecté */}
+            {userSession && (
+              <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-indigo-950 text-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-700 flex items-center justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center space-x-2">
+                    <span>Salut, {userProfile?.full_name || userSession.user.user_metadata?.full_name || userSession.user.email?.split("@")[0]} !</span>
+                    <span className="text-xl animate-bounce">👋</span>
+                  </h2>
+                  <p className="text-xs text-gray-300 font-medium">
+                    Ravi de vous revoir. Découvrez les nouvelles offres et gérez vos CVs en toute simplicité.
+                  </p>
+                </div>
+                <Link
+                  href="/profil"
+                  className="hidden sm:inline-flex items-center space-x-1.5 px-3.5 py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs rounded-xl transition shadow-xs flex-shrink-0"
+                >
+                  <span>Mon Profil</span>
+                  <i className="fa-solid fa-arrow-right text-[10px]"></i>
+                </Link>
+              </div>
+            )}
+
             {/* Barre de Recherche Intégrée au Flux */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col space-y-3.5">
               <h3 className="text-sm font-extrabold text-gray-900">{t.jobBoardTitle}</h3>

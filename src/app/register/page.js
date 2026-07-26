@@ -35,22 +35,32 @@ export default function RegisterPage() {
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName.trim(),
           },
         },
       });
 
-      setIsLoading(false);
-
       if (error) {
+        setIsLoading(false);
         setErrorMessage(error.message || "Erreur lors de la création du compte.");
         return;
       }
 
+      if (data?.user) {
+        // Insertion ou mise à jour directe dans la table public.profiles
+        await supabase.from("profiles").upsert({
+          id: data.user.id,
+          email: email.trim(),
+          full_name: fullName.trim(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+
+      setIsLoading(false);
       setIsSuccess(true);
     } catch (err) {
       setIsLoading(false);
