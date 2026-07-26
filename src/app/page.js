@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -340,24 +341,39 @@ export default function Home() {
 
   const t = translations[selectedLang] || translations.FR;
 
-  // Sync language with localStorage
-  useEffect(() => {
-    const savedLang = localStorage.getItem("lang");
-    if (savedLang) {
-      setSelectedLang(savedLang);
-    }
-  }, []);
+  // Sync session and profile with Supabase
+  const [userSession, setUserSession] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
 
-  // Sync experiences with localStorage
   useEffect(() => {
-    const savedExps = localStorage.getItem("user_experiences");
-    if (savedExps) {
-      try {
-        setExperiences(JSON.parse(savedExps));
-      } catch (e) {
-        console.error(e);
+    async function loadSessionAndProfile() {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUserSession(session);
+
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profile) {
+          setUserProfile(profile);
+          setExperiences(profile.experiences || []);
+        } else {
+          setUserProfile({
+            full_name: session.user.email?.split("@")[0],
+            headline: "",
+            location: ""
+          });
+        }
+      } else {
+        setUserProfile(null);
+        setExperiences([]);
       }
     }
+
+    loadSessionAndProfile();
   }, []);
 
   const handleAddExperience = (e) => {
@@ -988,10 +1004,16 @@ export default function Home() {
                 </Link>
                 
                 <Link href="/profil" className="group">
-                  <h2 className="text-sm font-extrabold text-gray-900 leading-tight group-hover:text-blue-600 transition">{t.profileTitle}</h2>
+                  <h2 className="text-sm font-extrabold text-gray-900 leading-tight group-hover:text-blue-600 transition">
+                    {userProfile?.full_name || (userSession ? userSession.user.email : "Se connecter pour voir votre profil")}
+                  </h2>
                 </Link>
-                <p className="text-[10px] text-gray-500 font-bold mt-0.5">{t.profileSubtitle}</p>
-                <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">{t.profileLocation}</p>
+                <p className="text-[10px] text-gray-500 font-bold mt-0.5">
+                  {userProfile?.headline || (userSession ? "Complétez votre profil" : "Créez votre CV en ligne")}
+                </p>
+                <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
+                  {userProfile?.location || (userSession ? "Localisation non renseignée" : "Dakar, Sénégal")}
+                </p>
                 
                 {/* Micro badge entreprise comme dans la capture */}
                 <div className="flex items-center justify-center space-x-1 text-[10px] text-gray-700 font-bold mb-2">
