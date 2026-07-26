@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -13,20 +13,77 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const router = useRouter();
+
+  // Flux "mot de passe oublié" : Supabase ouvre une session temporaire de type
+  // recovery quand l'utilisateur clique sur le lien reçu par email (redirectTo=/login?reset=true)
+  const [isRecoveryMode, setIsRecoveryMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("reset") === "true";
+  });
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [recoveryError, setRecoveryError] = useState("");
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoverySuccess, setRecoverySuccess] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecoveryMode(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setRecoveryError("");
+
+    if (newPassword.length < 6) {
+      setRecoveryError("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setRecoveryError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      setRecoveryLoading(false);
+
+      if (error) {
+        setRecoveryError(error.message || "Impossible de mettre à jour le mot de passe.");
+        return;
+      }
+
+      setRecoverySuccess(true);
+      await supabase.auth.signOut();
+      setTimeout(() => {
+        window.location.replace("/login");
+      }, 2000);
+    } catch (err) {
+      setRecoveryLoading(false);
+      setRecoveryError("Une erreur imprévue est survenue.");
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
+    setNeedsConfirmation(false);
     setIsLoading(true);
 
     try {
-      // 1. Déconnexion préventive de toute session précédente
-      await supabase.auth.signOut();
-
-      // 2. Authentification avec Supabase Auth
+      // Authentification directe (pas de signOut préventif : chaque appel
+      // Supabase Auth consomme le quota de rate-limit, cet appel était superflu)
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password: password,
       });
 
@@ -37,12 +94,12 @@ export default function LoginPage() {
         if (error.message.includes("Invalid login credentials")) {
           setErrorMessage("Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.");
         } else if (error.message.includes("Email not confirmed")) {
-          // Si Supabase demande confirmation, on connecte quand même après validation directe
-          setErrorMessage("Compte en cours de finalisation. Veuillez cliquer à nouveau sur Log In.");
+          setErrorMessage("Votre adresse email n'a pas encore été confirmée. Vérifiez votre boîte de réception ou renvoyez l'email de confirmation ci-dessous.");
+          setNeedsConfirmation(true);
         } else if (error.status === 429 || error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("too many requests")) {
-          setErrorMessage("Trop de tentatives consécutives. Veuillez patienter quelques secondes puis réessayez.");
+          setErrorMessage("Trop de tentatives consécutives. Veuillez patienter quelques minutes puis réessayer.");
         } else {
-          setErrorMessage(error.message || "Erreur de connexion. Veuillez réespayer.");
+          setErrorMessage(error.message || "Erreur de connexion. Veuillez réessayer.");
         }
         return;
       }
@@ -58,6 +115,27 @@ export default function LoginPage() {
       console.error("Erreur de connexion d'exception:", err);
       setIsLoading(false);
       setErrorMessage("Une erreur est survenue lors de la communication avec le serveur.");
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email.trim()) return;
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim().toLowerCase(),
+      });
+      if (error) {
+        setErrorMessage(error.message || "Impossible de renvoyer l'email de confirmation.");
+      } else {
+        setErrorMessage("Un nouvel email de confirmation vient d'être envoyé.");
+        setNeedsConfirmation(false);
+      }
+    } catch (err) {
+      setErrorMessage("Une erreur est survenue lors du renvoi de l'email.");
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -101,10 +179,83 @@ export default function LoginPage() {
         </Link>
       </header>
 
-      {/* Conteneur Principal / Carte de Login */}
+      {/* Conteneur Principal / Carte de Login OU Carte de Réinitialisation */}
       <main className="w-full max-w-md px-4 py-8 z-10">
+        {isRecoveryMode ? (
+          <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300">
+            <div className="flex justify-center mb-5">
+              <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
+            </div>
+
+            <div className="text-center mb-8">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
+                Nouveau mot de passe
+              </h1>
+              <p className="text-sm font-medium text-gray-500">
+                Choisissez un nouveau mot de passe pour votre compte.
+              </p>
+            </div>
+
+            {recoverySuccess ? (
+              <div className="text-center py-6 animate-fade-in">
+                <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                  ✓
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Mot de passe mis à jour !</h2>
+                <p className="text-sm text-gray-600">
+                  Redirection vers la page de connexion...
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Nouveau mot de passe
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    placeholder="Au moins 6 caractères"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Confirmer le mot de passe
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    required
+                    placeholder="Confirmez le mot de passe"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                  />
+                </div>
+                {recoveryError && (
+                  <p className="text-xs font-semibold text-red-600 bg-red-50 p-3 rounded-xl border border-red-200">
+                    ⚠️ {recoveryError}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={recoveryLoading}
+                  className="w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2"
+                >
+                  {recoveryLoading ? (
+                    <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
+                  ) : (
+                    <span>Mettre à jour le mot de passe</span>
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        ) : (
         <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300">
-          
+
           {/* Logo officiel du site au-dessus de la carte */}
           <div className="flex justify-center mb-5">
             <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
@@ -200,6 +351,16 @@ export default function LoginPage() {
                     ⚠️ {errorMessage}
                   </p>
                 )}
+                {needsConfirmation && (
+                  <button
+                    type="button"
+                    onClick={handleResendConfirmation}
+                    disabled={isResending}
+                    className="mt-2 w-full text-xs font-extrabold text-blue-600 hover:text-blue-800 hover:underline transition cursor-pointer"
+                  >
+                    {isResending ? "Envoi en cours..." : "Renvoyer l'email de confirmation"}
+                  </button>
+                )}
               </div>
 
               {/* Bouton de Soumission Principal */}
@@ -275,6 +436,7 @@ export default function LoginPage() {
             </form>
           )}
         </div>
+        )}
       </main>
 
       {/* Footer minimaliste */}

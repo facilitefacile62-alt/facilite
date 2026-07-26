@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -128,6 +128,8 @@ export default function MessageriePage() {
   // Layout & Dropdown States
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const plusDropdownRef = useRef(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
 
   // Notifications System (LinkedIn Style - initialisé à vide)
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
@@ -343,11 +345,15 @@ export default function MessageriePage() {
         if (recruitmentModalOpen) handleCloseRecruitmentModal();
         if (plusDropdownOpen) setPlusDropdownOpen(false);
         if (notificationsModalOpen) setNotificationsModalOpen(false);
+        if (userMenuOpen) setUserMenuOpen(false);
       }
     };
     const handleClickOutside = (e) => {
       if (plusDropdownRef.current && !plusDropdownRef.current.contains(e.target)) {
         setPlusDropdownOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -356,7 +362,7 @@ export default function MessageriePage() {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [contactModalOpen, recruitmentModalOpen, plusDropdownOpen, notificationsModalOpen]);
+  }, [contactModalOpen, recruitmentModalOpen, plusDropdownOpen, notificationsModalOpen, userMenuOpen]);
 
   const toggleFavorite = (id) => {
     setConversations(prev => prev.map(c => {
@@ -748,13 +754,43 @@ export default function MessageriePage() {
             </div>
 
             {userSession ? (
-              <Link
-                href="/profil"
-                className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
-              >
-                <i className="fa-solid fa-circle-user text-xl"></i>
-                <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
-              </Link>
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+                >
+                  <i className="fa-solid fa-circle-user text-xl"></i>
+                  <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-gray-200 shadow-2xl py-1.5 z-[600] animate-fade-in-up">
+                    <Link
+                      href="/profil"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                    >
+                      <i className="fa-regular fa-user text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Voir mon profil & CV</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        triggerToast("Déconnexion en cours...", "fa-right-from-bracket");
+                        setTimeout(() => {
+                          handleGlobalSignOut();
+                        }, 400);
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-red-50 hover:text-red-600 transition border-t border-gray-100 cursor-pointer text-left"
+                    >
+                      <i className="fa-solid fa-right-from-bracket text-red-500 text-sm w-5 text-center"></i>
+                      <span>Déconnexion</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="flex items-center space-x-2">
                 <Link

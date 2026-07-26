@@ -255,6 +255,8 @@ export default function Home() {
   // Spontaneous Recruitment Modal
   const [recruitmentModalOpen, setRecruitmentModalOpen] = useState(false);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
   const [isRecruitmentSubmitting, setIsRecruitmentSubmitting] = useState(false);
   const [recruitmentFormSubmitted, setRecruitmentFormSubmitted] = useState(false);
   const [recruitmentFile, setRecruitmentFile] = useState(null);
@@ -266,57 +268,11 @@ export default function Home() {
   const fileInputRef = useRef(null);
   const plusDropdownRef = useRef(null);
 
-  // Notifications System (LinkedIn Style)
+  // Notifications System (initialisé à vide : aucune donnée de test globale par défaut)
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [activeNotifFilter, setActiveNotifFilter] = useState("all");
-  const [unreadNotifCount, setUnreadNotifCount] = useState(3);
-  const [notificationsList, setNotificationsList] = useState([
-    {
-      id: 1,
-      author: "Université de Tours",
-      avatar: "/logo.jpeg",
-      text: "a publié quelque chose : Une grande étape franchie pour la recherche et l'innovation en Région Centre-Val de Loire !",
-      type: "posts",
-      time: "4 min",
-      unread: true
-    },
-    {
-      id: 2,
-      author: "Madeleine Fall",
-      avatar: "/logo.jpeg",
-      text: "a consulté votre profil. Votre expérience en Développement Front-End les intéresse.",
-      type: "jobs",
-      time: "2 h",
-      unread: true
-    },
-    {
-      id: 3,
-      author: "Joseph Maxime Bilivogui",
-      avatar: "/logo.jpeg",
-      text: "a publié un post : Le monde attend des leaders audacieux et visionnaires.",
-      type: "posts",
-      time: "3 h",
-      unread: true
-    },
-    {
-      id: 4,
-      author: "Wave Sénégal",
-      avatar: "/logo.jpeg",
-      text: "a publié une nouvelle offre : Conseiller Clientèle Télécom à Dakar. Postulez rapidement !",
-      type: "jobs",
-      time: "6 h",
-      unread: false
-    },
-    {
-      id: 5,
-      author: "Sarah Taylor",
-      avatar: "/logo.jpeg",
-      text: "vous a mentionné dans un commentaire sur le guide de création de CV.",
-      type: "mentions",
-      time: "13 h",
-      unread: false
-    }
-  ]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [notificationsList, setNotificationsList] = useState([]);
 
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
@@ -597,11 +553,15 @@ export default function Home() {
         if (noCvModalOpen) setNoCvModalOpen(false);
         if (plusDropdownOpen) setPlusDropdownOpen(false);
         if (notificationsModalOpen) setNotificationsModalOpen(false);
+        if (userMenuOpen) setUserMenuOpen(false);
       }
     };
     const handleClickOutside = (e) => {
       if (plusDropdownRef.current && !plusDropdownRef.current.contains(e.target)) {
         setPlusDropdownOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -610,7 +570,7 @@ export default function Home() {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [contactModalOpen, recruitmentModalOpen, noCvModalOpen, plusDropdownOpen, notificationsModalOpen]);
+  }, [contactModalOpen, recruitmentModalOpen, noCvModalOpen, plusDropdownOpen, notificationsModalOpen, userMenuOpen]);
 
   return (
     <>
@@ -767,13 +727,43 @@ export default function Home() {
           {/* Groupe Droit : Rendu conditionnel selon la session Supabase */}
           <div className="hidden md:flex items-center space-x-3">
             {userSession ? (
-              <Link
-                href="/profil"
-                className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
-              >
-                <i className="fa-solid fa-circle-user text-xl"></i>
-                <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
-              </Link>
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+                >
+                  <i className="fa-solid fa-circle-user text-xl"></i>
+                  <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-gray-200 shadow-2xl py-1.5 z-[600] animate-fade-in-up">
+                    <Link
+                      href="/profil"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                    >
+                      <i className="fa-regular fa-user text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Voir mon profil & CV</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        triggerToast("Déconnexion en cours...", "fa-right-from-bracket");
+                        setTimeout(() => {
+                          handleGlobalSignOut();
+                        }, 400);
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-red-50 hover:text-red-600 transition border-t border-gray-100 cursor-pointer text-left"
+                    >
+                      <i className="fa-solid fa-right-from-bracket text-red-500 text-sm w-5 text-center"></i>
+                      <span>Déconnexion</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="flex items-center space-x-2">
                 <Link
