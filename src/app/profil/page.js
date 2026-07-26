@@ -15,19 +15,20 @@ export default function ProfilPage() {
   const [formData, setFormData] = useState({ name: "", email: "", subject: "", message: "" });
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Équipes & États Profil Éditable
-  const [profileName, setProfileName] = useState("Macoumba Samak");
-  const [profileSubtitle, setProfileSubtitle] = useState("Étudiant(e) à lycée de pikine");
-  const [profileLocation, setProfileLocation] = useState("Pikine, Région de Dakar, Sénégal");
-  const [profileBio, setProfileBio] = useState("Étudiant passionné par le développement web, l'ingénierie digitale et la création de CV modernes et percutants. En recherche d'opportunités d'apprentissage et de stages en technologie.");
+  // Équipes & États Profil Éditable (Chargés dynamiquement depuis Supabase)
+  const [userSession, setUserSession] = useState(null);
+  const [profileName, setProfileName] = useState("");
+  const [profileSubtitle, setProfileSubtitle] = useState("");
+  const [profileLocation, setProfileLocation] = useState("");
+  const [profileBio, setProfileBio] = useState("");
   const [isEditingBio, setIsEditingBio] = useState(false);
 
   // Formulaire "Mon profil et mon CV"
-  const [firstName, setFirstName] = useState("faciliter");
-  const [lastName, setLastName] = useState("facile");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
-  const [city, setCity] = useState("Pikine");
-  const [country, setCountry] = useState("Sénégal");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
   const [uploadedCvFileName, setUploadedCvFileName] = useState(null);
   const [cvPreviewModalOpen, setCvPreviewModalOpen] = useState(false);
   const cvFileInputRef = useRef(null);
@@ -54,43 +55,82 @@ export default function ProfilPage() {
     setTimeout(() => setToast({ show: false, message: "", icon: "" }), 3000);
   };
 
-  // Charger les données sauvegardées au montage
+  // Synchroniser les données depuis Supabase pour le compte connecté
   useEffect(() => {
-    const savedExps = localStorage.getItem("user_experiences");
-    if (savedExps) {
-      try {
-        setExperiences(JSON.parse(savedExps));
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      // Expérience par défaut si vide
-      const defaultExp = [
-        {
-          id: 1,
-          title: "chef",
-          company: "facilite",
-          location: "pikine",
-          locationType: "Hybride",
-          employmentType: "Temps plein",
-          isCurrent: true,
-          startMonth: "juillet",
-          startYear: "2026",
-          skills: ["Management", "Gestion de projet", "Communication"]
+    async function loadUserProfile() {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUserSession(session);
+
+      if (session?.user) {
+        // Récupérer le profil réel depuis la table Supabase
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profile) {
+          setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
+          setProfileSubtitle(profile.headline || "");
+          setProfileLocation(profile.location || "");
+          setProfileBio(profile.bio || "");
+          setExperiences(profile.experiences || []);
+
+          if (profile.full_name) {
+            const parts = profile.full_name.split(" ");
+            setFirstName(parts[0] || "");
+            setLastName(parts.slice(1).join(" ") || "");
+          }
+        } else {
+          setProfileName(session.user.email?.split("@")[0] || "");
         }
-      ];
-      setExperiences(defaultExp);
-      localStorage.setItem("user_experiences", JSON.stringify(defaultExp));
+      } else {
+        // Si non connecté, tout reste vide
+        setProfileName("");
+        setProfileSubtitle("");
+        setProfileLocation("");
+        setProfileBio("");
+        setExperiences([]);
+        setFirstName("");
+        setLastName("");
+      }
     }
 
-    const savedBio = localStorage.getItem("user_profile_bio");
-    if (savedBio) setProfileBio(savedBio);
+    loadUserProfile();
   }, []);
 
-  const handleSaveBio = () => {
-    localStorage.setItem("user_profile_bio", profileBio);
+  // Sauvegarder la biographie dans Supabase
+  const handleSaveBio = async () => {
+    if (userSession?.user) {
+      await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        bio: profileBio,
+        updated_at: new Date().toISOString(),
+      });
+    }
     setIsEditingBio(false);
     triggerToast("Résumé du profil mis à jour !", "fa-pen-to-square");
+  };
+
+  // Sauvegarder les informations personnelles dans Supabase
+  const handleSaveProfileInfo = async () => {
+    const fullName = `${firstName} ${lastName}`.trim();
+    setProfileName(fullName);
+    setProfileSubtitle(jobTitle);
+    setProfileLocation(city && country ? `${city}, ${country}` : city || country);
+
+    if (userSession?.user) {
+      await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        full_name: fullName,
+        headline: jobTitle,
+        location: city && country ? `${city}, ${country}` : city || country,
+        updated_at: new Date().toISOString(),
+      });
+      triggerToast("Profil sauvegardé avec succès dans Supabase !", "fa-circle-check");
+    }
   };
 
   const handleAddSkill = () => {
@@ -125,7 +165,15 @@ export default function ProfilPage() {
 
     const updatedExps = [newExp, ...experiences];
     setExperiences(updatedExps);
-    localStorage.setItem("user_experiences", JSON.stringify(updatedExps));
+
+    if (userSession?.user) {
+      supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        experiences: updatedExps,
+        updated_at: new Date().toISOString(),
+      });
+    }
 
     // Clear form
     setExpTitle("");
