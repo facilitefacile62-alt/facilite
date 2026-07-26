@@ -469,10 +469,26 @@ export default function ProfilPage() {
               <button
                 type="button"
                 onClick={() => triggerToast("Ajouter un compte...", "fa-user-plus")}
-                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer border-b border-gray-100"
               >
                 <i className="fa-solid fa-user-plus text-gray-400 text-lg"></i>
                 <span>Ajouter un compte</span>
+              </button>
+
+              {/* Option 4: Déconnexion */}
+              <button
+                type="button"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  triggerToast("Déconnexion réussie !", "fa-right-from-bracket");
+                  setTimeout(() => {
+                    window.location.href = "/login";
+                  }, 800);
+                }}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-red-600 active:bg-red-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-right-from-bracket text-red-500 text-lg"></i>
+                <span>Se déconnecter</span>
               </button>
             </div>
           </div>
@@ -928,13 +944,30 @@ export default function ProfilPage() {
               </span>
             </div>
 
-            {/* Bouton Retour à l'accueil */}
-            <Link
-              href="/"
-              className="w-full bg-gray-900 hover:bg-black text-white font-extrabold py-3 rounded-2xl text-xs text-center transition shadow-md cursor-pointer block"
-            >
-              ← Retour à l'accueil des offres
-            </Link>
+            {/* Boutons d'Action Profil & Déconnexion */}
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  triggerToast("Déconnexion réussie !", "fa-right-from-bracket");
+                  setTimeout(() => {
+                    window.location.href = "/login";
+                  }, 800);
+                }}
+                className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-extrabold py-3 rounded-2xl text-xs text-center transition border border-red-200 cursor-pointer flex items-center justify-center space-x-2"
+              >
+                <i className="fa-solid fa-right-from-bracket text-sm"></i>
+                <span>Déconnexion</span>
+              </button>
+
+              <Link
+                href="/"
+                className="w-full bg-gray-900 hover:bg-black text-white font-extrabold py-3 rounded-2xl text-xs text-center transition shadow-md cursor-pointer block"
+              >
+                ← Retour à l'accueil des offres
+              </Link>
+            </div>
 
           </div>
 
