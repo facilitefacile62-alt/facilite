@@ -29,7 +29,11 @@ export default function LoginPage() {
       setIsLoading(false);
 
       if (error) {
-        setErrorMessage(error.message || "Email ou mot de passe incorrect.");
+        if (error.message.includes("Email not confirmed")) {
+          setErrorMessage("Veuillez confirmer votre adresse e-mail (un lien a été envoyé sur votre boîte mail) ou réessayez maintenant.");
+        } else {
+          setErrorMessage(error.message || "Email ou mot de passe incorrect.");
+        }
         return;
       }
 
