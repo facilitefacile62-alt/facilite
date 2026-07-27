@@ -68,6 +68,7 @@ export default function ProfilPage() {
   const [isUploadingCv, setIsUploadingCv] = useState(false);
   const [cvPreviewModalOpen, setCvPreviewModalOpen] = useState(false);
   const cvFileInputRef = useRef(null);
+  const [userDocuments, setUserDocuments] = useState([]);
 
   // Expériences dynamique (localStorage)
   const [experiences, setExperiences] = useState([]);
@@ -103,7 +104,14 @@ export default function ProfilPage() {
         return;
       }
 
-      // Récupérer le profil réel depuis la table Supabase
+      // 1. Récupérer l'ensemble des documents de l'utilisateur depuis la table resumes
+      const { data: resumesList } = await supabase
+        .from("resumes")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+
+      // 2. Récupérer le profil depuis la table profiles
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
@@ -122,25 +130,34 @@ export default function ProfilPage() {
         let profileCvUrl = profile?.cv_url;
         let profileCvName = profile?.cv_name;
 
-        // Si non présent dans profiles, tenter de récupérer dans la table resumes
-        if (!profileCvUrl) {
-          const { data: resumesData } = await supabase
-            .from("resumes")
-            .select("*")
-            .eq("user_id", session.user.id)
-            .order("created_at", { ascending: false })
-            .limit(1);
-
-          if (resumesData && resumesData.length > 0) {
-            profileCvUrl = resumesData[0].file_url;
-            profileCvName = resumesData[0].title;
+        if (resumesList && resumesList.length > 0) {
+          setUserDocuments(resumesList);
+          if (!profileCvUrl) {
+            profileCvUrl = resumesList[0].file_url;
+            profileCvName = resumesData[0]?.title || resumesList[0].title;
           }
-        }
-
-        // Tenter enfin de récupérer depuis le localStorage local
-        if (!profileCvUrl && typeof window !== "undefined") {
-          profileCvUrl = localStorage.getItem("user_cv_url");
-          profileCvName = localStorage.getItem("user_cv_name");
+        } else if (profileCvUrl) {
+          setUserDocuments([{
+            id: "primary-profile-cv",
+            title: profileCvName || "Mon_CV_Professionnel",
+            file_url: profileCvUrl,
+            type: "CV",
+            created_at: new Date().toISOString()
+          }]);
+        } else if (typeof window !== "undefined") {
+          const localUrl = localStorage.getItem("user_cv_url");
+          const localName = localStorage.getItem("user_cv_name");
+          if (localUrl) {
+            profileCvUrl = localUrl;
+            profileCvName = localName;
+            setUserDocuments([{
+              id: "local-cv-doc",
+              title: localName || "Mon_CV_Professionnel",
+              file_url: localUrl,
+              type: "CV",
+              created_at: new Date().toISOString()
+            }]);
+          }
         }
 
         if (profileCvUrl) {
@@ -161,14 +178,10 @@ export default function ProfilPage() {
           setLastName(parts.slice(1).join(" ") || "");
         }
       } else {
-        // Fallback localStorage si pas encore de profil Supabase
-        if (typeof window !== "undefined") {
-          const localCvUrl = localStorage.getItem("user_cv_url");
-          const localCvName = localStorage.getItem("user_cv_name");
-          if (localCvUrl) {
-            setCvUrl(localCvUrl);
-            setUploadedCvFileName(localCvName || "Mon_CV_Professionnel");
-          }
+        if (resumesList && resumesList.length > 0) {
+          setUserDocuments(resumesList);
+          setCvUrl(resumesList[0].file_url);
+          setUploadedCvFileName(resumesList[0].title);
         }
         setProfileName(session.user.email?.split("@")[0] || "");
       }
@@ -430,18 +443,78 @@ export default function ProfilPage() {
     }, 1200);
   };
 
+  // Suppression d'un document de la base de données Supabase et de l'interface
+  const handleDeleteDocument = async (docId, docFileUrl, docTitle) => {
+    if (!userSession?.user) return;
+
+    triggerToast("Suppression du document...", "fa-spinner fa-spin");
+
+    try {
+      // 1. Supprimer de la table resumes dans Supabase
+      if (typeof docId === "string" && docId.startsWith("primary-")) {
+        await supabase.from("profiles").upsert({
+          id: userSession.user.id,
+          email: userSession.user.email,
+          cv_url: null,
+          cv_name: null,
+          updated_at: new Date().toISOString(),
+        });
+      } else {
+        await supabase
+          .from("resumes")
+          .delete()
+          .eq("id", docId)
+          .eq("user_id", userSession.user.id);
+      }
+
+      // 2. Mettre à jour l'état local userDocuments
+      const updatedDocs = userDocuments.filter((doc) => doc.id !== docId);
+      setUserDocuments(updatedDocs);
+
+      // 3. Mettre à jour l'aperçu principal si le document supprimé était le document actif
+      if (docFileUrl === cvUrl || updatedDocs.length === 0) {
+        if (updatedDocs.length > 0) {
+          setCvUrl(updatedDocs[0].file_url);
+          setUploadedCvFileName(updatedDocs[0].title);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("user_cv_url", updatedDocs[0].file_url);
+            localStorage.setItem("user_cv_name", updatedDocs[0].title);
+          }
+        } else {
+          setCvUrl(null);
+          setUploadedCvFileName(null);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("user_cv_url");
+            localStorage.removeItem("user_cv_name");
+          }
+          await supabase.from("profiles").upsert({
+            id: userSession.user.id,
+            email: userSession.user.email,
+            cv_url: null,
+            cv_name: null,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+
+      triggerToast(`Document "${docTitle || "supprimé"}" retiré avec succès !`, "fa-trash-can");
+    } catch (err) {
+      console.error("Erreur suppression document:", err);
+      triggerToast("Erreur lors de la suppression du document", "fa-triangle-exclamation");
+    }
+  };
+
   // Téléversement & Enregistrement du fichier CV dans Supabase (Storage + Tables DB)
   const handleCvFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file || !userSession?.user) return;
 
     setIsUploadingCv(true);
-    triggerToast("Importation et sauvegarde du CV...", "fa-spinner fa-spin");
+    triggerToast("Importation et sauvegarde du document...", "fa-spinner fa-spin");
 
     const ext = file.name.split('.').pop().toLowerCase();
     const type = ext === "pdf" ? "pdf" : (ext === "doc" || ext === "docx" ? "doc" : "pdf");
-    setCvFileType(type);
-    setUploadedCvFileName(file.name);
+    const docCategory = file.name.toLowerCase().includes("lettre") || file.name.toLowerCase().includes("cover") ? "Lettre de motivation" : "CV";
 
     try {
       // 1. Sauvegarde dans Supabase Storage (Bucket resumes)
@@ -469,6 +542,8 @@ export default function ProfilPage() {
 
       const urlToSave = finalCvUrl || base64Content;
       setCvUrl(urlToSave);
+      setUploadedCvFileName(file.name);
+      setCvFileType(type);
 
       // 3. Sauvegarde dans localStorage pour accès instantané
       if (typeof window !== "undefined") {
@@ -485,23 +560,37 @@ export default function ProfilPage() {
         updated_at: new Date().toISOString(),
       });
 
-      // 5. Entrée dans la table resumes de Supabase
-      await supabase.from("resumes").insert({
-        user_id: userSession.user.id,
+      // 5. Insérer l'entrée dans la table resumes de Supabase
+      const { data: insertedDoc } = await supabase
+        .from("resumes")
+        .insert({
+          user_id: userSession.user.id,
+          title: file.name,
+          type: docCategory,
+          file_url: urlToSave,
+          content: { fileName: file.name, uploadedAt: new Date().toISOString() },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      const newDocument = insertedDoc || {
+        id: Date.now(),
         title: file.name,
-        type: "imported",
+        type: docCategory,
         file_url: urlToSave,
-        content: { fileName: file.name, uploadedAt: new Date().toISOString() },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+        created_at: new Date().toISOString()
+      };
+
+      setUserDocuments((prevDocs) => [newDocument, ...prevDocs]);
 
       setIsUploadingCv(false);
-      triggerToast(`CV "${file.name}" importé et sauvegardé de manière permanente !`, "fa-file-circle-check");
+      triggerToast(`Document "${file.name}" ajouté à votre profil !`, "fa-file-circle-check");
     } catch (err) {
       console.error("Erreur lors de la sauvegarde du CV:", err);
       setIsUploadingCv(false);
-      triggerToast("Erreur lors de la sauvegarde du CV", "fa-triangle-exclamation");
+      triggerToast("Erreur lors de la sauvegarde du document", "fa-triangle-exclamation");
     }
   };
 
@@ -1276,75 +1365,118 @@ export default function ProfilPage() {
               {/* Carte Principale Formulaire */}
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
                 
-                {/* Bloc Curriculum Vitae + Icône Œil pour Voir le CV + Bouton Importateur */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="flex items-center space-x-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] border border-[#A7F3D0] flex items-center justify-center text-[#047857] flex-shrink-0">
-                      <i className="fa-regular fa-file-lines text-2xl font-bold"></i>
+                {/* Section Gestionnaire Multi-Documents (CVs & Lettres de Motivation) */}
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-2xl bg-[#ECFDF5] border border-[#A7F3D0] flex items-center justify-center text-[#047857]">
+                        <i className="fa-regular fa-file-lines text-xl font-bold"></i>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-extrabold text-gray-900 flex items-center space-x-2">
+                          <span>Curriculum vitae & Lettres de motivation</span>
+                          <span className="bg-emerald-100 text-[#047857] text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                            {userDocuments.length} document{userDocuments.length > 1 ? "s" : ""}
+                          </span>
+                        </h3>
+                        <p className="text-xs text-gray-500 font-medium">Ajoutez ou supprimez vos fichiers réutilisables pour vos candidatures.</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-extrabold text-gray-900">Curriculum vitae</h3>
-                      <p className="text-xs font-bold flex items-center space-x-2 mt-0.5">
-                        {uploadedCvFileName ? (
-                          <>
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0"></span>
-                            <span className="text-emerald-600 truncate max-w-[180px] sm:max-w-xs">{uploadedCvFileName}</span>
-                            <button
-                              type="button"
-                              onClick={() => setCvPreviewModalOpen(true)}
-                              className="text-[#047857] hover:text-emerald-900 bg-emerald-100/90 hover:bg-emerald-200 p-1.5 rounded-lg transition cursor-pointer flex items-center justify-center"
-                              title="Voir le CV (Icône Œil)"
-                            >
-                              <i className="fa-solid fa-eye text-xs"></i>
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <span className="w-2.5 h-2.5 rounded-full bg-pink-500 inline-block flex-shrink-0"></span>
-                            <span className="text-pink-500 font-semibold">Aucun fichier</span>
-                            <button
-                              type="button"
-                              onClick={() => setCvPreviewModalOpen(true)}
-                              className="text-gray-700 hover:text-gray-950 bg-gray-100 hover:bg-gray-200 p-1 rounded-md transition cursor-pointer flex items-center justify-center"
-                              title="Voir l'aperçu du CV"
-                            >
-                              <i className="fa-solid fa-eye text-xs"></i>
-                            </button>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  </div>
 
-                  <input
-                    type="file"
-                    ref={cvFileInputRef}
-                    onChange={handleCvFileChange}
-                    accept=".pdf,.doc,.docx"
-                    className="hidden"
-                  />
-
-                  {/* Groupe de boutons d'action : Voir le CV (Icône Œil) & Importateur */}
-                  <div className="flex items-center space-x-2.5 w-full sm:w-auto">
-                    <button
-                      type="button"
-                      onClick={() => setCvPreviewModalOpen(true)}
-                      className="bg-emerald-50 hover:bg-emerald-100 text-[#047857] border border-[#A7F3D0] font-extrabold px-3.5 py-2.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer justify-center flex-1 sm:flex-initial"
-                      title="Voir le CV (Icône Œil)"
-                    >
-                      <i className="fa-solid fa-eye text-sm"></i>
-                      <span>Voir</span>
-                    </button>
+                    <input
+                      type="file"
+                      ref={cvFileInputRef}
+                      onChange={handleCvFileChange}
+                      accept=".pdf,.doc,.docx"
+                      className="hidden"
+                    />
 
                     <button
                       type="button"
                       onClick={() => cvFileInputRef.current?.click()}
-                      className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center flex-1 sm:flex-initial"
+                      className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center w-full sm:w-auto"
                     >
-                      <i className="fa-solid fa-arrow-up-from-bracket text-xs"></i>
-                      <span>Importateur</span>
+                      <i className="fa-solid fa-plus text-xs"></i>
+                      <span>Ajouter un document</span>
                     </button>
                   </div>
+
+                  {/* Liste des Documents Utilisateur */}
+                  {userDocuments.length > 0 ? (
+                    <div className="space-y-3">
+                      {userDocuments.map((doc, idx) => (
+                        <div
+                          key={doc.id || idx}
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-gray-50/80 hover:bg-gray-100/80 border border-gray-200/80 rounded-2xl transition gap-3"
+                        >
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                            <div className="w-9 h-9 rounded-xl bg-emerald-100/80 text-[#047857] flex items-center justify-center flex-shrink-0 font-bold">
+                              <i className="fa-solid fa-file-pdf text-sm"></i>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-gray-900 truncate">
+                                {doc.title || "Document_Professionnel"}
+                              </p>
+                              <div className="flex items-center space-x-2 text-[10px] text-gray-500 font-semibold mt-0.5">
+                                <span className="bg-white text-gray-700 px-2 py-0.5 rounded-md border border-gray-200">
+                                  {doc.type || (doc.title?.toLowerCase().includes("lettre") ? "Lettre de motivation" : "CV")}
+                                </span>
+                                {doc.created_at && (
+                                  <span>
+                                    • {new Date(doc.created_at).toLocaleDateString("fr-FR")}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Groupe de boutons d'action : Voir & Supprimer */}
+                          <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCvUrl(doc.file_url);
+                                setUploadedCvFileName(doc.title);
+                                setCvPreviewModalOpen(true);
+                              }}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-[#047857] border border-[#A7F3D0] font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                              title="Voir ce document"
+                            >
+                              <i className="fa-solid fa-eye text-xs"></i>
+                              <span>Voir</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDocument(doc.id, doc.file_url, doc.title)}
+                              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                              title="Supprimer ce document"
+                            >
+                              <i className="fa-solid fa-trash-can text-xs"></i>
+                              <span>Supprimer</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center bg-gray-50 border border-dashed border-gray-300 rounded-2xl space-y-2">
+                      <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-500 flex items-center justify-center mx-auto text-sm">
+                        <i className="fa-solid fa-file-circle-xmark"></i>
+                      </div>
+                      <p className="text-xs font-bold text-gray-700">Aucun document enregistré pour le moment</p>
+                      <p className="text-[11px] text-gray-500">Ajoutez vos CVs ou lettres de motivation au format PDF ou DOCX.</p>
+                      <button
+                        type="button"
+                        onClick={() => cvFileInputRef.current?.click()}
+                        className="mt-2 inline-flex items-center space-x-1.5 bg-[#047857] text-white font-extrabold text-xs px-4 py-2 rounded-xl hover:bg-[#036448] transition cursor-pointer"
+                      >
+                        <i className="fa-solid fa-upload text-xs"></i>
+                        <span>Téléverser mon premier document</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border-b border-gray-100"></div>

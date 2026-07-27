@@ -505,20 +505,15 @@ export default function ImporterCvPage() {
       let fileUrl = null;
 
       if (session?.user && file) {
-        const ext = file.name.split(".").pop().toLowerCase();
-        const storagePath = `${session.user.id}/${Date.now()}_${file.name}`;
+        const storagePath = `cvs/${session.user.id}_${Date.now()}.${file.name.split(".").pop().toLowerCase()}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("cvs")
-          .upload(storagePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: file.type || undefined,
-          });
+          .from("resumes")
+          .upload(storagePath, file, { upsert: true });
 
         if (uploadError) throw uploadError;
 
-        const { data: publicUrlData } = supabase.storage.from("cvs").getPublicUrl(storagePath);
+        const { data: publicUrlData } = supabase.storage.from("resumes").getPublicUrl(storagePath);
         fileUrl = publicUrlData?.publicUrl || null;
 
         // Reflète le CV importé sur le profil pour un affichage permanent
