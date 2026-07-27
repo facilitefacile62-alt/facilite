@@ -572,79 +572,94 @@ export default function ProfilPage() {
     triggerToast(`Compétence "${skillToDelete}" supprimée !`, "fa-trash-can");
   };
 
-  // Fonction d'extraction dynamique des données réelles du fichier (nom, titre, ville, compétences, expériences, formations)
+  // Extraction des données uniquement depuis le CONTENU TEXTUEL INTERNE du document (et AUCUNEMENT le nom du fichier)
   const extractRealDataFromFile = (file, textContent = "") => {
-    const rawFileName = file.name;
-    const nameWithoutExt = rawFileName.replace(/\.[^/.]+$/, "");
-
-    // Nettoyage du nom de fichier pour extraire le nom réel de la personne
-    const cleanTokens = nameWithoutExt
-      .replace(/[_\-.]+/g, " ")
-      .replace(/\b(cv|curriculum|vitae|prof|professionnel|doc|pdf|docx|cni|passeport|passport|identite|carte|scan|copie|v2|final|v3)\b/gi, "")
-      .replace(/[0-9]+/g, "")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-
+    // Ne jamais se baser sur le nom du fichier pour les noms et informations de profil
     let realFirstName = firstName || "Macoumba";
     let realLastName = lastName || "Samaké";
 
-    if (cleanTokens.length >= 2) {
-      realFirstName = cleanTokens[0].charAt(0).toUpperCase() + cleanTokens[0].slice(1).toLowerCase();
-      realLastName = cleanTokens.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-    } else if (cleanTokens.length === 1) {
-      realFirstName = cleanTokens[0].charAt(0).toUpperCase() + cleanTokens[0].slice(1).toLowerCase();
+    const cleanText = (textContent || "").replace(/[\r\n]+/g, " ");
+
+    // 1. Recherche de mots-clés d'état civil dans le contenu texte interne
+    const firstNameMatch = cleanText.match(/(?:prénom|prenom|first\s*name)\s*[:\-]\s*([A-Za-zÀ-ÿ\-]+)/i);
+    const lastNameMatch = cleanText.match(/(?:nom|nom\s*de\s*famille|last\s*name|surname)\s*[:\-]\s*([A-Za-zÀ-ÿ\-]+)/i);
+
+    if (firstNameMatch && firstNameMatch[1]) {
+      const candidateFn = firstNameMatch[1].trim();
+      if (candidateFn.length >= 2 && !candidateFn.toLowerCase().includes("cv") && !candidateFn.toLowerCase().includes("prof")) {
+        realFirstName = candidateFn.charAt(0).toUpperCase() + candidateFn.slice(1).toLowerCase();
+      }
     }
 
-    // Recherche de mots-clés dans le nom du fichier et le contenu texte brut
-    const fullSourceText = (nameWithoutExt + " " + textContent).toLowerCase();
+    if (lastNameMatch && lastNameMatch[1]) {
+      const candidateLn = lastNameMatch[1].trim();
+      if (candidateLn.length >= 2 && !candidateLn.toLowerCase().includes("cv") && !candidateLn.toLowerCase().includes("prof")) {
+        realLastName = candidateLn.charAt(0).toUpperCase() + candidateLn.slice(1).toLowerCase();
+      }
+    }
 
-    // Titre professionnel dynamique
-    let realTitle = "Spécialiste & Chef de Projet Digital";
-    if (fullSourceText.includes("developpe") || fullSourceText.includes("dev") || fullSourceText.includes("web") || fullSourceText.includes("react") || fullSourceText.includes("next")) {
+    // Recherche d'un nom complet explicite au début du texte du document
+    if (!firstNameMatch && !lastNameMatch && cleanText.trim().length > 0) {
+      const firstLineTokens = cleanText.trim().split(/\s+/).slice(0, 4);
+      const validNameTokens = firstLineTokens.filter(t => 
+        /^[A-Za-zÀ-ÿ\-]+$/.test(t) && 
+        !/\b(cv|curriculum|vitae|prof|professionnel|document|pdf|docx|table|page|scan|cni|passeport)\b/i.test(t)
+      );
+      if (validNameTokens.length >= 2) {
+        realFirstName = validNameTokens[0].charAt(0).toUpperCase() + validNameTokens[0].slice(1).toLowerCase();
+        realLastName = validNameTokens.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      }
+    }
+
+    // Recherche de mots-clés dans le contenu texte interne uniquement
+    const lowerText = cleanText.toLowerCase();
+
+    // Titre professionnel basé strictement sur le contenu du document
+    let realTitle = jobTitle || "Spécialiste & Chef de Projet Digital";
+    if (lowerText.includes("developpe") || lowerText.includes("dev ") || lowerText.includes("web") || lowerText.includes("react") || lowerText.includes("next")) {
       realTitle = "Développeur Fullstack & Web";
-    } else if (fullSourceText.includes("gestion") || fullSourceText.includes("mkt") || fullSourceText.includes("marketing") || fullSourceText.includes("commercial")) {
+    } else if (lowerText.includes("gestion") || lowerText.includes("mkt") || lowerText.includes("marketing") || lowerText.includes("commercial")) {
       realTitle = "Responsable Marketing & Commercial";
-    } else if (fullSourceText.includes("comptab") || fullSourceText.includes("financ") || fullSourceText.includes("audit")) {
+    } else if (lowerText.includes("comptab") || lowerText.includes("financ") || lowerText.includes("audit")) {
       realTitle = "Contrôleur de Gestion & Comptable";
-    } else if (fullSourceText.includes("jurist") || fullSourceText.includes("droit")) {
+    } else if (lowerText.includes("jurist") || lowerText.includes("droit")) {
       realTitle = "Consultant Juridique & Droit";
-    } else if (fullSourceText.includes("enseign") || fullSourceText.includes("format")) {
+    } else if (lowerText.includes("enseign") || lowerText.includes("format")) {
       realTitle = "Formateur & Enseignant";
-    } else if (fullSourceText.includes("design") || fullSourceText.includes("ui") || fullSourceText.includes("ux") || fullSourceText.includes("graphis")) {
+    } else if (lowerText.includes("design") || lowerText.includes("ui") || lowerText.includes("ux") || lowerText.includes("graphis")) {
       realTitle = "Designer Graphique & UI/UX";
     }
 
-    // Ville dynamique
+    // Ville basée strictly sur le contenu du document
     let realCity = city || "Pikine";
     let realCountry = country || "Sénégal";
-    if (fullSourceText.includes("dakar")) realCity = "Dakar";
-    else if (fullSourceText.includes("pikine")) realCity = "Pikine";
-    else if (fullSourceText.includes("saint louis") || fullSourceText.includes("st louis")) realCity = "Saint-Louis";
-    else if (fullSourceText.includes("thies")) realCity = "Thiès";
-    else if (fullSourceText.includes("ziguinchor")) realCity = "Ziguinchor";
-    else if (fullSourceText.includes("rufisque")) realCity = "Rufisque";
+    if (lowerText.includes("dakar")) realCity = "Dakar";
+    else if (lowerText.includes("pikine")) realCity = "Pikine";
+    else if (lowerText.includes("saint louis") || lowerText.includes("st louis")) realCity = "Saint-Louis";
+    else if (lowerText.includes("thies")) realCity = "Thiès";
+    else if (lowerText.includes("ziguinchor")) realCity = "Ziguinchor";
+    else if (lowerText.includes("rufisque")) realCity = "Rufisque";
 
-    // Compétences dynamiques extraites
+    // Compétences dynamiques extraites du texte interne
     const potentialSkills = [];
-    if (fullSourceText.includes("react")) potentialSkills.push("React.js");
-    if (fullSourceText.includes("next")) potentialSkills.push("Next.js");
-    if (fullSourceText.includes("node")) potentialSkills.push("Node.js");
-    if (fullSourceText.includes("python")) potentialSkills.push("Python");
-    if (fullSourceText.includes("java")) potentialSkills.push("Java");
-    if (fullSourceText.includes("html") || fullSourceText.includes("css")) potentialSkills.push("HTML5 / CSS3");
-    if (fullSourceText.includes("gestion")) potentialSkills.push("Gestion de projet");
-    if (fullSourceText.includes("communication")) potentialSkills.push("Communication");
-    if (fullSourceText.includes("marketing")) potentialSkills.push("Marketing Digital");
-    if (fullSourceText.includes("design") || fullSourceText.includes("figma")) potentialSkills.push("Figma & UI/UX");
-    if (fullSourceText.includes("compta") || fullSourceText.includes("excel")) potentialSkills.push("Excel Avancé & Comptabilité");
-    if (fullSourceText.includes("anglais") || fullSourceText.includes("english")) potentialSkills.push("Anglais Professionnel");
+    if (lowerText.includes("react")) potentialSkills.push("React.js");
+    if (lowerText.includes("next")) potentialSkills.push("Next.js");
+    if (lowerText.includes("node")) potentialSkills.push("Node.js");
+    if (lowerText.includes("python")) potentialSkills.push("Python");
+    if (lowerText.includes("java")) potentialSkills.push("Java");
+    if (lowerText.includes("html") || lowerText.includes("css")) potentialSkills.push("HTML5 / CSS3");
+    if (lowerText.includes("gestion")) potentialSkills.push("Gestion de projet");
+    if (lowerText.includes("communication")) potentialSkills.push("Communication");
+    if (lowerText.includes("marketing")) potentialSkills.push("Marketing Digital");
+    if (lowerText.includes("design") || lowerText.includes("figma")) potentialSkills.push("Figma & UI/UX");
+    if (lowerText.includes("compta") || lowerText.includes("excel")) potentialSkills.push("Excel Avancé & Comptabilité");
+    if (lowerText.includes("anglais") || lowerText.includes("english")) potentialSkills.push("Anglais Professionnel");
 
-    const realSkills = potentialSkills.length >= 2 ? potentialSkills : [
+    const realSkills = potentialSkills.length >= 2 ? potentialSkills : (userSkills.length > 0 ? userSkills : [
       "Gestion de projet", "Développement Web", "Communication", "Stratégie Digitale", "UI/UX Design"
-    ];
+    ]);
 
-    // Expériences dynamiques
+    // Expériences dynamiques extraites du texte interne
     const realExperiences = [
       {
         id: Date.now(),
@@ -660,11 +675,11 @@ export default function ProfilPage() {
       }
     ];
 
-    // Formations dynamiques
+    // Formations dynamiques extraites du texte interne
     let degreeExtracted = "Master Professionnel";
-    if (fullSourceText.includes("licence") || fullSourceText.includes("bachelor")) degreeExtracted = "Licence Professionnelle";
-    else if (fullSourceText.includes("bts") || fullSourceText.includes("dut")) degreeExtracted = "Diplôme Supérieur (BTS/DUT)";
-    else if (fullSourceText.includes("bac")) degreeExtracted = "Baccalauréat";
+    if (lowerText.includes("licence") || lowerText.includes("bachelor")) degreeExtracted = "Licence Professionnelle";
+    else if (lowerText.includes("bts") || lowerText.includes("dut")) degreeExtracted = "Diplôme Supérieur (BTS/DUT)";
+    else if (lowerText.includes("bac")) degreeExtracted = "Baccalauréat";
 
     const realEducations = [
       {
@@ -678,11 +693,11 @@ export default function ProfilPage() {
       }
     ];
 
-    const isIdentityDoc = fullSourceText.includes("cni") || fullSourceText.includes("identite") || fullSourceText.includes("carte") || fullSourceText.includes("passport") || fullSourceText.includes("passeport");
+    const isIdentityDoc = lowerText.includes("cni") || lowerText.includes("carte nationale") || lowerText.includes("passeport") || lowerText.includes("passport");
 
     const realBio = isIdentityDoc
-      ? `📄 Document officiel d'identité (${cleanTokens.join(" ")}) analysé le ${new Date().toLocaleDateString("fr-FR")}. Données d'état civil extraites par OCR et prêtes à être intégrées.`
-      : `👋 ${realFirstName} ${realLastName} — ${realTitle}. Document ${rawFileName} analysé le ${new Date().toLocaleDateString("fr-FR")}. Informations dynamiques extraites du CV et prêtes pour validation.`;
+      ? `📄 Document officiel d'identité analysé le ${new Date().toLocaleDateString("fr-FR")}. Les données d'état civil ont été numérisées à partir du texte du document.`
+      : `👋 ${realFirstName} ${realLastName} — ${realTitle}. Contenu textuel du document analysé le ${new Date().toLocaleDateString("fr-FR")}. Informations extraites et prêtes pour validation.`;
 
     return {
       firstName: realFirstName,
