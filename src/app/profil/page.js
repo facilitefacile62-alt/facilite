@@ -130,6 +130,14 @@ export default function ProfilPage() {
         let profileCvUrl = profile?.cv_url;
         let profileCvName = profile?.cv_name;
 
+        // Incrémenter dynamiquement le compteur de vues du profil
+        const updatedProfileViews = (profile.profile_views || 0) + 1;
+        supabase
+          .from("profiles")
+          .update({ profile_views: updatedProfileViews })
+          .eq("id", session.user.id)
+          .then();
+
         if (resumesList && resumesList.length > 0) {
           setUserDocuments(resumesList);
           if (!profileCvUrl) {

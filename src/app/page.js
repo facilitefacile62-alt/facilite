@@ -321,7 +321,9 @@ export default function Home() {
           setUserProfile({
             full_name: session.user.email?.split("@")[0],
             headline: "",
-            location: ""
+            location: "",
+            profile_views: 0,
+            post_impressions: 0
           });
         }
       } else {
@@ -1151,11 +1153,11 @@ export default function Home() {
                   <div className="space-y-2 font-bold text-[11px]">
                     <div className="flex justify-between items-center py-0.5">
                       <span className="text-gray-500">{t.statsViews}</span>
-                      <span className="text-blue-600 font-extrabold text-xs">5</span>
+                      <span className="text-blue-600 font-extrabold text-xs">{userProfile?.profile_views ?? 0}</span>
                     </div>
                     <div className="flex justify-between items-center py-0.5 border-t border-gray-100">
                       <span className="text-gray-500">{t.statsImpressions}</span>
-                      <span className="text-blue-600 font-extrabold text-xs">2</span>
+                      <span className="text-blue-600 font-extrabold text-xs">{userProfile?.post_impressions ?? 0}</span>
                     </div>
                   </div>
                 </div>
