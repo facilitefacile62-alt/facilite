@@ -31,6 +31,13 @@ export default function ProfilPage() {
   const [profileSubtitle, setProfileSubtitle] = useState("");
   const [profileLocation, setProfileLocation] = useState("");
   const [profileBio, setProfileBio] = useState("");
+  const [tempBio, setTempBio] = useState("");
+  const [pinnedDetails, setPinnedDetails] = useState(["creation_digitale", "pikine", "etudes_sports", "cem_thiolom_fall"]);
+  const [tempPinnedDetails, setTempPinnedDetails] = useState(["creation_digitale", "pikine", "etudes_sports", "cem_thiolom_fall"]);
+  const [phone, setPhone] = useState("");
+  const [maritalStatus, setMaritalStatus] = useState("Célibataire");
+  const [driverLicense, setDriverLicense] = useState("Permis B");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
   const [coverUrl, setCoverUrl] = useState("/stellar-cover.png");
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -132,7 +139,15 @@ export default function ProfilPage() {
         setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
         setProfileSubtitle(profile.headline || "");
         setProfileLocation(profile.location || "");
-        setProfileBio(profile.bio || "");
+        setProfileBio(profile.bio || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE");
+        setTempBio(profile.bio || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE");
+        const initialPinned = profile.pinned_details || (typeof window !== "undefined" && localStorage.getItem("user_pinned_details") ? JSON.parse(localStorage.getItem("user_pinned_details")) : ["creation_digitale", "pikine", "etudes_sports", "cem_thiolom_fall"]);
+        setPinnedDetails(initialPinned);
+        setTempPinnedDetails(initialPinned);
+        setPhone(profile.phone || (typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : ""));
+        setMaritalStatus(profile.marital_status || (typeof window !== "undefined" ? localStorage.getItem("user_marital_status") || "Célibataire" : "Célibataire"));
+        setDriverLicense(profile.driver_license || (typeof window !== "undefined" ? localStorage.getItem("user_driver_license") || "Permis B" : "Permis B"));
+        setWebsiteUrl(profile.website_url || (typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : ""));
         setAvatarUrl(profile.avatar_url || "/logo.jpeg");
         setCoverUrl(profile.cover_url || "/stellar-cover.png");
         setExperiences(profile.experiences || []);
@@ -747,6 +762,49 @@ export default function ProfilPage() {
     triggerToast("Formation supprimée avec succès !", "fa-trash-can");
   };
 
+  // Enregistrer la bio et les détails épinglés dans Supabase & localStorage
+  const handleSaveBioAndPinnedDetails = async () => {
+    if (!userSession?.user) return;
+
+    triggerToast("Sauvegarde de la bio et des détails épinglés...", "fa-spinner fa-spin");
+
+    setProfileBio(tempBio);
+    setPinnedDetails(tempPinnedDetails);
+    setIsEditingBio(false);
+
+    try {
+      const { error } = await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        bio: tempBio,
+        pinned_details: tempPinnedDetails,
+        phone: phone.trim(),
+        marital_status: maritalStatus,
+        driver_license: driverLicense.trim(),
+        website_url: websiteUrl.trim(),
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        console.error("Erreur sauvegarde bio & détails épinglés:", error);
+        triggerToast("Erreur lors de la sauvegarde dans Supabase", "fa-triangle-exclamation");
+      } else {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user_bio", tempBio);
+          localStorage.setItem("user_pinned_details", JSON.stringify(tempPinnedDetails));
+          localStorage.setItem("user_phone", phone.trim());
+          localStorage.setItem("user_marital_status", maritalStatus);
+          localStorage.setItem("user_driver_license", driverLicense.trim());
+          localStorage.setItem("user_website_url", websiteUrl.trim());
+        }
+        triggerToast("Bio et détails épinglés mis à jour avec succès !", "fa-circle-check");
+      }
+    } catch (err) {
+      console.error("Exception lors de la sauvegarde bio:", err);
+      triggerToast("Erreur lors de la sauvegarde", "fa-triangle-exclamation");
+    }
+  };
+
   return (
     <>
       {/* Toast Notification Floating */}
@@ -1322,17 +1380,48 @@ export default function ProfilPage() {
                       </span>
                     </div>
 
-                    <p className="text-sm md:text-base font-semibold text-gray-700">
-                      {profileSubtitle}
+                    <p className="text-xs font-semibold text-gray-500">
+                      5 K followers • 3,7 K suivi(e)s
                     </p>
 
-                    <p className="text-xs text-gray-500 font-medium flex items-center space-x-1.5">
+                    <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">
+                      {profileSubtitle || profileBio}
+                    </p>
+
+                    {/* Ligne des Détails Épinglés affichés en haut de profil */}
+                    {pinnedDetails.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs font-bold text-gray-800">
+                        {pinnedDetails.map((itemId) => {
+                          const itemMap = {
+                            creation_digitale: { label: jobTitle.trim() || "Création digitale", icon: "fa-regular fa-folder" },
+                            pikine: { label: city.trim() || "Pikine", icon: "fa-solid fa-location-dot" },
+                            etudes_sports: { label: educations[0]?.degree || "Etudes Sports", icon: "fa-solid fa-graduation-cap" },
+                            association_jeunes: { label: "Assiation des jeunes de guinaw rail nord", icon: "fa-solid fa-graduation-cap" },
+                            cem_thiolom_fall: { label: educations[0]?.school || "CEMde Thiolom Fall", icon: "fa-solid fa-building" },
+                            celibataire: { label: maritalStatus || "Célibataire", icon: "fa-solid fa-heart" },
+                            permis_conduire: { label: driverLicense || "Permis B", icon: "fa-solid fa-id-card" },
+                            telephone: { label: phone || "+221 77 000 00 00", icon: "fa-solid fa-phone" },
+                            site_web: { label: websiteUrl || "facilite.sn", icon: "fa-solid fa-globe" }
+                          };
+                          const itm = itemMap[itemId];
+                          if (!itm) return null;
+                          return (
+                            <span key={itemId} className="flex items-center space-x-1.5 text-gray-900 bg-gray-100/70 px-2 py-0.5 rounded-md border border-gray-200/60">
+                              <i className={`${itm.icon} text-gray-600 text-xs`}></i>
+                              <span>{itm.label}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <p className="text-xs text-gray-500 font-medium flex items-center space-x-1.5 pt-0.5">
                       <i className="fa-solid fa-location-dot text-red-500"></i>
                       <span>{profileLocation}</span>
                       <span className="text-gray-300">•</span>
                       <button
                         onClick={handleOpenModal}
-                        className="text-blue-600 hover:underline font-bold"
+                        className="text-blue-600 hover:underline font-bold cursor-pointer"
                       >
                         Coordonnées
                       </button>
@@ -1367,47 +1456,207 @@ export default function ProfilPage() {
               </div>
             </div>
 
-            {/* SECTION À PROPOS / RÉSUMÉ */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs relative">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-base font-extrabold text-gray-900">À propos</h3>
-                <button
-                  onClick={() => setIsEditingBio(!isEditingBio)}
-                  className="text-gray-400 hover:text-blue-600 transition p-1 cursor-pointer rounded-full hover:bg-gray-100"
-                  title="Éditer le résumé"
-                >
-                  <i className="fa-solid fa-pen text-sm"></i>
-                </button>
-              </div>
-
-              {isEditingBio ? (
-                <div className="space-y-3">
-                  <textarea
-                    rows={4}
-                    value={profileBio}
-                    onChange={(e) => setProfileBio(e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-600"
-                  />
-                  <div className="flex justify-end space-x-2">
+            {/* SECTION BIO ET DÉTAILS ÉPINGLÉS (CV FORMAT + FACEBOOK/LINKEDIN STYLE) */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs relative space-y-4">
+              <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                <div className="flex-1">
+                  <h3 className="text-base font-extrabold text-gray-900">Bio</h3>
+                  <div className="flex items-center space-x-2 text-xs md:text-sm font-bold text-gray-800 pt-1.5">
+                    <span className="text-lg">👋</span>
+                    <span className="leading-relaxed">
+                      {profileBio || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE"}
+                    </span>
+                    <span className="text-gray-400">🌐</span>
                     <button
-                      onClick={() => setIsEditingBio(false)}
-                      className="px-4 py-1.5 border border-gray-300 text-xs font-bold rounded-full text-gray-600 hover:bg-gray-100"
+                      type="button"
+                      onClick={() => {
+                        setTempBio(profileBio || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE");
+                        setTempPinnedDetails(pinnedDetails.length > 0 ? pinnedDetails : ["creation_digitale", "pikine", "etudes_sports", "cem_thiolom_fall"]);
+                        setIsEditingBio(!isEditingBio);
+                      }}
+                      className="text-gray-400 hover:text-blue-600 transition p-1.5 rounded-full hover:bg-gray-100 cursor-pointer ml-1"
+                      title="Modifier la bio et les détails épinglés"
                     >
-                      Annuler
-                    </button>
-                    <button
-                      onClick={handleSaveBio}
-                      className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full hover:bg-blue-700"
-                    >
-                      Enregistrer
+                      <i className="fa-solid fa-pen text-sm"></i>
                     </button>
                   </div>
                 </div>
-              ) : (
-                <p className="text-xs md:text-sm text-gray-600 leading-relaxed font-medium">
-                  {profileBio}
-                </p>
-              )}
+              </div>
+
+              {/* Section Détails épinglés */}
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-extrabold text-gray-900">Détails épinglés</h4>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Sélectionnez jusqu'à 5 informations à afficher également en haut de votre profil. Les informations seront visibles en fonction des paramètres d'audience.
+                  </p>
+                </div>
+
+                {isEditingBio ? (
+                  /* Formulaire Interactif de Modification Bio + Détails Épinglés + Coordonnées */
+                  <div className="space-y-4 bg-gray-50/80 p-5 rounded-2xl border border-gray-200 transition">
+                    <div>
+                      <label className="block text-xs font-extrabold text-gray-700 mb-1.5">Bio / Phrase d'accroche CV</label>
+                      <textarea
+                        rows={2}
+                        value={tempBio}
+                        onChange={(e) => setTempBio(e.target.value)}
+                        className="w-full p-3 bg-white border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-600 transition text-gray-900"
+                        placeholder="Ex. Youtubeur | Influenceur | Créateur | Inventeur | businessman..."
+                      />
+                    </div>
+
+                    {/* Champs de Coordonnées & Données CV Administratives */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-gray-200">
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-700 mb-1">Téléphone</label>
+                        <input
+                          type="text"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-600"
+                          placeholder="+221 77 000 00 00"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-700 mb-1">Statut marital</label>
+                        <select
+                          value={maritalStatus}
+                          onChange={(e) => setMaritalStatus(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-700 focus:outline-none focus:border-blue-600"
+                        >
+                          <option value="Célibataire">Célibataire</option>
+                          <option value="Marié(e)">Marié(e)</option>
+                          <option value="Divorcé(e)">Divorcé(e)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-700 mb-1">Permis de conduire</label>
+                        <input
+                          type="text"
+                          value={driverLicense}
+                          onChange={(e) => setDriverLicense(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-600"
+                          placeholder="Permis B"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-700 mb-1">Site web / Lien professionnel</label>
+                        <input
+                          type="text"
+                          value={websiteUrl}
+                          onChange={(e) => setWebsiteUrl(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-600"
+                          placeholder="https://facilite.sn"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Liste des cases à cocher pour sélection des 5 détails épinglés */}
+                    <div className="space-y-2 pt-3 border-t border-gray-200">
+                      <label className="block text-xs font-extrabold text-gray-800">
+                        Cochez les informations à faire apparaître sous votre nom :
+                      </label>
+
+                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        {[
+                          { id: "creation_digitale", label: jobTitle.trim() || "Création digitale", icon: "fa-regular fa-folder" },
+                          { id: "pikine", label: city.trim() || "Pikine", icon: "fa-solid fa-location-dot" },
+                          { id: "etudes_sports", label: educations[0]?.degree || "Etudes Sports", icon: "fa-solid fa-graduation-cap" },
+                          { id: "association_jeunes", label: "Assiation des jeunes de guinaw rail nord", icon: "fa-solid fa-graduation-cap" },
+                          { id: "cem_thiolom_fall", label: educations[0]?.school || "CEMde Thiolom Fall", icon: "fa-solid fa-building" },
+                          { id: "celibataire", label: maritalStatus || "Célibataire", icon: "fa-solid fa-heart" },
+                          { id: "permis_conduire", label: driverLicense || "Permis B", icon: "fa-solid fa-id-card" },
+                          { id: "telephone", label: phone || "+221 77 000 00 00", icon: "fa-solid fa-phone" },
+                          { id: "site_web", label: websiteUrl || "facilite.sn", icon: "fa-solid fa-globe" }
+                        ].map((item) => {
+                          const isChecked = tempPinnedDetails.includes(item.id);
+                          return (
+                            <label
+                              key={item.id}
+                              className="flex items-center space-x-3 p-3 bg-white rounded-xl border border-gray-200 hover:bg-blue-50/50 transition cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    if (tempPinnedDetails.length >= 5) {
+                                      triggerToast("Vous pouvez sélectionner 5 détails épinglés maximum", "fa-triangle-exclamation");
+                                      return;
+                                    }
+                                    setTempPinnedDetails([...tempPinnedDetails, item.id]);
+                                  } else {
+                                    setTempPinnedDetails(tempPinnedDetails.filter((id) => id !== item.id));
+                                  }
+                                }}
+                                className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                              />
+                              <div className="w-7 h-7 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center flex-shrink-0">
+                                <i className={`${item.icon} text-xs`}></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-gray-900 truncate">{item.label}</p>
+                                <p className="text-[10px] text-gray-400 font-medium">🌐 Public</p>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Boutons d'action Annuler & Enregistrer */}
+                    <div className="flex justify-end space-x-3 pt-3 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingBio(false);
+                          setTempBio(profileBio);
+                          setTempPinnedDetails(pinnedDetails);
+                        }}
+                        className="px-5 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-extrabold text-xs transition cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveBioAndPinnedDetails}
+                        className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs transition shadow-md cursor-pointer"
+                      >
+                        Enregistrer
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Affichage en liste normale des détails épinglés activés */
+                  <div className="space-y-2 pt-1">
+                    {pinnedDetails.map((itemId) => {
+                      const itemMap = {
+                        creation_digitale: { label: jobTitle.trim() || "Création digitale", icon: "fa-regular fa-folder" },
+                        pikine: { label: city.trim() || "Pikine", icon: "fa-solid fa-location-dot" },
+                        etudes_sports: { label: educations[0]?.degree || "Etudes Sports", icon: "fa-solid fa-graduation-cap" },
+                        association_jeunes: { label: "Assiation des jeunes de guinaw rail nord", icon: "fa-solid fa-graduation-cap" },
+                        cem_thiolom_fall: { label: educations[0]?.school || "CEMde Thiolom Fall", icon: "fa-solid fa-building" },
+                        celibataire: { label: maritalStatus || "Célibataire", icon: "fa-solid fa-heart" },
+                        permis_conduire: { label: driverLicense || "Permis B", icon: "fa-solid fa-id-card" },
+                        telephone: { label: phone || "+221 77 000 00 00", icon: "fa-solid fa-phone" },
+                        site_web: { label: websiteUrl || "facilite.sn", icon: "fa-solid fa-globe" }
+                      };
+                      const itm = itemMap[itemId];
+                      if (!itm) return null;
+                      return (
+                        <div key={itemId} className="flex items-center space-x-3 py-1.5 text-xs font-semibold text-gray-800">
+                          <div className="w-7 h-7 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center flex-shrink-0">
+                            <i className={`${itm.icon} text-xs`}></i>
+                          </div>
+                          <span className="font-extrabold text-gray-900">{itm.label}</span>
+                          <span className="text-[10px] text-gray-400 font-medium ml-auto">🌐 Public</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* SECTION EXPÉRIENCES DYNAMIQUE */}
