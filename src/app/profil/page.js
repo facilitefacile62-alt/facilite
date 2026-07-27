@@ -732,24 +732,25 @@ export default function ProfilPage() {
         body: parseFormData,
       });
 
-      if (!parseResponse.ok) {
-        throw new Error("Le service d'extraction a échoué.");
-      }
+      // Toujours lire et logger la réponse brute, même si le statut HTTP est hors de 200-299
+      const rawJsonResponse = await parseResponse.json().catch(() => ({}));
+      console.log("Données brutes de l'extraction reçues du backend :", rawJsonResponse);
 
-      const { fields: apiFields } = await parseResponse.json();
+      const apiFields = rawJsonResponse.fields || {};
 
       triggerToast("🤖 Cartographie des données extraites vers le profil...", "fa-wand-magic-sparkles fa-spin");
 
       const mapped = mapExtractedFieldsToScannedData(apiFields, file, docPublicUrl);
 
-      // Charger les données réellement extraites dans la modale interactive de prévisualisation & édition
+      // Mettre à jour l'état du formulaire de prévisualisation (state) avec les données cartographiées
       setScannedData(mapped);
 
+      // Ouvrir la modale après avoir mis à jour les états
       setIsParsingCv(false);
       setScanModalOpen(true);
       triggerToast("✓ Document analysé ! Vérifiez les données extraites avant validation.", "fa-wand-magic-sparkles");
     } catch (err) {
-      console.error("Erreur analyse du document:", err);
+      console.error("Erreur dans le flux d'analyse du document :", err);
       setIsParsingCv(false);
       triggerToast("Erreur lors de l'analyse du document", "fa-triangle-exclamation");
     }

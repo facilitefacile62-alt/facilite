@@ -96,13 +96,18 @@ Voici le schéma exact attendu du JSON :
         if (parsedData) {
           console.log("Extraction réussie via Groq.");
           return parsedData;
+        } else {
+          console.error("Erreur: Impossible de parser le JSON renvoyé par Groq. Contenu brut:", content);
         }
       } else {
-        console.warn(`Groq API a retourné un statut de rejet : ${response.status}`);
+        const errText = await response.text();
+        console.error(`Groq API rejetée. Statut: ${response.status}. Message: ${errText}`);
       }
     } catch (err) {
-      console.error("Échec de l'appel à Groq API :", err);
+      console.error("Échec de l'appel réseau à Groq API :", err);
     }
+  } else {
+    console.warn("Groq API Key manquante ou non configurée.");
   }
 
   // 2. Deuxième essai (Fallback) : DeepSeek API officielle (deepseek-chat)
@@ -133,35 +138,54 @@ Voici le schéma exact attendu du JSON :
         if (parsedData) {
           console.log("Extraction réussie via DeepSeek.");
           return parsedData;
+        } else {
+          console.error("Erreur: Impossible de parser le JSON renvoyé par DeepSeek. Contenu brut:", content);
         }
       } else {
-        console.warn(`DeepSeek API a retourné un statut de rejet : ${response.status}`);
+        const errText = await response.text();
+        console.error(`DeepSeek API rejetée. Statut: ${response.status}. Message: ${errText}`);
       }
     } catch (err) {
-      console.error("Échec de l'appel à DeepSeek API :", err);
+      console.error("Échec de l'appel réseau à DeepSeek API :", err);
     }
+  } else {
+    console.warn("DeepSeek API Key manquante ou non configurée.");
   }
 
   return null;
 }
 
 export async function POST(request) {
+  let rawText = "";
   try {
     const formData = await request.formData();
     const file = formData.get("file");
 
     if (!file || typeof file === "string") {
-      return NextResponse.json({ error: "Aucun fichier reçu." }, { status: 400 });
+      console.error("Erreur parse-document: Aucun fichier reçu ou fichier invalide.");
+      const fields = mapTextToProfileFields("");
+      return NextResponse.json({ fields, rawTextLength: 0, warning: "Aucun fichier reçu" });
     }
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     // Extraction du texte brut
-    const rawText = await extractTextFromFile(buffer, file.name, file.type);
+    try {
+      rawText = await extractTextFromFile(buffer, file.name, file.type);
+    } catch (ocrError) {
+      console.error("Erreur lors de l'extraction textuelle / OCR du document:", ocrError);
+    }
     
     // Extraction via l'IA avec fallback
-    let fields = await callAIModel(rawText);
+    let fields = null;
+    if (rawText) {
+      try {
+        fields = await callAIModel(rawText);
+      } catch (aiError) {
+        console.error("Erreur lors de l'appel au modèle IA (Groq/DeepSeek):", aiError);
+      }
+    }
 
     // Fallback local regex si les APIs IA échouent
     if (!fields) {
@@ -171,10 +195,8 @@ export async function POST(request) {
 
     return NextResponse.json({ fields, rawTextLength: rawText.length });
   } catch (error) {
-    console.error("Erreur d'extraction du document:", error);
-    return NextResponse.json(
-      { error: "Impossible d'analyser le contenu du document." },
-      { status: 500 }
-    );
+    console.error("Erreur générale dans le traitement du document:", error);
+    const fields = mapTextToProfileFields(rawText);
+    return NextResponse.json({ fields, rawTextLength: rawText.length, error: error.message });
   }
 }
