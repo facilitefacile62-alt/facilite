@@ -2144,11 +2144,11 @@ export default function ProfilPage() {
               </div>
             </div>
 
-            {/* SECTION MON PROFIL ET MON CV (CONFORME À LA CAPTURE D'ÉCRAN) */}
+            {/* SECTION MES DOCUMENTS */}
             <div id="section-mon-profil-cv" className="space-y-3 pt-2 scroll-mt-24">
               <div>
-                <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Mon profil et mon CV</h2>
-                <p className="text-xs md:text-sm text-gray-500 font-medium">Gérez votre identité professionnelle.</p>
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Mes documents</h2>
+                <p className="text-xs md:text-sm text-gray-500 font-medium">Gérez vos fichiers réutilisables, CVs et lettres de motivation.</p>
               </div>
 
               {/* Carte Principale Formulaire */}
@@ -2180,14 +2180,24 @@ export default function ProfilPage() {
                       className="hidden"
                     />
 
-                    <button
-                      type="button"
-                      onClick={() => cvFileInputRef.current?.click()}
-                      className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center w-full sm:w-auto"
-                    >
-                      <i className="fa-solid fa-plus text-xs"></i>
-                      <span>Ajouter un document</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                      <Link
+                        href="/importer-cv"
+                        className="bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center flex-1 sm:flex-none"
+                      >
+                        <i className="fa-solid fa-pen-to-square text-xs"></i>
+                        <span>Rédaction</span>
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => cvFileInputRef.current?.click()}
+                        className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center flex-1 sm:flex-none"
+                      >
+                        <i className="fa-solid fa-plus text-xs"></i>
+                        <span>Ajouter un document</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Liste des Documents Utilisateur */}
@@ -2324,18 +2334,18 @@ export default function ProfilPage() {
               );
             })()}
 
-            {/* Carte Mon profil et mon CV (Mint Green style conforme à la capture) */}
+            {/* Carte Mes documents (Mint Green style conforme à la capture) */}
             <div
               className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl p-4 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-3 group"
               onClick={() => {
                 const el = document.getElementById("section-mon-profil-cv");
                 if (el) el.scrollIntoView({ behavior: "smooth" });
-                triggerToast("Section Mon profil et mon CV affichée !", "fa-circle-check");
+                triggerToast("Section Mes documents affichée !", "fa-circle-check");
               }}
             >
-              <i className="fa-regular fa-user text-lg text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
+              <i className="fa-regular fa-file-lines text-lg text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
               <span className="text-sm font-extrabold text-[#047857] tracking-tight">
-                Mon profil et mon CV (Actif)
+                Mes documents (Actif)
               </span>
             </div>
 
