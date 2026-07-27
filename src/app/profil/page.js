@@ -1612,17 +1612,13 @@ export default function ProfilPage() {
                       </span>
                     </div>
 
-                    <p className="text-xs font-semibold text-gray-500">
-                      5 K followers • 3,7 K suivi(e)s
-                    </p>
-
                     <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">
                       {profileSubtitle || profileBio}
                     </p>
 
-                    {/* Ligne des Détails Épinglés affichés en haut de profil */}
+                    {/* Ligne des Détails Épinglés affichés en haut de profil sur une ligne horizontale continue */}
                     {pinnedDetails.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs font-bold text-gray-800">
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1.5 text-[11px] font-extrabold text-gray-900">
                         {pinnedDetails.map((itemId) => {
                           const itemMap = {
                             creation_digitale: { label: jobTitle.trim() || "Création digitale", icon: "fa-regular fa-folder" },
@@ -1638,7 +1634,7 @@ export default function ProfilPage() {
                           const itm = itemMap[itemId];
                           if (!itm) return null;
                           return (
-                            <span key={itemId} className="flex items-center space-x-1.5 text-gray-900 bg-gray-100/70 px-2 py-0.5 rounded-md border border-gray-200/60">
+                            <span key={itemId} className="flex items-center space-x-1 text-gray-900 bg-gray-100/90 px-2 py-0.5 rounded-md border border-gray-200/80 whitespace-nowrap">
                               <i className={`${itm.icon} text-gray-600 text-xs`}></i>
                               <span>{itm.label}</span>
                             </span>
