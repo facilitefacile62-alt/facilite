@@ -1479,25 +1479,6 @@ export default function ProfilPage() {
                       <span className="text-xs font-bold text-gray-800">Facilite Corporation</span>
                     </div>
                   </div>
-
-                  {/* Boutons d'action principaux */}
-                  <div className="flex flex-wrap gap-2.5 w-full md:w-auto">
-                    <button
-                      onClick={() => setExperienceModalOpen(true)}
-                      className="bg-[#10E688] hover:bg-[#0ed67e] text-gray-950 font-extrabold py-2 px-5 rounded-full text-xs transition shadow-xs cursor-pointer flex items-center space-x-2"
-                    >
-                      <i className="fa-solid fa-plus text-xs"></i>
-                      <span>Ajouter une expérience</span>
-                    </button>
-
-                    <Link
-                      href="/service"
-                      className="bg-[#E4B8F9] hover:bg-[#db9ff7] text-purple-950 font-extrabold py-2 px-5 rounded-full text-xs transition shadow-xs cursor-pointer flex items-center space-x-2"
-                    >
-                      <i className="fa-solid fa-file-pdf text-xs"></i>
-                      <span>Exporter mon CV</span>
-                    </Link>
-                  </div>
                 </div>
               </div>
             </div>
