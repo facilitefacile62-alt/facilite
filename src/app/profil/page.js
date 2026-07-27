@@ -601,12 +601,23 @@ export default function ProfilPage() {
       isCurrent: false
     }));
 
-    const languages = (apiFields.languages || []).map((lang) => ({
-      name: lang,
-      level: ""
-    }));
+    const languages = (apiFields.languages || []).map((lang) => {
+      if (typeof lang === "object" && lang !== null) {
+        return {
+          name: lang.name || lang.langue || "",
+          level: lang.level || lang.niveau || ""
+        };
+      }
+      return {
+        name: String(lang),
+        level: ""
+      };
+    });
 
-    const isIdentityDoc = false;
+    const isIdentityDoc = !!apiFields.isIdentityDoc || 
+      (apiFields.title || "").toLowerCase().includes("identit") || 
+      (apiFields.summary || "").toLowerCase().includes("cni") || 
+      (apiFields.summary || "").toLowerCase().includes("passeport");
 
     return {
       firstName: apiFields.firstName || "",
@@ -615,10 +626,10 @@ export default function ProfilPage() {
       bio: apiFields.summary || "",
       city: apiFields.city || "",
       country: apiFields.country || "",
-      birthDate: "",
-      gender: "",
-      maritalStatus: "",
-      driverLicense: "",
+      birthDate: apiFields.birthDate || "",
+      gender: apiFields.gender || "",
+      maritalStatus: apiFields.maritalStatus || "",
+      driverLicense: apiFields.driverLicense || "",
       skills: apiFields.skills || [],
       experiences,
       educations,
