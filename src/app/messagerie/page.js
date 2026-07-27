@@ -131,11 +131,57 @@ export default function MessageriePage() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
-  // Notifications System (LinkedIn Style - initialisé à vide)
+  // Notifications System (LinkedIn Style)
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [activeNotifFilter, setActiveNotifFilter] = useState("all");
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  const [notificationsList, setNotificationsList] = useState([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(3);
+  const [notificationsList, setNotificationsList] = useState([
+    {
+      id: 1,
+      author: "Université de Tours",
+      avatar: "/logo.jpeg",
+      text: "a publié quelque chose : Une grande étape franchie pour la recherche et l'innovation !",
+      type: "posts",
+      time: "4 min",
+      unread: true
+    },
+    {
+      id: 2,
+      author: "Madeleine Fall",
+      avatar: "/logo.jpeg",
+      text: "a consulté votre profil. Voir les services recommandés pour votre profil.",
+      type: "jobs",
+      time: "2 h",
+      unread: true
+    },
+    {
+      id: 3,
+      author: "Joseph Maxime Bilivogui",
+      avatar: "/logo.jpeg",
+      text: "a publié un post : Le monde attend des leaders créatifs et audacieux.",
+      type: "posts",
+      time: "3 h",
+      unread: true
+    },
+    {
+      id: 4,
+      author: "Wave Sénégal",
+      avatar: "/logo.jpeg",
+      text: "recrute un Conseiller Clientèle Télécom à Dakar. Postulez en 1 clic.",
+      type: "jobs",
+      time: "6 h",
+      unread: false
+    },
+    {
+      id: 5,
+      author: "Sarah Taylor",
+      avatar: "/logo.jpeg",
+      text: "vous a mentionné dans un commentaire sur la refonte de CV.",
+      type: "mentions",
+      time: "13 h",
+      unread: false
+    }
+  ]);
 
   // Contact Modal States
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -646,34 +692,38 @@ export default function MessageriePage() {
             </Link>
             
             {/* Messagerie (Actif sur la page de messagerie) */}
-            <Link
-              href="/messagerie"
-              className="flex flex-col items-center justify-center text-center text-[#10E688] transition space-y-1 cursor-pointer w-16 relative"
-            >
-              <i className="fa-regular fa-comments text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
-              <span className="absolute top-0.5 right-2 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
-            </Link>
+            {userSession && (
+              <Link
+                href="/messagerie"
+                className="flex flex-col items-center justify-center text-center text-[#10E688] transition space-y-1 cursor-pointer w-16 relative"
+              >
+                <i className="fa-regular fa-comments text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
+                <span className="absolute top-0.5 right-2 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+              </Link>
+            )}
 
             {/* Notifications */}
-            <button
-              type="button"
-              onClick={() => setNotificationsModalOpen(true)}
-              className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
-                notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <i className="fa-regular fa-bell text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">Notifications</span>
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
-                  {unreadNotifCount}
-                </span>
-              )}
-            </button>
+            {userSession && (
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(true)}
+                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
+                  notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <i className="fa-regular fa-bell text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">Notifications</span>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Recrutement Spontané */}
             <a

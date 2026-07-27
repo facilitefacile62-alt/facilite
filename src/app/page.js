@@ -268,11 +268,57 @@ export default function Home() {
   const fileInputRef = useRef(null);
   const plusDropdownRef = useRef(null);
 
-  // Notifications System (initialisé à vide : aucune donnée de test globale par défaut)
+  // Notifications System (LinkedIn Style)
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [activeNotifFilter, setActiveNotifFilter] = useState("all");
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  const [notificationsList, setNotificationsList] = useState([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(3);
+  const [notificationsList, setNotificationsList] = useState([
+    {
+      id: 1,
+      author: "Université de Tours",
+      avatar: "/logo.jpeg",
+      text: "a publié quelque chose : Une grande étape franchie pour la recherche et l'innovation !",
+      type: "posts",
+      time: "4 min",
+      unread: true
+    },
+    {
+      id: 2,
+      author: "Madeleine Fall",
+      avatar: "/logo.jpeg",
+      text: "a consulté votre profil. Voir les services recommandés pour votre profil.",
+      type: "jobs",
+      time: "2 h",
+      unread: true
+    },
+    {
+      id: 3,
+      author: "Joseph Maxime Bilivogui",
+      avatar: "/logo.jpeg",
+      text: "a publié un post : Le monde attend des leaders créatifs et audacieux.",
+      type: "posts",
+      time: "3 h",
+      unread: true
+    },
+    {
+      id: 4,
+      author: "Wave Sénégal",
+      avatar: "/logo.jpeg",
+      text: "recrute un Conseiller Clientèle Télécom à Dakar. Postulez en 1 clic.",
+      type: "jobs",
+      time: "6 h",
+      unread: false
+    },
+    {
+      id: 5,
+      author: "Sarah Taylor",
+      avatar: "/logo.jpeg",
+      text: "vous a mentionné dans un commentaire sur la refonte de CV.",
+      type: "mentions",
+      time: "13 h",
+      unread: false
+    }
+  ]);
 
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });

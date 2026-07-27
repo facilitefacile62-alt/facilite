@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -114,6 +115,65 @@ export default function BoiteAIdees() {
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+
+  // Supabase auth state
+  const [userSession, setUserSession] = useState(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+  const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
+  const plusDropdownRef = useRef(null);
+
+  // Notifications System (LinkedIn Style)
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
+  const [activeNotifFilter, setActiveNotifFilter] = useState("all");
+  const [unreadNotifCount, setUnreadNotifCount] = useState(3);
+  const [notificationsList, setNotificationsList] = useState([
+    {
+      id: 1,
+      author: "Université de Tours",
+      avatar: "/logo.jpeg",
+      text: "a publié quelque chose : Une grande étape franchie pour la recherche et l'innovation !",
+      type: "posts",
+      time: "4 min",
+      unread: true
+    },
+    {
+      id: 2,
+      author: "Madeleine Fall",
+      avatar: "/logo.jpeg",
+      text: "a consulté votre profil. Voir les services recommandés pour votre profil.",
+      type: "jobs",
+      time: "2 h",
+      unread: true
+    },
+    {
+      id: 3,
+      author: "Joseph Maxime Bilivogui",
+      avatar: "/logo.jpeg",
+      text: "a publié un post : Le monde attend des leaders créatifs et audacieux.",
+      type: "posts",
+      time: "3 h",
+      unread: true
+    },
+    {
+      id: 4,
+      author: "Wave Sénégal",
+      avatar: "/logo.jpeg",
+      text: "recrute un Conseiller Clientèle Télécom à Dakar. Postulez en 1 clic.",
+      type: "jobs",
+      time: "6 h",
+      unread: false
+    },
+    {
+      id: 5,
+      author: "Sarah Taylor",
+      avatar: "/logo.jpeg",
+      text: "vous a mentionné dans un commentaire sur la refonte de CV.",
+      type: "mentions",
+      time: "13 h",
+      unread: false
+    }
+  ]);
 
   // Spontaneous Recruitment Modal
   const [recruitmentModalOpen, setRecruitmentModalOpen] = useState(false);
@@ -268,16 +328,52 @@ export default function BoiteAIdees() {
     }, 1200);
   };
 
+  // Sync Supabase Auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Filtered Notifications helper
+  const filteredNotifications = notificationsList.filter(n => {
+    if (activeNotifFilter === "jobs") return n.type === "jobs";
+    if (activeNotifFilter === "posts") return n.type === "posts";
+    if (activeNotifFilter === "mentions") return n.type === "mentions";
+    return true;
+  });
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         if (contactModalOpen) handleCloseModal();
         if (recruitmentModalOpen) handleCloseRecruitmentModal();
+        if (plusDropdownOpen) setPlusDropdownOpen(false);
+        if (notificationsModalOpen) setNotificationsModalOpen(false);
+        if (userMenuOpen) setUserMenuOpen(false);
+      }
+    };
+    const handleClickOutside = (e) => {
+      if (plusDropdownRef.current && !plusDropdownRef.current.contains(e.target)) {
+        setPlusDropdownOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [contactModalOpen, recruitmentModalOpen]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [contactModalOpen, recruitmentModalOpen, plusDropdownOpen, notificationsModalOpen, userMenuOpen]);
 
   return (
     <>
@@ -355,7 +451,7 @@ export default function BoiteAIdees() {
             </div>
           </div>
 
-          {/* Groupe Centre : Liens principaux */}
+          {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Recrutement, Plus) */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
             {/* Accueil */}
             <a
@@ -365,28 +461,40 @@ export default function BoiteAIdees() {
               <i className="fa-solid fa-house text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
             </a>
-            
-            {/* Service */}
-            <Link
-              href="/service"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-solid fa-briefcase text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">{t.navService}</span>
-            </Link>
 
             {/* Messagerie */}
-            <Link
-              href="/messagerie"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
-            >
-              <i className="fa-regular fa-comments text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
-              <span className="absolute top-0.5 right-2 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
-            </Link>
+            {userSession && (
+              <Link
+                href="/messagerie"
+                className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+              >
+                <i className="fa-regular fa-comments text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
+                <span className="absolute top-0.5 right-2 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+              </Link>
+            )}
+
+            {/* Notifications */}
+            {userSession && (
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(true)}
+                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
+                  notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <i className="fa-regular fa-bell text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">Notifications</span>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Recrutement Spontané */}
             <a
@@ -398,26 +506,99 @@ export default function BoiteAIdees() {
               <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
             </a>
 
-            {/* Contactez-nous */}
-            <a
-              href="#"
-              onClick={handleOpenModal}
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-regular fa-comment-dots text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">Contact</span>
-            </a>
+            {/* Plus Dropdown Menu (Service & Contact) */}
+            <div className="relative" ref={plusDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
+                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
+                  plusDropdownOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <i className="fa-solid fa-bars text-xl"></i>
+                <div className="flex items-center space-x-1 text-[11px] font-bold tracking-tight">
+                  <span>Plus</span>
+                  <i className={`fa-solid fa-caret-down text-[9px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+                </div>
+              </button>
+
+              {/* Menu Déroulant "Plus" Overlay */}
+              {plusDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl border border-gray-200 shadow-2xl py-1.5 z-[600] animate-fade-in-up">
+                  <Link
+                    href="/service"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                  >
+                    <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
+                    <span>Service</span>
+                  </Link>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPlusDropdownOpen(false);
+                      handleOpenModal();
+                    }}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
+                    <span>Contact</span>
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Groupe Droit : Se connecter */}
+          {/* Groupe Droit : Connexion / Profil */}
           <div className="hidden md:flex items-center">
-            <a
-              href="#"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-regular fa-user text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
-            </a>
+            {userSession ? (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+                >
+                  <i className="fa-solid fa-circle-user text-xl"></i>
+                  <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-gray-200 shadow-2xl py-1.5 z-[600] animate-fade-in-up">
+                    <Link
+                      href="/profil"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                    >
+                      <i className="fa-regular fa-user text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Voir mon profil & CV</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        triggerToast("Déconnexion en cours...", "fa-right-from-bracket");
+                        setTimeout(() => {
+                          handleGlobalSignOut();
+                        }, 400);
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-red-50 hover:text-red-600 transition border-t border-gray-100 cursor-pointer text-left"
+                    >
+                      <i className="fa-solid fa-right-from-bracket text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Déconnexion</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
+              >
+                <i className="fa-regular fa-user text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Right Controls: Search & Hamburger (LinkedIn style icons in circles) */}
@@ -1181,6 +1362,144 @@ export default function BoiteAIdees() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Modal/Drawer de Notifications (LinkedIn Style) */}
+      {notificationsModalOpen && (
+        <div className="fixed inset-0 z-[750] bg-black/50 backdrop-blur-xs flex justify-center md:items-start md:pt-16 p-2 sm:p-4 animate-fade-in-up">
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col max-h-[85vh]">
+            {/* Header Modal Notifications */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-[#FAF6F1]">
+              <div className="flex items-center space-x-3">
+                <i className="fa-solid fa-bell text-xl text-[#10E688]"></i>
+                <h3 className="text-lg font-extrabold text-gray-900">Notifications</h3>
+                {unreadNotifCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                    {unreadNotifCount} nouvelle{unreadNotifCount > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                {unreadNotifCount > 0 && (
+                  <button
+                    onClick={() => {
+                      setNotificationsList(prev => prev.map(n => ({ ...n, unread: false })));
+                      setUnreadNotifCount(0);
+                      triggerToast("Toutes les notifications sont marquées comme lues", "fa-check-double");
+                    }}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition mr-2 cursor-pointer"
+                  >
+                    Tout marquer comme lu
+                  </button>
+                )}
+                <button
+                  onClick={() => setNotificationsModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-xmark text-base"></i>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Pills Bar (LinkedIn Mobile Style as in Image 3) */}
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center space-x-2 overflow-x-auto bg-gray-50/70 scrollbar-none">
+              <button
+                onClick={() => setActiveNotifFilter("all")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeNotifFilter === "all" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Toutes
+              </button>
+              <button
+                onClick={() => setActiveNotifFilter("jobs")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeNotifFilter === "jobs" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Offres d'emploi
+              </button>
+              <button
+                onClick={() => setActiveNotifFilter("posts")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeNotifFilter === "posts" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Mes posts
+              </button>
+              <button
+                onClick={() => setActiveNotifFilter("mentions")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeNotifFilter === "mentions" ? "bg-[#10E688] text-gray-900 shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Mentions
+              </button>
+            </div>
+
+            {/* Notification List */}
+            <div className="overflow-y-auto divide-y divide-gray-100 flex-1">
+              {filteredNotifications.length === 0 ? (
+                <div className="py-12 text-center text-gray-400 font-medium text-sm">
+                  Aucune notification dans cette catégorie.
+                </div>
+              ) : (
+                filteredNotifications.map((notif) => (
+                  <div
+                    key={notif.id}
+                    onClick={() => {
+                      if (notif.unread) {
+                        setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+                        setUnreadNotifCount(prev => Math.max(0, prev - 1));
+                      }
+                    }}
+                    className={`p-4 flex items-start space-x-3.5 hover:bg-blue-50/50 transition cursor-pointer ${
+                      notif.unread ? "bg-blue-50/30" : "bg-white"
+                    }`}
+                  >
+                    {/* Blue Unread Indicator Dot (Image 3 Style) */}
+                    <div className="pt-1.5 w-2 flex-shrink-0">
+                      {notif.unread && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600 block"></span>
+                      )}
+                    </div>
+
+                    {/* Sender Avatar */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-bold text-sm border border-gray-200 shadow-xs overflow-hidden">
+                        {notif.avatar ? (
+                          <img src={notif.avatar} alt={notif.author} className="w-full h-full object-cover" />
+                        ) : (
+                          notif.author.slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notification Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-800 font-normal leading-relaxed">
+                        <span className="font-bold text-gray-900">{notif.author} </span>
+                        {notif.text}
+                      </p>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1 block">{notif.time}</span>
+                    </div>
+
+                    {/* Action Menu */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerToast("Options de notification", "fa-ellipsis");
+                      }}
+                      className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-ellipsis text-sm"></i>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

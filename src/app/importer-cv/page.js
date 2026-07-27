@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 
 const translations = {
   FR: {
@@ -158,6 +158,7 @@ export default function ImporterCvPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", subject: "", message: "" });
@@ -167,6 +168,8 @@ export default function ImporterCvPage() {
   
   const fileInputRef = useRef(null);
   const plusDropdownRef = useRef(null);
+  const userMenuRef = useRef(null);
+  const [userSession, setUserSession] = useState(null);
 
   // Notifications System (LinkedIn Style)
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
@@ -228,6 +231,19 @@ export default function ImporterCvPage() {
     if (savedLang) {
       setSelectedLang(savedLang);
     }
+  }, []);
+
+  // Sync Supabase Auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const triggerToast = (message, icon = "fa-circle-check") => {
@@ -538,11 +554,15 @@ export default function ImporterCvPage() {
         if (contactModalOpen) handleCloseContactModal();
         if (plusDropdownOpen) setPlusDropdownOpen(false);
         if (notificationsModalOpen) setNotificationsModalOpen(false);
+        if (userMenuOpen) setUserMenuOpen(false);
       }
     };
     const handleClickOutside = (e) => {
       if (plusDropdownRef.current && !plusDropdownRef.current.contains(e.target)) {
         setPlusDropdownOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -551,7 +571,7 @@ export default function ImporterCvPage() {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [contactModalOpen, plusDropdownOpen, notificationsModalOpen]);
+  }, [contactModalOpen, plusDropdownOpen, notificationsModalOpen, userMenuOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans antialiased text-gray-800">
@@ -607,34 +627,38 @@ export default function ImporterCvPage() {
             </Link>
             
             {/* Messagerie */}
-            <Link
-              href="/messagerie"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
-            >
-              <i className="fa-regular fa-comments text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
-              <span className="absolute top-0.5 right-2 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
-            </Link>
+            {userSession && (
+              <Link
+                href="/messagerie"
+                className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+              >
+                <i className="fa-regular fa-comments text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
+                <span className="absolute top-0.5 right-2 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+              </Link>
+            )}
 
             {/* Notifications */}
-            <button
-              type="button"
-              onClick={() => setNotificationsModalOpen(true)}
-              className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
-                notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <i className="fa-regular fa-bell text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight">Notifications</span>
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
-                  {unreadNotifCount}
-                </span>
-              )}
-            </button>
+            {userSession && (
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(true)}
+                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 relative transition ${
+                  notificationsModalOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <i className="fa-regular fa-bell text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight">Notifications</span>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center shadow-xs border border-white animate-pulse">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Recrutement Spontané */}
             <a
@@ -652,7 +676,7 @@ export default function ImporterCvPage() {
                 type="button"
                 onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
                 className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
-                  plusDropdownOpen ? "text-gray-900 font-extrabold" : "text-gray-500 hover:text-gray-800"
+                  plusDropdownOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
                 }`}
               >
                 <i className="fa-solid fa-bars text-xl"></i>
@@ -690,7 +714,7 @@ export default function ImporterCvPage() {
             </div>
           </div>
 
-          {/* Groupe Droit : Connexion & Sélecteur de langue */}
+          {/* Groupe Droit : Connexion / Profil & Sélecteur de langue */}
           <div className="hidden md:flex items-center space-x-4">
             <div className="flex items-center space-x-1.5 p-1 bg-white border border-gray-200 rounded-full shadow-xs">
               <button
@@ -713,13 +737,53 @@ export default function ImporterCvPage() {
               </button>
             </div>
 
-            <Link
-              href="/login"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-regular fa-user text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
-            </Link>
+            {userSession ? (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                   type="button"
+                   onClick={() => setUserMenuOpen(!userMenuOpen)}
+                   className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+                >
+                  <i className="fa-solid fa-circle-user text-xl"></i>
+                  <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-gray-200 shadow-2xl py-1.5 z-[600] animate-fade-in-up">
+                    <Link
+                      href="/profil"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                    >
+                      <i className="fa-regular fa-user text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Voir mon profil & CV</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        triggerToast("Déconnexion en cours...", "fa-right-from-bracket");
+                        setTimeout(() => {
+                          handleGlobalSignOut();
+                        }, 400);
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-red-50 hover:text-red-600 transition border-t border-gray-100 cursor-pointer text-left"
+                    >
+                      <i className="fa-solid fa-right-from-bracket text-lg text-gray-600 w-5 text-center"></i>
+                      <span>Déconnexion</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
+              >
+                <i className="fa-regular fa-user text-xl"></i>
+                <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Connexion</span>
+              </Link>
+            )}
           </div>
         </div>
       </nav>
