@@ -572,162 +572,72 @@ export default function ProfilPage() {
     triggerToast(`Compétence "${skillToDelete}" supprimée !`, "fa-trash-can");
   };
 
-  // Extraction des données uniquement depuis le CONTENU TEXTUEL INTERNE du document (et AUCUNEMENT le nom du fichier)
-  const extractRealDataFromFile = (file, textContent = "") => {
-    // Ne jamais se baser sur le nom du fichier pour les noms et informations de profil
-    let realFirstName = firstName || "Macoumba";
-    let realLastName = lastName || "Samaké";
+  // Convertit les champs extraits par le service serveur (/api/parse-document) vers le
+  // format attendu par la modale de prévisualisation. Ne fabrique jamais de données fictives :
+  // un champ non détecté dans le document reste vide ou conserve la valeur déjà présente sur le profil.
+  const mapExtractedFieldsToScannedData = (apiFields, file, docPublicUrl) => {
+    const experiences = (apiFields.experiences || []).map((exp, idx) => ({
+      id: Date.now() + idx,
+      title: exp.title || "",
+      company: exp.employer || "",
+      location: exp.city || "",
+      locationType: "",
+      employmentType: "",
+      isCurrent: !!exp.current,
+      startMonth: "",
+      startYear: (exp.startDate || "").slice(0, 4),
+      endYear: (exp.endDate || "").slice(0, 4),
+      description: exp.description || "",
+      skills: []
+    }));
 
-    const cleanText = (textContent || "").replace(/[\r\n]+/g, " ");
+    const educations = (apiFields.educations || []).map((edu, idx) => ({
+      id: Date.now() + 100 + idx,
+      school: edu.school || "",
+      degree: edu.degree || "",
+      field: "",
+      startYear: edu.startYear || "",
+      endYear: edu.endYear || "",
+      isCurrent: false
+    }));
 
-    // 1. Recherche de mots-clés d'état civil dans le contenu texte interne
-    const firstNameMatch = cleanText.match(/(?:prénom|prenom|first\s*name)\s*[:\-]\s*([A-Za-zÀ-ÿ\-]+)/i);
-    const lastNameMatch = cleanText.match(/(?:nom|nom\s*de\s*famille|last\s*name|surname)\s*[:\-]\s*([A-Za-zÀ-ÿ\-]+)/i);
+    const languages = (apiFields.languages || []).map((lang) => ({
+      name: lang,
+      level: ""
+    }));
 
-    if (firstNameMatch && firstNameMatch[1]) {
-      const candidateFn = firstNameMatch[1].trim();
-      if (candidateFn.length >= 2 && !candidateFn.toLowerCase().includes("cv") && !candidateFn.toLowerCase().includes("prof")) {
-        realFirstName = candidateFn.charAt(0).toUpperCase() + candidateFn.slice(1).toLowerCase();
-      }
-    }
-
-    if (lastNameMatch && lastNameMatch[1]) {
-      const candidateLn = lastNameMatch[1].trim();
-      if (candidateLn.length >= 2 && !candidateLn.toLowerCase().includes("cv") && !candidateLn.toLowerCase().includes("prof")) {
-        realLastName = candidateLn.charAt(0).toUpperCase() + candidateLn.slice(1).toLowerCase();
-      }
-    }
-
-    // Recherche d'un nom complet explicite au début du texte du document
-    if (!firstNameMatch && !lastNameMatch && cleanText.trim().length > 0) {
-      const firstLineTokens = cleanText.trim().split(/\s+/).slice(0, 4);
-      const validNameTokens = firstLineTokens.filter(t => 
-        /^[A-Za-zÀ-ÿ\-]+$/.test(t) && 
-        !/\b(cv|curriculum|vitae|prof|professionnel|document|pdf|docx|table|page|scan|cni|passeport)\b/i.test(t)
-      );
-      if (validNameTokens.length >= 2) {
-        realFirstName = validNameTokens[0].charAt(0).toUpperCase() + validNameTokens[0].slice(1).toLowerCase();
-        realLastName = validNameTokens.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-      }
-    }
-
-    // Recherche de mots-clés dans le contenu texte interne uniquement
-    const lowerText = cleanText.toLowerCase();
-
-    // Titre professionnel basé strictement sur le contenu du document
-    let realTitle = jobTitle || "Spécialiste & Chef de Projet Digital";
-    if (lowerText.includes("developpe") || lowerText.includes("dev ") || lowerText.includes("web") || lowerText.includes("react") || lowerText.includes("next")) {
-      realTitle = "Développeur Fullstack & Web";
-    } else if (lowerText.includes("gestion") || lowerText.includes("mkt") || lowerText.includes("marketing") || lowerText.includes("commercial")) {
-      realTitle = "Responsable Marketing & Commercial";
-    } else if (lowerText.includes("comptab") || lowerText.includes("financ") || lowerText.includes("audit")) {
-      realTitle = "Contrôleur de Gestion & Comptable";
-    } else if (lowerText.includes("jurist") || lowerText.includes("droit")) {
-      realTitle = "Consultant Juridique & Droit";
-    } else if (lowerText.includes("enseign") || lowerText.includes("format")) {
-      realTitle = "Formateur & Enseignant";
-    } else if (lowerText.includes("design") || lowerText.includes("ui") || lowerText.includes("ux") || lowerText.includes("graphis")) {
-      realTitle = "Designer Graphique & UI/UX";
-    }
-
-    // Ville basée strictly sur le contenu du document
-    let realCity = city || "Pikine";
-    let realCountry = country || "Sénégal";
-    if (lowerText.includes("dakar")) realCity = "Dakar";
-    else if (lowerText.includes("pikine")) realCity = "Pikine";
-    else if (lowerText.includes("saint louis") || lowerText.includes("st louis")) realCity = "Saint-Louis";
-    else if (lowerText.includes("thies")) realCity = "Thiès";
-    else if (lowerText.includes("ziguinchor")) realCity = "Ziguinchor";
-    else if (lowerText.includes("rufisque")) realCity = "Rufisque";
-
-    // Compétences dynamiques extraites du texte interne
-    const potentialSkills = [];
-    if (lowerText.includes("react")) potentialSkills.push("React.js");
-    if (lowerText.includes("next")) potentialSkills.push("Next.js");
-    if (lowerText.includes("node")) potentialSkills.push("Node.js");
-    if (lowerText.includes("python")) potentialSkills.push("Python");
-    if (lowerText.includes("java")) potentialSkills.push("Java");
-    if (lowerText.includes("html") || lowerText.includes("css")) potentialSkills.push("HTML5 / CSS3");
-    if (lowerText.includes("gestion")) potentialSkills.push("Gestion de projet");
-    if (lowerText.includes("communication")) potentialSkills.push("Communication");
-    if (lowerText.includes("marketing")) potentialSkills.push("Marketing Digital");
-    if (lowerText.includes("design") || lowerText.includes("figma")) potentialSkills.push("Figma & UI/UX");
-    if (lowerText.includes("compta") || lowerText.includes("excel")) potentialSkills.push("Excel Avancé & Comptabilité");
-    if (lowerText.includes("anglais") || lowerText.includes("english")) potentialSkills.push("Anglais Professionnel");
-
-    const realSkills = potentialSkills.length >= 2 ? potentialSkills : (userSkills.length > 0 ? userSkills : [
-      "Gestion de projet", "Développement Web", "Communication", "Stratégie Digitale", "UI/UX Design"
-    ]);
-
-    // Expériences dynamiques extraites du texte interne
-    const realExperiences = [
-      {
-        id: Date.now(),
-        title: realTitle,
-        company: `${realFirstName} ${realLastName} Services & Consulting`,
-        location: `${realCity}, ${realCountry}`,
-        locationType: "Hybride",
-        employmentType: "Temps plein",
-        isCurrent: true,
-        startMonth: "janvier",
-        startYear: "2024",
-        skills: realSkills.slice(0, 3)
-      }
-    ];
-
-    // Formations dynamiques extraites du texte interne
-    let degreeExtracted = "Master Professionnel";
-    if (lowerText.includes("licence") || lowerText.includes("bachelor")) degreeExtracted = "Licence Professionnelle";
-    else if (lowerText.includes("bts") || lowerText.includes("dut")) degreeExtracted = "Diplôme Supérieur (BTS/DUT)";
-    else if (lowerText.includes("bac")) degreeExtracted = "Baccalauréat";
-
-    const realEducations = [
-      {
-        id: Date.now() + 1,
-        school: `Université & Institut de ${realCity}`,
-        degree: degreeExtracted,
-        field: "Sciences, Informatique & Gestion",
-        startYear: "2020",
-        endYear: "2023",
-        isCurrent: false
-      }
-    ];
-
-    const isIdentityDoc = lowerText.includes("cni") || lowerText.includes("carte nationale") || lowerText.includes("passeport") || lowerText.includes("passport");
-
-    const realBio = isIdentityDoc
-      ? `📄 Document officiel d'identité analysé le ${new Date().toLocaleDateString("fr-FR")}. Les données d'état civil ont été numérisées à partir du texte du document.`
-      : `👋 ${realFirstName} ${realLastName} — ${realTitle}. Contenu textuel du document analysé le ${new Date().toLocaleDateString("fr-FR")}. Informations extraites et prêtes pour validation.`;
+    const isIdentityDoc = false;
 
     return {
-      firstName: realFirstName,
-      lastName: realLastName,
-      jobTitle: realTitle,
-      bio: realBio,
-      city: realCity,
-      country: realCountry,
-      birthDate: birthDate || "14 juillet 1995",
-      gender: gender || "Homme",
-      maritalStatus: maritalStatus || "Marié",
-      driverLicense: driverLicense || "Permis B",
-      skills: realSkills,
-      experiences: realExperiences,
-      educations: realEducations,
-      languages: [
-        { name: "Français", level: "Principal / Courant" },
-        { name: "Anglais", level: "Avancé / Professionnel" }
-      ],
+      firstName: apiFields.firstName || "",
+      lastName: apiFields.lastName || "",
+      jobTitle: apiFields.title || "",
+      bio: apiFields.summary || "",
+      city: apiFields.city || "",
+      country: apiFields.country || "",
+      birthDate: "",
+      gender: "",
+      maritalStatus: "",
+      driverLicense: "",
+      skills: apiFields.skills || [],
+      experiences,
+      educations,
+      languages,
+      docUrl: docPublicUrl || cvUrl,
+      docName: file.name,
       isIdentityDoc
     };
   };
 
-  // Importation Universelle & OCR / Analyse IA des Documents (CV, CNI, Passeport, Justificatifs)
+  // Importation Universelle & Analyse IA des Documents (CV, lettres de motivation, justificatifs)
+  // L'extraction s'appuie sur le contenu textuel réel du document (PDF/DOCX/Image via OCR),
+  // jamais sur le nom du fichier.
   const handleImportAndParseCv = async (e) => {
     const file = e.target.files[0];
     if (!file || !userSession?.user) return;
 
     setIsParsingCv(true);
-    triggerToast("🔍 Numérisation & OCR du document en cours...", "fa-expand fa-spin");
+    triggerToast("🔍 Analyse du contenu réel du document...", "fa-expand fa-spin");
 
     try {
       const ext = file.name.split('.').pop().toLowerCase();
@@ -746,54 +656,35 @@ export default function ProfilPage() {
         docPublicUrl = urlData?.publicUrl;
       }
 
-      // Lecture du contenu brut du fichier pour extraction réelle des données
-      let rawContent = "";
-      try {
-        if (file.type.includes("text") || file.name.endsWith(".txt") || file.name.endsWith(".json")) {
-          rawContent = await file.text();
-        } else {
-          const buffer = await file.slice(0, 5000).arrayBuffer();
-          const decoder = new TextDecoder("utf-8", { fatal: false });
-          rawContent = decoder.decode(buffer);
-        }
-      } catch (readErr) {
-        console.warn("Erreur lecture binaire du fichier :", readErr);
+      // Extraction réelle du texte du document (PDF/DOCX/Image OCR) côté serveur
+      const parseFormData = new FormData();
+      parseFormData.append("file", file);
+
+      const parseResponse = await fetch("/api/parse-document", {
+        method: "POST",
+        body: parseFormData,
+      });
+
+      if (!parseResponse.ok) {
+        throw new Error("Le service d'extraction a échoué.");
       }
 
-      const extracted = extractRealDataFromFile(file, rawContent);
+      const { fields: apiFields } = await parseResponse.json();
 
-      setTimeout(async () => {
-        triggerToast("🤖 Extraction IA & OCR des données du document...", "fa-wand-magic-sparkles fa-spin");
+      triggerToast("🤖 Cartographie des données extraites vers le profil...", "fa-wand-magic-sparkles fa-spin");
 
-        // Charger les données réelles dans la modale interactive de prévisualisation & édition
-        setScannedData({
-          firstName: extracted.firstName,
-          lastName: extracted.lastName,
-          jobTitle: extracted.jobTitle,
-          bio: extracted.bio,
-          city: extracted.city,
-          country: extracted.country,
-          birthDate: extracted.birthDate,
-          gender: extracted.gender,
-          maritalStatus: extracted.maritalStatus,
-          driverLicense: extracted.driverLicense,
-          skills: extracted.skills,
-          experiences: extracted.experiences,
-          educations: extracted.educations,
-          languages: extracted.languages,
-          docUrl: docPublicUrl || cvUrl,
-          docName: file.name,
-          isIdentityDoc: extracted.isIdentityDoc
-        });
+      const mapped = mapExtractedFieldsToScannedData(apiFields, file, docPublicUrl);
 
-        setIsParsingCv(false);
-        setScanModalOpen(true);
-        triggerToast("✓ Document numérisé ! Données réelles extraites pour vérification.", "fa-wand-magic-sparkles");
-      }, 1200);
-    } catch (err) {
-      console.error("Erreur analyse OCR document:", err);
+      // Charger les données réellement extraites dans la modale interactive de prévisualisation & édition
+      setScannedData(mapped);
+
       setIsParsingCv(false);
-      triggerToast("Erreur lors de la numérisation du document", "fa-triangle-exclamation");
+      setScanModalOpen(true);
+      triggerToast("✓ Document analysé ! Vérifiez les données extraites avant validation.", "fa-wand-magic-sparkles");
+    } catch (err) {
+      console.error("Erreur analyse du document:", err);
+      setIsParsingCv(false);
+      triggerToast("Erreur lors de l'analyse du document", "fa-triangle-exclamation");
     }
   };
 

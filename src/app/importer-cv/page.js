@@ -329,9 +329,9 @@ export default function ImporterCvPage() {
       setScanStepIndex((prev) => {
         if (prev >= scanSteps.length - 1) {
           clearInterval(stepInterval);
-          // Transition to Edit mode with mock-parsed data
-          setTimeout(() => {
-            generateMockData(file.name);
+          // Transition to Edit mode with data extracted from the document's real content
+          setTimeout(async () => {
+            await parseFileContent(file);
             setStage("edit");
             triggerToast(t.toastSuccessImport, "fa-circle-check");
           }, 600);
@@ -347,101 +347,54 @@ export default function ImporterCvPage() {
     };
   }, [stage, file, scanSteps]);
 
-  // Generate realistic parsed templates depending on file keywords
-  const generateMockData = (filename) => {
-    const lowerName = filename.toLowerCase();
-    
-    let mock = {
-      firstName: "Mamadou",
-      lastName: "Sarr",
-      email: "mamadou.sarr@example.com",
-      phone: "+221 77 568 23 45",
-      title: "Conseiller Clientèle Télécom",
-      summary: "Conseiller client dynamique et orienté résultats, possédant 2 ans d'expérience dans le secteur des télécommunications. Excellente communication orale et écrite en français et wolof.",
-      experiences: [
-        {
-          id: 1,
-          title: "Conseiller Clientèle",
-          employer: "Orange Sénégal",
-          city: "Dakar",
-          startDate: "2024-03",
-          endDate: "",
-          current: true,
-          description: "Gestion des appels entrants, résolution d'incidents techniques de niveau 1, vente de forfaits mobiles et internet."
-        }
-      ],
-      skills: ["Relation client", "Téléphonie", "Gestion des réclamations", "Vente directe", "Wolof"]
-    };
+  // Extraction réelle du contenu du document (jamais basée sur le nom du fichier)
+  const parseFileContent = async (selectedFile) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-    if (lowerName.includes("dev") || lowerName.includes("web") || lowerName.includes("react") || lowerName.includes("next")) {
-      mock = {
-        firstName: "Macoumba",
-        lastName: "Samak",
-        email: "macoumba.samak@nextdev.sn",
-        phone: "+221 70 812 34 56",
-        title: "Développeur Front-End React",
-        summary: "Passionné par l'écosystème JavaScript et le Pixel-Perfect. Expérience confirmée dans l'optimisation des performances et la mise en page d'applications web réactives avec React et Tailwind CSS.",
-        experiences: [
-          {
-            id: 1,
-            title: "Développeur Front-End (Stage)",
-            employer: "Facilite Corporation",
-            city: "Pikine",
-            startDate: "2025-06",
-            endDate: "2025-12",
-            current: false,
-            description: "Refonte de la landing page avec Next.js 16 et Tailwind v4. Amélioration du score SEO et de la vitesse de chargement de 40%."
-          }
-        ],
-        skills: ["React.js", "Next.js", "Tailwind CSS", "TypeScript", "Git", "SEO"]
-      };
-    } else if (lowerName.includes("compta") || lowerName.includes("finance") || lowerName.includes("gestion")) {
-      mock = {
-        firstName: "Aminata",
-        lastName: "Diallo",
-        email: "aminata.diallo@comptable.sn",
-        phone: "+221 76 432 10 98",
-        title: "Comptable & Gestionnaire de Paie",
-        summary: "Professionnelle de la finance dotée d'une solide expertise dans le traitement des écritures comptables, les déclarations fiscales et la paie.",
-        experiences: [
-          {
-            id: 1,
-            title: "Assistant Comptable",
-            employer: "Senelec",
-            city: "Dakar",
-            startDate: "2023-01",
-            endDate: "2024-08",
-            current: false,
-            description: "Saisie comptable mensuelle, pointage bancaire, préparation des déclarations sociales (IPRES, CSS)."
-          }
-        ],
-        skills: ["Comptabilité générale", "SAGE", "Traitement de la paie", "Excel avancé", "Fiscalité"]
-      };
-    } else if (lowerName.includes("marie") || lowerName.includes("bernard")) {
-      mock = {
-        firstName: "Marie",
-        lastName: "Bernard",
-        email: "marie.bernard@example.com",
-        phone: "+33 6 12 34 56 78",
-        title: "Chargée de Clientèle B2B",
-        summary: "Forte d'une expérience de 3 ans dans le support aux partenaires commerciaux. Dynamique, organisée et centrée sur la satisfaction clients.",
-        experiences: [
-          {
-            id: 1,
-            title: "Chargée de Relations Clients",
-            employer: "Wave Mobile Money",
-            city: "Thies",
-            startDate: "2023-11",
-            endDate: "",
-            current: true,
-            description: "Accompagnement quotidien des marchands Wave, identification des anomalies de transaction, animation de formations utilisateurs."
-          }
-        ],
-        skills: ["Support commercial", "Gestion des incidents", "CRM Salesforce", "Négociation", "Reporting"]
-      };
+      const response = await fetch("/api/parse-document", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Extraction du document impossible.");
+
+      const { fields } = await response.json();
+
+      setParsedData({
+        firstName: fields.firstName || "",
+        lastName: fields.lastName || "",
+        email: fields.email || "",
+        phone: fields.phone || "",
+        title: fields.title || "",
+        summary: fields.summary || "",
+        experiences: (fields.experiences || []).map((exp, idx) => ({
+          id: idx + 1,
+          title: exp.title || "",
+          employer: exp.employer || "",
+          city: exp.city || "",
+          startDate: exp.startDate || "",
+          endDate: exp.endDate || "",
+          current: !!exp.current,
+          description: exp.description || "",
+        })),
+        skills: fields.skills || [],
+      });
+    } catch (err) {
+      console.error("Erreur d'extraction du document:", err);
+      triggerToast("Impossible d'extraire le contenu du document. Veuillez compléter les champs manuellement.", "fa-triangle-exclamation");
+      setParsedData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        title: "",
+        summary: "",
+        experiences: [],
+        skills: [],
+      });
     }
-
-    setParsedData(mock);
   };
 
   const handleFieldChange = (field, value) => {
