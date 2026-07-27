@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
@@ -231,6 +232,7 @@ const initialJobs = [
 ];
 
 export default function Home() {
+  const pathname = usePathname();
   // --- ÉTATS GÉNÉRAUX ---
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState("FR");
@@ -669,24 +671,24 @@ export default function Home() {
 
           {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Recrutement, Plus) */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
-            {/* Accueil (Actif sur la page d'accueil) */}
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                window.location.reload();
-              }}
-              className="flex flex-col items-center justify-center text-center text-[#10E688] hover:text-[#0fd57d] transition space-y-1 cursor-pointer w-16"
+            {/* Accueil */}
+            <Link
+              href="/"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
             >
               <i className="fa-solid fa-house text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
-            </a>
+            </Link>
 
             {/* Messagerie (Visible uniquement pour les utilisateurs connectés) */}
             {userSession && (
               <Link
                 href="/messagerie"
-                className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+                className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 relative ${
+                  pathname === "/messagerie" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
               >
                 <i className="fa-regular fa-comments text-xl"></i>
                 <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
@@ -732,7 +734,7 @@ export default function Home() {
                 type="button"
                 onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
                 className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
-                  plusDropdownOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                  plusDropdownOpen || pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
                 }`}
               >
                 <i className="fa-solid fa-bars text-xl"></i>
@@ -777,7 +779,9 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+                  className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
+                    pathname === "/profil" || userMenuOpen ? "text-[#10E688] font-bold" : "text-gray-500 hover:text-gray-800"
+                  }`}
                 >
                   <i className="fa-solid fa-circle-user text-xl"></i>
                   <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
@@ -875,23 +879,23 @@ export default function Home() {
 
         {/* Fixed Bottom Mobile Navigation Bar (LinkedIn Mobile Style as shown in Image 2) */}
         <div className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl py-2 px-3 items-center justify-around">
-          {/* Accueil - ACTIF */}
-          <a
+          {/* Accueil */}
+          <Link
             href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.reload();
-            }}
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-[#10E688]"
+            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
+              pathname === "/" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+            }`}
           >
             <i className="fa-solid fa-house text-lg"></i>
             <span className="text-[9px] font-bold tracking-tight">{t.navHome}</span>
-          </a>
+          </Link>
 
           {/* Service */}
           <Link
             href="/service"
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
+            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
+              pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+            }`}
           >
             <i className="fa-solid fa-briefcase text-lg"></i>
             <span className="text-[9px] font-bold tracking-tight">{t.navService}</span>
@@ -901,7 +905,9 @@ export default function Home() {
           {userSession && (
             <Link
               href="/messagerie"
-              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
+              className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 relative ${
+                pathname === "/messagerie" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
             >
               <i className="fa-regular fa-comments text-lg"></i>
               <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>

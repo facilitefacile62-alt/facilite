@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 
 const translations = {
@@ -131,6 +132,7 @@ const scanStepsGB = [
 ];
 
 export default function ImporterCvPage() {
+  const pathname = usePathname();
   const [selectedLang, setSelectedLang] = useState("FR");
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
@@ -620,7 +622,9 @@ export default function ImporterCvPage() {
             {/* Accueil */}
             <Link
               href="/"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
             >
               <i className="fa-solid fa-house text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
@@ -630,7 +634,9 @@ export default function ImporterCvPage() {
             {userSession && (
               <Link
                 href="/messagerie"
-                className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+                className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 relative ${
+                  pathname === "/messagerie" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
               >
                 <i className="fa-regular fa-comments text-xl"></i>
                 <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
@@ -676,7 +682,7 @@ export default function ImporterCvPage() {
                 type="button"
                 onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
                 className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
-                  plusDropdownOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                  plusDropdownOpen || pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
                 }`}
               >
                 <i className="fa-solid fa-bars text-xl"></i>
@@ -742,7 +748,9 @@ export default function ImporterCvPage() {
                 <button
                    type="button"
                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                   className="flex flex-col items-center justify-center text-center text-[#10E688] font-bold space-y-1 cursor-pointer w-16"
+                   className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
+                     pathname === "/profil" || userMenuOpen ? "text-[#10E688] font-bold" : "text-gray-500 hover:text-gray-800"
+                   }`}
                 >
                   <i className="fa-solid fa-circle-user text-xl"></i>
                   <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
@@ -1367,7 +1375,9 @@ export default function ImporterCvPage() {
       <div className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl py-2 px-3 items-center justify-around">
         <Link
           href="/"
-          className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
+          className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
+            pathname === "/" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+          }`}
         >
           <i className="fa-solid fa-house text-lg"></i>
           <span className="text-[9px] font-bold tracking-tight">{t.navHome}</span>
@@ -1375,7 +1385,9 @@ export default function ImporterCvPage() {
 
         <Link
           href="/service"
-          className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
+          className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
+            pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+          }`}
         >
           <i className="fa-solid fa-briefcase text-lg"></i>
           <span className="text-[9px] font-bold tracking-tight">{t.navService}</span>
@@ -1383,7 +1395,9 @@ export default function ImporterCvPage() {
 
         <Link
           href="/messagerie"
-          className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
+          className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 relative ${
+            pathname === "/messagerie" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+          }`}
         >
           <i className="fa-regular fa-comments text-lg"></i>
           <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>

@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 
 export default function ProfilPage() {
+  const pathname = usePathname();
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -533,19 +535,23 @@ export default function ProfilPage() {
           {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Recrutement, Plus) */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
             {/* Accueil */}
-            <a
+            <Link
               href="/"
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
             >
               <i className="fa-solid fa-house text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">Accueil</span>
-            </a>
+            </Link>
 
             {/* Messagerie */}
             {userSession && (
               <Link
                 href="/messagerie"
-                className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16 relative"
+                className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 relative ${
+                  pathname === "/messagerie" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                }`}
               >
                 <i className="fa-regular fa-comments text-xl"></i>
                 <span className="text-[11px] font-bold tracking-tight">Messagerie</span>
@@ -591,7 +597,7 @@ export default function ProfilPage() {
                 type="button"
                 onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
                 className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
-                  plusDropdownOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                  plusDropdownOpen || pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
                 }`}
               >
                 <i className="fa-solid fa-bars text-xl"></i>
@@ -635,7 +641,7 @@ export default function ProfilPage() {
               type="button"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
-                userMenuOpen ? "text-[#10E688] font-black scale-105" : "text-[#10E688] font-bold hover:opacity-85"
+                pathname === "/profil" || userMenuOpen ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
               }`}
             >
               <i className="fa-solid fa-circle-user text-xl"></i>
