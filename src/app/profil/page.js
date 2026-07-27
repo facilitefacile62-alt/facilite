@@ -173,15 +173,29 @@ export default function ProfilPage() {
         }
 
         if (profile?.full_name) {
-          const parts = profile.full_name.split(" ");
+          const parts = profile.full_name.trim().split(" ");
           setFirstName(parts[0] || "");
           setLastName(parts.slice(1).join(" ") || "");
+        } else if (typeof window !== "undefined") {
+          setFirstName(localStorage.getItem("user_first_name") || "");
+          setLastName(localStorage.getItem("user_last_name") || "");
         }
+
+        setJobTitle(profile?.headline || (typeof window !== "undefined" ? localStorage.getItem("user_job_title") || "" : ""));
+        setCity(profile?.city || (profile?.location ? profile.location.split(",")[0]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_city") || "" : "")));
+        setCountry(profile?.country || (profile?.location ? profile.location.split(",")[1]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_country") || "" : "")));
       } else {
         if (resumesList && resumesList.length > 0) {
           setUserDocuments(resumesList);
           setCvUrl(resumesList[0].file_url);
           setUploadedCvFileName(resumesList[0].title);
+        }
+        if (typeof window !== "undefined") {
+          setFirstName(localStorage.getItem("user_first_name") || "");
+          setLastName(localStorage.getItem("user_last_name") || "");
+          setJobTitle(localStorage.getItem("user_job_title") || "");
+          setCity(localStorage.getItem("user_city") || "");
+          setCountry(localStorage.getItem("user_country") || "");
         }
         setProfileName(session.user.email?.split("@")[0] || "");
       }
@@ -594,18 +608,53 @@ export default function ProfilPage() {
     }
   };
 
-  const handleSavePersonalDetails = (e) => {
+  // Sauvegarder les informations personnelles de manière persistante dans Supabase & localStorage
+  const handleSavePersonalDetails = async (e) => {
     if (e) e.preventDefault();
+    if (!userSession?.user) return;
+
+    triggerToast("Sauvegarde des modifications...", "fa-spinner fa-spin");
+
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-    setProfileName(fullName || "Macoumba Samak");
-    if (jobTitle.trim()) {
-      setProfileSubtitle(jobTitle);
+    const headlineStr = jobTitle.trim();
+    const locationStr = `${city.trim() ? city.trim() + ", " : ""}${country.trim() ? country.trim() : ""}`.replace(/,\s*$/, "");
+
+    // 1. Mettre à jour immédiatement l'interface utilisateur
+    setProfileName(fullName || userSession.user.email?.split("@")[0] || "Macoumba Samak");
+    if (headlineStr) setProfileSubtitle(headlineStr);
+    if (locationStr) setProfileLocation(locationStr);
+
+    try {
+      // 2. Mettre à jour ou insérer de manière persistante dans la table profiles de Supabase
+      const { error } = await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        full_name: fullName,
+        headline: headlineStr,
+        location: locationStr,
+        city: city.trim(),
+        country: country.trim(),
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        console.error("Erreur mise à jour profil Supabase:", error);
+        triggerToast("Erreur lors de la sauvegarde dans Supabase", "fa-triangle-exclamation");
+      } else {
+        // 3. Sauvegarder également dans localStorage pour secours instantané
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user_first_name", firstName.trim());
+          localStorage.setItem("user_last_name", lastName.trim());
+          localStorage.setItem("user_job_title", headlineStr);
+          localStorage.setItem("user_city", city.trim());
+          localStorage.setItem("user_country", country.trim());
+        }
+        triggerToast("Informations personnelles sauvegardées avec succès !", "fa-floppy-disk");
+      }
+    } catch (err) {
+      console.error("Exception lors de la sauvegarde des informations:", err);
+      triggerToast("Erreur de connexion lors de la sauvegarde", "fa-triangle-exclamation");
     }
-    const locationStr = `${city.trim() ? city.trim() + ", " : ""}${country.trim() ? country.trim() : ""}`;
-    if (locationStr) {
-      setProfileLocation(locationStr);
-    }
-    triggerToast("Informations personnelles sauvegardées !", "fa-floppy-disk");
   };
 
   return (
