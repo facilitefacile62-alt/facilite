@@ -1639,46 +1639,16 @@ export default function ProfilPage() {
                   </button>
                 </div>
               )}
-            </div>
-
-              {/* Expériences */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider">Expériences Professionnelles</h4>
-                {experiences.length > 0 ? (
-                  experiences.map((exp) => (
-                    <div key={exp.id} className="bg-white p-3.5 rounded-xl border border-gray-200/80 space-y-1">
-                      <div className="flex justify-between items-center">
-                        <h5 className="text-xs font-extrabold text-gray-900">{exp.title} — <span className="text-gray-600 font-bold">{exp.company}</span></h5>
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">{exp.startMonth} {exp.startYear}</span>
-                      </div>
-                      <p className="text-[11px] text-gray-500 font-medium">{exp.location} ({exp.locationType}) • {exp.employmentType}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-gray-400 italic">Aucune expérience enregistrée.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Actions Modal */}
+            {/* Footer Modale Visionneuse */}
             <div className="flex justify-between items-center pt-2">
-              <span className="text-xs font-bold text-gray-400">Modèle Facilite HD • Format A4</span>
+              <span className="text-xs font-bold text-gray-400">Document Certifié Facilite HD</span>
               <div className="flex space-x-3">
                 <button
+                  type="button"
                   onClick={() => setCvPreviewModalOpen(false)}
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition cursor-pointer"
                 >
                   Fermer
-                </button>
-                <button
-                  onClick={() => {
-                    triggerToast("Téléchargement du CV lancé !", "fa-download");
-                    setCvPreviewModalOpen(false);
-                  }}
-                  className="px-5 py-2 bg-[#10E688] hover:bg-[#0ed67e] text-gray-950 font-extrabold text-xs rounded-xl shadow-sm transition cursor-pointer flex items-center space-x-1.5"
-                >
-                  <i className="fa-solid fa-download text-xs"></i>
-                  <span>Télécharger PDF</span>
                 </button>
               </div>
             </div>
