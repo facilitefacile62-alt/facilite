@@ -1460,24 +1460,6 @@ export default function ProfilPage() {
                         })}
                       </div>
                     )}
-
-                    <p className="text-xs text-gray-500 font-medium flex items-center space-x-1.5 pt-0.5">
-                      <i className="fa-solid fa-location-dot text-red-500"></i>
-                      <span>{profileLocation}</span>
-                      <span className="text-gray-300">•</span>
-                      <button
-                        onClick={handleOpenModal}
-                        className="text-blue-600 hover:underline font-bold cursor-pointer"
-                      >
-                        Coordonnées
-                      </button>
-                    </p>
-
-                    {/* Badge Entreprise */}
-                    <div className="flex items-center space-x-2 pt-1">
-                      <img src="/logo.jpeg" alt="facilite" className="w-4 h-4 rounded-xs object-cover" />
-                      <span className="text-xs font-bold text-gray-800">Facilite Corporation</span>
-                    </div>
                   </div>
                 </div>
               </div>
