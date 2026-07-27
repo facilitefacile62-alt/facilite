@@ -242,10 +242,10 @@ export default function ImporterCvPage() {
   };
 
   // Parse files, upload to Supabase & simulate advanced extraction
-  const processFile = async (selectedFile) => {
+  const processFile = (selectedFile) => {
     const validExtensions = ["pdf", "doc", "docx"];
     const extension = selectedFile.name.split(".").pop().toLowerCase();
-    
+
     if (!validExtensions.includes(extension)) {
       triggerToast(t.toastErrorImport, "fa-circle-exclamation");
       return;
@@ -255,59 +255,6 @@ export default function ImporterCvPage() {
     setStage("scanning");
     setScanStepIndex(0);
     setScanProgress(0);
-
-    // Save persistently to Supabase Storage & DB if user is logged in
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      try {
-        let finalCvUrl = null;
-        const fileName = `${session.user.id}_${Date.now()}.${extension}`;
-        const filePath = `cvs/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('resumes')
-          .upload(filePath, selectedFile, { upsert: true });
-
-        if (!uploadError) {
-          const { data: publicUrlData } = supabase.storage
-            .from('resumes')
-            .getPublicUrl(filePath);
-          finalCvUrl = publicUrlData?.publicUrl;
-        }
-
-        const base64Content = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(selectedFile);
-        });
-
-        const urlToSave = finalCvUrl || base64Content;
-        if (typeof window !== "undefined") {
-          localStorage.setItem("user_cv_url", urlToSave);
-          localStorage.setItem("user_cv_name", selectedFile.name);
-        }
-
-        await supabase.from("profiles").upsert({
-          id: session.user.id,
-          email: session.user.email,
-          cv_url: urlToSave,
-          cv_name: selectedFile.name,
-          updated_at: new Date().toISOString(),
-        });
-
-        await supabase.from("resumes").insert({
-          user_id: session.user.id,
-          title: selectedFile.name,
-          type: "imported",
-          file_url: urlToSave,
-          content: { fileName: selectedFile.name, uploadedAt: new Date().toISOString() },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-      } catch (err) {
-        console.error("Erreur lors de la sauvegarde Supabase:", err);
-      }
-    }
   };
 
   // Simulation timeline for scanning CV
