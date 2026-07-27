@@ -1997,9 +1997,11 @@ export default function ProfilPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-400 space-y-2">
-                  <i className="fa-solid fa-briefcase text-3xl text-gray-300"></i>
-                  <p className="text-xs font-semibold">Aucune expérience enregistrée pour le moment.</p>
+                <div className="text-center py-6 text-gray-400 space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mx-auto text-sm">
+                    <i className="fa-solid fa-briefcase"></i>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700">Aucune expérience enregistrée pour le moment.</p>
                 </div>
               )}
             </div>
@@ -2056,14 +2058,6 @@ export default function ProfilPage() {
                     <i className="fa-solid fa-graduation-cap"></i>
                   </div>
                   <p className="text-xs font-semibold text-gray-700">Aucune formation ou diplôme enregistré pour le moment.</p>
-                  <button
-                    type="button"
-                    onClick={() => setEducationModalOpen(true)}
-                    className="inline-flex items-center space-x-1.5 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition cursor-pointer mt-1"
-                  >
-                    <i className="fa-solid fa-plus text-xs"></i>
-                    <span>Ajouter votre première formation</span>
-                  </button>
                 </div>
               )}
             </div>
