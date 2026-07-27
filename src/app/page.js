@@ -1035,23 +1035,23 @@ export default function Home() {
             
             {/* Carte Profil */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
-              {/* Image de couverture en hauteur (Ciel étoilé avec lune comme dans la capture) */}
+              {/* Image de couverture en hauteur */}
               <Link
                 href={userSession ? "/profil" : "/login"}
                 className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
-                style={{ backgroundImage: "url('/stellar-cover.png')" }}
+                style={{ backgroundImage: `url('${userProfile?.cover_url || '/stellar-cover.png'}')` }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-indigo-950 opacity-90 group-hover:opacity-75 transition"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
               </Link>
               
               <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
-                {/* Photo de profil (Logo Facilite avec bord blanc chevauchant la couverture) */}
+                {/* Photo de profil (Logo ou Avatar personnalisé) */}
                 <Link
                   href={userSession ? "/profil" : "/login"}
                   className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white shadow-md overflow-hidden bg-white block cursor-pointer group"
                 >
                   <img
-                    src="/logo.jpeg"
+                    src={userProfile?.avatar_url || "/logo.jpeg"}
                     alt="Facilite Logo Profile"
                     className="w-full h-full object-cover group-hover:scale-105 transition"
                   />

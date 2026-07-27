@@ -21,7 +21,15 @@ export default function ProfilPage() {
   const [profileSubtitle, setProfileSubtitle] = useState("");
   const [profileLocation, setProfileLocation] = useState("");
   const [profileBio, setProfileBio] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
+  const [coverUrl, setCoverUrl] = useState("/stellar-cover.png");
   const [isEditingBio, setIsEditingBio] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+
+  // File Inputs Refs pour Avatar et Couverture
+  const avatarInputRef = useRef(null);
+  const coverInputRef = useRef(null);
 
   // Formulaire "Mon profil et mon CV"
   const [firstName, setFirstName] = useState("");
@@ -79,6 +87,8 @@ export default function ProfilPage() {
         setProfileSubtitle(profile.headline || "");
         setProfileLocation(profile.location || "");
         setProfileBio(profile.bio || "");
+        setAvatarUrl(profile.avatar_url || "/logo.jpeg");
+        setCoverUrl(profile.cover_url || "/stellar-cover.png");
         setExperiences(profile.experiences || []);
 
         if (profile.full_name) {
@@ -93,6 +103,68 @@ export default function ProfilPage() {
 
     loadUserProfile();
   }, []);
+
+  // Gestion du téléversement de la photo de profil (Avatar)
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !userSession?.user) return;
+
+    setIsUploadingAvatar(true);
+    triggerToast("Téléversement de la photo de profil...", "fa-spinner fa-spin");
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Data = reader.result;
+      setAvatarUrl(base64Data);
+
+      try {
+        await supabase.from("profiles").upsert({
+          id: userSession.user.id,
+          email: userSession.user.email,
+          avatar_url: base64Data,
+          updated_at: new Date().toISOString(),
+        });
+        setIsUploadingAvatar(false);
+        triggerToast("Photo de profil mise à jour avec succès !", "fa-camera");
+      } catch (err) {
+        console.error(err);
+        setIsUploadingAvatar(false);
+        triggerToast("Erreur lors de la mise à jour de l'avatar", "fa-triangle-exclamation");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Gestion du téléversement de l'image de couverture
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !userSession?.user) return;
+
+    setIsUploadingCover(true);
+    triggerToast("Téléversement de la couverture...", "fa-spinner fa-spin");
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Data = reader.result;
+      setCoverUrl(base64Data);
+
+      try {
+        await supabase.from("profiles").upsert({
+          id: userSession.user.id,
+          email: userSession.user.email,
+          cover_url: base64Data,
+          updated_at: new Date().toISOString(),
+        });
+        setIsUploadingCover(false);
+        triggerToast("Image de couverture mise à jour avec succès !", "fa-image");
+      } catch (err) {
+        console.error(err);
+        setIsUploadingCover(false);
+        triggerToast("Erreur lors de la mise à jour de la couverture", "fa-triangle-exclamation");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Sauvegarder la biographie dans Supabase
   const handleSaveBio = async () => {
@@ -600,35 +672,69 @@ export default function ProfilPage() {
 
             {/* CARTE HERO PROFIL STYLE LINKEDIN */}
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs relative">
-              {/* Image de couverture spatiale stellaire */}
+              {/* Inputs de fichiers masqués pour Avatar & Couverture */}
+              <input
+                type="file"
+                ref={avatarInputRef}
+                onChange={handleAvatarUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <input
+                type="file"
+                ref={coverInputRef}
+                onChange={handleCoverUpload}
+                accept="image/*"
+                className="hidden"
+              />
+
+              {/* Image de couverture spatiale stellaire / personnalisée */}
               <div
                 className="h-44 md:h-56 bg-cover bg-center bg-no-repeat relative"
-                style={{ backgroundImage: "url('/stellar-cover.png')" }}
+                style={{ backgroundImage: `url('${coverUrl}')` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60"></div>
                 <button
-                  onClick={() => triggerToast("Bannière mise à jour !", "fa-image")}
-                  className="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-800 p-2 rounded-full shadow-md text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer backdrop-blur-xs"
+                  type="button"
+                  disabled={isUploadingCover}
+                  onClick={() => coverInputRef.current?.click()}
+                  className="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-800 p-2.5 px-3.5 rounded-full shadow-md text-xs font-bold transition flex items-center space-x-2 cursor-pointer backdrop-blur-xs active:scale-95 z-20"
                 >
-                  <i className="fa-solid fa-camera text-gray-600"></i>
-                  <span className="hidden sm:inline">Changer la couverture</span>
+                  {isUploadingCover ? (
+                    <>
+                      <i className="fa-solid fa-circle-notch animate-spin text-blue-600"></i>
+                      <span className="hidden sm:inline">Téléversement...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-camera text-gray-700"></i>
+                      <span className="hidden sm:inline">Changer la couverture</span>
+                    </>
+                  )}
                 </button>
               </div>
 
               {/* Contenu Profil Hero */}
               <div className="px-6 md:px-8 pb-6 pt-0 relative">
-                {/* Photo de profil (Grand cercle clé Facilite avec bordure blanche) */}
+                {/* Photo de profil (Grand cercle avec overlay d'édition) */}
                 <div className="-mt-16 md:-mt-20 mb-4 relative z-10 w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white group flex-shrink-0">
                   <img
-                    src="/logo.jpeg"
+                    src={avatarUrl}
                     alt="Logo Profil Facilite"
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                   />
                   <div
-                    onClick={() => triggerToast("Photo de profil mise à jour !", "fa-camera")}
-                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white cursor-pointer"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer"
                   >
-                    <i className="fa-solid fa-camera text-xl"></i>
+                    {isUploadingAvatar ? (
+                      <i className="fa-solid fa-circle-notch animate-spin text-2xl"></i>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-camera text-2xl mb-1"></i>
+                        <span className="text-[10px] font-bold tracking-tight">Modifier</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
