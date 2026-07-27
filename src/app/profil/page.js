@@ -1639,6 +1639,8 @@ export default function ProfilPage() {
                   </button>
                 </div>
               )}
+            </div>
+
             {/* Footer Modale Visionneuse */}
             <div className="flex justify-between items-center pt-2">
               <span className="text-xs font-bold text-gray-400">Document Certifié Facilite HD</span>
