@@ -815,7 +815,7 @@ export default function MessageriePage() {
                   type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
-                    pathname === "/profil" || userMenuOpen ? "text-[#10E688] font-bold" : "text-gray-500 hover:text-gray-800"
+                    pathname === "/profil" ? "text-[#10E688] font-bold" : "text-gray-500 hover:text-gray-800"
                   }`}
                 >
                   <i className="fa-solid fa-circle-user text-xl"></i>
