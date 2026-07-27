@@ -1478,17 +1478,11 @@ export default function ProfilPage() {
                 <div className="w-full md:w-64 flex-shrink-0 border-r-0 md:border-r border-gray-200/80 pr-0 md:pr-4 space-y-1">
                   {[
                     { id: "intro", label: "Intro", icon: "fa-solid fa-hand" },
-                    { id: "categorie", label: "Catégorie", icon: "fa-regular fa-folder" },
                     { id: "info_perso", label: "Informations personnelles", icon: "fa-regular fa-id-card" },
-                    { id: "liens", label: "Liens", icon: "fa-solid fa-link" },
                     { id: "langues", label: "Langues", icon: "fa-solid fa-language" },
-                    { id: "communautes", label: "Communautés", icon: "fa-solid fa-users" },
-                    { id: "offres", label: "Offres", icon: "fa-solid fa-briefcase" },
                     { id: "experiences", label: "Expériences professionnelles", icon: "fa-solid fa-user-tie" },
                     { id: "formation", label: "Formation", icon: "fa-solid fa-graduation-cap" },
-                    { id: "loisirs", label: "Loisirs", icon: "fa-solid fa-icons" },
                     { id: "interets", label: "Centres d'intérêt", icon: "fa-solid fa-heart" },
-                    { id: "voyage", label: "Voyage", icon: "fa-solid fa-plane" },
                     { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
                     { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
                     { id: "noms", label: "Noms", icon: "fa-regular fa-user" },
@@ -2095,7 +2089,7 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {!["info_perso", "intro", "categorie", "liens", "coordonnees", "experiences", "formation", "langues"].includes(activeAboutTab) && (
+                  {!["intro", "info_perso", "langues", "experiences", "formation", "interets", "coordonnees", "confidentialite", "noms"].includes(activeAboutTab) && (
                     <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 space-y-2">
                       <p className="text-xs font-bold text-gray-700">Aucune donnée spécifique enregistrée pour cet onglet.</p>
                       <p className="text-[11px] text-gray-500">Cliquez sur l'icône de crayon pour ajouter des informations.</p>
