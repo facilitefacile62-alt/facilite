@@ -611,11 +611,11 @@ export default function ProfilPage() {
     const rawSkills = getValue(apiFields, ["skills", "competences", "compétences", "competence", "compétence", "skills_list"]) || [];
 
     const experiences = (Array.isArray(rawExperiences) ? rawExperiences : [rawExperiences].filter(Boolean)).map((exp, idx) => {
-      const title = getValue(exp, ["title", "post", "poste", "intitule", "intitulé", "job"]);
+      const title = getValue(exp, ["title", "role", "post", "poste", "intitule", "intitulé", "job"]);
       const employer = getValue(exp, ["employer", "company", "entreprise", "employeur", "societe", "société"]);
       const expCity = getValue(exp, ["city", "location", "lieu", "ville"]);
       const current = getValue(exp, ["current", "enCours", "en_cours", "actuel", "isCurrent", "is_current"]);
-      const startDate = String(getValue(exp, ["startDate", "start_date", "dateDebut", "date_debut", "debut", "début", "startYear", "start_year"]));
+      const startDate = String(getValue(exp, ["startDate", "start_date", "dateDebut", "date_debut", "debut", "début", "startYear", "start_year", "period"]));
       const endDate = String(getValue(exp, ["endDate", "end_date", "dateFin", "date_fin", "fin", "endYear", "end_year"]));
       const description = getValue(exp, ["description", "tasks", "missions", "details", "détails"]);
 
@@ -636,10 +636,10 @@ export default function ProfilPage() {
     });
 
     const educations = (Array.isArray(rawEducations) ? rawEducations : [rawEducations].filter(Boolean)).map((edu, idx) => {
-      const school = getValue(edu, ["school", "etablissement", "établissement", "universite", "université", "ecole", "école"]);
+      const school = getValue(edu, ["school", "institution", "etablissement", "établissement", "universite", "université", "ecole", "école"]);
       const degree = getValue(edu, ["degree", "diploma", "diplome", "diplôme", "qualification"]);
       const startYear = String(getValue(edu, ["startYear", "start_year", "anneeDebut", "annee_debut", "debut", "début", "startDate", "start_date"]));
-      const endYear = String(getValue(edu, ["endYear", "end_year", "anneeFin", "annee_fin", "fin", "endDate", "end_date"]));
+      const endYear = String(getValue(edu, ["endYear", "end_year", "year", "anneeFin", "annee_fin", "fin", "endDate", "end_date"]));
 
       return {
         id: Date.now() + 100 + idx,
@@ -675,9 +675,25 @@ export default function ProfilPage() {
       (summaryVal || "").toLowerCase().includes("cni") || 
       (summaryVal || "").toLowerCase().includes("passeport");
 
+    // Gérer l'extraction et le découpage du nom complet s'il est renvoyé en un seul bloc (fullName)
+    let firstNameVal = getValue(apiFields, ["firstName", "prenom", "prénom", "first_name", "givenName", "given_name"]);
+    let lastNameVal = getValue(apiFields, ["lastName", "nom", "nomDeFamille", "nom_de_famille", "last_name", "familyName", "family_name"]);
+    const fullNameVal = getValue(apiFields, ["fullName", "full_name", "nomComplet", "nom_complet", "name"]);
+
+    if (!firstNameVal && !lastNameVal && fullNameVal) {
+      const parts = fullNameVal.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        firstNameVal = parts[0];
+        lastNameVal = parts.slice(1).join(" ");
+      } else {
+        firstNameVal = fullNameVal;
+        lastNameVal = "";
+      }
+    }
+
     return {
-      firstName: getValue(apiFields, ["firstName", "prenom", "prénom", "first_name", "givenName", "given_name"]),
-      lastName: getValue(apiFields, ["lastName", "nom", "nomDeFamille", "nom_de_famille", "last_name", "familyName", "family_name"]),
+      firstName: firstNameVal || "",
+      lastName: lastNameVal || "",
       jobTitle: titleVal || "",
       bio: summaryVal || "",
       city: getValue(apiFields, ["city", "ville", "city_name", "adresse_ville", "adresseville"]),
@@ -736,7 +752,7 @@ export default function ProfilPage() {
       const rawJsonResponse = await parseResponse.json().catch(() => ({}));
       console.log("Données brutes de l'extraction reçues du backend :", rawJsonResponse);
 
-      const apiFields = rawJsonResponse.fields || {};
+      const apiFields = rawJsonResponse.fields || rawJsonResponse.data || {};
 
       triggerToast("🤖 Cartographie des données extraites vers le profil...", "fa-wand-magic-sparkles fa-spin");
 
