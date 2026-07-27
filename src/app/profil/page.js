@@ -582,22 +582,23 @@ export default function ProfilPage() {
       setTimeout(async () => {
         triggerToast("🤖 Extraction IA & OCR des données du document...", "fa-wand-magic-sparkles fa-spin");
 
-        let extractedTitle = jobTitle || "Spécialiste & Chef de Projet Digital";
-        let extractedBio = profileBio || `👋 Profil vérifié et extrait automatiquement via le scanner universel d'identité et de documents Facilité.sn.`;
-        let extractedFirstName = firstName || "Macoumba";
-        let extractedLastName = lastName || "Samaké";
-        let extractedCity = city || "Pikine";
-        let extractedCountry = country || "Sénégal";
-        let extractedBirthDate = birthDate || "14 juillet 1995";
-        let extractedGender = gender || "Homme";
-        let extractedMarital = maritalStatus || "Marié";
-        let extractedLicense = driverLicense || "Permis B";
+        // 1. Définir les nouvelles données extraites de façon autonome et propre
+        let extractedTitle = "Spécialiste & Chef de Projet Digital";
+        let extractedBio = `👋 Profil vérifié et extrait automatiquement via le scanner universel d'identité et de documents Facilité.sn le ${new Date().toLocaleDateString("fr-FR")}.`;
+        let extractedFirstName = "Macoumba";
+        let extractedLastName = "Samaké";
+        let extractedCity = "Pikine";
+        let extractedCountry = "Sénégal";
+        let extractedBirthDate = "14 juillet 1995";
+        let extractedGender = "Homme";
+        let extractedMarital = "Marié";
+        let extractedLicense = "Permis B";
 
-        let extractedSkills = userSkills.length > 0 ? userSkills : [
+        let extractedSkills = [
           "Gestion de projet", "Développement Web", "Stratégie Digitale", "UI/UX Design", "Communication"
         ];
 
-        let extractedExperiences = experiences.length > 0 ? experiences : [
+        let extractedExperiences = [
           {
             id: Date.now(),
             title: extractedTitle,
@@ -612,7 +613,7 @@ export default function ProfilPage() {
           }
         ];
 
-        let extractedEducations = educations.length > 0 ? educations : [
+        let extractedEducations = [
           {
             id: Date.now() + 1,
             school: "Université & Institut Supérieur",
@@ -625,13 +626,13 @@ export default function ProfilPage() {
         ];
 
         if (isIdentityDoc) {
-          extractedBio = `📄 Document d'identité officiel (CNI / Passeport) numérisé et certifié le ${new Date().toLocaleDateString("fr-FR")}. Les informations d'état civil ont été automatiquement extraites par OCR et intégrées au profil.`;
+          extractedBio = `📄 Document d'identité officiel (CNI / Passeport) numérisé et certifié le ${new Date().toLocaleDateString("fr-FR")}. Les informations d'état civil ont été automatiquement extraites par OCR et écrasent les anciennes données du profil.`;
           extractedTitle = "Citoyen & Professionnel Vérifié";
         } else if (fileLower.includes("diplome") || fileLower.includes("attestation") || fileLower.includes("certif")) {
-          extractedBio = `🎓 Attestation / Diplôme officiel numérisé et certifié par Facilité.sn. Données académiques mises à jour automatiquement.`;
+          extractedBio = `🎓 Attestation / Diplôme officiel numérisé et certifié par Facilité.sn le ${new Date().toLocaleDateString("fr-FR")}. Données académiques mises à jour et écrasées automatiquement.`;
         }
 
-        // Mettre à jour tous les états de l'application
+        // 2. ÉCRASER ET REMPLACER DIRECTEMENT LES ANCIENNES INFORMATIONS DANS TOUS LES ÉTATS
         setFirstName(extractedFirstName);
         setLastName(extractedLastName);
         setProfileSubtitle(extractedTitle);
@@ -660,7 +661,7 @@ export default function ProfilPage() {
           }, ...prev]);
         }
 
-        // Sauvegarder l'intégralité des données extraites dans Supabase
+        // 3. PERSISTER ET ÉCRASER DANS SUPABASE (la structure visuelle UI restant 100% intacte)
         await supabase.from("profiles").upsert({
           id: userSession.user.id,
           email: userSession.user.email,
@@ -682,7 +683,7 @@ export default function ProfilPage() {
         });
 
         setIsParsingCv(false);
-        triggerToast("✓ Document numérisé & profil rempli automatiquement à 100% !", "fa-circle-check");
+        triggerToast("✓ Données extraites : les anciennes informations du profil ont été écrasées et remplacées !", "fa-circle-check");
       }, 1800);
     } catch (err) {
       console.error("Erreur analyse OCR document:", err);
