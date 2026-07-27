@@ -53,6 +53,9 @@ export default function ProfilPage() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [uploadedCvFileName, setUploadedCvFileName] = useState(null);
+  const [cvUrl, setCvUrl] = useState(null);
+  const [cvFileType, setCvFileType] = useState(null); // 'pdf' | 'doc' | 'image'
+  const [isUploadingCv, setIsUploadingCv] = useState(false);
   const [cvPreviewModalOpen, setCvPreviewModalOpen] = useState(false);
   const cvFileInputRef = useRef(null);
 
@@ -105,6 +108,18 @@ export default function ProfilPage() {
         setAvatarUrl(profile.avatar_url || "/logo.jpeg");
         setCoverUrl(profile.cover_url || "/stellar-cover.png");
         setExperiences(profile.experiences || []);
+
+        if (profile.cv_url) {
+          setCvUrl(profile.cv_url);
+          setUploadedCvFileName(profile.cv_name || "Mon_CV_Professionnel");
+          if (profile.cv_url.includes("pdf") || profile.cv_url.startsWith("data:application/pdf")) {
+            setCvFileType("pdf");
+          } else if (profile.cv_url.includes("doc") || profile.cv_url.includes("word")) {
+            setCvFileType("doc");
+          } else {
+            setCvFileType("pdf");
+          }
+        }
 
         if (profile.full_name) {
           const parts = profile.full_name.split(" ");
@@ -338,12 +353,41 @@ export default function ProfilPage() {
     }, 1200);
   };
 
-  const handleCvFileChange = (e) => {
+  // Téléversement & Enregistrement du fichier CV dans Supabase
+  const handleCvFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setUploadedCvFileName(file.name);
-      triggerToast(`Fichier "${file.name}" importé avec succès !`, "fa-file-circle-check");
-    }
+    if (!file || !userSession?.user) return;
+
+    setIsUploadingCv(true);
+    triggerToast("Importation du CV en cours...", "fa-spinner fa-spin");
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const type = ext === "pdf" ? "pdf" : (ext === "doc" || ext === "docx" ? "doc" : "pdf");
+    setCvFileType(type);
+    setUploadedCvFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Content = reader.result;
+      setCvUrl(base64Content);
+
+      try {
+        await supabase.from("profiles").upsert({
+          id: userSession.user.id,
+          email: userSession.user.email,
+          cv_url: base64Content,
+          cv_name: file.name,
+          updated_at: new Date().toISOString(),
+        });
+        setIsUploadingCv(false);
+        triggerToast(`CV "${file.name}" importé et sauvegardé !`, "fa-file-circle-check");
+      } catch (err) {
+        console.error(err);
+        setIsUploadingCv(false);
+        triggerToast("Erreur lors de la sauvegarde du CV", "fa-triangle-exclamation");
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSavePersonalDetails = (e) => {
@@ -1499,57 +1543,103 @@ export default function ProfilPage() {
           </div>
         </div>
       )}
-      {/* MODAL APERÇU DU CV (DECLENCHÉ PAR L'ICÔNE OEIL) */}
+      {/* MODAL APERÇU / VISIONNEUSE NATIVE DU CV (DÉCLENCHÉE PAR L'ICÔNE ŒIL) */}
       {cvPreviewModalOpen && (
         <div
           className="fixed inset-0 z-[750] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto"
           onClick={() => setCvPreviewModalOpen(false)}
         >
           <div
-            className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl space-y-6 relative border border-gray-100 transform transition-all scale-100"
+            className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl space-y-5 relative border border-gray-100 transform transition-all scale-100 flex flex-col max-h-[92vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Bouton Fermer */}
             <button
               onClick={() => setCvPreviewModalOpen(false)}
-              className="absolute top-5 right-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition cursor-pointer"
+              className="absolute top-5 right-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition cursor-pointer z-20"
             >
               <i className="fa-solid fa-xmark text-lg"></i>
             </button>
 
-            {/* En-tête Aperçu */}
-            <div className="flex items-center space-x-3 border-b border-gray-100 pb-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#047857] flex items-center justify-center font-bold">
-                <i className="fa-solid fa-eye text-lg"></i>
+            {/* En-tête Visionneuse */}
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4 pr-10">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#047857] flex items-center justify-center font-bold">
+                  <i className="fa-solid fa-file-pdf text-lg"></i>
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-gray-900">Visionneuse de CV</h3>
+                  <p className="text-xs text-gray-500 font-medium">
+                    {uploadedCvFileName ? `Document : ${uploadedCvFileName}` : "Aucun fichier de CV téléversé"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-extrabold text-gray-900">Aperçu du CV</h3>
-                <p className="text-xs text-gray-500 font-medium">
-                  {uploadedCvFileName ? `Fichier chargé : ${uploadedCvFileName}` : "Aperçu de votre identité professionnelle Facilite"}
-                </p>
-              </div>
+
+              {cvUrl && (
+                <a
+                  href={cvUrl}
+                  download={uploadedCvFileName || "Mon_CV.pdf"}
+                  className="hidden sm:flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-[#047857] border border-[#A7F3D0] px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-download text-xs"></i>
+                  <span>Télécharger</span>
+                </a>
+              )}
             </div>
 
-            {/* Document Aperçu CV Simulation */}
-            <div className="bg-[#FAF9F6] border border-gray-200 rounded-2xl p-6 md:p-8 shadow-inner space-y-6 max-h-[60vh] overflow-y-auto">
-              <div className="flex justify-between items-start border-b border-gray-300 pb-4">
-                <div>
-                  <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{profileName}</h1>
-                  <p className="text-sm font-bold text-[#047857]">{profileSubtitle}</p>
-                  <p className="text-xs text-gray-500 font-medium mt-1">{profileLocation}</p>
+            {/* Corps de la Visionneuse */}
+            <div className="flex-1 bg-gray-100 border border-gray-200 rounded-2xl overflow-hidden min-h-[450px] flex items-center justify-center relative shadow-inner">
+              {cvUrl ? (
+                cvFileType === "pdf" || cvUrl.startsWith("data:application/pdf") ? (
+                  <iframe
+                    src={cvUrl}
+                    title="Visionneuse PDF CV"
+                    className="w-full h-full min-h-[500px] border-none rounded-2xl"
+                  />
+                ) : (
+                  <div className="p-8 text-center space-y-4 max-w-md bg-white rounded-2xl shadow-lg border border-gray-200">
+                    <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
+                      <i className="fa-regular fa-file-word"></i>
+                    </div>
+                    <h4 className="text-base font-extrabold text-gray-900">{uploadedCvFileName}</h4>
+                    <p className="text-xs text-gray-500 font-medium">
+                      Ce document Word (.docx) est enregistré dans votre profil Supabase. Vous pouvez le consulter ou le télécharger ci-dessous.
+                    </p>
+                    <a
+                      href={cvUrl}
+                      download={uploadedCvFileName || "Mon_CV.docx"}
+                      className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs shadow-md transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-download text-xs"></i>
+                      <span>Télécharger le fichier Word</span>
+                    </a>
+                  </div>
+                )
+              ) : (
+                <div className="p-8 text-center space-y-4 max-w-md">
+                  <div className="w-20 h-20 bg-pink-50 text-pink-500 rounded-3xl flex items-center justify-center mx-auto text-3xl font-bold shadow-xs">
+                    <i className="fa-regular fa-file-excel"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-base font-extrabold text-gray-900">Aucun CV importé</h4>
+                    <p className="text-xs text-gray-500 font-medium mt-1">
+                      Vous n'avez pas encore téléversé de document. Cliquez sur "Importateur" pour ajouter votre CV au format PDF ou Word.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCvPreviewModalOpen(false);
+                      cvFileInputRef.current?.click();
+                    }}
+                    className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-6 py-3 rounded-xl text-xs shadow-md transition cursor-pointer inline-flex items-center space-x-2"
+                  >
+                    <i className="fa-solid fa-arrow-up-from-bracket text-xs"></i>
+                    <span>Importer un CV maintenant</span>
+                  </button>
                 </div>
-                <div className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden bg-white">
-                  <img src="/logo.jpeg" alt="Logo" className="w-full h-full object-cover" />
-                </div>
-              </div>
-
-              {/* Bio / Résumé */}
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider">Profil Personnel</h4>
-                <p className="text-xs text-gray-600 leading-relaxed font-medium bg-white p-3 rounded-xl border border-gray-200/80">
-                  {profileBio}
-                </p>
-              </div>
+              )}
+            </div>
 
               {/* Expériences */}
               <div className="space-y-2">
