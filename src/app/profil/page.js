@@ -119,24 +119,57 @@ export default function ProfilPage() {
         setCoverUrl(profile.cover_url || "/stellar-cover.png");
         setExperiences(profile.experiences || []);
 
-        if (profile.cv_url) {
-          setCvUrl(profile.cv_url);
-          setUploadedCvFileName(profile.cv_name || "Mon_CV_Professionnel");
-          if (profile.cv_url.includes("pdf") || profile.cv_url.startsWith("data:application/pdf")) {
+        let profileCvUrl = profile?.cv_url;
+        let profileCvName = profile?.cv_name;
+
+        // Si non présent dans profiles, tenter de récupérer dans la table resumes
+        if (!profileCvUrl) {
+          const { data: resumesData } = await supabase
+            .from("resumes")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          if (resumesData && resumesData.length > 0) {
+            profileCvUrl = resumesData[0].file_url;
+            profileCvName = resumesData[0].title;
+          }
+        }
+
+        // Tenter enfin de récupérer depuis le localStorage local
+        if (!profileCvUrl && typeof window !== "undefined") {
+          profileCvUrl = localStorage.getItem("user_cv_url");
+          profileCvName = localStorage.getItem("user_cv_name");
+        }
+
+        if (profileCvUrl) {
+          setCvUrl(profileCvUrl);
+          setUploadedCvFileName(profileCvName || "Mon_CV_Professionnel");
+          if (profileCvUrl.includes("pdf") || profileCvUrl.startsWith("data:application/pdf")) {
             setCvFileType("pdf");
-          } else if (profile.cv_url.includes("doc") || profile.cv_url.includes("word")) {
+          } else if (profileCvUrl.includes("doc") || profileCvUrl.includes("word")) {
             setCvFileType("doc");
           } else {
             setCvFileType("pdf");
           }
         }
 
-        if (profile.full_name) {
+        if (profile?.full_name) {
           const parts = profile.full_name.split(" ");
           setFirstName(parts[0] || "");
           setLastName(parts.slice(1).join(" ") || "");
         }
       } else {
+        // Fallback localStorage si pas encore de profil Supabase
+        if (typeof window !== "undefined") {
+          const localCvUrl = localStorage.getItem("user_cv_url");
+          const localCvName = localStorage.getItem("user_cv_name");
+          if (localCvUrl) {
+            setCvUrl(localCvUrl);
+            setUploadedCvFileName(localCvName || "Mon_CV_Professionnel");
+          }
+        }
         setProfileName(session.user.email?.split("@")[0] || "");
       }
     }
@@ -397,41 +430,79 @@ export default function ProfilPage() {
     }, 1200);
   };
 
-  // Téléversement & Enregistrement du fichier CV dans Supabase
+  // Téléversement & Enregistrement du fichier CV dans Supabase (Storage + Tables DB)
   const handleCvFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file || !userSession?.user) return;
 
     setIsUploadingCv(true);
-    triggerToast("Importation du CV en cours...", "fa-spinner fa-spin");
+    triggerToast("Importation et sauvegarde du CV...", "fa-spinner fa-spin");
 
     const ext = file.name.split('.').pop().toLowerCase();
     const type = ext === "pdf" ? "pdf" : (ext === "doc" || ext === "docx" ? "doc" : "pdf");
     setCvFileType(type);
     setUploadedCvFileName(file.name);
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64Content = reader.result;
-      setCvUrl(base64Content);
+    try {
+      // 1. Sauvegarde dans Supabase Storage (Bucket resumes)
+      let finalCvUrl = null;
+      const fileName = `${userSession.user.id}_${Date.now()}.${ext}`;
+      const filePath = `cvs/${fileName}`;
 
-      try {
-        await supabase.from("profiles").upsert({
-          id: userSession.user.id,
-          email: userSession.user.email,
-          cv_url: base64Content,
-          cv_name: file.name,
-          updated_at: new Date().toISOString(),
-        });
-        setIsUploadingCv(false);
-        triggerToast(`CV "${file.name}" importé et sauvegardé !`, "fa-file-circle-check");
-      } catch (err) {
-        console.error(err);
-        setIsUploadingCv(false);
-        triggerToast("Erreur lors de la sauvegarde du CV", "fa-triangle-exclamation");
+      const { error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(filePath, file, { upsert: true });
+
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage
+          .from('resumes')
+          .getPublicUrl(filePath);
+        finalCvUrl = publicUrlData?.publicUrl;
       }
-    };
-    reader.readAsDataURL(file);
+
+      // 2. Format Base64 de secours
+      const base64Content = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+
+      const urlToSave = finalCvUrl || base64Content;
+      setCvUrl(urlToSave);
+
+      // 3. Sauvegarde dans localStorage pour accès instantané
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user_cv_url", urlToSave);
+        localStorage.setItem("user_cv_name", file.name);
+      }
+
+      // 4. Sauvegarde persistante dans la table profiles de Supabase
+      await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        cv_url: urlToSave,
+        cv_name: file.name,
+        updated_at: new Date().toISOString(),
+      });
+
+      // 5. Entrée dans la table resumes de Supabase
+      await supabase.from("resumes").insert({
+        user_id: userSession.user.id,
+        title: file.name,
+        type: "imported",
+        file_url: urlToSave,
+        content: { fileName: file.name, uploadedAt: new Date().toISOString() },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      setIsUploadingCv(false);
+      triggerToast(`CV "${file.name}" importé et sauvegardé de manière permanente !`, "fa-file-circle-check");
+    } catch (err) {
+      console.error("Erreur lors de la sauvegarde du CV:", err);
+      setIsUploadingCv(false);
+      triggerToast("Erreur lors de la sauvegarde du CV", "fa-triangle-exclamation");
+    }
   };
 
   const handleSavePersonalDetails = (e) => {
