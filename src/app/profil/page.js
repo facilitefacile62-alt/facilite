@@ -84,6 +84,16 @@ export default function ProfilPage() {
   const [expSkills, setExpSkills] = useState([]);
   const [expSkillInput, setExpSkillInput] = useState("");
 
+  // Formations / Éducation dynamique (Supabase + localStorage)
+  const [educations, setEducations] = useState([]);
+  const [educationModalOpen, setEducationModalOpen] = useState(false);
+  const [eduSchool, setEduSchool] = useState("");
+  const [eduDegree, setEduDegree] = useState("");
+  const [eduField, setEduField] = useState("");
+  const [eduStartYear, setEduStartYear] = useState("2023");
+  const [eduEndYear, setEduEndYear] = useState("2026");
+  const [eduIsCurrent, setEduIsCurrent] = useState(false);
+
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "" });
 
@@ -126,6 +136,7 @@ export default function ProfilPage() {
         setAvatarUrl(profile.avatar_url || "/logo.jpeg");
         setCoverUrl(profile.cover_url || "/stellar-cover.png");
         setExperiences(profile.experiences || []);
+        setEducations(profile.educations || []);
 
         let profileCvUrl = profile?.cv_url;
         let profileCvName = profile?.cv_name;
@@ -663,6 +674,77 @@ export default function ProfilPage() {
       console.error("Exception lors de la sauvegarde des informations:", err);
       triggerToast("Erreur de connexion lors de la sauvegarde", "fa-triangle-exclamation");
     }
+  };
+
+  // Ajouter une formation dans Supabase et l'état local
+  const handleAddEducation = async (e) => {
+    e.preventDefault();
+    if (!eduSchool.trim() || !eduDegree.trim()) {
+      triggerToast("Veuillez remplir l'établissement et le diplôme", "fa-triangle-exclamation");
+      return;
+    }
+
+    const newEdu = {
+      id: Date.now(),
+      school: eduSchool.trim(),
+      degree: eduDegree.trim(),
+      field: eduField.trim(),
+      startYear: eduStartYear,
+      endYear: eduEndYear,
+      isCurrent: eduIsCurrent,
+      created_at: new Date().toISOString()
+    };
+
+    const updatedEducations = [newEdu, ...educations];
+    setEducations(updatedEducations);
+
+    if (userSession?.user) {
+      try {
+        await supabase.from("profiles").upsert({
+          id: userSession.user.id,
+          email: userSession.user.email,
+          educations: updatedEducations,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error("Erreur lors de la sauvegarde de la formation:", err);
+      }
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user_educations", JSON.stringify(updatedEducations));
+    }
+
+    setEducationModalOpen(false);
+    setEduSchool("");
+    setEduDegree("");
+    setEduField("");
+    triggerToast("Formation ajoutée avec succès !", "fa-graduation-cap");
+  };
+
+  // Supprimer une formation de Supabase et de l'état local
+  const handleDeleteEducation = async (id) => {
+    const updatedEducations = educations.filter((ed) => ed.id !== id);
+    setEducations(updatedEducations);
+
+    if (userSession?.user) {
+      try {
+        await supabase.from("profiles").upsert({
+          id: userSession.user.id,
+          email: userSession.user.email,
+          educations: updatedEducations,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error("Erreur lors de la suppression de la formation:", err);
+      }
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user_educations", JSON.stringify(updatedEducations));
+    }
+
+    triggerToast("Formation supprimée avec succès !", "fa-trash-can");
   };
 
   return (
@@ -1391,25 +1473,68 @@ export default function ProfilPage() {
               )}
             </div>
 
-            {/* SECTION FORMATION / ÉDUCATION */}
+            {/* SECTION FORMATION / ÉDUCATION (DYNAMIQUE ET PERSISTANTE SUR SUPABASE) */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
               <div className="flex justify-between items-center pb-2 border-b border-gray-100">
                 <div className="flex items-center space-x-2">
                   <i className="fa-solid fa-graduation-cap text-purple-600 text-lg"></i>
                   <h3 className="text-base font-extrabold text-gray-900">Formation & Diplômes</h3>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setEducationModalOpen(true)}
+                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-plus text-xs"></i>
+                  <span>Ajouter une formation</span>
+                </button>
               </div>
 
-              <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 font-black text-sm flex items-center justify-center uppercase shadow-xs flex-shrink-0">
-                  LP
+              {educations.length > 0 ? (
+                <div className="space-y-4 divide-y divide-gray-100">
+                  {educations.map((edu) => (
+                    <div key={edu.id} className="pt-4 first:pt-0 flex items-start space-x-4 relative group">
+                      <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 font-black text-sm flex items-center justify-center uppercase shadow-xs flex-shrink-0">
+                        {edu.school ? edu.school.slice(0, 2) : "FD"}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex justify-between items-start">
+                          <h4 className="text-sm font-extrabold text-gray-900">{edu.school}</h4>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteEducation(edu.id)}
+                            className="text-gray-300 hover:text-red-500 transition p-1 cursor-pointer"
+                            title="Supprimer cette formation"
+                          >
+                            <i className="fa-solid fa-trash-can text-xs"></i>
+                          </button>
+                        </div>
+                        <p className="text-xs font-bold text-gray-700">
+                          {edu.degree} {edu.field ? `• ${edu.field}` : ""}
+                        </p>
+                        <p className="text-[11px] text-gray-400 font-medium">
+                          {edu.startYear} — {edu.isCurrent ? "Présent" : edu.endYear}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-extrabold text-gray-900">Lycée de Pikine</h4>
-                  <p className="text-xs font-bold text-gray-700">Baccalauréat Scientifique / Général</p>
-                  <p className="text-[11px] text-gray-400 font-medium">2023 — 2026</p>
+              ) : (
+                <div className="text-center py-6 text-gray-400 space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center mx-auto text-sm">
+                    <i className="fa-solid fa-graduation-cap"></i>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700">Aucune formation ou diplôme enregistré pour le moment.</p>
+                  <button
+                    type="button"
+                    onClick={() => setEducationModalOpen(true)}
+                    className="inline-flex items-center space-x-1.5 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition cursor-pointer mt-1"
+                  >
+                    <i className="fa-solid fa-plus text-xs"></i>
+                    <span>Ajouter votre première formation</span>
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* SECTION MON PROFIL ET MON CV (CONFORME À LA CAPTURE D'ÉCRAN) */}
@@ -1909,6 +2034,126 @@ export default function ProfilPage() {
           </div>
         </div>
       )}
+      {/* MODAL 5: AJOUTER UNE FORMATION */}
+      {educationModalOpen && (
+        <div
+          className="fixed inset-0 z-[600] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target.id === "edu-modal-wrapper") setEducationModalOpen(false);
+          }}
+          id="edu-modal-wrapper"
+        >
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative border border-gray-100 transform transition-all scale-100 my-8">
+            <button
+              onClick={() => setEducationModalOpen(false)}
+              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition cursor-pointer"
+            >
+              <i className="fa-solid fa-xmark text-sm"></i>
+            </button>
+
+            <div className="border-b border-gray-100 pb-3">
+              <h3 className="text-lg font-extrabold text-gray-900">Ajouter une formation</h3>
+              <p className="text-xs text-gray-500 font-medium">Ajoutez vos diplômes, études ou certifications.</p>
+            </div>
+
+            <form onSubmit={handleAddEducation} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Établissement / École / Université *</label>
+                <input
+                  type="text"
+                  value={eduSchool}
+                  onChange={(e) => setEduSchool(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-xs focus:outline-none focus:border-purple-600 transition font-medium text-gray-900"
+                  placeholder="Ex. Université Cheikh Anta Diop, Lycée..."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Diplôme / Certificat *</label>
+                <input
+                  type="text"
+                  value={eduDegree}
+                  onChange={(e) => setEduDegree(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-xs focus:outline-none focus:border-purple-600 transition font-medium text-gray-900"
+                  placeholder="Ex. Licence, Baccalauréat Scientifique..."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Domaine d'études</label>
+                <input
+                  type="text"
+                  value={eduField}
+                  onChange={(e) => setEduField(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-xs focus:outline-none focus:border-purple-600 transition font-medium text-gray-900"
+                  placeholder="Ex. Informatique, Gestion des RH..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Année de début</label>
+                  <select
+                    value={eduStartYear}
+                    onChange={(e) => setEduStartYear(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-xs focus:outline-none focus:border-purple-600 transition font-bold text-gray-700 cursor-pointer"
+                  >
+                    {Array.from({ length: 30 }, (_, i) => 2026 - i).map((yr) => (
+                      <option key={yr} value={yr}>{yr}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Année de fin</label>
+                  <select
+                    value={eduEndYear}
+                    onChange={(e) => setEduEndYear(e.target.value)}
+                    disabled={eduIsCurrent}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-xs focus:outline-none focus:border-purple-600 transition font-bold text-gray-700 cursor-pointer disabled:opacity-50"
+                  >
+                    {Array.from({ length: 30 }, (_, i) => 2028 - i).map((yr) => (
+                      <option key={yr} value={yr}>{yr}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="eduIsCurrent"
+                  checked={eduIsCurrent}
+                  onChange={(e) => setEduIsCurrent(e.target.checked)}
+                  className="w-4 h-4 rounded text-purple-600 border-gray-300 focus:ring-purple-500 cursor-pointer"
+                />
+                <label htmlFor="eduIsCurrent" className="text-xs font-bold text-gray-700 cursor-pointer">
+                  Formation actuellement en cours
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setEducationModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border border-gray-300 text-xs font-extrabold text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold transition shadow-md cursor-pointer"
+                >
+                  Enregistrer la formation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL APERÇU / VISIONNEUSE NATIVE DU CV (DÉCLENCHÉE PAR L'ICÔNE ŒIL) */}
       {cvPreviewModalOpen && (
         <div
