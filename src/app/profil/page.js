@@ -573,39 +573,92 @@ export default function ProfilPage() {
   };
 
   // Convertit les champs extraits par le service serveur (/api/parse-document) vers le
-  // format attendu par la modale de prévisualisation. Ne fabrique jamais de données fictives :
-  // un champ non détecté dans le document reste vide ou conserve la valeur déjà présente sur le profil.
+  // format attendu par la modale de prévisualisation. Gère toutes les variations de clés JSON (français, anglais, accents).
   const mapExtractedFieldsToScannedData = (apiFields, file, docPublicUrl) => {
-    const experiences = (apiFields.experiences || []).map((exp, idx) => ({
-      id: Date.now() + idx,
-      title: exp.title || "",
-      company: exp.employer || "",
-      location: exp.city || "",
-      locationType: "",
-      employmentType: "",
-      isCurrent: !!exp.current,
-      startMonth: "",
-      startYear: (exp.startDate || "").slice(0, 4),
-      endYear: (exp.endDate || "").slice(0, 4),
-      description: exp.description || "",
-      skills: []
-    }));
+    // 2. Journalisation de l'objet JSON reçu pour le débogage
+    console.log("JSON reçu de l'API de parsing de documents :", apiFields);
 
-    const educations = (apiFields.educations || []).map((edu, idx) => ({
-      id: Date.now() + 100 + idx,
-      school: edu.school || "",
-      degree: edu.degree || "",
-      field: "",
-      startYear: edu.startYear || "",
-      endYear: edu.endYear || "",
-      isCurrent: false
-    }));
+    const getValue = (obj, possibleKeys) => {
+      if (!obj) return "";
+      for (const key of possibleKeys) {
+        if (key in obj) return obj[key] !== undefined && obj[key] !== null ? obj[key] : "";
+      }
+      const lowerKeysMap = {};
+      for (const k of Object.keys(obj)) {
+        lowerKeysMap[k.toLowerCase()] = obj[k];
+      }
+      for (const key of possibleKeys) {
+        const lower = key.toLowerCase();
+        if (lower in lowerKeysMap) {
+          const val = lowerKeysMap[lower];
+          return val !== undefined && val !== null ? val : "";
+        }
+        const cleanedKey = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+        for (const k of Object.keys(obj)) {
+          const cleanedK = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+          if (cleanedKey === cleanedK) {
+            const val = obj[k];
+            return val !== undefined && val !== null ? val : "";
+          }
+        }
+      }
+      return "";
+    };
 
-    const languages = (apiFields.languages || []).map((lang) => {
+    const rawExperiences = getValue(apiFields, ["experiences", "experiences_professionnelles", "experience", "parcours_professionnel", "work_experience", "workExperiences"]) || [];
+    const rawEducations = getValue(apiFields, ["educations", "education", "formation", "formations", "parcours_academique", "studies"]) || [];
+    const rawLanguages = getValue(apiFields, ["languages", "langues", "langue", "languages_list"]) || [];
+    const rawSkills = getValue(apiFields, ["skills", "competences", "compétences", "competence", "compétence", "skills_list"]) || [];
+
+    const experiences = (Array.isArray(rawExperiences) ? rawExperiences : [rawExperiences].filter(Boolean)).map((exp, idx) => {
+      const title = getValue(exp, ["title", "post", "poste", "intitule", "intitulé", "job"]);
+      const employer = getValue(exp, ["employer", "company", "entreprise", "employeur", "societe", "société"]);
+      const expCity = getValue(exp, ["city", "location", "lieu", "ville"]);
+      const current = getValue(exp, ["current", "enCours", "en_cours", "actuel", "isCurrent", "is_current"]);
+      const startDate = String(getValue(exp, ["startDate", "start_date", "dateDebut", "date_debut", "debut", "début", "startYear", "start_year"]));
+      const endDate = String(getValue(exp, ["endDate", "end_date", "dateFin", "date_fin", "fin", "endYear", "end_year"]));
+      const description = getValue(exp, ["description", "tasks", "missions", "details", "détails"]);
+
+      return {
+        id: Date.now() + idx,
+        title: title || "",
+        company: employer || "",
+        location: expCity || "",
+        locationType: "",
+        employmentType: "",
+        isCurrent: !!current,
+        startMonth: "",
+        startYear: startDate ? startDate.slice(0, 4) : "",
+        endYear: endDate ? endDate.slice(0, 4) : "",
+        description: description || "",
+        skills: []
+      };
+    });
+
+    const educations = (Array.isArray(rawEducations) ? rawEducations : [rawEducations].filter(Boolean)).map((edu, idx) => {
+      const school = getValue(edu, ["school", "etablissement", "établissement", "universite", "université", "ecole", "école"]);
+      const degree = getValue(edu, ["degree", "diploma", "diplome", "diplôme", "qualification"]);
+      const startYear = String(getValue(edu, ["startYear", "start_year", "anneeDebut", "annee_debut", "debut", "début", "startDate", "start_date"]));
+      const endYear = String(getValue(edu, ["endYear", "end_year", "anneeFin", "annee_fin", "fin", "endDate", "end_date"]));
+
+      return {
+        id: Date.now() + 100 + idx,
+        school: school || "",
+        degree: degree || "",
+        field: "",
+        startYear: startYear ? startYear.slice(0, 4) : "",
+        endYear: endYear ? endYear.slice(0, 4) : "",
+        isCurrent: false
+      };
+    });
+
+    const languages = (Array.isArray(rawLanguages) ? rawLanguages : [rawLanguages].filter(Boolean)).map((lang) => {
       if (typeof lang === "object" && lang !== null) {
+        const name = getValue(lang, ["name", "language", "langue", "nom"]);
+        const level = getValue(lang, ["level", "niveau", "maitrise", "maîtrise"]);
         return {
-          name: lang.name || lang.langue || "",
-          level: lang.level || lang.niveau || ""
+          name: name || "",
+          level: level || ""
         };
       }
       return {
@@ -614,23 +667,26 @@ export default function ProfilPage() {
       };
     });
 
+    const titleVal = getValue(apiFields, ["title", "jobTitle", "job_title", "titre", "poste", "profession"]);
+    const summaryVal = getValue(apiFields, ["summary", "bio", "resume", "description", "presentation", "présentation"]);
+
     const isIdentityDoc = !!apiFields.isIdentityDoc || 
-      (apiFields.title || "").toLowerCase().includes("identit") || 
-      (apiFields.summary || "").toLowerCase().includes("cni") || 
-      (apiFields.summary || "").toLowerCase().includes("passeport");
+      (titleVal || "").toLowerCase().includes("identit") || 
+      (summaryVal || "").toLowerCase().includes("cni") || 
+      (summaryVal || "").toLowerCase().includes("passeport");
 
     return {
-      firstName: apiFields.firstName || "",
-      lastName: apiFields.lastName || "",
-      jobTitle: apiFields.title || "",
-      bio: apiFields.summary || "",
-      city: apiFields.city || "",
-      country: apiFields.country || "",
-      birthDate: apiFields.birthDate || "",
-      gender: apiFields.gender || "",
-      maritalStatus: apiFields.maritalStatus || "",
-      driverLicense: apiFields.driverLicense || "",
-      skills: apiFields.skills || [],
+      firstName: getValue(apiFields, ["firstName", "prenom", "prénom", "first_name", "givenName", "given_name"]),
+      lastName: getValue(apiFields, ["lastName", "nom", "nomDeFamille", "nom_de_famille", "last_name", "familyName", "family_name"]),
+      jobTitle: titleVal || "",
+      bio: summaryVal || "",
+      city: getValue(apiFields, ["city", "ville", "city_name", "adresse_ville", "adresseville"]),
+      country: getValue(apiFields, ["country", "pays", "country_name", "pays_name"]),
+      birthDate: getValue(apiFields, ["birthDate", "birth_date", "dateDeNaissance", "date_de_naissance", "datenaissance", "date_naissance", "birthday", "dob"]),
+      gender: getValue(apiFields, ["gender", "sexe", "genre"]),
+      maritalStatus: getValue(apiFields, ["maritalStatus", "marital_status", "statutMarital", "statut_marital", "situation_familiale", "situationfamiliale", "statut_matrimonial", "statutmatrimonial"]),
+      driverLicense: getValue(apiFields, ["driverLicense", "driver_license", "permis", "permisDeConduire", "permis_de_conduire"]),
+      skills: Array.isArray(rawSkills) ? rawSkills : [rawSkills].filter(Boolean),
       experiences,
       educations,
       languages,
