@@ -80,6 +80,27 @@ export default function ProfilPage() {
   const cvFileInputRef = useRef(null);
   const aiCvFileInputRef = useRef(null);
   const [isParsingCv, setIsParsingCv] = useState(false);
+  const [scanModalOpen, setScanModalOpen] = useState(false);
+  const [scanModalActiveTab, setScanModalActiveTab] = useState("general");
+  const [scannedData, setScannedData] = useState({
+    firstName: "",
+    lastName: "",
+    jobTitle: "",
+    bio: "",
+    city: "",
+    country: "",
+    birthDate: "",
+    gender: "",
+    maritalStatus: "",
+    driverLicense: "",
+    skills: [],
+    experiences: [],
+    educations: [],
+    languages: [],
+    docUrl: "",
+    docName: "",
+    isIdentityDoc: false,
+  });
   const [userDocuments, setUserDocuments] = useState([]);
   const [isCopiedLink, setIsCopiedLink] = useState(false);
 
@@ -626,70 +647,108 @@ export default function ProfilPage() {
         ];
 
         if (isIdentityDoc) {
-          extractedBio = `📄 Document d'identité officiel (CNI / Passeport) numérisé et certifié le ${new Date().toLocaleDateString("fr-FR")}. Les informations d'état civil ont été automatiquement extraites par OCR et écrasent les anciennes données du profil.`;
+          extractedBio = `📄 Document d'identité officiel (CNI / Passeport) numérisé et certifié le ${new Date().toLocaleDateString("fr-FR")}. Les informations d'état civil ont été automatiquement extraites par OCR.`;
           extractedTitle = "Citoyen & Professionnel Vérifié";
         } else if (fileLower.includes("diplome") || fileLower.includes("attestation") || fileLower.includes("certif")) {
-          extractedBio = `🎓 Attestation / Diplôme officiel numérisé et certifié par Facilité.sn le ${new Date().toLocaleDateString("fr-FR")}. Données académiques mises à jour et écrasées automatiquement.`;
+          extractedBio = `🎓 Attestation / Diplôme officiel numérisé et certifié par Facilité.sn le ${new Date().toLocaleDateString("fr-FR")}. Données académiques extraites par l'IA.`;
         }
 
-        // 2. ÉCRASER ET REMPLACER DIRECTEMENT LES ANCIENNES INFORMATIONS DANS TOUS LES ÉTATS
-        setFirstName(extractedFirstName);
-        setLastName(extractedLastName);
-        setProfileSubtitle(extractedTitle);
-        setJobTitle(extractedTitle);
-        setCity(extractedCity);
-        setCountry(extractedCountry);
-        setBirthDate(extractedBirthDate);
-        setGender(extractedGender);
-        setMaritalStatus(extractedMarital);
-        setDriverLicense(extractedLicense);
-        setProfileBio(extractedBio);
-        setTempBio(extractedBio);
-        setUserSkills(extractedSkills);
-        setExperiences(extractedExperiences);
-        setEducations(extractedEducations);
-
-        if (docPublicUrl) {
-          setCvUrl(docPublicUrl);
-          setUploadedCvFileName(file.name);
-          setUserDocuments(prev => [{
-            id: `doc-${Date.now()}`,
-            title: file.name,
-            file_url: docPublicUrl,
-            type: isIdentityDoc ? "Identité" : "CV",
-            created_at: new Date().toISOString()
-          }, ...prev]);
-        }
-
-        // 3. PERSISTER ET ÉCRASER DANS SUPABASE (la structure visuelle UI restant 100% intacte)
-        await supabase.from("profiles").upsert({
-          id: userSession.user.id,
-          email: userSession.user.email,
-          full_name: `${extractedFirstName} ${extractedLastName}`.trim(),
-          headline: extractedTitle,
+        // Charger les données extraites dans la modale interactive de prévisualisation & édition
+        setScannedData({
+          firstName: extractedFirstName,
+          lastName: extractedLastName,
+          jobTitle: extractedTitle,
           bio: extractedBio,
           city: extractedCity,
           country: extractedCountry,
-          birth_date: extractedBirthDate,
+          birthDate: extractedBirthDate,
           gender: extractedGender,
-          marital_status: extractedMarital,
-          driver_license: extractedLicense,
+          maritalStatus: extractedMarital,
+          driverLicense: extractedLicense,
           skills: extractedSkills,
           experiences: extractedExperiences,
           educations: extractedEducations,
-          cv_url: docPublicUrl || cvUrl,
-          cv_name: file.name,
-          updated_at: new Date().toISOString(),
+          languages: [
+            { name: "Français", level: "Principal / Courant" },
+            { name: "Anglais", level: "Avancé / Professionnel" }
+          ],
+          docUrl: docPublicUrl || cvUrl,
+          docName: file.name,
+          isIdentityDoc
         });
 
         setIsParsingCv(false);
-        triggerToast("✓ Données extraites : les anciennes informations du profil ont été écrasées et remplacées !", "fa-circle-check");
-      }, 1800);
+        setScanModalOpen(true);
+        triggerToast("✓ Document numérisé ! Éditez ou validez vos données.", "fa-wand-magic-sparkles");
+      }, 1400);
     } catch (err) {
       console.error("Erreur analyse OCR document:", err);
       setIsParsingCv(false);
       triggerToast("Erreur lors de la numérisation du document", "fa-triangle-exclamation");
     }
+  };
+
+  // Validation et enregistrement définitif des données de la modale dans le profil & Supabase
+  const handleConfirmScanData = async () => {
+    if (!scannedData || !userSession?.user) return;
+
+    // 1. Écraser et remplacer directement les anciennes informations dans l'état de l'application
+    setFirstName(scannedData.firstName);
+    setLastName(scannedData.lastName);
+    setProfileSubtitle(scannedData.jobTitle);
+    setJobTitle(scannedData.jobTitle);
+    setCity(scannedData.city);
+    setCountry(scannedData.country);
+    setBirthDate(scannedData.birthDate);
+    setGender(scannedData.gender);
+    setMaritalStatus(scannedData.maritalStatus);
+    setDriverLicense(scannedData.driverLicense);
+    setProfileBio(scannedData.bio);
+    setTempBio(scannedData.bio);
+    setUserSkills(scannedData.skills);
+    setExperiences(scannedData.experiences);
+    setEducations(scannedData.educations);
+
+    if (scannedData.languages && scannedData.languages.length > 0) {
+      setUserLanguages(scannedData.languages.map((l, i) => ({ id: `lang-scan-${i}`, name: l.name, level: l.level })));
+    }
+
+    if (scannedData.docUrl) {
+      setCvUrl(scannedData.docUrl);
+      setUploadedCvFileName(scannedData.docName);
+      setUserDocuments(prev => [{
+        id: `doc-${Date.now()}`,
+        title: scannedData.docName,
+        file_url: scannedData.docUrl,
+        type: scannedData.isIdentityDoc ? "Identité" : "CV",
+        created_at: new Date().toISOString()
+      }, ...prev]);
+    }
+
+    // 2. Persister et écraser dans Supabase (la structure visuelle UI restant 100% intacte)
+    await supabase.from("profiles").upsert({
+      id: userSession.user.id,
+      email: userSession.user.email,
+      full_name: `${scannedData.firstName} ${scannedData.lastName}`.trim(),
+      headline: scannedData.jobTitle,
+      bio: scannedData.bio,
+      city: scannedData.city,
+      country: scannedData.country,
+      birth_date: scannedData.birthDate,
+      gender: scannedData.gender,
+      marital_status: scannedData.maritalStatus,
+      driver_license: scannedData.driverLicense,
+      skills: scannedData.skills,
+      experiences: scannedData.experiences,
+      educations: scannedData.educations,
+      languages: scannedData.languages,
+      cv_url: scannedData.docUrl || cvUrl,
+      cv_name: scannedData.docName,
+      updated_at: new Date().toISOString(),
+    });
+
+    setScanModalOpen(false);
+    triggerToast("✓ Données validées ! Les informations du profil ont été écrasées et enregistrées.", "fa-circle-check");
   };
 
   // Suppression d'un document de la base de données Supabase et de l'interface
@@ -3448,6 +3507,321 @@ export default function ProfilPage() {
                 Enregistrer la langue
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* MODALE INTERACTIVE DE PRÉVISUALISATION ET D'ÉDITION DES DONNÉES DU SCAN */}
+      {scanModalOpen && scannedData && (
+        <div className="fixed inset-0 z-[700] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl border border-gray-100 my-8 space-y-5 relative max-h-[90vh] flex flex-col">
+            
+            {/* Header Modale */}
+            <div className="flex justify-between items-start pb-4 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg shadow-xs">
+                  <i className="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-gray-900 flex items-center space-x-2">
+                    <span>Données extraites du document — Vérification & Édition</span>
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Vérifiez ou éditez directement les informations ci-dessous avant qu'elles ne remplacent les anciennes données de votre profil.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScanModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-lg"></i>
+              </button>
+            </div>
+
+            {/* Onglets de navigation dans la modale */}
+            <div className="flex items-center space-x-1 border-b border-gray-200 overflow-x-auto pb-1 flex-shrink-0 text-xs">
+              {[
+                { id: "general", label: "Identité & Contact", icon: "fa-solid fa-user" },
+                { id: "bio", label: "Bio & Titre", icon: "fa-solid fa-align-left" },
+                { id: "skills", label: "Compétences", icon: "fa-solid fa-lightbulb" },
+                { id: "experiences", label: "Expériences", icon: "fa-solid fa-briefcase" },
+                { id: "education", label: "Formation", icon: "fa-solid fa-graduation-cap" },
+                { id: "languages", label: "Langues", icon: "fa-solid fa-language" },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setScanModalActiveTab(t.id)}
+                  className={`px-3 py-2 rounded-xl font-extrabold transition cursor-pointer flex items-center space-x-1.5 whitespace-nowrap ${
+                    scanModalActiveTab === t.id ? "bg-emerald-100 text-emerald-800" : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  <i className={`${t.icon} text-xs`}></i>
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Corps défilant de la modale */}
+            <div className="overflow-y-auto flex-1 pr-1 space-y-4 text-xs">
+              
+              {/* TAB: IDENTITÉ & CONTACT */}
+              {scanModalActiveTab === "general" && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Prénom</label>
+                      <input
+                        type="text"
+                        value={scannedData.firstName}
+                        onChange={(e) => setScannedData({ ...scannedData, firstName: e.target.value })}
+                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Nom de famille</label>
+                      <input
+                        type="text"
+                        value={scannedData.lastName}
+                        onChange={(e) => setScannedData({ ...scannedData, lastName: e.target.value })}
+                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Ville</label>
+                      <input
+                        type="text"
+                        value={scannedData.city}
+                        onChange={(e) => setScannedData({ ...scannedData, city: e.target.value })}
+                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Pays</label>
+                      <input
+                        type="text"
+                        value={scannedData.country}
+                        onChange={(e) => setScannedData({ ...scannedData, country: e.target.value })}
+                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Date de naissance</label>
+                      <input
+                        type="text"
+                        value={scannedData.birthDate}
+                        onChange={(e) => setScannedData({ ...scannedData, birthDate: e.target.value })}
+                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Sexe</label>
+                      <select
+                        value={scannedData.gender}
+                        onChange={(e) => setScannedData({ ...scannedData, gender: e.target.value })}
+                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                      >
+                        <option value="Homme">Homme</option>
+                        <option value="Femme">Femme</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Statut marital</label>
+                      <input
+                        type="text"
+                        value={scannedData.maritalStatus}
+                        onChange={(e) => setScannedData({ ...scannedData, maritalStatus: e.target.value })}
+                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Permis de conduire</label>
+                      <input
+                        type="text"
+                        value={scannedData.driverLicense}
+                        onChange={(e) => setScannedData({ ...scannedData, driverLicense: e.target.value })}
+                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: BIO & TITRE */}
+              {scanModalActiveTab === "bio" && (
+                <div className="space-y-4 animate-fade-in">
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Titre / Intitulé professionnel</label>
+                    <input
+                      type="text"
+                      value={scannedData.jobTitle}
+                      onChange={(e) => setScannedData({ ...scannedData, jobTitle: e.target.value })}
+                      className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Bio & Présentation récapitulative</label>
+                    <textarea
+                      rows={5}
+                      value={scannedData.bio}
+                      onChange={(e) => setScannedData({ ...scannedData, bio: e.target.value })}
+                      className="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                    ></textarea>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: COMPÉTENCES */}
+              {scanModalActiveTab === "skills" && (
+                <div className="space-y-4 animate-fade-in">
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Compétences extraites (séparées par une virgule)</label>
+                    <input
+                      type="text"
+                      value={scannedData.skills.join(", ")}
+                      onChange={(e) => setScannedData({ ...scannedData, skills: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })}
+                      className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {scannedData.skills.map((sk, i) => (
+                      <span key={i} className="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold px-2.5 py-1 rounded-lg">
+                        {sk}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: EXPÉRIENCES */}
+              {scanModalActiveTab === "experiences" && (
+                <div className="space-y-4 animate-fade-in">
+                  {scannedData.experiences.map((exp, i) => (
+                    <div key={i} className="p-3 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-0.5">Poste / Intitulé</label>
+                        <input
+                          type="text"
+                          value={exp.title}
+                          onChange={(e) => {
+                            const updated = [...scannedData.experiences];
+                            updated[i].title = e.target.value;
+                            setScannedData({ ...scannedData, experiences: updated });
+                          }}
+                          className="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-0.5">Entreprise</label>
+                        <input
+                          type="text"
+                          value={exp.company}
+                          onChange={(e) => {
+                            const updated = [...scannedData.experiences];
+                            updated[i].company = e.target.value;
+                            setScannedData({ ...scannedData, experiences: updated });
+                          }}
+                          className="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* TAB: FORMATION */}
+              {scanModalActiveTab === "education" && (
+                <div className="space-y-4 animate-fade-in">
+                  {scannedData.educations.map((edu, i) => (
+                    <div key={i} className="p-3 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-0.5">Établissement / École</label>
+                        <input
+                          type="text"
+                          value={edu.school}
+                          onChange={(e) => {
+                            const updated = [...scannedData.educations];
+                            updated[i].school = e.target.value;
+                            setScannedData({ ...scannedData, educations: updated });
+                          }}
+                          className="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-0.5">Diplôme / Domaine</label>
+                        <input
+                          type="text"
+                          value={edu.degree}
+                          onChange={(e) => {
+                            const updated = [...scannedData.educations];
+                            updated[i].degree = e.target.value;
+                            setScannedData({ ...scannedData, educations: updated });
+                          }}
+                          className="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* TAB: LANGUES */}
+              {scanModalActiveTab === "languages" && (
+                <div className="space-y-4 animate-fade-in">
+                  {scannedData.languages.map((lang, i) => (
+                    <div key={i} className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={lang.name}
+                        onChange={(e) => {
+                          const updated = [...scannedData.languages];
+                          updated[i].name = e.target.value;
+                          setScannedData({ ...scannedData, languages: updated });
+                        }}
+                        className="flex-1 p-2 bg-gray-50 border border-gray-300 rounded-xl text-xs font-medium"
+                      />
+                      <input
+                        type="text"
+                        value={lang.level}
+                        onChange={(e) => {
+                          const updated = [...scannedData.languages];
+                          updated[i].level = e.target.value;
+                          setScannedData({ ...scannedData, languages: updated });
+                        }}
+                        className="w-36 p-2 bg-gray-50 border border-gray-300 rounded-xl text-xs font-medium"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3 border-t border-gray-100 flex-shrink-0">
+              <span className="text-[11px] text-gray-400 font-medium truncate max-w-[200px]">
+                Fichier : <span className="font-bold text-gray-700">{scannedData.docName}</span>
+              </span>
+              <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setScanModalOpen(false)}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-extrabold rounded-xl text-xs transition cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmScanData}
+                  className="px-5 py-2.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-black rounded-xl text-xs transition shadow-md cursor-pointer flex items-center space-x-1.5"
+                >
+                  <i className="fa-solid fa-check text-xs"></i>
+                  <span>Valider et Enregistrer dans mon profil</span>
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
