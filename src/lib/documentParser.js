@@ -1,4 +1,4 @@
-import { PDFParse } from "pdf-parse";
+import { getDocumentProxy, extractText } from "unpdf";
 import mammoth from "mammoth";
 
 const SECTION_HEADERS = {
@@ -50,13 +50,9 @@ export async function extractTextFromFile(buffer, filename, mimeType) {
   const ext = (filename || "").split(".").pop().toLowerCase();
 
   if (ext === "pdf" || mimeType === "application/pdf") {
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const result = await parser.getText();
-      return result.text || "";
-    } finally {
-      await parser.destroy();
-    }
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { text } = await extractText(pdf, { mergePages: true });
+    return text || "";
   }
 
   if (ext === "docx" || mimeType?.includes("wordprocessingml")) {
