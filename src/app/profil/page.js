@@ -1918,14 +1918,125 @@ export default function ProfilPage() {
                   )}
 
                   {activeAboutTab === "experiences" && (
-                    <div className="space-y-3">
-                      <p className="text-xs text-gray-500 font-bold">Consultez et gérez vos expériences professionnelles dans la section dédiée de votre profil.</p>
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                        <div className="flex items-center space-x-2">
+                          <i className="fa-solid fa-briefcase text-blue-600 text-base"></i>
+                          <h3 className="text-sm md:text-base font-extrabold text-gray-900">Expérience professionnelle</h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setExperienceModalOpen(true)}
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-plus text-xs"></i>
+                          <span>Ajouter une expérience</span>
+                        </button>
+                      </div>
+
+                      {experiences.length > 0 ? (
+                        <div className="space-y-4 divide-y divide-gray-100">
+                          {experiences.map((exp) => (
+                            <div key={exp.id} className="pt-4 first:pt-0 flex items-start space-x-4 relative group">
+                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-extrabold text-xs flex items-center justify-center uppercase shadow-sm flex-shrink-0">
+                                {exp.company ? exp.company.slice(0, 2) : "EX"}
+                              </div>
+
+                              <div className="flex-1 space-y-1">
+                                <div className="flex justify-between items-start">
+                                  <h4 className="text-xs md:text-sm font-extrabold text-gray-900">{exp.title}</h4>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteExperience(exp.id)}
+                                    className="text-gray-300 hover:text-red-500 transition p-1 cursor-pointer"
+                                    title="Supprimer cette expérience"
+                                  >
+                                    <i className="fa-solid fa-trash-can text-xs"></i>
+                                  </button>
+                                </div>
+                                <p className="text-xs font-bold text-gray-700">{exp.company} • <span className="font-semibold text-gray-500">{exp.employmentType}</span></p>
+                                <p className="text-[11px] text-gray-400 font-medium">
+                                  {exp.startMonth} {exp.startYear} — {exp.isCurrent ? "Présent" : "Terminé"} • {exp.location} ({exp.locationType})
+                                </p>
+
+                                {exp.skills && exp.skills.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 pt-1.5">
+                                    {exp.skills.map((sk, idx) => (
+                                      <span key={idx} className="bg-blue-50 text-blue-700 font-bold text-[10px] px-2 py-0.5 rounded-full border border-blue-100">
+                                        • {sk}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400 space-y-2">
+                          <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mx-auto text-sm">
+                            <i className="fa-solid fa-briefcase"></i>
+                          </div>
+                          <p className="text-xs font-semibold text-gray-700">Aucune expérience enregistrée pour le moment.</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {activeAboutTab === "formation" && (
-                    <div className="space-y-3">
-                      <p className="text-xs text-gray-500 font-bold">Consultez et gérez vos formations et diplômes dans la section dédiée de votre profil.</p>
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                        <div className="flex items-center space-x-2">
+                          <i className="fa-solid fa-graduation-cap text-purple-600 text-base"></i>
+                          <h3 className="text-sm md:text-base font-extrabold text-gray-900">Formation & Diplômes</h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEducationModalOpen(true)}
+                          className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-plus text-xs"></i>
+                          <span>Ajouter une formation</span>
+                        </button>
+                      </div>
+
+                      {educations.length > 0 ? (
+                        <div className="space-y-4 divide-y divide-gray-100">
+                          {educations.map((edu) => (
+                            <div key={edu.id} className="pt-4 first:pt-0 flex items-start space-x-4 relative group">
+                              <div className="w-11 h-11 rounded-xl bg-purple-100 text-purple-700 font-black text-xs flex items-center justify-center uppercase shadow-xs flex-shrink-0">
+                                {edu.school ? edu.school.slice(0, 2) : "FD"}
+                              </div>
+                              <div className="flex-1 space-y-1">
+                                <div className="flex justify-between items-start">
+                                  <h4 className="text-xs md:text-sm font-extrabold text-gray-900">{edu.school}</h4>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteEducation(edu.id)}
+                                    className="text-gray-300 hover:text-red-500 transition p-1 cursor-pointer"
+                                    title="Supprimer cette formation"
+                                  >
+                                    <i className="fa-solid fa-trash-can text-xs"></i>
+                                  </button>
+                                </div>
+                                <p className="text-xs font-bold text-gray-700">
+                                  {edu.degree} {edu.field ? `• ${edu.field}` : ""}
+                                </p>
+                                <p className="text-[11px] text-gray-400 font-medium">
+                                  {edu.startYear} — {edu.isCurrent ? "Présent" : edu.endYear}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400 space-y-2">
+                          <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center mx-auto text-sm">
+                            <i className="fa-solid fa-graduation-cap"></i>
+                          </div>
+                          <p className="text-xs font-semibold text-gray-700">Aucune formation ou diplôme enregistré pour le moment.</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1939,127 +2050,6 @@ export default function ProfilPage() {
                 </div>
 
               </div>
-            </div>
-
-            {/* SECTION EXPÉRIENCES DYNAMIQUE */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
-              <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                <div className="flex items-center space-x-2">
-                  <i className="fa-solid fa-briefcase text-blue-600 text-lg"></i>
-                  <h3 className="text-base font-extrabold text-gray-900">Expérience professionnelle</h3>
-                </div>
-                <button
-                  onClick={() => setExperienceModalOpen(true)}
-                  className="text-blue-600 hover:bg-blue-50 font-bold p-2 rounded-full text-xs transition cursor-pointer flex items-center space-x-1"
-                >
-                  <i className="fa-solid fa-plus text-sm"></i>
-                  <span>Ajouter</span>
-                </button>
-              </div>
-
-              {experiences.length > 0 ? (
-                <div className="space-y-6 divide-y divide-gray-100">
-                  {experiences.map((exp) => (
-                    <div key={exp.id} className="pt-4 first:pt-0 flex items-start space-x-4 relative group">
-                      {/* Logo Entreprise Initiales */}
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-extrabold text-sm flex items-center justify-center uppercase shadow-sm flex-shrink-0">
-                        {exp.company ? exp.company.slice(0, 2) : "EX"}
-                      </div>
-
-                      <div className="flex-1 space-y-1">
-                        <div className="flex justify-between items-start">
-                          <h4 className="text-sm font-extrabold text-gray-900">{exp.title}</h4>
-                          <button
-                            onClick={() => handleDeleteExperience(exp.id)}
-                            className="text-gray-300 hover:text-red-500 transition p-1 cursor-pointer"
-                            title="Supprimer cette expérience"
-                          >
-                            <i className="fa-solid fa-trash-can text-xs"></i>
-                          </button>
-                        </div>
-                        <p className="text-xs font-bold text-gray-700">{exp.company} • <span className="font-semibold text-gray-500">{exp.employmentType}</span></p>
-                        <p className="text-[11px] text-gray-400 font-medium">
-                          {exp.startMonth} {exp.startYear} — {exp.isCurrent ? "Présent" : "Terminé"} • {exp.location} ({exp.locationType})
-                        </p>
-
-                        {/* Compétences associées */}
-                        {exp.skills && exp.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 pt-2">
-                            {exp.skills.map((sk, idx) => (
-                              <span key={idx} className="bg-blue-50 text-blue-700 font-bold text-[10px] px-2.5 py-0.5 rounded-full border border-blue-100">
-                                • {sk}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-400 space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mx-auto text-sm">
-                    <i className="fa-solid fa-briefcase"></i>
-                  </div>
-                  <p className="text-xs font-semibold text-gray-700">Aucune expérience enregistrée pour le moment.</p>
-                </div>
-              )}
-            </div>
-
-            {/* SECTION FORMATION / ÉDUCATION (DYNAMIQUE ET PERSISTANTE SUR SUPABASE) */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                <div className="flex items-center space-x-2">
-                  <i className="fa-solid fa-graduation-cap text-purple-600 text-lg"></i>
-                  <h3 className="text-base font-extrabold text-gray-900">Formation & Diplômes</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEducationModalOpen(true)}
-                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer"
-                >
-                  <i className="fa-solid fa-plus text-xs"></i>
-                  <span>Ajouter une formation</span>
-                </button>
-              </div>
-
-              {educations.length > 0 ? (
-                <div className="space-y-4 divide-y divide-gray-100">
-                  {educations.map((edu) => (
-                    <div key={edu.id} className="pt-4 first:pt-0 flex items-start space-x-4 relative group">
-                      <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 font-black text-sm flex items-center justify-center uppercase shadow-xs flex-shrink-0">
-                        {edu.school ? edu.school.slice(0, 2) : "FD"}
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex justify-between items-start">
-                          <h4 className="text-sm font-extrabold text-gray-900">{edu.school}</h4>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteEducation(edu.id)}
-                            className="text-gray-300 hover:text-red-500 transition p-1 cursor-pointer"
-                            title="Supprimer cette formation"
-                          >
-                            <i className="fa-solid fa-trash-can text-xs"></i>
-                          </button>
-                        </div>
-                        <p className="text-xs font-bold text-gray-700">
-                          {edu.degree} {edu.field ? `• ${edu.field}` : ""}
-                        </p>
-                        <p className="text-[11px] text-gray-400 font-medium">
-                          {edu.startYear} — {edu.isCurrent ? "Présent" : edu.endYear}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-400 space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center mx-auto text-sm">
-                    <i className="fa-solid fa-graduation-cap"></i>
-                  </div>
-                  <p className="text-xs font-semibold text-gray-700">Aucune formation ou diplôme enregistré pour le moment.</p>
-                </div>
-              )}
             </div>
 
             {/* SECTION MON PROFIL ET MON CV (CONFORME À LA CAPTURE D'ÉCRAN) */}
