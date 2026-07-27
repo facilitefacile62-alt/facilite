@@ -2198,20 +2198,39 @@ export default function ProfilPage() {
               </button>
             </div>
 
-            {/* Carte URL du profil public */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-3">
-              <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Profil public et URL</h3>
-              <p className="text-[11px] text-gray-500 font-medium">facilite.sn/in/faciliter-facile</p>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText("https://facilite.sn/in/faciliter-facile");
-                  triggerToast("Lien du profil copié !", "fa-copy");
-                }}
-                className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 font-extrabold py-2 rounded-xl text-xs transition cursor-pointer"
-              >
-                Copier le lien du profil
-              </button>
-            </div>
+            {/* Carte URL du profil public (Génération Dynamique) */}
+            {(() => {
+              const rawName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profileName || (userSession?.user?.email ? userSession.user.email.split("@")[0] : "facilite-user"));
+              const profileSlug = rawName
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, "") || "facilite-user";
+              const displayUrl = `facilite.sn/in/${profileSlug}`;
+              const fullUrl = `https://${displayUrl}`;
+
+              return (
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-3">
+                  <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Profil public et URL</h3>
+                  <p className="text-[11px] text-gray-600 font-extrabold truncate" title={displayUrl}>
+                    {displayUrl}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(fullUrl);
+                      }
+                      triggerToast(`Lien copié : ${displayUrl}`, "fa-copy");
+                    }}
+                    className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 font-extrabold py-2 rounded-xl text-xs transition cursor-pointer"
+                  >
+                    Copier le lien du profil
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* Carte Mon profil et mon CV (Mint Green style conforme à la capture) */}
             <div
