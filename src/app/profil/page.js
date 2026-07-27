@@ -2181,8 +2181,8 @@ export default function ProfilPage() {
 
           </div>
 
-          {/* COLONNE DROITE : Paramètres de confidentialité & Action rapides */}
-          <div className="w-full lg:w-[326px] flex flex-col space-y-4">
+          {/* COLONNE DROITE : Paramètres de confidentialité & Action rapides (Fixe / Sticky au Scroll) */}
+          <div className="w-full lg:w-[326px] flex flex-col space-y-4 sticky top-[76px] self-start transition-all z-10">
 
             {/* Carte Langue du profil */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-3">
