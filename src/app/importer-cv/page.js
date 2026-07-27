@@ -176,54 +176,8 @@ export default function ImporterCvPage() {
   // Notifications System (LinkedIn Style)
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [activeNotifFilter, setActiveNotifFilter] = useState("all");
-  const [unreadNotifCount, setUnreadNotifCount] = useState(3);
-  const [notificationsList, setNotificationsList] = useState([
-    {
-      id: 1,
-      author: "Université de Tours",
-      avatar: "/logo.jpeg",
-      text: "a publié quelque chose : Importez vos compétences pour correspondre aux offres d'emploi !",
-      type: "posts",
-      time: "4 min",
-      unread: true
-    },
-    {
-      id: 2,
-      author: "Madeleine Fall",
-      avatar: "/logo.jpeg",
-      text: "a consulté votre profil. Import de CV recommandé.",
-      type: "jobs",
-      time: "2 h",
-      unread: true
-    },
-    {
-      id: 3,
-      author: "Joseph Maxime Bilivogui",
-      avatar: "/logo.jpeg",
-      text: "a publié un post : Votre CV révisé est votre meilleur atout.",
-      type: "posts",
-      time: "3 h",
-      unread: true
-    },
-    {
-      id: 4,
-      author: "Wave Sénégal",
-      avatar: "/logo.jpeg",
-      text: "recrute un Conseiller Clientèle Télécom à Dakar.",
-      type: "jobs",
-      time: "6 h",
-      unread: false
-    },
-    {
-      id: 5,
-      author: "Sarah Taylor",
-      avatar: "/logo.jpeg",
-      text: "vous a mentionné dans un commentaire sur l'outil d'analyse de CV.",
-      type: "mentions",
-      time: "13 h",
-      unread: false
-    }
-  ]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [notificationsList, setNotificationsList] = useState([]);
   const t = translations[selectedLang] || translations.FR;
   const scanSteps = selectedLang === "FR" ? scanStepsFR : scanStepsGB;
 
