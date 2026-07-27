@@ -24,8 +24,23 @@ export default function ProfilPage() {
   const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
   const [coverUrl, setCoverUrl] = useState("/stellar-cover.png");
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  // Dropdowns & Menu Actions pour Couverture et Avatar
+  const [coverMenuOpen, setCoverMenuOpen] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const coverMenuRef = useRef(null);
+  const avatarMenuRef = useRef(null);
+
+  // Modale de Recadrage & Zoom (Crop/Resize)
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropType, setCropType] = useState("avatar"); // 'avatar' | 'cover'
+  const [rawImageSrc, setRawImageSrc] = useState(null);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [imagePos, setImagePos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [imageDescription, setImageDescription] = useState("");
+  const [isProvisional, setIsProvisional] = useState(false);
+  const [viewImageModal, setViewImageModal] = useState({ open: false, url: "", title: "" });
 
   // File Inputs Refs pour Avatar et Couverture
   const avatarInputRef = useRef(null);
@@ -104,66 +119,91 @@ export default function ProfilPage() {
     loadUserProfile();
   }, []);
 
-  // Gestion du téléversement de la photo de profil (Avatar)
-  const handleAvatarUpload = async (e) => {
+  // Sélection d'une image pour ouverture de la modale de recadrage/zoom
+  const handleSelectImageForCrop = (e, type) => {
     const file = e.target.files[0];
-    if (!file || !userSession?.user) return;
-
-    setIsUploadingAvatar(true);
-    triggerToast("Téléversement de la photo de profil...", "fa-spinner fa-spin");
+    if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async () => {
-      const base64Data = reader.result;
-      setAvatarUrl(base64Data);
-
-      try {
-        await supabase.from("profiles").upsert({
-          id: userSession.user.id,
-          email: userSession.user.email,
-          avatar_url: base64Data,
-          updated_at: new Date().toISOString(),
-        });
-        setIsUploadingAvatar(false);
-        triggerToast("Photo de profil mise à jour avec succès !", "fa-camera");
-      } catch (err) {
-        console.error(err);
-        setIsUploadingAvatar(false);
-        triggerToast("Erreur lors de la mise à jour de l'avatar", "fa-triangle-exclamation");
-      }
+    reader.onload = () => {
+      setRawImageSrc(reader.result);
+      setCropType(type);
+      setZoomScale(1);
+      setImagePos({ x: 0, y: 0 });
+      setImageDescription("");
+      setIsProvisional(false);
+      setCropModalOpen(true);
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
-  // Gestion du téléversement de l'image de couverture
-  const handleCoverUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !userSession?.user) return;
+  // Traitement du Canvas et Enregistrement final sur Supabase
+  const handleSaveCroppedImage = async () => {
+    if (!rawImageSrc || !userSession?.user) return;
 
-    setIsUploadingCover(true);
-    triggerToast("Téléversement de la couverture...", "fa-spinner fa-spin");
+    triggerToast("Enregistrement de l'image...", "fa-spinner fa-spin");
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64Data = reader.result;
-      setCoverUrl(base64Data);
+    // Génération du rendu final avec Canvas
+    const img = new Image();
+    img.src = rawImageSrc;
+    await new Promise((resolve) => { img.onload = resolve; });
 
-      try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (cropType === "avatar") {
+      canvas.width = 400;
+      canvas.height = 400;
+    } else {
+      canvas.width = 1200;
+      canvas.height = 400;
+    }
+
+    // Dessin de l'image avec zoom et décalage
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const aspect = img.width / img.height;
+    let drawWidth = canvas.width * zoomScale;
+    let drawHeight = (canvas.width / aspect) * zoomScale;
+
+    if (drawHeight < canvas.height * zoomScale) {
+      drawHeight = canvas.height * zoomScale;
+      drawWidth = (canvas.height * aspect) * zoomScale;
+    }
+
+    const drawX = (canvas.width - drawWidth) / 2 + imagePos.x;
+    const drawY = (canvas.height - drawHeight) / 2 + imagePos.y;
+
+    ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+    const finalBase64 = canvas.toDataURL("image/jpeg", 0.9);
+
+    try {
+      if (cropType === "avatar") {
+        setAvatarUrl(finalBase64);
         await supabase.from("profiles").upsert({
           id: userSession.user.id,
           email: userSession.user.email,
-          cover_url: base64Data,
+          avatar_url: finalBase64,
           updated_at: new Date().toISOString(),
         });
-        setIsUploadingCover(false);
-        triggerToast("Image de couverture mise à jour avec succès !", "fa-image");
-      } catch (err) {
-        console.error(err);
-        setIsUploadingCover(false);
-        triggerToast("Erreur lors de la mise à jour de la couverture", "fa-triangle-exclamation");
+        triggerToast("Photo de profil mise à jour avec succès !", "fa-camera");
+      } else {
+        setCoverUrl(finalBase64);
+        await supabase.from("profiles").upsert({
+          id: userSession.user.id,
+          email: userSession.user.email,
+          cover_url: finalBase64,
+          updated_at: new Date().toISOString(),
+        });
+        triggerToast("Photo de couverture mise à jour avec succès !", "fa-image");
       }
-    };
-    reader.readAsDataURL(file);
+      setCropModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      triggerToast("Erreur lors de l'enregistrement", "fa-triangle-exclamation");
+    }
   };
 
   // Sauvegarder la biographie dans Supabase
@@ -676,66 +716,150 @@ export default function ProfilPage() {
               <input
                 type="file"
                 ref={avatarInputRef}
-                onChange={handleAvatarUpload}
+                onChange={(e) => handleSelectImageForCrop(e, "avatar")}
                 accept="image/*"
                 className="hidden"
               />
               <input
                 type="file"
                 ref={coverInputRef}
-                onChange={handleCoverUpload}
+                onChange={(e) => handleSelectImageForCrop(e, "cover")}
                 accept="image/*"
                 className="hidden"
               />
 
               {/* Image de couverture spatiale stellaire / personnalisée */}
               <div
-                className="h-44 md:h-56 bg-cover bg-center bg-no-repeat relative"
+                className="h-44 md:h-56 bg-cover bg-center bg-no-repeat relative group"
                 style={{ backgroundImage: `url('${coverUrl}')` }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60"></div>
-                <button
-                  type="button"
-                  disabled={isUploadingCover}
-                  onClick={() => coverInputRef.current?.click()}
-                  className="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-800 p-2.5 px-3.5 rounded-full shadow-md text-xs font-bold transition flex items-center space-x-2 cursor-pointer backdrop-blur-xs active:scale-95 z-20"
-                >
-                  {isUploadingCover ? (
-                    <>
-                      <i className="fa-solid fa-circle-notch animate-spin text-blue-600"></i>
-                      <span className="hidden sm:inline">Téléversement...</span>
-                    </>
-                  ) : (
-                    <>
-                      <i className="fa-solid fa-camera text-gray-700"></i>
-                      <span className="hidden sm:inline">Changer la couverture</span>
-                    </>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-900/30 to-indigo-950/50"></div>
+                
+                {/* Bouton Changer la photo de couverture avec menu déroulant */}
+                <div className="absolute top-4 right-4 z-30" ref={coverMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setCoverMenuOpen(!coverMenuOpen)}
+                    className="bg-white/95 hover:bg-white text-gray-800 p-2.5 px-4 rounded-full shadow-lg text-xs font-extrabold transition flex items-center space-x-2 cursor-pointer backdrop-blur-md active:scale-95 border border-gray-200"
+                  >
+                    <i className="fa-solid fa-camera text-gray-800 text-sm"></i>
+                    <span className="hidden sm:inline">Changer la photo de couverture</span>
+                  </button>
+
+                  {/* Menu Déroulant Couverture */}
+                  {coverMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-50 animate-fade-in-up">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCoverMenuOpen(false);
+                          coverInputRef.current?.click();
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left"
+                      >
+                        <i className="fa-regular fa-image text-gray-600 text-sm w-5 text-center"></i>
+                        <span>Choisir une photo de couverture</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCoverMenuOpen(false);
+                          coverInputRef.current?.click();
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left"
+                      >
+                        <i className="fa-solid fa-upload text-gray-600 text-sm w-5 text-center"></i>
+                        <span>Importer une photo</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCoverMenuOpen(false);
+                          if (coverUrl !== "/stellar-cover.png") {
+                            setRawImageSrc(coverUrl);
+                            setCropType("cover");
+                            setZoomScale(1);
+                            setImagePos({ x: 0, y: 0 });
+                            setCropModalOpen(true);
+                          } else {
+                            triggerToast("Veuillez d'abord choisir une photo", "fa-info-circle");
+                          }
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left border-b border-gray-100"
+                      >
+                        <i className="fa-solid fa-arrows-up-down-left-right text-gray-600 text-sm w-5 text-center"></i>
+                        <span>Repositionner</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setCoverMenuOpen(false);
+                          setCoverUrl("/stellar-cover.png");
+                          if (userSession?.user) {
+                            await supabase.from("profiles").upsert({
+                              id: userSession.user.id,
+                              cover_url: "/stellar-cover.png",
+                              updated_at: new Date().toISOString()
+                            });
+                          }
+                          triggerToast("Couverture réinitialisée", "fa-trash-can");
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition cursor-pointer text-left"
+                      >
+                        <i className="fa-regular fa-trash-can text-red-500 text-sm w-5 text-center"></i>
+                        <span>Supprimer</span>
+                      </button>
+                    </div>
                   )}
-                </button>
+                </div>
               </div>
 
               {/* Contenu Profil Hero */}
               <div className="px-6 md:px-8 pb-6 pt-0 relative">
-                {/* Photo de profil (Grand cercle avec overlay d'édition) */}
-                <div className="-mt-16 md:-mt-20 mb-4 relative z-10 w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white group flex-shrink-0">
-                  <img
-                    src={avatarUrl}
-                    alt="Logo Profil Facilite"
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <div
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer"
-                  >
-                    {isUploadingAvatar ? (
-                      <i className="fa-solid fa-circle-notch animate-spin text-2xl"></i>
-                    ) : (
-                      <>
-                        <i className="fa-solid fa-camera text-2xl mb-1"></i>
-                        <span className="text-[10px] font-bold tracking-tight">Modifier</span>
-                      </>
-                    )}
+                {/* Photo de profil (Grand cercle avec menu interactif au clic) */}
+                <div className="-mt-16 md:-mt-20 mb-4 relative z-20 w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-white shadow-xl bg-white flex-shrink-0" ref={avatarMenuRef}>
+                  <div className="w-full h-full rounded-full overflow-hidden relative group">
+                    <img
+                      src={avatarUrl}
+                      alt="Logo Profil Facilite"
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                    <div
+                      onClick={() => setAvatarMenuOpen(!avatarMenuOpen)}
+                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer"
+                    >
+                      <i className="fa-solid fa-camera text-2xl mb-1"></i>
+                      <span className="text-[10px] font-bold tracking-tight">Modifier</span>
+                    </div>
                   </div>
+
+                  {/* Menu Déroulant Avatar */}
+                  {avatarMenuOpen && (
+                    <div className="absolute left-0 top-full mt-2 w-56 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-50 animate-fade-in-up">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAvatarMenuOpen(false);
+                          setViewImageModal({ open: true, url: avatarUrl, title: "Photo de profil" });
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left border-b border-gray-100"
+                      >
+                        <i className="fa-regular fa-circle-user text-gray-600 text-base w-5 text-center"></i>
+                        <span>Voir la photo de profil</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAvatarMenuOpen(false);
+                          avatarInputRef.current?.click();
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left"
+                      >
+                        <i className="fa-regular fa-image text-gray-600 text-base w-5 text-center"></i>
+                        <span>Choisir une photo de profil</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1469,6 +1593,194 @@ export default function ProfilPage() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* --- MODALE DE RECADRAGE & ZOOM INTERACTIVE (STYLE LINKEDIN 1:1) --- */}
+      {cropModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl border border-gray-100 flex flex-col max-h-[92vh] animate-scale-up">
+            
+            {/* Header Modale */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-extrabold text-gray-900">
+                {cropType === "avatar" ? "Choisir une photo de profil" : "Ajuster la photo de couverture"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCropModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-base"></i>
+              </button>
+            </div>
+
+            {/* Corps Modale */}
+            <div className="p-6 overflow-y-auto space-y-5">
+              
+              {/* Champ Description */}
+              <div>
+                <textarea
+                  rows={2}
+                  value={imageDescription}
+                  onChange={(e) => setImageDescription(e.target.value)}
+                  placeholder="Description..."
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-2xl text-xs font-medium focus:outline-none focus:border-blue-600 transition placeholder-gray-400"
+                />
+              </div>
+
+              {/* Zone de recadrage interactive avec cadre (circulaire pour avatar, rectangulaire pour couverture) */}
+              <div
+                className="relative w-full h-72 sm:h-80 bg-gray-900 rounded-2xl overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing select-none"
+                onMouseDown={(e) => {
+                  setIsDragging(true);
+                  setDragStart({ x: e.clientX - imagePos.x, y: e.clientY - imagePos.y });
+                }}
+                onMouseMove={(e) => {
+                  if (!isDragging) return;
+                  setImagePos({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+                }}
+                onMouseUp={() => setIsDragging(false)}
+                onMouseLeave={() => setIsDragging(false)}
+              >
+                {/* Image brute avec transformation de zoom et position */}
+                <img
+                  src={rawImageSrc}
+                  alt="Aperçu recadrage"
+                  draggable={false}
+                  className="max-w-none transition-transform duration-75 pointer-events-none"
+                  style={{
+                    transform: `translate(${imagePos.x}px, ${imagePos.y}px) scale(${zoomScale})`,
+                    maxHeight: cropType === "avatar" ? "80%" : "90%",
+                  }}
+                />
+
+                {/* Masque de cadrage visuel */}
+                {cropType === "avatar" ? (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    {/* Fond d'assombrissement hors du cercle */}
+                    <div className="w-full h-full bg-black/50 mask-radial flex items-center justify-center">
+                      <div className="w-56 h-56 rounded-full border-2 border-white/80 shadow-2xl relative">
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[10px] font-bold px-3 py-1 rounded-full backdrop-blur-xs flex items-center space-x-1.5 whitespace-nowrap shadow-md">
+                          <i className="fa-solid fa-arrows-up-down-left-right text-xs"></i>
+                          <span>Faites glisser pour repositionner l'image</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+                    <div className="w-full h-48 border-2 border-dashed border-white/90 rounded-2xl shadow-2xl relative">
+                      <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[10px] font-bold px-3 py-1 rounded-full backdrop-blur-xs flex items-center space-x-1.5 whitespace-nowrap shadow-md">
+                        <i className="fa-solid fa-arrows-up-down-left-right text-xs"></i>
+                        <span>Faites glisser pour ajuster la couverture</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Slider de Zoom (+ / -) */}
+              <div className="flex items-center space-x-4 px-4 pt-2">
+                <span className="text-xs font-bold text-gray-500">-</span>
+                <input
+                  type="range"
+                  min="0.8"
+                  max="3"
+                  step="0.05"
+                  value={zoomScale}
+                  onChange={(e) => setZoomScale(parseFloat(e.target.value))}
+                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <span className="text-xs font-bold text-gray-500">+</span>
+              </div>
+
+              {/* Boutons d'action secondaires (Recadrer / Rendre provisoire) */}
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setZoomScale(1);
+                    setImagePos({ x: 0, y: 0 });
+                    triggerToast("Cadre réinitialisé", "fa-arrows-rotate");
+                  }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-extrabold px-4 py-2 rounded-xl transition flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <i className="fa-solid fa-crop text-gray-600"></i>
+                  <span>Recadrer la photo</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProvisional(!isProvisional);
+                    triggerToast(isProvisional ? "Mode normal" : "Marqué comme provisoire", "fa-clock");
+                  }}
+                  className={`text-xs font-extrabold px-4 py-2 rounded-xl transition flex items-center space-x-1.5 cursor-pointer ${
+                    isProvisional ? "bg-amber-100 text-amber-800 border border-amber-300" : "bg-gray-100 hover:bg-gray-200 text-gray-800"
+                  }`}
+                >
+                  <i className="fa-regular fa-clock text-gray-600"></i>
+                  <span>Rendre provisoire</span>
+                </button>
+              </div>
+
+              {/* Notice Visibilité */}
+              <div className="flex items-center space-x-2 text-gray-500 text-xs font-semibold pt-1">
+                <i className="fa-solid fa-earth-americas text-gray-400"></i>
+                <span>Votre photo de profil est publique.</span>
+              </div>
+
+            </div>
+
+            {/* Footer Modale (Annuler / Enregistrer) */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setCropModalOpen(false)}
+                className="px-5 py-2.5 text-xs font-extrabold text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition cursor-pointer"
+              >
+                Annuler
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveCroppedImage}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-full shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer active:scale-95 flex items-center space-x-2"
+              >
+                <span>Enregistrer</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* --- MODALE DE VISUALISATION PLEIN ÉCRAN --- */}
+      {viewImageModal.open && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100 p-6 flex flex-col items-center">
+            <div className="w-full flex justify-between items-center mb-4">
+              <h3 className="text-base font-extrabold text-gray-900">{viewImageModal.title}</h3>
+              <button
+                type="button"
+                onClick={() => setViewImageModal({ open: false, url: "", title: "" })}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-base"></i>
+              </button>
+            </div>
+            <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-white shadow-xl mb-4 bg-gray-100">
+              <img src={viewImageModal.url} alt="Aperçu grand format" className="w-full h-full object-cover" />
+            </div>
+            <button
+              type="button"
+              onClick={() => setViewImageModal({ open: false, url: "", title: "" })}
+              className="px-6 py-2 bg-gray-900 text-white font-bold text-xs rounded-full cursor-pointer hover:bg-gray-800 transition"
+            >
+              Fermer
+            </button>
           </div>
         </div>
       )}
