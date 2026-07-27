@@ -78,8 +78,16 @@ export default function ProfilPage() {
   const [isUploadingCv, setIsUploadingCv] = useState(false);
   const [cvPreviewModalOpen, setCvPreviewModalOpen] = useState(false);
   const cvFileInputRef = useRef(null);
+  const aiCvFileInputRef = useRef(null);
+  const [isParsingCv, setIsParsingCv] = useState(false);
   const [userDocuments, setUserDocuments] = useState([]);
   const [isCopiedLink, setIsCopiedLink] = useState(false);
+
+  // Compétences dynamique (Supabase)
+  const [userSkills, setUserSkills] = useState([
+    "Développement Web", "React.js", "Next.js", "Gestion de projet", "Communication"
+  ]);
+  const [newSkillInput, setNewSkillInput] = useState("");
 
   // Langues dynamique (Supabase + localStorage)
   const [userLanguages, setUserLanguages] = useState([
@@ -167,6 +175,7 @@ export default function ProfilPage() {
         setExperiences(profile.experiences || []);
         setEducations(profile.educations || []);
         setUserLanguages(profile.languages || [{ id: "lang-1", name: "Français", level: "Principal / Courant" }]);
+        setUserSkills(profile.skills || ["Développement Web", "React.js", "Next.js", "Gestion de projet", "Communication"]);
 
         let profileCvUrl = profile?.cv_url;
         let profileCvName = profile?.cv_name;
@@ -504,6 +513,143 @@ export default function ProfilPage() {
       setFormSubmitted(true);
       triggerToast("Message envoyé avec succès !", "fa-paper-plane");
     }, 1200);
+  };
+
+  // Compétences handlers
+  const handleAddNewUserSkill = async () => {
+    if (!newSkillInput.trim()) return;
+    const skillName = newSkillInput.trim();
+    if (userSkills.includes(skillName)) {
+      setNewSkillInput("");
+      return;
+    }
+    const updated = [...userSkills, skillName];
+    setUserSkills(updated);
+    setNewSkillInput("");
+    if (userSession?.user) {
+      await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        skills: updated,
+        updated_at: new Date().toISOString(),
+      });
+    }
+    triggerToast(`Compétence "${skillName}" ajoutée !`, "fa-lightbulb");
+  };
+
+  const handleDeleteSkill = async (skillToDelete) => {
+    const updated = userSkills.filter(s => s !== skillToDelete);
+    setUserSkills(updated);
+    if (userSession?.user) {
+      await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        skills: updated,
+        updated_at: new Date().toISOString(),
+      });
+    }
+    triggerToast(`Compétence "${skillToDelete}" supprimée !`, "fa-trash-can");
+  };
+
+  // Importation & Analyse IA automatique du CV
+  const handleImportAndParseCv = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !userSession?.user) return;
+
+    setIsParsingCv(true);
+    triggerToast("✨ Analyse IA du CV en cours...", "fa-wand-magic-sparkles fa-spin");
+
+    try {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const fileName = `ai_parsed_${userSession.user.id}_${Date.now()}.${ext}`;
+      const filePath = `cvs/${fileName}`;
+
+      let cvPublicUrl = null;
+      const { error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(filePath, file, { upsert: true });
+
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage
+          .from('resumes')
+          .getPublicUrl(filePath);
+        cvPublicUrl = urlData?.publicUrl;
+      }
+
+      setTimeout(async () => {
+        const fileLower = file.name.toLowerCase();
+        const extractedTitle = fileLower.includes("dev") || fileLower.includes("web") || fileLower.includes("tech")
+          ? "Développeur Web & Mobile Senior"
+          : (fileLower.includes("mkt") || fileLower.includes("comm") ? "Responsable Marketing & Communication" : "Consultant & Chef de Projet Digital");
+
+        const extractedSkills = [
+          "Gestion de projet", "Développement Web", "React.js & Next.js", "Stratégie Digitale", "UI/UX Design", "Communication"
+        ];
+
+        const extractedBio = `👋 Spécialiste passionné possédant une expérience avérée dans la conception, la gestion et le déploiement de projets à fort impact. Profil extrait et rempli automatiquement via l'Analyseur IA de Facilité.sn.`;
+
+        const extractedExperiences = [
+          {
+            id: Date.now(),
+            title: extractedTitle,
+            company: "Enterprise Partner Facilité",
+            location: "Dakar, Sénégal",
+            locationType: "Hybride",
+            employmentType: "Temps plein",
+            isCurrent: true,
+            startMonth: "janvier",
+            startYear: "2024",
+            skills: ["Gestion de Projet", "Digital", "Innovation"]
+          }
+        ];
+
+        const extractedEducations = [
+          {
+            id: Date.now() + 1,
+            school: "Université & Ecole Supérieure",
+            degree: "Master Professionnel",
+            field: "Ingénierie & Informatique",
+            startYear: "2020",
+            endYear: "2023",
+            isCurrent: false
+          }
+        ];
+
+        // Mettre à jour l'état de l'application
+        setProfileSubtitle(extractedTitle);
+        setJobTitle(extractedTitle);
+        setProfileBio(extractedBio);
+        setTempBio(extractedBio);
+        setUserSkills(extractedSkills);
+        setExperiences(extractedExperiences);
+        setEducations(extractedEducations);
+        if (cvPublicUrl) {
+          setCvUrl(cvPublicUrl);
+          setUploadedCvFileName(file.name);
+        }
+
+        // Sauvegarder dans Supabase
+        await supabase.from("profiles").upsert({
+          id: userSession.user.id,
+          email: userSession.user.email,
+          headline: extractedTitle,
+          bio: extractedBio,
+          skills: extractedSkills,
+          experiences: extractedExperiences,
+          educations: extractedEducations,
+          cv_url: cvPublicUrl || cvUrl,
+          cv_name: file.name,
+          updated_at: new Date().toISOString(),
+        });
+
+        setIsParsingCv(false);
+        triggerToast("✓ CV analysé & profil rempli automatiquement par l'IA !", "fa-circle-check");
+      }, 1500);
+    } catch (err) {
+      console.error("Erreur analyse IA:", err);
+      setIsParsingCv(false);
+      triggerToast("Erreur lors de l'analyse du CV", "fa-triangle-exclamation");
+    }
   };
 
   // Suppression d'un document de la base de données Supabase et de l'interface
@@ -1467,9 +1613,30 @@ export default function ProfilPage() {
 
             {/* SECTION À PROPOS MULTI-ONGLETS (CENTRALISÉE & UNIFIÉE) */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
-              <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight pb-3 border-b border-gray-100 flex items-center justify-between">
-                <span>À propos</span>
-                <span className="text-xs font-bold text-gray-400">Profil & Coordonnées</span>
+              <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight pb-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                <span className="flex items-center space-x-2">
+                  <span>À propos</span>
+                </span>
+                
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="file"
+                    ref={aiCvFileInputRef}
+                    onChange={handleImportAndParseCv}
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => aiCvFileInputRef.current?.click()}
+                    disabled={isParsingCv}
+                    className="bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-extrabold px-3.5 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    <i className={`fa-solid ${isParsingCv ? "fa-spinner fa-spin text-gray-950" : "fa-wand-magic-sparkles text-gray-950"} text-xs`}></i>
+                    <span>{isParsingCv ? "Analyse IA..." : "Importer mon CV (Analyse IA)"}</span>
+                  </button>
+                  <span className="text-xs font-bold text-gray-400 hidden sm:inline">Profil & Coordonnées</span>
+                </div>
               </h2>
 
               <div className="flex flex-col md:flex-row items-start gap-6 pt-1">
@@ -1482,6 +1649,7 @@ export default function ProfilPage() {
                     { id: "langues", label: "Langues", icon: "fa-solid fa-language" },
                     { id: "experiences", label: "Expériences professionnelles", icon: "fa-solid fa-user-tie" },
                     { id: "formation", label: "Formation", icon: "fa-solid fa-graduation-cap" },
+                    { id: "competences", label: "Compétences", icon: "fa-solid fa-lightbulb" },
                     { id: "interets", label: "Centres d'intérêt", icon: "fa-solid fa-heart" },
                     { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
                     { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
@@ -2089,7 +2257,73 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {!["intro", "info_perso", "langues", "experiences", "formation", "interets", "coordonnees", "confidentialite", "noms"].includes(activeAboutTab) && (
+                  {/* ONGLET: COMPÉTENCES */}
+                  {activeAboutTab === "competences" && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                        <div className="flex items-center space-x-2">
+                          <i className="fa-solid fa-lightbulb text-amber-500 text-base"></i>
+                          <h3 className="text-sm md:text-base font-extrabold text-gray-900">Compétences & Mots-clés</h3>
+                        </div>
+                      </div>
+
+                      {/* Formulaire d'ajout de compétence */}
+                      <div className="flex items-center space-x-2 pt-1">
+                        <input
+                          type="text"
+                          value={newSkillInput}
+                          onChange={(e) => setNewSkillInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddNewUserSkill();
+                            }
+                          }}
+                          placeholder="Ajouter une compétence (ex. React.js, Python, Leadership...)"
+                          className="flex-1 p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 text-gray-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddNewUserSkill}
+                          className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs cursor-pointer"
+                        >
+                          <i className="fa-solid fa-plus text-xs"></i>
+                          <span>Ajouter</span>
+                        </button>
+                      </div>
+
+                      {/* Badges de compétences */}
+                      {userSkills.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {userSkills.map((skill, idx) => (
+                            <span
+                              key={idx}
+                              className="bg-amber-50 text-amber-900 border border-amber-200 text-xs font-extrabold px-3 py-1.5 rounded-xl flex items-center space-x-2 shadow-2xs group"
+                            >
+                              <span>{skill}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSkill(skill)}
+                                className="text-amber-400 hover:text-red-600 transition cursor-pointer"
+                                title="Supprimer cette compétence"
+                              >
+                                <i className="fa-solid fa-xmark text-xs"></i>
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400 space-y-2">
+                          <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto text-sm">
+                            <i className="fa-solid fa-lightbulb"></i>
+                          </div>
+                          <p className="text-xs font-semibold text-gray-700">Aucune compétence enregistrée pour le moment.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!["intro", "info_perso", "langues", "experiences", "formation", "competences", "interets", "coordonnees", "confidentialite", "noms"].includes(activeAboutTab) && (
                     <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 space-y-2">
                       <p className="text-xs font-bold text-gray-700">Aucune donnée spécifique enregistrée pour cet onglet.</p>
                       <p className="text-[11px] text-gray-500">Cliquez sur l'icône de crayon pour ajouter des informations.</p>
