@@ -81,6 +81,14 @@ export default function ProfilPage() {
   const [userDocuments, setUserDocuments] = useState([]);
   const [isCopiedLink, setIsCopiedLink] = useState(false);
 
+  // Langues dynamique (Supabase + localStorage)
+  const [userLanguages, setUserLanguages] = useState([
+    { id: "lang-1", name: "Français", level: "Principal / Courant" }
+  ]);
+  const [langModalOpen, setLangModalOpen] = useState(false);
+  const [newLangName, setNewLangName] = useState("");
+  const [newLangLevel, setNewLangLevel] = useState("Intermédiaire");
+
   // Expériences dynamique (localStorage)
   const [experiences, setExperiences] = useState([]);
   const [experienceModalOpen, setExperienceModalOpen] = useState(false);
@@ -158,6 +166,7 @@ export default function ProfilPage() {
         setCoverUrl(profile.cover_url || "/stellar-cover.png");
         setExperiences(profile.experiences || []);
         setEducations(profile.educations || []);
+        setUserLanguages(profile.languages || [{ id: "lang-1", name: "Français", level: "Principal / Courant" }]);
 
         let profileCvUrl = profile?.cv_url;
         let profileCvName = profile?.cv_name;
@@ -1509,6 +1518,7 @@ export default function ProfilPage() {
                     { id: "categorie", label: "Catégorie", icon: "fa-regular fa-folder" },
                     { id: "info_perso", label: "Informations personnelles", icon: "fa-regular fa-id-card" },
                     { id: "liens", label: "Liens", icon: "fa-solid fa-link" },
+                    { id: "langues", label: "Langues", icon: "fa-solid fa-language" },
                     { id: "communautes", label: "Communautés", icon: "fa-solid fa-users" },
                     { id: "offres", label: "Offres", icon: "fa-solid fa-briefcase" },
                     { id: "experiences", label: "Expériences professionnelles", icon: "fa-solid fa-user-tie" },
@@ -1918,6 +1928,87 @@ export default function ProfilPage() {
                     </div>
                   )}
 
+                  {activeAboutTab === "langues" && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                        <div className="flex items-center space-x-2">
+                          <i className="fa-solid fa-language text-emerald-600 text-base"></i>
+                          <h3 className="text-sm md:text-base font-extrabold text-gray-900">Langues du profil</h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewLangName("");
+                            setNewLangLevel("Intermédiaire");
+                            setLangModalOpen(true);
+                          }}
+                          className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer border border-emerald-200"
+                        >
+                          <i className="fa-solid fa-plus text-xs"></i>
+                          <span>Ajouter une langue</span>
+                        </button>
+                      </div>
+
+                      {userLanguages.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          {userLanguages.map((lang, idx) => (
+                            <div
+                              key={lang.id || idx}
+                              className="p-4 bg-gray-50/80 hover:bg-gray-100/80 rounded-2xl border border-gray-200/80 transition flex items-center justify-between group"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-9 h-9 rounded-xl bg-emerald-100/80 text-emerald-700 flex items-center justify-center font-black text-xs">
+                                  <i className="fa-solid fa-globe"></i>
+                                </div>
+                                <div>
+                                  <h4 className="text-xs font-extrabold text-gray-900 flex items-center space-x-1.5">
+                                    <span>{lang.name}</span>
+                                    {idx === 0 && (
+                                      <span className="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-md border border-emerald-200">
+                                        Principal
+                                      </span>
+                                    )}
+                                  </h4>
+                                  <p className="text-[11px] text-gray-500 font-semibold">{lang.level}</p>
+                                </div>
+                              </div>
+
+                              {idx > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const updated = userLanguages.filter((_, i) => i !== idx);
+                                    setUserLanguages(updated);
+                                    if (userSession?.user) {
+                                      await supabase.from("profiles").upsert({
+                                        id: userSession.user.id,
+                                        email: userSession.user.email,
+                                        languages: updated,
+                                        updated_at: new Date().toISOString(),
+                                      });
+                                    }
+                                    triggerToast(`Langue ${lang.name} supprimée !`, "fa-trash-can");
+                                  }}
+                                  className="text-gray-300 hover:text-red-500 transition p-1.5 cursor-pointer"
+                                  title="Supprimer cette langue"
+                                >
+                                  <i className="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400 space-y-2">
+                          <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto text-sm">
+                            <i className="fa-solid fa-language"></i>
+                          </div>
+                          <p className="text-xs font-semibold text-gray-700">Aucune langue renseignée pour le moment.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {activeAboutTab === "experiences" && (
                     <div className="space-y-4 animate-fade-in">
                       <div className="flex justify-between items-center pb-2 border-b border-gray-100">
@@ -2041,7 +2132,7 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {!["info_perso", "intro", "categorie", "liens", "coordonnees", "experiences", "formation"].includes(activeAboutTab) && (
+                  {!["info_perso", "intro", "categorie", "liens", "coordonnees", "experiences", "formation", "langues"].includes(activeAboutTab) && (
                     <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 space-y-2">
                       <p className="text-xs font-bold text-gray-700">Aucune donnée spécifique enregistrée pour cet onglet.</p>
                       <p className="text-[11px] text-gray-500">Cliquez sur l'icône de crayon pour ajouter des informations.</p>
@@ -2183,21 +2274,6 @@ export default function ProfilPage() {
 
           {/* COLONNE DROITE : Paramètres de confidentialité & Action rapides (Fixe / Sticky au Scroll) */}
           <div className="w-full lg:w-[326px] flex flex-col space-y-4 sticky top-[76px] self-start transition-all z-10">
-
-            {/* Carte Langue du profil */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-3">
-              <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Langue du profil</h3>
-              <div className="flex items-center justify-between py-1">
-                <span className="text-xs font-bold text-gray-700">Français (Principal)</span>
-                <i className="fa-solid fa-check text-emerald-500 text-sm"></i>
-              </div>
-              <button
-                onClick={() => triggerToast("Langue secondaire ajoutée !", "fa-globe")}
-                className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2 rounded-xl text-xs transition cursor-pointer"
-              >
-                + Ajouter une langue
-              </button>
-            </div>
 
             {/* Carte URL du profil public (Génération Dynamique & Interactive) */}
             {(() => {
@@ -3049,6 +3125,90 @@ export default function ProfilPage() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* MODALE D'AJOUT DE LANGUE */}
+      {langModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-5">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+              <h3 className="text-base font-extrabold text-gray-900 flex items-center space-x-2">
+                <i className="fa-solid fa-language text-emerald-600"></i>
+                <span>Ajouter une langue à votre profil</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setLangModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-lg"></i>
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Nom de la langue</label>
+                <input
+                  type="text"
+                  value={newLangName}
+                  onChange={(e) => setNewLangName(e.target.value)}
+                  placeholder="Ex. Anglais, Wolof, Espagnol, Allemand..."
+                  className="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Niveau de maîtrise</label>
+                <select
+                  value={newLangLevel}
+                  onChange={(e) => setNewLangLevel(e.target.value)}
+                  className="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
+                >
+                  <option value="Langue maternelle">Langue maternelle</option>
+                  <option value="Courant / Bilingue">Courant / Bilingue</option>
+                  <option value="Avancé">Avancé</option>
+                  <option value="Intermédiaire">Intermédiaire</option>
+                  <option value="Débutant">Débutant</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2.5 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setLangModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-extrabold rounded-xl text-xs transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!newLangName.trim()) return;
+                  const newLang = {
+                    id: `lang-${Date.now()}`,
+                    name: newLangName.trim(),
+                    level: newLangLevel
+                  };
+                  const updated = [...userLanguages, newLang];
+                  setUserLanguages(updated);
+                  if (userSession?.user) {
+                    await supabase.from("profiles").upsert({
+                      id: userSession.user.id,
+                      email: userSession.user.email,
+                      languages: updated,
+                      updated_at: new Date().toISOString(),
+                    });
+                  }
+                  setLangModalOpen(false);
+                  triggerToast(`Langue ${newLangName.trim()} ajoutée !`, "fa-language");
+                }}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs transition shadow-md cursor-pointer"
+              >
+                Enregistrer la langue
+              </button>
             </div>
           </div>
         </div>
