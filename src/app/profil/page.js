@@ -38,6 +38,9 @@ export default function ProfilPage() {
   const [maritalStatus, setMaritalStatus] = useState("Célibataire");
   const [driverLicense, setDriverLicense] = useState("Permis B");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [activeAboutTab, setActiveAboutTab] = useState("info_perso");
+  const [birthDate, setBirthDate] = useState("14 juillet 2002");
+  const [gender, setGender] = useState("Homme");
   const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
   const [coverUrl, setCoverUrl] = useState("/stellar-cover.png");
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -148,6 +151,8 @@ export default function ProfilPage() {
         setMaritalStatus(profile.marital_status || (typeof window !== "undefined" ? localStorage.getItem("user_marital_status") || "Célibataire" : "Célibataire"));
         setDriverLicense(profile.driver_license || (typeof window !== "undefined" ? localStorage.getItem("user_driver_license") || "Permis B" : "Permis B"));
         setWebsiteUrl(profile.website_url || (typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : ""));
+        setBirthDate(profile.birth_date || (typeof window !== "undefined" ? localStorage.getItem("user_birth_date") || "14 juillet 2002" : "14 juillet 2002"));
+        setGender(profile.gender || (typeof window !== "undefined" ? localStorage.getItem("user_gender") || "Homme" : "Homme"));
         setAvatarUrl(profile.avatar_url || "/logo.jpeg");
         setCoverUrl(profile.cover_url || "/stellar-cover.png");
         setExperiences(profile.experiences || []);
@@ -801,6 +806,37 @@ export default function ProfilPage() {
       }
     } catch (err) {
       console.error("Exception lors de la sauvegarde bio:", err);
+      triggerToast("Erreur lors de la sauvegarde", "fa-triangle-exclamation");
+    }
+  };
+
+  // Enregistrer dynamiquement une information de l'onglet À propos dans Supabase
+  const handleSaveAboutField = async (fieldKey, fieldValue) => {
+    if (!userSession?.user) return;
+
+    triggerToast("Sauvegarde de la modification...", "fa-spinner fa-spin");
+
+    try {
+      const payload = {
+        id: userSession.user.id,
+        email: userSession.user.email,
+        [fieldKey]: fieldValue,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase.from("profiles").upsert(payload);
+
+      if (error) {
+        console.error(`Erreur lors de la mise à jour de ${fieldKey}:`, error);
+        triggerToast("Erreur lors de la sauvegarde dans Supabase", "fa-triangle-exclamation");
+      } else {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`user_${fieldKey}`, fieldValue);
+        }
+        triggerToast("Information mise à jour avec succès !", "fa-circle-check");
+      }
+    } catch (err) {
+      console.error("Exception sauvegarde champ:", err);
       triggerToast("Erreur lors de la sauvegarde", "fa-triangle-exclamation");
     }
   };
@@ -1656,6 +1692,301 @@ export default function ProfilPage() {
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* SECTION À PROPOS MULTI-ONGLETS (CONFORME FI DÈLEMENT À LA CAPTURE D'ÉCRAN) */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
+              <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight pb-3 border-b border-gray-100 flex items-center justify-between">
+                <span>À propos</span>
+                <span className="text-xs font-bold text-gray-400">Profil & Coordonnées</span>
+              </h2>
+
+              <div className="flex flex-col md:flex-row items-start gap-6 pt-1">
+                
+                {/* BARRE LATÉRALE GAUCHE (ONGLETS À PROPOS) */}
+                <div className="w-full md:w-64 flex-shrink-0 border-r-0 md:border-r border-gray-200/80 pr-0 md:pr-4 space-y-1">
+                  {[
+                    { id: "intro", label: "Intro", icon: "fa-solid fa-hand" },
+                    { id: "categorie", label: "Catégorie", icon: "fa-regular fa-folder" },
+                    { id: "info_perso", label: "Informations personnelles", icon: "fa-regular fa-id-card" },
+                    { id: "liens", label: "Liens", icon: "fa-solid fa-link" },
+                    { id: "communautes", label: "Communautés", icon: "fa-solid fa-users" },
+                    { id: "offres", label: "Offres", icon: "fa-solid fa-briefcase" },
+                    { id: "experiences", label: "Expériences professionnelles", icon: "fa-solid fa-user-tie" },
+                    { id: "formation", label: "Formation", icon: "fa-solid fa-graduation-cap" },
+                    { id: "loisirs", label: "Loisirs", icon: "fa-solid fa-icons" },
+                    { id: "interets", label: "Centres d'intérêt", icon: "fa-solid fa-heart" },
+                    { id: "voyage", label: "Voyage", icon: "fa-solid fa-plane" },
+                    { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
+                    { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
+                    { id: "noms", label: "Noms", icon: "fa-regular fa-user" },
+                  ].map((tab) => {
+                    const isActive = activeAboutTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveAboutTab(tab.id)}
+                        className={`w-full text-left px-4 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center space-x-2.5 ${
+                          isActive
+                            ? "bg-[#E8F0FE] text-[#1D4ED8] font-extrabold shadow-xs"
+                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-bold"
+                        }`}
+                      >
+                        <i className={`${tab.icon} text-xs w-4 text-center ${isActive ? "text-[#1D4ED8]" : "text-gray-400"}`}></i>
+                        <span className="truncate">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* ZONE DE CONTENU DÉTAILLÉE À DROITE */}
+                <div className="flex-1 w-full min-w-0 pl-0 md:pl-2 space-y-6">
+                  
+                  {/* ONGLET: INFORMATIONS PERSONNELLES */}
+                  {activeAboutTab === "info_perso" && (
+                    <div className="space-y-4">
+                      {/* Lieu Actuel */}
+                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60">
+                        <div className="flex items-center space-x-4 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
+                            <i className="fa-solid fa-location-dot"></i>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Lieu</h4>
+                            <p className="text-sm font-extrabold text-[#1D4ED8] mt-0.5">{city || "Pikine"}</p>
+                            <p className="text-[11px] text-gray-500 font-medium">Ville actuelle</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-md border border-gray-200">🌐 Public</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newCity = prompt("Modifier votre ville actuelle :", city || "Pikine");
+                              if (newCity !== null && newCity.trim()) {
+                                setCity(newCity.trim());
+                                handleSaveAboutField("city", newCity.trim());
+                              }
+                            }}
+                            className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
+                            title="Modifier"
+                          >
+                            <i className="fa-solid fa-pen text-xs"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Ville d'origine */}
+                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60 border-t border-gray-100">
+                        <div className="flex items-center space-x-4 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
+                            <i className="fa-solid fa-location-arrow"></i>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Ville d'origine</h4>
+                            <p className="text-sm font-extrabold text-[#1D4ED8] mt-0.5">{country || "Pikine, Sénégal"}</p>
+                            <p className="text-[11px] text-gray-500 font-medium">Ville d'origine</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-md border border-gray-200">🌐 Public</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newCountry = prompt("Modifier votre pays/ville d'origine :", country || "Sénégal");
+                              if (newCountry !== null && newCountry.trim()) {
+                                setCountry(newCountry.trim());
+                                handleSaveAboutField("country", newCountry.trim());
+                              }
+                            }}
+                            className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
+                            title="Modifier"
+                          >
+                            <i className="fa-solid fa-pen text-xs"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Date de naissance */}
+                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60 border-t border-gray-100">
+                        <div className="flex items-center space-x-4 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-pink-50 text-pink-600 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
+                            <i className="fa-solid fa-cake-candles"></i>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Date de naissance</h4>
+                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{birthDate}</p>
+                            <p className="text-[11px] text-gray-500 font-medium">Année de naissance</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-md border border-gray-200">🌐 Public</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newBirth = prompt("Modifier votre date de naissance :", birthDate);
+                              if (newBirth !== null && newBirth.trim()) {
+                                setBirthDate(newBirth.trim());
+                                handleSaveAboutField("birth_date", newBirth.trim());
+                              }
+                            }}
+                            className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
+                            title="Modifier"
+                          >
+                            <i className="fa-solid fa-pen text-xs"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Statut Marital */}
+                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60 border-t border-gray-100">
+                        <div className="flex items-center space-x-4 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
+                            <i className="fa-solid fa-heart"></i>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Statut</h4>
+                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{maritalStatus}</p>
+                            <p className="text-[11px] text-gray-500 font-medium">Situation maritale</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-md border border-gray-200">🌐 Public</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newStatus = prompt("Modifier votre statut (Célibataire, Marié(e), Divorcé(e)) :", maritalStatus);
+                              if (newStatus !== null && newStatus.trim()) {
+                                setMaritalStatus(newStatus.trim());
+                                handleSaveAboutField("marital_status", newStatus.trim());
+                              }
+                            }}
+                            className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
+                            title="Modifier"
+                          >
+                            <i className="fa-solid fa-pen text-xs"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Membre de */}
+                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60 border-t border-gray-100">
+                        <div className="flex items-center space-x-4 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
+                            <i className="fa-solid fa-building"></i>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Membre de</h4>
+                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">Facilite Corporation</p>
+                            <p className="text-[11px] text-gray-500 font-medium">Organisation certifiée</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] bg-emerald-100 text-[#047857] font-bold px-2 py-0.5 rounded-md border border-emerald-200">Certifié</span>
+                        </div>
+                      </div>
+
+                      {/* Genre */}
+                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60 border-t border-gray-100">
+                        <div className="flex items-center space-x-4 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
+                            <i className="fa-solid fa-[#D946EF] fa-mars-stroke"></i>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Genre</h4>
+                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{gender}</p>
+                            <p className="text-[11px] text-gray-500 font-medium">Genre du profil</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-md border border-gray-200">🌐 Public</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newGender = prompt("Modifier votre genre (Homme, Femme, Autre) :", gender);
+                              if (newGender !== null && newGender.trim()) {
+                                setGender(newGender.trim());
+                                handleSaveAboutField("gender", newGender.trim());
+                              }
+                            }}
+                            className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
+                            title="Modifier"
+                          >
+                            <i className="fa-solid fa-pen text-xs"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AUTRES ONGLETS (Intro, Catégorie, Liens, Coordonnées, etc.) */}
+                  {activeAboutTab === "intro" && (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Phrase d'accroche Bio</h4>
+                        <p className="text-sm font-extrabold text-gray-900">{profileBio}</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Titre Professionnel</h4>
+                        <p className="text-sm font-extrabold text-gray-900">{profileSubtitle || "Non renseigné"}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeAboutTab === "categorie" && (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-1">
+                        <h4 className="text-xs font-black text-blue-600 uppercase tracking-wider">Catégorie Principale</h4>
+                        <p className="text-sm font-extrabold text-gray-900">{jobTitle || "Création digitale"}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeAboutTab === "liens" && (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Site Web Officiel</h4>
+                        <p className="text-sm font-extrabold text-blue-600 hover:underline cursor-pointer">{websiteUrl || "https://facilite.sn"}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeAboutTab === "coordonnees" && (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Téléphone</h4>
+                        <p className="text-sm font-extrabold text-gray-900">{phone || "+221 77 000 00 00"}</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
+                        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">E-mail de contact</h4>
+                        <p className="text-sm font-extrabold text-gray-900">{userSession?.user?.email || "contact@facilite.sn"}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeAboutTab === "experiences" && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-500 font-bold">Consultez et gérez vos expériences professionnelles dans la section dédiée de votre profil.</p>
+                    </div>
+                  )}
+
+                  {activeAboutTab === "formation" && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-500 font-bold">Consultez et gérez vos formations et diplômes dans la section dédiée de votre profil.</p>
+                    </div>
+                  )}
+
+                  {!["info_perso", "intro", "categorie", "liens", "coordonnees", "experiences", "formation"].includes(activeAboutTab) && (
+                    <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 space-y-2">
+                      <p className="text-xs font-bold text-gray-700">Aucune donnée spécifique enregistrée pour cet onglet.</p>
+                      <p className="text-[11px] text-gray-500">Cliquez sur l'icône de crayon pour ajouter des informations.</p>
+                    </div>
+                  )}
+
+                </div>
+
               </div>
             </div>
 
