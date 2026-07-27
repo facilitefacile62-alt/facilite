@@ -79,6 +79,7 @@ export default function ProfilPage() {
   const [cvPreviewModalOpen, setCvPreviewModalOpen] = useState(false);
   const cvFileInputRef = useRef(null);
   const [userDocuments, setUserDocuments] = useState([]);
+  const [isCopiedLink, setIsCopiedLink] = useState(false);
 
   // Expériences dynamique (localStorage)
   const [experiences, setExperiences] = useState([]);
@@ -2198,7 +2199,7 @@ export default function ProfilPage() {
               </button>
             </div>
 
-            {/* Carte URL du profil public (Génération Dynamique) */}
+            {/* Carte URL du profil public (Génération Dynamique & Interactive) */}
             {(() => {
               const rawName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profileName || (userSession?.user?.email ? userSession.user.email.split("@")[0] : "facilite-user"));
               const profileSlug = rawName
@@ -2208,25 +2209,40 @@ export default function ProfilPage() {
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-+|-+$/g, "") || "facilite-user";
               const displayUrl = `facilite.sn/in/${profileSlug}`;
-              const fullUrl = `https://${displayUrl}`;
+              const relativeUrl = `/in/${profileSlug}`;
+              const fullUrl = typeof window !== "undefined" ? `${window.location.origin}${relativeUrl}` : `https://${displayUrl}`;
 
               return (
                 <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-3">
                   <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Profil public et URL</h3>
-                  <p className="text-[11px] text-gray-600 font-extrabold truncate" title={displayUrl}>
-                    {displayUrl}
-                  </p>
+                  <a
+                    href={relativeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-gray-600 hover:text-blue-600 font-extrabold truncate block hover:underline flex items-center space-x-1"
+                    title="Cliquer pour voir votre profil public"
+                  >
+                    <span className="truncate">{displayUrl}</span>
+                    <i className="fa-solid fa-arrow-up-right-from-square text-[9px] text-blue-500"></i>
+                  </a>
                   <button
                     type="button"
                     onClick={() => {
-                      if (navigator.clipboard) {
+                      if (typeof window !== "undefined" && navigator.clipboard) {
                         navigator.clipboard.writeText(fullUrl);
                       }
-                      triggerToast(`Lien copié : ${displayUrl}`, "fa-copy");
+                      setIsCopiedLink(true);
+                      triggerToast(`Lien copié dans le presse-papier !`, "fa-check");
+                      setTimeout(() => setIsCopiedLink(false), 2500);
                     }}
-                    className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 font-extrabold py-2 rounded-xl text-xs transition cursor-pointer"
+                    className={`w-full font-extrabold py-2 rounded-xl text-xs transition cursor-pointer flex items-center justify-center space-x-2 ${
+                      isCopiedLink
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+                    }`}
                   >
-                    Copier le lien du profil
+                    <i className={`fa-solid ${isCopiedLink ? "fa-check" : "fa-copy"} text-xs`}></i>
+                    <span>{isCopiedLink ? "Copié !" : "Copier le lien du profil"}</span>
                   </button>
                 </div>
               );
