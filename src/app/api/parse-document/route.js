@@ -33,38 +33,37 @@ function extractAndParseJSON(rawText) {
   return JSON.parse(cleaned);
 }
 
-const CV_EXTRACTION_PROMPT = `Tu es un moteur d'extraction de CV et de documents d'identité. Analyse le contenu texte et extrait impérativement un JSON structuré valide respectant la structure suivante :
+const SYSTEM_PROMPT = `Tu es un moteur d'extraction de CV ultra-précis. Analyse le document et extrait les données au format JSON strict suivant :
 {
-  "fullName": "Nom complet",
-  "firstName": "Prénom de la personne",
-  "lastName": "Nom de famille de la personne",
-  "email": "Adresse e-mail",
-  "phone": "Numéro de téléphone",
-  "jobTitle": "Titre du poste ou profil",
-  "summary": "Résumé professionnel / Présentation / Bio",
-  "city": "Ville de résidence",
-  "country": "Pays",
-  "birthDate": "Date de naissance",
-  "gender": "Sexe/Genre (Homme ou Femme)",
-  "maritalStatus": "Statut marital (ex: Marié, Célibataire)",
-  "driverLicense": "Permis de conduire (ex: Permis B)",
-  "skills": ["Compétence 1", "Compétence 2"],
+  "prenom": "Prénom du candidat",
+  "nom": "Nom de famille",
+  "ville": "Ville ou quartier",
+  "pays": "Pays si indiqué, sinon null",
+  "sexe": "Ne devine JAMAIS. Renvoie null sauf si le terme Homme ou Femme est explicitement écrit dans le texte",
+  "titre": "Intitulé du poste",
+  "resume": "Résumé professionnel",
+  "competences": ["Compétence 1", "Compétence 2"],
   "experiences": [
     {
-      "role": "Intitulé du poste (ex: Développeur Fullstack)",
-      "company": "Entreprise (ex: Facilité Corp)",
-      "period": "Dates (ex: 2021 - Present)",
-      "description": "Missions réalisées"
+      "poste": "Intitulé du poste",
+      "entreprise": "Nom de l'entreprise",
+      "periode": "Dates",
+      "description": "Missions"
     }
   ],
-  "education": [
+  "formations": [
     {
-      "degree": "Diplôme (ex: Master en Informatique)",
-      "institution": "Établissement (ex: Université de Dakar)",
-      "year": "Année (ex: 2023)"
+      "diplome": "Diplôme obtenu",
+      "ecole": "Établissement",
+      "annee": "Année"
     }
   ],
-  "languages": ["Français", "Anglais"]
+  "langues": [
+    {
+      "nom": "Nom de la langue (ex: Français)",
+      "niveau": "Niveau de maîtrise (ex: Excellent, Lu/parlé/écrit, Intermédiaire)"
+    }
+  ]
 }`;
 
 async function callGemini(documentText, systemPrompt) {
@@ -185,7 +184,7 @@ export async function POST(req) {
 
     // Tentative 1 : Gemini (Inférence ultra-rapide et structurée nativement)
     try {
-      parsedData = await callGemini(documentText, CV_EXTRACTION_PROMPT);
+      parsedData = await callGemini(documentText, SYSTEM_PROMPT);
     } catch (geminiErr) {
       console.error("[Gemini Pipeline Failed]", geminiErr?.message);
     }
@@ -199,7 +198,7 @@ export async function POST(req) {
           const groqResponse = await groq.chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: [
-              { role: "system", content: CV_EXTRACTION_PROMPT },
+              { role: "system", content: SYSTEM_PROMPT },
               { role: "user", content: `Voici le texte du document à analyser :\n\n${documentText}` },
             ],
             temperature: 0.1,
@@ -224,7 +223,7 @@ export async function POST(req) {
           const dsResponse = await deepseek.chat.completions.create({
             model: "deepseek-chat",
             messages: [
-              { role: "system", content: CV_EXTRACTION_PROMPT },
+              { role: "system", content: SYSTEM_PROMPT },
               { role: "user", content: `Voici le texte du document à analyser :\n\n${documentText}` },
             ],
             temperature: 0.1,

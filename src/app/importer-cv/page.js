@@ -309,24 +309,43 @@ export default function ImporterCvPage() {
 
       const { fields } = await response.json();
 
+      // Le moteur d'extraction (IA ou regex de secours) peut renvoyer des clés en
+      // anglais ou en français selon le pipeline utilisé : on tente toutes les variantes.
+      const getValue = (obj, possibleKeys) => {
+        if (!obj) return "";
+        for (const key of possibleKeys) {
+          if (key in obj) return obj[key] ?? "";
+        }
+        const lowerKeysMap = {};
+        for (const k of Object.keys(obj)) lowerKeysMap[k.toLowerCase()] = obj[k];
+        for (const key of possibleKeys) {
+          const lower = key.toLowerCase();
+          if (lower in lowerKeysMap) return lowerKeysMap[lower] ?? "";
+        }
+        return "";
+      };
+
+      const rawExperiences = getValue(fields, ["experiences", "experience"]) || [];
+      const rawSkills = getValue(fields, ["skills", "competences", "compétences"]) || [];
+
       setParsedData({
-        firstName: fields.firstName || "",
-        lastName: fields.lastName || "",
-        email: fields.email || "",
-        phone: fields.phone || "",
-        title: fields.title || "",
-        summary: fields.summary || "",
-        experiences: (fields.experiences || []).map((exp, idx) => ({
+        firstName: getValue(fields, ["firstName", "prenom", "prénom"]) || "",
+        lastName: getValue(fields, ["lastName", "nom"]) || "",
+        email: getValue(fields, ["email"]) || "",
+        phone: getValue(fields, ["phone", "telephone", "téléphone"]) || "",
+        title: getValue(fields, ["title", "jobTitle", "titre", "poste"]) || "",
+        summary: getValue(fields, ["summary", "resume", "résumé"]) || "",
+        experiences: (Array.isArray(rawExperiences) ? rawExperiences : []).map((exp, idx) => ({
           id: idx + 1,
-          title: exp.title || "",
-          employer: exp.employer || "",
-          city: exp.city || "",
-          startDate: exp.startDate || "",
-          endDate: exp.endDate || "",
-          current: !!exp.current,
-          description: exp.description || "",
+          title: getValue(exp, ["title", "role", "poste"]) || "",
+          employer: getValue(exp, ["employer", "company", "entreprise"]) || "",
+          city: getValue(exp, ["city", "ville"]) || "",
+          startDate: String(getValue(exp, ["startDate", "period", "periode", "période"]) || ""),
+          endDate: String(getValue(exp, ["endDate"]) || ""),
+          current: !!getValue(exp, ["current"]),
+          description: getValue(exp, ["description"]) || "",
         })),
-        skills: fields.skills || [],
+        skills: Array.isArray(rawSkills) ? rawSkills : [],
       });
     } catch (err) {
       console.error("Erreur d'extraction du document:", err);
