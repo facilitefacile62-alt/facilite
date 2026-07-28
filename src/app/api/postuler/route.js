@@ -167,72 +167,72 @@ export async function POST(req) {
     }
 
     // 6. Envoi des 2 e-mails via Resend
-    // Remarque de sécurité & résilience : Si la clé Resend est en mode Sandbox / Test,
-    // elle ne peut envoyer qu'aux e-mails de test vérifiés. Pour éviter de faire échouer
-    // la soumission de candidature entière à cause d'une restriction d'API de test,
-    // on enveloppe l'envoi dans un bloc try/catch et on trace les éventuelles erreurs.
-    try {
-      const emailRecruiterPromise = fileBuffer
-        ? resend.emails.send({
-            from: "Facilite Recrutement <onboarding@resend.dev>",
-            to: recruiterEmail,
-            subject: `[Facilite] Nouvelle candidature : ${fullName} - ${jobTitle} chez ${company}`,
-            html: `
-              <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
-                <h2 style="color: #10E688; border-bottom: 2px solid #eee; padding-bottom: 10px;">Nouvelle candidature reçue</h2>
-                <p>Un candidat vient de postuler à une offre depuis la plateforme Facilite.</p>
-                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                  <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; width: 150px;">Poste :</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${jobTitle} (${company})</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Candidat :</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${fullName}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">E-mail de contact :</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="mailto:${email}">${email}</a></td>
-                  </tr>
-                </table>
-                <p><strong>Message d'accompagnement :</strong></p>
-                <div style="background-color: #f9f9f9; border-left: 4px solid #10E688; padding: 15px; margin: 15px 0; font-style: italic;">
-                  ${coverLetter ? coverLetter.replace(/\n/g, "<br/>") : "Aucun message d'accompagnement fourni."}
-                </div>
-                <p>Le CV du candidat est attaché en pièce jointe à cet e-mail.</p>
-              </div>
-            `,
-            attachments: [
-              {
-                filename: cvName,
-                content: fileBuffer,
-              },
-            ],
-          })
-        : Promise.resolve();
-
-      const emailCandidatePromise = resend.emails.send({
-        from: "Facilite <onboarding@resend.dev>",
-        to: email,
-        subject: `Confirmation de votre candidature : ${jobTitle} chez ${company}`,
+    let recruiterRes = { data: null, error: null };
+    if (fileBuffer) {
+      recruiterRes = await resend.emails.send({
+        from: "Facilite Recrutement <onboarding@resend.dev>",
+        to: recruiterEmail,
+        subject: `[Facilite] Nouvelle candidature : ${fullName} - ${jobTitle} chez ${company}`,
         html: `
           <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
-            <h2 style="color: #10E688;">Bonjour ${fullName},</h2>
-            <p>Nous vous confirmons que votre candidature pour le poste de <strong>${jobTitle}</strong> chez <strong>${company}</strong> a bien été transmise avec succès.</p>
-            <p>Le recruteur étudiera votre profil avec la plus grande attention. Vous serez recontacté(e) directement par e-mail si votre candidature est retenue.</p>
-            <br/>
-            <p style="border-top: 1px solid #eee; padding-top: 15px; font-size: 12px; color: #777;">
-              Cordialement,<br/>
-              L'équipe de recrutement Facilite
-            </p>
+            <h2 style="color: #10E688; border-bottom: 2px solid #eee; padding-bottom: 10px;">Nouvelle candidature reçue</h2>
+            <p>Un candidat vient de postuler à une offre depuis la plateforme Facilite.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; width: 150px;">Poste :</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${jobTitle} (${company})</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Candidat :</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${fullName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">E-mail de contact :</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="mailto:${email}">${email}</a></td>
+              </tr>
+            </table>
+            <p><strong>Message d'accompagnement :</strong></p>
+            <div style="background-color: #f9f9f9; border-left: 4px solid #10E688; padding: 15px; margin: 15px 0; font-style: italic;">
+              ${coverLetter ? coverLetter.replace(/\n/g, "<br/>") : "Aucun message d'accompagnement fourni."}
+            </div>
+            <p>Le CV du candidat est attaché en pièce jointe à cet e-mail.</p>
           </div>
         `,
+        attachments: [
+          {
+            filename: cvName,
+            content: fileBuffer,
+          },
+        ],
       });
 
-      // Lancer les envois en parallèle
-      await Promise.all([emailRecruiterPromise, emailCandidatePromise]);
-    } catch (emailErr) {
-      console.warn("[Resend Warning] Échec d'envoi d'un ou plusieurs e-mails:", emailErr.message);
+      console.log("Resend response (recruiter):", recruiterRes.data, recruiterRes.error);
+      if (recruiterRes.error) {
+        return NextResponse.json({ error: recruiterRes.error }, { status: 500 });
+      }
+    }
+
+    const candidateRes = await resend.emails.send({
+      from: "Facilite <onboarding@resend.dev>",
+      to: email,
+      subject: `Confirmation de votre candidature : ${jobTitle} chez ${company}`,
+      html: `
+        <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
+          <h2 style="color: #10E688;">Bonjour ${fullName},</h2>
+          <p>Nous vous confirmons que votre candidature pour le poste de <strong>${jobTitle}</strong> chez <strong>${company}</strong> a bien été transmise avec succès.</p>
+          <p>Le recruteur étudiera votre profil avec la plus grande attention. Vous serez recontacté(e) directement par e-mail si votre candidature est retenue.</p>
+          <br/>
+          <p style="border-top: 1px solid #eee; padding-top: 15px; font-size: 12px; color: #777;">
+            Cordialement,<br/>
+            L'équipe de recrutement Facilite
+          </p>
+        </div>
+      `,
+    });
+
+    console.log("Resend response (candidate):", candidateRes.data, candidateRes.error);
+    if (candidateRes.error) {
+      return NextResponse.json({ error: candidateRes.error }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, candidature });
