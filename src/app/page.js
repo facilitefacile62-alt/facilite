@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import DiagnosticModal from "@/components/DiagnosticModal";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -282,6 +283,9 @@ export default function Home() {
   // CV Required Apply Modal
   const [noCvModalOpen, setNoCvModalOpen] = useState(false);
   const [selectedJobToApply, setSelectedJobToApply] = useState(null);
+
+  // Diagnostic CV Modal State
+  const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
 
   // Search and Filter States for Job Board
   const [jobs, setJobs] = useState(initialJobs);
@@ -1394,6 +1398,28 @@ export default function Home() {
               </Link>
             </div>
 
+            {/* Diagnostic CV Gratuit Card */}
+            <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-xl border border-indigo-950 p-4.5 shadow-md text-center flex flex-col items-center space-y-3 relative overflow-hidden">
+              {/* Badge GRATUIT */}
+              <div className="absolute top-2.5 right-2.5 bg-emerald-400 text-emerald-950 font-black text-[8px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                GRATUIT
+              </div>
+              <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                <i className="fa-solid fa-stethoscope text-sm"></i>
+              </div>
+              <h4 className="text-xs font-black text-white">Diagnostic CV Gratuit</h4>
+              <p className="text-[9px] text-indigo-250 leading-relaxed font-semibold">
+                Importez ou prenez une photo de votre CV pour obtenir une analyse IA complète de votre design, vos mots-clés et votre score ATS.
+              </p>
+              <button
+                type="button"
+                onClick={() => setDiagnosticModalOpen(true)}
+                className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold py-2 px-3 rounded-lg text-[10px] transition text-center shadow-md cursor-pointer block border-none focus:outline-none"
+              >
+                Diagnostiquer mon CV
+              </button>
+            </div>
+
           </aside>
 
         </div>
@@ -2270,6 +2296,7 @@ export default function Home() {
           </div>
         </div>
       )}
+      <DiagnosticModal isOpen={diagnosticModalOpen} onClose={() => setDiagnosticModalOpen(false)} />
     </>
   );
 }
