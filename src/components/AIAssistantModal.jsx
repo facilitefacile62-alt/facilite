@@ -9,8 +9,11 @@ export default function AIAssistantModal() {
   const [attachments, setAttachments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
+  
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const menuRef = useRef(null);
 
   // Initialisation de la conversation avec un message de bienvenue
   useEffect(() => {
@@ -32,6 +35,21 @@ export default function AIAssistantModal() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isLoading]);
+
+  // Fermer le menu popover lors d'un clic à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMenu]);
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -99,10 +117,8 @@ export default function AIAssistantModal() {
     setIsLoading(true);
 
     try {
-      // Préparer l'historique épuré pour l'API backend (on envoie le texte réel saisi par l'utilisateur)
+      // Préparer l'historique épuré pour l'API backend
       const apiMessages = updatedMessages.map((msg, idx) => {
-        // Pour le dernier message utilisateur, on renvoie uniquement son contenu textuel brut
-        // Le serveur recevra les attachements séparément pour les traiter
         if (idx === updatedMessages.length - 1) {
           return {
             role: "user",
@@ -278,52 +294,65 @@ export default function AIAssistantModal() {
         {/* Attachment Previews */}
         {attachments.length > 0 && (
           <div className="px-3 py-2 bg-neutral-50 border-t border-neutral-100 flex flex-wrap gap-2 items-center">
-            {attachments.map((att) => (
-              <div
-                key={att.id}
-                className="relative group flex items-center bg-white border border-neutral-200 p-1 rounded-xl shadow-sm"
-              >
-                {att.type === "image" ? (
-                  <img
-                    src={att.data}
-                    alt={att.name}
-                    className="w-12 h-12 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="flex items-center gap-1.5 px-2 py-1 text-xs text-neutral-600 font-medium">
-                    <i className={`fa-solid ${att.name.endsWith('.pdf') ? 'fa-file-pdf text-red-500' : 'fa-file-word text-blue-500'} text-sm`}></i>
-                    <span className="max-w-[100px] truncate">{att.name}</span>
-                  </div>
-                )}
-                
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAttachment(att.id)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-md hover:bg-rose-600 transition-colors focus:outline-none"
+            {attachments.map((att) => {
+              let iconClass = "fa-file text-neutral-400";
+              if (att.type === "image") iconClass = "fa-file-image text-emerald-500";
+              else if (att.name.endsWith(".pdf")) iconClass = "fa-file-pdf text-rose-500";
+              else if (att.name.endsWith(".doc") || att.name.endsWith(".docx")) iconClass = "fa-file-word text-blue-500";
+
+              return (
+                <div
+                  key={att.id}
+                  className="flex items-center gap-2 bg-white border border-neutral-200 px-3 py-1.5 rounded-xl shadow-sm text-xs text-neutral-700 font-medium"
                 >
-                  <i className="fa-solid fa-xmark"></i>
-                </button>
-              </div>
-            ))}
+                  <i className={`fa-solid ${iconClass} text-sm`}></i>
+                  <span className="max-w-[120px] truncate">{att.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAttachment(att.id)}
+                    className="w-4 h-4 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-neutral-600 transition-colors focus:outline-none ml-1"
+                  >
+                    <i className="fa-solid fa-xmark text-[10px]"></i>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
 
         {/* Input Form */}
         <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-neutral-100">
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-              className="w-10 h-10 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center transition-colors focus:outline-none disabled:opacity-50 border border-neutral-200"
-              title="Ajouter un fichier (Image, PDF, Word)"
-            >
-              <i className="fa-solid fa-plus text-base"></i>
-            </button>
+            {/* Menu Popover Container */}
+            <div className="relative" ref={menuRef}>
+              {showMenu && (
+                <div
+                  onClick={() => {
+                    setShowMenu(false);
+                    fileInputRef.current?.click();
+                  }}
+                  className="absolute bottom-full left-0 mb-3 z-50 bg-[#1E1E1E] hover:bg-neutral-800 text-white py-2.5 px-4 rounded-xl shadow-2xl flex items-center gap-2.5 cursor-pointer whitespace-nowrap text-xs transition-colors border border-neutral-800 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                >
+                  <i className="fa-solid fa-paperclip text-sm text-neutral-400"></i>
+                  <span className="font-medium">Importer des fichiers</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowMenu(!showMenu)}
+                disabled={isLoading}
+                className="w-10 h-10 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center transition-colors focus:outline-none disabled:opacity-50 border border-neutral-200"
+                title="Ajouter un fichier"
+              >
+                <i className="fa-solid fa-plus text-base"></i>
+              </button>
+            </div>
+            
             <input
               type="file"
               multiple
-              accept="image/*,.pdf,.doc,.docx"
+              accept="image/*,.pdf,.doc,.docx,.webp"
               ref={fileInputRef}
               onChange={handleFileSelect}
               className="hidden"
