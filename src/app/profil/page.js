@@ -32,15 +32,16 @@ export default function ProfilPage() {
   const [profileLocation, setProfileLocation] = useState("");
   const [profileBio, setProfileBio] = useState("");
   const [tempBio, setTempBio] = useState("");
-  const [pinnedDetails, setPinnedDetails] = useState(["creation_digitale", "pikine", "etudes_sports", "cem_thiolom_fall"]);
-  const [tempPinnedDetails, setTempPinnedDetails] = useState(["creation_digitale", "pikine", "etudes_sports", "cem_thiolom_fall"]);
+  const [pinnedDetails, setPinnedDetails] = useState([]);
+  const [tempPinnedDetails, setTempPinnedDetails] = useState([]);
   const [phone, setPhone] = useState("");
-  const [maritalStatus, setMaritalStatus] = useState("Célibataire");
-  const [driverLicense, setDriverLicense] = useState("Permis B");
+  const [maritalStatus, setMaritalStatus] = useState("");
+  const [driverLicense, setDriverLicense] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [activeAboutTab, setActiveAboutTab] = useState("info_perso");
-  const [birthDate, setBirthDate] = useState("14 juillet 2002");
-  const [gender, setGender] = useState("Homme");
+  const [birthDate, setBirthDate] = useState("");
+  const [gender, setGender] = useState("");
+  const [company, setCompany] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
   const [coverUrl, setCoverUrl] = useState("/stellar-cover.png");
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -108,9 +109,7 @@ export default function ProfilPage() {
   const [isCopiedLink, setIsCopiedLink] = useState(false);
 
   // Compétences dynamique (Supabase)
-  const [userSkills, setUserSkills] = useState([
-    "Développement Web", "React.js", "Next.js", "Gestion de projet", "Communication"
-  ]);
+  const [userSkills, setUserSkills] = useState([]);
   const [newSkillInput, setNewSkillInput] = useState("");
 
   // Centres d'intérêt dynamique (Supabase)
@@ -121,9 +120,7 @@ export default function ProfilPage() {
   const [contactEmail, setContactEmail] = useState("");
 
   // Langues dynamique (Supabase + localStorage)
-  const [userLanguages, setUserLanguages] = useState([
-    { id: "lang-1", name: "Français", level: "Principal / Courant" }
-  ]);
+  const [userLanguages, setUserLanguages] = useState([]);
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [newLangName, setNewLangName] = useState("");
   const [newLangLevel, setNewLangLevel] = useState("Intermédiaire");
@@ -190,23 +187,24 @@ export default function ProfilPage() {
         setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
         setProfileSubtitle(profile.headline || "");
         setProfileLocation(profile.location || "");
-        setProfileBio(profile.bio || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE");
-        setTempBio(profile.bio || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE");
-        const initialPinned = profile.pinned_details || (typeof window !== "undefined" && localStorage.getItem("user_pinned_details") ? JSON.parse(localStorage.getItem("user_pinned_details")) : ["creation_digitale", "pikine", "etudes_sports", "cem_thiolom_fall"]);
+        setProfileBio(profile.bio || "");
+        setTempBio(profile.bio || "");
+        const initialPinned = profile.pinned_details || (typeof window !== "undefined" && localStorage.getItem("user_pinned_details") ? JSON.parse(localStorage.getItem("user_pinned_details")) : []);
         setPinnedDetails(initialPinned);
         setTempPinnedDetails(initialPinned);
         setPhone(profile.phone || (typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : ""));
-        setMaritalStatus(profile.marital_status || (typeof window !== "undefined" ? localStorage.getItem("user_marital_status") || "Célibataire" : "Célibataire"));
-        setDriverLicense(profile.driver_license || (typeof window !== "undefined" ? localStorage.getItem("user_driver_license") || "Permis B" : "Permis B"));
+        setMaritalStatus(profile.marital_status || (typeof window !== "undefined" ? localStorage.getItem("user_marital_status") || "" : ""));
+        setDriverLicense(profile.driver_license || (typeof window !== "undefined" ? localStorage.getItem("user_driver_license") || "" : ""));
         setWebsiteUrl(profile.website_url || (typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : ""));
-        setBirthDate(profile.birth_date || (typeof window !== "undefined" ? localStorage.getItem("user_birth_date") || "14 juillet 2002" : "14 juillet 2002"));
-        setGender(profile.gender || (typeof window !== "undefined" ? localStorage.getItem("user_gender") || "Homme" : "Homme"));
+        setBirthDate(profile.birth_date || (typeof window !== "undefined" ? localStorage.getItem("user_birth_date") || "" : ""));
+        setGender(profile.gender || (typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : ""));
+        setCompany(profile.company || (typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : ""));
         setAvatarUrl(profile.avatar_url || "/logo.jpeg");
         setCoverUrl(profile.cover_url || "/stellar-cover.png");
         setExperiences(profile.experiences || []);
         setEducations(profile.educations || []);
-        setUserLanguages(profile.languages || [{ id: "lang-1", name: "Français", level: "Principal / Courant" }]);
-        setUserSkills(profile.skills || ["Développement Web", "React.js", "Next.js", "Gestion de projet", "Communication"]);
+        setUserLanguages(profile.languages || []);
+        setUserSkills(profile.skills || []);
         setUserInterests(profile.interests || []);
         setContactEmail(profile.contact_email || session.user.email || "");
 
@@ -1057,7 +1055,7 @@ export default function ProfilPage() {
     const locationStr = `${city.trim() ? city.trim() + ", " : ""}${country.trim() ? country.trim() : ""}`.replace(/,\s*$/, "");
 
     // 1. Mettre à jour immédiatement l'interface utilisateur
-    setProfileName(fullName || userSession.user.email?.split("@")[0] || "Macoumba Samak");
+    setProfileName(fullName || userSession.user.email?.split("@")[0] || "");
     if (headlineStr) setProfileSubtitle(headlineStr);
     if (locationStr) setProfileLocation(locationStr);
 
@@ -1557,11 +1555,11 @@ export default function ProfilPage() {
                 className="bg-white rounded-xl p-4 flex items-center space-x-4 border border-gray-200 shadow-xs active:bg-gray-50 transition"
               >
                 {/* Cercle Avatar Violet */}
-                <div className="w-12 h-12 rounded-full bg-[#D946EF] flex-shrink-0 flex items-center justify-center text-white font-extrabold text-lg">
-                  M
+                <div className="w-12 h-12 rounded-full bg-[#D946EF] flex-shrink-0 flex items-center justify-center text-white font-extrabold text-lg animate-pulse">
+                  {profileName ? profileName.charAt(0).toUpperCase() : "👤"}
                 </div>
                 <div className="flex-grow text-left">
-                  <h3 className="text-sm font-extrabold text-gray-900">Macoumba Samak</h3>
+                  <h3 className="text-sm font-extrabold text-gray-900">{profileName || "Mon Profil"}</h3>
                   <span className="text-xs text-gray-500 font-medium">Voir votre profil</span>
                 </div>
               </Link>
@@ -1826,8 +1824,8 @@ export default function ProfilPage() {
                             creation_digitale: { label: jobTitle.trim() || "Création digitale", icon: "fa-regular fa-folder" },
                             pikine: { label: city.trim() || "Pikine", icon: "fa-solid fa-location-dot" },
                             etudes_sports: { label: educations[0]?.degree || "Etudes Sports", icon: "fa-solid fa-graduation-cap" },
-                            association_jeunes: { label: "Assiation des jeunes de guinaw rail nord", icon: "fa-solid fa-graduation-cap" },
-                            cem_thiolom_fall: { label: educations[0]?.school || "CEMde Thiolom Fall", icon: "fa-solid fa-building" },
+                            association_jeunes: { label: "Association des jeunes", icon: "fa-solid fa-users" },
+                            cem_thiolom_fall: { label: educations[0]?.school || "CEM Thiolom Fall", icon: "fa-solid fa-building" },
                             celibataire: { label: maritalStatus || "Célibataire", icon: "fa-solid fa-heart" },
                             permis_conduire: { label: driverLicense || "Permis B", icon: "fa-solid fa-id-card" },
                             telephone: { label: phone || "+221 77 000 00 00", icon: "fa-solid fa-phone" },
@@ -1927,7 +1925,7 @@ export default function ProfilPage() {
                           </div>
                           <div>
                             <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Lieu</h4>
-                            <p className="text-sm font-extrabold text-[#1D4ED8] mt-0.5">{city || "Pikine"}</p>
+                            <p className="text-sm font-extrabold text-[#1D4ED8] mt-0.5">{city || "Non renseigné"}</p>
                             <p className="text-[11px] text-gray-500 font-medium">Ville actuelle</p>
                           </div>
                         </div>
@@ -1936,8 +1934,8 @@ export default function ProfilPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              const newCity = prompt("Modifier votre ville actuelle :", city || "Pikine");
-                              if (newCity !== null && newCity.trim()) {
+                              const newCity = prompt("Modifier votre ville actuelle :", city || "");
+                              if (newCity !== null) {
                                 setCity(newCity.trim());
                                 handleSaveAboutField("city", newCity.trim());
                               }
@@ -1958,7 +1956,7 @@ export default function ProfilPage() {
                           </div>
                           <div>
                             <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Ville d'origine</h4>
-                            <p className="text-sm font-extrabold text-[#1D4ED8] mt-0.5">{country || "Pikine, Sénégal"}</p>
+                            <p className="text-sm font-extrabold text-[#1D4ED8] mt-0.5">{country || "Non renseigné"}</p>
                             <p className="text-[11px] text-gray-500 font-medium">Ville d'origine</p>
                           </div>
                         </div>
@@ -1967,8 +1965,8 @@ export default function ProfilPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              const newCountry = prompt("Modifier votre pays/ville d'origine :", country || "Sénégal");
-                              if (newCountry !== null && newCountry.trim()) {
+                              const newCountry = prompt("Modifier votre pays/ville d'origine :", country || "");
+                              if (newCountry !== null) {
                                 setCountry(newCountry.trim());
                                 handleSaveAboutField("country", newCountry.trim());
                               }
@@ -1989,7 +1987,7 @@ export default function ProfilPage() {
                           </div>
                           <div>
                             <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Date de naissance</h4>
-                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{birthDate}</p>
+                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{birthDate || "Non renseigné"}</p>
                             <p className="text-[11px] text-gray-500 font-medium">Année de naissance</p>
                           </div>
                         </div>
@@ -1998,8 +1996,8 @@ export default function ProfilPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              const newBirth = prompt("Modifier votre date de naissance :", birthDate);
-                              if (newBirth !== null && newBirth.trim()) {
+                              const newBirth = prompt("Modifier votre date de naissance :", birthDate || "");
+                              if (newBirth !== null) {
                                 setBirthDate(newBirth.trim());
                                 handleSaveAboutField("birth_date", newBirth.trim());
                               }
@@ -2020,7 +2018,7 @@ export default function ProfilPage() {
                           </div>
                           <div>
                             <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Statut</h4>
-                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{maritalStatus}</p>
+                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{maritalStatus || "Non renseigné"}</p>
                             <p className="text-[11px] text-gray-500 font-medium">Situation maritale</p>
                           </div>
                         </div>
@@ -2029,8 +2027,8 @@ export default function ProfilPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              const newStatus = prompt("Modifier votre statut (Célibataire, Marié(e), Divorcé(e)) :", maritalStatus);
-                              if (newStatus !== null && newStatus.trim()) {
+                              const newStatus = prompt("Modifier votre statut (Célibataire, Marié(e), Divorcé(e)) :", maritalStatus || "");
+                              if (newStatus !== null) {
                                 setMaritalStatus(newStatus.trim());
                                 handleSaveAboutField("marital_status", newStatus.trim());
                               }
@@ -2051,12 +2049,26 @@ export default function ProfilPage() {
                           </div>
                           <div>
                             <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Membre de</h4>
-                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">Facilite Corporation</p>
+                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{company || "Non renseigné"}</p>
                             <p className="text-[11px] text-gray-500 font-medium">Organisation certifiée</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <span className="text-[10px] bg-emerald-100 text-[#047857] font-bold px-2 py-0.5 rounded-md border border-emerald-200">Certifié</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newCompany = prompt("Modifier votre organisation/société :", company || "");
+                              if (newCompany !== null) {
+                                setCompany(newCompany.trim());
+                                handleSaveAboutField("company", newCompany.trim());
+                              }
+                            }}
+                            className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
+                            title="Modifier"
+                          >
+                            <i className="fa-solid fa-pen text-xs"></i>
+                          </button>
                         </div>
                       </div>
 
@@ -2068,7 +2080,7 @@ export default function ProfilPage() {
                           </div>
                           <div>
                             <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Genre</h4>
-                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{gender}</p>
+                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{gender || "Non renseigné"}</p>
                             <p className="text-[11px] text-gray-500 font-medium">Genre du profil</p>
                           </div>
                         </div>
@@ -2103,7 +2115,7 @@ export default function ProfilPage() {
                           <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-md">🌐 Public</span>
                         </div>
                         <p className="text-sm font-extrabold text-gray-900 leading-relaxed">
-                          👋 {profileBio || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE"}
+                          👋 {profileBio || "Non renseigné"}
                         </p>
                       </div>
 
@@ -2121,11 +2133,11 @@ export default function ProfilPage() {
                           </div>
                           <div>
                             <span className="font-bold text-gray-400 block text-[10px] uppercase">Ville actuelle</span>
-                            <span className="font-extrabold text-[#1D4ED8] text-sm">{city || "Pikine"}</span>
+                            <span className="font-extrabold text-[#1D4ED8] text-sm">{city || "Non renseigné"}</span>
                           </div>
                           <div>
                             <span className="font-bold text-gray-400 block text-[10px] uppercase">Pays / Origine</span>
-                            <span className="font-extrabold text-[#1D4ED8] text-sm">{country || "Sénégal"}</span>
+                            <span className="font-extrabold text-[#1D4ED8] text-sm">{country || "Non renseigné"}</span>
                           </div>
                         </div>
                       </div>
@@ -2136,7 +2148,7 @@ export default function ProfilPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                           <div>
                             <span className="font-bold text-gray-400 block text-[10px] uppercase">Téléphone</span>
-                            <span className="font-extrabold text-gray-900">{phone || "+221 77 000 00 00"}</span>
+                            <span className="font-extrabold text-gray-900">{phone || "Non renseigné"}</span>
                           </div>
                           <div>
                             <span className="font-bold text-gray-400 block text-[10px] uppercase">E-mail</span>
@@ -2281,13 +2293,45 @@ export default function ProfilPage() {
 
                   {activeAboutTab === "coordonnees" && (
                     <div className="space-y-4">
-                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
-                        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Téléphone</h4>
-                        <p className="text-sm font-extrabold text-gray-900">{phone || "Non renseigné"}</p>
+                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex justify-between items-center">
+                        <div>
+                          <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Téléphone</h4>
+                          <p className="text-sm font-extrabold text-gray-900 mt-1">{phone || "Non renseigné"}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newPhone = prompt("Modifier votre numéro de téléphone :", phone || "");
+                            if (newPhone !== null) {
+                              setPhone(newPhone.trim());
+                              handleSaveAboutField("phone", newPhone.trim());
+                            }
+                          }}
+                          className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
+                          title="Modifier"
+                        >
+                          <i className="fa-solid fa-pen text-xs"></i>
+                        </button>
                       </div>
-                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
-                        <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">E-mail de contact</h4>
-                        <p className="text-sm font-extrabold text-gray-900">{contactEmail || userSession?.user?.email || "Non renseigné"}</p>
+                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex justify-between items-center">
+                        <div>
+                          <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">E-mail de contact</h4>
+                          <p className="text-sm font-extrabold text-gray-900 mt-1">{contactEmail || userSession?.user?.email || "Non renseigné"}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newEmail = prompt("Modifier votre email de contact :", contactEmail || userSession?.user?.email || "");
+                            if (newEmail !== null) {
+                              setContactEmail(newEmail.trim());
+                              handleSaveAboutField("contact_email", newEmail.trim());
+                            }
+                          }}
+                          className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
+                          title="Modifier"
+                        >
+                          <i className="fa-solid fa-pen text-xs"></i>
+                        </button>
                       </div>
                     </div>
                   )}
