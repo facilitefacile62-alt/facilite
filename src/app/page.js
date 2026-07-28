@@ -244,6 +244,9 @@ export default function Home() {
   // --- ÉTATS EXPÉRIENCE (LINKEDIN STYLE) ---
   const [experienceModalOpen, setExperienceModalOpen] = useState(false);
   const [experiences, setExperiences] = useState([]);
+  // Accordéon de la carte Expérience : replié/déplié + affichage partiel (2 plus récentes)
+  const [experienceExpanded, setExperienceExpanded] = useState(true);
+  const [showAllExperiences, setShowAllExperiences] = useState(false);
   const [expTitle, setExpTitle] = useState("");
   const [expCompany, setExpCompany] = useState("");
   const [expLocation, setExpLocation] = useState("");
@@ -1043,10 +1046,10 @@ export default function Home() {
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
-          <aside className="hidden lg:flex lg:w-[215px] flex-shrink-0 flex-col space-y-2 sticky top-[92px] lg:max-h-[calc(100vh-115px)] lg:overflow-y-auto no-scrollbar lg:pr-0.5">
-            
-            {/* Carte Profil */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
+          <aside className="hidden lg:flex lg:w-[215px] flex-shrink-0 flex-col gap-2 sticky top-[92px] lg:max-h-[calc(100vh-115px)] lg:pr-0.5">
+
+            {/* Carte Profil (toujours visible, ne défile pas) */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs flex-shrink-0">
               {/* Image de couverture en hauteur */}
               <Link
                 href={userSession ? "/profil" : "/login"}
@@ -1096,15 +1099,31 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Zone défilante : tout le reste de la barre latérale */}
+            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col space-y-2 pr-0.5">
+
             {/* Carte Expériences (Dynamique) */}
             {experiences.length > 0 && (
               <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs flex flex-col space-y-2.5">
-                <div className="flex justify-between items-center pb-1.5 border-b border-gray-100">
-                  <h3 className="text-[10px] font-extrabold text-gray-800 uppercase tracking-wider">Expérience</h3>
-                  <i className="fa-solid fa-briefcase text-gray-400 text-[10px]"></i>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setExperienceExpanded((v) => !v)}
+                  aria-expanded={experienceExpanded}
+                  className="w-full flex justify-between items-center pb-1.5 border-b border-gray-100 cursor-pointer bg-transparent border-x-0 border-t-0 p-0 text-left group"
+                >
+                  <h3 className="text-[10px] font-extrabold text-gray-800 uppercase tracking-wider group-hover:text-blue-600 transition">
+                    Expérience
+                    <span className="ml-1 text-gray-400 font-bold normal-case tracking-normal">({experiences.length})</span>
+                  </h3>
+                  <i
+                    className={`fa-solid fa-chevron-down text-gray-400 text-[10px] transition-transform duration-200 ${
+                      experienceExpanded ? "rotate-180" : ""
+                    }`}
+                  ></i>
+                </button>
+                {experienceExpanded && (
                 <div className="space-y-3">
-                  {experiences.map((exp) => (
+                  {(showAllExperiences ? experiences : experiences.slice(0, 2)).map((exp) => (
                     <div key={exp.id} className="relative flex items-start space-x-2 text-left">
                       <div className="w-7 h-7 rounded bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-gray-200">
                         {exp.company.substring(0, 2).toUpperCase()}
@@ -1141,7 +1160,28 @@ export default function Home() {
                       </button>
                     </div>
                   ))}
+
+                  {/* Bouton "Voir plus" / "Voir moins" si plus de 2 expériences */}
+                  {experiences.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllExperiences((v) => !v)}
+                      className="w-full pt-1.5 border-t border-gray-100 text-[9px] font-extrabold text-blue-600 hover:text-blue-800 transition cursor-pointer bg-transparent border-x-0 border-b-0 flex items-center justify-center space-x-1"
+                    >
+                      <span>
+                        {showAllExperiences
+                          ? "Voir moins"
+                          : `Voir plus (+${experiences.length - 2})`}
+                      </span>
+                      <i
+                        className={`fa-solid fa-chevron-down text-[7px] transition-transform duration-200 ${
+                          showAllExperiences ? "rotate-180" : ""
+                        }`}
+                      ></i>
+                    </button>
+                  )}
                 </div>
+                )}
               </div>
             )}
 
@@ -1212,6 +1252,7 @@ export default function Home() {
               </div>
             )}
 
+            </div>
           </aside>
 
           {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
