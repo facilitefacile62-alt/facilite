@@ -28,6 +28,7 @@ export async function POST(req) {
     const coverLetter = formData.get("coverLetter") || "";
     const existingCvId = formData.get("existingCvId");
     const cvFile = formData.get("cvFile");
+    const recruiterEmail = formData.get("recruiterEmail") || "contact@facilite.sn";
 
     // Validation des données requises
     if (!jobId || !jobTitle || !company || !fullName || !email) {
@@ -174,7 +175,7 @@ export async function POST(req) {
       const emailRecruiterPromise = fileBuffer
         ? resend.emails.send({
             from: "Facilite Recrutement <onboarding@resend.dev>",
-            to: "contact@facilite.sn",
+            to: recruiterEmail,
             subject: `[Facilite] Nouvelle candidature : ${fullName} - ${jobTitle} chez ${company}`,
             html: `
               <div style="font-family: sans-serif; line-height: 1.5; color: #333;">

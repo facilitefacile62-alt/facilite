@@ -124,6 +124,9 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       formData.append("fullName", fullName.trim());
       formData.append("email", email.trim());
       formData.append("coverLetter", coverLetter.trim());
+      if (job.recruiterEmail) {
+        formData.append("recruiterEmail", job.recruiterEmail);
+      }
 
       if (cvChoice === "existing") {
         formData.append("existingCvId", existingCvId);

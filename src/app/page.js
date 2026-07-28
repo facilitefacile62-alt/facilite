@@ -152,6 +152,34 @@ const translations = {
 
 const initialJobs = [
   {
+    id: 6,
+    titleFR: "FACILITE BUSINESS RECRUTE !",
+    titleEN: "FACILITE BUSINESS IS RECRUITING!",
+    company: "Facilite Business",
+    logoColor: "bg-blue-600",
+    initials: "FB",
+    location: "Abidjan, Côte d'Ivoire",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI",
+    descFR: `Vous cherchez un nouveau challenge professionnel ? Facilite Business grandit et recherche des talents motivés et dynamiques pour rejoindre son équipe !
+
+Nous recrutons activement pour les postes suivants :
+- 💻 Informaticiens : Maîtrise du développement, du support technique et de la maintenance IT. Expérience requise.
+- 📞 Téléconseillères : Aisance relationnelle pour le service client, la vente et l'assistance téléphonique. Bonnes compétences en communication exigées.
+- 🍳 Cuisinière : Expérience solide en restauration pour la préparation des repas, la gestion de cuisine et le service alimentaire.`,
+    descEN: `Looking for a new professional challenge? Facilite Business is growing and looking for motivated and dynamic talents to join its team!
+
+We are actively recruiting for the following positions:
+- 💻 IT Specialists: Mastery of development, technical support, and IT maintenance. Experience required.
+- 📞 Teleconsultants: Interpersonal skills for customer service, sales, and telephone assistance. Good communication skills required.
+- 🍳 Cook: Solid experience in catering for meal preparation, kitchen management, and food service.`,
+    tags: ["Abidjan", "CDI", "Full-time"],
+    salary: "À débattre",
+    recruiterEmail: "facilitefacile@gmail.com",
+    image: "/affichedoffre.jpeg"
+  },
+  {
     id: 1,
     titleFR: "Conseiller Clientèle Télécom",
     titleEN: "Telecom Customer Advisor",
@@ -1371,9 +1399,20 @@ export default function Home() {
                     </div>
 
                     {/* Description */}
-                    <p className="text-xs text-gray-600 font-semibold leading-relaxed">
+                    <p className="text-xs text-gray-600 font-semibold leading-relaxed whitespace-pre-line">
                       {selectedLang === "FR" ? job.descFR : job.descEN}
                     </p>
+
+                    {/* Visuel de l'offre */}
+                    {job.image && (
+                      <div className="rounded-xl overflow-hidden border border-gray-150 max-h-[300px] flex items-center justify-center bg-gray-50 mt-2">
+                        <img
+                          src={job.image}
+                          alt="Affiche de recrutement"
+                          className="max-h-[300px] w-full object-cover animate-fade-in"
+                        />
+                      </div>
+                    )}
 
                     {/* Footer Offre */}
                     <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-2">
