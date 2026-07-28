@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import DiagnosticModal from "@/components/DiagnosticModal";
+import ApplyModal from "@/components/ApplyModal";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -286,6 +287,7 @@ export default function Home() {
   // CV Required Apply Modal
   const [noCvModalOpen, setNoCvModalOpen] = useState(false);
   const [selectedJobToApply, setSelectedJobToApply] = useState(null);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
 
   // Diagnostic CV Modal State
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
@@ -470,7 +472,7 @@ export default function Home() {
       // Si déconnecté, bloquer la candidature et afficher le modal de création de compte
       setAuthRequiredModalOpen(true);
     } else {
-      setNoCvModalOpen(true);
+      setApplyModalOpen(true);
     }
   };
 
@@ -2338,6 +2340,14 @@ export default function Home() {
         </div>
       )}
       <DiagnosticModal isOpen={diagnosticModalOpen} onClose={() => setDiagnosticModalOpen(false)} />
+      <ApplyModal
+        isOpen={applyModalOpen}
+        onClose={() => setApplyModalOpen(false)}
+        job={selectedJobToApply}
+        selectedLang={selectedLang}
+        t={t}
+        triggerToast={triggerToast}
+      />
     </>
   );
 }
