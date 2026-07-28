@@ -1,5 +1,28 @@
-import { getDocumentProxy, extractText } from "unpdf";
+import { getDocumentProxy, extractText, renderPageAsImage } from "unpdf";
 import mammoth from "mammoth";
+
+// Seuil en dessous duquel on considère qu'un PDF n'a pas de couche texte exploitable
+// (cas des documents scannés/photographiés) et qu'il faut basculer en OCR.
+const MIN_PDF_TEXT_LENGTH = 30;
+
+async function ocrPdfPages(pdf, numPages) {
+  const { createWorker } = await import("tesseract.js");
+  const worker = await createWorker("fra+eng");
+  try {
+    let combinedText = "";
+    for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
+      const imageBuffer = await renderPageAsImage(pdf, pageNumber, {
+        canvasImport: () => import("@napi-rs/canvas"),
+        scale: 2,
+      });
+      const { data } = await worker.recognize(Buffer.from(imageBuffer));
+      combinedText += `${data.text || ""}\n`;
+    }
+    return combinedText;
+  } finally {
+    await worker.terminate();
+  }
+}
 
 const SECTION_HEADERS = {
   experiences: [
@@ -51,7 +74,14 @@ export async function extractTextFromFile(buffer, filename, mimeType) {
 
   if (ext === "pdf" || mimeType === "application/pdf") {
     const pdf = await getDocumentProxy(new Uint8Array(buffer));
-    const { text } = await extractText(pdf, { mergePages: true });
+    const { text, totalPages } = await extractText(pdf, { mergePages: true });
+
+    // Document scanné/photographié : pas de couche texte, on bascule en OCR page par page.
+    if (!text || text.trim().length < MIN_PDF_TEXT_LENGTH) {
+      const ocrText = await ocrPdfPages(pdf, totalPages || 1);
+      return ocrText || text || "";
+    }
+
     return text || "";
   }
 
