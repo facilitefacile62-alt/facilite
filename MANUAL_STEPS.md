@@ -8,20 +8,26 @@ accès aux dashboards. Elles sont classées par ordre d'urgence.
 
 ## 🔴 URGENT — à faire en premier
 
-### 1. Appliquer la migration SQL sur Supabase
+### 1. ✅ FAIT — Migration de durcissement appliquée
 
-C'est l'action la plus importante : elle referme les deux failles critiques
-(CV téléchargeables publiquement, et lignes `resumes` accessibles à tous).
+`20260728180000_durcissement_securite_rls_storage.sql` a été exécutée sur
+Supabase. Les deux failles critiques sont fermées : le bucket `resumes` est
+privé, et la policy `resumes` ne comporte plus `OR user_id IS NULL`.
 
-1. Ouvrez le [SQL Editor Supabase](https://supabase.com/dashboard/project/ocfhzwwjvljintabxxlg/sql/new).
-2. **Avant tout**, exécutez cette requête pour voir combien de lignes seront supprimées :
-   ```sql
-   SELECT count(*) FROM public.resumes WHERE user_id IS NULL;
-   ```
-   Si le nombre vous surprend, arrêtez-vous et signalez-le avant de continuer.
-3. Ouvrez le fichier `supabase/migrations/20260728180000_durcissement_securite_rls_storage.sql`
-   du dépôt, copiez **tout** son contenu, collez-le dans l'éditeur SQL.
-4. Cliquez sur **Run**.
+### 1 bis. Appliquer les deux migrations restantes
+
+Dans le [SQL Editor Supabase](https://supabase.com/dashboard/project/ocfhzwwjvljintabxxlg/sql/new),
+**dans cet ordre** :
+
+1. `supabase/migrations/20260728190000_messages_receiver_id.sql`
+   — rend l'historique de migrations rejouable.
+2. `supabase/migrations/20260728200000_vue_profils_publics.sql`
+   — crée la vue `profils_publics`. **Sans elle, la page `/in/[slug]` renvoie
+   une erreur**, puisque le code interroge désormais une vue inexistante.
+
+Après application, chaque utilisateur devra activer lui-même son profil public
+depuis **Profil → Confidentialité** (`is_public` vaut `false` par défaut :
+personne n'est publié sans l'avoir demandé).
 
 ### 2. Corriger le Client ID Google dans Supabase
 
