@@ -47,7 +47,7 @@ const SYSTEM_PROMPT = `Tu es un moteur d'extraction de CV ultra-précis. Analyse
     {
       "poste": "Intitulé du poste",
       "entreprise": "Nom de l'entreprise",
-      "periode": "Dates",
+      "periode": "Dates ou période obligatoire si présente dans le texte (ex: 'Février 2025', 'Fin 2024', 'Février - Juin 2024', '2021 - 2023'). Ne renvoie jamais une chaîne vide si une date apparaît près de cette expérience dans le document.",
       "description": "Missions"
     }
   ],
@@ -55,7 +55,7 @@ const SYSTEM_PROMPT = `Tu es un moteur d'extraction de CV ultra-précis. Analyse
     {
       "diplome": "Diplôme obtenu",
       "ecole": "Établissement",
-      "annee": "Année"
+      "annee": "Année ou période obligatoire si présente dans le texte (ex: '2021-2022', '2018-2019', '2020'). Ne renvoie jamais une chaîne vide si une date apparaît près de cette formation dans le document."
     }
   ],
   "langues": [
@@ -64,7 +64,11 @@ const SYSTEM_PROMPT = `Tu es un moteur d'extraction de CV ultra-précis. Analyse
       "niveau": "Niveau de maîtrise (ex: Excellent, Lu/parlé/écrit, Intermédiaire)"
     }
   ]
-}`;
+}
+
+Règles impératives :
+- Recherche systématiquement les dates, périodes ou années situées à proximité de chaque expérience et de chaque formation (même sur une ligne séparée, entre parenthèses, ou en fin de bloc) et reporte-les fidèlement dans "periode" / "annee".
+- Si le document contient une section intitulée "INFORMATIQUE", "COMPÉTENCES INFORMATIQUES" ou équivalente (ex: "Réseaux sociaux (Excellent)", "Internet/Web", "Emails et messageries", "Pack Office"), intègre chacun de ces éléments tel quel comme entrée supplémentaire du tableau "competences", sans les omettre ni les fusionner avec les autres compétences.`;
 
 async function callGemini(documentText, systemPrompt) {
   const geminiApiKey = process.env.GEMINI_API_KEY;

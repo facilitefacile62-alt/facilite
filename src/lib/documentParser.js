@@ -35,6 +35,7 @@ const SECTION_HEADERS = {
   ],
   skills: [
     "competences", "competences cles", "skills", "compétences", "compétences clés",
+    "informatique", "competences informatiques", "compétences informatiques",
   ],
   languages: [
     "langues", "languages",

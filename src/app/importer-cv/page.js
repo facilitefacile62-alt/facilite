@@ -151,6 +151,7 @@ export default function ImporterCvPage() {
     title: "",
     summary: "",
     experiences: [],
+    formations: [],
     skills: []
   });
 
@@ -326,6 +327,7 @@ export default function ImporterCvPage() {
       };
 
       const rawExperiences = getValue(fields, ["experiences", "experience"]) || [];
+      const rawFormations = getValue(fields, ["formations", "formation", "educations", "education"]) || [];
       const rawSkills = getValue(fields, ["skills", "competences", "compétences"]) || [];
 
       setParsedData({
@@ -340,10 +342,17 @@ export default function ImporterCvPage() {
           title: getValue(exp, ["title", "role", "poste"]) || "",
           employer: getValue(exp, ["employer", "company", "entreprise"]) || "",
           city: getValue(exp, ["city", "ville"]) || "",
-          startDate: String(getValue(exp, ["startDate", "period", "periode", "période"]) || ""),
+          periode: String(getValue(exp, ["periode", "période", "period"]) || ""),
+          startDate: String(getValue(exp, ["startDate"]) || ""),
           endDate: String(getValue(exp, ["endDate"]) || ""),
           current: !!getValue(exp, ["current"]),
           description: getValue(exp, ["description"]) || "",
+        })),
+        formations: (Array.isArray(rawFormations) ? rawFormations : []).map((form, idx) => ({
+          id: idx + 1,
+          diplome: getValue(form, ["diplome", "diplôme", "degree"]) || "",
+          ecole: getValue(form, ["ecole", "école", "school", "institution"]) || "",
+          annee: String(getValue(form, ["annee", "année", "periode", "période", "year"]) || ""),
         })),
         skills: Array.isArray(rawSkills) ? rawSkills : [],
       });
@@ -358,6 +367,7 @@ export default function ImporterCvPage() {
         title: "",
         summary: "",
         experiences: [],
+        formations: [],
         skills: [],
       });
     }
@@ -388,12 +398,38 @@ export default function ImporterCvPage() {
       title: "",
       employer: "",
       city: "",
+      periode: "",
       startDate: "",
       endDate: "",
       current: false,
       description: ""
     };
     setParsedData(prev => ({ ...prev, experiences: [...prev.experiences, newExp] }));
+  };
+
+  // Formation handlers inside parser editor
+  const handleFormationChange = (id, field, value) => {
+    setParsedData(prev => ({
+      ...prev,
+      formations: prev.formations.map(form => form.id === id ? { ...form, [field]: value } : form)
+    }));
+  };
+
+  const deleteFormation = (id) => {
+    setParsedData(prev => ({
+      ...prev,
+      formations: prev.formations.filter(form => form.id !== id)
+    }));
+  };
+
+  const addFormation = () => {
+    const newFormation = {
+      id: Date.now(),
+      diplome: "",
+      ecole: "",
+      annee: ""
+    };
+    setParsedData(prev => ({ ...prev, formations: [...prev.formations, newFormation] }));
   };
 
   // Skills handlers inside parser editor
@@ -1118,6 +1154,17 @@ export default function ImporterCvPage() {
                     </div>
                   </div>
 
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Période / Dates</label>
+                    <input
+                      type="text"
+                      value={exp.periode || ""}
+                      onChange={(e) => handleExpChange(exp.id, "periode", e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 transition bg-white"
+                      placeholder="Ex. Février 2025, Février - Juin 2024, 2021 - 2023"
+                    />
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Ville</label>
@@ -1176,7 +1223,71 @@ export default function ImporterCvPage() {
                 </div>
               ))}
             </div>
-            
+
+            {/* Formation Block */}
+            <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-xs space-y-6">
+              <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest">
+                  4. Formation
+                </h3>
+                <button
+                  onClick={addFormation}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100/80 px-3.5 py-2 rounded-xl transition cursor-pointer"
+                >
+                  + Ajouter
+                </button>
+              </div>
+
+              {parsedData.formations.map((form, index) => (
+                <div key={form.id} className="p-5 border border-gray-200 bg-gray-50/30 rounded-2xl relative space-y-4 shadow-2xs">
+
+                  <button
+                    onClick={() => deleteFormation(form.id)}
+                    className="absolute top-4 right-4 text-xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-200/50 transition cursor-pointer"
+                  >
+                    <i className="fa-solid fa-trash-can mr-1.5"></i>
+                    Supprimer
+                  </button>
+
+                  <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-2">Formation n°{index + 1}</h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Diplôme</label>
+                      <input
+                        type="text"
+                        value={form.diplome}
+                        onChange={(e) => handleFormationChange(form.id, "diplome", e.target.value)}
+                        className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 transition bg-white"
+                        placeholder="Ex. Licence Informatique"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">École / Établissement</label>
+                      <input
+                        type="text"
+                        value={form.ecole}
+                        onChange={(e) => handleFormationChange(form.id, "ecole", e.target.value)}
+                        className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 transition bg-white"
+                        placeholder="Ex. Université Cheikh Anta Diop"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Année / Période</label>
+                    <input
+                      type="text"
+                      value={form.annee || ""}
+                      onChange={(e) => handleFormationChange(form.id, "annee", e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 transition bg-white"
+                      placeholder="Ex. 2021-2022, 2018-2019"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
             {/* Continuer footer buttons */}
             <div className="flex justify-end gap-3.5 bg-white border border-gray-200 rounded-3xl p-6 shadow-xs">
               <button
