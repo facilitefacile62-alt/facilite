@@ -64,7 +64,7 @@ ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
 -- Politiques pour company_settings
 DROP POLICY IF EXISTS "Les utilisateurs gèrent leur propre entreprise" ON public.company_settings;
 CREATE POLICY "Les utilisateurs gèrent leur propre entreprise" ON public.company_settings
-  FOR ALL USING (auth.uid() = user_id OR user_id IS NULL);
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Politiques pour clients
 DROP POLICY IF EXISTS "Les utilisateurs gèrent leurs propres clients" ON public.clients;

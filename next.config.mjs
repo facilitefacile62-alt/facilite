@@ -1,17 +1,69 @@
 /** @type {import('next').NextConfig} */
+
+/**
+ * Content-Security-Policy en mode Report-Only.
+ *
+ * Volontairement non bloquante pour l'instant : une CSP stricte appliquée
+ * d'emblée casserait le rendu (Font Awesome via cdnjs, images et PDF servis
+ * depuis Supabase Storage). Observer d'abord les violations rapportées dans la
+ * console du navigateur, ajuster, puis seulement basculer la clé sur
+ * "Content-Security-Policy" pour qu'elle bloque réellement.
+ *
+ * Notes sur les assouplissements :
+ *  - 'unsafe-inline' / 'unsafe-eval' sur script-src : requis par le runtime
+ *    Next.js (scripts d'hydratation inline). Les supprimer demande une
+ *    stratégie de nonces via le middleware.
+ *  - frame-src supabase.co : la visionneuse PDF du profil affiche le CV dans
+ *    une iframe alimentée par une URL signée Supabase.
+ */
+const cspReportOnly = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+  "font-src 'self' data: https://cdnjs.cloudflare.com",
+  "img-src 'self' data: blob: https://*.supabase.co",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  "frame-src 'self' blob: data: https://*.supabase.co",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests",
+].join("; ");
+
 const nextConfig = {
   serverExternalPackages: ["unpdf", "mammoth", "tesseract.js", "@napi-rs/canvas", "canvas"],
   async headers() {
     return [
       {
-        source: "/:path*",
+        source: "/(.*)",
         headers: [
-          { key: "X-Frame-Options", value: "DENY" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          ...(process.env.NODE_ENV === "production"
-            ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]
-            : []),
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            // camera=(self) et non camera=() : l'import de CV par photo
+            // (DiagnosticModal) utilise capture="environment" et serait bloqué.
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(), geolocation=(), payment=(), usb=()",
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains; preload",
+          },
+          {
+            key: "Content-Security-Policy-Report-Only",
+            value: cspReportOnly,
+          },
         ],
       },
     ];

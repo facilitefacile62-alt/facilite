@@ -19,6 +19,16 @@ CREATE POLICY "Un utilisateur gere uniquement son propre profil" ON public.profi
 
 -- 2. MESSAGES : lecture par expediteur/destinataire, ecriture strictement
 -- au nom de l'expediteur authentifie uniquement
+
+-- La colonne receiver_id existait en production (table creee hors historique
+-- Git) mais n'etait definie par aucune migration : les policies ci-dessous la
+-- referencent, ce qui faisait echouer tout rejeu sur une base neuve.
+-- Ajout idempotent : no-op sur une base ou la colonne existe deja.
+ALTER TABLE public.messages
+  ADD COLUMN IF NOT EXISTS receiver_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_messages_receiver_id ON public.messages(receiver_id);
+
 DROP POLICY IF EXISTS "Users can view and send their messages" ON public.messages;
 DROP POLICY IF EXISTS "Un utilisateur gere uniquement ses propres messages" ON public.messages;
 
