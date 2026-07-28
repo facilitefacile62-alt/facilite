@@ -167,7 +167,13 @@ export async function POST(req) {
     }
 
     // 6. Envoi des 2 e-mails via Resend
-    const testRecipient = process.env.RESEND_TEST_RECIPIENT || process.env.RESEND_VERIFIED_EMAIL || null;
+    const recruiterSender = process.env.RESEND_FROM_RECRUITER || "Facilite Recrutement <onboarding@resend.dev>";
+    const candidateSender = process.env.RESEND_FROM_CANDIDATE || "Facilite <onboarding@resend.dev>";
+    
+    // On est en mode onboarding si l'un des expéditeurs contient onboarding@resend.dev
+    const isResendOnboarding = recruiterSender.includes("onboarding@resend.dev") || candidateSender.includes("onboarding@resend.dev");
+
+    const testRecipient = isResendOnboarding ? (process.env.RESEND_TEST_RECIPIENT || process.env.RESEND_VERIFIED_EMAIL || null) : null;
     const finalRecruiterEmail = testRecipient || recruiterEmail;
     const finalCandidateEmail = testRecipient || email;
 
@@ -193,7 +199,7 @@ export async function POST(req) {
 
     if (fileBuffer) {
       const { data, error } = await resend.emails.send({
-        from: "Facilite Recrutement <onboarding@resend.dev>",
+        from: recruiterSender,
         to: finalRecruiterEmail,
         subject: `[Facilite] Nouvelle candidature : ${fullName} - ${jobTitle} chez ${company}`,
         html: `
@@ -236,7 +242,7 @@ export async function POST(req) {
     }
 
     const { data, error } = await resend.emails.send({
-      from: "Facilite <onboarding@resend.dev>",
+      from: candidateSender,
       to: finalCandidateEmail,
       subject: `Confirmation de votre candidature : ${jobTitle} chez ${company}`,
       html: `
