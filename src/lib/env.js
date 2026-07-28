@@ -7,8 +7,7 @@
  * On préfère un échec bruyant au démarrage à une corruption silencieuse.
  */
 
-function required(name) {
-  const value = process.env[name];
+function checkEnv(name, value) {
   if (!value || value.trim() === "") {
     throw new Error(
       `[Configuration] Variable d'environnement manquante : ${name}. ` +
@@ -31,5 +30,8 @@ export function optionalServerKey(name) {
   return value;
 }
 
-export const SUPABASE_URL = required("NEXT_PUBLIC_SUPABASE_URL");
-export const SUPABASE_ANON_KEY = required("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+// Les variables côté client doivent être référencées de manière statique (process.env.NOM)
+// pour que le compilateur Next.js (Webpack/Turbopack) puisse les injecter/inliner
+// dans le bundle client lors du build.
+export const SUPABASE_URL = checkEnv("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+export const SUPABASE_ANON_KEY = checkEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
