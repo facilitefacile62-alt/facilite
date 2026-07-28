@@ -73,6 +73,10 @@ export default function ProfilPage() {
   const [jobTitle, setJobTitle] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
+  // Publication du profil sur /in/[slug] — opt-in explicite, deux niveaux
+  const [isPublic, setIsPublic] = useState(false);
+  const [showContact, setShowContact] = useState(false);
+  const [savingVisibility, setSavingVisibility] = useState(false);
   const [uploadedCvFileName, setUploadedCvFileName] = useState(null);
   const [cvUrl, setCvUrl] = useState(null);
   // cvUrl contient un CHEMIN de stockage (bucket privé) ; cvDisplayUrl contient
@@ -158,17 +162,54 @@ export default function ProfilPage() {
   // Régénère une URL signée dès que le document courant change
   useEffect(() => {
     let annule = false;
-    if (!cvUrl) {
-      setCvDisplayUrl(null);
-      return;
-    }
-    getSignedCvUrl(cvUrl).then((url) => {
+    // Résolution asynchrone dans les deux cas : évite un setState synchrone
+    // dans le corps de l'effet (cascade de rendus).
+    Promise.resolve(cvUrl ? getSignedCvUrl(cvUrl) : null).then((url) => {
       if (!annule) setCvDisplayUrl(url);
     });
     return () => {
       annule = true;
     };
   }, [cvUrl]);
+
+  /**
+   * Enregistre les réglages de visibilité publique.
+   * Couper is_public coupe aussi show_contact : on ne conserve jamais un
+   * consentement aux coordonnées sur un profil redevenu privé.
+   */
+  const handleSaveVisibility = async (champ, valeur) => {
+    if (!userSession?.user) return;
+    setSavingVisibility(true);
+
+    const majIsPublic = champ === "is_public" ? valeur : isPublic;
+    const majShowContact =
+      champ === "is_public" && valeur === false
+        ? false
+        : champ === "show_contact"
+        ? valeur
+        : showContact;
+
+    const { error } = await supabase.from("profiles").upsert({
+      id: userSession.user.id,
+      is_public: majIsPublic,
+      show_contact: majShowContact,
+      updated_at: new Date().toISOString(),
+    });
+
+    setSavingVisibility(false);
+
+    if (error) {
+      triggerToast("Impossible d'enregistrer ce réglage.", "fa-triangle-exclamation");
+      return;
+    }
+
+    setIsPublic(majIsPublic);
+    setShowContact(majShowContact);
+    triggerToast(
+      majIsPublic ? "Profil public activé." : "Profil repassé en privé.",
+      majIsPublic ? "fa-globe" : "fa-lock"
+    );
+  };
 
   const triggerToast = (msg, icon = "fa-check") => {
     setToast({ show: true, message: msg, icon });
@@ -225,6 +266,10 @@ export default function ProfilPage() {
         setUserSkills(profile.skills || []);
         setUserInterests(profile.interests || []);
         setContactEmail(profile.contact_email || session.user.email || "");
+        // Consentement de publication : false par défaut, personne n'est
+        // publié sans l'avoir explicitement demandé.
+        setIsPublic(profile.is_public === true);
+        setShowContact(profile.show_contact === true);
 
         let profileCvUrl = profile?.cv_url;
         let profileCvName = profile?.cv_name;
@@ -2687,6 +2732,94 @@ export default function ProfilPage() {
                             <i className="fa-solid fa-plus text-xs"></i>
                             <span>Ajouter un centre d'intérêt</span>
                           </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ONGLET CONFIDENTIALITÉ : visibilité du profil public */}
+                  {activeAboutTab === "confidentialite" && (
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-4 p-4 bg-white rounded-2xl border border-gray-200">
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
+                            <i className="fa-solid fa-globe text-xs text-blue-600"></i>
+                            Rendre mon profil public
+                          </h4>
+                          <p className="text-[11px] text-gray-500 font-medium mt-1 leading-relaxed">
+                            Votre profil devient consultable par toute personne disposant du lien,
+                            sans connexion. Sont affich&eacute;s : nom, titre, biographie, photo,
+                            localisation, expériences et formations.
+                            <br />
+                            <span className="font-bold text-gray-700">
+                              Ne sont jamais publiés : votre e-mail de connexion, date de naissance,
+                              genre, situation familiale, permis et CV.
+                            </span>
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={isPublic}
+                          disabled={savingVisibility}
+                          onClick={() => handleSaveVisibility("is_public", !isPublic)}
+                          className={`relative shrink-0 w-12 h-6 rounded-full transition cursor-pointer disabled:opacity-50 ${
+                            isPublic ? "bg-[#10E688]" : "bg-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                              isPublic ? "translate-x-6" : "translate-x-0"
+                            }`}
+                          ></span>
+                        </button>
+                      </div>
+
+                      <div
+                        className={`flex items-start justify-between gap-4 p-4 rounded-2xl border transition ${
+                          isPublic
+                            ? "bg-white border-gray-200"
+                            : "bg-gray-50 border-gray-100 opacity-60"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
+                            <i className="fa-solid fa-address-card text-xs text-indigo-600"></i>
+                            Afficher mes coordonnées
+                          </h4>
+                          <p className="text-[11px] text-gray-500 font-medium mt-1 leading-relaxed">
+                            Publie votre e-mail de contact, votre téléphone et votre site web sur
+                            votre profil public. Désactivé, ces champs restent masqués même si le
+                            profil est public.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={showContact}
+                          disabled={savingVisibility || !isPublic}
+                          onClick={() => handleSaveVisibility("show_contact", !showContact)}
+                          className={`relative shrink-0 w-12 h-6 rounded-full transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+                            showContact && isPublic ? "bg-[#10E688]" : "bg-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                              showContact && isPublic ? "translate-x-6" : "translate-x-0"
+                            }`}
+                          ></span>
+                        </button>
+                      </div>
+
+                      {isPublic && (
+                        <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                          <p className="text-[11px] font-bold text-blue-900">
+                            <i className="fa-solid fa-link text-[10px] mr-1.5"></i>
+                            Votre profil est en ligne &agrave; l&apos;adresse{" "}
+                            <span className="font-mono break-all">
+                              /in/{userSession?.user?.id}
+                            </span>
+                          </p>
                         </div>
                       )}
                     </div>

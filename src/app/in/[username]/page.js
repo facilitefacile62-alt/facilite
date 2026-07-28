@@ -23,20 +23,25 @@ export default function PublicProfilePage() {
       try {
         const decoded = decodeURIComponent(username).toLowerCase();
 
+        // Toutes les lectures passent par la vue profils_publics, jamais par
+        // la table profiles : la vue ne projette que les colonnes publiques
+        // et ne renvoie que les profils dont le propriétaire a activé la
+        // publication (is_public). La table, elle, reste privée.
+
         // 1. Recherche par slug
-        let { data, error } = await supabase
-          .from("profiles")
+        let { data } = await supabase
+          .from("profils_publics")
           .select("*")
           .eq("slug", decoded)
-          .single();
+          .maybeSingle();
 
         // 2. Si pas trouvé par slug, recherche par ID
         if (!data) {
           const { data: idData } = await supabase
-            .from("profiles")
+            .from("profils_publics")
             .select("*")
             .eq("id", decoded)
-            .single();
+            .maybeSingle();
           data = idData;
         }
 
@@ -47,7 +52,7 @@ export default function PublicProfilePage() {
         // la page affiche "Profil introuvable".
         if (!data) {
           const { data: nameData } = await supabase
-            .from("profiles")
+            .from("profils_publics")
             .select("*")
             .ilike("full_name", `%${decoded}%`)
             .limit(1);
@@ -207,7 +212,7 @@ export default function PublicProfilePage() {
               {/* ACTION CTAs */}
               <div className="flex items-center space-x-2.5 w-full sm:w-auto">
                 <a
-                  href={`mailto:${profile.email || 'contact@facilite.sn'}`}
+                  href={`mailto:${profile.contact_email || 'contact@facilite.sn'}`}
                   className="flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-xs transition shadow-md flex items-center justify-center space-x-2"
                 >
                   <i className="fa-solid fa-paper-plane text-xs"></i>
@@ -371,14 +376,16 @@ export default function PublicProfilePage() {
                   </div>
                 )}
 
-                {profile.email && (
+                {/* contact_email et non email : l'adresse de connexion du
+                    compte n'est jamais exposée publiquement. */}
+                {profile.contact_email && (
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
                     <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
                       <i className="fa-solid fa-envelope"></i>
                     </div>
                     <div className="min-w-0">
                       <span className="text-[10px] text-gray-400 font-bold block uppercase">E-mail</span>
-                      <span className="font-extrabold text-gray-900 truncate block">{profile.email}</span>
+                      <span className="font-extrabold text-gray-900 truncate block">{profile.contact_email}</span>
                     </div>
                   </div>
                 )}
