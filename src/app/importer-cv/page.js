@@ -298,11 +298,14 @@ export default function ImporterCvPage() {
   // Extraction réelle du contenu du document (jamais basée sur le nom du fichier)
   const parseFileContent = async (selectedFile) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+
       const formData = new FormData();
       formData.append("file", selectedFile);
 
       const response = await fetch("/api/parse-document", {
         method: "POST",
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
         body: formData,
       });
 
@@ -460,7 +463,7 @@ export default function ImporterCvPage() {
       let fileUrl = null;
 
       if (session?.user && file) {
-        const storagePath = `cvs/${session.user.id}_${Date.now()}.${file.name.split(".").pop().toLowerCase()}`;
+        const storagePath = `${session.user.id}/cvs/${Date.now()}.${file.name.split(".").pop().toLowerCase()}`;
 
         const { error: uploadError } = await supabase.storage
           .from("resumes")
@@ -468,8 +471,8 @@ export default function ImporterCvPage() {
 
         if (uploadError) throw uploadError;
 
-        const { data: publicUrlData } = supabase.storage.from("resumes").getPublicUrl(storagePath);
-        fileUrl = publicUrlData?.publicUrl || null;
+        // Bucket privé : on stocke le chemin, l'URL signée est générée à l'affichage
+        fileUrl = storagePath;
 
         // Reflète le CV importé sur le profil pour un affichage permanent
         await supabase.from("profiles").upsert({

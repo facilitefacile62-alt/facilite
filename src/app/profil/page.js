@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 
 export default function ProfilPage() {
   const pathname = usePathname();
@@ -75,6 +75,9 @@ export default function ProfilPage() {
   const [country, setCountry] = useState("");
   const [uploadedCvFileName, setUploadedCvFileName] = useState(null);
   const [cvUrl, setCvUrl] = useState(null);
+  // cvUrl contient un CHEMIN de stockage (bucket privé) ; cvDisplayUrl contient
+  // l'URL signée temporaire réellement utilisable dans un href / une iframe.
+  const [cvDisplayUrl, setCvDisplayUrl] = useState(null);
   const [cvFileType, setCvFileType] = useState(null); // 'pdf' | 'doc' | 'image'
   const [isUploadingCv, setIsUploadingCv] = useState(false);
   const [cvPreviewModalOpen, setCvPreviewModalOpen] = useState(false);
@@ -151,6 +154,21 @@ export default function ProfilPage() {
 
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "" });
+
+  // Régénère une URL signée dès que le document courant change
+  useEffect(() => {
+    let annule = false;
+    if (!cvUrl) {
+      setCvDisplayUrl(null);
+      return;
+    }
+    getSignedCvUrl(cvUrl).then((url) => {
+      if (!annule) setCvDisplayUrl(url);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [cvUrl]);
 
   const triggerToast = (msg, icon = "fa-check") => {
     setToast({ show: true, message: msg, icon });
@@ -773,8 +791,7 @@ export default function ProfilPage() {
 
     try {
       const ext = file.name.split('.').pop().toLowerCase();
-      const fileName = `doc_ocr_${userSession.user.id}_${Date.now()}.${ext}`;
-      const filePath = `documents/${fileName}`;
+      const filePath = `${userSession.user.id}/documents/doc_ocr_${Date.now()}.${ext}`;
 
       let docPublicUrl = null;
       const { error: uploadError } = await supabase.storage
@@ -782,10 +799,8 @@ export default function ProfilPage() {
         .upload(filePath, file, { upsert: true });
 
       if (!uploadError) {
-        const { data: urlData } = supabase.storage
-          .from('resumes')
-          .getPublicUrl(filePath);
-        docPublicUrl = urlData?.publicUrl;
+        // Bucket privé : on conserve le chemin, signé à la demande à l'affichage
+        docPublicUrl = filePath;
       }
 
       // Extraction réelle du texte du document (PDF/DOCX/Image OCR) côté serveur
@@ -794,6 +809,7 @@ export default function ProfilPage() {
 
       const parseResponse = await fetch("/api/parse-document", {
         method: "POST",
+        headers: userSession?.access_token ? { Authorization: `Bearer ${userSession.access_token}` } : undefined,
         body: parseFormData,
       });
 
@@ -968,18 +984,15 @@ export default function ProfilPage() {
     try {
       // 1. Sauvegarde dans Supabase Storage (Bucket resumes)
       let finalCvUrl = null;
-      const fileName = `${userSession.user.id}_${Date.now()}.${ext}`;
-      const filePath = `cvs/${fileName}`;
+      const filePath = `${userSession.user.id}/cvs/${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from('resumes')
         .upload(filePath, file, { upsert: true });
 
       if (!uploadError) {
-        const { data: publicUrlData } = supabase.storage
-          .from('resumes')
-          .getPublicUrl(filePath);
-        finalCvUrl = publicUrlData?.publicUrl;
+        // Bucket privé : on conserve le chemin, signé à la demande à l'affichage
+        finalCvUrl = filePath;
       }
 
       // 2. Format Base64 de secours
@@ -1193,8 +1206,6 @@ export default function ProfilPage() {
         if (typeof window !== "undefined") {
           localStorage.setItem("user_bio", tempBio);
           localStorage.setItem("user_pinned_details", JSON.stringify(tempPinnedDetails));
-          localStorage.setItem("user_phone", phone.trim());
-          localStorage.setItem("user_marital_status", maritalStatus);
           localStorage.setItem("user_driver_license", driverLicense.trim());
           localStorage.setItem("user_website_url", websiteUrl.trim());
         }
@@ -3279,9 +3290,9 @@ export default function ProfilPage() {
                 </div>
               </div>
 
-              {cvUrl && (
+              {cvDisplayUrl && (
                 <a
-                  href={cvUrl}
+                  href={cvDisplayUrl}
                   download={uploadedCvFileName || "Mon_CV.pdf"}
                   className="hidden sm:flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-[#047857] border border-[#A7F3D0] px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer"
                 >
@@ -3293,10 +3304,10 @@ export default function ProfilPage() {
 
             {/* Corps de la Visionneuse */}
             <div className="flex-1 bg-gray-100 border border-gray-200 rounded-2xl overflow-hidden min-h-[450px] flex items-center justify-center relative shadow-inner">
-              {cvUrl ? (
-                cvFileType === "pdf" || cvUrl.startsWith("data:application/pdf") ? (
+              {cvDisplayUrl ? (
+                cvFileType === "pdf" || cvDisplayUrl.startsWith("data:application/pdf") ? (
                   <iframe
-                    src={cvUrl}
+                    src={cvDisplayUrl}
                     title="Visionneuse PDF CV"
                     className="w-full h-full min-h-[500px] border-none rounded-2xl"
                   />
@@ -3310,7 +3321,7 @@ export default function ProfilPage() {
                       Ce document Word (.docx) est enregistré dans votre profil Supabase. Vous pouvez le consulter ou le télécharger ci-dessous.
                     </p>
                     <a
-                      href={cvUrl}
+                      href={cvDisplayUrl}
                       download={uploadedCvFileName || "Mon_CV.docx"}
                       className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-2.5 rounded-xl text-xs shadow-md transition cursor-pointer"
                     >

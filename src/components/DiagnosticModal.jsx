@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function DiagnosticModal({ isOpen, onClose }) {
   const [file, setFile] = useState(null);
@@ -52,10 +53,16 @@ export default function DiagnosticModal({ isOpen, onClose }) {
       setLoading(true);
 
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error("Veuillez vous connecter pour utiliser le diagnostic IA.");
+        }
+
         const response = await fetch("/api/diagnostic-cv", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`
           },
           body: JSON.stringify({
             fileData: base64Data,

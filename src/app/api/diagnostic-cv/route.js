@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { extractTextFromFile } from "@/lib/documentParser";
+import { requireUser, checkRateLimit } from "@/lib/apiAuth";
+import { DiagnosticPayloadSchema, validateUploadedFile } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
@@ -175,13 +177,27 @@ async function callAITextModel(extractedText) {
 
 export async function POST(req) {
   try {
-    const { fileData, fileName, mimeType } = await req.json();
+    const { user, error: authError } = await requireUser(req);
+    if (authError) return authError;
 
-    if (!fileData) {
+    const { allowed, error: rateError } = checkRateLimit(user.id);
+    if (!allowed) return rateError;
+
+    const parsed = DiagnosticPayloadSchema.safeParse(await req.json());
+    if (!parsed.success) {
       return NextResponse.json(
         { error: "Les données du fichier sont requises." },
         { status: 400 }
       );
+    }
+    const { fileData, fileName, mimeType } = parsed.data;
+
+    // Contrôle taille + type déclaré + magic bytes sur le binaire réel
+    const base64Payload = fileData.replace(/^data:[a-zA-Z0-9/\-+.]+;base64,/, "");
+    const fileBuffer = Buffer.from(base64Payload, "base64");
+    const check = validateUploadedFile(fileBuffer, mimeType, fileBuffer.length);
+    if (!check.valid) {
+      return NextResponse.json({ error: check.error }, { status: check.status });
     }
 
     let result = null;
@@ -235,7 +251,7 @@ export async function POST(req) {
   } catch (error) {
     console.error("[Diagnostic API Error]", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue lors de la génération du diagnostic.", details: error.message },
+      { error: "Une erreur est survenue lors de la génération du diagnostic." },
       { status: 500 }
     );
   }

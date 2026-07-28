@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { extractTextFromFile, mapTextToProfileFields } from "@/lib/documentParser";
+import { requireUser, checkRateLimit } from "@/lib/apiAuth";
+import { ParseDocumentJsonSchema, validateUploadedFile } from "@/lib/validation";
 
 export const runtime = "nodejs"; // Évite les restrictions de durée Edge en production
 
@@ -170,13 +172,22 @@ export async function POST(req) {
   let documentText = "";
   let filename = "document.txt";
   let mimeType = "text/plain";
-  
+
   try {
+    const { user, error: authError } = await requireUser(req);
+    if (authError) return authError;
+
+    const { allowed, error: rateError } = checkRateLimit(user.id);
+    if (!allowed) return rateError;
+
     const contentType = req.headers.get("content-type") || "";
-    
+
     if (contentType.includes("application/json")) {
-      const body = await req.json();
-      documentText = body.documentText || "";
+      const parsedBody = ParseDocumentJsonSchema.safeParse(await req.json());
+      if (!parsedBody.success) {
+        return NextResponse.json({ error: "Payload invalide." }, { status: 400 });
+      }
+      documentText = parsedBody.data.documentText;
     } else {
       // Extraction depuis FormData
       const formData = await req.formData();
@@ -184,8 +195,17 @@ export async function POST(req) {
       if (file && typeof file !== "string") {
         filename = file.name;
         mimeType = file.type;
+
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+
+        // Taille + type déclaré + magic bytes : l'OCR Tesseract qui suit est
+        // très coûteux en CPU, on refuse tout ce qui n'est pas légitime AVANT.
+        const check = validateUploadedFile(buffer, mimeType, file.size);
+        if (!check.valid) {
+          return NextResponse.json({ error: check.error }, { status: check.status });
+        }
+
         documentText = await extractTextFromFile(buffer, filename, mimeType);
       }
     }
@@ -265,11 +285,10 @@ export async function POST(req) {
   } catch (error) {
     console.error("[Parsing Route Error]", error);
     const fallbackFields = mapTextToProfileFields(documentText);
-    return NextResponse.json({ 
-      success: true, 
-      data: fallbackFields, 
-      fields: fallbackFields, 
-      error: error.message 
+    return NextResponse.json({
+      success: true,
+      data: fallbackFields,
+      fields: fallbackFields,
     });
   }
 }

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { extractTextFromFile, mapTextToProfileFields } from "@/lib/documentParser";
+import { requireUser, checkRateLimit } from "@/lib/apiAuth";
+import { AssistantPayloadSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
@@ -248,14 +250,20 @@ async function callDeepSeek(messages) {
 
 export async function POST(req) {
   try {
-    const { messages, attachments } = await req.json();
+    const { user, error: authError } = await requireUser(req);
+    if (authError) return authError;
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    const { allowed, error: rateError } = checkRateLimit(user.id);
+    if (!allowed) return rateError;
+
+    const parsed = AssistantPayloadSchema.safeParse(await req.json());
+    if (!parsed.success) {
       return NextResponse.json(
         { error: "Historique des messages invalide ou manquant." },
         { status: 400 }
       );
     }
+    const { messages, attachments } = parsed.data;
 
     let updatedMessages = [...messages];
     const imageAttachments = [];
@@ -329,7 +337,7 @@ export async function POST(req) {
   } catch (error) {
     console.error("[Assistant Route Error]", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue lors de la communication avec l'assistant.", details: error.message },
+      { error: "Une erreur est survenue lors de la communication avec l'assistant." },
       { status: 500 }
     );
   }

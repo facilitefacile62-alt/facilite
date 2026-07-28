@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function AIAssistantModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -131,14 +132,20 @@ export default function AIAssistantModal() {
         };
       });
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Veuillez vous connecter pour utiliser l'assistant IA.");
+      }
+
       const response = await fetch("/api/assistant", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ 
-          messages: apiMessages, 
-          attachments: currentAttachments 
+        body: JSON.stringify({
+          messages: apiMessages,
+          attachments: currentAttachments
         })
       });
 

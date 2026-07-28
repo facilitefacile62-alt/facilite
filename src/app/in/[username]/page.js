@@ -4,11 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ocfhzwwjvljintabxxlg.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from "@/lib/supabase";
 
 export default function PublicProfilePage() {
   const params = useParams();
@@ -44,11 +40,16 @@ export default function PublicProfilePage() {
           data = idData;
         }
 
-        // 3. Si pas trouvé, recherche partielle par full_name
+        // 3. Si pas trouvé, recherche partielle par full_name.
+        // Le filtre .ilike est indispensable : un `.limit(1)` SANS filtre
+        // renvoyait auparavant un profil arbitraire, affichant les données d'un
+        // inconnu sous l'identité demandée. Si rien ne correspond désormais,
+        // la page affiche "Profil introuvable".
         if (!data) {
           const { data: nameData } = await supabase
             .from("profiles")
             .select("*")
+            .ilike("full_name", `%${decoded}%`)
             .limit(1);
           if (nameData && nameData.length > 0) {
             data = nameData[0];
@@ -213,17 +214,10 @@ export default function PublicProfilePage() {
                   <span>Contacter</span>
                 </a>
 
-                {profile.cv_url && (
-                  <a
-                    href={profile.cv_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 sm:flex-none px-5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-[#047857] border border-emerald-200 font-extrabold rounded-2xl text-xs transition flex items-center justify-center space-x-2"
-                  >
-                    <i className="fa-solid fa-download text-xs"></i>
-                    <span>Télécharger CV</span>
-                  </a>
-                )}
+                {/* Le téléchargement public du CV a été retiré volontairement :
+                    le bucket "resumes" est privé et réservé à son propriétaire.
+                    Exposer le CV ici publierait nom, adresse, téléphone et date
+                    de naissance à tout visiteur anonyme. */}
               </div>
             </div>
 
