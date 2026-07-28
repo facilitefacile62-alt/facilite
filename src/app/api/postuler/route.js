@@ -167,11 +167,34 @@ export async function POST(req) {
     }
 
     // 6. Envoi des 2 e-mails via Resend
-    let recruiterRes = { data: null, error: null };
+    const testRecipient = process.env.RESEND_TEST_RECIPIENT || process.env.RESEND_VERIFIED_EMAIL || null;
+    const finalRecruiterEmail = testRecipient || recruiterEmail;
+    const finalCandidateEmail = testRecipient || email;
+
+    const handleResendError = (err) => {
+      if (err) {
+        const msg = err.message || "";
+        const isRestriction = 
+          msg.includes("verify") || 
+          msg.includes("domain") || 
+          msg.includes("restriction") || 
+          msg.includes("onboarding") || 
+          (err.name && err.name.includes("validation_error"));
+        
+        if (isRestriction) {
+          return {
+            name: "resend_restriction",
+            message: "En mode test (onboarding@resend.dev), Resend restreint l'envoi d'e-mails aux adresses de test vérifiées de votre compte. Veuillez configurer la variable d'environnement RESEND_TEST_RECIPIENT avec votre adresse vérifiée."
+          };
+        }
+      }
+      return err;
+    };
+
     if (fileBuffer) {
-      recruiterRes = await resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: "Facilite Recrutement <onboarding@resend.dev>",
-        to: recruiterEmail,
+        to: finalRecruiterEmail,
         subject: `[Facilite] Nouvelle candidature : ${fullName} - ${jobTitle} chez ${company}`,
         html: `
           <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
@@ -206,15 +229,15 @@ export async function POST(req) {
         ],
       });
 
-      console.log("Resend response (recruiter):", recruiterRes.data, recruiterRes.error);
-      if (recruiterRes.error) {
-        return NextResponse.json({ error: recruiterRes.error }, { status: 500 });
+      console.log("Resend response:", data, error);
+      if (error) {
+        return NextResponse.json({ error: handleResendError(error) }, { status: 500 });
       }
     }
 
-    const candidateRes = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: "Facilite <onboarding@resend.dev>",
-      to: email,
+      to: finalCandidateEmail,
       subject: `Confirmation de votre candidature : ${jobTitle} chez ${company}`,
       html: `
         <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
@@ -230,9 +253,9 @@ export async function POST(req) {
       `,
     });
 
-    console.log("Resend response (candidate):", candidateRes.data, candidateRes.error);
-    if (candidateRes.error) {
-      return NextResponse.json({ error: candidateRes.error }, { status: 500 });
+    console.log("Resend response:", data, error);
+    if (error) {
+      return NextResponse.json({ error: handleResendError(error) }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, candidature });

@@ -146,7 +146,13 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || "Une erreur est survenue lors de l'envoi.");
+        const errorObj = result.error;
+        const errMsg = typeof errorObj === "object" && errorObj !== null
+          ? (errorObj.message || "Une erreur est survenue lors de l'envoi.")
+          : (errorObj || "Une erreur est survenue lors de l'envoi.");
+        const err = new Error(errMsg);
+        err.error = errorObj;
+        throw err;
       }
 
       setSuccess(true);
@@ -155,7 +161,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       }
     } catch (err) {
       console.error("Erreur postuler:", err);
-      setErrorMsg(err.message || "Une erreur est survenue lors de la soumission.");
+      setErrorMsg(err.error?.message || err.message || "Une erreur est survenue lors de la soumission.");
     } finally {
       setLoading(false);
     }
