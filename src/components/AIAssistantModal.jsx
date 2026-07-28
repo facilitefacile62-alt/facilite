@@ -6,9 +6,11 @@ export default function AIAssistantModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
+  const [attachments, setAttachments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Initialisation de la conversation avec un message de bienvenue
   useEffect(() => {
@@ -31,19 +33,64 @@ export default function AIAssistantModal() {
     }
   }, [messages, isLoading]);
 
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Data = reader.result;
+        const isImage = file.type.startsWith("image/");
+        
+        setAttachments((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(36).substring(2, 9),
+            name: file.name,
+            type: isImage ? "image" : "document",
+            mimeType: file.type,
+            data: base64Data
+          }
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Réinitialiser le champ input
+    e.target.value = "";
+  };
+
+  const handleRemoveAttachment = (id) => {
+    setAttachments((prev) => prev.filter((att) => att.id !== id));
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+    if ((!inputValue.trim() && attachments.length === 0) || isLoading) return;
 
     const userMessageText = inputValue.trim();
+    const currentAttachments = [...attachments];
+    
+    // Réinitialiser les champs de saisie immédiatement pour la réactivité
     setInputValue("");
+    setAttachments([]);
     setErrorMsg("");
 
-    // 1. Ajouter le message utilisateur
+    // Construire le contenu du message à afficher dans l'interface
+    let displayContent = userMessageText;
+    if (currentAttachments.length > 0) {
+      const fileNames = currentAttachments.map(f => f.name).join(", ");
+      displayContent = userMessageText 
+        ? `${userMessageText} (Fichiers joints : ${fileNames})`
+        : `[Fichiers joints : ${fileNames}]`;
+    }
+
+    // 1. Ajouter le message utilisateur à l'interface
     const userMsg = {
       id: Date.now().toString(),
       role: "user",
-      content: userMessageText,
+      content: displayContent,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     
@@ -52,18 +99,31 @@ export default function AIAssistantModal() {
     setIsLoading(true);
 
     try {
-      // Préparer l'historique épuré pour l'API backend
-      const apiMessages = updatedMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      // Préparer l'historique épuré pour l'API backend (on envoie le texte réel saisi par l'utilisateur)
+      const apiMessages = updatedMessages.map((msg, idx) => {
+        // Pour le dernier message utilisateur, on renvoie uniquement son contenu textuel brut
+        // Le serveur recevra les attachements séparément pour les traiter
+        if (idx === updatedMessages.length - 1) {
+          return {
+            role: "user",
+            content: userMessageText || "Analyse les documents ci-joints."
+          };
+        }
+        return {
+          role: msg.role,
+          content: msg.content
+        };
+      });
 
       const response = await fetch("/api/assistant", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ messages: apiMessages })
+        body: JSON.stringify({ 
+          messages: apiMessages, 
+          attachments: currentAttachments 
+        })
       });
 
       const data = await response.json();
@@ -83,7 +143,10 @@ export default function AIAssistantModal() {
       setMessages(prev => [...prev, assistantMsg]);
     } catch (err) {
       console.error("Erreur assistant IA :", err);
-      setErrorMsg("Une erreur est survenue. Veuillez réessayer.");
+      setErrorMsg("Une erreur est survenue lors de l'analyse ou de l'envoi.");
+      
+      // Restaurer les fichiers en cas d'erreur
+      setAttachments(currentAttachments);
     } finally {
       setIsLoading(false);
     }
@@ -99,6 +162,7 @@ export default function AIAssistantModal() {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
+      setAttachments([]);
       setErrorMsg("");
     }
   };
@@ -116,7 +180,6 @@ export default function AIAssistantModal() {
         ) : (
           <div className="relative">
             <i className="fa-solid fa-comment-dots text-2xl transition-transform duration-300 group-hover:scale-110"></i>
-            {/* Petit effet de pulsation pour attirer l'attention */}
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border border-white animate-pulse"></span>
           </div>
         )}
@@ -146,7 +209,6 @@ export default function AIAssistantModal() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Reset */}
             <button
               onClick={handleResetConversation}
               className="w-8 h-8 rounded-full hover:bg-neutral-200/50 flex items-center justify-center text-neutral-600 transition-colors focus:outline-none"
@@ -154,7 +216,6 @@ export default function AIAssistantModal() {
             >
               <i className="fa-solid fa-rotate-left text-xs"></i>
             </button>
-            {/* Close */}
             <button
               onClick={() => setIsOpen(false)}
               className="w-8 h-8 rounded-full hover:bg-neutral-200/50 flex items-center justify-center text-neutral-600 transition-colors focus:outline-none"
@@ -214,20 +275,71 @@ export default function AIAssistantModal() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Attachment Previews */}
+        {attachments.length > 0 && (
+          <div className="px-3 py-2 bg-neutral-50 border-t border-neutral-100 flex flex-wrap gap-2 items-center">
+            {attachments.map((att) => (
+              <div
+                key={att.id}
+                className="relative group flex items-center bg-white border border-neutral-200 p-1 rounded-xl shadow-sm"
+              >
+                {att.type === "image" ? (
+                  <img
+                    src={att.data}
+                    alt={att.name}
+                    className="w-12 h-12 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center gap-1.5 px-2 py-1 text-xs text-neutral-600 font-medium">
+                    <i className={`fa-solid ${att.name.endsWith('.pdf') ? 'fa-file-pdf text-red-500' : 'fa-file-word text-blue-500'} text-sm`}></i>
+                    <span className="max-w-[100px] truncate">{att.name}</span>
+                  </div>
+                )}
+                
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAttachment(att.id)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-md hover:bg-rose-600 transition-colors focus:outline-none"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Input Form */}
         <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-neutral-100">
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              className="w-10 h-10 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center transition-colors focus:outline-none disabled:opacity-50 border border-neutral-200"
+              title="Ajouter un fichier (Image, PDF, Word)"
+            >
+              <i className="fa-solid fa-plus text-base"></i>
+            </button>
+            <input
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Posez votre question sur les CV ou carrières..."
+              placeholder="Posez votre question ou joignez un fichier..."
               disabled={isLoading}
               className="flex-1 px-4 py-2.5 bg-neutral-100 focus:bg-neutral-50 border border-transparent focus:border-blue-500 focus:outline-none rounded-xl text-sm transition-all placeholder-neutral-400 disabled:opacity-50"
             />
             <button
               type="submit"
-              disabled={isLoading || !inputValue.trim()}
+              disabled={isLoading || (!inputValue.trim() && attachments.length === 0)}
               className="w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-lg transition-colors focus:outline-none disabled:opacity-40 disabled:hover:bg-blue-600 disabled:cursor-not-allowed"
             >
               <i className="fa-solid fa-paper-plane text-sm"></i>

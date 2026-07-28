@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { extractTextFromFile, mapTextToProfileFields } from "@/lib/documentParser";
 
 export const runtime = "nodejs";
 
@@ -133,6 +134,96 @@ async function callGemini(messages) {
   return null;
 }
 
+async function callGeminiWithImages(messages, images) {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey || geminiApiKey.includes("[") || geminiApiKey.trim() === "") return null;
+
+  const contents = [];
+  for (let i = 0; i < messages.length - 1; i++) {
+    const msg = messages[i];
+    let role = "user";
+    if (msg.role === "assistant") role = "model";
+    contents.push({
+      role: role,
+      parts: [{ text: msg.content }]
+    });
+  }
+
+  const lastMsg = messages[messages.length - 1];
+  const lastParts = [{ text: lastMsg.content }];
+
+  for (const img of images) {
+    const base64Data = img.data.replace(/^data:image\/[a-z]+;base64,/, "");
+    lastParts.push({
+      inlineData: {
+        mimeType: img.mimeType || "image/png",
+        data: base64Data
+      }
+    });
+  }
+
+  contents.push({
+    role: "user",
+    parts: lastParts
+  });
+
+  try {
+    console.log("Assistant: Appel Gemini Vision (gemini-2.5-flash)...");
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        contents: contents,
+        systemInstruction: {
+          parts: [{ text: SYSTEM_PROMPT }]
+        },
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 1024
+        }
+      })
+    });
+
+    if (response.ok) {
+      const json = await response.json();
+      return json.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    } else {
+      const errText = await response.text();
+      console.error("Assistant: Gemini Vision rejeté:", response.status, errText);
+    }
+  } catch (err) {
+    console.error("Assistant: Échec Gemini Vision 2.5-flash, essai Gemini 1.5-flash...", err.message);
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: contents,
+          systemInstruction: {
+            parts: [{ text: SYSTEM_PROMPT }]
+          },
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 1024
+          }
+        })
+      });
+
+      if (response.ok) {
+        const json = await response.json();
+        return json.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      }
+    } catch (geminiErr2) {
+      console.error("Assistant: Échec complet de Gemini Vision 1.5:", geminiErr2.message);
+    }
+  }
+  return null;
+}
+
 async function callDeepSeek(messages) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") return null;
@@ -157,7 +248,7 @@ async function callDeepSeek(messages) {
 
 export async function POST(req) {
   try {
-    const { messages } = await req.json();
+    const { messages, attachments } = await req.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -166,19 +257,63 @@ export async function POST(req) {
       );
     }
 
-    let responseText = null;
+    let updatedMessages = [...messages];
+    const imageAttachments = [];
+    const documentAttachments = [];
 
-    // 1. Moteur Principal : Groq
-    responseText = await callGroq(messages);
-
-    // 2. Secours #1 : Gemini
-    if (!responseText) {
-      responseText = await callGemini(messages);
+    if (attachments && Array.isArray(attachments)) {
+      for (const att of attachments) {
+        if (att.type === "image") {
+          imageAttachments.push(att);
+        } else if (att.type === "document") {
+          documentAttachments.push(att);
+        }
+      }
     }
 
-    // 3. Secours #2 : DeepSeek
-    if (!responseText) {
-      responseText = await callDeepSeek(messages);
+    // 1. Traitement des documents : extraction du texte brut et injection dans le dernier message utilisateur
+    if (documentAttachments.length > 0) {
+      let documentContext = "";
+      for (const doc of documentAttachments) {
+        try {
+          const base64Data = doc.data.replace(/^data:[a-zA-Z0-9/\-+.]+;base64,/, "");
+          const buffer = Buffer.from(base64Data, "base64");
+          const extractedText = await extractTextFromFile(buffer, doc.name, doc.mimeType || "text/plain");
+          if (extractedText) {
+            documentContext += `Contenu du fichier joint [${doc.name}] :\n---\n${extractedText}\n---\n\n`;
+          }
+        } catch (docErr) {
+          console.error(`Erreur d'extraction textuelle pour le document ${doc.name}:`, docErr);
+        }
+      }
+
+      if (documentContext) {
+        const lastUserIndex = [...updatedMessages].reverse().findIndex(msg => msg.role === "user");
+        if (lastUserIndex !== -1) {
+          const index = updatedMessages.length - 1 - lastUserIndex;
+          updatedMessages[index] = {
+            ...updatedMessages[index],
+            content: `${documentContext}${updatedMessages[index].content}`
+          };
+        }
+      }
+    }
+
+    let responseText = null;
+
+    // 2. Si des images sont jointes, appeler Gemini (Vision) en priorité absolue
+    if (imageAttachments.length > 0) {
+      console.log("Assistant: Images détectées, Gemini sollicité en priorité absolue.");
+      responseText = await callGeminiWithImages(updatedMessages, imageAttachments);
+    } else {
+      // Pas d'images, cascade standard : Groq -> Gemini -> DeepSeek
+      responseText = await callGroq(updatedMessages);
+      if (!responseText) {
+        responseText = await callGemini(updatedMessages);
+      }
+      if (!responseText) {
+        responseText = await callDeepSeek(updatedMessages);
+      }
     }
 
     if (!responseText) {
