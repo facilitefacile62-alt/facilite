@@ -37,12 +37,15 @@ const SYSTEM_PROMPT = `Tu es un moteur d'extraction de CV ultra-précis. Analyse
 {
   "prenom": "Prénom du candidat",
   "nom": "Nom de famille",
+  "email": "Adresse e-mail extraite du document, sinon null",
+  "telephone": "Numéro de téléphone extrait du document, sinon null",
   "ville": "Ville ou quartier",
   "pays": "Pays si indiqué, sinon null",
   "sexe": "Ne devine JAMAIS. Renvoie null sauf si le terme Homme ou Femme est explicitement écrit dans le texte",
   "titre": "Intitulé du poste",
   "resume": "Résumé professionnel",
   "competences": ["Compétence 1", "Compétence 2"],
+  "centres_interet": ["Centre d'intérêt 1", "Centre d'intérêt 2"],
   "experiences": [
     {
       "poste": "Intitulé du poste",
@@ -68,7 +71,16 @@ const SYSTEM_PROMPT = `Tu es un moteur d'extraction de CV ultra-précis. Analyse
 
 Règles impératives :
 - Recherche systématiquement les dates, périodes ou années situées à proximité de chaque expérience et de chaque formation (même sur une ligne séparée, entre parenthèses, ou en fin de bloc) et reporte-les fidèlement dans "periode" / "annee".
-- Si le document contient une section intitulée "INFORMATIQUE", "COMPÉTENCES INFORMATIQUES" ou équivalente (ex: "Réseaux sociaux (Excellent)", "Internet/Web", "Emails et messageries", "Pack Office"), intègre chacun de ces éléments tel quel comme entrée supplémentaire du tableau "competences", sans les omettre ni les fusionner avec les autres compétences.`;
+- Si le document contient une section intitulée "INFORMATIQUE", "COMPÉTENCES INFORMATIQUES" ou équivalente (ex: "Réseaux sociaux (Excellent)", "Internet/Web", "Emails et messageries", "Pack Office"), intègre chacun de ces éléments tel quel comme entrée supplémentaire du tableau "competences", sans les omettre ni les fusionner avec les autres compétences.
+- Recherche l'adresse e-mail (motif contenant "@") et le numéro de téléphone (chiffres regroupés, souvent précédés d'un indicatif comme "+221") n'importe où dans le document, y compris dans l'en-tête ou les coordonnées, et reporte-les fidèlement dans "email" et "telephone".
+- Si le document contient une section intitulée "CENTRES D'INTÉRÊT", "LOISIRS", "HOBBIES" ou équivalente, reporte chaque élément tel quel dans le tableau "centres_interet" (ex: "Activités sportives et lecture", "Voyages et découvertes", "Veille technologique").
+
+Exemple de sortie attendue pour un CV contenant ces informations :
+{
+  "email": "Florencecoly264@gmail.com",
+  "telephone": "+221 77 215 83 72",
+  "centres_interet": ["Activités sportives et lecture", "Voyages et découvertes", "Veille technologique"]
+}`;
 
 async function callGemini(documentText, systemPrompt) {
   const geminiApiKey = process.env.GEMINI_API_KEY;

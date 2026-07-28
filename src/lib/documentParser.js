@@ -43,6 +43,10 @@ const SECTION_HEADERS = {
   summary: [
     "profil", "resume", "a propos", "à propos", "summary", "objectif", "presentation",
   ],
+  interests: [
+    "centres d'interet", "centre d'interet", "centres d'intérêt", "centre d'intérêt",
+    "loisirs", "hobbies", "interests",
+  ],
 };
 
 function normalize(str) {
@@ -130,6 +134,7 @@ export function mapTextToProfileFields(rawText) {
     languages: [],
     educations: [],
     experiences: [],
+    interests: [],
   };
 
   // --- Email ---
@@ -217,6 +222,16 @@ export function mapTextToProfileFields(rawText) {
       .split(/[,•|•]/)
       .map((s) => s.trim())
       .filter((s) => s.length > 1 && s.length < 40)
+      .slice(0, 10);
+  }
+
+  // --- Centres d'intérêt ---
+  if (sections.interests && sections.interests.length) {
+    fields.interests = sections.interests
+      .join(",")
+      .split(/[,•|•]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 1 && s.length < 60)
       .slice(0, 10);
   }
 

@@ -93,7 +93,10 @@ export default function ProfilPage() {
     gender: "",
     maritalStatus: "",
     driverLicense: "",
+    email: "",
+    phone: "",
     skills: [],
+    interests: [],
     experiences: [],
     educations: [],
     languages: [],
@@ -109,6 +112,13 @@ export default function ProfilPage() {
     "Développement Web", "React.js", "Next.js", "Gestion de projet", "Communication"
   ]);
   const [newSkillInput, setNewSkillInput] = useState("");
+
+  // Centres d'intérêt dynamique (Supabase)
+  const [userInterests, setUserInterests] = useState([]);
+  const [newInterestInput, setNewInterestInput] = useState("");
+
+  // Coordonnées de contact extraites (Supabase)
+  const [contactEmail, setContactEmail] = useState("");
 
   // Langues dynamique (Supabase + localStorage)
   const [userLanguages, setUserLanguages] = useState([
@@ -197,6 +207,8 @@ export default function ProfilPage() {
         setEducations(profile.educations || []);
         setUserLanguages(profile.languages || [{ id: "lang-1", name: "Français", level: "Principal / Courant" }]);
         setUserSkills(profile.skills || ["Développement Web", "React.js", "Next.js", "Gestion de projet", "Communication"]);
+        setUserInterests(profile.interests || []);
+        setContactEmail(profile.contact_email || session.user.email || "");
 
         let profileCvUrl = profile?.cv_url;
         let profileCvName = profile?.cv_name;
@@ -572,6 +584,41 @@ export default function ProfilPage() {
     triggerToast(`Compétence "${skillToDelete}" supprimée !`, "fa-trash-can");
   };
 
+  const handleAddNewInterest = async () => {
+    if (!newInterestInput.trim()) return;
+    const interestName = newInterestInput.trim();
+    if (userInterests.includes(interestName)) {
+      setNewInterestInput("");
+      return;
+    }
+    const updated = [...userInterests, interestName];
+    setUserInterests(updated);
+    setNewInterestInput("");
+    if (userSession?.user) {
+      await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        interests: updated,
+        updated_at: new Date().toISOString(),
+      });
+    }
+    triggerToast(`Centre d'intérêt "${interestName}" ajouté !`, "fa-heart");
+  };
+
+  const handleDeleteInterest = async (interestToDelete) => {
+    const updated = userInterests.filter(i => i !== interestToDelete);
+    setUserInterests(updated);
+    if (userSession?.user) {
+      await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        interests: updated,
+        updated_at: new Date().toISOString(),
+      });
+    }
+    triggerToast(`Centre d'intérêt "${interestToDelete}" supprimé !`, "fa-trash-can");
+  };
+
   // Convertit les champs extraits par le service serveur (/api/parse-document) vers le
   // format attendu par la modale de prévisualisation. Gère toutes les variations de clés JSON (français, anglais, accents).
   const mapExtractedFieldsToScannedData = (apiFields, file, docPublicUrl) => {
@@ -609,6 +656,7 @@ export default function ProfilPage() {
     const rawEducations = getValue(apiFields, ["educations", "education", "formation", "formations", "parcours_academique", "studies"]) || [];
     const rawLanguages = getValue(apiFields, ["languages", "langues", "langue", "languages_list"]) || [];
     const rawSkills = getValue(apiFields, ["skills", "competences", "compétences", "competence", "compétence", "skills_list"]) || [];
+    const rawInterests = getValue(apiFields, ["interests", "centres_interet", "centresInteret", "centres_d_interet", "hobbies", "loisirs"]) || [];
 
     const experiences = (Array.isArray(rawExperiences) ? rawExperiences : [rawExperiences].filter(Boolean)).map((exp, idx) => {
       const title = getValue(exp, ["title", "role", "post", "poste", "intitule", "intitulé", "job"]);
@@ -702,7 +750,10 @@ export default function ProfilPage() {
       gender: getValue(apiFields, ["gender", "sexe", "genre"]),
       maritalStatus: getValue(apiFields, ["maritalStatus", "marital_status", "statutMarital", "statut_marital", "situation_familiale", "situationfamiliale", "statut_matrimonial", "statutmatrimonial"]),
       driverLicense: getValue(apiFields, ["driverLicense", "driver_license", "permis", "permisDeConduire", "permis_de_conduire"]),
+      email: getValue(apiFields, ["email", "e-mail", "mail"]),
+      phone: getValue(apiFields, ["phone", "telephone", "téléphone", "tel"]),
       skills: Array.isArray(rawSkills) ? rawSkills : [rawSkills].filter(Boolean),
+      interests: Array.isArray(rawInterests) ? rawInterests : [rawInterests].filter(Boolean),
       experiences,
       educations,
       languages,
@@ -792,6 +843,11 @@ export default function ProfilPage() {
     setUserSkills(scannedData.skills);
     setExperiences(scannedData.experiences);
     setEducations(scannedData.educations);
+    if (scannedData.phone) setPhone(scannedData.phone);
+    if (scannedData.email) setContactEmail(scannedData.email);
+    if (scannedData.interests && scannedData.interests.length > 0) {
+      setUserInterests(scannedData.interests);
+    }
 
     if (scannedData.languages && scannedData.languages.length > 0) {
       setUserLanguages(scannedData.languages.map((l, i) => ({ id: `lang-scan-${i}`, name: l.name, level: l.level })));
@@ -822,7 +878,10 @@ export default function ProfilPage() {
       gender: scannedData.gender,
       marital_status: scannedData.maritalStatus,
       driver_license: scannedData.driverLicense,
+      phone: scannedData.phone || phone,
+      contact_email: scannedData.email || contactEmail,
       skills: scannedData.skills,
+      interests: scannedData.interests && scannedData.interests.length > 0 ? scannedData.interests : userInterests,
       experiences: scannedData.experiences,
       educations: scannedData.educations,
       languages: scannedData.languages,
@@ -2224,11 +2283,11 @@ export default function ProfilPage() {
                     <div className="space-y-4">
                       <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
                         <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Téléphone</h4>
-                        <p className="text-sm font-extrabold text-gray-900">{phone || "+221 77 000 00 00"}</p>
+                        <p className="text-sm font-extrabold text-gray-900">{phone || "Non renseigné"}</p>
                       </div>
                       <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
                         <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">E-mail de contact</h4>
-                        <p className="text-sm font-extrabold text-gray-900">{userSession?.user?.email || "contact@facilite.sn"}</p>
+                        <p className="text-sm font-extrabold text-gray-900">{contactEmail || userSession?.user?.email || "Non renseigné"}</p>
                       </div>
                     </div>
                   )}
@@ -2498,6 +2557,81 @@ export default function ProfilPage() {
                             <i className="fa-solid fa-lightbulb"></i>
                           </div>
                           <p className="text-xs font-semibold text-gray-700">Aucune compétence enregistrée pour le moment.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ONGLET: CENTRES D'INTÉRÊT */}
+                  {activeAboutTab === "interets" && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                        <div className="flex items-center space-x-2">
+                          <i className="fa-solid fa-heart text-rose-500 text-base"></i>
+                          <h3 className="text-sm md:text-base font-extrabold text-gray-900">Centres d'intérêt</h3>
+                        </div>
+                      </div>
+
+                      {/* Formulaire d'ajout de centre d'intérêt */}
+                      <div className="flex items-center space-x-2 pt-1">
+                        <input
+                          id="interest-input-focus"
+                          type="text"
+                          value={newInterestInput}
+                          onChange={(e) => setNewInterestInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddNewInterest();
+                            }
+                          }}
+                          placeholder="Ajouter un centre d'intérêt (ex. Voyages, Lecture, Sport...)"
+                          className="flex-1 p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:border-rose-500 text-gray-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddNewInterest}
+                          className="bg-rose-500 hover:bg-rose-600 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs cursor-pointer"
+                        >
+                          <i className="fa-solid fa-plus text-xs"></i>
+                          <span>Ajouter</span>
+                        </button>
+                      </div>
+
+                      {/* Badges de centres d'intérêt */}
+                      {userInterests.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {userInterests.map((interest, idx) => (
+                            <span
+                              key={idx}
+                              className="bg-rose-50 text-rose-900 border border-rose-200 text-xs font-extrabold px-3 py-1.5 rounded-xl flex items-center space-x-2 shadow-2xs group"
+                            >
+                              <span>{interest}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteInterest(interest)}
+                                className="text-rose-400 hover:text-red-600 transition cursor-pointer"
+                                title="Supprimer ce centre d'intérêt"
+                              >
+                                <i className="fa-solid fa-xmark text-xs"></i>
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400 space-y-3">
+                          <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto text-sm">
+                            <i className="fa-solid fa-heart"></i>
+                          </div>
+                          <p className="text-xs font-semibold text-gray-700">Aucun centre d'intérêt renseigné.</p>
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById("interest-input-focus")?.focus()}
+                            className="inline-flex items-center space-x-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer border border-rose-200"
+                          >
+                            <i className="fa-solid fa-plus text-xs"></i>
+                            <span>Ajouter un centre d'intérêt</span>
+                          </button>
                         </div>
                       )}
                     </div>
