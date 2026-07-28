@@ -195,9 +195,9 @@ export async function POST(req) {
       const groqKey = process.env.GROQ_API_KEY;
       if (groqKey && !groqKey.includes("[") && groqKey.trim() !== "") {
         try {
-          console.log("Appel Groq OpenAI Client (deepseek-r1-distill-llama-70b)...");
+          console.log("Appel Groq OpenAI Client (llama-3.3-70b-versatile)...");
           const groqResponse = await groq.chat.completions.create({
-            model: "deepseek-r1-distill-llama-70b",
+            model: "llama-3.3-70b-versatile",
             messages: [
               { role: "system", content: CV_EXTRACTION_PROMPT },
               { role: "user", content: `Voici le texte du document à analyser :\n\n${documentText}` },
