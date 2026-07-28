@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
+import AIAssistantModal from "@/components/AIAssistantModal";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,6 +21,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${inter.className} bg-white text-dark min-h-screen flex flex-col`}>
         {children}
+        <AIAssistantModal />
       </body>
     </html>
   );
