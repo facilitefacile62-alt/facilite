@@ -265,6 +265,19 @@ export async function POST(req) {
       return NextResponse.json({ error: handleResendError(error) }, { status: 500 });
     }
 
+    // 7. Enregistrement automatique de l'e-mail dans la messagerie interne Supabase (messages)
+    try {
+      const emailContentText = `📧 [E-mail de confirmation] Candidature transmise avec succès pour le poste de ${jobTitle} chez ${company}.\n\nLe recruteur (${finalRecruiterEmail}) étudiera votre profil avec attention.`;
+      await supabase.from("messages").insert({
+        sender_id: "recruiter-support",
+        receiver_id: user.id,
+        content: emailContentText,
+        created_at: new Date().toISOString()
+      });
+    } catch (msgErr) {
+      console.error("Erreur de synchronisation de l'e-mail dans la messagerie Supabase:", msgErr?.message);
+    }
+
     return NextResponse.json({ success: true, candidature });
   } catch (error) {
     console.error("[Quick Apply API Error]", error);

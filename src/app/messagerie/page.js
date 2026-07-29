@@ -505,7 +505,48 @@ export default function MessageriePage() {
         setActiveConvId("ai-assistant");
       }
 
-      return () => subscription.unsubscribe();
+      // Écouter les nouveaux messages insérés en temps réel (ex: e-mails de recrutement synchronisés)
+      const realtimeChannel = supabase
+        .channel("public:messages")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages"
+          },
+          (payload) => {
+            const newRow = payload.new;
+            if (!newRow) return;
+            // Si le message concerne l'utilisateur (expéditeur ou destinataire)
+            if (newRow.sender_id === session.user.id || newRow.receiver_id === session.user.id) {
+              const formatted = formatMessageRow(newRow, session.user.id);
+              setConversations(prev => prev.map(c => {
+                if (c.id === 1 || c.id === "ai-assistant") {
+                  // Ne pas ajouter les doublons
+                  if (c.messages.some(m => m.id === formatted.id)) return c;
+                  return {
+                    ...c,
+                    lastMessage: formatted.text,
+                    time: formatted.time,
+                    messages: [...c.messages, formatted]
+                  };
+                }
+                return c;
+              }));
+              // Si c'est un message IA
+              if (newRow.sender_id === AI_BOT_ID || newRow.receiver_id === AI_BOT_ID) {
+                loadAiMessagesFromSupabase(session.user.id);
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+        supabase.removeChannel(realtimeChannel);
+      };
     }
 
     loadUserSessionAndMessages();
