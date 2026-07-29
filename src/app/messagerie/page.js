@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow } from "@/lib/messages";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -62,7 +63,17 @@ const translations = {
     downloadFile: "Télécharger",
     filterAll: "Tous",
     filterUnread: "Non lues",
-    filterFavorites: "Favoris"
+    filterFavorites: "Favoris",
+
+    // Pinned message
+    pinnedLabel: "Épinglé",
+    pinAction: "Épingler ce message",
+    unpinAction: "Désépingler",
+    pinSuccess: "Message épinglé en haut de la discussion",
+    unpinSuccess: "Message désépinglé",
+    pinError: "Impossible d'épingler ce message",
+    noPinnedMessage: "Aucun message épinglé dans cette discussion",
+    jumpToPinned: "Aller au message épinglé"
   },
   GB: {
     navHome: "Home",
@@ -115,7 +126,20 @@ const translations = {
     recruiterTitle: "Recruiter",
     activeNow: "Active now",
     fileSent: "File sent: ",
-    downloadFile: "Download"
+    downloadFile: "Download",
+    filterAll: "All",
+    filterUnread: "Unread",
+    filterFavorites: "Favorites",
+
+    // Pinned message
+    pinnedLabel: "Pinned",
+    pinAction: "Pin this message",
+    unpinAction: "Unpin",
+    pinSuccess: "Message pinned to the top of the chat",
+    unpinSuccess: "Message unpinned",
+    pinError: "Could not pin this message",
+    noPinnedMessage: "No pinned message in this conversation",
+    jumpToPinned: "Jump to pinned message"
   }
 };
 
@@ -166,6 +190,10 @@ export default function MessageriePage() {
   const fileInputRef = useRef(null);
   // Chat scroll anchor ref
   const chatBottomRef = useRef(null);
+  // Registre des noeuds DOM par id de message (scroll vers le message épinglé)
+  const messageNodesRef = useRef({});
+  // Compteur d'ids temporaires pour les messages en cours d'envoi
+  const tempIdCounterRef = useRef(0);
 
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "" });
@@ -213,22 +241,15 @@ export default function MessageriePage() {
       });
 
       // Charger uniquement les messages appartenant à cet utilisateur authentifié
+      // (envoyés ou reçus — la RLS garantit déjà l'isolation côté base).
       try {
-        const { data: userMessages } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("sender_id", session.user.id)
-          .order("created_at", { ascending: true });
+        const { messages: formattedMsgs, error: messagesError } = await fetchConversationMessages(session.user.id);
 
-        if (userMessages && userMessages.length > 0) {
-          const formattedMsgs = userMessages.map(m => ({
-            id: m.id,
-            sender: "me",
-            text: m.content,
-            time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            status: m.is_read ? "read" : "sent"
-          }));
+        if (messagesError) {
+          triggerToast("Erreur de chargement de la discussion", "fa-triangle-exclamation");
+        }
 
+        if (formattedMsgs.length > 0) {
           const userConv = {
             id: 1,
             name: "Support RH Facilité",
@@ -382,6 +403,63 @@ export default function MessageriePage() {
     }));
   };
 
+  // --- ÉPINGLAGE D'UN MESSAGE ------------------------------------------------
+  // Mise à jour optimiste : l'UI bascule immédiatement, puis on confirme en base.
+  // En cas d'échec (droits, réseau), l'état précédent est restauré intégralement.
+  const handleTogglePin = async (msg) => {
+    if (!msg?.persisted) {
+      triggerToast(t.pinError, "fa-triangle-exclamation");
+      return;
+    }
+
+    const nextPinned = !msg.isPinned;
+    // On mémorise uniquement l'état d'épinglage, pas tout le fil : un message
+    // peut arriver pendant l'aller-retour réseau et ne doit pas être écrasé.
+    const previousPinStates = new Map(
+      (conversations.find(c => c.id === activeConvId)?.messages || []).map(m => [m.id, m.isPinned])
+    );
+
+    setConversations(prev => prev.map(c => {
+      if (c.id !== activeConvId) return c;
+      return {
+        ...c,
+        messages: c.messages.map(m => ({
+          ...m,
+          // Un seul message épinglé à la fois : les autres sont décochés,
+          // ce qui reflète exactement ce que fait la RPC côté base.
+          isPinned: m.id === msg.id ? nextPinned : (nextPinned ? false : m.isPinned)
+        }))
+      };
+    }));
+
+    const { error } = await toggleMessagePin(msg.id, nextPinned);
+
+    if (error) {
+      setConversations(prev => prev.map(c => {
+        if (c.id !== activeConvId) return c;
+        return {
+          ...c,
+          messages: c.messages.map(m =>
+            previousPinStates.has(m.id) ? { ...m, isPinned: previousPinStates.get(m.id) } : m
+          )
+        };
+      }));
+      triggerToast(t.pinError, "fa-triangle-exclamation");
+      return;
+    }
+
+    triggerToast(nextPinned ? t.pinSuccess : t.unpinSuccess, "fa-thumbtack");
+  };
+
+  // Défilement vers le message épinglé depuis la bannière
+  const scrollToPinnedMessage = (messageId) => {
+    const node = messageNodesRef.current[messageId];
+    if (!node) return;
+    node.scrollIntoView({ behavior: "smooth", block: "center" });
+    node.classList.add("ring-2", "ring-amber-400");
+    setTimeout(() => node.classList.remove("ring-2", "ring-amber-400"), 1600);
+  };
+
   // Send Message Logic
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
@@ -389,16 +467,21 @@ export default function MessageriePage() {
 
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMessageText = messageText;
-    
+    // Id temporaire : remplacé par l'UUID renvoyé par la base dès l'insertion
+    // réussie, sans quoi le message ne serait pas épinglable avant rechargement.
+    const tempId = `temp-${(tempIdCounterRef.current += 1)}`;
+
     // 1. Add user message to state
     setConversations(prev => prev.map(c => {
       if (c.id === activeConvId) {
         const newMsg = {
-          id: Date.now(),
+          id: tempId,
           sender: "me",
           text: userMessageText,
           time: timestamp,
-          status: "sent"
+          status: "sent",
+          isPinned: false,
+          persisted: false
         };
         return {
           ...c,
@@ -417,14 +500,29 @@ export default function MessageriePage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        await supabase.from("messages").insert({
-          sender_id: session.user.id,
-          content: userMessageText,
-          is_read: false
+        const { data: savedRow, error: sendError } = await sendMessage({
+          senderId: session.user.id,
+          content: userMessageText
         });
+
+        if (sendError) {
+          triggerToast("Message non enregistré", "fa-triangle-exclamation");
+        } else if (savedRow) {
+          // Réconciliation id temporaire → UUID réel
+          setConversations(prev => prev.map(c => {
+            if (c.id !== activeConvId) return c;
+            return {
+              ...c,
+              messages: c.messages.map(m =>
+                m.id === tempId ? { ...formatMessageRow(savedRow, session.user.id), status: m.status } : m
+              )
+            };
+          }));
+        }
       }
     } catch (err) {
       console.error("Erreur d'envoi du message sur Supabase:", err);
+      triggerToast("Message non enregistré", "fa-triangle-exclamation");
     }
 
     // Update status to delivered quickly
@@ -467,11 +565,13 @@ export default function MessageriePage() {
         setConversations(prev => prev.map(c => {
           if (c.id === convId) {
             const newBotMsg = {
-              id: Date.now() + 1,
+              id: `local-${Date.now() + 1}`,
               sender: "them",
               text: randomResponse,
               time: botTimestamp,
-              status: "read"
+              status: "read",
+              isPinned: false,
+              persisted: false
             };
             return {
               ...c,
@@ -520,7 +620,7 @@ export default function MessageriePage() {
     setConversations(prev => prev.map(c => {
       if (c.id === activeConvId) {
         const newMsg = {
-          id: Date.now(),
+          id: `local-${Date.now()}`,
           sender: "me",
           text: `${t.fileSent}${file.name}`,
           time: timestamp,
@@ -529,7 +629,9 @@ export default function MessageriePage() {
             size: formattedSize,
             type: file.type
           },
-          status: "sent"
+          status: "sent",
+          isPinned: false,
+          persisted: false
         };
         return {
           ...c,
@@ -556,11 +658,13 @@ export default function MessageriePage() {
         setConversations(prev => prev.map(c => {
           if (c.id === activeConvId) {
             const newBotMsg = {
-              id: Date.now() + 2,
+              id: `local-${Date.now() + 2}`,
               sender: "them",
               text: fileResponse,
               time: botTimestamp,
-              status: "read"
+              status: "read",
+              isPinned: false,
+              persisted: false
             };
             return {
               ...c,
@@ -595,6 +699,9 @@ export default function MessageriePage() {
   });
 
   const activeConversation = conversations.find(c => c.id === activeConvId) || conversations[0];
+
+  // Message épinglé de la discussion active (au plus un, garanti par la RPC)
+  const pinnedMessage = activeConversation?.messages?.find(m => m.isPinned) || null;
 
   return (
     <>
@@ -1202,20 +1309,81 @@ export default function MessageriePage() {
                       <i className="fa-solid fa-phone"></i>
                     </button>
                     <button
-                      onClick={() => triggerToast("Discussion épinglée", "fa-thumbtack")}
-                      className="text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
+                      onClick={() => {
+                        if (pinnedMessage) scrollToPinnedMessage(pinnedMessage.id);
+                        else triggerToast(t.noPinnedMessage, "fa-thumbtack");
+                      }}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition ${
+                        pinnedMessage
+                          ? "text-amber-600 bg-amber-50 hover:bg-amber-100"
+                          : "text-gray-500 hover:text-amber-600 hover:bg-amber-50"
+                      }`}
+                      title={pinnedMessage ? t.jumpToPinned : t.noPinnedMessage}
                     >
                       <i className="fa-solid fa-thumbtack"></i>
                     </button>
                   </div>
                 </div>
 
+                {/* BANNIÈRE MESSAGE ÉPINGLÉ (toujours visible en haut du fil) */}
+                {pinnedMessage && (
+                  <div className="sticky top-0 z-30 bg-[#FAF9F6]/95 backdrop-blur-sm px-4 pt-3 pb-2 border-b border-amber-200/70 shadow-xs animate-fade-in-up">
+                    <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 border-l-4 border-l-amber-500 rounded-xl p-3 shadow-xs">
+                      <span className="text-base leading-none mt-0.5 flex-shrink-0" aria-hidden="true">📌</span>
+
+                      <button
+                        type="button"
+                        onClick={() => scrollToPinnedMessage(pinnedMessage.id)}
+                        className="flex-1 min-w-0 text-left cursor-pointer group"
+                        title={t.jumpToPinned}
+                      >
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[10px] font-extrabold text-amber-700 uppercase tracking-wider">
+                            {t.pinnedLabel}
+                          </span>
+                          <span className="text-[10px] font-bold text-amber-600/80">
+                            {pinnedMessage.sender === "me" ? "Vous" : activeConversation.name} · {pinnedMessage.time}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-amber-950 leading-relaxed line-clamp-2 group-hover:underline decoration-amber-400 underline-offset-2">
+                          {pinnedMessage.text}
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePin(pinnedMessage)}
+                        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-amber-600 hover:text-amber-800 hover:bg-amber-100 transition cursor-pointer"
+                        title={t.unpinAction}
+                        aria-label={t.unpinAction}
+                      >
+                        <i className="fa-solid fa-xmark text-sm"></i>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Messages scrollarea */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {/* Séparateur visuel entre la zone épinglée et le fil chronologique */}
+                  {pinnedMessage && (
+                    <div className="flex items-center gap-3 pb-1">
+                      <div className="flex-1 h-px bg-gray-200"></div>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        {selectedLang === "FR" ? "Discussion" : "Conversation"}
+                      </span>
+                      <div className="flex-1 h-px bg-gray-200"></div>
+                    </div>
+                  )}
+
                   {activeConversation.messages.map(msg => (
                     <div
                       key={msg.id}
-                      className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"} items-end space-x-1.5`}
+                      ref={(node) => {
+                        if (node) messageNodesRef.current[msg.id] = node;
+                        else delete messageNodesRef.current[msg.id];
+                      }}
+                      className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"} items-end space-x-1.5 rounded-2xl transition-all duration-500`}
                     >
                       {msg.sender === "them" && (
                         <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white font-extrabold text-[10px] shadow-inner ${activeConversation.avatarColor}`}>
@@ -1228,8 +1396,36 @@ export default function MessageriePage() {
                           msg.sender === "me"
                             ? "bg-[#2563EB] text-white border-blue-600 rounded-br-xs"
                             : "bg-white text-gray-800 border-gray-200 rounded-bl-xs"
-                        }`}
+                        } ${msg.isPinned ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-[#FAF9F6]" : ""}`}
                       >
+                        {/* Action d'épinglage — visible au survol / focus clavier.
+                            Réservée aux messages réellement enregistrés en base. */}
+                        {msg.persisted && (
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePin(msg)}
+                            className={`absolute -top-2.5 ${msg.sender === "me" ? "-left-2.5" : "-right-2.5"} w-7 h-7 rounded-full bg-white border shadow-md flex items-center justify-center transition-all cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                              msg.isPinned
+                                ? "border-amber-400 text-amber-600 opacity-100"
+                                : "border-gray-200 text-gray-400 hover:text-amber-600 hover:border-amber-300"
+                            }`}
+                            title={msg.isPinned ? t.unpinAction : t.pinAction}
+                            aria-label={msg.isPinned ? t.unpinAction : t.pinAction}
+                            aria-pressed={msg.isPinned}
+                          >
+                            <i className={`fa-solid fa-thumbtack text-[10px] ${msg.isPinned ? "" : "rotate-45"}`}></i>
+                          </button>
+                        )}
+
+                        {msg.isPinned && (
+                          <div className={`flex items-center gap-1 mb-1.5 text-[9px] font-extrabold uppercase tracking-wider ${
+                            msg.sender === "me" ? "text-amber-200" : "text-amber-600"
+                          }`}>
+                            <span aria-hidden="true">📌</span>
+                            <span>{t.pinnedLabel}</span>
+                          </div>
+                        )}
+
                         {msg.file && (
                           <div className="flex items-center space-x-3 bg-black/10 p-2.5 rounded-xl mb-1 border border-white/10 text-left">
                             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-white">

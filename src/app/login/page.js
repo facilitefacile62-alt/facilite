@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import PhoneAuthForm from "@/components/PhoneAuthForm";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -28,6 +29,8 @@ export default function LoginPage() {
   const [recoveryError, setRecoveryError] = useState("");
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoverySuccess, setRecoverySuccess] = useState(false);
+  // Méthode de connexion sélectionnée : 'email' ou 'phone'
+  const [loginMethod, setLoginMethod] = useState("email");
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -80,8 +83,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Authentification directe (pas de signOut préventif : chaque appel
-      // Supabase Auth consomme le quota de rate-limit, cet appel était superflu)
+      // Authentification directe
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: password,
@@ -106,9 +108,9 @@ export default function LoginPage() {
 
       if (data?.session) {
         setIsSuccess(true);
-        // Redirection immédiate vers le tableau de bord personnel principal (sans conserver l'écran login dans l'historique)
+        // Redirection immédiate vers /profil (conformément aux consignes de redirection vers /profil)
         setTimeout(() => {
-          window.location.replace("/");
+          window.location.replace("/profil");
         }, 500);
       }
     } catch (err) {
@@ -261,13 +263,41 @@ export default function LoginPage() {
             <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
           </div>
 
+          {/* Sélecteur d'onglets Connexion (E-mail / Téléphone) */}
+          <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+            <button
+              type="button"
+              onClick={() => setLoginMethod("email")}
+              className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all duration-200 ${
+                loginMethod === "email"
+                  ? "bg-white text-gray-900 shadow-xs"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              📧 E-mail
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginMethod("phone")}
+              className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all duration-200 ${
+                loginMethod === "phone"
+                  ? "bg-white text-gray-900 shadow-xs"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              📱 Téléphone
+            </button>
+          </div>
+
           {/* Titre & Sous-titre */}
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
               Login
             </h1>
             <p className="text-sm font-medium text-gray-500">
-              Saisissez vos identifiants pour vous connecter.
+              {loginMethod === "email"
+                ? "Saisissez vos identifiants pour vous connecter."
+                : "Connectez-vous à l'aide de votre numéro de téléphone."}
             </p>
           </div>
 
@@ -287,7 +317,7 @@ export default function LoginPage() {
                 Accéder à mon espace
               </Link>
             </div>
-          ) : (
+          ) : loginMethod === "email" ? (
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Champ Email */}
               <div>
@@ -434,6 +464,10 @@ export default function LoginPage() {
                 </p>
               </div>
             </form>
+          ) : (
+            <div className="mt-4">
+              <PhoneAuthForm onSuccessRedirect="/profil" />
+            </div>
           )}
         </div>
         )}
