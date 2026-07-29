@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
+import { roleHomePath } from "@/lib/roles";
 
 /**
  * Protection des routes en REFUS PAR DÉFAUT.
@@ -55,37 +56,27 @@ export async function middleware(req) {
     return NextResponse.redirect(url);
   }
 
-  // Verification des autorisations selon le rôle pour les routes restreintes
-  if (user) {
-    let userRole = user.user_metadata?.role || "candidat";
+  // Vérification des autorisations selon le rôle pour les routes restreintes.
+  //
+  // Source de vérité : UNIQUEMENT public.profiles.role, jamais
+  // user.user_metadata.role. user_metadata (raw_user_meta_data) est fourni
+  // par le client au signup (options.data) — un attaquant peut y écrire
+  // n'importe quoi ("role": "admin") et ce claim finit dans son propre JWT.
+  // Le lire ici pour une décision d'autorisation aurait permis à quiconque
+  // de s'auto-attribuer l'accès à /admin sans jamais toucher à la base.
+  if (user && (pathname.startsWith("/admin") || pathname.startsWith("/recruteur"))) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
 
-    // Si le rôle n'est pas dans les metadonnées, interroger profiles
-    if (!user.user_metadata?.role) {
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        if (profile?.role) {
-          userRole = profile.role;
-        }
-      } catch (err) {
-        console.warn("Middleware profile role fetch error:", err);
-      }
-    }
+    const userRole = profile?.role || "candidat";
+    const requiredRole = pathname.startsWith("/admin") ? "admin" : "recruteur";
 
-    // Protection des routes /admin/* (réservé aux admins)
-    if (pathname.startsWith("/admin") && userRole !== "admin") {
+    if (userRole !== requiredRole && userRole !== "admin") {
       const url = req.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
-    }
-
-    // Protection des routes /recruteur/* (réservé aux recruteurs et admins)
-    if (pathname.startsWith("/recruteur") && userRole !== "recruteur" && userRole !== "admin") {
-      const url = req.nextUrl.clone();
-      url.pathname = "/login";
+      url.pathname = roleHomePath(userRole);
       return NextResponse.redirect(url);
     }
   }
