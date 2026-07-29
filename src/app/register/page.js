@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState("candidat");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -40,6 +41,7 @@ export default function RegisterPage() {
         options: {
           data: {
             full_name: fullName.trim(),
+            role: role
           },
         },
       });
@@ -51,11 +53,12 @@ export default function RegisterPage() {
       }
 
       if (data?.user) {
-        // Insertion ou mise à jour directe dans la table public.profiles
+        // Insertion ou mise à jour directe dans la table public.profiles avec le rôle
         await supabase.from("profiles").upsert({
           id: data.user.id,
           email: email.trim(),
           full_name: fullName.trim(),
+          role: role,
           updated_at: new Date().toISOString(),
         });
       }
@@ -145,6 +148,37 @@ export default function RegisterPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Sélecteur de rôle (Candidat / Recruteur) */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Type de compte
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setRole("candidat")}
+                    className={`py-2 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
+                      role === "candidat"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
+                    }`}
+                  >
+                    <span>👨‍🎓 Candidat</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("recruteur")}
+                    className={`py-2 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
+                      role === "recruteur"
+                        ? "bg-white text-emerald-800 shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
+                    }`}
+                  >
+                    <span>💼 Recruteur</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Champ Nom Complet */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">

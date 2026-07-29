@@ -108,9 +108,32 @@ export default function LoginPage() {
 
       if (data?.session) {
         setIsSuccess(true);
-        // Redirection immédiate vers /profil (conformément aux consignes de redirection vers /profil)
+
+        const userId = data.session.user.id;
+        let targetRole = data.session.user?.user_metadata?.role || "candidat";
+
+        // Interroger la table profiles pour vérifier le rôle à jour
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", userId)
+            .single();
+
+          if (profile?.role) {
+            targetRole = profile.role;
+          }
+        } catch (pErr) {
+          console.warn("Impossible de lire le profil:", pErr);
+        }
+
+        // Redirection dynamique selon le rôle
+        let redirectUrl = "/messagerie";
+        if (targetRole === "admin") redirectUrl = "/admin";
+        else if (targetRole === "recruteur") redirectUrl = "/recruteur";
+
         setTimeout(() => {
-          window.location.replace("/profil");
+          window.location.replace(redirectUrl);
         }, 500);
       }
     } catch (err) {

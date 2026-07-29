@@ -55,6 +55,41 @@ export async function middleware(req) {
     return NextResponse.redirect(url);
   }
 
+  // Verification des autorisations selon le rôle pour les routes restreintes
+  if (user) {
+    let userRole = user.user_metadata?.role || "candidat";
+
+    // Si le rôle n'est pas dans les metadonnées, interroger profiles
+    if (!user.user_metadata?.role) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        if (profile?.role) {
+          userRole = profile.role;
+        }
+      } catch (err) {
+        console.warn("Middleware profile role fetch error:", err);
+      }
+    }
+
+    // Protection des routes /admin/* (réservé aux admins)
+    if (pathname.startsWith("/admin") && userRole !== "admin") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+
+    // Protection des routes /recruteur/* (réservé aux recruteurs et admins)
+    if (pathname.startsWith("/recruteur") && userRole !== "recruteur" && userRole !== "admin") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+  }
+
   return res;
 }
 
