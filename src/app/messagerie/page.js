@@ -294,8 +294,8 @@ export default function MessageriePage() {
   const [assistantLoading, setAssistantLoading] = useState(false);
   const assistantIdRef = useRef(0);
 
-  // ID réservé pour identifier l'expéditeur / destinataire Bot IA
-  const AI_BOT_ID = "ai-assistant";
+  // ID UUID système réservé pour identifier l'expéditeur / destinataire Bot IA
+  const AI_BOT_ID = "00000000-0000-0000-0000-000000000000";
 
   // Charge l'historique des messages IA enregistrés dans Supabase pour l'utilisateur
   const loadAiMessagesFromSupabase = async (userId) => {
@@ -312,7 +312,7 @@ export default function MessageriePage() {
         .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("Détail Erreur Supabase SQL Messages IA:", error);
+        console.error("Erreur Sauvegarde Supabase (Lecture Messages IA):", error);
         setAssistantMessages([AI_WELCOME_MESSAGE]);
         return;
       }
@@ -343,6 +343,10 @@ export default function MessageriePage() {
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id || userSession?.user?.id;
 
+    if (!userId) {
+      console.warn("Utilisateur non connecté : persistance Supabase désactivée pour ce message.");
+    }
+
     const userMsg = {
       id: `ai-u-${(assistantIdRef.current += 1)}`,
       role: "user",
@@ -356,14 +360,21 @@ export default function MessageriePage() {
 
     // 2. Sauvegarde du message utilisateur dans Supabase (sender: userId, receiver: AI_BOT_ID)
     if (userId) {
-      supabase.from("messages").insert({
-        sender_id: userId,
-        receiver_id: AI_BOT_ID,
-        content: content,
-        created_at: new Date().toISOString()
-      }).then(({ error }) => {
-        if (error) console.error("Erreur d'insertion du message utilisateur IA:", error.message);
-      });
+      try {
+        const { error: insertUserErr } = await supabase.from("messages").insert({
+          sender_id: userId,
+          receiver_id: AI_BOT_ID,
+          content: content,
+          created_at: new Date().toISOString()
+        });
+        if (insertUserErr) {
+          console.error("Erreur Sauvegarde Supabase (Message User):", insertUserErr);
+        } else {
+          console.log("Sauvegarde Supabase (Message User) réussie.");
+        }
+      } catch (err) {
+        console.error("Erreur Sauvegarde Supabase (Message User Exception):", err);
+      }
     }
 
     try {
@@ -401,14 +412,21 @@ export default function MessageriePage() {
 
       // 3. Sauvegarde de la réponse de l'IA (sender: AI_BOT_ID, receiver: userId)
       if (userId) {
-        supabase.from("messages").insert({
-          sender_id: AI_BOT_ID,
-          receiver_id: userId,
-          content: botReplyText,
-          created_at: new Date().toISOString()
-        }).then(({ error }) => {
-          if (error) console.error("Erreur d'insertion de la réponse IA:", error.message);
-        });
+        try {
+          const { error: insertBotErr } = await supabase.from("messages").insert({
+            sender_id: AI_BOT_ID,
+            receiver_id: userId,
+            content: botReplyText,
+            created_at: new Date().toISOString()
+          });
+          if (insertBotErr) {
+            console.error("Erreur Sauvegarde Supabase (Message Bot):", insertBotErr);
+          } else {
+            console.log("Sauvegarde Supabase (Message Bot) réussie.");
+          }
+        } catch (err) {
+          console.error("Erreur Sauvegarde Supabase (Message Bot Exception):", err);
+        }
       }
     } catch (err) {
       console.error("Messagerie AI Error:", err);
