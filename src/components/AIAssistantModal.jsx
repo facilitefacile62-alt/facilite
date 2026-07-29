@@ -5,6 +5,17 @@ import { supabase } from "@/lib/supabase";
 import imageCompression from "browser-image-compression";
 
 export default function AIAssistantModal() {
+  // Ne rend rien côté serveur : ce widget est monté globalement dans le layout
+  // racine (donc présent sur 100% des pages) et purement décoratif tant qu'il
+  // n'est pas ouvert. Le gater derrière un montage client élimine toute
+  // divergence serveur/client pour ce sous-arbre — y compris celles causées
+  // par des extensions navigateur (gestionnaires de mots de passe, Grammarly,
+  // bloqueurs de pub…) qui injectent du DOM avant l'hydratation de React.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [isOpen, setIsOpen] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [errorMsg, setErrorMsg] = useState("");
@@ -163,6 +174,8 @@ export default function AIAssistantModal() {
       setInput("");
     }
   };
+
+  if (!mounted) return null;
 
   return (
     <div suppressHydrationWarning>
