@@ -289,13 +289,19 @@ export default function MessagerieClient() {
   const [userSession, setUserSession] = useState(null);
 
   // Discussion IA épinglée : appel direct à /api/ai-chat (DeepSeek, spécialisé
-  // par rôle) avec persistance Supabase dans la table `messages`.
+  // par rôle) avec persistance Supabase dans la table dédiée assistant_messages.
+  //
+  // Pourquoi pas public.messages (essayé précédemment avec un UUID de "bot"
+  // factice) : messages.receiver_id référence auth.users(id) — un faux UUID
+  // viole la clé étrangère — et la policy RLS d'INSERT exige sender_id =
+  // auth.uid(), ce qui bloque systématiquement l'enregistrement des réponses
+  // de l'assistant (le client authentifié n'est jamais le "bot"). Chaque ligne
+  // de assistant_messages — rôle "user" ou "assistant" — appartient à
+  // l'utilisateur authentifié (user_id = auth.uid()), donc aucun compte bot
+  // n'est nécessaire. Voir supabase/migrations/20260729224100_assistant_messages.sql.
   const [assistantMessages, setAssistantMessages] = useState([AI_WELCOME_MESSAGE]);
   const [assistantLoading, setAssistantLoading] = useState(false);
   const assistantIdRef = useRef(0);
-
-  // ID UUID système réservé pour identifier l'expéditeur / destinataire Bot IA
-  const AI_BOT_ID = "00000000-0000-0000-0000-000000000000";
 
   // Charge l'historique des messages IA enregistrés dans Supabase pour l'utilisateur
   const loadAiMessagesFromSupabase = async (userId) => {
@@ -305,11 +311,10 @@ export default function MessagerieClient() {
       return;
     }
     try {
-      // Requête sécurisée PostgREST sur sender_id / receiver_id
       const { data, error } = await supabase
-        .from("messages")
+        .from("assistant_messages")
         .select("*")
-        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -320,21 +325,14 @@ export default function MessagerieClient() {
 
       console.log("Messages chargés depuis Supabase:", data);
 
-      // Filtrer côté JS les messages appartenant spécifiquement à la discussion Bot IA (UUID ou legacy ID)
-      const aiRows = (data || []).filter(
-        row => row.sender_id === AI_BOT_ID || row.receiver_id === AI_BOT_ID ||
-               row.sender_id === "ai-assistant" || row.receiver_id === "ai-assistant"
-      );
-
-      if (aiRows.length > 0) {
-        const loadedMsgs = aiRows.map((row) => ({
+      if (data && data.length > 0) {
+        const loadedMsgs = data.map((row) => ({
           id: row.id,
-          role: (row.sender_id === userId) ? "user" : "assistant",
+          role: row.role,
           content: row.content,
           createdAt: row.created_at
         }));
-        // Garder le message de bienvenue en premier message du fil
-        setAssistantMessages([AI_WELCOME_MESSAGE, ...loadedMsgs]);
+        setAssistantMessages(loadedMsgs);
       } else {
         setAssistantMessages([AI_WELCOME_MESSAGE]);
       }
@@ -363,14 +361,13 @@ export default function MessagerieClient() {
     setAssistantMessages(historique);
     setAssistantLoading(true);
 
-    // 2. Sauvegarde du message utilisateur dans Supabase (sender: userId, receiver: AI_BOT_ID)
+    // 2. Sauvegarde du message utilisateur dans assistant_messages (role: 'user')
     if (userId) {
       try {
-        const { error: insertUserErr } = await supabase.from("messages").insert({
-          sender_id: userId,
-          receiver_id: AI_BOT_ID,
-          content: content,
-          created_at: new Date().toISOString()
+        const { error: insertUserErr } = await supabase.from("assistant_messages").insert({
+          user_id: userId,
+          role: "user",
+          content: content
         });
         if (insertUserErr) {
           console.error("Erreur Sauvegarde Supabase (Message User):", insertUserErr);
@@ -415,14 +412,13 @@ export default function MessagerieClient() {
         }
       ]);
 
-      // 3. Sauvegarde de la réponse de l'IA (sender: AI_BOT_ID, receiver: userId)
+      // 3. Sauvegarde de la réponse de l'IA dans assistant_messages (role: 'assistant')
       if (userId) {
         try {
-          const { error: insertBotErr } = await supabase.from("messages").insert({
-            sender_id: AI_BOT_ID,
-            receiver_id: userId,
-            content: botReplyText,
-            created_at: new Date().toISOString()
+          const { error: insertBotErr } = await supabase.from("assistant_messages").insert({
+            user_id: userId,
+            role: "assistant",
+            content: botReplyText
           });
           if (insertBotErr) {
             console.error("Erreur Sauvegarde Supabase (Message Bot):", insertBotErr);
@@ -567,10 +563,6 @@ export default function MessagerieClient() {
                 }
                 return c;
               }));
-              // Si c'est un message IA
-              if (newRow.sender_id === AI_BOT_ID || newRow.receiver_id === AI_BOT_ID) {
-                loadAiMessagesFromSupabase(session.user.id);
-              }
             }
           }
         )
