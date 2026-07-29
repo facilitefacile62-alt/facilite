@@ -4,17 +4,42 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
+// Liste des pays demandés
+const COUNTRIES = [
+  { code: "+221", flag: "🇸🇳", name: "Sénégal" },
+  { code: "+225", flag: "🇨🇮", name: "Côte d'Ivoire" },
+  { code: "+212", flag: "🇲🇦", name: "Maroc" },
+  { code: "+33", flag: "🇫🇷", name: "France" },
+  { code: "+223", flag: "🇲🇱", name: "Mali" },
+  { code: "+224", flag: "🇬🇳", name: "Guinée" },
+  { code: "+229", flag: "🇧🇯", name: "Bénin" },
+  { code: "+228", flag: "🇹🇬", name: "Togo" },
+  { code: "+237", flag: "🇨🇲", name: "Cameroun" },
+  { code: "other", flag: "🌍", name: "Autre (Saisie libre)" },
+];
+
 export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
   const router = useRouter();
 
   // Étape 1 : 'phone' (Saisie numéro) | Étape 2 : 'otp' (Saisie code 6 chiffres)
   const [step, setStep] = useState("phone");
-  const [phone, setPhone] = useState("");
+  
+  // États de saisie téléphone séparés
+  const [selectedCountryCode, setSelectedCountryCode] = useState("+221");
+  const [localNumber, setLocalNumber] = useState("");
+  const [customCountryCode, setCustomCountryCode] = useState("");
+  
+  const [phone, setPhone] = useState(""); // Numéro international complet final
   const [otpToken, setOtpToken] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
+
+  // Obtenir l'indicatif final à utiliser
+  const getActiveCode = () => {
+    return selectedCountryCode === "other" ? customCountryCode.trim() : selectedCountryCode;
+  };
 
   // ----------------------------------------------------
   // ÉTAPE 1 : Envoi du code SMS via signInWithOtp
@@ -24,18 +49,29 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
     setError(null);
     setMessage(null);
 
-    // Validation simple du format international
-    const cleanPhone = phone.trim();
-    if (!cleanPhone.startsWith("+")) {
-      setError("Le numéro de téléphone doit inclure l'indicatif international (ex: +33612345678 ou +225...)");
+    const activeCode = getActiveCode();
+    
+    if (!activeCode || !activeCode.startsWith("+")) {
+      setError("L'indicatif pays doit commencer par '+' (ex: +221 ou +33)");
       return;
     }
+
+    // Supprimer tous les espaces, tirets et caractères non numériques (sauf le + initial) du numéro local
+    const cleanLocal = localNumber.replace(/[\s\-\(\)]/g, "");
+    
+    if (!cleanLocal) {
+      setError("Veuillez saisir un numéro de téléphone valide.");
+      return;
+    }
+
+    const fullPhoneNumber = `${activeCode}${cleanLocal}`;
+    setPhone(fullPhoneNumber);
 
     setLoading(true);
 
     try {
       const { error: supabaseError } = await supabase.auth.signInWithOtp({
-        phone: cleanPhone,
+        phone: fullPhoneNumber,
         options: {
           shouldCreateUser: true, // Crée l'utilisateur automatiquement s'il n'existe pas encore
         },
@@ -44,7 +80,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
       if (supabaseError) throw supabaseError;
 
       setStep("otp");
-      setMessage(`Un code de validation à 6 chiffres a été envoyé par SMS au ${cleanPhone}.`);
+      setMessage(`Un code de validation à 6 chiffres a été envoyé par SMS au ${fullPhoneNumber}.`);
     } catch (err) {
       console.error("Erreur d'envoi OTP SMS :", err);
       setError(err.message || "Impossible d'envoyer le code SMS. Vérifiez le numéro.");
@@ -87,7 +123,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
       }
     } catch (err) {
       console.error("Erreur de vérification OTP :", err);
-      setError(err.message || "Code invalide ou expiré. Veuillez réespérer.");
+      setError(err.message || "Code invalide ou expiré. Veuillez réessayer.");
     } finally {
       setLoading(false);
     }
@@ -111,14 +147,14 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
         <h2 className="text-2xl font-extrabold text-gray-900">Connexion par Téléphone</h2>
         <p className="text-xs text-gray-500 mt-1">
           {step === "phone"
-            ? "Entrez votre numéro pour recevoir un code d'accès par SMS."
+            ? "Choisissez votre pays et saisissez votre numéro."
             : `Code envoyé au ${phone}`}
         </p>
       </div>
 
       {/* Alerte d'Erreur */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-start space-x-2">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-start space-x-2 animate-fade-in">
           <span>⚠️</span>
           <span>{error}</span>
         </div>
@@ -126,7 +162,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
 
       {/* Message de Succès / Info */}
       {message && (
-        <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-start space-x-2">
+        <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-start space-x-2 animate-fade-in">
           <span>✅</span>
           <span>{message}</span>
         </div>
@@ -137,29 +173,63 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
       {/* ---------------------------------------------------- */}
       {step === "phone" ? (
         <form onSubmit={handleSendOtp} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">
-              Numéro de téléphone (Format International)
-            </label>
-            <div className="relative">
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                Pays / Indicatif
+              </label>
+              <select
+                value={selectedCountryCode}
+                onChange={(e) => {
+                  setSelectedCountryCode(e.target.value);
+                  setError(null);
+                }}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white transition font-medium text-gray-800"
+              >
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.flag} {c.name} {c.code !== "other" ? `(${c.code})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Saisie libre si "Autre" sélectionné */}
+            {selectedCountryCode === "other" && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Indicatif international personnalisé
+                </label>
+                <input
+                  type="text"
+                  value={customCountryCode}
+                  onChange={(e) => setCustomCountryCode(e.target.value)}
+                  placeholder="+243"
+                  required
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm transition font-medium placeholder-gray-400"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                Numéro de téléphone local
+              </label>
               <input
                 type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+33 6 12 34 56 78"
+                value={localNumber}
+                onChange={(e) => setLocalNumber(e.target.value)}
+                placeholder="77 123 45 67"
                 required
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm transition font-medium tracking-wide"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm transition font-medium tracking-wide placeholder-gray-400"
               />
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">
-              N'oubliez pas l'indicatif (ex: +33 pour la France, +225 pour la Côte d'Ivoire).
-            </p>
           </div>
 
           <button
             type="submit"
-            disabled={loading || !phone.trim()}
-            className="w-full py-3 bg-[#10E688] hover:bg-emerald-400 text-gray-900 font-extrabold text-sm rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center"
+            disabled={loading || !localNumber.trim()}
+            className="w-full py-3.5 bg-[#10E688] hover:bg-emerald-400 text-gray-900 font-extrabold text-sm rounded-2xl shadow-md transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
@@ -174,7 +244,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
         /* ---------------------------------------------------- */
         <form onSubmit={handleVerifyOtp} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1 text-center">
+            <label className="block text-xs font-bold text-gray-700 mb-1.5 text-center">
               Code de vérification (6 chiffres)
             </label>
             <input
@@ -191,7 +261,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
           <button
             type="submit"
             disabled={loading || otpToken.length !== 6}
-            className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white font-extrabold text-sm rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center"
+            className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-extrabold text-sm rounded-2xl shadow-md transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -204,7 +274,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
             <button
               type="button"
               onClick={handleResendCode}
-              className="text-xs font-semibold text-emerald-600 hover:underline"
+              className="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer"
             >
               ← Modifier le numéro ou renvoyer un code
             </button>
