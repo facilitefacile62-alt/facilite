@@ -337,15 +337,29 @@ export default function MessageriePage() {
             messages: formattedMsgs
           };
 
-          setConversations([AI_PINNED_CHAT, userConv]);
+          // Fusion avec l'état déjà en place plutôt qu'un remplacement brut : le fil
+          // IA (useChat) peut déjà avoir synchronisé son message d'accueil ou les
+          // premiers échanges avant que cette promesse ne se résolve. Utiliser la
+          // constante statique AI_PINNED_CHAT ici écraserait ce contenu (course
+          // entre cet effet asynchrone et l'effet de synchronisation useChat).
+          setConversations(prev => {
+            const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
+            return [aiConv, userConv];
+          });
           setActiveConvId("ai-assistant");
         } else {
-          setConversations([AI_PINNED_CHAT]);
+          setConversations(prev => {
+            const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
+            return [aiConv];
+          });
           setActiveConvId("ai-assistant");
         }
       } catch (err) {
         console.error("Erreur de chargement des messages utilisateur:", err);
-        setConversations([AI_PINNED_CHAT]);
+        setConversations(prev => {
+          const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
+          return [aiConv];
+        });
         setActiveConvId("ai-assistant");
       }
 
