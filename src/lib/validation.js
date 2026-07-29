@@ -126,6 +126,7 @@ export const AiChatPayloadSchema = z
       .optional(),
     message: z.string().min(1).max(20_000).optional(),
     activeAiRole: z.enum(["cv", "coach", "interview", "orientation"]).optional(),
+    attachments: z.array(AttachmentSchema).max(5).optional(),
   })
   .refine((d) => (d.messages && d.messages.length > 0) || d.message, {
     message: "Un message ou un historique de messages est requis.",

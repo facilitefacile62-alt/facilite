@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { AiChatPayloadSchema } from "@/lib/validation";
+import { extractTextFromFile } from "@/lib/documentParser";
 
 export const runtime = "nodejs";
 
@@ -25,6 +26,94 @@ const ROLE_PROMPTS = {
   orientation: " Spécialisation : Orientation académique, démarches administratives et conseils de carrière.",
 };
 
+const GEMINI_VISION_MODEL = "gemini-flash-latest";
+const BASE64_PREFIXE = /^data:[a-zA-Z0-9/\-+.]+;base64,/;
+
+/**
+ * Extrait le texte des documents joints (PDF, Word...) pour l'injecter dans le
+ * prompt. DeepSeek ne lit que du texte : sans cette étape, un CV joint était
+ * transmis puis purement ignoré.
+ */
+async function extraireContexteDocuments(documents) {
+  let contexte = "";
+
+  for (const doc of documents) {
+    try {
+      const buffer = Buffer.from(doc.data.replace(BASE64_PREFIXE, ""), "base64");
+      const texte = await extractTextFromFile(
+        buffer,
+        doc.name || "document",
+        doc.mimeType || "application/octet-stream"
+      );
+      if (texte) {
+        contexte += `Contenu du fichier joint [${doc.name || "document"}] :\n---\n${texte}\n---\n\n`;
+      }
+    } catch (err) {
+      console.error(`ai-chat: extraction impossible pour ${doc.name}:`, err.message);
+    }
+  }
+
+  return contexte;
+}
+
+/**
+ * Analyse d'images via Gemini : DeepSeek n'a pas de capacité vision, une image
+ * jointe ne peut donc pas être traitée par le chemin nominal.
+ * Renvoie null si la clé manque ou si l'appel échoue — l'appelant retombe alors
+ * sur DeepSeek en mode texte seul.
+ */
+async function appelerGeminiVision(systemPrompt, historique, images) {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey || geminiKey.includes("[") || geminiKey.trim() === "") return null;
+
+  // Gemini nomme "model" le rôle assistant.
+  const contents = historique.map((m) => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
+
+  const dernier = contents[contents.length - 1];
+  for (const img of images) {
+    dernier.parts.push({
+      inlineData: {
+        mimeType: img.mimeType || "image/png",
+        data: img.data.replace(BASE64_PREFIXE, ""),
+      },
+    });
+  }
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_VISION_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // En-tête plutôt que query string : une clé en URL fuite dans les journaux.
+          "x-goog-api-key": geminiKey,
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: { temperature: 0.7 },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("ai-chat: Gemini Vision rejeté:", response.status, err.slice(0, 300));
+      return null;
+    }
+
+    const json = await response.json();
+    return json.candidates?.[0]?.content?.parts?.[0]?.text || null;
+  } catch (err) {
+    console.error("ai-chat: échec Gemini Vision:", err.message);
+    return null;
+  }
+}
+
 export async function POST(req) {
   try {
     // 1. Authentification & limitation de débit — alignées sur /api/assistant.
@@ -44,13 +133,49 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { messages, message, activeAiRole } = parsed.data;
+    const { messages, message, activeAiRole, attachments } = parsed.data;
 
     // Normalisation des deux formes acceptées vers un historique unique.
     const historique =
       messages && messages.length > 0
         ? messages
         : [{ role: "user", content: message }];
+
+    const systemPrompt = BASE_PROMPT + (ROLE_PROMPTS[activeAiRole] || "");
+
+    // 3. Pièces jointes
+    const images = (attachments || []).filter((a) => a.type === "image");
+    const documents = (attachments || []).filter((a) => a.type === "document");
+
+    // Les documents sont convertis en texte et préfixés au dernier tour
+    // utilisateur, qui est celui auquel ils étaient joints.
+    if (documents.length > 0) {
+      const contexte = await extraireContexteDocuments(documents);
+      if (contexte) {
+        const dernierUser = historique.map((m) => m.role).lastIndexOf("user");
+        if (dernierUser !== -1) {
+          historique[dernierUser] = {
+            ...historique[dernierUser],
+            content: `${contexte}${historique[dernierUser].content}`,
+          };
+        }
+      }
+    }
+
+    // Les images exigent un modèle vision : DeepSeek n'en a pas.
+    if (images.length > 0) {
+      const reponseVision = await appelerGeminiVision(systemPrompt, historique, images);
+      if (reponseVision) {
+        return NextResponse.json({ reply: reponseVision });
+      }
+      console.warn("ai-chat: vision indisponible, repli sur DeepSeek en texte seul.");
+      historique.push({
+        role: "user",
+        content:
+          "[Note système : des images ont été jointes mais n'ont pas pu être analysées. " +
+          "Indique-le à l'utilisateur et propose de coller le texte du document.]",
+      });
+    }
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
@@ -60,8 +185,6 @@ export async function POST(req) {
         { status: 500 }
       );
     }
-
-    const systemPrompt = BASE_PROMPT + (ROLE_PROMPTS[activeAiRole] || "");
 
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
