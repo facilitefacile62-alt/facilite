@@ -210,9 +210,14 @@ const AI_PINNED_CHAT = {
 const initialConversations = [AI_PINNED_CHAT];
 
 export default function MessageriePage() {
+  const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   // Rôle IA actif (par défaut : Rédaction & Optimisation CV)
   const [activeAiRole, setActiveAiRole] = useState("cv");
@@ -1013,6 +1018,8 @@ export default function MessageriePage() {
 
   // Message épinglé de la discussion active (au plus un, garanti par la RPC)
   const pinnedMessage = activeConversation?.messages?.find(m => m.isPinned) || null;
+
+  if (!isMounted) return null;
 
   return (
     <>
