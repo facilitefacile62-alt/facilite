@@ -260,10 +260,11 @@ export default function MessageriePage() {
   } = useChat({
     api: "/api/assistant",
     initialMessages: [AI_WELCOME_MESSAGE],
-    headers: {
-      Authorization: `Bearer ${userSession?.access_token || ""}`
-    },
-    onError: () => {
+    headers: userSession?.access_token ? {
+      Authorization: `Bearer ${userSession.access_token}`
+    } : {},
+    onError: (err) => {
+      console.error("Messagerie AI Error:", err);
       triggerToast(
         selectedLang === "FR" ? "Erreur de l'assistant IA" : "AI assistant error",
         "fa-triangle-exclamation"
@@ -558,7 +559,13 @@ export default function MessageriePage() {
       const userMessageText = messageText;
       setMessageText("");
       setShowEmojiPicker(false);
-      appendAssistantMessage({ role: "user", content: userMessageText });
+
+      // S'assurer que le token Bearer est fourni lors de l'envoi de la requête
+      const options = userSession?.access_token ? {
+        headers: { Authorization: `Bearer ${userSession.access_token}` }
+      } : {};
+
+      appendAssistantMessage({ role: "user", content: userMessageText }, options);
       return;
     }
 
