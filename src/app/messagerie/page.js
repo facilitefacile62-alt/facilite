@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useChat } from "@ai-sdk/react";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow } from "@/lib/messages";
 
@@ -159,27 +160,15 @@ const AI_PINNED_CHAT = {
   isAI: true,
   online: true,
   favorite: true,
-  responsesFR: [
-    "Bonjour ! Je suis l'assistant IA de Facilite. Comment puis-je vous aider pour votre CV ou vos démarches aujourd'hui ?",
-    "Excellente question ! Je peux vous aider à formuler vos expériences professionnelles ou rédiger une lettre de motivation sur mesure.",
-    "N'hésitez pas à me donner plus de détails sur le poste visé pour que je puisse vous guider au mieux !"
-  ],
-  responsesEN: [
-    "Hello! I am the Facilite AI Assistant. How can I help you with your resume or job search today?",
-    "Great question! I can help you tailor your work experience or write a customized cover letter.",
-    "Feel free to share more details about the target job so I can assist you best!"
-  ],
-  messages: [
-    {
-      id: "ai-welcome",
-      sender: "them",
-      text: "Bonjour ! 🤖 Je suis l'assistant IA Facilite. Je suis disponible 24/7 pour relire vos CV, optimiser vos compétences et répondre à toutes vos questions.",
-      time: "24/7",
-      status: "read",
-      isPinned: false,
-      persisted: false
-    }
-  ]
+  // Les messages de ce fil sont pilotés par le hook useChat (streaming réel via
+  // /api/assistant) et synchronisés dans `conversations` — pas de contenu statique ici.
+  messages: []
+};
+
+const AI_WELCOME_MESSAGE = {
+  id: "ai-welcome",
+  role: "assistant",
+  content: "Bonjour ! 🤖 Je suis l'assistant IA Facilite. Je suis disponible 24/7 pour relire vos CV, optimiser vos compétences et répondre à toutes vos questions."
 };
 
 // Initialisation avec la discussion IA épinglée permanente
@@ -260,6 +249,49 @@ export default function MessageriePage() {
 
   // Protection stricte et isolation des messages par l'ID d'utilisateur Supabase
   const [userSession, setUserSession] = useState(null);
+
+  // Discussion IA épinglée : streaming réel via /api/assistant (déjà authentifié et
+  // sécurisé côté serveur), même backend que la bulle flottante AIAssistantModal.
+  // Historique tenu uniquement en session — jamais écrit dans public.messages.
+  const {
+    messages: assistantMessages,
+    append: appendAssistantMessage,
+    isLoading: assistantLoading
+  } = useChat({
+    api: "/api/assistant",
+    initialMessages: [AI_WELCOME_MESSAGE],
+    headers: {
+      Authorization: `Bearer ${userSession?.access_token || ""}`
+    },
+    onError: () => {
+      triggerToast(
+        selectedLang === "FR" ? "Erreur de l'assistant IA" : "AI assistant error",
+        "fa-triangle-exclamation"
+      );
+    }
+  });
+
+  // Synchronise le fil useChat (format AI SDK) vers l'entrée ai-assistant de
+  // `conversations`, pour réutiliser tel quel le rendu des bulles/aperçu existant.
+  useEffect(() => {
+    const lastMsg = assistantMessages[assistantMessages.length - 1];
+    setConversations(prev => prev.map(c => {
+      if (c.id !== AI_PINNED_CHAT.id) return c;
+      return {
+        ...c,
+        lastMessage: lastMsg ? lastMsg.content : c.lastMessage,
+        messages: assistantMessages.map(m => ({
+          id: m.id,
+          sender: m.role === "user" ? "me" : "them",
+          text: m.content,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          status: "read",
+          isPinned: false,
+          persisted: false
+        }))
+      };
+    }));
+  }, [assistantMessages]);
 
   useEffect(() => {
     async function loadUserSessionAndMessages() {
@@ -507,6 +539,15 @@ export default function MessageriePage() {
     if (e) e.preventDefault();
     if (!messageText.trim()) return;
 
+    // Discussion IA : streaming réel via useChat, jamais persisté dans Supabase.
+    if (activeConvId === AI_PINNED_CHAT.id) {
+      const userMessageText = messageText;
+      setMessageText("");
+      setShowEmojiPicker(false);
+      appendAssistantMessage({ role: "user", content: userMessageText });
+      return;
+    }
+
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMessageText = messageText;
     // Id temporaire : remplacé par l'UUID renvoyé par la base dès l'insertion
@@ -601,6 +642,7 @@ export default function MessageriePage() {
         setIsTyping(false);
         
         const responses = selectedLang === "FR" ? activeConv.responsesFR : activeConv.responsesEN;
+        if (!responses?.length) return;
         const randomResponse = responses[Math.floor(Math.random() * responses.length)];
         const botTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -1547,7 +1589,7 @@ export default function MessageriePage() {
                     </div>
                   ))}
 
-                  {isTyping && (
+                  {(isTyping || (activeConvId === AI_PINNED_CHAT.id && assistantLoading)) && (
                     <div className="flex justify-start items-end space-x-2 animate-pulse">
                       <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white font-extrabold text-[10px] shadow-inner ${activeConversation.avatarColor}`}>
                         {activeConversation.avatarInitials}
