@@ -289,34 +289,75 @@ export default function MessageriePage() {
   const [userSession, setUserSession] = useState(null);
 
   // Discussion IA épinglée : appel direct à /api/ai-chat (DeepSeek, spécialisé
-  // par rôle). Historique tenu uniquement en session — jamais écrit dans
-  // public.messages.
-  //
-  // `useChat` du SDK Vercel n'est volontairement pas utilisé ici : les versions
-  // installées sont incompatibles (`ai@7` ne fournit plus `toDataStreamResponse`
-  // que `@ai-sdk/react@4` attend côté client). Un fetch simple sur une réponse
-  // JSON évite ce couplage, au prix du streaming token par token.
+  // par rôle) avec persistance Supabase dans la table `messages`.
   const [assistantMessages, setAssistantMessages] = useState([AI_WELCOME_MESSAGE]);
   const [assistantLoading, setAssistantLoading] = useState(false);
   const assistantIdRef = useRef(0);
 
+  // ID unique fixe de conversation IA par utilisateur Supabase
+  const getAiConversationId = (userId) => `ai-chat-${userId || "guest"}`;
+
+  // Charge l'historique des messages IA enregistrés dans Supabase pour l'utilisateur
+  const loadAiMessagesFromSupabase = async (userId) => {
+    if (!userId) return;
+    try {
+      const aiConvId = getAiConversationId(userId);
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", aiConvId)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Erreur de chargement des messages IA Supabase:", error.message);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const loadedMsgs = data.map((row) => ({
+          id: row.id,
+          role: row.sender_id === userId ? "user" : "assistant",
+          content: row.content,
+          createdAt: row.created_at
+        }));
+        setAssistantMessages(loadedMsgs);
+      } else {
+        setAssistantMessages([AI_WELCOME_MESSAGE]);
+      }
+    } catch (err) {
+      console.error("Erreur lors de la récupération de l'historique IA:", err);
+    }
+  };
+
   const appendAssistantMessage = async ({ content }) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id || userSession?.user?.id;
+    const aiConvId = getAiConversationId(userId);
+
     const userMsg = {
       id: `ai-u-${(assistantIdRef.current += 1)}`,
       role: "user",
       content
     };
 
-    // L'historique envoyé inclut le message courant, pour que l'assistant
-    // dispose du contexte complet de l'échange.
+    // 1. Mise à jour locale de l'historique
     const historique = [...assistantMessages, userMsg];
     setAssistantMessages(historique);
     setAssistantLoading(true);
 
+    // 2. Sauvegarde du message utilisateur dans Supabase
+    if (userId) {
+      supabase.from("messages").insert({
+        conversation_id: aiConvId,
+        sender_id: userId,
+        content: content,
+        created_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.error("Erreur d'insertion du message utilisateur IA:", error.message);
+      });
+    }
+
     try {
-      // Session relue à chaque envoi : le jeton peut avoir été rafraîchi depuis
-      // le montage du composant.
-      const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || userSession?.access_token;
 
       const res = await fetch("/api/ai-chat", {
@@ -326,8 +367,6 @@ export default function MessageriePage() {
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          // Le message d'accueil est purement décoratif côté UI : l'envoyer
-          // ferait démarrer la conversation sur un tour assistant sans requête.
           messages: historique
             .filter(m => m.id !== AI_WELCOME_MESSAGE.id)
             .map(m => ({ role: m.role, content: m.content })),
@@ -340,14 +379,28 @@ export default function MessageriePage() {
         throw new Error(data.error || `HTTP ${res.status}`);
       }
 
+      const botReplyText = data.reply || "Désolé, je n'ai pas pu générer de réponse.";
+
       setAssistantMessages(prev => [
         ...prev,
         {
           id: `ai-a-${(assistantIdRef.current += 1)}`,
           role: "assistant",
-          content: data.reply
+          content: botReplyText
         }
       ]);
+
+      // 3. Sauvegarde de la réponse de l'IA (bot) dans Supabase
+      if (userId) {
+        supabase.from("messages").insert({
+          conversation_id: aiConvId,
+          sender_id: "bot",
+          content: botReplyText,
+          created_at: new Date().toISOString()
+        }).then(({ error }) => {
+          if (error) console.error("Erreur d'insertion de la réponse IA:", error.message);
+        });
+      }
     } catch (err) {
       console.error("Messagerie AI Error:", err);
       triggerToast(
@@ -359,8 +412,7 @@ export default function MessageriePage() {
     }
   };
 
-  // Synchronise le fil useChat (format AI SDK) vers l'entrée ai-assistant de
-  // `conversations`, pour réutiliser tel quel le rendu des bulles/aperçu existant.
+  // Synchronise le fil useChat vers l'entrée ai-assistant de `conversations`
   useEffect(() => {
     const lastMsg = assistantMessages[assistantMessages.length - 1];
     setConversations(prev => prev.map(c => {
@@ -372,10 +424,12 @@ export default function MessageriePage() {
           id: m.id,
           sender: m.role === "user" ? "me" : "them",
           text: m.content,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          time: m.createdAt
+            ? new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           status: "read",
           isPinned: false,
-          persisted: false
+          persisted: true
         }))
       };
     }));
@@ -389,6 +443,7 @@ export default function MessageriePage() {
         return;
       }
       setUserSession(session);
+      loadAiMessagesFromSupabase(session.user.id);
 
       // Écouter également les changements de session en temps réel
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
@@ -1390,6 +1445,9 @@ export default function MessageriePage() {
                 onClick={() => {
                   setActiveConvId(AI_PINNED_CHAT.id);
                   setMobileChatView(true);
+                  if (userSession?.user?.id) {
+                    loadAiMessagesFromSupabase(userSession.user.id);
+                  }
                 }}
                 className={`flex items-start space-x-3 p-4 cursor-pointer transition-all relative border-b border-emerald-200/80 ${
                   activeConvId === AI_PINNED_CHAT.id
