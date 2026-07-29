@@ -560,9 +560,12 @@ export default function MessageriePage() {
       setMessageText("");
       setShowEmojiPicker(false);
 
-      // S'assurer que le token Bearer est fourni lors de l'envoi de la requête
-      const options = userSession?.access_token ? {
-        headers: { Authorization: `Bearer ${userSession.access_token}` }
+      // Récupération dynamique de la session active pour garantir la présence du token Bearer
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || userSession?.access_token;
+
+      const options = token ? {
+        headers: { Authorization: `Bearer ${token}` }
       } : {};
 
       appendAssistantMessage({ role: "user", content: userMessageText }, options);
