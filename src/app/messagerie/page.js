@@ -144,6 +144,50 @@ const translations = {
   }
 };
 
+// 3 IA d'assistance spécialisées
+const AI_ROLES = [
+  {
+    id: "cv",
+    name: "Rédaction & Optimisation CV",
+    badge: "📄 CV & Lettre",
+    icon: "🤖",
+    description: "Rédaction de CV, lettres de motivation, mise en valeur des compétences.",
+    systemPrompt: "Tu es une IA experte en rédaction de CV et de lettres de motivation."
+  },
+  {
+    id: "coach",
+    name: "Coach Recrutement & Entretien",
+    badge: "💼 Coach Entretien",
+    icon: "💼",
+    description: "Simulation d'entretiens d'embauche, conseils recruteurs et négociation.",
+    systemPrompt: "Tu es un coach expert en entretien d'embauche et négociation salariale."
+  },
+  {
+    id: "orientation",
+    name: "Orientation & Assistance",
+    badge: "🧭 Orientation",
+    icon: "🧭",
+    description: "Démarches administratives, orientation académique et reconversion pro.",
+    systemPrompt: "Tu es un conseiller expert en orientation professionnelle et démarches."
+  }
+];
+
+const DEFAULT_AI_WELCOME = {
+  id: 'welcome-msg',
+  sender: 'bot',
+  text: "Bonjour ! 👋 Bienvenue sur l'Assistance IA Facilite.\n\nQuelle assistance souhaitez-vous aujourd'hui ?\n1️⃣ Rédaction & Correction de CV\n2️⃣ Coaching Entretien d'embauche\n3️⃣ Orientation & Démarches",
+  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  status: "read",
+  isPinned: false,
+  persisted: false
+};
+
+const AI_WELCOME_MESSAGE = {
+  id: "ai-welcome",
+  role: "assistant",
+  content: DEFAULT_AI_WELCOME.text
+};
+
 // Discussion IA épinglée permanente
 const AI_PINNED_CHAT = {
   id: 'ai-assistant',
@@ -160,15 +204,7 @@ const AI_PINNED_CHAT = {
   isAI: true,
   online: true,
   favorite: true,
-  // Les messages de ce fil sont pilotés par le hook useChat (streaming réel via
-  // /api/assistant) et synchronisés dans `conversations` — pas de contenu statique ici.
-  messages: []
-};
-
-const AI_WELCOME_MESSAGE = {
-  id: "ai-welcome",
-  role: "assistant",
-  content: "Bonjour ! 🤖 Je suis l'assistant IA Facilite. Je suis disponible 24/7 pour relire vos CV, optimiser vos compétences et répondre à toutes vos questions."
+  messages: [DEFAULT_AI_WELCOME]
 };
 
 // Initialisation avec la discussion IA épinglée permanente
@@ -178,6 +214,9 @@ export default function MessageriePage() {
   const pathname = usePathname();
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Rôle IA actif (par défaut : Rédaction & Optimisation CV)
+  const [activeAiRole, setActiveAiRole] = useState("cv");
   
   // Layout & Dropdown States
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
@@ -1412,70 +1451,107 @@ export default function MessageriePage() {
           }`}>
             {activeConversation ? (
               <>
-                <div className="bg-white p-4 border-b border-gray-200 flex items-center justify-between shadow-xs">
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <button
-                      onClick={() => setMobileChatView(false)}
-                      className="md:hidden text-gray-500 hover:text-gray-800 p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer mr-1"
-                    >
-                      <i className="fa-solid fa-arrow-left text-lg"></i>
-                    </button>
+                <div className="bg-white p-4 border-b border-gray-200 flex flex-col space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <button
+                        onClick={() => setMobileChatView(false)}
+                        className="md:hidden text-gray-500 hover:text-gray-800 p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer mr-1"
+                      >
+                        <i className="fa-solid fa-arrow-left text-lg"></i>
+                      </button>
 
-                    <div className="relative">
-                      <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-extrabold text-sm shadow-inner ${activeConversation.avatarColor}`}>
-                        {activeConversation.avatarInitials}
+                      <div className="relative">
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-extrabold text-sm shadow-inner ${activeConversation.avatarColor}`}>
+                          {activeConversation.avatarInitials}
+                        </div>
+                        {activeConversation.online && (
+                          <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white"></span>
+                        )}
                       </div>
-                      {activeConversation.online && (
-                        <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white"></span>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <h2 className="text-sm font-extrabold text-gray-900 truncate leading-snug">{activeConversation.name}</h2>
+                          {activeConversation.isAI ? (
+                            <span className="hidden sm:inline-block text-[10px] font-extrabold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                              ⚡ IA 24/7
+                            </span>
+                          ) : (
+                            <span className="hidden sm:inline-block text-[10px] font-extrabold text-white bg-gray-900 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                              {t.recruiterTitle}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-gray-500 font-medium truncate">
+                          {activeConversation.title} — <span className="font-bold text-gray-800">{activeConversation.company}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => toggleFavorite(activeConversation.id)}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition ${
+                          activeConversation.favorite
+                            ? "text-red-500 bg-red-50 hover:bg-red-100"
+                            : "text-gray-500 hover:text-red-500 hover:bg-red-50"
+                        }`}
+                        title={activeConversation.favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+                      >
+                        <i className={`${activeConversation.favorite ? "fa-solid fa-heart" : "fa-regular fa-heart"}`}></i>
+                      </button>
+                      {!activeConversation.isAI && (
+                        <button
+                          onClick={() => triggerToast(`Appel simulé vers ${activeConversation.name}...`, "fa-phone")}
+                          className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
+                        >
+                          <i className="fa-solid fa-phone"></i>
+                        </button>
                       )}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <h2 className="text-sm font-extrabold text-gray-900 truncate leading-snug">{activeConversation.name}</h2>
-                        <span className="hidden sm:inline-block text-[10px] font-extrabold text-white bg-gray-900 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
-                          {t.recruiterTitle}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-gray-500 font-medium truncate">
-                        {activeConversation.title} — <span className="font-bold text-gray-800">{activeConversation.company}</span>
-                      </p>
+                      <button
+                        onClick={() => {
+                          if (pinnedMessage) scrollToPinnedMessage(pinnedMessage.id);
+                          else triggerToast(t.noPinnedMessage, "fa-thumbtack");
+                        }}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition ${
+                          pinnedMessage
+                            ? "text-amber-600 bg-amber-50 hover:bg-amber-100"
+                            : "text-gray-500 hover:text-amber-600 hover:bg-amber-50"
+                        }`}
+                        title={pinnedMessage ? t.jumpToPinned : t.noPinnedMessage}
+                      >
+                        <i className="fa-solid fa-thumbtack"></i>
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => toggleFavorite(activeConversation.id)}
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition ${
-                        activeConversation.favorite
-                          ? "text-red-500 bg-red-50 hover:bg-red-100"
-                          : "text-gray-500 hover:text-red-500 hover:bg-red-50"
-                      }`}
-                      title={activeConversation.favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-                    >
-                      <i className={`${activeConversation.favorite ? "fa-solid fa-heart" : "fa-regular fa-heart"}`}></i>
-                    </button>
-                    <button
-                      onClick={() => triggerToast(`Appel simulé vers ${activeConversation.name}...`, "fa-phone")}
-                      className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
-                    >
-                      <i className="fa-solid fa-phone"></i>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (pinnedMessage) scrollToPinnedMessage(pinnedMessage.id);
-                        else triggerToast(t.noPinnedMessage, "fa-thumbtack");
-                      }}
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition ${
-                        pinnedMessage
-                          ? "text-amber-600 bg-amber-50 hover:bg-amber-100"
-                          : "text-gray-500 hover:text-amber-600 hover:bg-amber-50"
-                      }`}
-                      title={pinnedMessage ? t.jumpToPinned : t.noPinnedMessage}
-                    >
-                      <i className="fa-solid fa-thumbtack"></i>
-                    </button>
-                  </div>
+                  {/* Sélecteur de 3 IA d'assistance (Pills) si le canal actif est la discussion IA */}
+                  {activeConversation.isAI && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 scrollbar-none border-t border-gray-100">
+                      <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">
+                        Choisir une IA :
+                      </span>
+                      {AI_ROLES.map((role) => (
+                        <button
+                          key={role.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveAiRole(role.id);
+                            triggerToast(`IA sélectionnée : ${role.name}`, "fa-robot");
+                          }}
+                          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 ${
+                            activeAiRole === role.id
+                              ? "bg-emerald-500 text-white shadow-sm scale-[1.02]"
+                              : "bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-800"
+                          }`}
+                          title={role.description}
+                        >
+                          <span>{role.badge}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* BANNIÈRE MESSAGE ÉPINGLÉ (toujours visible en haut du fil) */}
