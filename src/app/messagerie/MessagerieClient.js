@@ -384,8 +384,12 @@ export default function MessagerieClient() {
         const activeCId = targetConvId || data[data.length - 1].conversation_id || "default";
         setCurrentConversationId(activeCId);
 
+        // Quand targetConvId est fourni, la requête SQL ci-dessus a déjà filtré côté
+        // serveur. Sans targetConvId (chargement initial), `data` contient TOUTES
+        // les conversations de l'utilisateur : il faut ici ne garder que celles de
+        // activeCId, sans quoi tous les fils passés se retrouvent mélangés.
         const loadedMsgs = data
-          .filter(row => !targetConvId || row.conversation_id === activeCId || !row.conversation_id)
+          .filter(row => row.conversation_id === activeCId || !row.conversation_id)
           .map((row) => ({
             id: row.id,
             role: row.role,
@@ -405,21 +409,60 @@ export default function MessagerieClient() {
     }
   };
 
-  // Démarrer une NOUVELLE DISCUSSION IA (+)
-  const handleNewAiConversation = () => {
-    const newId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `conv-${Date.now()}`;
-    setCurrentConversationId(newId);
-    setAssistantMessages([AI_WELCOME_MESSAGE]);
-    triggerToast("Nouvelle discussion IA démarrée", "fa-plus");
+  // Supprimer une discussion individuelle de l'historique
+  const handleDeleteAiConversation = async (convId, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm("Voulez-vous vraiment supprimer cette discussion de votre historique ?")) return;
+
+    const userId = userSession?.user?.id;
+    if (!userId) return;
+
+    try {
+      const { error } = await supabase
+        .from("assistant_messages")
+        .delete()
+        .eq("user_id", userId)
+        .eq("conversation_id", convId);
+
+      if (error) {
+        console.error("Erreur lors de la suppression de la discussion IA:", error);
+        triggerToast("Erreur lors de la suppression", "fa-triangle-exclamation");
+        return;
+      }
+
+      triggerToast("Discussion supprimée", "fa-trash-can");
+      
+      // Si la discussion supprimée était la discussion active, réinitialiser
+      if (currentConversationId === convId) {
+        handleNewAiConversation();
+      }
+
+      // Rafraîchir la liste de l'historique
+      fetchAllAiConversations(userId);
+    } catch (err) {
+      console.error("Exception suppression discussion IA:", err);
+    }
   };
 
-  // Charger une discussion spécifique choisie dans l'historique (icône horloge)
-  const handleSelectAiConversation = (convId) => {
-    if (!userSession?.user?.id) return;
-    setCurrentConversationId(convId);
-    loadAiMessagesFromSupabase(userSession.user.id, convId);
-    setAiHistoryModalOpen(false);
-    triggerToast("Discussion chargée", "fa-clock-rotate-left");
+  // Exporter la discussion IA active sous format texte / TXT
+  const handleExportAiConversation = () => {
+    if (!assistantMessages || assistantMessages.length === 0) return;
+
+    const exportText = assistantMessages
+      .map(m => `[${m.role === "user" ? "VOUS" : "IA ASSISTANT"}] ${m.createdAt ? new Date(m.createdAt).toLocaleString() : ""}\n${m.content}\n`)
+      .join("\n----------------------------------------\n\n");
+
+    const blob = new Blob([exportText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `discussion-ia-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    triggerToast("Discussion exportée en fichier .txt", "fa-file-arrow-down");
   };
 
   const appendAssistantMessage = async ({ content }) => {
@@ -1778,6 +1821,14 @@ export default function MessagerieClient() {
                           >
                             <i className="fa-solid fa-clock-rotate-left text-sm"></i>
                           </button>
+                          <button
+                            type="button"
+                            onClick={handleExportAiConversation}
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer"
+                            title="Exporter la discussion (TXT)"
+                          >
+                            <i className="fa-solid fa-file-arrow-down text-sm"></i>
+                          </button>
                         </div>
                       )}
                       <button
@@ -2431,9 +2482,8 @@ export default function MessagerieClient() {
                 </div>
               ) : (
                 aiConversationsHistory.map((conv) => (
-                  <button
+                  <div
                     key={conv.id}
-                    type="button"
                     onClick={() => handleSelectAiConversation(conv.id)}
                     className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
                       currentConversationId === conv.id
@@ -2441,7 +2491,7 @@ export default function MessagerieClient() {
                         : "bg-gray-50 hover:bg-gray-100 border-gray-200"
                     }`}
                   >
-                    <div className="min-w-0 pr-3">
+                    <div className="min-w-0 pr-3 flex-1">
                       <p className="text-xs font-bold text-gray-900 truncate mb-1 group-hover:text-emerald-700">
                         {conv.lastMessage || "Discussion IA"}
                       </p>
@@ -2449,10 +2499,21 @@ export default function MessagerieClient() {
                         {new Date(conv.createdAt).toLocaleDateString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
-                    <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-1 rounded-lg flex-shrink-0">
-                      {conv.messagesCount} msgs
-                    </span>
-                  </button>
+
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-1 rounded-lg">
+                        {conv.messagesCount} msgs
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteAiConversation(conv.id, e)}
+                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition cursor-pointer"
+                        title="Supprimer cette discussion"
+                      >
+                        <i className="fa-solid fa-trash-can text-xs"></i>
+                      </button>
+                    </div>
+                  </div>
                 ))
               )}
             </div>
