@@ -159,6 +159,12 @@ export default function ProfilPage() {
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "" });
 
+  const profileData = {
+    telephone: phone,
+    email: contactEmail || userSession?.user?.email || "",
+    centres_interet: userInterests,
+  };
+
   // Régénère une URL signée dès que le document courant change
   useEffect(() => {
     let annule = false;
@@ -2352,7 +2358,7 @@ export default function ProfilPage() {
                       <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex justify-between items-center">
                         <div>
                           <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Téléphone</h4>
-                          <p className="text-sm font-extrabold text-gray-900 mt-1">{phone || "Non renseigné"}</p>
+                          <p className="text-sm font-extrabold text-gray-900 mt-1">{profileData.telephone || 'Non renseigné'}</p>
                         </div>
                         <button
                           type="button"
@@ -2372,7 +2378,7 @@ export default function ProfilPage() {
                       <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex justify-between items-center">
                         <div>
                           <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">E-mail de contact</h4>
-                          <p className="text-sm font-extrabold text-gray-900 mt-1">{contactEmail || userSession?.user?.email || "Non renseigné"}</p>
+                          <p className="text-sm font-extrabold text-gray-900 mt-1">{profileData.email || 'Non renseigné'}</p>
                         </div>
                         <button
                           type="button"
@@ -2699,9 +2705,9 @@ export default function ProfilPage() {
                       </div>
 
                       {/* Badges de centres d'intérêt */}
-                      {userInterests.length > 0 ? (
+                      {profileData.centres_interet.length > 0 ? (
                         <div className="flex flex-wrap gap-2 pt-2">
-                          {userInterests.map((interest, idx) => (
+                          {profileData.centres_interet.map((interest, idx) => (
                             <span
                               key={idx}
                               className="bg-rose-50 text-rose-900 border border-rose-200 text-xs font-extrabold px-3 py-1.5 rounded-xl flex items-center space-x-2 shadow-2xs group"

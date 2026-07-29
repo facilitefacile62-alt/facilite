@@ -2,33 +2,62 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { useChat } from "@ai-sdk/react";
+import imageCompression from "browser-image-compression";
 
 export default function AIAssistantModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [inputValue, setInputValue] = useState("");
   const [attachments, setAttachments] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showMenu, setShowMenu] = useState(false);
-  
+  const [token, setToken] = useState("");
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const menuRef = useRef(null);
 
-  // Initialisation de la conversation avec un message de bienvenue
+  // Authentification et token réactif
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: "welcome",
-          role: "assistant",
-          content: "Bonjour ! Je suis votre assistant Facilité. Comment puis-je vous aider aujourd'hui à concevoir votre CV, rédiger votre lettre de motivation ou optimiser votre profil professionnel ?",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setToken(session.access_token);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setToken(session?.access_token || "");
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const welcomeMessage = {
+    id: "welcome",
+    role: "assistant",
+    content: "Bonjour ! Je suis votre assistant Facilité. Comment puis-je vous aider aujourd'hui à concevoir votre CV, rédiger votre lettre de motivation ou optimiser votre profil professionnel ?",
+  };
+
+  // Intégration Vercel AI SDK useChat
+  const { messages, input, setInput, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
+    api: "/api/assistant",
+    initialMessages: [welcomeMessage],
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    body: {
+      attachments: attachments
+    },
+    onResponse: (response) => {
+      if (!response.ok) {
+        setErrorMsg("Erreur lors de la communication avec l'assistant.");
+      }
+    },
+    onFinish: () => {
+      setAttachments([]);
+    },
+    onError: (err) => {
+      console.error("AI Assistant error:", err);
+      setErrorMsg("Une erreur est survenue lors de la communication avec l'assistant.");
     }
-  }, [messages.length]);
+  });
 
   // Défilement automatique vers le bas lors de la réception de messages
   useEffect(() => {
@@ -52,16 +81,33 @@ export default function AIAssistantModal() {
     };
   }, [showMenu]);
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    files.forEach((file) => {
+    for (const file of files) {
+      let fileToProcess = file;
+
+      if (file.type.startsWith("image/")) {
+        try {
+          const options = {
+            maxSizeMB: 0.8,
+            maxWidthOrHeight: 1200,
+            useWebWorker: true
+          };
+          console.log(`[Assistant UI] Compressing image: ${file.name}`);
+          fileToProcess = await imageCompression(file, options);
+          console.log(`[Assistant UI] Compressed size: ${(fileToProcess.size / 1024).toFixed(2)} KB`);
+        } catch (compErr) {
+          console.error("[Assistant UI] Compression error:", compErr);
+        }
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64Data = reader.result;
         const isImage = file.type.startsWith("image/");
-        
+
         setAttachments((prev) => [
           ...prev,
           {
@@ -73,10 +119,9 @@ export default function AIAssistantModal() {
           }
         ]);
       };
-      reader.readAsDataURL(file);
-    });
+      reader.readAsDataURL(fileToProcess);
+    }
 
-    // Réinitialiser le champ input
     e.target.value = "";
   };
 
@@ -84,109 +129,20 @@ export default function AIAssistantModal() {
     setAttachments((prev) => prev.filter((att) => att.id !== id));
   };
 
-  const handleSendMessage = async (e) => {
+  const handleSendMessage = (e) => {
     e.preventDefault();
-    if ((!inputValue.trim() && attachments.length === 0) || isLoading) return;
+    if ((!(input || "").trim() && attachments.length === 0) || isLoading) return;
 
-    const userMessageText = inputValue.trim();
-    const currentAttachments = [...attachments];
-    
-    // Réinitialiser les champs de saisie immédiatement pour la réactivité
-    setInputValue("");
-    setAttachments([]);
     setErrorMsg("");
-
-    // Construire le contenu du message à afficher dans l'interface
-    let displayContent = userMessageText;
-    if (currentAttachments.length > 0) {
-      const fileNames = currentAttachments.map(f => f.name).join(", ");
-      displayContent = userMessageText 
-        ? `${userMessageText} (Fichiers joints : ${fileNames})`
-        : `[Fichiers joints : ${fileNames}]`;
-    }
-
-    // 1. Ajouter le message utilisateur à l'interface
-    const userMsg = {
-      id: Date.now().toString(),
-      role: "user",
-      content: displayContent,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
-    setIsLoading(true);
-
-    try {
-      // Préparer l'historique épuré pour l'API backend
-      const apiMessages = updatedMessages.map((msg, idx) => {
-        if (idx === updatedMessages.length - 1) {
-          return {
-            role: "user",
-            content: userMessageText || "Analyse les documents ci-joints."
-          };
-        }
-        return {
-          role: msg.role,
-          content: msg.content
-        };
-      });
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Veuillez vous connecter pour utiliser l'assistant IA.");
-      }
-
-      const response = await fetch("/api/assistant", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          messages: apiMessages,
-          attachments: currentAttachments
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Erreur lors de la récupération de la réponse.");
-      }
-
-      // 2. Ajouter la réponse de l'assistant
-      const assistantMsg = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.message,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      setMessages(prev => [...prev, assistantMsg]);
-    } catch (err) {
-      console.error("Erreur assistant IA :", err);
-      setErrorMsg("Une erreur est survenue lors de l'analyse ou de l'envoi.");
-      
-      // Restaurer les fichiers en cas d'erreur
-      setAttachments(currentAttachments);
-    } finally {
-      setIsLoading(false);
-    }
+    handleSubmit(e);
   };
 
   const handleResetConversation = () => {
     if (window.confirm("Voulez-vous réinitialiser votre conversation avec l'assistant ?")) {
-      setMessages([
-        {
-          id: "welcome",
-          role: "assistant",
-          content: "Bonjour ! Je suis votre assistant Facilité. Comment puis-je vous aider aujourd'hui à concevoir votre CV, rédiger votre lettre de motivation ou optimiser votre profil professionnel ?",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
+      setMessages([welcomeMessage]);
       setAttachments([]);
       setErrorMsg("");
+      setInput("");
     }
   };
 
@@ -367,15 +323,15 @@ export default function AIAssistantModal() {
             
             <input
               type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              value={input}
+              onChange={handleInputChange}
               placeholder="Posez votre question ou joignez un fichier..."
               disabled={isLoading}
               className="flex-1 px-4 py-2.5 bg-neutral-100 focus:bg-neutral-50 border border-transparent focus:border-blue-500 focus:outline-none rounded-xl text-sm transition-all placeholder-neutral-400 disabled:opacity-50"
             />
             <button
               type="submit"
-              disabled={isLoading || (!inputValue.trim() && attachments.length === 0)}
+              disabled={isLoading || (!(input || "").trim() && attachments.length === 0)}
               className="w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-lg transition-colors focus:outline-none disabled:opacity-40 disabled:hover:bg-blue-600 disabled:cursor-not-allowed"
             >
               <i className="fa-solid fa-paper-plane text-sm"></i>

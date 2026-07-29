@@ -1,20 +1,12 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-import { extractTextFromFile, mapTextToProfileFields } from "@/lib/documentParser";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { streamText } from "ai";
+import { extractTextFromFile } from "@/lib/documentParser";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { AssistantPayloadSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
-
-const groq = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || "dummy",
-  baseURL: "https://api.groq.com/openai/v1",
-});
-
-const deepseek = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY || "dummy",
-  baseURL: "https://api.deepseek.com",
-});
 
 const SYSTEM_PROMPT = `Tu es l'assistant IA officiel de "Facilite", une plateforme professionnelle dédiée à l'aide à la création, l'optimisation et la valorisation de CVs professionnels, de lettres de motivation à fort impact, et à la préparation aux entretiens et conseils de carrière.
 
@@ -24,238 +16,31 @@ Instructions :
 3. Adapte-toi à la langue de l'utilisateur (le français est la langue par défaut).
 4. Ne sors pas de ton rôle de conseiller professionnel et de CV / lettres de motivation. Si on te pose des questions hors sujet, ramène poliment l'utilisateur à ton domaine de compétences.`;
 
-function cleanAIResponse(text) {
-  if (!text) return "";
-  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
-  return cleaned.trim();
-}
+// Clients providers Vercel AI SDK
+const groqClient = createOpenAI({
+  apiKey: process.env.GROQ_API_KEY || "dummy",
+  baseURL: "https://api.groq.com/openai/v1",
+});
 
-async function callGroq(messages) {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") return null;
+const deepseekClient = createOpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY || "dummy",
+  baseURL: "https://api.deepseek.com",
+});
 
-  try {
-    console.log("Assistant: Appel Groq (llama-3.3-70b-versatile)...");
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...messages
-      ],
-      temperature: 0.7,
-      max_tokens: 1024,
-    });
-    return response.choices[0]?.message?.content || null;
-  } catch (err) {
-    console.error("Assistant: Échec Groq (llama-3.3-70b-versatile), tentative avec deepseek-r1-distill-llama-70b...", err.message);
-    try {
-      const response = await groq.chat.completions.create({
-        model: "deepseek-r1-distill-llama-70b",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...messages
-        ],
-        temperature: 0.6,
-        max_tokens: 1024,
-      });
-      return response.choices[0]?.message?.content || null;
-    } catch (groqErr2) {
-      console.error("Assistant: Échec complet de Groq:", groqErr2.message);
-      return null;
-    }
-  }
-}
-
-async function callGemini(messages) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey || geminiApiKey.includes("[") || geminiApiKey.trim() === "") return null;
-
-  const contents = messages.map(msg => {
-    let role = "user";
-    if (msg.role === "assistant") role = "model";
-    return {
-      role: role,
-      parts: [{ text: msg.content }]
-    };
-  });
-
-  try {
-    console.log("Assistant: Appel Gemini (gemini-2.5-flash)...");
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: contents,
-        systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT }]
-        },
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024
-        }
-      })
-    });
-
-    if (response.ok) {
-      const json = await response.json();
-      return json.candidates?.[0]?.content?.parts?.[0]?.text || null;
-    } else {
-      const errText = await response.text();
-      console.error("Assistant: Gemini rejeté:", response.status, errText);
-    }
-  } catch (err) {
-    console.error("Assistant: Échec Gemini 2.5-flash, essai Gemini 1.5-flash...", err.message);
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: contents,
-          systemInstruction: {
-            parts: [{ text: SYSTEM_PROMPT }]
-          },
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1024
-          }
-        })
-      });
-
-      if (response.ok) {
-        const json = await response.json();
-        return json.candidates?.[0]?.content?.parts?.[0]?.text || null;
-      }
-    } catch (geminiErr2) {
-      console.error("Assistant: Échec complet de Gemini:", geminiErr2.message);
-    }
-  }
-  return null;
-}
-
-async function callGeminiWithImages(messages, images) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey || geminiApiKey.includes("[") || geminiApiKey.trim() === "") return null;
-
-  const contents = [];
-  for (let i = 0; i < messages.length - 1; i++) {
-    const msg = messages[i];
-    let role = "user";
-    if (msg.role === "assistant") role = "model";
-    contents.push({
-      role: role,
-      parts: [{ text: msg.content }]
-    });
-  }
-
-  const lastMsg = messages[messages.length - 1];
-  const lastParts = [{ text: lastMsg.content }];
-
-  for (const img of images) {
-    const base64Data = img.data.replace(/^data:image\/[a-z]+;base64,/, "");
-    lastParts.push({
-      inlineData: {
-        mimeType: img.mimeType || "image/png",
-        data: base64Data
-      }
-    });
-  }
-
-  contents.push({
-    role: "user",
-    parts: lastParts
-  });
-
-  try {
-    console.log("Assistant: Appel Gemini Vision (gemini-2.5-flash)...");
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: contents,
-        systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT }]
-        },
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 1024
-        }
-      })
-    });
-
-    if (response.ok) {
-      const json = await response.json();
-      return json.candidates?.[0]?.content?.parts?.[0]?.text || null;
-    } else {
-      const errText = await response.text();
-      console.error("Assistant: Gemini Vision rejeté:", response.status, errText);
-    }
-  } catch (err) {
-    console.error("Assistant: Échec Gemini Vision 2.5-flash, essai Gemini 1.5-flash...", err.message);
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: contents,
-          systemInstruction: {
-            parts: [{ text: SYSTEM_PROMPT }]
-          },
-          generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 1024
-          }
-        })
-      });
-
-      if (response.ok) {
-        const json = await response.json();
-        return json.candidates?.[0]?.content?.parts?.[0]?.text || null;
-      }
-    } catch (geminiErr2) {
-      console.error("Assistant: Échec complet de Gemini Vision 1.5:", geminiErr2.message);
-    }
-  }
-  return null;
-}
-
-async function callDeepSeek(messages) {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") return null;
-
-  try {
-    console.log("Assistant: Appel DeepSeek (deepseek-chat)...");
-    const response = await deepseek.chat.completions.create({
-      model: "deepseek-chat",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...messages
-      ],
-      temperature: 0.7,
-      max_tokens: 1024,
-    });
-    return response.choices[0]?.message?.content || null;
-  } catch (err) {
-    console.error("Assistant: Échec DeepSeek:", err.message);
-    return null;
-  }
-}
+const googleClient = createGoogleGenerativeAI({
+  apiKey: process.env.GEMINI_API_KEY || "",
+});
 
 export async function POST(req) {
   try {
+    // 1. Authentification & Rate Limiting
     const { user, error: authError } = await requireUser(req);
     if (authError) return authError;
 
     const { allowed, error: rateError } = checkRateLimit(user.id);
     if (!allowed) return rateError;
 
+    // 2. Validation du payload
     const parsed = AssistantPayloadSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json(
@@ -279,7 +64,7 @@ export async function POST(req) {
       }
     }
 
-    // 1. Traitement des documents : extraction du texte brut et injection dans le dernier message utilisateur
+    // 3. Traitement des documents (ex. PDF, Word) : extraction de texte
     if (documentAttachments.length > 0) {
       let documentContext = "";
       for (const doc of documentAttachments) {
@@ -307,37 +92,77 @@ export async function POST(req) {
       }
     }
 
-    let responseText = null;
-
-    // 2. Si des images sont jointes, appeler Gemini (Vision) en priorité absolue
+    // 4. Si des images sont jointes, appeler Gemini 1.5 Flash (Vision) en direct sans OCR local
     if (imageAttachments.length > 0) {
-      console.log("Assistant: Images détectées, Gemini sollicité en priorité absolue.");
-      responseText = await callGeminiWithImages(updatedMessages, imageAttachments);
-    } else {
-      // Pas d'images, cascade standard : Groq -> Gemini -> DeepSeek
-      responseText = await callGroq(updatedMessages);
-      if (!responseText) {
-        responseText = await callGemini(updatedMessages);
+      console.log("Assistant: Images détectées, streaming via Gemini 1.5 Flash Vision.");
+      
+      const lastMessage = updatedMessages[updatedMessages.length - 1];
+      const contentParts = [
+        { type: "text", text: lastMessage.content || "Analyse les documents ci-joints." }
+      ];
+
+      for (const img of imageAttachments) {
+        const base64Data = img.data.replace(/^data:[a-zA-Z0-9/\-+.]+;base64,/, "");
+        contentParts.push({
+          type: "image",
+          image: Buffer.from(base64Data, "base64"),
+          mimeType: img.mimeType || "image/png"
+        });
       }
-      if (!responseText) {
-        responseText = await callDeepSeek(updatedMessages);
+
+      const finalMessages = [
+        ...updatedMessages.slice(0, -1),
+        {
+          role: "user",
+          content: contentParts
+        }
+      ];
+
+      const result = await streamText({
+        model: googleClient("gemini-1.5-flash"),
+        system: SYSTEM_PROMPT,
+        messages: finalMessages,
+        temperature: 0.4
+      });
+
+      return result.toDataStreamResponse();
+    }
+
+    // 5. Sans images, streaming cascade classique : Groq -> Gemini 1.5 Flash -> DeepSeek
+    let resultStream;
+    try {
+      console.log("Assistant: Tentative streaming avec Groq (llama-3.3-70b-versatile)...");
+      resultStream = await streamText({
+        model: groqClient("llama-3.3-70b-versatile"),
+        system: SYSTEM_PROMPT,
+        messages: updatedMessages,
+        temperature: 0.7
+      });
+    } catch (groqErr) {
+      console.warn("Assistant: Échec Groq, bascule sur Gemini 1.5 Flash...", groqErr.message);
+      try {
+        resultStream = await streamText({
+          model: googleClient("gemini-1.5-flash"),
+          system: SYSTEM_PROMPT,
+          messages: updatedMessages,
+          temperature: 0.7
+        });
+      } catch (geminiErr) {
+        console.warn("Assistant: Échec Gemini, bascule finale sur DeepSeek...", geminiErr.message);
+        resultStream = await streamText({
+          model: deepseekClient("deepseek-chat"),
+          system: SYSTEM_PROMPT,
+          messages: updatedMessages,
+          temperature: 0.7
+        });
       }
     }
 
-    if (!responseText) {
-      return NextResponse.json(
-        { error: "Tous les services d'intelligence artificielle ont échoué ou ne sont pas configurés." },
-        { status: 503 }
-      );
-    }
-
-    const cleanedMessage = cleanAIResponse(responseText);
-
-    return NextResponse.json({ success: true, message: cleanedMessage });
+    return resultStream.toDataStreamResponse();
   } catch (error) {
-    console.error("[Assistant Route Error]", error);
+    console.error("[Assistant Streaming API Error]", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue lors de la communication avec l'assistant." },
+      { error: "Une erreur est survenue lors de la génération de la réponse de l'assistant." },
       { status: 500 }
     );
   }
