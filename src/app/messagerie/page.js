@@ -143,8 +143,47 @@ const translations = {
   }
 };
 
-// Initialisation à vide (zéro donnée de test globale par défaut)
-const initialConversations = [];
+// Discussion IA épinglée permanente
+const AI_PINNED_CHAT = {
+  id: 'ai-assistant',
+  name: 'Assistance IA Facilite',
+  title: 'IA & Orientation Pro',
+  company: 'Facilite Bot',
+  avatar: '🤖',
+  avatarInitials: '🤖',
+  avatarColor: 'bg-emerald-600',
+  lastMessage: 'Disponible 24/7 pour vos CV et démarches',
+  time: "Disponible",
+  unreadCount: 0,
+  isPinned: true,
+  isAI: true,
+  online: true,
+  favorite: true,
+  responsesFR: [
+    "Bonjour ! Je suis l'assistant IA de Facilite. Comment puis-je vous aider pour votre CV ou vos démarches aujourd'hui ?",
+    "Excellente question ! Je peux vous aider à formuler vos expériences professionnelles ou rédiger une lettre de motivation sur mesure.",
+    "N'hésitez pas à me donner plus de détails sur le poste visé pour que je puisse vous guider au mieux !"
+  ],
+  responsesEN: [
+    "Hello! I am the Facilite AI Assistant. How can I help you with your resume or job search today?",
+    "Great question! I can help you tailor your work experience or write a customized cover letter.",
+    "Feel free to share more details about the target job so I can assist you best!"
+  ],
+  messages: [
+    {
+      id: "ai-welcome",
+      sender: "them",
+      text: "Bonjour ! 🤖 Je suis l'assistant IA Facilite. Je suis disponible 24/7 pour relire vos CV, optimiser vos compétences et répondre à toutes vos questions.",
+      time: "24/7",
+      status: "read",
+      isPinned: false,
+      persisted: false
+    }
+  ]
+};
+
+// Initialisation avec la discussion IA épinglée permanente
+const initialConversations = [AI_PINNED_CHAT];
 
 export default function MessageriePage() {
   const pathname = usePathname();
@@ -178,7 +217,7 @@ export default function MessageriePage() {
 
   // Messaging States
   const [conversations, setConversations] = useState(initialConversations);
-  const [activeConvId, setActiveConvId] = useState(1);
+  const [activeConvId, setActiveConvId] = useState("ai-assistant");
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -266,13 +305,16 @@ export default function MessageriePage() {
             messages: formattedMsgs
           };
 
-          setConversations([userConv]);
-          setActiveConvId(1);
+          setConversations([AI_PINNED_CHAT, userConv]);
+          setActiveConvId("ai-assistant");
         } else {
-          setConversations([]);
+          setConversations([AI_PINNED_CHAT]);
+          setActiveConvId("ai-assistant");
         }
       } catch (err) {
         console.error("Erreur de chargement des messages utilisateur:", err);
+        setConversations([AI_PINNED_CHAT]);
+        setActiveConvId("ai-assistant");
       }
 
       return () => subscription.unsubscribe();
@@ -1196,8 +1238,53 @@ export default function MessageriePage() {
 
             {/* Liste des conversations */}
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
-              {filteredConversations.length > 0 ? (
-                filteredConversations.map(conv => (
+              {/* 🤖 Carte de discussion IA Épinglée toujours visible en haut */}
+              <div
+                key={AI_PINNED_CHAT.id}
+                onClick={() => {
+                  setActiveConvId(AI_PINNED_CHAT.id);
+                  setMobileChatView(true);
+                }}
+                className={`flex items-start space-x-3 p-4 cursor-pointer transition-all relative border-b border-emerald-200/80 ${
+                  activeConvId === AI_PINNED_CHAT.id
+                    ? "bg-emerald-100/70 border-l-4 border-[#10E688]"
+                    : "bg-emerald-50/60 hover:bg-emerald-100/40"
+                }`}
+              >
+                <div className="relative flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-emerald-600 text-white text-xl shadow-sm">
+                    🤖
+                  </div>
+                  <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-emerald-500 border-2 border-white"></span>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <div className="flex items-center space-x-1.5 min-w-0 pr-2">
+                      <h3 className="text-sm font-extrabold text-gray-900 truncate">
+                        {AI_PINNED_CHAT.name}
+                      </h3>
+                      <span className="bg-emerald-200 text-emerald-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                        📌 Épinglé
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-700">{AI_PINNED_CHAT.time}</span>
+                  </div>
+                  <div className="flex items-center space-x-1 mb-0.5">
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded-md truncate max-w-[150px]">
+                      {AI_PINNED_CHAT.company}
+                    </span>
+                    <span className="text-[10px] font-medium text-gray-500 truncate">{AI_PINNED_CHAT.title}</span>
+                  </div>
+                  <p className="text-xs truncate font-medium text-gray-700">
+                    {AI_PINNED_CHAT.lastMessage}
+                  </p>
+                </div>
+              </div>
+
+              {/* Autres discussions */}
+              {filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).length > 0 ? (
+                filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).map(conv => (
                   <div
                     key={conv.id}
                     onClick={() => {
@@ -1246,8 +1333,8 @@ export default function MessageriePage() {
                   </div>
                 ))
               ) : (
-                <div className="p-8 text-center text-sm text-gray-500 font-medium">
-                  {t.searchNoResults}
+                <div className="p-8 text-center text-xs text-gray-400 font-semibold italic">
+                  Aucune autre discussion.
                 </div>
               )}
             </div>
