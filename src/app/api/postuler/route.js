@@ -167,8 +167,9 @@ export async function POST(req) {
     }
 
     // 6. Envoi des 2 e-mails via Resend
-    const recruiterSender = process.env.RESEND_FROM_RECRUITER || "Facilite Recrutement <onboarding@resend.dev>";
-    const candidateSender = process.env.RESEND_FROM_CANDIDATE || "Facilite <onboarding@resend.dev>";
+    const isProd = process.env.NODE_ENV === "production";
+    const recruiterSender = process.env.RESEND_FROM_RECRUITER || (isProd ? "Facilite Recrutement <recrutement@ffacilite.com>" : "Facilite Recrutement <onboarding@resend.dev>");
+    const candidateSender = process.env.RESEND_FROM_CANDIDATE || (isProd ? "Facilite <noreply@ffacilite.com>" : "Facilite <onboarding@resend.dev>");
     
     // On est en mode onboarding si l'un des expéditeurs contient onboarding@resend.dev
     const isResendOnboarding = recruiterSender.includes("onboarding@resend.dev") || candidateSender.includes("onboarding@resend.dev");
