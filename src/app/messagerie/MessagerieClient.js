@@ -299,6 +299,10 @@ export default function MessagerieClient() {
   // de assistant_messages — rôle "user" ou "assistant" — appartient à
   // l'utilisateur authentifié (user_id = auth.uid()), donc aucun compte bot
   // n'est nécessaire. Voir supabase/migrations/20260729224100_assistant_messages.sql.
+  const [assistantMessages, setAssistantMessages] = useState([AI_WELCOME_MESSAGE]);
+  const [assistantLoading, setAssistantLoading] = useState(false);
+  const assistantIdRef = useRef(0);
+
   // ---------------------------------------------------------------------------
   // GESTION DES CONVERSATIONS IA (PERSISTANCE MULTI-SESSION PAR conversation_id)
   // ---------------------------------------------------------------------------
