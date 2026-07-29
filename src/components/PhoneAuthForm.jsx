@@ -82,11 +82,22 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
       setStep("otp");
       setMessage(`Un code de validation à 6 chiffres a été envoyé par SMS au ${fullPhoneNumber}.`);
     } catch (err) {
-      console.error("Détail Erreur Supabase OTP:", err);
-      const errorMessage = typeof err === 'string' 
-        ? err 
-        : err?.message || err?.error_description || "Impossible d'envoyer le SMS. Vérifiez le numéro.";
-      setError(errorMessage);
+      console.error("Détail complet erreur OTP :", err);
+      
+      // Extraction propre du message sans jamais passer un objet au state
+      let msg = "Impossible d'envoyer le SMS. Vérifiez le numéro.";
+      if (typeof err === 'string') {
+        msg = err;
+      } else if (err && typeof err === 'object') {
+        msg = err.message || err.error_description || err.msg || String(err);
+      }
+      
+      // Sécurité anti-objet vide "{}"
+      if (!msg || msg === "{}" || msg === "[object Object]") {
+        msg = "Erreur lors de l'envoi du SMS. Vérifiez la configuration Twilio/Supabase.";
+      }
+      
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -125,11 +136,22 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
         }, 1000);
       }
     } catch (err) {
-      console.error("Détail Erreur Supabase OTP:", err);
-      const errorMessage = typeof err === 'string' 
-        ? err 
-        : err?.message || err?.error_description || "Code invalide ou expiré. Veuillez réessayer.";
-      setError(errorMessage);
+      console.error("Détail complet erreur OTP :", err);
+      
+      // Extraction propre du message sans jamais passer un objet au state
+      let msg = "Code invalide ou expiré. Veuillez réessayer.";
+      if (typeof err === 'string') {
+        msg = err;
+      } else if (err && typeof err === 'object') {
+        msg = err.message || err.error_description || err.msg || String(err);
+      }
+      
+      // Sécurité anti-objet vide "{}"
+      if (!msg || msg === "{}" || msg === "[object Object]") {
+        msg = "Erreur lors de la vérification du code. Veuillez réessayer.";
+      }
+      
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -162,7 +184,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-start space-x-2 animate-fade-in">
           <span>⚠️</span>
-          <span>{typeof error === 'object' ? (error.message || JSON.stringify(error)) : error}</span>
+          <span>{error}</span>
         </div>
       )}
 
