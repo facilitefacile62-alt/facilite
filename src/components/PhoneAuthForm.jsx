@@ -82,8 +82,11 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
       setStep("otp");
       setMessage(`Un code de validation à 6 chiffres a été envoyé par SMS au ${fullPhoneNumber}.`);
     } catch (err) {
-      console.error("Erreur d'envoi OTP SMS :", err);
-      setError(err.message || "Impossible d'envoyer le code SMS. Vérifiez le numéro.");
+      console.error("Détail Erreur Supabase OTP:", err);
+      const errorMessage = typeof err === 'string' 
+        ? err 
+        : err?.message || err?.error_description || "Impossible d'envoyer le SMS. Vérifiez le numéro.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -122,8 +125,11 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
         }, 1000);
       }
     } catch (err) {
-      console.error("Erreur de vérification OTP :", err);
-      setError(err.message || "Code invalide ou expiré. Veuillez réessayer.");
+      console.error("Détail Erreur Supabase OTP:", err);
+      const errorMessage = typeof err === 'string' 
+        ? err 
+        : err?.message || err?.error_description || "Code invalide ou expiré. Veuillez réessayer.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -156,7 +162,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-start space-x-2 animate-fade-in">
           <span>⚠️</span>
-          <span>{error}</span>
+          <span>{typeof error === 'object' ? (error.message || JSON.stringify(error)) : error}</span>
         </div>
       )}
 
