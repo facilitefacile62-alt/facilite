@@ -15,11 +15,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="fr" className={`${inter.variable} scroll-smooth`}>
+    <html lang="fr" className={`${inter.variable} scroll-smooth`} suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       </head>
-      <body className={`${inter.className} bg-white text-dark min-h-screen flex flex-col`}>
+      <body className={`${inter.className} bg-white text-dark min-h-screen flex flex-col`} suppressHydrationWarning>
         {children}
         <AIAssistantModal />
       </body>

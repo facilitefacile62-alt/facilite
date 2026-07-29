@@ -21,7 +21,7 @@ export default function AIAssistantModal() {
     id: "welcome",
     role: "assistant",
     content: "Bonjour ! Je suis votre assistant Facilité. Comment puis-je vous aider aujourd'hui à concevoir votre CV, rédiger votre lettre de motivation ou optimiser votre profil professionnel ?",
-    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    timestamp: "12:00"
   }), []);
 
   const [messages, setMessages] = useState([welcomeMessage]);
@@ -165,7 +165,7 @@ export default function AIAssistantModal() {
   };
 
   return (
-    <>
+    <div suppressHydrationWarning>
       {/* 1. Bouton Flottant (FAB) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -360,6 +360,6 @@ export default function AIAssistantModal() {
           </p>
         </form>
       </div>
-    </>
+    </div>
   );
 }
