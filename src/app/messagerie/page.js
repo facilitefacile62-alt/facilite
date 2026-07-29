@@ -294,18 +294,18 @@ export default function MessageriePage() {
   const [assistantLoading, setAssistantLoading] = useState(false);
   const assistantIdRef = useRef(0);
 
-  // ID unique fixe de conversation IA par utilisateur Supabase
-  const getAiConversationId = (userId) => `ai-chat-${userId || "guest"}`;
+  // ID réservé pour identifier l'expéditeur / destinataire Bot IA
+  const AI_BOT_ID = "ai-assistant";
 
   // Charge l'historique des messages IA enregistrés dans Supabase pour l'utilisateur
   const loadAiMessagesFromSupabase = async (userId) => {
     if (!userId) return;
     try {
-      const aiConvId = getAiConversationId(userId);
+      // Filtrer les messages où l'utilisateur et le Bot sont interlocuteurs (sender/receiver)
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .eq("conversation_id", aiConvId)
+        .or(`and(sender_id.eq.${userId},receiver_id.eq.${AI_BOT_ID}),and(sender_id.eq.${AI_BOT_ID},receiver_id.eq.${userId})`)
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -332,7 +332,6 @@ export default function MessageriePage() {
   const appendAssistantMessage = async ({ content }) => {
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id || userSession?.user?.id;
-    const aiConvId = getAiConversationId(userId);
 
     const userMsg = {
       id: `ai-u-${(assistantIdRef.current += 1)}`,
@@ -345,11 +344,11 @@ export default function MessageriePage() {
     setAssistantMessages(historique);
     setAssistantLoading(true);
 
-    // 2. Sauvegarde du message utilisateur dans Supabase
+    // 2. Sauvegarde du message utilisateur dans Supabase (sender: userId, receiver: AI_BOT_ID)
     if (userId) {
       supabase.from("messages").insert({
-        conversation_id: aiConvId,
         sender_id: userId,
+        receiver_id: AI_BOT_ID,
         content: content,
         created_at: new Date().toISOString()
       }).then(({ error }) => {
@@ -390,11 +389,11 @@ export default function MessageriePage() {
         }
       ]);
 
-      // 3. Sauvegarde de la réponse de l'IA (bot) dans Supabase
+      // 3. Sauvegarde de la réponse de l'IA (sender: AI_BOT_ID, receiver: userId)
       if (userId) {
         supabase.from("messages").insert({
-          conversation_id: aiConvId,
-          sender_id: "bot",
+          sender_id: AI_BOT_ID,
+          receiver_id: userId,
           content: botReplyText,
           created_at: new Date().toISOString()
         }).then(({ error }) => {
