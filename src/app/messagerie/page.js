@@ -4,7 +4,6 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useChat } from "@ai-sdk/react";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow } from "@/lib/messages";
 
@@ -289,27 +288,76 @@ export default function MessageriePage() {
   // Protection stricte et isolation des messages par l'ID d'utilisateur Supabase
   const [userSession, setUserSession] = useState(null);
 
-  // Discussion IA épinglée : streaming réel via /api/assistant (déjà authentifié et
-  // sécurisé côté serveur), même backend que la bulle flottante AIAssistantModal.
-  // Historique tenu uniquement en session — jamais écrit dans public.messages.
-  const {
-    messages: assistantMessages,
-    append: appendAssistantMessage,
-    isLoading: assistantLoading
-  } = useChat({
-    api: "/api/assistant",
-    initialMessages: [AI_WELCOME_MESSAGE],
-    headers: userSession?.access_token ? {
-      Authorization: `Bearer ${userSession.access_token}`
-    } : {},
-    onError: (err) => {
+  // Discussion IA épinglée : appel direct à /api/ai-chat (DeepSeek, spécialisé
+  // par rôle). Historique tenu uniquement en session — jamais écrit dans
+  // public.messages.
+  //
+  // `useChat` du SDK Vercel n'est volontairement pas utilisé ici : les versions
+  // installées sont incompatibles (`ai@7` ne fournit plus `toDataStreamResponse`
+  // que `@ai-sdk/react@4` attend côté client). Un fetch simple sur une réponse
+  // JSON évite ce couplage, au prix du streaming token par token.
+  const [assistantMessages, setAssistantMessages] = useState([AI_WELCOME_MESSAGE]);
+  const [assistantLoading, setAssistantLoading] = useState(false);
+  const assistantIdRef = useRef(0);
+
+  const appendAssistantMessage = async ({ content }) => {
+    const userMsg = {
+      id: `ai-u-${(assistantIdRef.current += 1)}`,
+      role: "user",
+      content
+    };
+
+    // L'historique envoyé inclut le message courant, pour que l'assistant
+    // dispose du contexte complet de l'échange.
+    const historique = [...assistantMessages, userMsg];
+    setAssistantMessages(historique);
+    setAssistantLoading(true);
+
+    try {
+      // Session relue à chaque envoi : le jeton peut avoir été rafraîchi depuis
+      // le montage du composant.
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || userSession?.access_token;
+
+      const res = await fetch("/api/ai-chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          // Le message d'accueil est purement décoratif côté UI : l'envoyer
+          // ferait démarrer la conversation sur un tour assistant sans requête.
+          messages: historique
+            .filter(m => m.id !== AI_WELCOME_MESSAGE.id)
+            .map(m => ({ role: m.role, content: m.content })),
+          activeAiRole
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+
+      setAssistantMessages(prev => [
+        ...prev,
+        {
+          id: `ai-a-${(assistantIdRef.current += 1)}`,
+          role: "assistant",
+          content: data.reply
+        }
+      ]);
+    } catch (err) {
       console.error("Messagerie AI Error:", err);
       triggerToast(
         selectedLang === "FR" ? "Erreur de l'assistant IA" : "AI assistant error",
         "fa-triangle-exclamation"
       );
+    } finally {
+      setAssistantLoading(false);
     }
-  });
+  };
 
   // Synchronise le fil useChat (format AI SDK) vers l'entrée ai-assistant de
   // `conversations`, pour réutiliser tel quel le rendu des bulles/aperçu existant.
@@ -599,15 +647,8 @@ export default function MessageriePage() {
       setMessageText("");
       setShowEmojiPicker(false);
 
-      // Récupération dynamique de la session active pour garantir la présence du token Bearer
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || userSession?.access_token;
-
-      const options = token ? {
-        headers: { Authorization: `Bearer ${token}` }
-      } : {};
-
-      appendAssistantMessage({ role: "user", content: userMessageText }, options);
+      // Le jeton Bearer est relu directement dans appendAssistantMessage.
+      appendAssistantMessage({ role: "user", content: userMessageText });
       return;
     }
 

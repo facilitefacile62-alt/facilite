@@ -46,86 +46,73 @@ Analyse le CV fourni et retourne impérativement un rapport d'audit détaillé s
   ]
 }`;
 
+// Modèles vision essayés dans l'ordre. `gemini-flash-latest` est un alias qui
+// suit la version courante : les identifiants figés utilisés auparavant ne
+// répondaient plus (`gemini-1.5-flash` retiré, `gemini-2.5-flash` fermé aux
+// nouveaux comptes), ce qui rendait tout le diagnostic par image inopérant.
+const GEMINI_VISION_MODELS = ["gemini-flash-latest", "gemini-2.0-flash"];
+
 async function callGeminiVision(base64Data, mimeType) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey || geminiApiKey.includes("[") || geminiApiKey.trim() === "") return null;
 
   const pureBase64 = base64Data.replace(/^data:[a-zA-Z0-9/\-+.]+;base64,/, "");
 
-  try {
-    console.log("Diagnostic: Appel Gemini Vision (gemini-2.5-flash)...");
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [
+  const requestBody = JSON.stringify({
+    contents: [
+      {
+        parts: [
+          { text: `${SYSTEM_PROMPT}\n\nAnalyse cette image de CV et renvoie le JSON d'audit.` },
           {
-            parts: [
-              { text: `${SYSTEM_PROMPT}\n\nAnalyse cette image de CV et renvoie le JSON d'audit.` },
-              {
-                inlineData: {
-                  mimeType: mimeType || "image/png",
-                  data: pureBase64
-                }
-              }
-            ]
+            inlineData: {
+              mimeType: mimeType || "image/png",
+              data: pureBase64
+            }
           }
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.2
-        }
-      })
-    });
+        ]
+      }
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.2
+    }
+  });
 
-    if (response.ok) {
+  for (const model of GEMINI_VISION_MODELS) {
+    try {
+      console.log(`Diagnostic: Appel Gemini Vision (${model})...`);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // Clé transmise en en-tête plutôt qu'en paramètre d'URL : une query
+            // string se retrouve dans les journaux d'accès et les proxys.
+            "x-goog-api-key": geminiApiKey
+          },
+          body: requestBody
+        }
+      );
+
+      // Un rejet HTTP doit faire passer au modèle suivant. La version
+      // précédente se contentait de journaliser puis retournait null : le
+      // second modèle n'était atteint que sur exception réseau, donc jamais
+      // sur un 404 — le repli était du code mort.
+      if (!response.ok) {
+        const err = await response.text();
+        console.error(`Diagnostic: Gemini Vision ${model} rejeté:`, response.status, err.slice(0, 300));
+        continue;
+      }
+
       const json = await response.json();
       const content = json.candidates?.[0]?.content?.parts?.[0]?.text;
       return cleanAndParseJSON(content);
-    } else {
-      const err = await response.text();
-      console.error("Diagnostic: Gemini Vision rejeté:", response.status, err);
-    }
-  } catch (err) {
-    console.error("Diagnostic: Échec Gemini Vision 2.5-flash, essai Gemini 1.5-flash...", err.message);
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: `${SYSTEM_PROMPT}\n\nAnalyse cette image de CV et renvoie le JSON d'audit.` },
-                {
-                  inlineData: {
-                    mimeType: mimeType || "image/png",
-                    data: pureBase64
-                  }
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.2
-          }
-        })
-      });
-
-      if (response.ok) {
-        const json = await response.json();
-        const content = json.candidates?.[0]?.content?.parts?.[0]?.text;
-        return cleanAndParseJSON(content);
-      }
-    } catch (geminiErr2) {
-      console.error("Diagnostic: Échec complet de Gemini Vision 1.5:", geminiErr2.message);
+    } catch (err) {
+      console.error(`Diagnostic: Échec Gemini Vision ${model}:`, err.message);
     }
   }
+
   return null;
 }
 
@@ -227,8 +214,15 @@ export async function POST(req) {
     }
 
     // 3. Fallback local structuré et cohérent si toutes les requêtes d'IA échouent
+    //
+    // Ce contenu est GÉNÉRIQUE : il ne résulte d'aucune analyse du CV envoyé.
+    // Le drapeau `degraded` permet à l'interface de le signaler plutôt que de
+    // présenter un score inventé comme un audit réel. Il est additif : les
+    // clients qui l'ignorent gardent le comportement actuel.
+    let degraded = false;
     if (!result) {
       console.warn("Diagnostic: Tous les modèles IA ont échoué, utilisation du diagnostic de secours.");
+      degraded = true;
       result = {
         score_global: 65,
         points_forts: [
@@ -247,7 +241,7 @@ export async function POST(req) {
       };
     }
 
-    return NextResponse.json({ success: true, result });
+    return NextResponse.json({ success: true, degraded, result });
   } catch (error) {
     console.error("[Diagnostic API Error]", error);
     return NextResponse.json(

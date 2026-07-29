@@ -16,7 +16,13 @@ Instructions :
 3. Adapte-toi à la langue de l'utilisateur (le français est la langue par défaut).
 4. Ne sors pas de ton rôle de conseiller professionnel et de CV / lettres de motivation. Si on te pose des questions hors sujet, ramène poliment l'utilisateur à ton domaine de compétences.`;
 
-// Clients providers Vercel AI SDK
+// Clients providers Vercel AI SDK.
+//
+// Important : on appelle systématiquement `.chat(...)` et jamais `client(...)`.
+// Le raccourci `client(modelId)` de @ai-sdk/openai cible l'API *Responses*
+// d'OpenAI (POST /responses), que ni Groq ni DeepSeek n'implémentent — l'appel
+// échouait alors sans produire le moindre token (AI_NoOutputGeneratedError).
+// `.chat(...)` cible POST /chat/completions, que les deux exposent.
 const groqClient = createOpenAI({
   apiKey: process.env.GROQ_API_KEY || "dummy",
   baseURL: "https://api.groq.com/openai/v1",
@@ -30,6 +36,12 @@ const deepseekClient = createOpenAI({
 const googleClient = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY || "",
 });
+
+// Alias suivant la version courante du modèle Flash. Les identifiants figés
+// utilisés auparavant ne répondaient plus : `gemini-1.5-flash` est retiré
+// (404 sur v1beta) et `gemini-2.5-flash` est fermé aux nouveaux comptes —
+// le chemin vision comme le repli intermédiaire échouaient donc en silence.
+const GEMINI_MODEL = "gemini-flash-latest";
 
 export async function POST(req) {
   try {
@@ -48,7 +60,29 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { messages, attachments } = parsed.data;
+    const { messages: uiMessages, attachments } = parsed.data;
+
+    // Les UIMessage du client portent leur texte dans `parts`. On les aplatit en
+    // messages { role, content } exploitables par streamText — et par la logique
+    // d'injection de contexte documentaire ci-dessous, qui manipule du texte.
+    const messages = uiMessages.map(m => ({
+      role: m.role,
+      content:
+        typeof m.content === "string" && m.content.length > 0
+          ? m.content
+          : (m.parts || [])
+              .filter(p => p.type === "text" && typeof p.text === "string")
+              .map(p => p.text)
+              .join("\n")
+    }));
+
+    // Un message vide ferait rejeter la requête par le fournisseur.
+    if (messages.every(m => !m.content)) {
+      return NextResponse.json(
+        { error: "Historique des messages invalide ou manquant." },
+        { status: 400 }
+      );
+    }
 
     let updatedMessages = [...messages];
     const imageAttachments = [];
@@ -92,9 +126,9 @@ export async function POST(req) {
       }
     }
 
-    // 4. Si des images sont jointes, appeler Gemini 1.5 Flash (Vision) en direct sans OCR local
+    // 4. Si des images sont jointes, appeler Gemini Flash (Vision) en direct sans OCR local
     if (imageAttachments.length > 0) {
-      console.log("Assistant: Images détectées, streaming via Gemini 1.5 Flash Vision.");
+      console.log("Assistant: Images détectées, streaming via Gemini Flash (Vision).");
       
       const lastMessage = updatedMessages[updatedMessages.length - 1];
       const contentParts = [
@@ -119,30 +153,37 @@ export async function POST(req) {
       ];
 
       const result = await streamText({
-        model: googleClient("gemini-1.5-flash"),
+        model: googleClient(GEMINI_MODEL),
         system: SYSTEM_PROMPT,
         messages: finalMessages,
         temperature: 0.4
       });
 
-      return result.toDataStreamResponse();
+      return result.toUIMessageStreamResponse();
     }
 
-    // 5. Sans images, streaming cascade classique : Groq -> Gemini 1.5 Flash -> DeepSeek
+    // 5. Sans images, streaming cascade classique : Groq -> Gemini Flash -> DeepSeek
+    //
+    // Limite connue : `streamText` ne lève pas de façon synchrone sur une erreur
+    // du fournisseur — celle-ci est émise DANS le flux. Ces try/catch n'attrapent
+    // donc que les échecs de construction (clé absente, modèle inconnu), pas un
+    // refus renvoyé pendant la génération. Les trois fournisseurs ont été
+    // vérifiés individuellement ; un vrai repli en cours de flux imposerait de
+    // bufferiser la réponse, donc de renoncer au streaming.
     let resultStream;
     try {
       console.log("Assistant: Tentative streaming avec Groq (llama-3.3-70b-versatile)...");
       resultStream = await streamText({
-        model: groqClient("llama-3.3-70b-versatile"),
+        model: groqClient.chat("llama-3.3-70b-versatile"),
         system: SYSTEM_PROMPT,
         messages: updatedMessages,
         temperature: 0.7
       });
     } catch (groqErr) {
-      console.warn("Assistant: Échec Groq, bascule sur Gemini 1.5 Flash...", groqErr.message);
+      console.warn("Assistant: Échec Groq, bascule sur Gemini Flash...", groqErr.message);
       try {
         resultStream = await streamText({
-          model: googleClient("gemini-1.5-flash"),
+          model: googleClient(GEMINI_MODEL),
           system: SYSTEM_PROMPT,
           messages: updatedMessages,
           temperature: 0.7
@@ -150,7 +191,7 @@ export async function POST(req) {
       } catch (geminiErr) {
         console.warn("Assistant: Échec Gemini, bascule finale sur DeepSeek...", geminiErr.message);
         resultStream = await streamText({
-          model: deepseekClient("deepseek-chat"),
+          model: deepseekClient.chat("deepseek-chat"),
           system: SYSTEM_PROMPT,
           messages: updatedMessages,
           temperature: 0.7
@@ -158,7 +199,7 @@ export async function POST(req) {
       }
     }
 
-    return resultStream.toDataStreamResponse();
+    return resultStream.toUIMessageStreamResponse();
   } catch (error) {
     console.error("[Assistant Streaming API Error]", error);
     return NextResponse.json(

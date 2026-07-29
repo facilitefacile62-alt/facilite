@@ -82,18 +82,54 @@ const AttachmentSchema = z.object({
   data: z.string().max(14_000_000),
 });
 
+// `useChat` (@ai-sdk/react@4) envoie des UIMessage : le texte est porté par un
+// tableau `parts`, plus par un champ `content`. Les deux formes sont acceptées
+// ici pour rester tolérant aux appels directs de l'API hors composant React.
+const UiMessagePartSchema = z.object({
+  type: z.string().max(50),
+  text: z.string().max(20_000).optional(),
+});
+
 export const AssistantPayloadSchema = z.object({
   messages: z
     .array(
       z.object({
+        id: z.string().max(100).optional(),
         role: z.enum(["user", "assistant", "system"]),
-        content: z.string().max(20_000),
+        parts: z.array(UiMessagePartSchema).max(50).optional(),
+        content: z.string().max(20_000).optional(),
       })
     )
     .min(1)
     .max(50),
   attachments: z.array(AttachmentSchema).max(5).optional(),
 });
+
+// Payload de /api/ai-chat : historique de conversation + rôle d'assistance.
+// `activeAiRole` est contraint à la liste connue plutôt que laissé libre, pour
+// qu'aucune valeur inattendue ne puisse influencer le prompt système.
+// Deux formes de payload coexistent volontairement :
+//   - `messages` : historique complet (messagerie), l'assistant garde le contexte
+//   - `message`  : tour unique (bulle flottante)
+// Accepter les deux évite d'imposer une réécriture simultanée des deux clients.
+export const AiChatPayloadSchema = z
+  .object({
+    messages: z
+      .array(
+        z.object({
+          role: z.enum(["user", "assistant"]),
+          content: z.string().min(1).max(20_000),
+        })
+      )
+      .min(1)
+      .max(30)
+      .optional(),
+    message: z.string().min(1).max(20_000).optional(),
+    activeAiRole: z.enum(["cv", "coach", "interview", "orientation"]).optional(),
+  })
+  .refine((d) => (d.messages && d.messages.length > 0) || d.message, {
+    message: "Un message ou un historique de messages est requis.",
+  });
 
 export const DiagnosticPayloadSchema = z.object({
   fileData: z.string().min(1).max(14_000_000),
