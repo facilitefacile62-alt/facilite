@@ -299,22 +299,31 @@ export default function MessageriePage() {
 
   // Charge l'historique des messages IA enregistrés dans Supabase pour l'utilisateur
   const loadAiMessagesFromSupabase = async (userId) => {
-    if (!userId) return;
+    if (!userId) {
+      setAssistantMessages([AI_WELCOME_MESSAGE]);
+      return;
+    }
     try {
-      // Filtrer les messages où l'utilisateur et le Bot sont interlocuteurs (sender/receiver)
+      // Requête sécurisée PostgREST sur sender_id / receiver_id
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .or(`and(sender_id.eq.${userId},receiver_id.eq.${AI_BOT_ID}),and(sender_id.eq.${AI_BOT_ID},receiver_id.eq.${userId})`)
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
         .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("Erreur de chargement des messages IA Supabase:", error.message);
+        console.error("Détail Erreur Supabase SQL Messages IA:", error);
+        setAssistantMessages([AI_WELCOME_MESSAGE]);
         return;
       }
 
-      if (data && data.length > 0) {
-        const loadedMsgs = data.map((row) => ({
+      // Filtrer côté JS les messages appartenant spécifiquement à la discussion Bot IA
+      const aiRows = (data || []).filter(
+        row => row.sender_id === AI_BOT_ID || row.receiver_id === AI_BOT_ID
+      );
+
+      if (aiRows.length > 0) {
+        const loadedMsgs = aiRows.map((row) => ({
           id: row.id,
           role: row.sender_id === userId ? "user" : "assistant",
           content: row.content,
@@ -325,7 +334,8 @@ export default function MessageriePage() {
         setAssistantMessages([AI_WELCOME_MESSAGE]);
       }
     } catch (err) {
-      console.error("Erreur lors de la récupération de l'historique IA:", err);
+      console.error("Exception lors de la récupération de l'historique IA:", err);
+      setAssistantMessages([AI_WELCOME_MESSAGE]);
     }
   };
 
