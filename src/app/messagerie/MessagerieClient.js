@@ -320,19 +320,21 @@ export default function MessagerieClient() {
 
       console.log("Messages chargés depuis Supabase:", data);
 
-      // Filtrer côté JS les messages appartenant spécifiquement à la discussion Bot IA
+      // Filtrer côté JS les messages appartenant spécifiquement à la discussion Bot IA (UUID ou legacy ID)
       const aiRows = (data || []).filter(
-        row => row.sender_id === AI_BOT_ID || row.receiver_id === AI_BOT_ID
+        row => row.sender_id === AI_BOT_ID || row.receiver_id === AI_BOT_ID ||
+               row.sender_id === "ai-assistant" || row.receiver_id === "ai-assistant"
       );
 
       if (aiRows.length > 0) {
         const loadedMsgs = aiRows.map((row) => ({
           id: row.id,
-          role: row.sender_id === userId ? "user" : "assistant",
+          role: (row.sender_id === userId) ? "user" : "assistant",
           content: row.content,
           createdAt: row.created_at
         }));
-        setAssistantMessages(loadedMsgs);
+        // Garder le message de bienvenue en premier message du fil
+        setAssistantMessages([AI_WELCOME_MESSAGE, ...loadedMsgs]);
       } else {
         setAssistantMessages([AI_WELCOME_MESSAGE]);
       }
