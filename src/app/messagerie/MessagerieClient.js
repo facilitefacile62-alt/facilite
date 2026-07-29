@@ -299,23 +299,77 @@ export default function MessagerieClient() {
   // de assistant_messages — rôle "user" ou "assistant" — appartient à
   // l'utilisateur authentifié (user_id = auth.uid()), donc aucun compte bot
   // n'est nécessaire. Voir supabase/migrations/20260729224100_assistant_messages.sql.
-  const [assistantMessages, setAssistantMessages] = useState([AI_WELCOME_MESSAGE]);
-  const [assistantLoading, setAssistantLoading] = useState(false);
-  const assistantIdRef = useRef(0);
+  // ---------------------------------------------------------------------------
+  // GESTION DES CONVERSATIONS IA (PERSISTANCE MULTI-SESSION PAR conversation_id)
+  // ---------------------------------------------------------------------------
+  const [currentConversationId, setCurrentConversationId] = useState(null);
+  const [aiHistoryModalOpen, setAiHistoryModalOpen] = useState(false);
+  const [aiConversationsHistory, setAiConversationsHistory] = useState([]);
 
-  // Charge l'historique des messages IA enregistrés dans Supabase pour l'utilisateur
-  const loadAiMessagesFromSupabase = async (userId) => {
+  // Génère ou initialise un nouveau conversation_id
+  const getOrCreateConversationId = () => {
+    if (currentConversationId) return currentConversationId;
+    const newId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `conv-${Date.now()}`;
+    setCurrentConversationId(newId);
+    return newId;
+  };
+
+  // Charge l'historique complet des sessions IA pour la liste d'historique (icône horloge)
+  const fetchAllAiConversations = async (userId) => {
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase
+        .from("assistant_messages")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Erreur chargement des conversations IA:", error);
+        return;
+      }
+
+      // Groupe par conversation_id
+      const grouped = {};
+      (data || []).forEach((row) => {
+        const cId = row.conversation_id || "default";
+        if (!grouped[cId]) {
+          grouped[cId] = {
+            id: cId,
+            lastMessage: row.content,
+            createdAt: row.created_at,
+            messagesCount: 1
+          };
+        } else {
+          grouped[cId].messagesCount += 1;
+        }
+      });
+
+      setAiConversationsHistory(Object.values(grouped));
+    } catch (err) {
+      console.error("Exception chargement conversations IA:", err);
+    }
+  };
+
+  // Charge les messages d'une discussion IA spécifique (ou la plus récente)
+  const loadAiMessagesFromSupabase = async (userId, targetConvId = null) => {
     if (!userId) {
       console.warn("loadAiMessagesFromSupabase appelé sans userId");
       setAssistantMessages([AI_WELCOME_MESSAGE]);
       return;
     }
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("assistant_messages")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
+
+      if (targetConvId) {
+        query = query.eq("conversation_id", targetConvId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Erreur Sauvegarde Supabase (Lecture Messages IA):", error);
@@ -326,20 +380,46 @@ export default function MessagerieClient() {
       console.log("Messages chargés depuis Supabase:", data);
 
       if (data && data.length > 0) {
-        const loadedMsgs = data.map((row) => ({
-          id: row.id,
-          role: row.role,
-          content: row.content,
-          createdAt: row.created_at
-        }));
-        setAssistantMessages(loadedMsgs);
+        // Déterminer la conversation_id active
+        const activeCId = targetConvId || data[data.length - 1].conversation_id || "default";
+        setCurrentConversationId(activeCId);
+
+        const loadedMsgs = data
+          .filter(row => !targetConvId || row.conversation_id === activeCId || !row.conversation_id)
+          .map((row) => ({
+            id: row.id,
+            role: row.role,
+            content: row.content,
+            createdAt: row.created_at
+          }));
+        setAssistantMessages([AI_WELCOME_MESSAGE, ...loadedMsgs]);
       } else {
         setAssistantMessages([AI_WELCOME_MESSAGE]);
       }
+
+      // Recharger également la liste de l'historique
+      fetchAllAiConversations(userId);
     } catch (err) {
       console.error("Exception lors de la récupération de l'historique IA:", err);
       setAssistantMessages([AI_WELCOME_MESSAGE]);
     }
+  };
+
+  // Démarrer une NOUVELLE DISCUSSION IA (+)
+  const handleNewAiConversation = () => {
+    const newId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `conv-${Date.now()}`;
+    setCurrentConversationId(newId);
+    setAssistantMessages([AI_WELCOME_MESSAGE]);
+    triggerToast("Nouvelle discussion IA démarrée", "fa-plus");
+  };
+
+  // Charger une discussion spécifique choisie dans l'historique (icône horloge)
+  const handleSelectAiConversation = (convId) => {
+    if (!userSession?.user?.id) return;
+    setCurrentConversationId(convId);
+    loadAiMessagesFromSupabase(userSession.user.id, convId);
+    setAiHistoryModalOpen(false);
+    triggerToast("Discussion chargée", "fa-clock-rotate-left");
   };
 
   const appendAssistantMessage = async ({ content }) => {
@@ -361,13 +441,16 @@ export default function MessagerieClient() {
     setAssistantMessages(historique);
     setAssistantLoading(true);
 
-    // 2. Sauvegarde du message utilisateur dans assistant_messages (role: 'user')
+    const activeConvId = getOrCreateConversationId();
+
+    // 2. Sauvegarde du message utilisateur dans assistant_messages (role: 'user', conversation_id)
     if (userId) {
       try {
         const { error: insertUserErr } = await supabase.from("assistant_messages").insert({
           user_id: userId,
           role: "user",
-          content: content
+          content: content,
+          conversation_id: activeConvId
         });
         if (insertUserErr) {
           console.error("Erreur Sauvegarde Supabase (Message User):", insertUserErr);
@@ -412,13 +495,14 @@ export default function MessagerieClient() {
         }
       ]);
 
-      // 3. Sauvegarde de la réponse de l'IA dans assistant_messages (role: 'assistant')
+      // 3. Sauvegarde de la réponse de l'IA dans assistant_messages (role: 'assistant', conversation_id)
       if (userId) {
         try {
           const { error: insertBotErr } = await supabase.from("assistant_messages").insert({
             user_id: userId,
             role: "assistant",
-            content: botReplyText
+            content: botReplyText,
+            conversation_id: activeConvId
           });
           if (insertBotErr) {
             console.error("Erreur Sauvegarde Supabase (Message Bot):", insertBotErr);
@@ -1673,6 +1757,29 @@ export default function MessagerieClient() {
                           <i className="fa-solid fa-phone"></i>
                         </button>
                       )}
+                      {activeConversation.isAI && (
+                        <div className="flex items-center space-x-1.5 pl-1 border-l border-gray-200">
+                          <button
+                            type="button"
+                            onClick={handleNewAiConversation}
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer font-bold"
+                            title="Nouvelle discussion (+)"
+                          >
+                            <i className="fa-solid fa-plus text-base"></i>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (userSession?.user?.id) fetchAllAiConversations(userSession.user.id);
+                              setAiHistoryModalOpen(true);
+                            }}
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-600 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
+                            title="Historique des discussions"
+                          >
+                            <i className="fa-solid fa-clock-rotate-left text-sm"></i>
+                          </button>
+                        </div>
+                      )}
                       <button
                         onClick={() => {
                           if (pinnedMessage) scrollToPinnedMessage(pinnedMessage.id);
@@ -2289,6 +2396,76 @@ export default function MessagerieClient() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE HISTORIQUE DES DISCUSSIONS IA (Icône Horloge) */}
+      {aiHistoryModalOpen && (
+        <div className="fixed inset-0 z-[800] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 relative overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">
+                  <i className="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-gray-900">Historique des discussions IA</h3>
+                  <p className="text-xs text-gray-500 font-medium">Sélectionnez une session précédente</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiHistoryModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4 space-y-2.5">
+              {aiConversationsHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-xs italic font-medium">
+                  Aucune discussion précédente trouvée.
+                </div>
+              ) : (
+                aiConversationsHistory.map((conv) => (
+                  <button
+                    key={conv.id}
+                    type="button"
+                    onClick={() => handleSelectAiConversation(conv.id)}
+                    className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
+                      currentConversationId === conv.id
+                        ? "bg-emerald-50 border-emerald-300 ring-2 ring-emerald-400/20"
+                        : "bg-gray-50 hover:bg-gray-100 border-gray-200"
+                    }`}
+                  >
+                    <div className="min-w-0 pr-3">
+                      <p className="text-xs font-bold text-gray-900 truncate mb-1 group-hover:text-emerald-700">
+                        {conv.lastMessage || "Discussion IA"}
+                      </p>
+                      <span className="text-[10px] text-gray-500 font-medium">
+                        {new Date(conv.createdAt).toLocaleDateString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-1 rounded-lg flex-shrink-0">
+                      {conv.messagesCount} msgs
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex justify-end">
+              <button
+                type="button"
+                onClick={handleNewAiConversation}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
+              >
+                <i className="fa-solid fa-plus"></i>
+                <span>Nouvelle discussion</span>
+              </button>
             </div>
           </div>
         </div>
