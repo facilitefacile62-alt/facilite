@@ -175,7 +175,7 @@ const DEFAULT_AI_WELCOME = {
   id: 'welcome-msg',
   sender: 'bot',
   text: "Bonjour ! 👋 Bienvenue sur l'Assistance IA Facilite.\n\nQuelle assistance souhaitez-vous aujourd'hui ?\n1️⃣ Rédaction & Correction de CV\n2️⃣ Coaching Entretien d'embauche\n3️⃣ Orientation & Démarches",
-  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  time: "12:00",
   status: "read",
   isPinned: false,
   persisted: false
@@ -1019,10 +1019,8 @@ export default function MessageriePage() {
   // Message épinglé de la discussion active (au plus un, garanti par la RPC)
   const pinnedMessage = activeConversation?.messages?.find(m => m.isPinned) || null;
 
-  if (!isMounted) return null;
-
   return (
-    <>
+    <div suppressHydrationWarning>
       {/* Toast Notification Top Floating */}
       <div
         className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
@@ -1744,7 +1742,7 @@ export default function MessageriePage() {
                           <span className="text-[10px] font-extrabold text-amber-700 uppercase tracking-wider">
                             {t.pinnedLabel}
                           </span>
-                          <span className="text-[10px] font-bold text-amber-600/80">
+                          <span className="text-[10px] font-bold text-amber-600/80" suppressHydrationWarning>
                             {pinnedMessage.sender === "me" ? "Vous" : activeConversation.name} · {pinnedMessage.time}
                           </span>
                         </div>
@@ -1849,7 +1847,7 @@ export default function MessageriePage() {
 
                         <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                         
-                        <div className="flex items-center justify-end space-x-1 mt-1 text-[9px] opacity-75 font-bold">
+                        <div className="flex items-center justify-end space-x-1 mt-1 text-[9px] opacity-75 font-bold" suppressHydrationWarning>
                           <span>{msg.time}</span>
                           {msg.sender === "me" && (
                             <span>
@@ -2303,6 +2301,6 @@ export default function MessageriePage() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
