@@ -300,6 +300,7 @@ export default function MessagerieClient() {
   // Charge l'historique des messages IA enregistrés dans Supabase pour l'utilisateur
   const loadAiMessagesFromSupabase = async (userId) => {
     if (!userId) {
+      console.warn("loadAiMessagesFromSupabase appelé sans userId");
       setAssistantMessages([AI_WELCOME_MESSAGE]);
       return;
     }
@@ -316,6 +317,8 @@ export default function MessagerieClient() {
         setAssistantMessages([AI_WELCOME_MESSAGE]);
         return;
       }
+
+      console.log("Messages chargés depuis Supabase:", data);
 
       // Filtrer côté JS les messages appartenant spécifiquement à la discussion Bot IA
       const aiRows = (data || []).filter(
