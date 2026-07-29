@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { useChat } from "@ai-sdk/react";
 import imageCompression from "browser-image-compression";
 
 export default function AIAssistantModal() {
@@ -10,54 +9,22 @@ export default function AIAssistantModal() {
   const [attachments, setAttachments] = useState([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [showMenu, setShowMenu] = useState(false);
-  const [token, setToken] = useState("");
+  const [input, setInput] = useState("");
+  const [activeAiRole, setActiveAiRole] = useState("cv");
+  const [isLoading, setIsLoading] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const menuRef = useRef(null);
 
-  // Authentification et token réactif
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setToken(session.access_token);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setToken(session?.access_token || "");
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const welcomeMessage = {
+  const welcomeMessage = useMemo(() => ({
     id: "welcome",
     role: "assistant",
     content: "Bonjour ! Je suis votre assistant Facilité. Comment puis-je vous aider aujourd'hui à concevoir votre CV, rédiger votre lettre de motivation ou optimiser votre profil professionnel ?",
-  };
+    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  }), []);
 
-  // Intégration Vercel AI SDK useChat
-  const { messages, input, setInput, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
-    api: "/api/assistant",
-    initialMessages: [welcomeMessage],
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    body: {
-      attachments: attachments
-    },
-    onResponse: (response) => {
-      if (!response.ok) {
-        setErrorMsg("Erreur lors de la communication avec l'assistant.");
-      }
-    },
-    onFinish: () => {
-      setAttachments([]);
-    },
-    onError: (err) => {
-      console.error("AI Assistant error:", err);
-      setErrorMsg("Une erreur est survenue lors de la communication avec l'assistant.");
-    }
-  });
+  const [messages, setMessages] = useState([welcomeMessage]);
 
   // Défilement automatique vers le bas lors de la réception de messages
   useEffect(() => {
@@ -129,12 +96,63 @@ export default function AIAssistantModal() {
     setAttachments((prev) => prev.filter((att) => att.id !== id));
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if ((!(input || "").trim() && attachments.length === 0) || isLoading) return;
 
     setErrorMsg("");
-    handleSubmit(e);
+    const texte = input.trim() || "Analyse les documents ci-joints.";
+    setInput("");
+
+    const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const userMsg = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: texte,
+      timestamp
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setIsLoading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch("/api/ai-chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          message: texte,
+          activeAiRole: activeAiRole,
+          attachments: attachments
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Erreur API (${response.status})`);
+      }
+
+      const resData = await response.json();
+      const botMsg = {
+        id: `bot-${Date.now()}`,
+        role: "assistant",
+        content: resData.reply || "Désolé, je n'ai pas pu générer de réponse.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      };
+
+      setMessages((prev) => [...prev, botMsg]);
+      setAttachments([]);
+    } catch (err) {
+      console.error("Erreur AIAssistantModal POST /api/ai-chat:", err);
+      setErrorMsg(err.message || "Une erreur est survenue lors de la communication avec l'assistant.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleResetConversation = () => {
@@ -324,7 +342,7 @@ export default function AIAssistantModal() {
             <input
               type="text"
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => setInput(e.target.value)}
               placeholder="Posez votre question ou joignez un fichier..."
               disabled={isLoading}
               className="flex-1 px-4 py-2.5 bg-neutral-100 focus:bg-neutral-50 border border-transparent focus:border-blue-500 focus:outline-none rounded-xl text-sm transition-all placeholder-neutral-400 disabled:opacity-50"
