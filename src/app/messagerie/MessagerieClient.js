@@ -313,7 +313,9 @@ export default function MessagerieClient() {
   // Génère ou initialise un nouveau conversation_id
   const getOrCreateConversationId = () => {
     if (currentConversationId) return currentConversationId;
-    const newId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `conv-${Date.now()}`;
+    const newId = (typeof window !== "undefined" && window.crypto && typeof window.crypto.randomUUID === "function")
+      ? window.crypto.randomUUID()
+      : `conv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     setCurrentConversationId(newId);
     return newId;
   };
@@ -446,6 +448,25 @@ export default function MessagerieClient() {
     } catch (err) {
       console.error("Exception suppression discussion IA:", err);
     }
+  };
+
+  // Démarrer une NOUVELLE DISCUSSION IA (+)
+  const handleNewAiConversation = () => {
+    const newId = (typeof window !== "undefined" && window.crypto && typeof window.crypto.randomUUID === "function")
+      ? window.crypto.randomUUID()
+      : `conv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    setCurrentConversationId(newId);
+    setAssistantMessages([AI_WELCOME_MESSAGE]);
+    triggerToast("Nouvelle discussion IA démarrée", "fa-plus");
+  };
+
+  // Charger une discussion spécifique choisie dans l'historique (icône horloge)
+  const handleSelectAiConversation = (convId) => {
+    if (!userSession?.user?.id) return;
+    setCurrentConversationId(convId);
+    loadAiMessagesFromSupabase(userSession.user.id, convId);
+    setAiHistoryModalOpen(false);
+    triggerToast("Discussion chargée", "fa-clock-rotate-left");
   };
 
   // Exporter la discussion IA active sous format texte / TXT
