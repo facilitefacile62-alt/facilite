@@ -297,7 +297,7 @@ export default function ProfilPage() {
           setUserDocuments(resumesList);
           if (!profileCvUrl) {
             profileCvUrl = resumesList[0].file_url;
-            profileCvName = resumesData[0]?.title || resumesList[0].title;
+            profileCvName = resumesList[0]?.title;
           }
         } else if (profileCvUrl) {
           setUserDocuments([{

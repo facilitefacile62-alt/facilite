@@ -346,14 +346,25 @@ export async function POST(req) {
     }
 
     // 7. Enregistrement automatique de l'e-mail dans la messagerie interne Supabase (messages)
+    // sender_id référence auth.users(id) (NOT NULL) : "recruiter-support" n'est
+    // pas un UUID valide et viole systématiquement la contrainte de clé
+    // étrangère (l'insert échouait silencieusement, avalé par le catch
+    // ci-dessous). On utilise le recruteur propriétaire de l'offre quand il
+    // est connu (flux job_offers), sinon l'utilisateur connecté lui-même
+    // (flux historique sans recruteur identifié) pour garantir un UUID valide.
     try {
       const emailContentText = `📧 [E-mail de confirmation] Candidature transmise avec succès pour le poste de ${jobTitle} chez ${company}.\n\nLe recruteur (${finalRecruiterEmail}) étudiera votre profil avec attention.`;
-      await supabase.from("messages").insert({
-        sender_id: "recruiter-support",
+      const { error: confirmMsgError } = await supabase.from("messages").insert({
+        sender_id: offerRecruiterId || user.id,
         receiver_id: user.id,
         content: emailContentText,
+        type_discussion: "OFFRE",
+        job_offer_id: jobOfferId || null,
         created_at: new Date().toISOString()
       });
+      if (confirmMsgError) {
+        console.error("Erreur d'enregistrement du message de confirmation:", confirmMsgError.message);
+      }
     } catch (msgErr) {
       console.error("Erreur de synchronisation de l'e-mail dans la messagerie Supabase:", msgErr?.message);
     }
