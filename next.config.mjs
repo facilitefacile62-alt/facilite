@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 
 /**
@@ -22,7 +24,8 @@ const cspReportOnly = [
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
   "font-src 'self' data: https://cdnjs.cloudflare.com",
   "img-src 'self' data: blob: https://*.supabase.co",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  // *.sentry.io : ingestion des événements par le SDK Sentry (client-side).
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io",
   "frame-src 'self' blob: data: https://*.supabase.co",
   "object-src 'none'",
   "base-uri 'self'",
@@ -70,4 +73,14 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// org/project/authToken absents en local et en CI (aucun secret Sentry
+// configuré) : le plugin webpack de Sentry se contente alors de sauter
+// l'upload des source maps avec un avertissement, sans faire échouer le
+// build (`silent: true` supprime ce bruit plutôt que de le rendre bloquant).
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  widenClientFileUpload: true,
+});

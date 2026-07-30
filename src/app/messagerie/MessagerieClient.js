@@ -1004,7 +1004,24 @@ export default function MessagerieClient() {
   //   destinataire de ses propres réponses.
   const resolveReplyTarget = async () => {
     if (currentUserRole !== "admin") {
-      return { receiverId: supportAdminId, conversationId: supportConversationId, error: null };
+      if (supportAdminId && supportConversationId) {
+        return { receiverId: supportAdminId, conversationId: supportConversationId, error: null };
+      }
+      // Course avec la résolution lancée au chargement (resolveSupportConversation
+      // dans le useEffect de session) : si l'utilisateur envoie un message
+      // avant qu'elle n'ait eu le temps de se terminer, supportAdminId/
+      // supportConversationId sont encore null ici — le message partait alors
+      // avec receiver_id/conversation_id NULL et restait invisible côté admin
+      // (constaté en base : messages "XX"/"DD" orphelins juste après le
+      // chargement de la page). On la relance ici de façon bloquante avant
+      // l'envoi plutôt que de risquer un envoi orphelin.
+      const result = await resolveSupportConversation(userSession?.user?.id);
+      if (!result) {
+        return { receiverId: null, conversationId: null, error: null };
+      }
+      setSupportConversationId(result.conversationId);
+      setSupportAdminId(result.adminId);
+      return { receiverId: result.adminId, conversationId: result.conversationId, error: null };
     }
 
     const activeConv = conversations.find((c) => c.id === activeConvId);

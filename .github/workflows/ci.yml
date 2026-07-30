@@ -45,3 +45,42 @@ jobs:
           # simples valeurs syntaxiquement plausibles suffisent en CI.
           NEXT_PUBLIC_SUPABASE_URL: "https://ci-placeholder.supabase.co"
           NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key"
+          # NEXT_PUBLIC_SENTRY_DSN volontairement absent ici : le SDK Sentry
+          # (src/instrumentation-client.js, sentry.server/edge.config.js)
+          # retombe sur une chaîne vide et se désactive silencieusement sans
+          # faire échouer le build — testé localement sans cette variable.
+
+  db-lint:
+    name: Supabase DB Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Démarre un stack Postgres local (Docker, déjà présent sur les
+      # runners ubuntu-latest) et applique TOUTES les migrations de
+      # supabase/migrations/ depuis zéro — c'est ce qui permet de linter le
+      # schéma réel plutôt que le texte SQL brut, sans toucher au projet
+      # distant ni nécessiter de secret (SUPABASE_ACCESS_TOKEN) en CI.
+      - name: Start local Supabase stack (applique les migrations)
+        run: supabase start
+
+      # plpgsql_check (fonctions instables, erreurs de syntaxe/sémantique,
+      # search_path manquant...). Testé au préalable contre le projet lié en
+      # conditions réelles (`supabase db lint --linked`) : zéro résultat
+      # actuellement, donc bloquant (--fail-on warning) dès le premier run —
+      # contrairement au lint ESLint plus haut, il n'y a pas de dette connue
+      # à absorber avant d'activer la porte.
+      #
+      # Ne détecte PAS les policies RLS trop permissives (ex. le bucket
+      # storage "resumes" corrigé plus tôt) : ça reste du ressort du Security
+      # Advisor de Supabase (API Management /advisors/security), un outil
+      # distinct non couvert par cette étape.
+      - name: Lint database schema
+        run: supabase db lint --local --level warning --fail-on warning
