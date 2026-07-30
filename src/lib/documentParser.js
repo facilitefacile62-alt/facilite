@@ -27,13 +27,12 @@ function withTimeout(promise, ms, errorMessage) {
 // qu'il est retiré (c'est exactement ce qui est arrivé avec gemini-2.5-flash).
 const CANDIDATE_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-2.5-flash"];
 
-function extractGeminiErrorMessage(err) {
-  return String(err?.message || err || "");
-}
-
 /**
- * Extraction et OCR d'image avec l'API Gemini via REST : détecte le
- * texte et extrait les informations d'annonces en JSON. 
+ * Extraction et OCR d'image avec l'API Gemini (appel REST direct, sans le
+ * SDK @google/genai) : détecte le texte et extrait les informations
+ * d'annonces en JSON. Essaie chaque modèle de CANDIDATE_MODELS dans l'ordre ;
+ * si un modèle échoue (404 ou autre), passe immédiatement au suivant sans
+ * faire planter la requête.
  */
 export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image/jpeg") {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -48,9 +47,7 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
   const prompt = `Analyse cette affiche d'emploi/recrutement. Extrais l'adresse e-mail du recruteur, le titre du poste, le nom de l'entreprise et le type de contrat. Réponds STRICTEMENT en JSON sous la forme : { "email": "...", "job_title": "...", "company": "...", "contract_type": "...", "raw_text": "..." }.`;
   const base64Data = buffer.toString("base64");
 
-  const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
-
-  for (const model of modelsToTry) {
+  for (const model of CANDIDATE_MODELS) {
     try {
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -117,7 +114,7 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
   }
 
   return {
-    error: "Erreur lors de l'analyse avec Gemini. Veuillez vérifier votre photo ou réessayer.",
+    error: "Impossible d'analyser l'image pour le moment. Réessayez dans quelques instants.",
   };
 }
 
