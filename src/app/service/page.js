@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import RoleNavLink from "@/components/RoleNavLink";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -807,6 +808,8 @@ export default function Home() {
               <i className="fa-solid fa-user-tie text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
             </a>
+
+            <RoleNavLink session={userSession} />
 
             {/* Plus Dropdown Menu (Service & Contact) */}
             <div className="relative" ref={plusDropdownRef}>
