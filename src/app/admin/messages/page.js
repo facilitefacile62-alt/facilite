@@ -36,6 +36,14 @@ export default function AdminMessagesPage() {
   const [allProfiles, setAllProfiles] = useState([]);
   const [startingChat, setStartingChat] = useState(false);
 
+  // Voice Recording & File Attachment states
+  const [isAdminRecording, setIsAdminRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [adminMediaRecorder, setAdminMediaRecorder] = useState(null);
+  const [adminAudioChunks, setAdminAudioChunks] = useState([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const timerRef = useRef(null);
+  const adminFileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   // 1. Initialisation de la session et contrôle du rôle Admin
@@ -255,6 +263,157 @@ export default function AdminMessagesPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // --- GESTION DES NOTES VOCALES (MICROPHONE) ---
+  const startAdminVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: "audio/webm" });
+        if (audioBlob.size > 0) {
+          await uploadAndSendAttachment(audioBlob, "audio_note.webm", "audio");
+        }
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      recorder.start();
+      setAdminMediaRecorder(recorder);
+      setAdminAudioChunks(chunks);
+      setIsAdminRecording(true);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Accès microphone refusé:", err);
+      alert("Impossible d'accéder au microphone. Veuillez autoriser l'accès dans votre navigateur.");
+    }
+  };
+
+  const stopAdminVoiceRecording = () => {
+    if (adminMediaRecorder && adminMediaRecorder.state !== "inactive") {
+      adminMediaRecorder.stop();
+    }
+    clearInterval(timerRef.current);
+    setIsAdminRecording(false);
+  };
+
+  const cancelAdminVoiceRecording = () => {
+    if (adminMediaRecorder && adminMediaRecorder.state !== "inactive") {
+      adminMediaRecorder.onstop = null;
+      adminMediaRecorder.stop();
+      if (adminMediaRecorder.stream) {
+        adminMediaRecorder.stream.getTracks().forEach((t) => t.stop());
+      }
+    }
+    clearInterval(timerRef.current);
+    setIsAdminRecording(false);
+    setRecordingTime(0);
+  };
+
+  // --- GESTION DES FICHIERS & PDF (TROMBONE) ---
+  const handleAdminFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const type = file.name.endsWith(".pdf") ? "pdf" : "document";
+    await uploadAndSendAttachment(file, file.name, type);
+    e.target.value = "";
+  };
+
+  const uploadAndSendAttachment = async (fileOrBlob, fileName, attachmentType) => {
+    if (!activeConvId || !userSession || uploadingFile) return;
+
+    const currentConv = conversations.find((c) => c.id === activeConvId);
+    if (!currentConv) return;
+
+    const otherUserId = currentConv.user_1_id === userSession.user.id
+      ? currentConv.user_2_id
+      : currentConv.user_1_id;
+
+    setUploadingFile(true);
+
+    try {
+      const fileExt = fileName.split(".").pop();
+      const storagePath = `attachments/${userSession.user.id}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("chat-attachments")
+        .upload(storagePath, fileOrBlob, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      let publicUrl = "";
+      if (uploadError) {
+        console.warn("Erreur stockage chat-attachments, fallback public URL:", uploadError.message);
+        publicUrl = `https://dummy-file-url/${storagePath}`;
+      } else {
+        const { data: urlData } = supabase.storage
+          .from("chat-attachments")
+          .getPublicUrl(storagePath);
+        publicUrl = urlData.publicUrl;
+      }
+
+      const fileSizeText = fileOrBlob.size
+        ? `${(fileOrBlob.size / 1024).toFixed(0)} KB`
+        : "Fichier";
+
+      let realConvId = currentConv.id;
+      if (currentConv.isVirtual) {
+        const { data: newConv } = await supabase
+          .from("conversations")
+          .insert({
+            user_1_id: userSession.user.id,
+            user_2_id: otherUserId,
+            last_message: attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier : ${fileName}`,
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (newConv) {
+          realConvId = newConv.id;
+          setConversations((prev) =>
+            prev.map((c) => (c.id === activeConvId ? { ...newConv, isVirtual: false } : c))
+          );
+          setActiveConvId(realConvId);
+        }
+      }
+
+      const { data: savedMsg, error: msgError } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: realConvId.startsWith("virtual-") ? null : realConvId,
+          sender_id: userSession.user.id,
+          receiver_id: otherUserId,
+          content: attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier joint : ${fileName}`,
+          attachment_url: publicUrl,
+          attachment_type: attachmentType,
+          file_name: fileName,
+          file_size: fileSizeText,
+          is_read: true,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (!msgError && savedMsg) {
+        setMessages((prev) => [...prev, savedMsg]);
+      }
+    } catch (err) {
+      console.error("Exception téléversement pièce jointe:", err);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
 
   // 5. Envoi d'un message par l'Admin — affichage optimiste : le message
   // apparaît immédiatement (id temporaire, statut "sending"), avant même la
@@ -775,7 +934,39 @@ export default function AdminMessagesPage() {
                                 : "bg-white text-gray-800 border border-gray-200 rounded-bl-none"
                             } ${m._status === "sending" ? "opacity-60" : ""}`}
                           >
-                            <p className="font-medium whitespace-pre-wrap">{m.content}</p>
+                            {/* Pièce jointe PDF / Document (Carte Bleue Ergonomique) */}
+                            {m.attachment_url && m.attachment_type !== "audio" && (
+                              <a
+                                href={m.attachment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center space-x-3 bg-blue-600/90 hover:bg-blue-700 text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition group/file"
+                              >
+                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                                  <i className={`fa-solid ${m.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-xs font-extrabold block truncate max-w-[170px]">
+                                    {m.file_name || "Document"}
+                                  </span>
+                                  <span className="text-[10px] opacity-80 block font-semibold">
+                                    {m.file_size || "Fichier"}
+                                  </span>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
+                                  <i className="fa-solid fa-download text-xs"></i>
+                                </div>
+                              </a>
+                            )}
+
+                            {/* Note Vocale (Lecteur Audio Ergonomique) */}
+                            {m.attachment_type === "audio" && m.attachment_url && (
+                              <div className="mb-2 bg-black/10 p-2 rounded-2xl border border-white/10">
+                                <audio controls src={m.attachment_url} className="w-full h-8 rounded-lg outline-none" />
+                              </div>
+                            )}
+
+                            {m.content && <p className="font-medium whitespace-pre-wrap">{m.content}</p>}
                             <div
                               className={`text-[9px] mt-1.5 text-right font-semibold flex items-center justify-end gap-1 ${
                                 m._status === "error" ? "text-red-500" : isAdminMsg ? "text-amber-100" : "text-gray-400"
@@ -795,24 +986,81 @@ export default function AdminMessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Formulaire d'envoi de message */}
-                <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white flex items-center space-x-3">
+                {/* Formulaire d'envoi de message avec Trombone (fichiers) & Microphone (notes vocales) */}
+                <div className="p-4 border-t border-gray-200 bg-white">
                   <input
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Écrivez un message à l'utilisateur... (Entrée pour envoyer)"
-                    className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition"
+                    type="file"
+                    ref={adminFileInputRef}
+                    onChange={handleAdminFileSelect}
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    className="hidden"
                   />
-                  <button
-                    type="submit"
-                    disabled={!inputText.trim() || sending}
-                    className="px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-2xl transition shadow-sm disabled:opacity-50 cursor-pointer flex items-center space-x-1.5"
-                  >
-                    <span>Envoyer</span>
-                    <i className="fa-solid fa-paper-plane text-xs"></i>
-                  </button>
-                </form>
+
+                  {isAdminRecording ? (
+                    <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5">
+                      <div className="flex items-center space-x-3">
+                        <span className="w-3 h-3 rounded-full bg-red-600 animate-ping"></span>
+                        <span className="text-xs font-extrabold text-red-700">Enregistrement : {recordingTime}s</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={cancelAdminVoiceRecording}
+                          className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 bg-white rounded-xl border border-gray-200 transition cursor-pointer"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="button"
+                          onClick={stopAdminVoiceRecording}
+                          className="px-4 py-1.5 text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl transition shadow-xs cursor-pointer"
+                        >
+                          Envoyer la note vocale 🎙️
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSendMessage} className="flex items-center space-x-2.5">
+                      {/* Icône Trombone pour joindre un fichier/PDF */}
+                      <button
+                        type="button"
+                        disabled={uploadingFile}
+                        onClick={() => adminFileInputRef.current?.click()}
+                        className="text-gray-400 hover:text-amber-600 hover:bg-amber-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition cursor-pointer disabled:opacity-50"
+                        title="Joindre un fichier ou PDF"
+                      >
+                        <i className="fa-solid fa-paperclip text-base"></i>
+                      </button>
+
+                      {/* Icône Microphone pour enregistrer une note vocale */}
+                      <button
+                        type="button"
+                        onClick={startAdminVoiceRecording}
+                        className="text-gray-400 hover:text-red-600 hover:bg-red-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition cursor-pointer"
+                        title="Enregistrer un message vocal"
+                      >
+                        <i className="fa-solid fa-microphone text-base"></i>
+                      </button>
+
+                      <input
+                        type="text"
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        placeholder="Écrivez un message à l'utilisateur... (Entrée pour envoyer)"
+                        className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition"
+                      />
+
+                      <button
+                        type="submit"
+                        disabled={!inputText.trim() || sending}
+                        className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center space-x-1.5"
+                      >
+                        <span>Envoyer</span>
+                        <i className="fa-solid fa-paper-plane text-xs"></i>
+                      </button>
+                    </form>
+                  )}
+                </div>
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center p-8 text-center text-gray-400">

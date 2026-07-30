@@ -254,7 +254,14 @@ export default function MessagerieClient() {
   const [filterTab, setFilterTab] = useState("all"); // 'all' | 'unread' | 'favorites'
   const [discussionTypeFilter, setDiscussionTypeFilter] = useState("all"); // 'all' | 'OFFRE' | 'ECHANGE'
   
-  // File upload ref
+  // Voice Recording & File Attachment states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const timerRef = useRef(null);
+  const fileInputDocRef = useRef(null);
   const fileInputRef = useRef(null);
   // Chat scroll anchor ref
   const chatBottomRef = useRef(null);
@@ -1136,94 +1143,197 @@ export default function MessagerieClient() {
             }
             return c;
           }));
-          triggerToast(`Nouveau message de ${activeConv.name}`, "fa-comment");
         }
       }, 1500);
-
     }, 800);
   };
 
-  // Trigger file attachment select
+  // --- GESTION DES PIÈCES JOINTES & VOCAUX DANS LA MESSAGERIE CLIENT ---
   const handleAttachmentClick = () => {
-    if (fileInputRef.current) {
+    if (fileInputDocRef.current) {
+      fileInputDocRef.current.click();
+    } else if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Handle uploaded file sending simulation
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const formattedSize = file.size > 1024 * 1024 
-      ? (file.size / (1024 * 1024)).toFixed(1) + " MB" 
-      : (file.size / 1024).toFixed(0) + " KB";
+    const attachmentType = file.name.endsWith(".pdf") ? "pdf" : "document";
+    const fileSizeText = `${(file.size / 1024).toFixed(0)} KB`;
 
-    // Add user file message to conversation
-    setConversations(prev => prev.map(c => {
-      if (c.id === activeConvId) {
-        const newMsg = {
-          id: `local-${Date.now()}`,
-          sender: "me",
-          text: `${t.fileSent}${file.name}`,
-          time: timestamp,
-          file: {
-            name: file.name,
-            size: formattedSize,
-            type: file.type
-          },
-          status: "sent",
-          isPinned: false,
-          persisted: false
-        };
-        return {
-          ...c,
-          lastMessage: `📎 ${file.name}`,
-          time: "À l'instant",
-          messages: [...c.messages, newMsg]
-        };
+    setUploadingFile(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const storagePath = `attachments/${userSession?.user?.id || "guest"}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("chat-attachments")
+        .upload(storagePath, file, { cacheControl: "3600", upsert: false });
+
+      let publicUrl = "";
+      if (uploadError) {
+        console.warn("Erreur stockage chat-attachments, fallback public URL:", uploadError.message);
+        publicUrl = `https://dummy-file-url/${storagePath}`;
+      } else {
+        const { data: urlData } = supabase.storage
+          .from("chat-attachments")
+          .getPublicUrl(storagePath);
+        publicUrl = urlData.publicUrl;
       }
-      return c;
-    }));
 
-    triggerToast("Fichier partagé dans la discussion !", "fa-paperclip");
+      await sendAttachmentMessage(publicUrl, attachmentType, file.name, fileSizeText);
+    } catch (err) {
+      console.error("Exception upload fichier client:", err);
+    } finally {
+      setUploadingFile(false);
+      e.target.value = "";
+    }
+  };
 
-    // Trigger responder response specifically for file
-    setTimeout(() => {
-      setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        const botTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const fileResponse = selectedLang === "FR" 
-          ? "Bien reçu ! Merci pour le document, je l'examine tout de suite et je vous redis." 
-          : "Well received! Thanks for the document, I will review it right away and let you know.";
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
 
-        setConversations(prev => prev.map(c => {
-          if (c.id === activeConvId) {
-            const newBotMsg = {
-              id: `local-${Date.now() + 2}`,
-              sender: "them",
-              text: fileResponse,
-              time: botTimestamp,
-              status: "read",
-              isPinned: false,
-              persisted: false
-            };
-            return {
-              ...c,
-              lastMessage: fileResponse,
-              time: botTimestamp,
-              messages: [...c.messages.map(m => m.sender === 'me' ? { ...m, status: 'read' } : m), newBotMsg]
-            };
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: "audio/webm" });
+        if (audioBlob.size > 0) {
+          const fileName = `audio_${Date.now()}.webm`;
+          const fileSizeText = `${(audioBlob.size / 1024).toFixed(0)} KB`;
+
+          const storagePath = `attachments/${userSession?.user?.id || "guest"}/${Date.now()}_voice.webm`;
+          const { error: uploadError } = await supabase.storage
+            .from("chat-attachments")
+            .upload(storagePath, audioBlob, { cacheControl: "3600", upsert: false });
+
+          let publicUrl = "";
+          if (uploadError) {
+            publicUrl = `https://dummy-file-url/${storagePath}`;
+          } else {
+            const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(storagePath);
+            publicUrl = urlData.publicUrl;
           }
-          return c;
-        }));
-      }, 1500);
-    }, 1000);
 
-    // Clear input
-    e.target.value = "";
+          await sendAttachmentMessage(publicUrl, "audio", fileName, fileSizeText);
+        }
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setAudioChunks(chunks);
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Accès microphone refusé:", err);
+      triggerToast("Accès au microphone refusé ou non disponible.", "fa-triangle-exclamation");
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    clearInterval(timerRef.current);
+    setIsRecording(false);
+  };
+
+  const cancelVoiceRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.onstop = null;
+      mediaRecorder.stop();
+      if (mediaRecorder.stream) {
+        mediaRecorder.stream.getTracks().forEach((t) => t.stop());
+      }
+    }
+    clearInterval(timerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  const sendAttachmentMessage = async (publicUrl, attachmentType, fileName, fileSizeText) => {
+    const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const tempId = `temp-${Date.now()}`;
+
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (c.id === activeConvId) {
+          const newMsg = {
+            id: tempId,
+            sender: "me",
+            text: attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier : ${fileName}`,
+            attachment_url: publicUrl,
+            attachment_type: attachmentType,
+            file_name: fileName,
+            file_size: fileSizeText,
+            time: timestamp,
+            status: "sent",
+            isPinned: false,
+            persisted: false,
+          };
+          return {
+            ...c,
+            lastMessage: newMsg.text,
+            time: "À l'instant",
+            messages: [...c.messages, newMsg],
+          };
+        }
+        return c;
+      })
+    );
+
+    if (userSession?.user?.id) {
+      try {
+        const { data: savedRow } = await supabase.from("messages").insert({
+          sender_id: userSession.user.id,
+          content: attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier joint : ${fileName}`,
+          attachment_url: publicUrl,
+          attachment_type: attachmentType,
+          file_name: fileName,
+          file_size: fileSizeText,
+          type_discussion: discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE",
+          created_at: new Date().toISOString(),
+        }).select().single();
+
+        if (savedRow) {
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== activeConvId) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === tempId
+                    ? {
+                        ...m,
+                        id: savedRow.id,
+                        attachment_url: savedRow.attachment_url,
+                        attachment_type: savedRow.attachment_type,
+                        file_name: savedRow.file_name,
+                        file_size: savedRow.file_size,
+                        persisted: true,
+                      }
+                    : m
+                ),
+              };
+            })
+          );
+        }
+      } catch (err) {
+        console.error("Erreur envoi pièce jointe Supabase:", err);
+      }
+    }
   };
 
   // Emojis list helper
@@ -2157,25 +2267,39 @@ export default function MessagerieClient() {
                           </div>
                         )}
 
-                        {msg.file && (
-                          <div className="flex items-center space-x-3 bg-black/10 p-2.5 rounded-xl mb-1 border border-white/10 text-left">
-                            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-white">
-                              <i className="fa-regular fa-file-pdf text-xl"></i>
+                        {/* Pièce jointe PDF / Document (Carte Bleue Ergonomique) */}
+                        {(msg.attachment_url || msg.file) && msg.attachment_type !== "audio" && (
+                          <a
+                            href={msg.attachment_url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center space-x-3 bg-blue-600/90 hover:bg-blue-700 text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition group/file"
+                          >
+                            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                              <i className={`fa-solid ${msg.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
                             </div>
-                            <div className="min-w-0">
-                              <span className="text-xs font-bold block truncate max-w-[160px]">{msg.file.name}</span>
-                              <span className="text-[10px] opacity-75 block">{msg.file.size}</span>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs font-extrabold block truncate max-w-[170px]">
+                                {msg.file_name || msg.file?.name || "Document"}
+                              </span>
+                              <span className="text-[10px] opacity-80 block font-semibold">
+                                {msg.file_size || msg.file?.size || "PDF / Fichier"}
+                              </span>
                             </div>
-                            <button
-                              onClick={() => triggerToast(`Téléchargement de ${msg.file.name}...`, "fa-download")}
-                              className="text-white hover:text-green-300 transition cursor-pointer"
-                            >
-                              <i className="fa-solid fa-arrow-down-long text-sm bg-white/20 w-7 h-7 rounded-full flex items-center justify-center"></i>
-                            </button>
+                            <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
+                              <i className="fa-solid fa-download text-xs"></i>
+                            </div>
+                          </a>
+                        )}
+
+                        {/* Note Vocale (Lecteur Audio Ergonomique) */}
+                        {msg.attachment_type === "audio" && msg.attachment_url && (
+                          <div className="mb-2 bg-black/10 p-2 rounded-2xl border border-white/10">
+                            <audio controls src={msg.attachment_url} className="w-full h-8 rounded-lg outline-none" />
                           </div>
                         )}
 
-                        <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                        {msg.text && <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
                         
                         <div className="flex items-center justify-end space-x-1 mt-1 text-[9px] opacity-75 font-bold" suppressHydrationWarning>
                           <span>{msg.time}</span>
@@ -2226,53 +2350,88 @@ export default function MessagerieClient() {
                     </div>
                   )}
 
-                  <form onSubmit={handleSendMessage} className="flex items-center space-x-2.5">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept=".pdf,.doc,.docx"
-                      className="hidden"
-                    />
+                  <input
+                    type="file"
+                    ref={fileInputDocRef}
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    className="hidden"
+                  />
 
-                    <button
-                      type="button"
-                      onClick={handleAttachmentClick}
-                      className="text-gray-400 hover:text-blue-600 transition hover:bg-blue-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
-                      title={t.attachmentTooltip}
-                    >
-                      <i className="fa-solid fa-paperclip text-lg"></i>
-                    </button>
+                  {isRecording ? (
+                    <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5">
+                      <div className="flex items-center space-x-3">
+                        <span className="w-3 h-3 rounded-full bg-red-600 animate-ping"></span>
+                        <span className="text-xs font-extrabold text-red-700">Enregistrement vocal : {recordingTime}s</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={cancelVoiceRecording}
+                          className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 bg-white rounded-xl border border-gray-200 transition cursor-pointer"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="button"
+                          onClick={stopVoiceRecording}
+                          className="px-4 py-1.5 text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl transition shadow-xs cursor-pointer"
+                        >
+                          Envoyer la note vocale 🎙️
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        disabled={uploadingFile}
+                        onClick={handleAttachmentClick}
+                        className="text-gray-400 hover:text-blue-600 transition hover:bg-blue-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer disabled:opacity-50"
+                        title={t.attachmentTooltip}
+                      >
+                        <i className="fa-solid fa-paperclip text-lg"></i>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="text-gray-400 hover:text-amber-500 transition hover:bg-amber-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
-                      title={t.emojiTooltip}
-                    >
-                      <i className="fa-regular fa-smile text-lg"></i>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={startVoiceRecording}
+                        className="text-gray-400 hover:text-red-600 transition hover:bg-red-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
+                        title="Enregistrer un message vocal"
+                      >
+                        <i className="fa-solid fa-microphone text-lg"></i>
+                      </button>
 
-                    <input
-                      type="text"
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      placeholder={t.inputPlaceholder}
-                      className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-semibold text-gray-900 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all placeholder-[#9CA3AF]"
-                    />
+                      <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className="text-gray-400 hover:text-amber-500 transition hover:bg-amber-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
+                        title={t.emojiTooltip}
+                      >
+                        <i className="fa-regular fa-smile text-lg"></i>
+                      </button>
 
-                    <button
-                      type="submit"
-                      disabled={!messageText.trim()}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all cursor-pointer ${
-                        messageText.trim()
-                          ? "bg-[#2563EB] text-white hover:bg-blue-700 shadow-md hover:scale-105 active:scale-95"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      <i className="fa-solid fa-paper-plane text-sm"></i>
-                    </button>
-                  </form>
+                      <input
+                        type="text"
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        placeholder={t.inputPlaceholder}
+                        className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-semibold text-gray-900 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all placeholder-[#9CA3AF]"
+                      />
+
+                      <button
+                        type="submit"
+                        disabled={!messageText.trim()}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all cursor-pointer ${
+                          messageText.trim()
+                            ? "bg-[#2563EB] text-white hover:bg-blue-700 shadow-md hover:scale-105 active:scale-95"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        <i className="fa-solid fa-paper-plane text-sm"></i>
+                      </button>
+                    </form>
+                  )}
                 </div>
               </>
             ) : (

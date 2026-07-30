@@ -30,6 +30,13 @@ export function formatMessageRow(row, currentUserId) {
     // sert au filtre par onglet de la messagerie.
     typeDiscussion: row.type_discussion || "ECHANGE",
     jobOfferId: row.job_offer_id || null,
+    // Pièce jointe (fichier ou note vocale) — noms de colonnes conservés tels
+    // quels (pas de camelCase) pour matcher directement les lignes brutes
+    // reçues via Realtime, affichées sans passer par ce formatage.
+    attachment_url: row.attachment_url || null,
+    attachment_type: row.attachment_type || null,
+    file_name: row.file_name || null,
+    file_size: row.file_size || null,
   };
 }
 
@@ -51,7 +58,7 @@ export async function fetchConversationMessages(userId) {
 
   const { data, error } = await supabase
     .from("messages")
-    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id")
+    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id, attachment_url, attachment_type, file_name, file_size")
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: true });
@@ -109,7 +116,17 @@ export async function toggleMessagePin(messageId, nextPinned) {
  * l'UI puisse remplacer son id temporaire — sans quoi l'épinglage d'un message
  * tout juste envoyé échouerait.
  */
-export async function sendMessage({ senderId, content, receiverId = null, typeDiscussion = "ECHANGE", jobOfferId = null }) {
+export async function sendMessage({
+  senderId,
+  content,
+  receiverId = null,
+  typeDiscussion = "ECHANGE",
+  jobOfferId = null,
+  attachmentUrl = null,
+  attachmentType = null,
+  fileName = null,
+  fileSize = null,
+}) {
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -119,8 +136,12 @@ export async function sendMessage({ senderId, content, receiverId = null, typeDi
       is_read: false,
       type_discussion: typeDiscussion,
       job_offer_id: jobOfferId,
+      attachment_url: attachmentUrl,
+      attachment_type: attachmentType,
+      file_name: fileName,
+      file_size: fileSize,
     })
-    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id")
+    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id, attachment_url, attachment_type, file_name, file_size")
     .single();
 
   if (error) {
