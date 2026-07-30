@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import DiagnosticModal from "@/components/DiagnosticModal";
 import ApplyModal from "@/components/ApplyModal";
+import RoleNavLink from "@/components/RoleNavLink";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -720,6 +721,9 @@ export default function Home() {
               <i className="fa-solid fa-user-tie text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
             </a>
+
+            {/* Accès direct à l'espace admin/recruteur, visible uniquement pour ces rôles */}
+            <RoleNavLink session={userSession} />
 
             {/* Plus Dropdown Menu (Service & Contact) */}
             <div className="relative" ref={plusDropdownRef}>
