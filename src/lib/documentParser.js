@@ -19,88 +19,72 @@ function withTimeout(promise, ms, errorMessage) {
 }
 
 /**
- * OCR via Google Cloud Vision (documentTextDetection : optimisé pour du texte
- * dense/structuré comme un CV ou une annonce, plus précis que Tesseract sur
- * des photos de qualité moyenne). Lève une erreur si les identifiants
- * GOOGLE_* sont absents/invalides ou si l'appel échoue/traîne — à charge de
- * l'appelant (runImageOcr) de basculer sur le fallback Tesseract.
+ * Extraction et OCR d'image avec l'API Gemini 2.5 Flash via @google/genai.
+ * Détecte le texte et extrait les informations d'annonces en JSON ultra-rapide sans dépendances lourdes (Vision/Tesseract).
  */
-async function extractTextWithVision(buffer) {
-  const projectId = process.env.GOOGLE_PROJECT_ID;
-  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
+export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image/jpeg") {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
 
-  if (!projectId || !clientEmail || !rawPrivateKey) {
-    throw new Error("Google Vision non configuré (variables GOOGLE_PROJECT_ID/GOOGLE_CLIENT_EMAIL/GOOGLE_PRIVATE_KEY manquantes).");
+  if (!apiKey) {
+    throw new Error("Clé API Gemini non configurée (GEMINI_API_KEY manquante dans l'environnement).");
   }
 
-  // Sur Vercel (comme la plupart des plateformes), les variables d'env sont
-  // stockées sur une seule ligne : les retours à la ligne du PEM sont
-  // échappés en "\n" littéral et doivent être reconvertis.
-  const privateKey = rawPrivateKey.replace(/\\n/g, "\n");
+  const { GoogleGenAI } = await import("@google/genai");
+  const ai = new GoogleGenAI({ apiKey });
 
-  let client;
+  const prompt = `Analyse cette affiche d'emploi/recrutement. Extrais l'adresse e-mail du recruteur, le titre du poste, le nom de l'entreprise et le type de contrat. Réponds STRICTEMENT en JSON sous la forme : { "email": "...", "job_title": "...", "company": "...", "contract_type": "...", "raw_text": "..." }.`;
+
+  const base64Data = buffer.toString("base64");
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType: mimeType || "image/jpeg",
+              data: base64Data,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  const responseText = response.text || "";
+
+  let cleanedJson = responseText.trim();
+  if (cleanedJson.includes("```")) {
+    cleanedJson = cleanedJson.replace(/```json/gi, "").replace(/```/g, "").trim();
+  }
+
+  let parsed = null;
   try {
-    const { ImageAnnotatorClient } = await import("@google-cloud/vision");
-    client = new ImageAnnotatorClient({
-      projectId,
-      credentials: { client_email: clientEmail, private_key: privateKey },
-    });
-  } catch (initErr) {
-    throw new Error(`Initialisation du client Google Vision impossible : ${initErr.message}`);
+    parsed = JSON.parse(cleanedJson);
+  } catch {
+    const emailMatch = responseText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    parsed = {
+      email: emailMatch ? emailMatch[0].toLowerCase() : null,
+      job_title: null,
+      company: null,
+      contract_type: null,
+      raw_text: responseText,
+    };
   }
 
-  let result;
-  try {
-    [result] = await withTimeout(
-      client.documentTextDetection({ image: { content: buffer } }),
-      VISION_TIMEOUT_MS,
-      "Google Vision : délai dépassé"
-    );
-  } catch (callErr) {
-    throw new Error(`Appel Google Vision échoué : ${callErr.message}`);
-  }
-
-  const text = result?.fullTextAnnotation?.text || "";
-  if (!text.trim()) {
-    throw new Error("Google Vision n'a détecté aucun texte sur cette image.");
-  }
-  return text;
+  return parsed;
 }
 
-// Tesseract (WASM, CPU) peut être lent au premier démarrage dans un
-// environnement serverless contraint : borné lui aussi, pour que le pire cas
-// (Vision + fallback Tesseract) reste sous le maxDuration des routes API et
-// ne fasse jamais tourner la requête jusqu'au timeout brutal de Vercel.
-const TESSERACT_TIMEOUT_MS = 25000;
-
-async function extractTextWithTesseract(buffer) {
-  const { createWorker } = await import("tesseract.js");
-  const worker = await createWorker("fra+eng");
-  try {
-    const { data } = await withTimeout(
-      worker.recognize(buffer),
-      TESSERACT_TIMEOUT_MS,
-      "Tesseract : délai dépassé"
-    );
-    return data.text || "";
-  } finally {
-    await worker.terminate();
-  }
-}
-
-/**
- * OCR d'une image avec Google Vision en priorité et repli automatique et
- * silencieux sur Tesseract (identifiants absents, quota dépassé, erreur
- * réseau, aucun texte détecté...). L'Extracteur doit rester fonctionnel même
- * sans les identifiants Google configurés.
- */
 async function runImageOcr(buffer) {
   try {
-    return await extractTextWithVision(buffer);
+    const res = await extractJobAnnouncementWithGemini(buffer, "image/jpeg");
+    return res?.raw_text || res?.email || "";
   } catch (err) {
-    console.warn("Google Vision indisponible, repli sur Tesseract:", err.message);
-    return extractTextWithTesseract(buffer);
+    console.error("Gemini Flash OCR Error:", err.message);
+    return "";
   }
 }
 

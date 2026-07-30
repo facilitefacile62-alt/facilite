@@ -11,6 +11,7 @@ export default function ExtracteurPage() {
   const [imagePreview, setImagePreview] = useState(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedEmail, setExtractedEmail] = useState(null);
+  const [extractedData, setExtractedData] = useState(null);
   const [extractionMessage, setExtractionMessage] = useState(null);
 
   const [isSending, setIsSending] = useState(false);
@@ -49,15 +50,12 @@ export default function ExtracteurPage() {
 
     setIsExtracting(true);
     setExtractedEmail(null);
+    setExtractedData(null);
     setExtractionMessage(null);
     setSendSuccess(false);
 
-    // Filet de sécurité côté client : l'OCR (Vision + repli Tesseract) est
-    // borné côté serveur, mais si la réponse ne revient jamais (coupure
-    // réseau, fonction tuée sans réponse propre...), le bouton ne doit
-    // jamais rester bloqué indéfiniment sur "Analyse en cours".
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 40000);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -75,14 +73,15 @@ export default function ExtracteurPage() {
 
       if (data.email) {
         setExtractedEmail(data.email);
+        setExtractedData(data);
       } else {
-        setExtractionMessage(data.error || "Aucune adresse e-mail détectée sur cette photo.");
+        setExtractionMessage(data.error || "Aucune adresse e-mail détectée sur cette affiche.");
       }
     } catch (err) {
-      console.error("Erreur d'extraction:", err);
+      console.error("Erreur d'extraction Gemini:", err);
       setExtractionMessage(
         err.name === "AbortError"
-          ? "L'analyse a pris trop de temps. Réessayez avec une photo plus légère ou mieux cadrée."
+          ? "L'analyse Gemini a pris trop de temps. Réessayez avec une photo mieux cadrée."
           : "Erreur lors de la lecture de l'image."
       );
     } finally {
@@ -241,17 +240,42 @@ export default function ExtracteurPage() {
           {/* E-mail détecté & Bouton 1-Click */}
           {extractedEmail && (
             <div className="space-y-4 animate-fade-in">
-              {/* Encadré vert de détection */}
-              <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center text-lg shadow-sm">
-                    ✉️
-                  </div>
-                  <div>
-                    <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider block">E-mail détecté</span>
-                    <span className="text-sm font-black text-emerald-900 font-mono">{extractedEmail}</span>
+              {/* Encadré vert de détection avec détails Gemini */}
+              <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center text-lg shadow-sm">
+                      ✉️
+                    </div>
+                    <div>
+                      <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider block">E-mail détecté par Gemini 2.5 Flash</span>
+                      <span className="text-sm font-black text-emerald-900 font-mono">{extractedEmail}</span>
+                    </div>
                   </div>
                 </div>
+
+                {extractedData && (extractedData.job_title || extractedData.company || extractedData.contract_type) && (
+                  <div className="pt-3 border-t border-emerald-200/60 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold text-emerald-950">
+                    {extractedData.job_title && (
+                      <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
+                        <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Poste</span>
+                        <span>{extractedData.job_title}</span>
+                      </div>
+                    )}
+                    {extractedData.company && (
+                      <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
+                        <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Entreprise</span>
+                        <span>{extractedData.company}</span>
+                      </div>
+                    )}
+                    {extractedData.contract_type && (
+                      <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
+                        <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Contrat</span>
+                        <span>{extractedData.contract_type}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Confirmation de succès */}

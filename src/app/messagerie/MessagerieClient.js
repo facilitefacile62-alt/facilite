@@ -748,15 +748,30 @@ export default function MessagerieClient() {
 
   // Handle active message read status
   useEffect(() => {
-    if (activeConvId) {
-      setConversations(prev => prev.map(c => {
-        if (c.id === activeConvId && c.unreadCount > 0) {
-          return { ...c, unreadCount: 0 };
-        }
-        return c;
-      }));
+    if (!activeConvId) return;
+
+    setConversations(prev => prev.map(c => {
+      if (c.id === activeConvId && c.unreadCount > 0) {
+        return { ...c, unreadCount: 0 };
+      }
+      return c;
+    }));
+
+    // Marquage réel en base (is_read=true) : seule la conversation fusionnée
+    // (id 1) correspond à des lignes persistées dans `messages` — le fil IA
+    // n'y est jamais stocké. Sans ce UPDATE, le badge global de la navbar ne
+    // redescendait jamais après lecture, seul l'état local était réinitialisé.
+    if (activeConvId === 1 && userSession?.user?.id) {
+      supabase
+        .from("messages")
+        .update({ is_read: true })
+        .eq("receiver_id", userSession.user.id)
+        .eq("is_read", false)
+        .then(({ error }) => {
+          if (error) console.error("Erreur marquage des messages comme lus:", error.message);
+        });
     }
-  }, [activeConvId]);
+  }, [activeConvId, userSession]);
 
   // Modals management
   const handleOpenContactModal = (e) => {
