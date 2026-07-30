@@ -6,6 +6,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import ApplyModal from "@/components/ApplyModal";
 
+export const dynamic = "force-dynamic";
+
 const EDUCATION_LEVELS = ["Aucun", "CM2", "Brevet", "BAC", "Licence", "Master", "Doctorat"];
 const levelRank = (level) => {
   const idx = EDUCATION_LEVELS.indexOf(level || "Aucun");
@@ -36,20 +38,27 @@ export default function OffresPage() {
         if (session?.user?.id) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("education_level")
+            .select("education_level, degree")
             .eq("id", session.user.id)
             .single();
-          setCandidateEducationLevel(profile?.education_level || "Aucun");
+          setCandidateEducationLevel(profile?.degree || profile?.education_level || "Aucun");
         }
 
+        // Récupérer toutes les offres d'emploi publiques sans bloquer sur un filtre de statut restrictif
         const { data, error } = await supabase
           .from("job_offers")
           .select("*")
-          .eq("is_active", true)
           .order("created_at", { ascending: false });
 
-        if (error) console.error("Erreur chargement des offres:", error);
-        else setOffers(data || []);
+        if (error) {
+          console.error("Erreur chargement des offres:", error);
+        } else {
+          // Filtrer dynamiquement côté client (is_active !== false ET status !== 'closed' / 'paused')
+          const activeOffers = (data || []).filter(
+            (o) => o.is_active !== false && o.status !== "closed" && o.status !== "paused"
+          );
+          setOffers(activeOffers);
+        }
       } catch (err) {
         console.error("Exception chargement des offres:", err);
       } finally {
