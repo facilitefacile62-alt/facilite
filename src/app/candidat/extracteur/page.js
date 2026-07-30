@@ -7,6 +7,17 @@ import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
+// Filet de sécurité : si le serveur renvoie malgré tout une erreur brute
+// (JSON stringifié d'un SDK, objet imbriqué...) plutôt qu'une phrase lisible,
+// on ne l'affiche jamais telle quelle à l'utilisateur.
+function toReadableErrorMessage(error) {
+  const fallback = "Impossible d'analyser l'image pour le moment. Réessayez dans quelques instants.";
+  if (!error) return fallback;
+  if (typeof error !== "string") return fallback;
+  const looksLikeRawJson = error.trim().startsWith("{") || error.trim().startsWith("[");
+  return looksLikeRawJson ? fallback : error;
+}
+
 export default function ExtracteurPage() {
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
@@ -78,7 +89,7 @@ export default function ExtracteurPage() {
         setExtractedEmail(data.email);
         setExtractedData(data);
       } else {
-        setExtractionMessage(data.error || "Aucune adresse e-mail détectée sur cette affiche.");
+        setExtractionMessage(toReadableErrorMessage(data.error) || "Aucune adresse e-mail détectée sur cette affiche.");
       }
     } catch (err) {
       console.error("Erreur d'extraction Gemini:", err);
@@ -252,7 +263,7 @@ export default function ExtracteurPage() {
                       ✉️
                     </div>
                     <div>
-                      <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider block">E-mail détecté par Gemini 2.5 Flash</span>
+                      <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider block">E-mail détecté par l'IA</span>
                       <span className="text-sm font-black text-emerald-900 font-mono">{extractedEmail}</span>
                     </div>
                   </div>

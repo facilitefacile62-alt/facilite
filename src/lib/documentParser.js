@@ -18,74 +18,107 @@ function withTimeout(promise, ms, errorMessage) {
   ]);
 }
 
+// Modèles essayés dans l'ordre : gemini-1.5-flash en premier (rapide, léger,
+// disponible sur v1beta/v1 pour tous les projets), les suivants en repli
+// automatique si un modèle renvoie 404/NOT_FOUND (dépréciation, modèle non
+// activé sur le projet...) ou échoue pour toute autre raison — l'API Gemini
+// change régulièrement la disponibilité de ses modèles par projet/région, un
+// seul nom de modèle codé en dur casse donc la fonctionnalité entière dès
+// qu'il est retiré (c'est exactement ce qui est arrivé avec gemini-2.5-flash).
+const CANDIDATE_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-2.5-flash"];
+
+function extractGeminiErrorMessage(err) {
+  return String(err?.message || err || "");
+}
+
 /**
- * Extraction et OCR d'image avec l'API Gemini 2.5 Flash via @google/genai.
- * Détecte le texte et extrait les informations d'annonces en JSON ultra-rapide sans dépendances lourdes (Vision/Tesseract).
+ * Extraction et OCR d'image avec l'API Gemini via REST : détecte le
+ * texte et extrait les informations d'annonces en JSON. 
  */
 export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image/jpeg") {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
 
-  if (!apiKey) {
+  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") {
     return {
       errorKeyMissing: true,
       error: "Clé API Gemini introuvable. Veuillez configurer GEMINI_API_KEY dans Vercel/env.",
     };
   }
 
-  try {
-    const { GoogleGenAI } = await import("@google/genai");
-    const ai = new GoogleGenAI({ apiKey });
+  const prompt = `Analyse cette affiche d'emploi/recrutement. Extrais l'adresse e-mail du recruteur, le titre du poste, le nom de l'entreprise et le type de contrat. Réponds STRICTEMENT en JSON sous la forme : { "email": "...", "job_title": "...", "company": "...", "contract_type": "...", "raw_text": "..." }.`;
+  const base64Data = buffer.toString("base64");
 
-    const prompt = `Analyse cette affiche d'emploi/recrutement. Extrais l'adresse e-mail du recruteur, le titre du poste, le nom de l'entreprise et le type de contrat. Réponds STRICTEMENT en JSON sous la forme : { "email": "...", "job_title": "...", "company": "...", "contract_type": "...", "raw_text": "..." }.`;
+  const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
 
-    const base64Data = buffer.toString("base64");
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: mimeType || "image/jpeg",
-                data: base64Data,
-              },
-            },
-          ],
-        },
-      ],
-    });
-
-    const responseText = response.text || "";
-
-    let cleanedJson = responseText.trim();
-    if (cleanedJson.includes("```")) {
-      cleanedJson = cleanedJson.replace(/```json/gi, "").replace(/```/g, "").trim();
-    }
-
-    let parsed = null;
+  for (const model of modelsToTry) {
     try {
-      parsed = JSON.parse(cleanedJson);
-    } catch {
-      const emailMatch = responseText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-      parsed = {
-        email: emailMatch ? emailMatch[0].toLowerCase() : null,
-        job_title: null,
-        company: null,
-        contract_type: null,
-        raw_text: responseText,
-      };
-    }
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: prompt },
+                  {
+                    inlineData: {
+                      mimeType: mimeType || "image/jpeg",
+                      data: base64Data,
+                    },
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.1,
+            },
+          }),
+        }
+      );
 
-    return parsed;
-  } catch (err) {
-    console.error("[Extract Email Error]", err);
-    return {
-      error: err.message || "Erreur lors de l'analyse avec Gemini.",
-    };
+      if (!response.ok) {
+        const errText = await response.text();
+        console.warn(`[Gemini REST] Échec avec ${model} (${response.status}):`, errText.slice(0, 150));
+        continue;
+      }
+
+      const resJson = await response.json();
+      const responseText = resJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      let cleanedJson = responseText.trim();
+      if (cleanedJson.includes("```")) {
+        cleanedJson = cleanedJson.replace(/```json/gi, "").replace(/```/g, "").trim();
+      }
+
+      let parsed = null;
+      try {
+        parsed = JSON.parse(cleanedJson);
+      } catch {
+        const emailMatch = responseText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        parsed = {
+          email: emailMatch ? emailMatch[0].toLowerCase() : null,
+          job_title: null,
+          company: null,
+          contract_type: null,
+          raw_text: responseText,
+        };
+      }
+
+      if (parsed) return parsed;
+    } catch (err) {
+      console.warn(`[Gemini REST] Erreur réseau/fetch avec ${model}:`, err.message);
+    }
   }
+
+  return {
+    error: "Erreur lors de l'analyse avec Gemini. Veuillez vérifier votre photo ou réessayer.",
+  };
 }
 
 async function runImageOcr(buffer) {

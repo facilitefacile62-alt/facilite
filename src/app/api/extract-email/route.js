@@ -90,7 +90,7 @@ export async function POST(req) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Erreur lors de l'analyse avec Gemini.",
+        error: "Impossible d'analyser l'image pour le moment. Réessayez dans quelques instants.",
       },
       { status: 400 }
     );
