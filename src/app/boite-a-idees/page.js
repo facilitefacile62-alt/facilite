@@ -202,7 +202,11 @@ export default function BoiteAIdees() {
   }, [searchQuery, selectedLang]);
 
   const handleSearchResultClick = (slide) => {
-    // Redirect to home page with models section visible
+    // Redirect to home page with models section visible. Navigation
+    // impérative volontaire (rechargement complet), pas une mutation de
+    // donnée React — react-hooks/immutability flatte tout assignment sur un
+    // objet global comme window, y compris ce pattern standard.
+    // eslint-disable-next-line react-hooks/immutability
     window.location.href = "/#section-models";
   };
 

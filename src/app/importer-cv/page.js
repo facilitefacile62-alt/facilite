@@ -262,49 +262,6 @@ export default function ImporterCvPage() {
     setScanProgress(0);
   };
 
-  // Simulation timeline for scanning CV
-  useEffect(() => {
-    if (stage !== "scanning") return;
-
-    // Fast-updating scanning lines and logs
-    const progressInterval = setInterval(() => {
-      setScanProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
-        return prev + 1;
-      });
-    }, 40);
-
-    const stepInterval = setInterval(() => {
-      setScanStepIndex((prev) => {
-        if (prev >= scanSteps.length - 1) {
-          clearInterval(stepInterval);
-          // Transition to Edit mode with data extracted from the document's real content
-          setTimeout(async () => {
-            await parseFileContent(file);
-            setStage("edit");
-            triggerToast(t.toastSuccessImport, "fa-circle-check");
-          }, 600);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 550);
-
-    return () => {
-      clearInterval(progressInterval);
-      clearInterval(stepInterval);
-    };
-    // parseFileContent et t.toastSuccessImport volontairement omis : ce sont
-    // des références recréées à chaque rendu (fonction non mémoïsée, objet
-    // de traduction), les ajouter relancerait toute l'animation de scan à
-    // chaque re-render du parent plutôt qu'une seule fois par changement
-    // réel de stage/file.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, file, scanSteps]);
-
   // Extraction réelle du contenu du document (jamais basée sur le nom du fichier)
   const parseFileContent = async (selectedFile) => {
     try {
@@ -385,6 +342,50 @@ export default function ImporterCvPage() {
       });
     }
   };
+
+  // Simulation timeline for scanning CV
+  useEffect(() => {
+    if (stage !== "scanning") return;
+
+    // Fast-updating scanning lines and logs
+    const progressInterval = setInterval(() => {
+      setScanProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + 1;
+      });
+    }, 40);
+
+    const stepInterval = setInterval(() => {
+      setScanStepIndex((prev) => {
+        if (prev >= scanSteps.length - 1) {
+          clearInterval(stepInterval);
+          // Transition to Edit mode with data extracted from the document's real content
+          setTimeout(async () => {
+            await parseFileContent(file);
+            setStage("edit");
+            triggerToast(t.toastSuccessImport, "fa-circle-check");
+          }, 600);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 550);
+
+    return () => {
+      clearInterval(progressInterval);
+      clearInterval(stepInterval);
+    };
+    // parseFileContent et t.toastSuccessImport volontairement omis : ce sont
+    // des références recréées à chaque rendu (fonction non mémoïsée, objet
+    // de traduction), les ajouter relancerait toute l'animation de scan à
+    // chaque re-render du parent plutôt qu'une seule fois par changement
+    // réel de stage/file.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, file, scanSteps]);
+
 
   const handleFieldChange = (field, value) => {
     setParsedData(prev => ({ ...prev, [field]: value }));

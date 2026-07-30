@@ -430,8 +430,8 @@ export default function LoginPage() {
               </button>
 
               {/* Séparateur OR */}
-              <div className="relative flex items-center justify-center my-6">
-                <div className="border-t border-gray-200 w-full"></div>
+              <div className="relative flex items-center justify-center my-4">
+                <div className="absolute border-t border-gray-200 w-full top-1/2"></div>
                 <span className="bg-white px-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider relative z-10">
                   OR
                 </span>
@@ -441,7 +441,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => handleOAuthLogin("google")}
-                className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
+                className="w-full py-2.5 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
@@ -465,7 +465,7 @@ export default function LoginPage() {
               </button>
 
               {/* Inscription Sign up */}
-              <div className="text-center pt-4 border-t border-gray-100 mt-4">
+              <div className="text-center mt-3">
                 <p className="text-xs text-gray-600 font-semibold flex items-center justify-center space-x-1.5">
                   <span>Don't have an account yet?</span>
                   <Link
