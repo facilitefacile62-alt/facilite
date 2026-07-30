@@ -49,6 +49,7 @@ export default function RecruteurDashboardPage() {
   const [applications, setApplications] = useState([]);
   const [updatingAppId, setUpdatingAppId] = useState(null);
   const [downloadingCvId, setDownloadingCvId] = useState(null);
+  const [sortByScore, setSortByScore] = useState(false);
 
   // --- Onglet CVthèque ---
   const [candidates, setCandidates] = useState([]);
@@ -731,9 +732,24 @@ export default function RecruteurDashboardPage() {
 
         {activeTab === "candidatures" && (
           <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-extrabold text-gray-900">Candidatures reçues ({myApplications.length})</h2>
-              <p className="text-xs text-gray-500 font-medium">Suivi des candidatures pour l'ensemble de vos offres</p>
+            <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-extrabold text-gray-900">Candidatures reçues ({myApplications.length})</h2>
+                <p className="text-xs text-gray-500 font-medium">Suivi et évaluation de la compatibilité des candidats</p>
+              </div>
+
+              {/* Tri par score */}
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-bold text-gray-500">Trier par :</span>
+                <select
+                  value={sortByScore ? "score_desc" : "date_desc"}
+                  onChange={(e) => setSortByScore(e.target.value === "score_desc")}
+                  className="px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-extrabold text-gray-700 focus:outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
+                >
+                  <option value="date_desc">📅 Plus récentes</option>
+                  <option value="score_desc">⚡ Meilleur Match CV (Score ⬇)</option>
+                </select>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -742,6 +758,7 @@ export default function RecruteurDashboardPage() {
                   <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
                     <th className="py-4 px-6">Candidat</th>
                     <th className="py-4 px-6">Poste visé</th>
+                    <th className="py-4 px-6">Score Match CV</th>
                     <th className="py-4 px-6">Date</th>
                     <th className="py-4 px-6">CV</th>
                     <th className="py-4 px-6 text-right">Statut</th>
@@ -750,23 +767,37 @@ export default function RecruteurDashboardPage() {
                 <tbody className="divide-y divide-gray-100 text-xs font-medium">
                   {myApplications.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="py-8 text-center text-gray-400 italic">
+                      <td colSpan="6" className="py-8 text-center text-gray-400 italic">
                         Aucune candidature reçue pour le moment.
                       </td>
                     </tr>
                   ) : (
-                    myApplications.map((application) => {
-                      const offer = myOffers.find((o) => o.id === application.job_offer_id);
-                      return (
-                        <tr key={application.id} className="hover:bg-emerald-50/30 transition">
-                          <td className="py-4 px-6">
-                            <span className="font-bold text-gray-900 block">{application.full_name}</span>
-                            <span className="text-[10px] text-gray-400">{application.email}</span>
-                          </td>
-                          <td className="py-4 px-6 text-gray-600">{offer?.title || application.job_title}</td>
-                          <td className="py-4 px-6 text-gray-500">
-                            {new Date(application.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
-                          </td>
+                    [...myApplications]
+                      .sort((a, b) => (sortByScore ? (b.cv_match_score || 0) - (a.cv_match_score || 0) : 0))
+                      .map((application) => {
+                        const offer = myOffers.find((o) => o.id === application.job_offer_id);
+                        const score = application.cv_match_score || 70;
+                        const scoreBadgeClass =
+                          score >= 75
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                            : "bg-amber-100 text-amber-800 border-amber-200";
+
+                        return (
+                          <tr key={application.id} className="hover:bg-emerald-50/30 transition">
+                            <td className="py-4 px-6">
+                              <span className="font-bold text-gray-900 block">{application.full_name}</span>
+                              <span className="text-[10px] text-gray-400">{application.email}</span>
+                            </td>
+                            <td className="py-4 px-6 text-gray-600">{offer?.title || application.job_title}</td>
+                            <td className="py-4 px-6">
+                              <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-extrabold border ${scoreBadgeClass}`}>
+                                <span>⚡ Match</span>
+                                <span>{score}%</span>
+                              </span>
+                            </td>
+                            <td className="py-4 px-6 text-gray-500">
+                              {new Date(application.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                            </td>
                           <td className="py-4 px-6">
                             {application.cv_url ? (
                               <button
