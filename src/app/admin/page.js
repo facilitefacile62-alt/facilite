@@ -56,9 +56,9 @@ export default function AdminDashboardPage() {
   const [tableRoleFilter, setTableRoleFilter] = useState("all");
   const [updatingUserId, setUpdatingUserId] = useState(null);
 
-  const [toast, setToast] = useState({ show: false, message: "", tone: "success" });
-  const triggerToast = (message, tone = "success") => {
-    setToast({ show: true, message, tone });
+  const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-check" });
+  const triggerToast = (message, icon = "fa-circle-check") => {
+    setToast({ show: true, message, icon });
     setTimeout(() => setToast((t) => ({ ...t, show: false })), 3000);
   };
 
@@ -111,19 +111,27 @@ export default function AdminDashboardPage() {
   }, []);
 
   const handleRoleChange = async (userId, newRole) => {
+    const previousUsers = users;
+    setUpdatingUserId(userId);
+    // Mise à jour optimiste : bascule immédiate de l'UI, restaurée en cas d'échec.
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+
     const { error } = await supabase
       .from("profiles")
       .update({ role: newRole, updated_at: new Date().toISOString() })
       .eq("id", userId);
 
+    setUpdatingUserId(null);
+
     if (error) {
       console.error("Erreur mise à jour rôle:", error);
+      setUsers(previousUsers);
       triggerToast("Impossible de mettre à jour le rôle : " + error.message, "fa-triangle-exclamation");
       return;
     }
 
-    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
-    triggerToast(`Rôle mis à jour avec succès : ${newRole.toUpperCase()}`, "fa-circle-check");
+    const target = previousUsers.find((u) => u.id === userId);
+    triggerToast(`Rôle de ${target?.full_name || target?.email || "l'utilisateur"} mis à jour : ${newRole.toUpperCase()}`, "fa-circle-check");
   };
 
   // --- KPI ---
