@@ -776,11 +776,15 @@ export default function RecruteurDashboardPage() {
                       .sort((a, b) => (sortByScore ? (b.cv_match_score || 0) - (a.cv_match_score || 0) : 0))
                       .map((application) => {
                         const offer = myOffers.find((o) => o.id === application.job_offer_id);
-                        const score = application.cv_match_score || 70;
-                        const scoreBadgeClass =
-                          score >= 75
-                            ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                            : "bg-amber-100 text-amber-800 border-amber-200";
+                        const score = application.cv_match_score;
+                        const hasScore = score !== null && score !== undefined;
+                        const scoreBadgeClass = !hasScore
+                          ? "bg-gray-100 text-gray-500 border-gray-200"
+                          : score >= 75
+                          ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                          : score >= 50
+                          ? "bg-amber-100 text-amber-800 border-amber-200"
+                          : "bg-red-100 text-red-800 border-red-200";
 
                         return (
                           <tr key={application.id} className="hover:bg-emerald-50/30 transition">
@@ -790,9 +794,9 @@ export default function RecruteurDashboardPage() {
                             </td>
                             <td className="py-4 px-6 text-gray-600">{offer?.title || application.job_title}</td>
                             <td className="py-4 px-6">
-                              <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-extrabold border ${scoreBadgeClass}`}>
+                              <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-extrabold border whitespace-nowrap ${scoreBadgeClass}`}>
                                 <span>⚡ Match</span>
-                                <span>{score}%</span>
+                                <span>{hasScore ? `${score}%` : "N/A"}</span>
                               </span>
                             </td>
                             <td className="py-4 px-6 text-gray-500">
