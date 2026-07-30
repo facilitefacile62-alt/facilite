@@ -54,6 +54,13 @@ export default function AdminDashboardPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [tableRoleFilter, setTableRoleFilter] = useState("all");
+  const [updatingUserId, setUpdatingUserId] = useState(null);
+
+  const [toast, setToast] = useState({ show: false, message: "", tone: "success" });
+  const triggerToast = (message, tone = "success") => {
+    setToast({ show: true, message, tone });
+    setTimeout(() => setToast((t) => ({ ...t, show: false })), 3000);
+  };
 
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
@@ -110,10 +117,13 @@ export default function AdminDashboardPage() {
       .eq("id", userId);
 
     if (error) {
-      alert("Impossible de mettre à jour le rôle : " + error.message);
+      console.error("Erreur mise à jour rôle:", error);
+      triggerToast("Impossible de mettre à jour le rôle : " + error.message, "fa-triangle-exclamation");
       return;
     }
+
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+    triggerToast(`Rôle mis à jour avec succès : ${newRole.toUpperCase()}`, "fa-circle-check");
   };
 
   // --- KPI ---
@@ -183,6 +193,13 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#F7F7F8] font-sans flex">
+      {/* Toast Notification Flottant */}
+      {toast.show && (
+        <div className="fixed top-5 right-5 z-[1000] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 animate-fade-in-down">
+          <i className={`fa-solid ${toast.icon} text-orange-400 text-base`}></i>
+          <span className="text-xs font-extrabold">{toast.message}</span>
+        </div>
+      )}
       {/* ------------------------------------------------------------- */}
       {/* SIDEBAR LATÉRALE */}
       {/* ------------------------------------------------------------- */}
@@ -469,13 +486,14 @@ export default function AdminDashboardPage() {
                       <th className="py-4 px-6">Utilisateur</th>
                       <th className="py-4 px-6">Email</th>
                       <th className="py-4 px-6">Rôle Actuel</th>
-                      <th className="py-4 px-6 text-right">Modifier Rôle</th>
+                      <th className="py-4 px-6">Inscription</th>
+                      <th className="py-4 px-6 text-right">Action (Rôle)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs font-medium">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan="4" className="py-8 text-center text-gray-400 italic">
+                        <td colSpan="5" className="py-8 text-center text-gray-400 italic">
                           Aucun utilisateur trouvé.
                         </td>
                       </tr>
@@ -483,24 +501,38 @@ export default function AdminDashboardPage() {
                       filteredUsers.map((user) => (
                         <tr key={user.id} className="hover:bg-orange-50/30 transition">
                           <td className="py-4 px-6 flex items-center space-x-3">
-                            <div className="w-9 h-9 rounded-full bg-gray-800 text-white font-extrabold flex items-center justify-center text-xs shadow-inner">
-                              {(user.full_name || "U").charAt(0).toUpperCase()}
+                            {user.avatar_url ? (
+                              <img
+                                src={user.avatar_url}
+                                alt={user.full_name || "Avatar"}
+                                className="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-xs"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-gray-900 text-white font-extrabold flex items-center justify-center text-xs shadow-inner">
+                                {(user.full_name || user.email || "U").charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <span className="font-bold text-gray-900 block">{user.full_name || "Sans nom"}</span>
+                              <span className="text-[10px] text-gray-400 font-normal">ID: {user.id.slice(0, 8)}...</span>
                             </div>
-                            <span className="font-bold text-gray-900">{user.full_name || "Sans nom"}</span>
                           </td>
-                          <td className="py-4 px-6 text-gray-600">{user.email}</td>
+                          <td className="py-4 px-6 text-gray-600 font-mono text-[11px]">{user.email}</td>
                           <td className="py-4 px-6">
                             <RoleBadge role={user.role || "candidat"} />
+                          </td>
+                          <td className="py-4 px-6 text-gray-500 font-medium">
+                            {user.created_at ? new Date(user.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "Inconnue"}
                           </td>
                           <td className="py-4 px-6 text-right">
                             <select
                               value={user.role || "candidat"}
                               onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-bold focus:outline-none focus:border-orange-500 cursor-pointer shadow-xs"
+                              className="px-3 py-1.5 bg-white border border-gray-300 rounded-xl text-xs font-extrabold focus:outline-none focus:border-orange-500 cursor-pointer shadow-xs"
                             >
-                              <option value="candidat">Candidat</option>
-                              <option value="recruteur">Recruteur</option>
-                              <option value="admin">Administrateur</option>
+                              <option value="candidat">🟢 Candidat</option>
+                              <option value="recruteur">💼 Recruteur</option>
+                              <option value="admin">🛡️ Administrateur</option>
                             </select>
                           </td>
                         </tr>
