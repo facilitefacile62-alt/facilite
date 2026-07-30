@@ -5,11 +5,7 @@ import mammoth from "mammoth";
 // (cas des documents scannés/photographiés) et qu'il faut basculer en OCR.
 const MIN_PDF_TEXT_LENGTH = 30;
 
-// Délai maximal accordé à Google Vision avant d'abandonner et de basculer sur
-// Tesseract. Sans ce garde-fou, un appel réseau qui traîne (clé invalide mal
-// détectée, API qui ne répond pas...) peut faire tourner la fonction jusqu'au
-// timeout de la plateforme Vercel — perçu côté utilisateur comme un blocage
-// en boucle de l'analyse d'image.
+// Timeout court pour l'appel à Google Vision (8 secondes maximum)
 const VISION_TIMEOUT_MS = 8000;
 
 function withTimeout(promise, ms, errorMessage) {
@@ -32,16 +28,14 @@ function withTimeout(promise, ms, errorMessage) {
 async function extractTextWithVision(buffer) {
   const projectId = process.env.GOOGLE_PROJECT_ID;
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  // Sur Vercel (comme la plupart des plateformes), les variables d'env sont
-  // stockées sur une seule ligne : les retours à la ligne du PEM sont
-  // échappés en "\n" littéral et doivent être reconvertis, sans quoi la clé
-  // est invalide et chaque appel Google échoue.
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
 
-  if (!projectId || !clientEmail || !privateKey) {
+  if (!projectId || !clientEmail || !rawPrivateKey) {
     throw new Error("Google Vision non configuré (variables GOOGLE_PROJECT_ID/GOOGLE_CLIENT_EMAIL/GOOGLE_PRIVATE_KEY manquantes).");
   }
 
+  // Sur Vercel (comme la plupart des plateformes), les variables d'env sont
+  // stockées sur une seule ligne : les retours à la ligne du PEM sont
   // échappés en "\n" littéral et doivent être reconvertis.
   const privateKey = rawPrivateKey.replace(/\\n/g, "\n");
 
@@ -95,7 +89,7 @@ async function runImageOcr(buffer) {
   try {
     return await extractTextWithVision(buffer);
   } catch (err) {
-    console.warn("Google Vision indisponible, repli sur Tesseract:", err?.message || String(err));
+    console.warn("Google Vision indisponible, repli sur Tesseract:", err.message);
     return extractTextWithTesseract(buffer);
   }
 }
