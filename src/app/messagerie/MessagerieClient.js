@@ -144,79 +144,12 @@ const translations = {
   }
 };
 
-// 3 IA d'assistance spécialisées
-const AI_ROLES = [
-  {
-    id: "cv",
-    name: "Rédaction & Optimisation CV",
-    badge: "📄 CV & Lettre",
-    icon: "🤖",
-    description: "Rédaction de CV, lettres de motivation, mise en valeur des compétences.",
-    systemPrompt: "Tu es une IA experte en rédaction de CV et de lettres de motivation."
-  },
-  {
-    id: "coach",
-    name: "Coach Recrutement & Entretien",
-    badge: "💼 Coach Entretien",
-    icon: "💼",
-    description: "Simulation d'entretiens d'embauche, conseils recruteurs et négociation.",
-    systemPrompt: "Tu es un coach expert en entretien d'embauche et négociation salariale."
-  },
-  {
-    id: "orientation",
-    name: "Orientation & Assistance",
-    badge: "🧭 Orientation",
-    icon: "🧭",
-    description: "Démarches administratives, orientation académique et reconversion pro.",
-    systemPrompt: "Tu es un conseiller expert en orientation professionnelle et démarches."
-  }
-];
-
-const DEFAULT_AI_WELCOME = {
-  id: 'welcome-msg',
-  sender: 'bot',
-  text: "Bonjour ! 👋 Bienvenue sur l'Assistance IA Facilite.\n\nQuelle assistance souhaitez-vous aujourd'hui ?\n1️⃣ Rédaction & Correction de CV\n2️⃣ Coaching Entretien d'embauche\n3️⃣ Orientation & Démarches",
-  time: "12:00",
-  status: "read",
-  isPinned: false,
-  persisted: false
-};
-
-const AI_WELCOME_MESSAGE = {
-  id: "ai-welcome",
-  role: "assistant",
-  content: DEFAULT_AI_WELCOME.text
-};
-
-// Discussion IA épinglée permanente
-const AI_PINNED_CHAT = {
-  id: 'ai-assistant',
-  name: 'Assistance IA Facilite',
-  title: 'IA & Orientation Pro',
-  company: 'Facilite Bot',
-  avatar: '🤖',
-  avatarInitials: '🤖',
-  avatarColor: 'bg-emerald-600',
-  lastMessage: 'Disponible 24/7 pour vos CV et démarches',
-  time: "Disponible",
-  unreadCount: 0,
-  isPinned: true,
-  isAI: true,
-  online: true,
-  favorite: true,
-  messages: [DEFAULT_AI_WELCOME]
-};
-
-// Initialisation avec la discussion IA épinglée permanente
-const initialConversations = [AI_PINNED_CHAT];
+const initialConversations = [];
 
 export default function MessagerieClient() {
   const pathname = usePathname();
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // Rôle IA actif (par défaut : Rédaction & Optimisation CV)
-  const [activeAiRole, setActiveAiRole] = useState("cv");
   
   // Layout & Dropdown States
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
@@ -290,333 +223,6 @@ export default function MessagerieClient() {
   // Protection stricte et isolation des messages par l'ID d'utilisateur Supabase
   const [userSession, setUserSession] = useState(null);
 
-  // Discussion IA épinglée : appel direct à /api/ai-chat (DeepSeek, spécialisé
-  // par rôle) avec persistance Supabase dans la table dédiée assistant_messages.
-  //
-  // Pourquoi pas public.messages (essayé précédemment avec un UUID de "bot"
-  // factice) : messages.receiver_id référence auth.users(id) — un faux UUID
-  // viole la clé étrangère — et la policy RLS d'INSERT exige sender_id =
-  // auth.uid(), ce qui bloque systématiquement l'enregistrement des réponses
-  // de l'assistant (le client authentifié n'est jamais le "bot"). Chaque ligne
-  // de assistant_messages — rôle "user" ou "assistant" — appartient à
-  // l'utilisateur authentifié (user_id = auth.uid()), donc aucun compte bot
-  // n'est nécessaire. Voir supabase/migrations/20260729224100_assistant_messages.sql.
-  const [assistantMessages, setAssistantMessages] = useState([AI_WELCOME_MESSAGE]);
-  const [assistantLoading, setAssistantLoading] = useState(false);
-  const assistantIdRef = useRef(0);
-
-  // ---------------------------------------------------------------------------
-  // GESTION DES CONVERSATIONS IA (PERSISTANCE MULTI-SESSION PAR conversation_id)
-  // ---------------------------------------------------------------------------
-  const [currentConversationId, setCurrentConversationId] = useState(null);
-  const [aiHistoryModalOpen, setAiHistoryModalOpen] = useState(false);
-  const [aiConversationsHistory, setAiConversationsHistory] = useState([]);
-
-  // Génère ou initialise un nouveau conversation_id
-  const getOrCreateConversationId = () => {
-    if (currentConversationId) return currentConversationId;
-    const newId = (typeof window !== "undefined" && window.crypto && typeof window.crypto.randomUUID === "function")
-      ? window.crypto.randomUUID()
-      : `conv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    setCurrentConversationId(newId);
-    return newId;
-  };
-
-  // Charge l'historique complet des sessions IA pour la liste d'historique (icône horloge)
-  const fetchAllAiConversations = async (userId) => {
-    if (!userId) return;
-    try {
-      const { data, error } = await supabase
-        .from("assistant_messages")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Erreur chargement des conversations IA:", error);
-        return;
-      }
-
-      // Groupe par conversation_id
-      const grouped = {};
-      (data || []).forEach((row) => {
-        const cId = row.conversation_id || "default";
-        if (!grouped[cId]) {
-          grouped[cId] = {
-            id: cId,
-            lastMessage: row.content,
-            createdAt: row.created_at,
-            messagesCount: 1
-          };
-        } else {
-          grouped[cId].messagesCount += 1;
-        }
-      });
-
-      setAiConversationsHistory(Object.values(grouped));
-    } catch (err) {
-      console.error("Exception chargement conversations IA:", err);
-    }
-  };
-
-  // Charge les messages d'une discussion IA spécifique (ou la plus récente)
-  const loadAiMessagesFromSupabase = async (userId, targetConvId = null) => {
-    if (!userId) {
-      console.warn("loadAiMessagesFromSupabase appelé sans userId");
-      setAssistantMessages([AI_WELCOME_MESSAGE]);
-      return;
-    }
-    try {
-      let query = supabase
-        .from("assistant_messages")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: true });
-
-      if (targetConvId) {
-        query = query.eq("conversation_id", targetConvId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Erreur Sauvegarde Supabase (Lecture Messages IA):", error);
-        setAssistantMessages([AI_WELCOME_MESSAGE]);
-        return;
-      }
-
-      console.log("Messages chargés depuis Supabase:", data);
-
-      if (data && data.length > 0) {
-        // Déterminer la conversation_id active
-        const activeCId = targetConvId || data[data.length - 1].conversation_id || "default";
-        setCurrentConversationId(activeCId);
-
-        // Quand targetConvId est fourni, la requête SQL ci-dessus a déjà filtré côté
-        // serveur. Sans targetConvId (chargement initial), `data` contient TOUTES
-        // les conversations de l'utilisateur : il faut ici ne garder que celles de
-        // activeCId, sans quoi tous les fils passés se retrouvent mélangés.
-        const loadedMsgs = data
-          .filter(row => row.conversation_id === activeCId || !row.conversation_id)
-          .map((row) => ({
-            id: row.id,
-            role: row.role,
-            content: row.content,
-            createdAt: row.created_at
-          }));
-        setAssistantMessages([AI_WELCOME_MESSAGE, ...loadedMsgs]);
-      } else {
-        setAssistantMessages([AI_WELCOME_MESSAGE]);
-      }
-
-      // Recharger également la liste de l'historique
-      fetchAllAiConversations(userId);
-    } catch (err) {
-      console.error("Exception lors de la récupération de l'historique IA:", err);
-      setAssistantMessages([AI_WELCOME_MESSAGE]);
-    }
-  };
-
-  // Supprimer une discussion individuelle de l'historique
-  const handleDeleteAiConversation = async (convId, e) => {
-    if (e) e.stopPropagation();
-    if (!window.confirm("Voulez-vous vraiment supprimer cette discussion de votre historique ?")) return;
-
-    const userId = userSession?.user?.id;
-    if (!userId) return;
-
-    try {
-      const { error } = await supabase
-        .from("assistant_messages")
-        .delete()
-        .eq("user_id", userId)
-        .eq("conversation_id", convId);
-
-      if (error) {
-        console.error("Erreur lors de la suppression de la discussion IA:", error);
-        triggerToast("Erreur lors de la suppression", "fa-triangle-exclamation");
-        return;
-      }
-
-      triggerToast("Discussion supprimée", "fa-trash-can");
-      
-      // Si la discussion supprimée était la discussion active, réinitialiser
-      if (currentConversationId === convId) {
-        handleNewAiConversation();
-      }
-
-      // Rafraîchir la liste de l'historique
-      fetchAllAiConversations(userId);
-    } catch (err) {
-      console.error("Exception suppression discussion IA:", err);
-    }
-  };
-
-  // Démarrer une NOUVELLE DISCUSSION IA (+)
-  const handleNewAiConversation = () => {
-    const newId = (typeof window !== "undefined" && window.crypto && typeof window.crypto.randomUUID === "function")
-      ? window.crypto.randomUUID()
-      : `conv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    setCurrentConversationId(newId);
-    setAssistantMessages([AI_WELCOME_MESSAGE]);
-    triggerToast("Nouvelle discussion IA démarrée", "fa-plus");
-  };
-
-  // Charger une discussion spécifique choisie dans l'historique (icône horloge)
-  const handleSelectAiConversation = (convId) => {
-    if (!userSession?.user?.id) return;
-    setCurrentConversationId(convId);
-    loadAiMessagesFromSupabase(userSession.user.id, convId);
-    setAiHistoryModalOpen(false);
-    triggerToast("Discussion chargée", "fa-clock-rotate-left");
-  };
-
-  // Exporter la discussion IA active sous format texte / TXT
-  const handleExportAiConversation = () => {
-    if (!assistantMessages || assistantMessages.length === 0) return;
-
-    const exportText = assistantMessages
-      .map(m => `[${m.role === "user" ? "VOUS" : "IA ASSISTANT"}] ${m.createdAt ? new Date(m.createdAt).toLocaleString() : ""}\n${m.content}\n`)
-      .join("\n----------------------------------------\n\n");
-
-    const blob = new Blob([exportText], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `discussion-ia-${new Date().toISOString().slice(0, 10)}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    triggerToast("Discussion exportée en fichier .txt", "fa-file-arrow-down");
-  };
-
-  const appendAssistantMessage = async ({ content }) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id || userSession?.user?.id;
-
-    if (!userId) {
-      console.warn("Utilisateur non connecté : persistance Supabase désactivée pour ce message.");
-    }
-
-    const userMsg = {
-      id: `ai-u-${(assistantIdRef.current += 1)}`,
-      role: "user",
-      content
-    };
-
-    // 1. Mise à jour locale de l'historique
-    const historique = [...assistantMessages, userMsg];
-    setAssistantMessages(historique);
-    setAssistantLoading(true);
-
-    const activeConvId = getOrCreateConversationId();
-
-    // 2. Sauvegarde du message utilisateur dans assistant_messages (role: 'user', conversation_id)
-    if (userId) {
-      try {
-        const { error: insertUserErr } = await supabase.from("assistant_messages").insert({
-          user_id: userId,
-          role: "user",
-          content: content,
-          conversation_id: activeConvId
-        });
-        if (insertUserErr) {
-          console.error("Erreur Sauvegarde Supabase (Message User):", insertUserErr);
-        } else {
-          console.log("Sauvegarde Supabase (Message User) réussie.");
-        }
-      } catch (err) {
-        console.error("Erreur Sauvegarde Supabase (Message User Exception):", err);
-      }
-    }
-
-    try {
-      const token = session?.access_token || userSession?.access_token;
-
-      const res = await fetch("/api/ai-chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          messages: historique
-            .filter(m => m.id !== AI_WELCOME_MESSAGE.id)
-            .map(m => ({ role: m.role, content: m.content })),
-          activeAiRole
-        })
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
-
-      const botReplyText = data.reply || "Désolé, je n'ai pas pu générer de réponse.";
-
-      setAssistantMessages(prev => [
-        ...prev,
-        {
-          id: `ai-a-${(assistantIdRef.current += 1)}`,
-          role: "assistant",
-          content: botReplyText
-        }
-      ]);
-
-      // 3. Sauvegarde de la réponse de l'IA dans assistant_messages (role: 'assistant', conversation_id)
-      if (userId) {
-        try {
-          const { error: insertBotErr } = await supabase.from("assistant_messages").insert({
-            user_id: userId,
-            role: "assistant",
-            content: botReplyText,
-            conversation_id: activeConvId
-          });
-          if (insertBotErr) {
-            console.error("Erreur Sauvegarde Supabase (Message Bot):", insertBotErr);
-          } else {
-            console.log("Sauvegarde Supabase (Message Bot) réussie.");
-          }
-        } catch (err) {
-          console.error("Erreur Sauvegarde Supabase (Message Bot Exception):", err);
-        }
-      }
-    } catch (err) {
-      console.error("Messagerie AI Error:", err);
-      triggerToast(
-        selectedLang === "FR" ? "Erreur de l'assistant IA" : "AI assistant error",
-        "fa-triangle-exclamation"
-      );
-    } finally {
-      setAssistantLoading(false);
-    }
-  };
-
-  // Synchronise le fil useChat vers l'entrée ai-assistant de `conversations`
-  useEffect(() => {
-    const lastMsg = assistantMessages[assistantMessages.length - 1];
-    setConversations(prev => prev.map(c => {
-      if (c.id !== AI_PINNED_CHAT.id) return c;
-      return {
-        ...c,
-        lastMessage: lastMsg ? lastMsg.content : c.lastMessage,
-        messages: assistantMessages.map(m => ({
-          id: m.id,
-          sender: m.role === "user" ? "me" : "them",
-          text: m.content,
-          time: m.createdAt
-            ? new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-            : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          status: "read",
-          isPinned: false,
-          persisted: true
-        }))
-      };
-    }));
-  }, [assistantMessages]);
-
   useEffect(() => {
     async function loadUserSessionAndMessages() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -625,7 +231,6 @@ export default function MessagerieClient() {
         return;
       }
       setUserSession(session);
-      loadAiMessagesFromSupabase(session.user.id);
 
       // Écouter également les changements de session en temps réel
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
@@ -662,30 +267,16 @@ export default function MessagerieClient() {
             messages: formattedMsgs
           };
 
-          // Fusion avec l'état déjà en place plutôt qu'un remplacement brut : le fil
-          // IA (useChat) peut déjà avoir synchronisé son message d'accueil ou les
-          // premiers échanges avant que cette promesse ne se résolve. Utiliser la
-          // constante statique AI_PINNED_CHAT ici écraserait ce contenu (course
-          // entre cet effet asynchrone et l'effet de synchronisation useChat).
-          setConversations(prev => {
-            const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
-            return [aiConv, userConv];
-          });
-          setActiveConvId("ai-assistant");
+          setConversations([userConv]);
+          setActiveConvId(1);
         } else {
-          setConversations(prev => {
-            const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
-            return [aiConv];
-          });
-          setActiveConvId("ai-assistant");
+          setConversations([]);
+          setActiveConvId(null);
         }
       } catch (err) {
         console.error("Erreur de chargement des messages utilisateur:", err);
-        setConversations(prev => {
-          const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
-          return [aiConv];
-        });
-        setActiveConvId("ai-assistant");
+        setConversations([]);
+        setActiveConvId(null);
       }
 
       // Écouter les nouveaux messages insérés en temps réel (ex: e-mails de recrutement synchronisés)
@@ -705,7 +296,7 @@ export default function MessagerieClient() {
             if (newRow.sender_id === session.user.id || newRow.receiver_id === session.user.id) {
               const formatted = formatMessageRow(newRow, session.user.id);
               setConversations(prev => prev.map(c => {
-                if (c.id === 1 || c.id === "ai-assistant") {
+                if (c.id === 1) {
                   // Ne pas ajouter les doublons
                   if (c.messages.some(m => m.id === formatted.id)) return c;
                   return {
@@ -914,17 +505,6 @@ export default function MessagerieClient() {
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!messageText.trim()) return;
-
-    // Discussion IA : streaming réel via useChat, jamais persisté dans Supabase.
-    if (activeConvId === AI_PINNED_CHAT.id) {
-      const userMessageText = messageText;
-      setMessageText("");
-      setShowEmojiPicker(false);
-
-      // Le jeton Bearer est relu directement dans appendAssistantMessage.
-      appendAssistantMessage({ role: "user", content: userMessageText });
-      return;
-    }
 
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMessageText = messageText;
@@ -1168,7 +748,6 @@ export default function MessagerieClient() {
   // Filtre par type de discussion (Offres d'emploi / Demandes d'échange) — ne
   // s'applique qu'au fil de messages réels (pas au fil IA, hors de ce concept).
   const visibleMessages = (activeConversation?.messages || []).filter((m) => {
-    if (activeConversation?.id === AI_PINNED_CHAT.id) return true;
     if (discussionTypeFilter === "all") return true;
     return (m.typeDiscussion || "ECHANGE") === discussionTypeFilter;
   });
@@ -1699,56 +1278,8 @@ export default function MessagerieClient() {
 
             {/* Liste des conversations */}
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
-              {/* 🤖 Carte de discussion IA Épinglée toujours visible en haut */}
-              <div
-                key={AI_PINNED_CHAT.id}
-                onClick={() => {
-                  setActiveConvId(AI_PINNED_CHAT.id);
-                  setMobileChatView(true);
-                  if (userSession?.user?.id) {
-                    loadAiMessagesFromSupabase(userSession.user.id);
-                  }
-                }}
-                className={`flex items-start space-x-3 p-4 cursor-pointer transition-all relative border-b border-emerald-200/80 ${
-                  activeConvId === AI_PINNED_CHAT.id
-                    ? "bg-emerald-100/70 border-l-4 border-[#10E688]"
-                    : "bg-emerald-50/60 hover:bg-emerald-100/40"
-                }`}
-              >
-                <div className="relative flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-emerald-600 text-white text-xl shadow-sm">
-                    🤖
-                  </div>
-                  <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-emerald-500 border-2 border-white"></span>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline mb-1">
-                    <div className="flex items-center space-x-1.5 min-w-0 pr-2">
-                      <h3 className="text-sm font-extrabold text-gray-900 truncate">
-                        {AI_PINNED_CHAT.name}
-                      </h3>
-                      <span className="bg-emerald-200 text-emerald-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                        📌 Épinglé
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold text-emerald-700">{AI_PINNED_CHAT.time}</span>
-                  </div>
-                  <div className="flex items-center space-x-1 mb-0.5">
-                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded-md truncate max-w-[150px]">
-                      {AI_PINNED_CHAT.company}
-                    </span>
-                    <span className="text-[10px] font-medium text-gray-500 truncate">{AI_PINNED_CHAT.title}</span>
-                  </div>
-                  <p className="text-xs truncate font-medium text-gray-700">
-                    {AI_PINNED_CHAT.lastMessage}
-                  </p>
-                </div>
-              </div>
-
-              {/* Autres discussions */}
-              {filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).length > 0 ? (
-                filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).map(conv => (
+              {filteredConversations.length > 0 ? (
+                filteredConversations.map(conv => (
                   <div
                     key={conv.id}
                     onClick={() => {
@@ -1798,7 +1329,7 @@ export default function MessagerieClient() {
                 ))
               ) : (
                 <div className="p-8 text-center text-xs text-gray-400 font-semibold italic">
-                  Aucune autre discussion.
+                  Aucune discussion pour le moment.
                 </div>
               )}
             </div>
@@ -1832,15 +1363,9 @@ export default function MessagerieClient() {
                       <div className="min-w-0">
                         <div className="flex items-center space-x-2">
                           <h2 className="text-sm font-extrabold text-gray-900 truncate leading-snug">{activeConversation.name}</h2>
-                          {activeConversation.isAI ? (
-                            <span className="hidden sm:inline-block text-[10px] font-extrabold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                              ⚡ IA 24/7
-                            </span>
-                          ) : (
-                            <span className="hidden sm:inline-block text-[10px] font-extrabold text-white bg-gray-900 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
-                              {t.recruiterTitle}
-                            </span>
-                          )}
+                          <span className="hidden sm:inline-block text-[10px] font-extrabold text-white bg-gray-900 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                            {t.recruiterTitle}
+                          </span>
                         </div>
                         <p className="text-[11px] text-gray-500 font-medium truncate">
                           {activeConversation.title} — <span className="font-bold text-gray-800">{activeConversation.company}</span>
@@ -1860,45 +1385,12 @@ export default function MessagerieClient() {
                       >
                         <i className={`${activeConversation.favorite ? "fa-solid fa-heart" : "fa-regular fa-heart"}`}></i>
                       </button>
-                      {!activeConversation.isAI && (
-                        <button
-                          onClick={() => triggerToast(`Appel simulé vers ${activeConversation.name}...`, "fa-phone")}
-                          className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
-                        >
-                          <i className="fa-solid fa-phone"></i>
-                        </button>
-                      )}
-                      {activeConversation.isAI && (
-                        <div className="flex items-center space-x-1.5 pl-1 border-l border-gray-200">
-                          <button
-                            type="button"
-                            onClick={handleNewAiConversation}
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer font-bold"
-                            title="Nouvelle discussion (+)"
-                          >
-                            <i className="fa-solid fa-plus text-base"></i>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (userSession?.user?.id) fetchAllAiConversations(userSession.user.id);
-                              setAiHistoryModalOpen(true);
-                            }}
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-600 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
-                            title="Historique des discussions"
-                          >
-                            <i className="fa-solid fa-clock-rotate-left text-sm"></i>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleExportAiConversation}
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer"
-                            title="Exporter la discussion (TXT)"
-                          >
-                            <i className="fa-solid fa-file-arrow-down text-sm"></i>
-                          </button>
-                        </div>
-                      )}
+                      <button
+                        onClick={() => triggerToast(`Appel simulé vers ${activeConversation.name}...`, "fa-phone")}
+                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
+                      >
+                        <i className="fa-solid fa-phone"></i>
+                      </button>
                       <button
                         onClick={() => {
                           if (pinnedMessage) scrollToPinnedMessage(pinnedMessage.id);
@@ -1916,32 +1408,6 @@ export default function MessagerieClient() {
                     </div>
                   </div>
 
-                  {/* Sélecteur de 3 IA d'assistance (Pills) si le canal actif est la discussion IA */}
-                  {activeConversation.isAI && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 scrollbar-none border-t border-gray-100">
-                      <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">
-                        Choisir une IA :
-                      </span>
-                      {AI_ROLES.map((role) => (
-                        <button
-                          key={role.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveAiRole(role.id);
-                            triggerToast(`IA sélectionnée : ${role.name}`, "fa-robot");
-                          }}
-                          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 ${
-                            activeAiRole === role.id
-                              ? "bg-emerald-500 text-white shadow-sm scale-[1.02]"
-                              : "bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-800"
-                          }`}
-                          title={role.description}
-                        >
-                          <span>{role.badge}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* BANNIÈRE MESSAGE ÉPINGLÉ (toujours visible en haut du fil) */}
@@ -2087,7 +1553,7 @@ export default function MessagerieClient() {
                     </div>
                   ))}
 
-                  {(isTyping || (activeConvId === AI_PINNED_CHAT.id && assistantLoading)) && (
+                  {isTyping && (
                     <div className="flex justify-start items-end space-x-2 animate-pulse">
                       <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white font-extrabold text-[10px] shadow-inner ${activeConversation.avatarColor}`}>
                         {activeConversation.avatarInitials}
@@ -2528,85 +1994,6 @@ export default function MessagerieClient() {
         </div>
       )}
 
-      {/* MODALE HISTORIQUE DES DISCUSSIONS IA (Icône Horloge) */}
-      {aiHistoryModalOpen && (
-        <div className="fixed inset-0 z-[800] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 relative overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">
-                  <i className="fa-solid fa-clock-rotate-left"></i>
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-gray-900">Historique des discussions IA</h3>
-                  <p className="text-xs text-gray-500 font-medium">Sélectionnez une session précédente</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAiHistoryModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition cursor-pointer"
-              >
-                <i className="fa-solid fa-xmark text-sm"></i>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto py-4 space-y-2.5">
-              {aiConversationsHistory.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-xs italic font-medium">
-                  Aucune discussion précédente trouvée.
-                </div>
-              ) : (
-                aiConversationsHistory.map((conv) => (
-                  <div
-                    key={conv.id}
-                    onClick={() => handleSelectAiConversation(conv.id)}
-                    className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
-                      currentConversationId === conv.id
-                        ? "bg-emerald-50 border-emerald-300 ring-2 ring-emerald-400/20"
-                        : "bg-gray-50 hover:bg-gray-100 border-gray-200"
-                    }`}
-                  >
-                    <div className="min-w-0 pr-3 flex-1">
-                      <p className="text-xs font-bold text-gray-900 truncate mb-1 group-hover:text-emerald-700">
-                        {conv.lastMessage || "Discussion IA"}
-                      </p>
-                      <span className="text-[10px] text-gray-500 font-medium">
-                        {new Date(conv.createdAt).toLocaleDateString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-2 flex-shrink-0">
-                      <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-1 rounded-lg">
-                        {conv.messagesCount} msgs
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteAiConversation(conv.id, e)}
-                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition cursor-pointer"
-                        title="Supprimer cette discussion"
-                      >
-                        <i className="fa-solid fa-trash-can text-xs"></i>
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="pt-3 border-t border-gray-100 flex justify-end">
-              <button
-                type="button"
-                onClick={handleNewAiConversation}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
-              >
-                <i className="fa-solid fa-plus"></i>
-                <span>Nouvelle discussion</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
