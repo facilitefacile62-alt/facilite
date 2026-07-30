@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
-import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, touchConversation } from "@/lib/messages";
+import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, resolveConversationWith, touchConversation } from "@/lib/messages";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
@@ -308,6 +308,11 @@ export default function MessagerieClient() {
   // src/lib/messages.js pour le détail du problème corrigé.
   const [supportConversationId, setSupportConversationId] = useState(null);
   const [supportAdminId, setSupportAdminId] = useState(null);
+  // Rôle du compte connecté : conditionne QUI est le destinataire d'un envoi
+  // (cf. handleResolveReplyTarget). Un admin sur ce fil fusionné n'a pas un
+  // seul interlocuteur fixe ("le support") comme un candidat/recruteur — il
+  // doit répondre au dernier expéditeur du message qu'il consulte.
+  const [currentUserRole, setCurrentUserRole] = useState(null);
 
   // Discussion IA épinglée : appel direct à /api/ai-chat (DeepSeek, spécialisé
   // par rôle) avec persistance Supabase dans la table dédiée assistant_messages.
@@ -662,13 +667,28 @@ export default function MessagerieClient() {
 
       // Résout (ou crée) la conversation avec un admin AVANT que l'utilisateur
       // ne puisse envoyer un message, pour que le tout premier message parte
-      // déjà correctement rattaché.
-      resolveSupportConversation(session.user.id).then((result) => {
-        if (result) {
-          setSupportConversationId(result.conversationId);
-          setSupportAdminId(result.adminId);
-        }
-      });
+      // déjà correctement rattaché. Réservé aux non-admins : un admin qui
+      // consulte /messagerie n'est pas "en recherche de support" — le
+      // résoudre quand même l'aurait fait se désigner lui-même comme
+      // destinataire (voir resolveSupportConversation).
+      supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (!isActive) return;
+          const role = profile?.role || null;
+          setCurrentUserRole(role);
+          if (role !== "admin") {
+            resolveSupportConversation(session.user.id).then((result) => {
+              if (result && isActive) {
+                setSupportConversationId(result.conversationId);
+                setSupportAdminId(result.adminId);
+              }
+            });
+          }
+        });
 
       // Écouter également les changements de session en temps réel
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
@@ -973,6 +993,37 @@ export default function MessagerieClient() {
   };
 
   // Send Message Logic
+  // Détermine dynamiquement le destinataire d'un envoi sur ce fil fusionné :
+  // - non-admin (candidat/recruteur) : toujours l'admin résolu au chargement
+  //   (supportAdminId/supportConversationId) — comportement historique,
+  //   correct car un candidat n'a qu'un seul interlocuteur possible.
+  // - admin : pas d'interlocuteur fixe ici, le fil mélange les messages de
+  //   plusieurs candidats distincts. On répond au dernier expéditeur reçu
+  //   dans le fil actif, et on résout/crée la conversation avec lui à la
+  //   volée — sans quoi (bug corrigé ici) l'admin s'auto-assignait comme
+  //   destinataire de ses propres réponses.
+  const resolveReplyTarget = async () => {
+    if (currentUserRole !== "admin") {
+      return { receiverId: supportAdminId, conversationId: supportConversationId, error: null };
+    }
+
+    const activeConv = conversations.find((c) => c.id === activeConvId);
+    const lastIncoming = [...(activeConv?.messages || [])]
+      .reverse()
+      .find((m) => m.sender === "them" && m.senderId);
+
+    if (!lastIncoming?.senderId) {
+      return { receiverId: null, conversationId: null, error: "Aucun candidat à qui répondre dans ce fil pour l'instant." };
+    }
+
+    const result = await resolveConversationWith(userSession?.user?.id, lastIncoming.senderId);
+    if (!result) {
+      return { receiverId: null, conversationId: null, error: "Impossible de résoudre la conversation avec ce candidat." };
+    }
+
+    return { receiverId: lastIncoming.senderId, conversationId: result.conversationId, error: null };
+  };
+
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!messageText.trim()) return;
@@ -1023,11 +1074,25 @@ export default function MessagerieClient() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        const replyTarget = await resolveReplyTarget();
+
+        if (replyTarget.error) {
+          triggerToast(replyTarget.error, "fa-triangle-exclamation");
+          setConversations(prev => prev.map(c => {
+            if (c.id !== activeConvId) return c;
+            return {
+              ...c,
+              messages: c.messages.map(m => (m.id === tempId ? { ...m, status: "error" } : m))
+            };
+          }));
+          return;
+        }
+
         const { data: savedRow, error: sendError } = await sendMessage({
           senderId: session.user.id,
           content: userMessageText,
-          receiverId: supportAdminId,
-          conversationId: supportConversationId,
+          receiverId: replyTarget.receiverId,
+          conversationId: replyTarget.conversationId,
           typeDiscussion: discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE"
         });
 
@@ -1053,8 +1118,8 @@ export default function MessagerieClient() {
           }));
           // Fait remonter la conversation en tête de la colonne de gauche
           // côté admin (canal Realtime sur la table conversations).
-          if (supportConversationId) {
-            touchConversation(supportConversationId, userMessageText);
+          if (replyTarget.conversationId) {
+            touchConversation(replyTarget.conversationId, userMessageText);
           }
         }
       }
@@ -1354,11 +1419,27 @@ export default function MessagerieClient() {
 
     if (userSession?.user?.id) {
       try {
+        const replyTarget = await resolveReplyTarget();
+
+        if (replyTarget.error) {
+          triggerToast(replyTarget.error, "fa-triangle-exclamation");
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== activeConvId) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) => (m.id === tempId ? { ...m, status: "error" } : m)),
+              };
+            })
+          );
+          return;
+        }
+
         const captionText = attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier joint : ${fileName}`;
         const { data: savedRow } = await supabase.from("messages").insert({
           sender_id: userSession.user.id,
-          receiver_id: supportAdminId,
-          conversation_id: supportConversationId,
+          receiver_id: replyTarget.receiverId,
+          conversation_id: replyTarget.conversationId,
           content: captionText,
           attachment_url: publicUrl,
           attachment_type: attachmentType,
@@ -1390,8 +1471,8 @@ export default function MessagerieClient() {
               };
             })
           );
-          if (supportConversationId) {
-            touchConversation(supportConversationId, captionText);
+          if (replyTarget.conversationId) {
+            touchConversation(replyTarget.conversationId, captionText);
           }
         }
       } catch (err) {

@@ -18,6 +18,12 @@ export function formatMessageRow(row, currentUserId) {
   return {
     id: row.id,
     sender: row.sender_id === currentUserId ? "me" : "them",
+    // UUID bruts conservés (en plus du booléen "me"/"them" ci-dessus) pour que
+    // l'admin, dont le fil fusionné /messagerie mélange les messages de
+    // plusieurs candidats distincts, puisse déterminer à QUI répondre —
+    // impossible à partir de "them" seul, qui ne distingue pas les expéditeurs.
+    senderId: row.sender_id,
+    receiverId: row.receiver_id,
     text: row.content,
     time: formatTime(row.created_at),
     createdAt: row.created_at,
@@ -155,6 +161,43 @@ export async function sendMessage({
 }
 
 /**
+ * Retrouve (ou crée) une conversation entre deux utilisateurs donnés, sans
+ * distinction de rôle. Logique commune à `resolveSupportConversation`
+ * (candidat/recruteur -> admin) et à la résolution dynamique du destinataire
+ * côté admin (admin -> candidat actuellement répondu).
+ *
+ * @returns {Promise<string | null>} l'id de la conversation, ou null en cas d'erreur.
+ */
+async function findOrCreateConversation(userId, otherUserId) {
+  const { data: existing, error: existingErr } = await supabase
+    .from("conversations")
+    .select("id")
+    .or(`and(user_1_id.eq.${userId},user_2_id.eq.${otherUserId}),and(user_1_id.eq.${otherUserId},user_2_id.eq.${userId})`)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingErr) {
+    console.error("Erreur recherche conversation existante:", existingErr.message);
+  }
+  if (existing) {
+    return existing.id;
+  }
+
+  const { data: created, error: createErr } = await supabase
+    .from("conversations")
+    .insert({ user_1_id: userId, user_2_id: otherUserId, last_message: "", updated_at: new Date().toISOString() })
+    .select("id")
+    .single();
+
+  if (createErr || !created) {
+    console.error("Erreur création conversation:", createErr?.message);
+    return null;
+  }
+
+  return created.id;
+}
+
+/**
  * Retrouve (ou crée) la conversation entre l'utilisateur connecté et un
  * administrateur.
  *
@@ -164,6 +207,13 @@ export async function sendMessage({
  * `conversations`. Cette fonction garantit qu'un vrai destinataire (un admin
  * réel) et une conversation existent AVANT l'envoi, pour que le message y
  * soit rattaché dès sa création plutôt que de rester orphelin.
+ *
+ * Garde ajoutée : si l'appelant EST lui-même l'admin résolu (cas d'un admin
+ * qui consulte /messagerie), on renvoie null plutôt que de créer une
+ * conversation admin<->admin — sans quoi une réponse de l'admin s'auto-
+ * assignait comme destinataire (receiver_id = sender_id), invisible pour
+ * tout candidat. Un admin doit résoudre son destinataire dynamiquement via
+ * `resolveConversationWith`, pas via ce chemin "je cherche le support".
  *
  * @returns {Promise<{ conversationId: string, adminId: string } | null>}
  */
@@ -181,33 +231,27 @@ export async function resolveSupportConversation(userId) {
     // message repartira sans destinataire (comportement précédent).
     return null;
   }
-
-  const { data: existing, error: existingErr } = await supabase
-    .from("conversations")
-    .select("id")
-    .or(`and(user_1_id.eq.${userId},user_2_id.eq.${adminId}),and(user_1_id.eq.${adminId},user_2_id.eq.${userId})`)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingErr) {
-    console.error("Erreur recherche conversation support existante:", existingErr.message);
-  }
-  if (existing) {
-    return { conversationId: existing.id, adminId };
-  }
-
-  const { data: created, error: createErr } = await supabase
-    .from("conversations")
-    .insert({ user_1_id: userId, user_2_id: adminId, last_message: "", updated_at: new Date().toISOString() })
-    .select("id")
-    .single();
-
-  if (createErr || !created) {
-    console.error("Erreur création conversation support:", createErr?.message);
+  if (adminId === userId) {
     return null;
   }
 
-  return { conversationId: created.id, adminId };
+  const conversationId = await findOrCreateConversation(userId, adminId);
+  return conversationId ? { conversationId, adminId } : null;
+}
+
+/**
+ * Retrouve (ou crée) la conversation entre l'utilisateur connecté et un autre
+ * utilisateur précis — utilisé côté admin pour répondre dynamiquement au bon
+ * candidat/recruteur depuis le fil fusionné de /messagerie, qui agrège les
+ * messages de plusieurs interlocuteurs distincts.
+ *
+ * @returns {Promise<{ conversationId: string } | null>}
+ */
+export async function resolveConversationWith(userId, otherUserId) {
+  if (!userId || !otherUserId || userId === otherUserId) return null;
+
+  const conversationId = await findOrCreateConversation(userId, otherUserId);
+  return conversationId ? { conversationId } : null;
 }
 
 /**
