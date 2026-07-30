@@ -28,8 +28,8 @@ export default function CandidatDashboardPage() {
           .eq("id", session.user.id)
           .single();
 
-        if (profile?.role === "recruteur") {
-          window.location.replace("/recruteur");
+        if (!profile || (profile.role !== "candidat" && profile.role !== "admin")) {
+          window.location.replace(profile?.role === "recruteur" ? "/recruteur" : "/");
           return;
         }
 
@@ -179,11 +179,15 @@ export default function CandidatDashboardPage() {
                   </tr>
                 ) : (
                   candidatures.map((c) => {
-                    const score = c.cv_match_score || 70;
-                    const scoreBadgeClass =
-                      score >= 75
-                        ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                        : "bg-amber-100 text-amber-800 border-amber-200";
+                    const score = c.cv_match_score;
+                    const hasScore = score !== null && score !== undefined;
+                    const scoreBadgeClass = !hasScore
+                      ? "bg-gray-100 text-gray-500 border-gray-200"
+                      : score >= 75
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                      : score >= 50
+                      ? "bg-amber-100 text-amber-800 border-amber-200"
+                      : "bg-red-100 text-red-800 border-red-200";
 
                     return (
                       <tr key={c.id} className="hover:bg-emerald-50/20 transition">
@@ -192,9 +196,9 @@ export default function CandidatDashboardPage() {
                           <span className="text-xs text-emerald-700 font-semibold">{c.company}</span>
                         </td>
                         <td className="py-4 px-6">
-                          <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-extrabold border ${scoreBadgeClass}`}>
+                          <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-extrabold border whitespace-nowrap ${scoreBadgeClass}`}>
                             <span>⚡ Match</span>
-                            <span>{score}%</span>
+                            <span>{hasScore ? `${score}%` : "N/A"}</span>
                           </span>
                         </td>
                         <td className="py-4 px-6 text-gray-500">

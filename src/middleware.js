@@ -64,7 +64,10 @@ export async function middleware(req) {
   // n'importe quoi ("role": "admin") et ce claim finit dans son propre JWT.
   // Le lire ici pour une décision d'autorisation aurait permis à quiconque
   // de s'auto-attribuer l'accès à /admin sans jamais toucher à la base.
-  if (user && (pathname.startsWith("/admin") || pathname.startsWith("/recruteur"))) {
+  if (
+    user &&
+    (pathname.startsWith("/admin") || pathname.startsWith("/recruteur") || pathname.startsWith("/candidat"))
+  ) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -72,7 +75,11 @@ export async function middleware(req) {
       .single();
 
     const userRole = profile?.role || "candidat";
-    const requiredRole = pathname.startsWith("/admin") ? "admin" : "recruteur";
+    const requiredRole = pathname.startsWith("/admin")
+      ? "admin"
+      : pathname.startsWith("/recruteur")
+      ? "recruteur"
+      : "candidat";
 
     if (userRole !== requiredRole && userRole !== "admin") {
       const url = req.nextUrl.clone();
