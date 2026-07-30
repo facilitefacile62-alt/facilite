@@ -22,17 +22,18 @@ ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lecture conversations admin et participants" ON public.conversations;
 DROP POLICY IF EXISTS "Ecriture conversations admin et participants" ON public.conversations;
 
--- L'admin ou les participants de la conversation peuvent lire
+-- L'admin ou les participants de la conversation peuvent lire.
+-- Utilise public.current_user_role() (SECURITY DEFINER, introduite dans
+-- 20260730000200) plutôt qu'un EXISTS(SELECT ... FROM profiles) direct :
+-- même résultat, mais fonction STABLE réutilisée dans tout le projet, plus
+-- économe qu'une sous-requête répétée par ligne.
 CREATE POLICY "Lecture conversations admin et participants" ON public.conversations
   FOR SELECT
   TO authenticated
   USING (
     user_1_id = auth.uid() OR
     user_2_id = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-    )
+    public.current_user_role() = 'admin'
   );
 
 -- L'admin ou les participants peuvent créer / mettre à jour
@@ -42,33 +43,29 @@ CREATE POLICY "Ecriture conversations admin et participants" ON public.conversat
   USING (
     user_1_id = auth.uid() OR
     user_2_id = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-    )
+    public.current_user_role() = 'admin'
   )
   WITH CHECK (
     user_1_id = auth.uid() OR
     user_2_id = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-    )
+    public.current_user_role() = 'admin'
   );
-
 
 -- 3. Mise à jour de la table public.messages (s'assurer des colonnes conversation_id et is_read)
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
+    SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'conversation_id'
   ) THEN
     ALTER TABLE public.messages ADD COLUMN conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE;
   END IF;
 
+  -- is_read existe déjà (migration 20260726210000) : ce bloc est un no-op sur
+  -- la base actuelle, conservé pour que cette migration reste rejouable seule
+  -- sur une base neuve qui n'aurait pas encore la colonne.
   IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
+    SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'is_read'
   ) THEN
     ALTER TABLE public.messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE;
@@ -78,11 +75,13 @@ END $$;
 -- Index sur conversation_id pour accélération Realtime et jointures
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON public.messages(conversation_id);
 
--- 4. Activer RLS sur public.messages
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-
+-- 4. RLS sur public.messages : policies additives, s'ajoutent (en OR) à
+-- celles déjà en place depuis 20260727090000/20260730050000 sans les
+-- remplacer — un utilisateur garde tous ses droits existants, l'admin
+-- obtient en plus un accès global à toute la table.
 DROP POLICY IF EXISTS "Lecture messages admin et participants" ON public.messages;
 DROP POLICY IF EXISTS "Insertion messages admin et participants" ON public.messages;
+DROP POLICY IF EXISTS "Mise a jour messages admin et destinataires" ON public.messages;
 
 CREATE POLICY "Lecture messages admin et participants" ON public.messages
   FOR SELECT
@@ -94,10 +93,7 @@ CREATE POLICY "Lecture messages admin et participants" ON public.messages
       SELECT 1 FROM public.conversations c
       WHERE c.id = messages.conversation_id AND (c.user_1_id = auth.uid() OR c.user_2_id = auth.uid())
     ) OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-    )
+    public.current_user_role() = 'admin'
   );
 
 CREATE POLICY "Insertion messages admin et participants" ON public.messages
@@ -105,10 +101,7 @@ CREATE POLICY "Insertion messages admin et participants" ON public.messages
   TO authenticated
   WITH CHECK (
     sender_id = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-    )
+    public.current_user_role() = 'admin'
   );
 
 CREATE POLICY "Mise a jour messages admin et destinataires" ON public.messages
@@ -116,12 +109,12 @@ CREATE POLICY "Mise a jour messages admin et destinataires" ON public.messages
   TO authenticated
   USING (
     receiver_id = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
-    )
+    public.current_user_role() = 'admin'
   );
 
--- Active la réplication temps réel Supabase sur messages et conversations
+-- Active la réplication temps réel Supabase sur messages et conversations.
+-- messages n'était pas encore membre de la publication supabase_realtime :
+-- sans cette ligne, AUCUN postgres_changes (messagerie candidat/recruteur,
+-- /admin/support, cette nouvelle page) ne recevait d'événement en direct.
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
