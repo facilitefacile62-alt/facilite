@@ -24,6 +24,12 @@ export default function OffresPage() {
   const [applyingOffer, setApplyingOffer] = useState(null);
   const [toast, setToast] = useState("");
 
+  // Recherche sémantique : Map job_offers.id -> similarité une fois activée,
+  // null quand on est revenu à la recherche texte classique.
+  const [semanticResults, setSemanticResults] = useState(null);
+  const [isSemanticSearching, setIsSemanticSearching] = useState(false);
+  const [semanticSearchError, setSemanticSearchError] = useState("");
+
   const triggerToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3500);
@@ -68,13 +74,60 @@ export default function OffresPage() {
     loadData();
   }, []);
 
-  const filteredOffers = offers.filter((o) => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      !q || (o.title || "").toLowerCase().includes(q) || (o.company || "").toLowerCase().includes(q);
-    const matchesLocation = !locationFilter || (o.location || "").toLowerCase().includes(locationFilter.toLowerCase());
-    return matchesSearch && matchesLocation;
-  });
+  // Recherche sémantique : embedding de la requête via l'Edge Function
+  // gemini-orchestrator, puis match_job_offers (offres actives uniquement).
+  // Déclenchée explicitement (bouton/Entrée), pas à chaque frappe.
+  const handleSemanticSearch = async () => {
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    setIsSemanticSearching(true);
+    setSemanticSearchError("");
+
+    try {
+      const { data: embedData, error: embedError } = await supabase.functions.invoke("gemini-orchestrator", {
+        body: { action: "embed", text: query },
+      });
+
+      if (embedError || !embedData?.success || !Array.isArray(embedData?.embedding)) {
+        throw new Error(embedData?.error || embedError?.message || "Échec de la génération de l'embedding.");
+      }
+
+      const { data: matches, error: matchError } = await supabase.rpc("match_job_offers", {
+        query_embedding: `[${embedData.embedding.join(",")}]`,
+        match_threshold: 0.5,
+        match_count: 10,
+      });
+
+      if (matchError) throw new Error(matchError.message);
+
+      setSemanticResults(new Map((matches || []).map((m) => [m.id, m.similarity])));
+    } catch (err) {
+      console.error("Erreur recherche sémantique:", err);
+      setSemanticSearchError(err.message || "Erreur lors de la recherche sémantique.");
+      setSemanticResults(null);
+    } finally {
+      setIsSemanticSearching(false);
+    }
+  };
+
+  const handleResetSemanticSearch = () => {
+    setSemanticResults(null);
+    setSemanticSearchError("");
+  };
+
+  const filteredOffers = semanticResults
+    ? offers
+        .filter((o) => semanticResults.has(o.id))
+        .map((o) => ({ ...o, similarity: semanticResults.get(o.id) }))
+        .sort((a, b) => b.similarity - a.similarity)
+    : offers.filter((o) => {
+        const q = searchQuery.toLowerCase();
+        const matchesSearch =
+          !q || (o.title || "").toLowerCase().includes(q) || (o.company || "").toLowerCase().includes(q);
+        const matchesLocation = !locationFilter || (o.location || "").toLowerCase().includes(locationFilter.toLowerCase());
+        return matchesSearch && matchesLocation;
+      });
 
   const handleApplyClick = (offer) => {
     if (!userSession) {
@@ -121,7 +174,7 @@ export default function OffresPage() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 mb-2">
           <div className="relative max-w-xs w-full">
             <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-gray-400 text-xs"></i>
             <input
@@ -129,6 +182,7 @@ export default function OffresPage() {
               placeholder="Titre, entreprise..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSemanticSearch()}
               className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 transition shadow-xs"
             />
           </div>
@@ -142,7 +196,39 @@ export default function OffresPage() {
               className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 transition shadow-xs"
             />
           </div>
+          {semanticResults ? (
+            <button
+              type="button"
+              onClick={handleResetSemanticSearch}
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs rounded-xl transition cursor-pointer whitespace-nowrap"
+            >
+              <i className="fa-solid fa-xmark"></i> Réinitialiser
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSemanticSearch}
+              disabled={isSemanticSearching || !searchQuery.trim()}
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {isSemanticSearching ? (
+                <i className="fa-solid fa-spinner fa-spin"></i>
+              ) : (
+                <i className="fa-solid fa-wand-magic-sparkles"></i>
+              )}
+              Recherche IA
+            </button>
+          )}
         </div>
+
+        {semanticSearchError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-700 flex items-center gap-2">
+            <i className="fa-solid fa-triangle-exclamation"></i> {semanticSearchError}
+          </div>
+        )}
+        {semanticResults && (
+          <p className="text-xs text-gray-500 font-semibold mb-4">Résultats triés par compatibilité IA avec votre recherche.</p>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16">
@@ -167,6 +253,11 @@ export default function OffresPage() {
                       {offer.min_education_level && offer.min_education_level !== "Aucun" && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-100 text-purple-700">
                           🎓 {offer.min_education_level}
+                        </span>
+                      )}
+                      {typeof offer.similarity === "number" && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold text-white bg-emerald-600 flex items-center gap-1">
+                          <i className="fa-solid fa-wand-magic-sparkles"></i> {Math.round(offer.similarity * 100)}% compatible
                         </span>
                       )}
                     </div>

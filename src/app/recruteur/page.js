@@ -63,6 +63,13 @@ export default function RecruteurDashboardPage() {
   const [loadingCvUrl, setLoadingCvUrl] = useState(false);
   const [contactingId, setContactingId] = useState(null);
 
+  // Recherche sémantique (embedding de la requête + RPC match_resumes) : un
+  // Map user_id -> similarité quand active, null quand on est revenu à la
+  // recherche texte classique.
+  const [semanticResults, setSemanticResults] = useState(null);
+  const [isSemanticSearching, setIsSemanticSearching] = useState(false);
+  const [semanticSearchError, setSemanticSearchError] = useState("");
+
   const [toast, setToast] = useState("");
   const triggerToast = (msg) => {
     setToast(msg);
@@ -195,6 +202,34 @@ export default function RecruteurDashboardPage() {
     setTimeout(() => offerFormRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   };
 
+  // Sans ceci, match_job_offers (RPC utilisée par la recherche sémantique
+  // côté /offres) ne renverrait jamais aucun résultat : la colonne
+  // job_offers.embedding resterait NULL pour toute nouvelle offre. Appelé en
+  // tâche de fond (non "await"-é par l'appelant) pour ne pas retarder le
+  // toast de confirmation de publication/modification.
+  const generateOfferEmbedding = async (offerId, title, description) => {
+    try {
+      const text = `${title || ""}\n\n${description || ""}`.trim().slice(0, 8000);
+      if (!text) return;
+
+      const { data: embedData, error: embedError } = await supabase.functions.invoke("gemini-orchestrator", {
+        body: { action: "embed", text },
+      });
+
+      if (embedError || !embedData?.success || !Array.isArray(embedData?.embedding)) {
+        console.error("Erreur génération embedding offre:", embedData?.error || embedError?.message);
+        return;
+      }
+
+      await supabase
+        .from("job_offers")
+        .update({ embedding: `[${embedData.embedding.join(",")}]` })
+        .eq("id", offerId);
+    } catch (err) {
+      console.error("Erreur génération embedding offre:", err);
+    }
+  };
+
   const handleSubmitOffer = async (e) => {
     e.preventDefault();
     if (!userSession?.user?.id) return;
@@ -236,6 +271,7 @@ export default function RecruteurDashboardPage() {
         } else {
           setMyOffers((prev) => prev.map((o) => (o.id === editingOfferId ? { ...o, ...payload } : o)));
           triggerToast("Offre mise à jour.");
+          generateOfferEmbedding(editingOfferId, payload.title, payload.description);
           handleCancelEditOffer();
         }
       } else {
@@ -250,6 +286,7 @@ export default function RecruteurDashboardPage() {
         } else {
           setMyOffers((prev) => [data, ...prev]);
           triggerToast("Offre publiée !");
+          generateOfferEmbedding(data.id, payload.title, payload.description);
           setOfferForm(EMPTY_OFFER);
           setOfferImageFile(null);
           setOfferImagePreview(null);
@@ -370,17 +407,66 @@ export default function RecruteurDashboardPage() {
     window.location.href = "/messagerie";
   };
 
-  const filteredCandidates = candidates.filter((c) => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      !q ||
-      (c.full_name || "").toLowerCase().includes(q) ||
-      (c.headline || "").toLowerCase().includes(q) ||
-      (Array.isArray(c.skills) ? c.skills.join(" ") : "").toLowerCase().includes(q);
-    const matchesLocation =
-      !locationFilter || (c.city || c.location || "").toLowerCase().includes(locationFilter.toLowerCase());
-    return matchesSearch && matchesLocation;
-  });
+  // Recherche sémantique : génère l'embedding de la requête via l'Edge
+  // Function gemini-orchestrator, puis appelle match_resumes (base = CV dont
+  // l'analyse est terminée, cf. migration 20260730110000). Déclenchée
+  // explicitement (bouton) plutôt qu'à chaque frappe, pour ne pas appeler
+  // l'API Gemini à chaque caractère tapé.
+  const handleSemanticSearch = async () => {
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    setIsSemanticSearching(true);
+    setSemanticSearchError("");
+
+    try {
+      const { data: embedData, error: embedError } = await supabase.functions.invoke("gemini-orchestrator", {
+        body: { action: "embed", text: query },
+      });
+
+      if (embedError || !embedData?.success || !Array.isArray(embedData?.embedding)) {
+        throw new Error(embedData?.error || embedError?.message || "Échec de la génération de l'embedding.");
+      }
+
+      const { data: matches, error: matchError } = await supabase.rpc("match_resumes", {
+        query_embedding: `[${embedData.embedding.join(",")}]`,
+        match_threshold: 0.5,
+        match_count: 10,
+      });
+
+      if (matchError) throw new Error(matchError.message);
+
+      setSemanticResults(new Map((matches || []).map((m) => [m.user_id, m.similarity])));
+    } catch (err) {
+      console.error("Erreur recherche sémantique:", err);
+      setSemanticSearchError(err.message || "Erreur lors de la recherche sémantique.");
+      setSemanticResults(null);
+    } finally {
+      setIsSemanticSearching(false);
+    }
+  };
+
+  const handleResetSemanticSearch = () => {
+    setSemanticResults(null);
+    setSemanticSearchError("");
+  };
+
+  const filteredCandidates = semanticResults
+    ? candidates
+        .filter((c) => semanticResults.has(c.id))
+        .map((c) => ({ ...c, similarity: semanticResults.get(c.id) }))
+        .sort((a, b) => b.similarity - a.similarity)
+    : candidates.filter((c) => {
+        const q = searchQuery.toLowerCase();
+        const matchesSearch =
+          !q ||
+          (c.full_name || "").toLowerCase().includes(q) ||
+          (c.headline || "").toLowerCase().includes(q) ||
+          (Array.isArray(c.skills) ? c.skills.join(" ") : "").toLowerCase().includes(q);
+        const matchesLocation =
+          !locationFilter || (c.city || c.location || "").toLowerCase().includes(locationFilter.toLowerCase());
+        return matchesSearch && matchesLocation;
+      });
 
   if (loading) {
     return (
@@ -849,7 +935,9 @@ export default function RecruteurDashboardPage() {
             <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-extrabold text-gray-900">CVthèque ({filteredCandidates.length})</h2>
-                <p className="text-xs text-gray-500 font-medium">Recherchez par nom, métier ou compétence</p>
+                <p className="text-xs text-gray-500 font-medium">
+                  {semanticResults ? "Résultats triés par compatibilité IA" : "Recherchez par nom, métier ou compétence"}
+                </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative max-w-xs w-full">
@@ -859,6 +947,7 @@ export default function RecruteurDashboardPage() {
                     placeholder="Nom, métier, compétence..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSemanticSearch()}
                     className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   />
                 </div>
@@ -872,8 +961,37 @@ export default function RecruteurDashboardPage() {
                     className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   />
                 </div>
+                {semanticResults ? (
+                  <button
+                    type="button"
+                    onClick={handleResetSemanticSearch}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs rounded-xl transition cursor-pointer whitespace-nowrap"
+                  >
+                    <i className="fa-solid fa-xmark"></i> Réinitialiser
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSemanticSearch}
+                    disabled={isSemanticSearching || !searchQuery.trim()}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {isSemanticSearching ? (
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                    ) : (
+                      <i className="fa-solid fa-wand-magic-sparkles"></i>
+                    )}
+                    Recherche IA
+                  </button>
+                )}
               </div>
             </div>
+
+            {semanticSearchError && (
+              <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-700 flex items-center gap-2">
+                <i className="fa-solid fa-triangle-exclamation"></i> {semanticSearchError}
+              </div>
+            )}
 
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCandidates.length === 0 ? (
@@ -900,11 +1018,18 @@ export default function RecruteurDashboardPage() {
                     <p className="text-[11px] text-gray-400 font-medium truncate">
                       {candidate.city || candidate.location || "Localisation non renseignée"}
                     </p>
-                    {candidate.cv_url && (
-                      <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-extrabold text-emerald-600">
-                        <i className="fa-solid fa-file-pdf"></i> CV disponible
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      {candidate.cv_url && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-600">
+                          <i className="fa-solid fa-file-pdf"></i> CV disponible
+                        </span>
+                      )}
+                      {typeof candidate.similarity === "number" && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-white bg-emerald-600 px-2 py-0.5 rounded-full">
+                          <i className="fa-solid fa-wand-magic-sparkles"></i> {Math.round(candidate.similarity * 100)}% compatible
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))
               )}

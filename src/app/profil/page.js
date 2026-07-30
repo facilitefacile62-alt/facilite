@@ -370,6 +370,33 @@ export default function ProfilPage() {
     loadUserProfile();
   }, []);
 
+  // Abonnement Realtime sur `resumes` : reflète en direct le passage
+  // 'processing' -> 'completed'/'error' déclenché par /api/process-resume
+  // après l'upload d'un CV, sans avoir à rafraîchir la page.
+  useEffect(() => {
+    const userId = userSession?.user?.id;
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`resumes-status-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "resumes", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const updatedRow = payload.new;
+          if (!updatedRow) return;
+          setUserDocuments((prevDocs) =>
+            prevDocs.map((doc) => (doc.id === updatedRow.id ? { ...doc, ...updatedRow } : doc))
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userSession?.user?.id]);
+
   // Filtered Notifications helper
   const filteredNotifications = notificationsList.filter(n => {
     if (activeNotifFilter === "jobs") return n.type === "jobs";
@@ -1081,7 +1108,10 @@ export default function ProfilPage() {
         updated_at: new Date().toISOString(),
       });
 
-      // 5. Insérer l'entrée dans la table resumes de Supabase
+      // 5. Insérer l'entrée dans la table resumes de Supabase. Seul un vrai CV
+      // déclenche l'analyse sémantique (extraction + embedding) : une lettre
+      // de motivation n'a pas vocation à être matchée contre des offres.
+      const isCv = docCategory === "CV";
       const { data: insertedDoc } = await supabase
         .from("resumes")
         .insert({
@@ -1090,6 +1120,7 @@ export default function ProfilPage() {
           type: docCategory,
           file_url: urlToSave,
           content: { fileName: file.name, uploadedAt: new Date().toISOString() },
+          status: isCv ? "processing" : "completed",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -1101,13 +1132,35 @@ export default function ProfilPage() {
         title: file.name,
         type: docCategory,
         file_url: urlToSave,
+        status: isCv ? "processing" : "completed",
         created_at: new Date().toISOString()
       };
 
       setUserDocuments((prevDocs) => [newDocument, ...prevDocs]);
 
       setIsUploadingCv(false);
-      triggerToast(`Document "${file.name}" ajouté à votre profil !`, "fa-file-circle-check");
+      triggerToast(
+        isCv ? `CV "${file.name}" ajouté, analyse en cours...` : `Document "${file.name}" ajouté à votre profil !`,
+        isCv ? "fa-wand-magic-sparkles" : "fa-file-circle-check"
+      );
+
+      // 6. Analyse asynchrone (extraction de texte + embedding sémantique) :
+      // volontairement non "await"-ée pour ne pas bloquer l'UI — le statut
+      // 'processing' déjà affiché passe à 'completed'/'error' via l'abonnement
+      // Realtime sur `resumes` dès que cette requête se termine côté serveur.
+      if (isCv && insertedDoc?.id) {
+        const processFormData = new FormData();
+        processFormData.append("file", file);
+        processFormData.append("resumeId", insertedDoc.id);
+
+        fetch("/api/process-resume", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${userSession.access_token}` },
+          body: processFormData,
+        }).catch((err) => {
+          console.error("Erreur lors du lancement de l'analyse du CV:", err);
+        });
+      }
     } catch (err) {
       console.error("Erreur lors de la sauvegarde du CV:", err);
       setIsUploadingCv(false);
@@ -3003,7 +3056,16 @@ export default function ProfilPage() {
                           className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-gray-50/80 hover:bg-gray-100/80 border border-gray-200/80 rounded-2xl transition gap-3"
                         >
                           <div className="flex items-center space-x-3 min-w-0 flex-1">
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                            {doc.status === "processing" ? (
+                              <span
+                                className="w-2.5 h-2.5 rounded-full border-2 border-amber-400 border-t-transparent animate-spin flex-shrink-0"
+                                title="Analyse en cours"
+                              ></span>
+                            ) : doc.status === "error" ? (
+                              <span className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" title="Échec de l'analyse"></span>
+                            ) : (
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" title="Analyse terminée"></span>
+                            )}
                             <div className="w-9 h-9 rounded-xl bg-emerald-100/80 text-[#047857] flex items-center justify-center flex-shrink-0 font-bold">
                               <i className="fa-solid fa-file-pdf text-sm"></i>
                             </div>
@@ -3015,6 +3077,16 @@ export default function ProfilPage() {
                                 <span className="bg-white text-gray-700 px-2 py-0.5 rounded-md border border-gray-200">
                                   {doc.type || (doc.title?.toLowerCase().includes("lettre") ? "Lettre de motivation" : "CV")}
                                 </span>
+                                {doc.status === "processing" && (
+                                  <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                    Analyse en cours...
+                                  </span>
+                                )}
+                                {doc.status === "error" && (
+                                  <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+                                    Échec de l'analyse
+                                  </span>
+                                )}
                                 {doc.created_at && (
                                   <span>
                                     • {new Date(doc.created_at).toLocaleDateString("fr-FR")}
