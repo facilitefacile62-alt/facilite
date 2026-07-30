@@ -18,15 +18,22 @@ function withTimeout(promise, ms, errorMessage) {
   ]);
 }
 
-// Modèles essayés dans l'ordre : gemini-1.5-flash en premier (rapide, léger,
-// disponible sur v1beta/v1 pour tous les projets), les suivants en repli
-// automatique si un modèle échoue (404/NOT_FOUND, quota, etc.) — l'API
-// Gemini change régulièrement la disponibilité de ses modèles par
-// projet/région, un seul nom de modèle codé en dur casse donc la
-// fonctionnalité entière dès qu'il est retiré.
-// gemini-2.5-flash est volontairement exclu de cette liste : ce n'est pas un
-// identifiant stable de l'API REST v1beta (404 systématique constaté).
-const CANDIDATE_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+// Liste vérifiée en interrogeant directement l'API (GET /v1beta/models puis
+// un vrai appel generateContent) avec la clé configurée dans ce projet :
+//   - gemini-1.5-flash / gemini-1.5-pro : n'existent plus du tout (retirés
+//     du catalogue Google, absents de ListModels).
+//   - gemini-2.5-flash : listé mais bloqué ("no longer available to new
+//     users") — 404 systématique malgré sa présence dans ListModels.
+//   - gemini-2.0-flash / gemini-pro-latest : quota gratuit à 0 sur ce projet
+//     (429 RESOURCE_EXHAUSTED, limit: 0) — probablement un projet sans accès
+//     "Pro"/modèles datés sur le palier gratuit.
+//   - gemini-flash-lite-latest / gemini-flash-latest : seuls modèles ayant
+//     réellement répondu avec succès à un appel generateContent réel.
+// Alias "-latest" plutôt que des noms de modèles datés : Google les repointe
+// automatiquement vers la version courante, ce qui évite de revivre cette
+// panne à chaque dépréciation. gemini-2.0-flash est gardé en dernier repli
+// au cas où son quota serait réactivé sur ce projet.
+const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.0-flash"];
 
 /**
  * Extraction et OCR d'image avec l'API Gemini (appel REST direct, sans le
