@@ -40,6 +40,7 @@ export default function ProfilPage() {
   const [maritalStatus, setMaritalStatus] = useState("");
   const [driverLicense, setDriverLicense] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [educationLevel, setEducationLevel] = useState("Aucun");
   const [activeAboutTab, setActiveAboutTab] = useState("info_perso");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("");
@@ -253,6 +254,7 @@ export default function ProfilPage() {
       if (profile) {
         setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
         setProfileRole(profile.role || "candidat");
+        setEducationLevel(profile.education_level || "Aucun");
         setProfileSubtitle(profile.headline || "");
         setProfileLocation(profile.location || "");
         setProfileBio(profile.bio || "");
@@ -2185,6 +2187,36 @@ export default function ProfilPage() {
                           >
                             <i className="fa-solid fa-pen text-xs"></i>
                           </button>
+                        </div>
+                      </div>
+
+                      {/* Niveau d'études : utilisé pour le filtre d'éligibilité aux offres d'emploi */}
+                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60 border-t border-gray-100">
+                        <div className="flex items-center space-x-4 min-w-0 flex-1">
+                          <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
+                            <i className="fa-solid fa-graduation-cap"></i>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Niveau d'études</h4>
+                            <select
+                              value={educationLevel}
+                              onChange={(e) => {
+                                const newLevel = e.target.value;
+                                setEducationLevel(newLevel);
+                                handleSaveAboutField("education_level", newLevel);
+                              }}
+                              className="mt-1 text-sm font-extrabold text-gray-900 bg-transparent border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                            >
+                              <option value="Aucun">Aucun</option>
+                              <option value="CM2">CM2</option>
+                              <option value="Brevet">Brevet</option>
+                              <option value="BAC">BAC</option>
+                              <option value="Licence">Licence</option>
+                              <option value="Master">Master</option>
+                              <option value="Doctorat">Doctorat</option>
+                            </select>
+                            <p className="text-[11px] text-gray-500 font-medium mt-1">Utilisé pour vérifier votre éligibilité aux offres d'emploi</p>
+                          </div>
                         </div>
                       </div>
 

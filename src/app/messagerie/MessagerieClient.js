@@ -1165,6 +1165,14 @@ export default function MessagerieClient() {
   // Message épinglé de la discussion active (au plus un, garanti par la RPC)
   const pinnedMessage = activeConversation?.messages?.find(m => m.isPinned) || null;
 
+  // Filtre par type de discussion (Offres d'emploi / Demandes d'échange) — ne
+  // s'applique qu'au fil de messages réels (pas au fil IA, hors de ce concept).
+  const visibleMessages = (activeConversation?.messages || []).filter((m) => {
+    if (activeConversation?.id === AI_PINNED_CHAT.id) return true;
+    if (discussionTypeFilter === "all") return true;
+    return (m.typeDiscussion || "ECHANGE") === discussionTypeFilter;
+  });
+
   return (
     <div suppressHydrationWarning>
       {/* Toast Notification Top Floating */}
@@ -1987,7 +1995,15 @@ export default function MessagerieClient() {
                     </div>
                   )}
 
-                  {activeConversation.messages.map(msg => (
+                  {visibleMessages.length === 0 && discussionTypeFilter !== "all" && (
+                    <div className="text-center text-xs text-gray-400 italic py-6">
+                      {discussionTypeFilter === "OFFRE"
+                        ? "Aucun échange lié à une candidature pour le moment."
+                        : "Aucune demande d'échange pour le moment."}
+                    </div>
+                  )}
+
+                  {visibleMessages.map(msg => (
                     <div
                       key={msg.id}
                       ref={(node) => {

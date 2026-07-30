@@ -57,46 +57,66 @@ export async function POST(req) {
     });
 
     // --- FILTRES D'ÉLIGIBILITÉ STRICTS ---
-    // A. Récupérer l'offre d'emploi pour connaître le diplôme requis et la description
-    const { data: offerData } = await supabase
-      .from("job_offers")
-      .select("min_education_level, description, recruiter_id")
-      .eq("id", jobId)
-      .single();
+    // jobId sert deux flux distincts, jamais mélangés :
+    //  - un entier (candidatures.job_id, colonne héritée) pour le "postuler
+    //    rapide" historique vers les offres statiques de la page d'accueil ;
+    //  - un UUID (job_offers.id) pour une vraie offre publiée par un
+    //    recruteur (page /offres), avec contrôle d'éligibilité.
+    // Les confondre est ce qui cassait la vérification précédemment :
+    // interroger job_offers avec un petit entier ne renvoie jamais de ligne,
+    // et écrire un UUID dans candidatures.job_id (INT) est impossible.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const jobOfferId = UUID_RE.test(String(jobId)) ? String(jobId) : null;
 
-    // B. Récupérer le profil du candidat pour vérifier son niveau d'études et ses compétences
-    const { data: candidateProfile } = await supabase
-      .from("profiles")
-      .select("degree, skills, bio")
-      .eq("id", user.id)
-      .single();
+    let cvMatchScore = null;
+    let offerRecruiterId = null;
 
-    const requiredEducation = offerData?.min_education_level || "Aucun";
-    const candidateEducation = candidateProfile?.degree || "Aucun";
+    if (jobOfferId) {
+      // A. Récupérer l'offre pour connaître le diplôme requis et la description
+      const { data: offerData, error: offerErr } = await supabase
+        .from("job_offers")
+        .select("min_education_level, description, recruiter_id")
+        .eq("id", jobOfferId)
+        .single();
 
-    // Import helpers
-    const { isEducationEligible, calculateCvMatchScore } = await import("@/lib/eligibility");
+      if (offerErr || !offerData) {
+        return NextResponse.json({ error: "Offre introuvable." }, { status: 404 });
+      }
+      offerRecruiterId = offerData.recruiter_id;
 
-    // 1. Vérification du niveau d'études
-    if (!isEducationEligible(candidateEducation, requiredEducation)) {
-      return NextResponse.json(
-        { error: `Votre niveau d'étude (${candidateEducation}) est inférieur au niveau requis (${requiredEducation}) pour cette offre.` },
-        { status: 403 }
+      // B. Récupérer le profil du candidat pour vérifier son niveau d'études et ses compétences
+      const { data: candidateProfile } = await supabase
+        .from("profiles")
+        .select("education_level, skills, bio")
+        .eq("id", user.id)
+        .single();
+
+      const requiredEducation = offerData.min_education_level || "Aucun";
+      const candidateEducation = candidateProfile?.education_level || "Aucun";
+
+      const { isEducationEligible, calculateCvMatchScore: computeScore } = await import("@/lib/eligibility");
+
+      // 1. Vérification du niveau d'études
+      if (!isEducationEligible(candidateEducation, requiredEducation)) {
+        return NextResponse.json(
+          { error: "Votre niveau d'étude est inférieur au niveau requis." },
+          { status: 403 }
+        );
+      }
+
+      // 2. Vérification du Match Score CV (doit être >= 50%)
+      cvMatchScore = computeScore(
+        candidateProfile?.skills || [],
+        candidateProfile?.bio || "",
+        offerData.description || ""
       );
-    }
 
-    // 2. Vérification du Match Score CV (doit être >= 50%)
-    const cvMatchScore = calculateCvMatchScore(
-      candidateProfile?.skills || [],
-      candidateProfile?.bio || "",
-      offerData?.description || ""
-    );
-
-    if (cvMatchScore < 50) {
-      return NextResponse.json(
-        { error: `Votre CV n'est pas suffisamment adapté à cette offre (Score de correspondance: ${cvMatchScore}% < 50%).` },
-        { status: 403 }
-      );
+      if (cvMatchScore < 50) {
+        return NextResponse.json(
+          { error: "Votre CV n'est pas suffisamment adapté à cette offre." },
+          { status: 403 }
+        );
+      }
     }
 
     let cvUrl = "";
@@ -171,12 +191,15 @@ export async function POST(req) {
       cvName = resumeRecord.title;
     }
 
-    // 4. Enregistrer la candidature en base dans la table public.candidatures avec cv_match_score
+    // 4. Enregistrer la candidature en base dans la table public.candidatures
+    // job_id (entier, flux historique) et job_offer_id (UUID, vraie offre
+    // recruteur) sont mutuellement exclusifs — jamais les deux à la fois.
     const { data: candidature, error: candidatureError } = await supabase
       .from("candidatures")
       .insert({
         user_id: user.id,
-        job_id: parseInt(jobId, 10),
+        job_id: jobOfferId ? null : parseInt(jobId, 10),
+        job_offer_id: jobOfferId,
         job_title: jobTitle,
         company: company,
         full_name: fullName,
@@ -197,14 +220,16 @@ export async function POST(req) {
       );
     }
 
-    // Auto-création d'une conversation séparée de type 'OFFRE' dans Supabase
-    if (offerData?.recruiter_id) {
+    // Auto-création d'une conversation séparée de type 'OFFRE' dans Supabase,
+    // uniquement pour une vraie offre recruteur (le flux historique n'a pas
+    // de destinataire interne connu — il repose uniquement sur l'e-mail).
+    if (offerRecruiterId) {
       await supabase.from("messages").insert({
         sender_id: user.id,
-        receiver_id: offerData.recruiter_id,
-        content: `Candidature envoyée pour le poste : ${jobTitle} (${company}) - Score Match CV: ${cvMatchScore}%`,
+        receiver_id: offerRecruiterId,
+        content: `Candidature envoyée pour le poste : ${jobTitle} (${company}) — Score de correspondance CV : ${cvMatchScore}%`,
         type_discussion: "OFFRE",
-        job_offer_id: jobId,
+        job_offer_id: jobOfferId,
         created_at: new Date().toISOString(),
       });
     }

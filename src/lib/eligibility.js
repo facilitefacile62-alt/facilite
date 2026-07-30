@@ -40,14 +40,22 @@ export function isEducationEligible(candidateLevel, requiredLevel) {
 }
 
 /**
- * Calcul du score de match entre les compétences/CV du candidat et l'offre
+ * Calcul du score de match entre les compétences/CV du candidat et l'offre.
+ *
+ * Heuristique par recouvrement de mots-clés (pas de matching sémantique/IA) :
+ * % des mots significatifs (≥4 lettres) de la description de l'offre
+ * retrouvés dans le texte du candidat. Volontairement SANS plancher
+ * artificiel — une version précédente forçait un minimum de 65% dès qu'un
+ * candidat avait au moins une compétence renseignée, ce qui rendait le
+ * filtre "< 50% → refus" quasiment impossible à déclencher, quel que soit
+ * le rapport réel entre le profil et l'offre.
  */
 export function calculateCvMatchScore(candidateSkills = [], candidateBio = "", offerDescription = "") {
   if (!offerDescription) return 100;
-  
+
   const textToScan = `${Array.isArray(candidateSkills) ? candidateSkills.join(" ") : candidateSkills} ${candidateBio}`.toLowerCase();
   const words = offerDescription.toLowerCase().match(/\b[a-zà-ÿ]{4,}\b/g) || [];
-  
+
   if (words.length === 0) return 100;
 
   const uniqueWords = Array.from(new Set(words));
@@ -59,7 +67,5 @@ export function calculateCvMatchScore(candidateSkills = [], candidateBio = "", o
     }
   }
 
-  const score = Math.round((matches / uniqueWords.length) * 100);
-  // Retourner au minimum 60% si des compétences sont présentes pour valoriser les profils complets
-  return Math.min(100, Math.max(score, candidateSkills.length > 0 ? 65 : 45));
+  return Math.round((matches / uniqueWords.length) * 100);
 }

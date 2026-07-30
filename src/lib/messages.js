@@ -26,6 +26,10 @@ export function formatMessageRow(row, currentUserId) {
     // Distingue les messages réellement en base des messages purement locaux
     // (optimistes, simulés) : eux seuls peuvent être épinglés.
     persisted: true,
+    // 'OFFRE' (candidature à une offre recruteur) ou 'ECHANGE' (défaut) —
+    // sert au filtre par onglet de la messagerie.
+    typeDiscussion: row.type_discussion || "ECHANGE",
+    jobOfferId: row.job_offer_id || null,
   };
 }
 
@@ -47,7 +51,7 @@ export async function fetchConversationMessages(userId) {
 
   const { data, error } = await supabase
     .from("messages")
-    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at")
+    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id")
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: true });
@@ -114,7 +118,7 @@ export async function sendMessage({ senderId, content, receiverId = null }) {
       content,
       is_read: false,
     })
-    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at")
+    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id")
     .single();
 
   if (error) {
