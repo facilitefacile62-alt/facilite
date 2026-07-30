@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import RoleBadge from "@/components/RoleBadge";
 
 // Trie les conversations par activité la plus récente — utilisé après chaque
@@ -323,12 +324,19 @@ export default function AdminMessagesPage() {
   const handleAdminFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const type = file.name.endsWith(".pdf") ? "pdf" : "document";
-    await uploadAndSendAttachment(file, file.name, type);
+
+    const { valid, error: validationError } = validateChatFile(file);
+    if (!valid) {
+      alert(validationError);
+      e.target.value = "";
+      return;
+    }
+
+    await uploadAndSendAttachment(file, file.name);
     e.target.value = "";
   };
 
-  const uploadAndSendAttachment = async (fileOrBlob, fileName, attachmentType) => {
+  const uploadAndSendAttachment = async (fileOrBlob, fileName, forcedType) => {
     if (!activeConvId || !userSession || uploadingFile) return;
 
     const currentConv = conversations.find((c) => c.id === activeConvId);
@@ -341,40 +349,34 @@ export default function AdminMessagesPage() {
     setUploadingFile(true);
 
     try {
-      const fileExt = fileName.split(".").pop();
-      const storagePath = `attachments/${userSession.user.id}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("chat-attachments")
-        .upload(storagePath, fileOrBlob, {
-          cacheControl: "3600",
-          upsert: false,
+      const { attachment_url: publicUrl, attachment_type: attachmentType, file_name: resolvedFileName, file_size: fileSizeText, error: uploadError } =
+        await uploadChatAttachment({
+          file: fileOrBlob,
+          userId: userSession.user.id,
+          fileName,
+          attachmentType: forcedType,
         });
 
-      let publicUrl = "";
-      if (uploadError) {
-        console.warn("Erreur stockage chat-attachments, fallback public URL:", uploadError.message);
-        publicUrl = `https://dummy-file-url/${storagePath}`;
-      } else {
-        const { data: urlData } = supabase.storage
-          .from("chat-attachments")
-          .getPublicUrl(storagePath);
-        publicUrl = urlData.publicUrl;
+      if (uploadError || !publicUrl) {
+        // Ne jamais envoyer un message avec un lien de pièce jointe cassé :
+        // en cas d'échec de l'upload, on prévient l'admin et on abandonne
+        // l'envoi plutôt que d'insérer une URL factice.
+        alert("Échec de l'envoi de la pièce jointe. Réessayez.");
+        return;
       }
 
-      const fileSizeText = fileOrBlob.size
-        ? `${(fileOrBlob.size / 1024).toFixed(0)} KB`
-        : "Fichier";
-
+      const captionText = attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier joint : ${resolvedFileName}`;
+      const nowIso = new Date().toISOString();
       let realConvId = currentConv.id;
+
       if (currentConv.isVirtual) {
         const { data: newConv } = await supabase
           .from("conversations")
           .insert({
             user_1_id: userSession.user.id,
             user_2_id: otherUserId,
-            last_message: attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier : ${fileName}`,
-            updated_at: new Date().toISOString(),
+            last_message: captionText,
+            updated_at: nowIso,
           })
           .select()
           .single();
@@ -382,10 +384,20 @@ export default function AdminMessagesPage() {
         if (newConv) {
           realConvId = newConv.id;
           setConversations((prev) =>
-            prev.map((c) => (c.id === activeConvId ? { ...newConv, isVirtual: false } : c))
+            reorderByUpdatedAt(prev.map((c) => (c.id === activeConvId ? { ...newConv, isVirtual: false } : c)))
           );
           setActiveConvId(realConvId);
         }
+      } else {
+        // Garde le fil à jour côté serveur et le remonte en tête de la
+        // colonne de gauche, exactement comme pour un message texte.
+        await supabase
+          .from("conversations")
+          .update({ last_message: captionText, updated_at: nowIso })
+          .eq("id", realConvId);
+        setConversations((prev) =>
+          reorderByUpdatedAt(prev.map((c) => (c.id === realConvId ? { ...c, last_message: captionText, updated_at: nowIso } : c)))
+        );
       }
 
       const { data: savedMsg, error: msgError } = await supabase
@@ -394,22 +406,26 @@ export default function AdminMessagesPage() {
           conversation_id: realConvId.startsWith("virtual-") ? null : realConvId,
           sender_id: userSession.user.id,
           receiver_id: otherUserId,
-          content: attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier joint : ${fileName}`,
+          content: captionText,
           attachment_url: publicUrl,
           attachment_type: attachmentType,
-          file_name: fileName,
+          file_name: resolvedFileName,
           file_size: fileSizeText,
           is_read: true,
-          created_at: new Date().toISOString(),
+          created_at: nowIso,
         })
         .select()
         .single();
 
       if (!msgError && savedMsg) {
         setMessages((prev) => [...prev, savedMsg]);
+      } else if (msgError) {
+        console.error("Erreur enregistrement message pièce jointe:", msgError);
+        alert("La pièce jointe a été envoyée mais le message n'a pas pu être enregistré.");
       }
     } catch (err) {
       console.error("Exception téléversement pièce jointe:", err);
+      alert("Échec de l'envoi de la pièce jointe. Réessayez.");
     } finally {
       setUploadingFile(false);
     }

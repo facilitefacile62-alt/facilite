@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow } from "@/lib/messages";
+import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import RoleNavLink from "@/components/RoleNavLink";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
@@ -1161,32 +1162,30 @@ export default function MessagerieClient() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const attachmentType = file.name.endsWith(".pdf") ? "pdf" : "document";
-    const fileSizeText = `${(file.size / 1024).toFixed(0)} KB`;
+    const { valid, error: validationError } = validateChatFile(file);
+    if (!valid) {
+      triggerToast(validationError, "fa-triangle-exclamation");
+      e.target.value = "";
+      return;
+    }
 
     setUploadingFile(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const storagePath = `attachments/${userSession?.user?.id || "guest"}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const { attachment_url, attachment_type, file_name, file_size, error: uploadError } =
+        await uploadChatAttachment({ file, userId: userSession?.user?.id || "guest" });
 
-      const { error: uploadError } = await supabase.storage
-        .from("chat-attachments")
-        .upload(storagePath, file, { cacheControl: "3600", upsert: false });
-
-      let publicUrl = "";
-      if (uploadError) {
-        console.warn("Erreur stockage chat-attachments, fallback public URL:", uploadError.message);
-        publicUrl = `https://dummy-file-url/${storagePath}`;
-      } else {
-        const { data: urlData } = supabase.storage
-          .from("chat-attachments")
-          .getPublicUrl(storagePath);
-        publicUrl = urlData.publicUrl;
+      if (uploadError || !attachment_url) {
+        // Ne jamais envoyer un message avec un lien de pièce jointe cassé :
+        // en cas d'échec de l'upload, on prévient l'utilisateur et on
+        // abandonne l'envoi plutôt que d'insérer une URL factice.
+        triggerToast("Échec de l'envoi du fichier. Réessayez.", "fa-triangle-exclamation");
+        return;
       }
 
-      await sendAttachmentMessage(publicUrl, attachmentType, file.name, fileSizeText);
+      await sendAttachmentMessage(attachment_url, attachment_type, file_name, file_size);
     } catch (err) {
       console.error("Exception upload fichier client:", err);
+      triggerToast("Échec de l'envoi du fichier. Réessayez.", "fa-triangle-exclamation");
     } finally {
       setUploadingFile(false);
       e.target.value = "";
@@ -1207,22 +1206,20 @@ export default function MessagerieClient() {
         const audioBlob = new Blob(chunks, { type: "audio/webm" });
         if (audioBlob.size > 0) {
           const fileName = `audio_${Date.now()}.webm`;
-          const fileSizeText = `${(audioBlob.size / 1024).toFixed(0)} KB`;
+          const { attachment_url, file_name, file_size, error: uploadError } = await uploadChatAttachment({
+            file: audioBlob,
+            userId: userSession?.user?.id || "guest",
+            fileName,
+            attachmentType: "audio",
+          });
 
-          const storagePath = `attachments/${userSession?.user?.id || "guest"}/${Date.now()}_voice.webm`;
-          const { error: uploadError } = await supabase.storage
-            .from("chat-attachments")
-            .upload(storagePath, audioBlob, { cacheControl: "3600", upsert: false });
-
-          let publicUrl = "";
-          if (uploadError) {
-            publicUrl = `https://dummy-file-url/${storagePath}`;
+          if (uploadError || !attachment_url) {
+            // Jamais de message avec un lien de note vocale cassé : on
+            // prévient et on abandonne plutôt que d'insérer une URL factice.
+            triggerToast("Échec de l'envoi de la note vocale. Réessayez.", "fa-triangle-exclamation");
           } else {
-            const { data: urlData } = supabase.storage.from("chat-attachments").getPublicUrl(storagePath);
-            publicUrl = urlData.publicUrl;
+            await sendAttachmentMessage(attachment_url, "audio", file_name, file_size);
           }
-
-          await sendAttachmentMessage(publicUrl, "audio", fileName, fileSizeText);
         }
         stream.getTracks().forEach((track) => track.stop());
       };
