@@ -188,7 +188,7 @@ What we offer:
     tags: ["Dakar", "CDD", "Formation"],
     salary: "Selon profil",
     recruiterEmail: "recrutement@kfcsenegal.com",
-    image: "/affichedoffre.jpeg"
+    image: "/kfc.jpeg"
   },
   {
     id: 6,
