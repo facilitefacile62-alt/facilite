@@ -637,12 +637,26 @@ export default function MessagerieClient() {
   }, [assistantMessages]);
 
   useEffect(() => {
+    // `loadUserSessionAndMessages` est async, donc son propre `return () => {...}`
+    // (souscriptions à nettoyer) n'est que la valeur de résolution de la promesse
+    // qu'elle renvoie — jamais lue par React, qui n'attend qu'une fonction de
+    // nettoyage retournée SYNCHRONEMENT par le callback de useEffect. Résultat :
+    // le canal "public:messages" n'était jamais désabonné, et un second montage
+    // (ex. double-exécution des effets en dev) tentait un nouveau `.on()` sur un
+    // canal déjà `subscribe()`, provoquant l'erreur Supabase correspondante. Les
+    // références ci-dessous sont donc déclarées dans la portée synchrone de
+    // l'effet pour que le nettoyage réel, retourné plus bas, puisse les cibler.
+    let isActive = true;
+    let authSubscription = null;
+    let realtimeChannel = null;
+
     async function loadUserSessionAndMessages() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         window.location.replace("/login");
         return;
       }
+      if (!isActive) return;
       setUserSession(session);
       loadAiMessagesFromSupabase(session.user.id);
 
@@ -664,6 +678,7 @@ export default function MessagerieClient() {
           setUserSession(currentSession);
         }
       });
+      authSubscription = subscription;
 
       // Charger uniquement les messages appartenant à cet utilisateur authentifié
       // (envoyés ou reçus — la RLS garantit déjà l'isolation côté base).
@@ -717,8 +732,10 @@ export default function MessagerieClient() {
         setActiveConvId("ai-assistant");
       }
 
+      if (!isActive) return;
+
       // Écouter les nouveaux messages insérés en temps réel (ex: e-mails de recrutement synchronisés)
-      const realtimeChannel = supabase
+      realtimeChannel = supabase
         .channel("public:messages")
         .on(
           "postgres_changes",
@@ -750,14 +767,15 @@ export default function MessagerieClient() {
           }
         )
         .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-        supabase.removeChannel(realtimeChannel);
-      };
     }
 
     loadUserSessionAndMessages();
+
+    return () => {
+      isActive = false;
+      if (authSubscription) authSubscription.unsubscribe();
+      if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    };
   }, []);
 
   // Scroll to bottom of chat whenever active conversation or messages or typing state changes
