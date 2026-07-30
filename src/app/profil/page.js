@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
+import RoleBadge from "@/components/RoleBadge";
 
 export default function ProfilPage() {
   const pathname = usePathname();
@@ -28,6 +29,7 @@ export default function ProfilPage() {
   // Équipes & États Profil Éditable (Chargés dynamiquement depuis Supabase)
   const [userSession, setUserSession] = useState(null);
   const [profileName, setProfileName] = useState("");
+  const [profileRole, setProfileRole] = useState("candidat");
   const [profileSubtitle, setProfileSubtitle] = useState("");
   const [profileLocation, setProfileLocation] = useState("");
   const [profileBio, setProfileBio] = useState("");
@@ -250,6 +252,7 @@ export default function ProfilPage() {
 
       if (profile) {
         setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
+        setProfileRole(profile.role || "candidat");
         setProfileSubtitle(profile.headline || "");
         setProfileLocation(profile.location || "");
         setProfileBio(profile.bio || "");
@@ -1869,6 +1872,7 @@ export default function ProfilPage() {
                       <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
                         {profileName}
                       </h1>
+                      <RoleBadge role={profileRole} />
                       <span className="bg-emerald-100 text-[#047857] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">
                         Profil Vérifié
                       </span>
