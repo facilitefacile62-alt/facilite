@@ -68,6 +68,11 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
+    // localStorage n'existe pas côté serveur : cette lecture doit rester
+    // dans un effet (jamais pendant le rendu, pour éviter un hydration
+    // mismatch), donc setState-après-lecture-synchrone est ici la seule
+    // option correcte.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (savedLang) setSelectedLang(savedLang);
   }, []);
 

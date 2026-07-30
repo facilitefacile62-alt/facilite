@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
@@ -361,7 +361,10 @@ export default function Home() {
 
   // Search and Filter States for Job Board
   const [dynamicJobs, setDynamicJobs] = useState([]);
-  const [allJobs, setAllJobs] = useState(initialJobs);
+  // Entièrement dérivé de dynamicJobs (fusion avec le fil statique) : calculé
+  // directement au rendu plutôt que synchronisé via un effet séparé, qui
+  // ajoutait un aller-retour de rendu superflu à chaque changement.
+  const allJobs = useMemo(() => [...dynamicJobs, ...initialJobs], [dynamicJobs]);
   const [jobs, setJobs] = useState(initialJobs);
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
@@ -416,10 +419,6 @@ export default function Home() {
     }
     loadDynamicJobs();
   }, []);
-
-  useEffect(() => {
-    setAllJobs([...dynamicJobs, ...initialJobs]);
-  }, [dynamicJobs]);
 
   useEffect(() => {
     async function loadSessionAndProfile(session) {

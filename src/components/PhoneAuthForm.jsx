@@ -200,8 +200,8 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
       {/* ÉTAPE 1 : Formulaire Numéro de Téléphone */}
       {/* ---------------------------------------------------- */}
       {step === "phone" ? (
-        <form onSubmit={handleSendOtp} className="space-y-3">
-          <div className="space-y-3">
+        <form onSubmit={handleSendOtp} className="space-y-2.5">
+          <div className="space-y-2.5">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5">
                 Pays / Indicatif
@@ -270,7 +270,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
         /* ---------------------------------------------------- */
         /* ÉTAPE 2 : Formulaire Code OTP */
         /* ---------------------------------------------------- */
-        <form onSubmit={handleVerifyOtp} className="space-y-3">
+        <form onSubmit={handleVerifyOtp} className="space-y-2.5">
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5 text-center">
               Code de vérification (6 chiffres)

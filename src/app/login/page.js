@@ -205,9 +205,9 @@ export default function LoginPage() {
       </header>
 
       {/* Conteneur Principal / Carte de Login OU Carte de Réinitialisation */}
-      <main className="w-[90%] max-w-sm mx-auto py-8 z-10">
+      <main className="w-[92%] max-w-xs sm:max-w-sm mx-auto py-4 z-10">
         {isRecoveryMode ? (
-          <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl p-4 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300 max-h-[85vh] overflow-y-auto">
             <div className="flex justify-center mb-5">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
             </div>
@@ -232,7 +232,7 @@ export default function LoginPage() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleResetPasswordSubmit} className="space-y-3">
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-2.5">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">
                     Nouveau mot de passe
@@ -279,15 +279,15 @@ export default function LoginPage() {
             )}
           </div>
         ) : (
-        <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300 max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-3xl p-4 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300 max-h-[85vh] overflow-y-auto">
 
           {/* Logo officiel du site au-dessus de la carte */}
-          <div className="flex justify-center mb-5">
+          <div className="flex justify-center mb-3">
             <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
           </div>
 
           {/* Sélecteur d'onglets Connexion (E-mail / Téléphone) */}
-          <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+          <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
             <button
               type="button"
               onClick={() => setLoginMethod("email")}
@@ -313,7 +313,7 @@ export default function LoginPage() {
           </div>
 
           {/* Titre & Sous-titre */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
               Login
             </h1>
@@ -341,7 +341,7 @@ export default function LoginPage() {
               </Link>
             </div>
           ) : loginMethod === "email" ? (
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-2.5">
               {/* Champ Email */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
@@ -152,7 +152,6 @@ export default function BoiteAIdees() {
 
   // Search System
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
   const [searchFocused, setSearchFocused] = useState(false);
 
   // Suggestion page states
@@ -175,6 +174,11 @@ export default function BoiteAIdees() {
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
     if (savedLang) {
+      // localStorage n'existe pas côté serveur : cette lecture doit rester
+      // dans un effet (jamais pendant le rendu, pour éviter un hydration
+      // mismatch), donc setState-après-lecture-synchrone est ici la seule
+      // option correcte.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedLang(savedLang);
     }
   }, []);

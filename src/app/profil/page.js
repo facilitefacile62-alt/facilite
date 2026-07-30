@@ -406,6 +406,16 @@ export default function ProfilPage() {
     return true;
   });
 
+  const handleCloseModal = () => {
+    setContactModalOpen(false);
+    setTimeout(() => {
+      setFormSubmitted(false);
+      setIsSubmitting(false);
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    }, 300);
+  };
+
+
   // Close modals and dropdowns on Escape key or click outside
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -634,15 +644,6 @@ export default function ProfilPage() {
     setTimeout(() => {
       window.location.href = "/";
     }, 1000);
-  };
-
-  const handleCloseModal = () => {
-    setContactModalOpen(false);
-    setTimeout(() => {
-      setFormSubmitted(false);
-      setIsSubmitting(false);
-      setFormData({ name: "", email: "", subject: "", message: "" });
-    }, 300);
   };
 
   const handleFormSubmit = (e) => {
