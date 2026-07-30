@@ -155,6 +155,42 @@ const translations = {
 
 const initialJobs = [
   {
+    id: 99,
+    titleFR: "Équipiers Polyvalents en Formation",
+    titleEN: "Polyvalent Team Members in Training",
+    company: "KFC Sénégal",
+    logoColor: "bg-red-600",
+    initials: "KFC",
+    location: "Dakar",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDD",
+    descFR: `KFC Sénégal recrute des ÉQUIPIERS POLYVALENTS EN FORMATION pour accompagner ses prochaines ouvertures de restaurants.
+
+Ce que nous offrons :
+- Une formation complète et accompagnée
+- Des opportunités d'évolution
+- Un environnement de travail stimulant et bienveillant
+- Avantages repas et autres bénéfices
+
+Profil recherché :
+- Souriant(e) et motivé(e)
+- Dynamique et esprit d'équipe
+- Ponctuel(le) et engagé(e)
+- Désireux(se) d'apprendre`,
+    descEN: `KFC Senegal is recruiting POLYVALENT TEAM MEMBERS IN TRAINING to support its upcoming restaurant openings.
+
+What we offer:
+- Full and guided training
+- Career growth opportunities
+- Stimulating and caring work environment
+- Meal benefits and other perks`,
+    tags: ["Dakar", "CDD", "Formation"],
+    salary: "Selon profil",
+    recruiterEmail: "recrutement@kfcsenegal.com",
+    image: "/affichedoffre.jpeg"
+  },
+  {
     id: 6,
     titleFR: "FACILITE BUSINESS RECRUTE !",
     titleEN: "FACILITE BUSINESS IS RECRUITING!",
