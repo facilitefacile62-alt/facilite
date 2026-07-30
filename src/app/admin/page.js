@@ -5,6 +5,8 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
+import UnreadBadge from "@/components/UnreadBadge";
+import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 const TABS = [
   { id: "dashboard", label: "Tableau de bord", icon: "📊" },
@@ -41,6 +43,7 @@ function growthPercent(current, previous) {
 
 export default function AdminDashboardPage() {
   const [userSession, setUserSession] = useState(null);
+  const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [selectedLang, setSelectedLang] = useState("FR");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -237,9 +240,10 @@ export default function AdminDashboardPage() {
             <span>🔍</span>
             <span>Explorer / Offres</span>
           </Link>
-          <Link href="/messagerie" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
+          <Link href="/messagerie" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition relative">
             <span>💬</span>
             <span>Messagerie Échanges</span>
+            <UnreadBadge count={unreadMessagesCount} />
           </Link>
           <Link href="/admin/messages" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">
             <span>💬</span>

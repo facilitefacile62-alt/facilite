@@ -6,6 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import RoleNavLink from "@/components/RoleNavLink";
+import UnreadBadge from "@/components/UnreadBadge";
+import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -225,6 +227,7 @@ export default function Home() {
 
   // Sync Supabase Auth session
   const [userSession, setUserSession] = useState(null);
+  const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -773,10 +776,7 @@ export default function Home() {
               >
                 <i className="fa-regular fa-comments text-xl"></i>
                 <span className="text-[11px] font-bold tracking-tight">{t.navMessages}</span>
-                <span className="absolute top-0.5 right-2 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
+                <UnreadBadge count={unreadMessagesCount} />
               </Link>
             )}
 
@@ -912,10 +912,7 @@ export default function Home() {
               aria-label="Messagerie"
             >
               <i className="fa-regular fa-comments text-sm"></i>
-              <span className="absolute top-1 right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
+              <UnreadBadge count={unreadMessagesCount} />
             </Link>
 
             <button
@@ -956,10 +953,7 @@ export default function Home() {
           >
             <i className="fa-regular fa-comments text-lg"></i>
             <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>
-            <span className="absolute top-0.5 right-2 flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
-            </span>
+            <UnreadBadge count={unreadMessagesCount} />
           </Link>
 
           <button

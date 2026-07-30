@@ -6,6 +6,8 @@ import Link from "next/link";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import { sendMessage } from "@/lib/messages";
 import RoleBadge from "@/components/RoleBadge";
+import UnreadBadge from "@/components/UnreadBadge";
+import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 const EMPTY_OFFER = {
   title: "",
@@ -29,6 +31,7 @@ const APPLICATION_STATUSES = [
 
 export default function RecruteurDashboardPage() {
   const [userSession, setUserSession] = useState(null);
+  const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [activeTab, setActiveTab] = useState("offres"); // 'offres' | 'candidatures' | 'cvtheque'
   const [loading, setLoading] = useState(true);
   const offerFormRef = useRef(null);
@@ -423,10 +426,11 @@ export default function RecruteurDashboardPage() {
             </button>
             <Link
               href="/messagerie"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 relative"
             >
               <i className="fa-solid fa-comments"></i>
               <span className="hidden sm:inline">Messagerie</span>
+              <UnreadBadge count={unreadMessagesCount} />
             </Link>
             <button
               onClick={handleGlobalSignOut}

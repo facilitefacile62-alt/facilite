@@ -4,9 +4,12 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import UnreadBadge from "@/components/UnreadBadge";
+import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 export default function ExtracteurPage() {
   const [userSession, setUserSession] = useState(null);
+  const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -137,10 +140,11 @@ export default function ExtracteurPage() {
           <div className="flex items-center space-x-4">
             <Link
               href="/messagerie"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 relative"
             >
               <i className="fa-solid fa-comments"></i>
               <span>Messagerie</span>
+              <UnreadBadge count={unreadMessagesCount} />
             </Link>
             <button
               onClick={handleGlobalSignOut}

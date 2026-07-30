@@ -5,9 +5,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
+import UnreadBadge from "@/components/UnreadBadge";
+import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 export default function CandidatDashboardPage() {
   const [userSession, setUserSession] = useState(null);
+  const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [candidatures, setCandidatures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [downloadingCvId, setDownloadingCvId] = useState(null);
@@ -112,10 +115,11 @@ export default function CandidatDashboardPage() {
             </Link>
             <Link
               href="/messagerie"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 relative"
             >
               <i className="fa-solid fa-comments"></i>
               <span>Messagerie</span>
+              <UnreadBadge count={unreadMessagesCount} />
             </Link>
             <button
               onClick={handleGlobalSignOut}

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
+import UnreadBadge from "@/components/UnreadBadge";
+import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 export default function ProfilPage() {
   const pathname = usePathname();
@@ -28,6 +30,7 @@ export default function ProfilPage() {
 
   // Équipes & États Profil Éditable (Chargés dynamiquement depuis Supabase)
   const [userSession, setUserSession] = useState(null);
+  const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [profileName, setProfileName] = useState("");
   const [profileRole, setProfileRole] = useState("candidat");
   const [profileSubtitle, setProfileSubtitle] = useState("");
@@ -1365,10 +1368,7 @@ export default function ProfilPage() {
               >
                 <i className="fa-regular fa-comments text-xl"></i>
                 <span className="text-[11px] font-bold tracking-tight">Messagerie</span>
-                <span className="absolute top-0.5 right-2 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
+                <UnreadBadge count={unreadMessagesCount} />
               </Link>
             )}
 
@@ -1617,10 +1617,7 @@ export default function ProfilPage() {
           >
             <i className="fa-regular fa-comments text-lg"></i>
             <span className="text-[9px] font-bold tracking-tight">Messagerie</span>
-            <span className="absolute top-0.5 right-2 flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
-            </span>
+            <UnreadBadge count={unreadMessagesCount} />
           </Link>
 
           {/* Recrutement */}

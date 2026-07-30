@@ -26,56 +26,66 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
 
   if (!apiKey) {
-    throw new Error("Clé API Gemini non configurée (GEMINI_API_KEY manquante dans l'environnement).");
-  }
-
-  const { GoogleGenAI } = await import("@google/genai");
-  const ai = new GoogleGenAI({ apiKey });
-
-  const prompt = `Analyse cette affiche d'emploi/recrutement. Extrais l'adresse e-mail du recruteur, le titre du poste, le nom de l'entreprise et le type de contrat. Réponds STRICTEMENT en JSON sous la forme : { "email": "...", "job_title": "...", "company": "...", "contract_type": "...", "raw_text": "..." }.`;
-
-  const base64Data = buffer.toString("base64");
-
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: prompt },
-          {
-            inlineData: {
-              mimeType: mimeType || "image/jpeg",
-              data: base64Data,
-            },
-          },
-        ],
-      },
-    ],
-  });
-
-  const responseText = response.text || "";
-
-  let cleanedJson = responseText.trim();
-  if (cleanedJson.includes("```")) {
-    cleanedJson = cleanedJson.replace(/```json/gi, "").replace(/```/g, "").trim();
-  }
-
-  let parsed = null;
-  try {
-    parsed = JSON.parse(cleanedJson);
-  } catch {
-    const emailMatch = responseText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    parsed = {
-      email: emailMatch ? emailMatch[0].toLowerCase() : null,
-      job_title: null,
-      company: null,
-      contract_type: null,
-      raw_text: responseText,
+    return {
+      errorKeyMissing: true,
+      error: "Clé API Gemini introuvable. Veuillez configurer GEMINI_API_KEY dans Vercel/env.",
     };
   }
 
-  return parsed;
+  try {
+    const { GoogleGenAI } = await import("@google/genai");
+    const ai = new GoogleGenAI({ apiKey });
+
+    const prompt = `Analyse cette affiche d'emploi/recrutement. Extrais l'adresse e-mail du recruteur, le titre du poste, le nom de l'entreprise et le type de contrat. Réponds STRICTEMENT en JSON sous la forme : { "email": "...", "job_title": "...", "company": "...", "contract_type": "...", "raw_text": "..." }.`;
+
+    const base64Data = buffer.toString("base64");
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: mimeType || "image/jpeg",
+                data: base64Data,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const responseText = response.text || "";
+
+    let cleanedJson = responseText.trim();
+    if (cleanedJson.includes("```")) {
+      cleanedJson = cleanedJson.replace(/```json/gi, "").replace(/```/g, "").trim();
+    }
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(cleanedJson);
+    } catch {
+      const emailMatch = responseText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      parsed = {
+        email: emailMatch ? emailMatch[0].toLowerCase() : null,
+        job_title: null,
+        company: null,
+        contract_type: null,
+        raw_text: responseText,
+      };
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error("[Extract Email Error]", err);
+    return {
+      error: err.message || "Erreur lors de l'analyse avec Gemini.",
+    };
+  }
 }
 
 async function runImageOcr(buffer) {
