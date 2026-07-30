@@ -239,7 +239,11 @@ export default function AdminDashboardPage() {
           </Link>
           <Link href="/messagerie" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
             <span>💬</span>
-            <span>Messagerie</span>
+            <span>Messagerie Échanges</span>
+          </Link>
+          <Link href="/admin/messages" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">
+            <span>💬</span>
+            <span>Messagerie Support Admin</span>
           </Link>
           <Link href="/admin/support" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
             <span>🎧</span>
