@@ -1389,6 +1389,34 @@ export default function ProfilPage() {
               </button>
             )}
 
+            {/* Onglet Admin si l'utilisateur est admin */}
+            {profileRole === "admin" && (
+              <Link
+                href="/admin"
+                className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                  pathname === "/admin" ? "text-amber-500 font-extrabold" : "text-amber-600 hover:text-amber-700"
+                }`}
+                title="Accéder au panneau d'administration"
+              >
+                <i className="fa-solid fa-shield-halved text-xl text-amber-500"></i>
+                <span className="text-[11px] font-extrabold tracking-tight text-amber-600">Admin</span>
+              </Link>
+            )}
+
+            {/* Onglet Recruteur si l'utilisateur est recruteur */}
+            {profileRole === "recruteur" && (
+              <Link
+                href="/recruteur"
+                className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                  pathname === "/recruteur" ? "text-emerald-600 font-extrabold" : "text-emerald-700 hover:text-emerald-800"
+                }`}
+                title="Accéder à l'espace recruteur"
+              >
+                <i className="fa-solid fa-briefcase text-xl text-emerald-600"></i>
+                <span className="text-[11px] font-extrabold tracking-tight text-emerald-700">Recruteur</span>
+              </Link>
+            )}
+
             {/* Recrutement Spontané */}
             <a
               href="#"
@@ -1485,6 +1513,28 @@ export default function ProfilPage() {
                     <i className="fa-regular fa-user text-gray-400 text-sm"></i>
                     <span>Voir mon profil & CV</span>
                   </button>
+
+                  {profileRole === "admin" && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full text-left px-3 py-2 text-xs font-extrabold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-xl transition flex items-center space-x-2.5"
+                    >
+                      <i className="fa-solid fa-shield-halved text-amber-600 text-sm"></i>
+                      <span>Espace Administration</span>
+                    </Link>
+                  )}
+
+                  {profileRole === "recruteur" && (
+                    <Link
+                      href="/recruteur"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full text-left px-3 py-2 text-xs font-extrabold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition flex items-center space-x-2.5"
+                    >
+                      <i className="fa-solid fa-briefcase text-emerald-600 text-sm"></i>
+                      <span>Espace Recruteur</span>
+                    </Link>
+                  )}
 
                   <button
                     onClick={() => {
