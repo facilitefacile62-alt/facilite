@@ -85,7 +85,7 @@ export default function ExtracteurPage() {
 
       const data = await res.json();
 
-      if (data.email) {
+      if (data.success && data.email) {
         setExtractedEmail(data.email);
         setExtractedData(data);
       } else {

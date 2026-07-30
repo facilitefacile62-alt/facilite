@@ -45,7 +45,13 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
   }
 
   const prompt = `Analyse cette affiche d'emploi/recrutement. Extrais l'adresse e-mail du recruteur, le titre du poste, le nom de l'entreprise et le type de contrat. Réponds STRICTEMENT en JSON sous la forme : { "email": "...", "job_title": "...", "company": "...", "contract_type": "...", "raw_text": "..." }.`;
-  const base64Data = buffer.toString("base64");
+
+  // buffer.toString("base64") ne contient normalement jamais de préfixe data
+  // URI (ce n'est pas un data URI, juste du base64 brut) — retrait défensif
+  // au cas où un appelant passerait un buffer dérivé d'un data URI complet.
+  const cleanBase64 = buffer.toString("base64").replace(/^data:[^;]+;base64,/, "");
+
+  let lastErrorDetail = null;
 
   for (const model of CANDIDATE_MODELS) {
     try {
@@ -63,10 +69,16 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
                 role: "user",
                 parts: [
                   { text: prompt },
+                  // Nomenclature REST officielle : inline_data / mime_type en
+                  // snake_case. Le SDK @google/genai accepte inlineData /
+                  // mimeType (camelCase) et les convertit lui-même, mais un
+                  // appel fetch() direct au endpoint REST doit utiliser le
+                  // nommage exact du schéma JSON, sans quoi Google rejette la
+                  // requête (400 invalid argument).
                   {
-                    inlineData: {
-                      mimeType: mimeType || "image/jpeg",
-                      data: base64Data,
+                    inline_data: {
+                      mime_type: mimeType || "image/jpeg",
+                      data: cleanBase64,
                     },
                   },
                 ],
@@ -80,8 +92,18 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
       );
 
       if (!response.ok) {
-        const errText = await response.text();
-        console.warn(`[Gemini REST] Échec avec ${model} (${response.status}):`, errText.slice(0, 150));
+        let errJson;
+        try {
+          errJson = await response.json();
+        } catch {
+          errJson = { raw: await response.text().catch(() => "Corps de réponse illisible.") };
+        }
+        console.error("[Gemini REST Error]", response.status, errJson);
+        lastErrorDetail = {
+          model,
+          status: response.status,
+          message: errJson?.error?.message || JSON.stringify(errJson),
+        };
         continue;
       }
 
@@ -109,12 +131,21 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
 
       if (parsed) return parsed;
     } catch (err) {
-      console.warn(`[Gemini REST] Erreur réseau/fetch avec ${model}:`, err.message);
+      console.error(`[Gemini REST] Erreur réseau/fetch avec ${model}:`, err.message);
+      lastErrorDetail = { model, status: null, message: err.message };
     }
   }
 
+  // Tous les modèles ont échoué : on renvoie le détail exact de la dernière
+  // erreur Google (clé invalide, quota, modèle indisponible...) plutôt qu'un
+  // message générique, pour permettre un diagnostic précis côté client.
+  const lastErrorText = lastErrorDetail
+    ? `${lastErrorDetail.message} (modèle : ${lastErrorDetail.model}${lastErrorDetail.status ? `, HTTP ${lastErrorDetail.status}` : ""})`
+    : null;
+
+  console.error("[Extract Email Error] Tous les modèles Gemini ont échoué. Dernier échec:", lastErrorText);
   return {
-    error: "Impossible d'analyser l'image pour le moment. Réessayez dans quelques instants.",
+    error: lastErrorText ? `Erreur API Gemini : ${lastErrorText}` : "Impossible d'analyser l'image pour le moment. Réessayez dans quelques instants.",
   };
 }
 
