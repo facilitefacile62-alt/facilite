@@ -107,7 +107,7 @@ export default function CandidatDashboardPage() {
 
           <div className="flex items-center space-x-4">
             <Link
-              href="/service"
+              href="/offres"
               className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
             >
               <i className="fa-solid fa-briefcase"></i>

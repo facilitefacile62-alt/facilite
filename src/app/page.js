@@ -360,6 +360,8 @@ export default function Home() {
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
 
   // Search and Filter States for Job Board
+  const [dynamicJobs, setDynamicJobs] = useState([]);
+  const [allJobs, setAllJobs] = useState(initialJobs);
   const [jobs, setJobs] = useState(initialJobs);
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
@@ -379,6 +381,45 @@ export default function Home() {
   const [userSession, setUserSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
+
+  useEffect(() => {
+    async function loadDynamicJobs() {
+      try {
+        const { data, error } = await supabase
+          .from("job_offers")
+          .select("*")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          const formatted = data.map((offer) => ({
+            id: offer.id,
+            titleFR: offer.title || "Offre d'emploi",
+            titleEN: offer.title || "Job offer",
+            company: offer.company || "Entreprise confidentielle",
+            logoColor: "bg-gray-500",
+            initials: offer.company ? offer.company.substring(0, 2).toUpperCase() : "CO",
+            location: offer.location || "Non spécifié",
+            timeFR: new Date(offer.created_at).toLocaleDateString("fr-FR"),
+            timeEN: new Date(offer.created_at).toLocaleDateString("en-US"),
+            contract: offer.contract_type || "Non spécifié",
+            descFR: offer.description || "",
+            descEN: offer.description || "",
+            tags: [offer.location, offer.contract_type].filter(Boolean),
+            salary: offer.salary_range || "Non spécifié",
+            image: offer.image_url || null,
+          }));
+          setDynamicJobs(formatted);
+        }
+      } catch (err) {
+        console.error("Erreur chargement des offres:", err);
+      }
+    }
+    loadDynamicJobs();
+  }, []);
+
+  useEffect(() => {
+    setAllJobs([...dynamicJobs, ...initialJobs]);
+  }, [dynamicJobs]);
 
   useEffect(() => {
     async function loadSessionAndProfile(session) {
@@ -483,7 +524,7 @@ export default function Home() {
 
   // --- FILTRAGE DES OFFRES D'EMPLOI ---
   useEffect(() => {
-    let filtered = initialJobs;
+    let filtered = allJobs;
 
     // Filtre mot-clé (titre ou entreprise ou description)
     if (keyword.trim()) {
@@ -506,7 +547,7 @@ export default function Home() {
     }
 
     setJobs(filtered);
-  }, [keyword, locationFilter, contractFilter, selectedLang]);
+  }, [keyword, locationFilter, contractFilter, selectedLang, allJobs]);
 
   // Infinite Scroll / Looping Feed listener
   useEffect(() => {
@@ -715,6 +756,19 @@ export default function Home() {
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
             </Link>
 
+            {/* Offres d'emploi publiées par les recruteurs (table job_offers) :
+                distinct du fil statique ci-dessous, sans quoi cette page reste le
+                seul point d'entrée réel vers /offres pour un candidat. */}
+            <Link
+              href="/offres"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/offres" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-list-check text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">Offres</span>
+            </Link>
+
             {/* Messagerie (Visible uniquement pour les utilisateurs connectés) */}
             {userSession && (
               <Link
@@ -918,6 +972,17 @@ export default function Home() {
           >
             <i className="fa-solid fa-house text-lg"></i>
             <span className="text-[9px] font-bold tracking-tight">{t.navHome}</span>
+          </Link>
+
+          {/* Offres d'emploi publiées par les recruteurs (job_offers) */}
+          <Link
+            href="/offres"
+            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
+              pathname === "/offres" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            <i className="fa-solid fa-list-check text-lg"></i>
+            <span className="text-[9px] font-bold tracking-tight">Offres</span>
           </Link>
 
           {/* Service */}
@@ -1346,8 +1411,18 @@ export default function Home() {
 
             {/* Barre de Recherche Intégrée au Flux */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col space-y-3.5">
-              <h3 className="text-sm font-extrabold text-gray-900">{t.jobBoardTitle}</h3>
-              
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h3 className="text-sm font-extrabold text-gray-900">{t.jobBoardTitle}</h3>
+                <Link
+                  href="/offres"
+                  className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <i className="fa-solid fa-briefcase"></i>
+                  Voir les offres publiées par nos recruteurs
+                  <i className="fa-solid fa-arrow-right text-[9px]"></i>
+                </Link>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                 {/* Mot-clé */}
                 <div className="relative">

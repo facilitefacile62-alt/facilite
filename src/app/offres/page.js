@@ -59,10 +59,10 @@ export default function OffresPage() {
         if (error) {
           console.error("Erreur chargement des offres:", error);
         } else {
-          // Filtrer dynamiquement côté client (is_active !== false ET status !== 'closed' / 'paused')
-          const activeOffers = (data || []).filter(
-            (o) => o.is_active !== false && o.status !== "closed" && o.status !== "paused"
-          );
+          // job_offers n'a pas de colonne `status` (seul is_active existe,
+          // basculé via /recruteur) : un filtre dessus était toujours vrai et
+          // ne faisait rien, laissé par erreur lors d'une évolution passée.
+          const activeOffers = (data || []).filter((o) => o.is_active !== false);
           setOffers(activeOffers);
         }
       } catch (err) {

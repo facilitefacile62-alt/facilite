@@ -170,23 +170,17 @@ export async function sendMessage({
 export async function resolveSupportConversation(userId) {
   if (!userId) return null;
 
-  const { data: admins, error: adminsErr } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("role", "admin")
-    .order("created_at", { ascending: true })
-    .limit(1);
+  const { data: adminId, error: adminsErr } = await supabase.rpc("resolve_admin_id");
 
   if (adminsErr) {
     console.error("Erreur recherche d'un compte admin:", adminsErr.message);
     return null;
   }
-  if (!admins || admins.length === 0) {
+  if (!adminId) {
     // Aucun admin sur la plateforme pour l'instant : rien à résoudre, le
     // message repartira sans destinataire (comportement précédent).
     return null;
   }
-  const adminId = admins[0].id;
 
   const { data: existing, error: existingErr } = await supabase
     .from("conversations")
