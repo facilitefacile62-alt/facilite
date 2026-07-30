@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
-import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow } from "@/lib/messages";
+import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, touchConversation } from "@/lib/messages";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
@@ -300,6 +300,14 @@ export default function MessagerieClient() {
   // Protection stricte et isolation des messages par l'ID d'utilisateur Supabase
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
+
+  // Conversation résolue avec un administrateur (créée si nécessaire) : tout
+  // message envoyé depuis le fil fusionné "Support RH Facilité" y est
+  // rattaché (receiver_id + conversation_id), sans quoi il n'apparaît nulle
+  // part côté /admin/messages. Voir resolveSupportConversation dans
+  // src/lib/messages.js pour le détail du problème corrigé.
+  const [supportConversationId, setSupportConversationId] = useState(null);
+  const [supportAdminId, setSupportAdminId] = useState(null);
 
   // Discussion IA épinglée : appel direct à /api/ai-chat (DeepSeek, spécialisé
   // par rôle) avec persistance Supabase dans la table dédiée assistant_messages.
@@ -637,6 +645,16 @@ export default function MessagerieClient() {
       }
       setUserSession(session);
       loadAiMessagesFromSupabase(session.user.id);
+
+      // Résout (ou crée) la conversation avec un admin AVANT que l'utilisateur
+      // ne puisse envoyer un message, pour que le tout premier message parte
+      // déjà correctement rattaché.
+      resolveSupportConversation(session.user.id).then((result) => {
+        if (result) {
+          setSupportConversationId(result.conversationId);
+          setSupportAdminId(result.adminId);
+        }
+      });
 
       // Écouter également les changements de session en temps réel
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
@@ -990,6 +1008,8 @@ export default function MessagerieClient() {
         const { data: savedRow, error: sendError } = await sendMessage({
           senderId: session.user.id,
           content: userMessageText,
+          receiverId: supportAdminId,
+          conversationId: supportConversationId,
           typeDiscussion: discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE"
         });
 
@@ -1013,6 +1033,11 @@ export default function MessagerieClient() {
               )
             };
           }));
+          // Fait remonter la conversation en tête de la colonne de gauche
+          // côté admin (canal Realtime sur la table conversations).
+          if (supportConversationId) {
+            touchConversation(supportConversationId, userMessageText);
+          }
         }
       }
     } catch (err) {
@@ -1311,9 +1336,12 @@ export default function MessagerieClient() {
 
     if (userSession?.user?.id) {
       try {
+        const captionText = attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier joint : ${fileName}`;
         const { data: savedRow } = await supabase.from("messages").insert({
           sender_id: userSession.user.id,
-          content: attachmentType === "audio" ? "🎙️ Note vocale" : `📎 Fichier joint : ${fileName}`,
+          receiver_id: supportAdminId,
+          conversation_id: supportConversationId,
+          content: captionText,
           attachment_url: publicUrl,
           attachment_type: attachmentType,
           file_name: fileName,
@@ -1344,6 +1372,9 @@ export default function MessagerieClient() {
               };
             })
           );
+          if (supportConversationId) {
+            touchConversation(supportConversationId, captionText);
+          }
         }
       } catch (err) {
         console.error("Erreur envoi pièce jointe Supabase:", err);

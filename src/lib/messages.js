@@ -58,7 +58,7 @@ export async function fetchConversationMessages(userId) {
 
   const { data, error } = await supabase
     .from("messages")
-    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id, attachment_url, attachment_type, file_name, file_size")
+    .select("id, sender_id, receiver_id, conversation_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id, attachment_url, attachment_type, file_name, file_size")
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: true });
@@ -120,6 +120,7 @@ export async function sendMessage({
   senderId,
   content,
   receiverId = null,
+  conversationId = null,
   typeDiscussion = "ECHANGE",
   jobOfferId = null,
   attachmentUrl = null,
@@ -132,6 +133,7 @@ export async function sendMessage({
     .insert({
       sender_id: senderId,
       receiver_id: receiverId,
+      conversation_id: conversationId,
       content,
       is_read: false,
       type_discussion: typeDiscussion,
@@ -141,7 +143,7 @@ export async function sendMessage({
       file_name: fileName,
       file_size: fileSize,
     })
-    .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id, attachment_url, attachment_type, file_name, file_size")
+    .select("id, sender_id, receiver_id, conversation_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id, attachment_url, attachment_type, file_name, file_size")
     .single();
 
   if (error) {
@@ -150,4 +152,83 @@ export async function sendMessage({
   }
 
   return { data, error: null };
+}
+
+/**
+ * Retrouve (ou crée) la conversation entre l'utilisateur connecté et un
+ * administrateur.
+ *
+ * Pourquoi : /messagerie envoie les messages du fil fusionné "Support RH
+ * Facilité" sans destinataire précis (receiver_id NULL) — ce qui les rendait
+ * invisibles côté /admin/messages, entièrement construit autour de la table
+ * `conversations`. Cette fonction garantit qu'un vrai destinataire (un admin
+ * réel) et une conversation existent AVANT l'envoi, pour que le message y
+ * soit rattaché dès sa création plutôt que de rester orphelin.
+ *
+ * @returns {Promise<{ conversationId: string, adminId: string } | null>}
+ */
+export async function resolveSupportConversation(userId) {
+  if (!userId) return null;
+
+  const { data: admins, error: adminsErr } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "admin")
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (adminsErr) {
+    console.error("Erreur recherche d'un compte admin:", adminsErr.message);
+    return null;
+  }
+  if (!admins || admins.length === 0) {
+    // Aucun admin sur la plateforme pour l'instant : rien à résoudre, le
+    // message repartira sans destinataire (comportement précédent).
+    return null;
+  }
+  const adminId = admins[0].id;
+
+  const { data: existing, error: existingErr } = await supabase
+    .from("conversations")
+    .select("id")
+    .or(`and(user_1_id.eq.${userId},user_2_id.eq.${adminId}),and(user_1_id.eq.${adminId},user_2_id.eq.${userId})`)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingErr) {
+    console.error("Erreur recherche conversation support existante:", existingErr.message);
+  }
+  if (existing) {
+    return { conversationId: existing.id, adminId };
+  }
+
+  const { data: created, error: createErr } = await supabase
+    .from("conversations")
+    .insert({ user_1_id: userId, user_2_id: adminId, last_message: "", updated_at: new Date().toISOString() })
+    .select("id")
+    .single();
+
+  if (createErr || !created) {
+    console.error("Erreur création conversation support:", createErr?.message);
+    return null;
+  }
+
+  return { conversationId: created.id, adminId };
+}
+
+/**
+ * Met à jour last_message/updated_at d'une conversation après un envoi, pour
+ * qu'elle remonte en tête de la colonne de gauche côté admin (ce dernier
+ * s'appuie sur un canal Realtime écoutant les changements de cette table).
+ */
+export async function touchConversation(conversationId, lastMessage) {
+  if (!conversationId) return;
+  const { error } = await supabase
+    .from("conversations")
+    .update({ last_message: lastMessage, updated_at: new Date().toISOString() })
+    .eq("id", conversationId);
+
+  if (error) {
+    console.error("Erreur mise à jour de la conversation:", error.message);
+  }
 }
