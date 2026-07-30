@@ -1655,7 +1655,7 @@ export default function MessagerieClient() {
                   discussionTypeFilter === "ECHANGE" ? "bg-blue-600 text-white shadow-xs" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <span>💬 Échanges</span>
+                <span>🎓 Demande de stage</span>
               </button>
             </div>
 
@@ -1999,7 +1999,7 @@ export default function MessagerieClient() {
                     <div className="text-center text-xs text-gray-400 italic py-6">
                       {discussionTypeFilter === "OFFRE"
                         ? "Aucun échange lié à une candidature pour le moment."
-                        : "Aucune demande d'échange pour le moment."}
+                        : "Aucune demande de stage pour le moment."}
                     </div>
                   )}
 
