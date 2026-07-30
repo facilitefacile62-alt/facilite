@@ -969,6 +969,13 @@ export default function MessagerieClient() {
 
         if (sendError) {
           triggerToast("Message non enregistré", "fa-triangle-exclamation");
+          setConversations(prev => prev.map(c => {
+            if (c.id !== activeConvId) return c;
+            return {
+              ...c,
+              messages: c.messages.map(m => (m.id === tempId ? { ...m, status: "error" } : m))
+            };
+          }));
         } else if (savedRow) {
           // Réconciliation id temporaire → UUID réel
           setConversations(prev => prev.map(c => {
@@ -985,15 +992,26 @@ export default function MessagerieClient() {
     } catch (err) {
       console.error("Erreur d'envoi du message sur Supabase:", err);
       triggerToast("Message non enregistré", "fa-triangle-exclamation");
+      setConversations(prev => prev.map(c => {
+        if (c.id !== activeConvId) return c;
+        return {
+          ...c,
+          messages: c.messages.map(m => (m.id === tempId ? { ...m, status: "error" } : m))
+        };
+      }));
     }
 
-    // Update status to delivered quickly
+    // Update status to delivered quickly — ne touche jamais un message déjà
+    // marqué en échec (sinon l'indicateur d'erreur, posé juste au-dessus,
+    // serait aussitôt écrasé par ce timeout).
     setTimeout(() => {
       setConversations(prev => prev.map(c => {
         if (c.id === activeConvId) {
           return {
             ...c,
-            messages: c.messages.map(m => m.text === userMessageText ? { ...m, status: "delivered" } : m)
+            messages: c.messages.map(m =>
+              m.text === userMessageText && m.status !== "error" ? { ...m, status: "delivered" } : m
+            )
           };
         }
         return c;
@@ -2166,6 +2184,9 @@ export default function MessagerieClient() {
                               {msg.status === "sent" && <i className="fa-solid fa-check"></i>}
                               {msg.status === "delivered" && <i className="fa-solid fa-check-double text-gray-300"></i>}
                               {msg.status === "read" && <i className="fa-solid fa-check-double text-[#10E688]"></i>}
+                              {msg.status === "error" && (
+                                <i className="fa-solid fa-triangle-exclamation text-red-400" title="Échec de l'envoi"></i>
+                              )}
                             </span>
                           )}
                         </div>

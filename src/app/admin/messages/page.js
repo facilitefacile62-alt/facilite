@@ -6,6 +6,13 @@ import Link from "next/link";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 
+// Trie les conversations par activité la plus récente — utilisé après chaque
+// mise à jour optimiste ou événement Realtime pour faire remonter le fil qui
+// vient de recevoir un message, sans recharger la liste depuis la base.
+function reorderByUpdatedAt(list) {
+  return [...list].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+}
+
 export default function AdminMessagesPage() {
   const [userSession, setUserSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -154,48 +161,53 @@ export default function AdminMessagesPage() {
     loadMessagesForActiveConv();
   }, [activeConvId, userSession, conversations]);
 
-  // 4. Supabase Realtime : écouter les nouveaux messages reçus en direct
+  // 4a. Supabase Realtime : canal dédié à la conversation active, filtré côté
+  // serveur par conversation_id. Re-souscrit (et ferme proprement l'ancien
+  // canal) à chaque changement de conversation ou démontage.
+  //
+  // Cas des conversations "virtuelles" (fallback créé si l'INSERT dans
+  // public.conversations a échoué, voir handleSelectUserFromDirectory) :
+  // elles n'ont pas de conversation_id réel à filtrer côté serveur, donc pas
+  // de véritable id de correspondant non plus — on le retrouve directement
+  // dans l'id local ("virtual-<userId>") plutôt que de dépendre de l'état
+  // `conversations`, ce qui éviterait sinon de resouscrire à chaque mise à
+  // jour de la liste (reorder, etc.).
   useEffect(() => {
-    if (!userSession) return;
+    if (!activeConvId || !userSession) return;
+
+    const isVirtual = activeConvId.startsWith("virtual-");
+    const myId = userSession.user.id;
+    const otherUserId = isVirtual ? activeConvId.replace("virtual-", "") : null;
 
     const channel = supabase
-      .channel("admin_realtime_messages")
+      .channel(`chat:${activeConvId}`)
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-        },
+        isVirtual
+          ? { event: "INSERT", schema: "public", table: "messages" }
+          : { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${activeConvId}` },
         (payload) => {
           const newMsg = payload.new;
+          if (!newMsg) return;
 
-          // Si le message appartient à la conversation active
-          if (newMsg.conversation_id === activeConvId || newMsg.receiver_id === userSession.user.id) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMsg.id)) return prev;
-              return [...prev, newMsg];
-            });
+          const belongsToActiveConv = isVirtual
+            ? (newMsg.sender_id === otherUserId && newMsg.receiver_id === myId) ||
+              (newMsg.sender_id === myId && newMsg.receiver_id === otherUserId)
+            : newMsg.conversation_id === activeConvId;
 
-            // Marquer comme lu immédiatement si l'admin regarde cette conversation
-            if (newMsg.conversation_id === activeConvId && newMsg.sender_id !== userSession.user.id) {
-              supabase.from("messages").update({ is_read: true }).eq("id", newMsg.id);
-            }
+          if (!belongsToActiveConv) return;
+
+          // Le message peut déjà être présent (écho de notre propre envoi
+          // optimiste, remplacé par la ligne réelle dès la réponse de
+          // l'insert) : on ne l'ajoute que s'il est vraiment nouveau.
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+
+          if (newMsg.sender_id !== myId) {
+            supabase.from("messages").update({ is_read: true }).eq("id", newMsg.id);
           }
-
-          // Mettre à jour le dernier message dans la liste des conversations
-          setConversations((prevConvs) =>
-            prevConvs.map((c) => {
-              if (c.id === newMsg.conversation_id || c.user_2_id === newMsg.sender_id || c.user_1_id === newMsg.sender_id) {
-                return {
-                  ...c,
-                  last_message: newMsg.content,
-                  updated_at: newMsg.created_at,
-                };
-              }
-              return c;
-            })
-          );
         }
       )
       .subscribe();
@@ -205,28 +217,86 @@ export default function AdminMessagesPage() {
     };
   }, [activeConvId, userSession]);
 
+  // 4b. Supabase Realtime : canal global sur public.conversations pour faire
+  // remonter en direct, dans la colonne de gauche, le fil qui vient de
+  // recevoir un message (le sien ou celui d'un autre admin) — sans dépendre
+  // du contenu de la conversation actuellement ouverte.
+  useEffect(() => {
+    if (!userSession) return;
+
+    const channel = supabase
+      .channel("admin_conversations_list")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "conversations" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            setConversations((prev) => prev.filter((c) => c.id !== payload.old?.id));
+            return;
+          }
+          const row = payload.new;
+          if (!row) return;
+
+          setConversations((prev) => {
+            const exists = prev.some((c) => c.id === row.id);
+            const next = exists ? prev.map((c) => (c.id === row.id ? { ...c, ...row } : c)) : [row, ...prev];
+            return reorderByUpdatedAt(next);
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userSession]);
+
   // Auto-scroll en bas de tchat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 5. Envoi d'un message par l'Admin
+  // 5. Envoi d'un message par l'Admin — affichage optimiste : le message
+  // apparaît immédiatement (id temporaire, statut "sending"), avant même la
+  // confirmation serveur, puis est remplacé par la ligne réelle renvoyée par
+  // Supabase (ou marqué en échec si l'insertion échoue).
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputText.trim() || sending || !activeConvId || !userSession) return;
 
+    const currentConv = conversations.find((c) => c.id === activeConvId);
+    if (!currentConv) return;
+
+    const otherUserId = currentConv.user_1_id === userSession.user.id
+      ? currentConv.user_2_id
+      : currentConv.user_1_id;
+
     const textToSend = inputText.trim();
+    const nowIso = new Date().toISOString();
+    const tempId = `temp-${Date.now()}`;
+
     setInputText("");
     setSending(true);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        conversation_id: currentConv.isVirtual ? null : activeConvId,
+        sender_id: userSession.user.id,
+        receiver_id: otherUserId,
+        content: textToSend,
+        is_read: true,
+        created_at: nowIso,
+        _status: "sending",
+      },
+    ]);
+    setConversations((prev) =>
+      reorderByUpdatedAt(
+        prev.map((c) => (c.id === activeConvId ? { ...c, last_message: textToSend, updated_at: nowIso } : c))
+      )
+    );
 
     try {
-      const currentConv = conversations.find((c) => c.id === activeConvId);
-      if (!currentConv) return;
-
-      const otherUserId = currentConv.user_1_id === userSession.user.id
-        ? currentConv.user_2_id
-        : currentConv.user_1_id;
-
       let realConvId = currentConv.id;
 
       // Si la conversation est virtuelle, créer une vraie entrée dans public.conversations
@@ -237,7 +307,7 @@ export default function AdminMessagesPage() {
             user_1_id: userSession.user.id,
             user_2_id: otherUserId,
             last_message: textToSend,
-            updated_at: new Date().toISOString(),
+            updated_at: nowIso,
           })
           .select()
           .single();
@@ -245,7 +315,7 @@ export default function AdminMessagesPage() {
         if (newConv) {
           realConvId = newConv.id;
           setConversations((prev) =>
-            prev.map((c) => (c.id === activeConvId ? { ...newConv, isVirtual: false } : c))
+            reorderByUpdatedAt(prev.map((c) => (c.id === activeConvId ? { ...newConv, isVirtual: false } : c)))
           );
           setActiveConvId(realConvId);
         }
@@ -254,7 +324,7 @@ export default function AdminMessagesPage() {
           .from("conversations")
           .update({
             last_message: textToSend,
-            updated_at: new Date().toISOString(),
+            updated_at: nowIso,
           })
           .eq("id", realConvId);
       }
@@ -267,18 +337,20 @@ export default function AdminMessagesPage() {
           receiver_id: otherUserId,
           content: textToSend,
           is_read: true,
-          created_at: new Date().toISOString(),
+          created_at: nowIso,
         })
         .select()
         .single();
 
       if (msgError) {
         console.error("Erreur envoi message admin:", msgError);
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, _status: "error" } : m)));
       } else if (savedMsg) {
-        setMessages((prev) => [...prev, savedMsg]);
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? savedMsg : m)));
       }
     } catch (err) {
       console.error("Exception lors de l'envoi de message:", err);
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, _status: "error" } : m)));
     } finally {
       setSending(false);
     }
@@ -696,18 +768,24 @@ export default function AdminMessagesPage() {
                         >
                           <div
                             className={`max-w-md px-4 py-3 rounded-2xl text-xs shadow-xs leading-relaxed ${
-                              isAdminMsg
+                              m._status === "error"
+                                ? "bg-red-50 text-red-800 border border-red-200"
+                                : isAdminMsg
                                 ? "bg-amber-500 text-white rounded-br-none"
                                 : "bg-white text-gray-800 border border-gray-200 rounded-bl-none"
-                            }`}
+                            } ${m._status === "sending" ? "opacity-60" : ""}`}
                           >
                             <p className="font-medium whitespace-pre-wrap">{m.content}</p>
                             <div
-                              className={`text-[9px] mt-1.5 text-right font-semibold ${
-                                isAdminMsg ? "text-amber-100" : "text-gray-400"
+                              className={`text-[9px] mt-1.5 text-right font-semibold flex items-center justify-end gap-1 ${
+                                m._status === "error" ? "text-red-500" : isAdminMsg ? "text-amber-100" : "text-gray-400"
                               }`}
                             >
-                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                              {m._status === "sending" && <span>Envoi...</span>}
+                              {m._status === "error" && <span>⚠️ Échec de l'envoi</span>}
+                              {!m._status && (
+                                <span>{new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+                              )}
                             </div>
                           </div>
                         </div>
