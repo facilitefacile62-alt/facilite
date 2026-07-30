@@ -18,6 +18,17 @@ const EMPTY_OFFER = {
   min_education_level: "Aucun",
   description: "",
   image_url: "",
+  deadline: "",
+};
+
+const EMPTY_RECRUITER_PROFILE = {
+  company_name: "",
+  sector: "",
+  location: "Dakar, Sénégal",
+  logo_url: "",
+  banner_url: "",
+  description: "",
+  website: "",
 };
 
 const OFFER_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -32,9 +43,20 @@ const APPLICATION_STATUSES = [
 export default function RecruteurDashboardPage() {
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
-  const [activeTab, setActiveTab] = useState("offres"); // 'offres' | 'candidatures' | 'cvtheque'
+  const [activeTab, setActiveTab] = useState("offres"); // 'offres' | 'candidatures' | 'cvtheque' | 'profil'
   const [loading, setLoading] = useState(true);
   const offerFormRef = useRef(null);
+
+  // --- Onglet Profil Entreprise (vitrine publique /recruteurs/[id]) ---
+  const [recruiterProfileId, setRecruiterProfileId] = useState(null);
+  const [recruiterProfileForm, setRecruiterProfileForm] = useState(EMPTY_RECRUITER_PROFILE);
+  const [savingRecruiterProfile, setSavingRecruiterProfile] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [bannerFile, setBannerFile] = useState(null);
+  const [bannerPreview, setBannerPreview] = useState(null);
+  const logoInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
 
   // --- Onglet Offres ---
   const [myOffers, setMyOffers] = useState([]);
@@ -105,6 +127,7 @@ export default function RecruteurDashboardPage() {
           { data: offers, error: offersErr },
           { data: candidatesData, error: candidatesErr },
           { data: applicationsData, error: applicationsErr },
+          { data: recruiterProfileData, error: recruiterProfileErr },
         ] = await Promise.all([
           supabase.from("job_offers").select("*").eq("recruiter_id", session.user.id).order("created_at", { ascending: false }),
           supabase.from("candidats_recherche").select("*"),
@@ -113,6 +136,7 @@ export default function RecruteurDashboardPage() {
             .select("*")
             .not("job_offer_id", "is", null)
             .order("created_at", { ascending: false }),
+          supabase.from("recruiter_profiles").select("*").eq("user_id", session.user.id).maybeSingle(),
         ]);
 
         if (offersErr) console.error("Erreur chargement offres:", offersErr);
@@ -123,6 +147,22 @@ export default function RecruteurDashboardPage() {
 
         if (applicationsErr) console.error("Erreur chargement candidatures:", applicationsErr);
         else setApplications(applicationsData || []);
+
+        if (recruiterProfileErr) console.error("Erreur chargement profil vitrine:", recruiterProfileErr);
+        else if (recruiterProfileData) {
+          setRecruiterProfileId(recruiterProfileData.id);
+          setRecruiterProfileForm({
+            company_name: recruiterProfileData.company_name || "",
+            sector: recruiterProfileData.sector || "",
+            location: recruiterProfileData.location || "Dakar, Sénégal",
+            logo_url: recruiterProfileData.logo_url || "",
+            banner_url: recruiterProfileData.banner_url || "",
+            description: recruiterProfileData.description || "",
+            website: recruiterProfileData.website || "",
+          });
+          setLogoPreview(recruiterProfileData.logo_url || null);
+          setBannerPreview(recruiterProfileData.banner_url || null);
+        }
       } catch (err) {
         console.error("Exception chargement dashboard recruteur:", err);
       } finally {
@@ -150,6 +190,7 @@ export default function RecruteurDashboardPage() {
       min_education_level: offer.min_education_level || "Aucun",
       description: offer.description || "",
       image_url: offer.image_url || "",
+      deadline: offer.deadline || "",
     });
     setOfferImageFile(null);
     setOfferImagePreview(offer.image_url || null);
@@ -194,6 +235,119 @@ export default function RecruteurDashboardPage() {
     setOfferImagePreview(null);
     setOfferForm((prev) => ({ ...prev, image_url: "" }));
     if (offerImageInputRef.current) offerImageInputRef.current.value = "";
+  };
+
+  // --- Onglet Profil Entreprise ---
+  const handleRecruiterProfileFieldChange = (field, value) => {
+    setRecruiterProfileForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleLogoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!OFFER_IMAGE_TYPES.includes(file.type)) {
+      triggerToast("Format d'image non supporté (PNG, JPG ou WEBP uniquement).");
+      return;
+    }
+    if (file.size > MAX_OFFER_IMAGE_BYTES) {
+      triggerToast("Image trop volumineuse (5 Mo maximum).");
+      return;
+    }
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setLogoPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleBannerSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!OFFER_IMAGE_TYPES.includes(file.type)) {
+      triggerToast("Format d'image non supporté (PNG, JPG ou WEBP uniquement).");
+      return;
+    }
+    if (file.size > MAX_OFFER_IMAGE_BYTES) {
+      triggerToast("Image trop volumineuse (5 Mo maximum).");
+      return;
+    }
+    setBannerFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setBannerPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveRecruiterProfile = async (e) => {
+    e.preventDefault();
+    if (!userSession?.user?.id) return;
+
+    if (!recruiterProfileForm.company_name.trim()) {
+      triggerToast("Le nom de l'entreprise est obligatoire.");
+      return;
+    }
+
+    setSavingRecruiterProfile(true);
+
+    try {
+      let logoUrl = recruiterProfileForm.logo_url || "";
+      let bannerUrl = recruiterProfileForm.banner_url || "";
+
+      // Réutilise le bucket "job-offers" (déjà scopé par dossier utilisateur
+      // via ses policies RLS existantes) plutôt que d'en créer un nouveau
+      // rien que pour le logo/la bannière.
+      if (logoFile) {
+        const ext = logoFile.name.split(".").pop().toLowerCase();
+        const path = `${userSession.user.id}/branding/logo-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("job-offers")
+          .upload(path, logoFile, { upsert: true, contentType: logoFile.type });
+        if (uploadError) throw uploadError;
+        logoUrl = supabase.storage.from("job-offers").getPublicUrl(path).data?.publicUrl || "";
+      }
+
+      if (bannerFile) {
+        const ext = bannerFile.name.split(".").pop().toLowerCase();
+        const path = `${userSession.user.id}/branding/banner-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("job-offers")
+          .upload(path, bannerFile, { upsert: true, contentType: bannerFile.type });
+        if (uploadError) throw uploadError;
+        bannerUrl = supabase.storage.from("job-offers").getPublicUrl(path).data?.publicUrl || "";
+      }
+
+      const payload = {
+        user_id: userSession.user.id,
+        ...recruiterProfileForm,
+        logo_url: logoUrl,
+        banner_url: bannerUrl,
+      };
+
+      const { data, error } = await supabase
+        .from("recruiter_profiles")
+        .upsert(payload, { onConflict: "user_id" })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setRecruiterProfileId(data.id);
+      setRecruiterProfileForm({
+        company_name: data.company_name || "",
+        sector: data.sector || "",
+        location: data.location || "Dakar, Sénégal",
+        logo_url: data.logo_url || "",
+        banner_url: data.banner_url || "",
+        description: data.description || "",
+        website: data.website || "",
+      });
+      setLogoFile(null);
+      setBannerFile(null);
+      triggerToast("Profil vitrine mis à jour !");
+    } catch (err) {
+      console.error("Erreur sauvegarde profil vitrine:", err);
+      triggerToast("Erreur lors de la sauvegarde du profil.");
+    } finally {
+      setSavingRecruiterProfile(false);
+    }
   };
 
   const handleOpenPublishOffer = () => {
@@ -257,7 +411,10 @@ export default function RecruteurDashboardPage() {
         imageUrl = publicUrlData?.publicUrl || "";
       }
 
-      const payload = { ...offerForm, image_url: imageUrl };
+      // deadline est une colonne DATE : une chaîne vide ("" par défaut dans le
+      // formulaire) ferait échouer l'insert/update avec une erreur de type
+      // Postgres ("invalid input syntax for type date"), il faut null.
+      const payload = { ...offerForm, image_url: imageUrl, deadline: offerForm.deadline || null };
 
       if (editingOfferId) {
         const { error } = await supabase
@@ -577,6 +734,15 @@ export default function RecruteurDashboardPage() {
           >
             <span>🔍 CVthèque</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("profil")}
+            className={`flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 whitespace-nowrap ${
+              activeTab === "profil" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            <span>🏢 Profil Entreprise</span>
+          </button>
         </div>
 
         {activeTab === "offres" && (
@@ -665,6 +831,16 @@ export default function RecruteurDashboardPage() {
                     value={offerForm.salary_range}
                     onChange={(e) => handleOfferFieldChange("salary_range", e.target.value)}
                     placeholder="Ex. 300 000 - 450 000 FCFA / mois"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Date limite de candidature (optionnel)</label>
+                  <input
+                    type="date"
+                    value={offerForm.deadline}
+                    onChange={(e) => handleOfferFieldChange("deadline", e.target.value)}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   />
                 </div>
@@ -1034,6 +1210,143 @@ export default function RecruteurDashboardPage() {
                 ))
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === "profil" && (
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <div>
+                <h2 className="text-lg font-extrabold text-gray-900 mb-1">Profil Entreprise</h2>
+                <p className="text-xs text-gray-500 font-medium">
+                  Ces informations apparaissent sur votre vitrine publique, visible par tous les candidats.
+                </p>
+              </div>
+              {userSession?.user?.id && (
+                <Link
+                  href={`/recruteurs/${userSession.user.id}`}
+                  target="_blank"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-extrabold text-xs rounded-xl transition whitespace-nowrap"
+                >
+                  <i className="fa-solid fa-arrow-up-right-from-square"></i> Voir ma vitrine publique
+                </Link>
+              )}
+            </div>
+
+            <form onSubmit={handleSaveRecruiterProfile} className="space-y-6">
+              {/* Bannière + Logo */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">Bannière (optionnel)</label>
+                <div
+                  onClick={() => bannerInputRef.current?.click()}
+                  className="relative h-32 rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-900 bg-cover bg-center cursor-pointer overflow-hidden group border border-gray-200"
+                  style={bannerPreview ? { backgroundImage: `url(${bannerPreview})` } : undefined}
+                >
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <span className="text-white text-xs font-extrabold flex items-center gap-1.5">
+                      <i className="fa-solid fa-camera"></i> Changer la bannière
+                    </span>
+                  </div>
+                  <input type="file" ref={bannerInputRef} accept="image/png,image/jpeg,image/webp" onChange={handleBannerSelect} className="hidden" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div
+                  onClick={() => logoInputRef.current?.click()}
+                  className="relative w-20 h-20 rounded-2xl bg-emerald-100 flex-shrink-0 cursor-pointer overflow-hidden group border border-gray-200 flex items-center justify-center"
+                >
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <i className="fa-solid fa-building text-emerald-400 text-xl"></i>
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <i className="fa-solid fa-camera text-white text-sm"></i>
+                  </div>
+                  <input type="file" ref={logoInputRef} accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} className="hidden" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-700">Logo de l'entreprise</p>
+                  <p className="text-[10px] text-gray-400 font-medium">PNG, JPG ou WEBP — 5 Mo maximum</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Nom de l'entreprise *</label>
+                  <input
+                    type="text"
+                    required
+                    value={recruiterProfileForm.company_name}
+                    onChange={(e) => handleRecruiterProfileFieldChange("company_name", e.target.value)}
+                    placeholder="Ex. Facilite Corporation"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Secteur d'activité</label>
+                  <input
+                    type="text"
+                    value={recruiterProfileForm.sector}
+                    onChange={(e) => handleRecruiterProfileFieldChange("sector", e.target.value)}
+                    placeholder="Ex. Technologies, Restauration..."
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Localisation</label>
+                  <input
+                    type="text"
+                    value={recruiterProfileForm.location}
+                    onChange={(e) => handleRecruiterProfileFieldChange("location", e.target.value)}
+                    placeholder="Ex. Dakar, Sénégal"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Site web (optionnel)</label>
+                  <input
+                    type="text"
+                    value={recruiterProfileForm.website}
+                    onChange={(e) => handleRecruiterProfileFieldChange("website", e.target.value)}
+                    placeholder="Ex. www.monentreprise.com"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Description de l'entreprise</label>
+                  <textarea
+                    rows="4"
+                    value={recruiterProfileForm.description}
+                    onChange={(e) => handleRecruiterProfileFieldChange("description", e.target.value)}
+                    placeholder="Présentez votre entreprise aux candidats..."
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition resize-none"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingRecruiterProfile}
+                className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {savingRecruiterProfile ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin"></i> Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-floppy-disk"></i>
+                    {recruiterProfileId ? "Enregistrer les modifications" : "Créer mon profil vitrine"}
+                  </>
+                )}
+              </button>
+            </form>
           </div>
         )}
       </main>

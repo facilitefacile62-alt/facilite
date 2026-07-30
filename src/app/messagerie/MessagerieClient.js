@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, resolveConversationWith, touchConversation } from "@/lib/messages";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
@@ -215,6 +215,12 @@ const initialConversations = [AI_PINNED_CHAT];
 
 export default function MessagerieClient() {
   const pathname = usePathname();
+  // Ouvre directement une conversation avec un destinataire précis (ex.
+  // bouton "Contacter le recruteur" d'une vitrine /recruteurs/[id]) —
+  // safe sans Suspense ici : la page parente charge ce composant via
+  // next/dynamic avec ssr:false, jamais de rendu serveur pour useSearchParams.
+  const searchParams = useSearchParams();
+  const recipientParam = searchParams.get("recipient");
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
@@ -313,6 +319,11 @@ export default function MessagerieClient() {
   // seul interlocuteur fixe ("le support") comme un candidat/recruteur — il
   // doit répondre au dernier expéditeur du message qu'il consulte.
   const [currentUserRole, setCurrentUserRole] = useState(null);
+
+  // Conversation directe ouverte via ?recipient=<userId> (ex. vitrine
+  // recruteur) — distincte du fil fusionné "Support RH Facilité" (id 1).
+  const [directRecipientId, setDirectRecipientId] = useState(null);
+  const [directConversationId, setDirectConversationId] = useState(null);
 
   // Discussion IA épinglée : appel direct à /api/ai-chat (DeepSeek, spécialisé
   // par rôle) avec persistance Supabase dans la table dédiée assistant_messages.
@@ -690,6 +701,56 @@ export default function MessagerieClient() {
           }
         });
 
+      // ?recipient=<userId> (ex. bouton "Contacter le recruteur" d'une
+      // vitrine /recruteurs/[id]) : ouvre une conversation directe avec ce
+      // destinataire précis, en plus (pas à la place) du fil Support.
+      if (recipientParam && recipientParam !== session.user.id) {
+        resolveConversationWith(session.user.id, recipientParam).then(async (result) => {
+          if (!result || !isActive) return;
+
+          const { data: recruiterProfile } = await supabase
+            .from("recruiter_profiles")
+            .select("company_name, sector, logo_url")
+            .eq("user_id", recipientParam)
+            .maybeSingle();
+
+          const { data: directMessages } = await supabase
+            .from("messages")
+            .select("id, sender_id, receiver_id, conversation_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id, attachment_url, attachment_type, file_name, file_size")
+            .eq("conversation_id", result.conversationId)
+            .order("created_at", { ascending: true });
+
+          if (!isActive) return;
+
+          const formattedMsgs = (directMessages || []).map((row) => formatMessageRow(row, session.user.id));
+          const displayName = recruiterProfile?.company_name || "Recruteur";
+
+          setDirectRecipientId(recipientParam);
+          setDirectConversationId(result.conversationId);
+
+          setConversations((prev) => {
+            if (prev.some((c) => c.id === recipientParam)) return prev;
+            const directConv = {
+              id: recipientParam,
+              name: displayName,
+              title: recruiterProfile?.sector || "Recruteur",
+              company: displayName,
+              avatarColor: "bg-blue-600",
+              avatarInitials: displayName.slice(0, 2).toUpperCase(),
+              logo: recruiterProfile?.logo_url || null,
+              lastMessage: formattedMsgs.length > 0 ? formattedMsgs[formattedMsgs.length - 1].text : "",
+              time: formattedMsgs.length > 0 ? formattedMsgs[formattedMsgs.length - 1].time : "",
+              unreadCount: 0,
+              online: false,
+              favorite: false,
+              messages: formattedMsgs,
+            };
+            return [...prev, directConv];
+          });
+          setActiveConvId(recipientParam);
+        });
+      }
+
       // Écouter également les changements de session en temps réel
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
         if (!currentSession) {
@@ -774,21 +835,33 @@ export default function MessagerieClient() {
             // l'utilisateur, quel que soit leur conversation_id.
             if (newRow.sender_id === session.user.id || newRow.receiver_id === session.user.id) {
               const formatted = formatMessageRow(newRow, session.user.id);
-              setConversations(prev => prev.map(c => {
-                // Uniquement le fil réel (id 1) : "ai-assistant" est alimenté
-                // par une table séparée (assistant_messages) — l'y ajouter
-                // aussi (bug précédent : condition OR au lieu d'un ciblage
-                // exclusif) polluait le fil IA avec de vrais messages support.
-                if (c.id !== 1) return c;
-                // Ne pas ajouter les doublons
-                if (c.messages.some(m => m.id === formatted.id)) return c;
-                return {
-                  ...c,
-                  lastMessage: formatted.text,
-                  time: formatted.time,
-                  messages: [...c.messages, formatted]
-                };
-              }));
+              // L'autre partie de l'échange : si une conversation directe
+              // (?recipient=, id = user_id du contact) existe déjà pour elle,
+              // le message y appartient plutôt qu'au fil Support fusionné.
+              // Lu depuis newRow (pas depuis l'état directRecipientId du
+              // closure, capturé une seule fois au montage et potentiellement
+              // périmé) pour rester correct même après résolution tardive.
+              const otherPartyId = newRow.sender_id === session.user.id ? newRow.receiver_id : newRow.sender_id;
+              setConversations(prev => {
+                const hasDirectConv = prev.some((c) => c.id === otherPartyId);
+                return prev.map(c => {
+                  // "ai-assistant" est alimenté par une table séparée
+                  // (assistant_messages) — jamais par de vrais messages ici
+                  // (bug précédent : condition OR au lieu d'un ciblage
+                  // exclusif polluait le fil IA avec de vrais messages support).
+                  if (c.id === "ai-assistant") return c;
+                  const belongsHere = hasDirectConv ? c.id === otherPartyId : c.id === 1;
+                  if (!belongsHere) return c;
+                  // Ne pas ajouter les doublons
+                  if (c.messages.some(m => m.id === formatted.id)) return c;
+                  return {
+                    ...c,
+                    lastMessage: formatted.text,
+                    time: formatted.time,
+                    messages: [...c.messages, formatted]
+                  };
+                });
+              });
             }
           }
         )
@@ -1009,6 +1082,12 @@ export default function MessagerieClient() {
   //   volée — sans quoi (bug corrigé ici) l'admin s'auto-assignait comme
   //   destinataire de ses propres réponses.
   const resolveReplyTarget = async () => {
+    // Conversation directe ouverte via ?recipient= (vitrine recruteur) :
+    // destinataire fixe, indépendant du rôle et du fil Support.
+    if (activeConvId === directRecipientId && directConversationId) {
+      return { receiverId: directRecipientId, conversationId: directConversationId, error: null };
+    }
+
     if (currentUserRole !== "admin") {
       if (supportAdminId && supportConversationId) {
         return { receiverId: supportAdminId, conversationId: supportConversationId, error: null };
