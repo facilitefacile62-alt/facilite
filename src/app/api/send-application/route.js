@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
-import { SendApplicationPayloadSchema } from "@/lib/validation";
+import { SendApplicationPayloadSchema, validateUploadedFile } from "@/lib/validation";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -19,11 +19,17 @@ export async function POST(req) {
     const { allowed, error: rateError } = checkRateLimit(user.id);
     if (!allowed) return rateError;
 
-    const parsed = SendApplicationPayloadSchema.safeParse(await req.json());
-    if (!parsed.success) {
+    const formData = await req.formData();
+    const recipientEmail = String(formData.get("recipientEmail") || "").trim();
+    const subject = String(formData.get("subject") || "").trim();
+    const message = String(formData.get("message") || "").trim();
+    const existingCvId = formData.get("existingCvId");
+    const cvFile = formData.get("cvFile");
+
+    const emailCheck = SendApplicationPayloadSchema.shape.recipientEmail.safeParse(recipientEmail);
+    if (!emailCheck.success) {
       return NextResponse.json({ error: "Adresse e-mail destinataire invalide." }, { status: 400 });
     }
-    const { recipientEmail } = parsed.data;
 
     // Le candidat est TOUJOURS l'utilisateur authentifié (user.id), jamais un
     // id envoyé par le client : sans ça, n'importe qui pourrait déclencher
@@ -43,30 +49,94 @@ export async function POST(req) {
     if (profileErr || !profile) {
       return NextResponse.json({ error: "Profil introuvable." }, { status: 404 });
     }
-    if (!profile.cv_url) {
-      return NextResponse.json(
-        { error: "Ajoutez d'abord un CV à votre profil pour pouvoir postuler en 1 clic." },
-        { status: 400 }
-      );
-    }
 
     const candidateName = profile.full_name || "Un candidat Facilite";
     const candidateEmail = profile.email || user.email;
 
-    // cv_url est un CHEMIN de stockage privé ({user_id}/cvs/...), pas une URL
-    // accessible : on télécharge le fichier pour le joindre en pièce jointe
-    // (même pattern que /api/postuler), plutôt qu'un lien qui serait cassé
-    // pour le destinataire (le bucket est privé).
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from("resumes")
-      .download(profile.cv_url);
+    // --- Résolution du CV à joindre : nouveau fichier > CV existant choisi
+    // > CV principal du profil (comportement historique, conservé en repli). ---
+    let fileBuffer = null;
+    let cvFileName = "CV.pdf";
 
-    if (downloadError || !fileData) {
-      console.error("Erreur téléchargement CV pour l'envoi:", downloadError?.message);
-      return NextResponse.json({ error: "Impossible de récupérer votre CV depuis le stockage." }, { status: 500 });
+    if (cvFile && typeof cvFile !== "string") {
+      const buffer = Buffer.from(await cvFile.arrayBuffer());
+      const check = validateUploadedFile(buffer, cvFile.type, cvFile.size);
+      if (!check.valid) {
+        return NextResponse.json({ error: check.error }, { status: check.status });
+      }
+
+      const storagePath = `${user.id}/cvs/${Date.now()}_${cvFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("resumes")
+        .upload(storagePath, buffer, { contentType: cvFile.type, duplex: "half" });
+
+      if (uploadError) {
+        console.error("Erreur upload CV send-application:", uploadError.message);
+        return NextResponse.json({ error: "Échec de l'importation du CV." }, { status: 500 });
+      }
+
+      // Le nouveau CV rejoint la bibliothèque du candidat, comme sur
+      // /api/postuler : disponible pour ses prochaines candidatures 1-clic.
+      const { error: resumeInsertErr } = await supabase.from("resumes").insert({
+        user_id: user.id,
+        title: cvFile.name,
+        type: "imported",
+        file_url: storagePath,
+        ats_score: 95,
+      });
+      if (resumeInsertErr) {
+        console.error("Erreur enregistrement resume send-application:", resumeInsertErr.message);
+      }
+
+      fileBuffer = buffer;
+      cvFileName = cvFile.name;
+    } else if (existingCvId) {
+      const { data: resumeRecord, error: resumeErr } = await supabase
+        .from("resumes")
+        .select("file_url, title")
+        .eq("id", existingCvId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (resumeErr || !resumeRecord) {
+        return NextResponse.json({ error: "Le CV sélectionné est introuvable." }, { status: 404 });
+      }
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from("resumes")
+        .download(resumeRecord.file_url);
+
+      if (downloadError || !fileData) {
+        console.error("Erreur téléchargement CV sélectionné:", downloadError?.message);
+        return NextResponse.json({ error: "Impossible de récupérer le CV sélectionné." }, { status: 500 });
+      }
+
+      fileBuffer = Buffer.from(await fileData.arrayBuffer());
+      cvFileName = resumeRecord.title || "CV.pdf";
+    } else if (profile.cv_url) {
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from("resumes")
+        .download(profile.cv_url);
+
+      if (downloadError || !fileData) {
+        console.error("Erreur téléchargement CV pour l'envoi:", downloadError?.message);
+        return NextResponse.json({ error: "Impossible de récupérer votre CV depuis le stockage." }, { status: 500 });
+      }
+
+      fileBuffer = Buffer.from(await fileData.arrayBuffer());
+      cvFileName = profile.cv_name || "CV.pdf";
+    } else {
+      return NextResponse.json(
+        { error: "Sélectionnez un CV existant ou importez-en un pour postuler en 1 clic." },
+        { status: 400 }
+      );
     }
-    const fileBuffer = Buffer.from(await fileData.arrayBuffer());
-    const cvFileName = profile.cv_name || "CV.pdf";
+
+    const finalSubject = subject || `Candidature de ${candidateName} via Facilite`;
+    const escapedMessage = message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const messageHtml = message
+      ? `<p style="font-size: 14px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${escapedMessage}</p>`
+      : `<p style="font-size: 14px; color: #374151; line-height: 1.6;"><strong>${candidateName}</strong> (${candidateEmail}) vous adresse sa candidature en réponse à votre annonce de recrutement.</p>`;
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px; background-color: #ffffff;">
@@ -74,9 +144,7 @@ export async function POST(req) {
           🚀 Nouvelle Candidature via Facilite
         </h2>
         <p style="font-size: 14px; color: #374151; line-height: 1.6;">Bonjour,</p>
-        <p style="font-size: 14px; color: #374151; line-height: 1.6;">
-          <strong>${candidateName}</strong> (${candidateEmail}) vous adresse sa candidature en réponse à votre annonce de recrutement.
-        </p>
+        ${messageHtml}
         <p style="font-size: 13px; color: #6b7280;">Vous trouverez son CV en pièce jointe à cet e-mail.</p>
         <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 24px 0;" />
         <p style="font-size: 11px; color: #9ca3af; text-align: center;">
@@ -98,7 +166,7 @@ export async function POST(req) {
       from: sender,
       to: finalRecipient,
       replyTo: candidateEmail,
-      subject: `Candidature de ${candidateName} via Facilite`,
+      subject: finalSubject,
       html: htmlContent,
       attachments: [{ filename: cvFileName, content: fileBuffer }],
     });

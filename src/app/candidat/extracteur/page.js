@@ -10,8 +10,7 @@ import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 // Filet de sécurité : si le serveur renvoie malgré tout une erreur brute
 // (JSON stringifié d'un SDK, objet imbriqué...) plutôt qu'une phrase lisible,
 // on ne l'affiche jamais telle quelle à l'utilisateur.
-function toReadableErrorMessage(error) {
-  const fallback = "Impossible d'analyser l'image pour le moment. Réessayez dans quelques instants.";
+function toReadableErrorMessage(error, fallback = "Impossible d'analyser l'image pour le moment. Réessayez dans quelques instants.") {
   if (!error) return fallback;
   if (typeof error !== "string") return fallback;
   const looksLikeRawJson = error.trim().startsWith("{") || error.trim().startsWith("[");
@@ -28,10 +27,27 @@ export default function ExtracteurPage() {
   const [extractedData, setExtractedData] = useState(null);
   const [extractionMessage, setExtractionMessage] = useState(null);
 
+  // --- Formulaire de préparation de candidature (étape 2) ---
+  const [userResumes, setUserResumes] = useState([]);
+  const [cvChoice, setCvChoice] = useState("new"); // "existing" | "new"
+  const [selectedCvId, setSelectedCvId] = useState("");
+  const [newCvFile, setNewCvFile] = useState(null);
+  const [applicationSubject, setApplicationSubject] = useState("");
+  const [applicationMessage, setApplicationMessage] = useState("");
+
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [sendErrorMessage, setSendErrorMessage] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: "" });
 
   const fileInputRef = useRef(null);
+  const cvFileInputRef = useRef(null);
+  const applicationFormRef = useRef(null);
+
+  const triggerToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: "" }), 3500);
+  };
 
   useEffect(() => {
     async function checkAuth() {
@@ -41,9 +57,40 @@ export default function ExtracteurPage() {
         return;
       }
       setUserSession(session);
+
+      const { data: resumesList } = await supabase
+        .from("resumes")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+
+      setUserResumes(resumesList || []);
+      if (resumesList && resumesList.length > 0) {
+        setSelectedCvId(resumesList[0].id);
+        setCvChoice("existing");
+      }
     }
     checkAuth();
   }, []);
+
+  // Pré-remplit l'objet et le message dès que l'IA a identifié le poste,
+  // et fait défiler la page jusqu'au formulaire de candidature.
+  useEffect(() => {
+    if (!extractedEmail) return;
+
+    const title = extractedData?.job_title || "ce poste";
+    const company = extractedData?.company || "";
+
+    setApplicationSubject(`Candidature au poste de ${title}${company ? ` - ${company}` : ""}`);
+    setApplicationMessage(
+      `Bonjour,\n\nSuite à votre offre pour le poste de ${title}${company ? ` chez ${company}` : ""}, je me permets de vous adresser ma candidature. Vous trouverez ci-joint mon CV détaillant mon parcours et mes compétences.\n\nJe reste à votre disposition pour un entretien à votre convenance.\n\nCordialement.`
+    );
+
+    const timer = setTimeout(() => {
+      applicationFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [extractedEmail, extractedData]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -53,10 +100,17 @@ export default function ExtracteurPage() {
     setExtractedEmail(null);
     setExtractionMessage(null);
     setSendSuccess(false);
+    setSendErrorMessage(null);
 
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
+  };
+
+  const handleCvFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNewCvFile(file);
   };
 
   const handleExtractEmail = async () => {
@@ -107,34 +161,70 @@ export default function ExtracteurPage() {
   const handleSendOneClickApplication = async () => {
     if (!extractedEmail || !userSession?.user?.id) return;
 
+    if (cvChoice === "existing" && !selectedCvId) {
+      setSendErrorMessage("Sélectionnez un CV existant ou importez-en un nouveau.");
+      return;
+    }
+    if (cvChoice === "new" && !newCvFile) {
+      setSendErrorMessage("Importez un fichier de CV avant d'envoyer votre candidature.");
+      return;
+    }
+
     setIsSending(true);
+    setSendErrorMessage(null);
     try {
+      const formData = new FormData();
+      formData.append("recipientEmail", extractedEmail);
+      formData.append("subject", applicationSubject);
+      formData.append("message", applicationMessage);
+      if (cvChoice === "existing") {
+        formData.append("existingCvId", selectedCvId);
+      } else {
+        formData.append("cvFile", newCvFile);
+      }
+
       const res = await fetch("/api/send-application", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${userSession.access_token}`,
         },
-        body: JSON.stringify({ recipientEmail: extractedEmail }),
+        body: formData,
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
         setSendSuccess(true);
+        triggerToast("Votre candidature a été préparée avec succès !");
       } else {
-        alert(data.error || "Impossible d'envoyer la candidature.");
+        setSendErrorMessage(toReadableErrorMessage(data.error, "Impossible d'envoyer la candidature pour le moment."));
       }
     } catch (err) {
       console.error("Erreur d'envoi:", err);
-      alert("Une erreur s'est produite lors de l'envoi.");
+      setSendErrorMessage("Une erreur s'est produite lors de l'envoi.");
     } finally {
       setIsSending(false);
     }
   };
 
+  // Alternative rapide : ouvre le client mail par défaut du candidat avec le
+  // sujet et le message déjà remplis (le CV n'étant pas joignable via
+  // mailto:, le candidat doit l'attacher manuellement dans ce cas).
+  const mailtoHref = extractedEmail
+    ? `mailto:${extractedEmail}?subject=${encodeURIComponent(applicationSubject)}&body=${encodeURIComponent(applicationMessage)}`
+    : "#";
+
   return (
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col justify-between">
+      {/* Toast */}
+      <div
+        className={`fixed top-20 right-4 z-[700] bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl transition-all duration-300 transform ${
+          toast.show ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0 pointer-events-none"
+        }`}
+      >
+        <span className="text-sm font-semibold">{toast.message}</span>
+      </div>
+
       {/* Header Nav */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -301,25 +391,144 @@ export default function ExtracteurPage() {
                   <p className="text-xs text-emerald-100 font-medium">Votre CV et votre demande ont été envoyés à {extractedEmail}.</p>
                 </div>
               ) : (
-                /* Gros Bouton d'action 1-Click */
-                <button
-                  type="button"
-                  onClick={handleSendOneClickApplication}
-                  disabled={isSending}
-                  className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-base rounded-2xl shadow-xl transition cursor-pointer flex items-center justify-center space-x-2 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60"
-                >
-                  {isSending ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Envoi direct en cours...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>🚀 Postuler en 1 clic à</span>
-                      <span className="font-mono text-emerald-200 underline">{extractedEmail}</span>
-                    </>
+                <div ref={applicationFormRef} className="space-y-4 pt-2 scroll-mt-24">
+                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider">
+                    2. Vos informations de candidature
+                  </label>
+
+                  {/* Choix du CV */}
+                  <div className="space-y-2.5">
+                    {userResumes.length > 0 && (
+                      <div className="flex gap-4 border-b border-gray-100 pb-2">
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="cvChoice"
+                            checked={cvChoice === "existing"}
+                            onChange={() => setCvChoice("existing")}
+                            className="accent-emerald-500"
+                            disabled={isSending}
+                          />
+                          <span>CV déjà enregistré</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="cvChoice"
+                            checked={cvChoice === "new"}
+                            onChange={() => setCvChoice("new")}
+                            className="accent-emerald-500"
+                            disabled={isSending}
+                          />
+                          <span>Importer un nouveau CV</span>
+                        </label>
+                      </div>
+                    )}
+
+                    {cvChoice === "existing" && userResumes.length > 0 ? (
+                      <select
+                        value={selectedCvId}
+                        onChange={(e) => setSelectedCvId(e.target.value)}
+                        disabled={isSending}
+                        className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-extrabold text-gray-700 focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+                      >
+                        {userResumes.map((cv) => (
+                          <option key={cv.id} value={cv.id}>
+                            {cv.title} ({new Date(cv.created_at).toLocaleDateString("fr-FR")})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div
+                        onClick={() => cvFileInputRef.current?.click()}
+                        className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-gray-50/50 hover:bg-emerald-50/30 rounded-2xl p-5 text-center cursor-pointer transition"
+                      >
+                        <input
+                          type="file"
+                          ref={cvFileInputRef}
+                          accept=".pdf,.doc,.docx"
+                          onChange={handleCvFileSelect}
+                          className="hidden"
+                          disabled={isSending}
+                        />
+                        {newCvFile ? (
+                          <div className="space-y-1">
+                            <i className="fa-solid fa-file-pdf text-2xl text-emerald-500"></i>
+                            <p className="text-xs font-extrabold text-gray-800 truncate">{newCvFile.name}</p>
+                            <p className="text-[10px] text-gray-400 font-bold">Cliquez pour remplacer</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-1 text-gray-400">
+                            <i className="fa-solid fa-cloud-arrow-up text-2xl"></i>
+                            <p className="text-xs font-bold text-gray-600">Cliquez pour importer votre CV (PDF, DOCX)</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Objet de la demande */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
+                      Objet de la demande
+                    </label>
+                    <input
+                      type="text"
+                      value={applicationSubject}
+                      onChange={(e) => setApplicationSubject(e.target.value)}
+                      disabled={isSending}
+                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition"
+                    />
+                  </div>
+
+                  {/* Message / lettre de motivation */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
+                      Message / Lettre de motivation
+                    </label>
+                    <textarea
+                      rows={5}
+                      value={applicationMessage}
+                      onChange={(e) => setApplicationMessage(e.target.value)}
+                      disabled={isSending}
+                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition resize-none"
+                    />
+                  </div>
+
+                  {sendErrorMessage && (
+                    <div className="p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-xs font-bold text-rose-700 flex items-center gap-2">
+                      <i className="fa-solid fa-triangle-exclamation"></i>
+                      <span>{sendErrorMessage}</span>
+                    </div>
                   )}
-                </button>
+
+                  {/* Bouton d'envoi + alternative mailto */}
+                  <button
+                    type="button"
+                    onClick={handleSendOneClickApplication}
+                    disabled={isSending}
+                    className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-base rounded-2xl shadow-xl transition cursor-pointer flex items-center justify-center space-x-2 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60"
+                  >
+                    {isSending ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Envoi direct en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🚀 Postuler en 1 clic à</span>
+                        <span className="font-mono text-emerald-200 underline">{extractedEmail}</span>
+                      </>
+                    )}
+                  </button>
+
+                  <a
+                    href={mailtoHref}
+                    className="block text-center text-[11px] font-bold text-gray-400 hover:text-emerald-700 transition underline"
+                  >
+                    Ou ouvrir dans votre messagerie (CV à joindre manuellement)
+                  </a>
+                </div>
               )}
             </div>
           )}
