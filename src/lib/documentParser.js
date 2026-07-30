@@ -5,23 +5,79 @@ import mammoth from "mammoth";
 // (cas des documents scannés/photographiés) et qu'il faut basculer en OCR.
 const MIN_PDF_TEXT_LENGTH = 30;
 
-async function ocrPdfPages(pdf, numPages) {
+/**
+ * OCR via Google Cloud Vision (documentTextDetection : optimisé pour du texte
+ * dense/structuré comme un CV ou une annonce, plus précis que Tesseract sur
+ * des photos de qualité moyenne). Lève une erreur si les identifiants
+ * GOOGLE_* sont absents ou si l'appel échoue — à charge de l'appelant de
+ * basculer sur le fallback.
+ */
+async function extractTextWithVision(buffer) {
+  const projectId = process.env.GOOGLE_PROJECT_ID;
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error("Google Vision non configuré (variables GOOGLE_PROJECT_ID/GOOGLE_CLIENT_EMAIL/GOOGLE_PRIVATE_KEY manquantes).");
+  }
+
+  const { ImageAnnotatorClient } = await import("@google-cloud/vision");
+  const client = new ImageAnnotatorClient({
+    projectId,
+    credentials: {
+      client_email: clientEmail,
+      // La clé est stockée dans .env avec des \n littéraux (échappés) : il
+      // faut les convertir en vrais retours à la ligne pour un PEM valide.
+      private_key: privateKey.replace(/\\n/g, "\n"),
+    },
+  });
+
+  const [result] = await client.documentTextDetection({ image: { content: buffer } });
+  const text = result?.fullTextAnnotation?.text || "";
+
+  if (!text.trim()) {
+    throw new Error("Google Vision n'a détecté aucun texte sur cette image.");
+  }
+  return text;
+}
+
+async function extractTextWithTesseract(buffer) {
   const { createWorker } = await import("tesseract.js");
   const worker = await createWorker("fra+eng");
   try {
-    let combinedText = "";
-    for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
-      const imageBuffer = await renderPageAsImage(pdf, pageNumber, {
-        canvasImport: () => import("@napi-rs/canvas"),
-        scale: 2,
-      });
-      const { data } = await worker.recognize(Buffer.from(imageBuffer));
-      combinedText += `${data.text || ""}\n`;
-    }
-    return combinedText;
+    const { data } = await worker.recognize(buffer);
+    return data.text || "";
   } finally {
     await worker.terminate();
   }
+}
+
+/**
+ * OCR d'une image avec Google Vision en priorité et repli automatique et
+ * silencieux sur Tesseract (identifiants absents, quota dépassé, erreur
+ * réseau, aucun texte détecté...). L'Extracteur doit rester fonctionnel même
+ * sans les identifiants Google configurés.
+ */
+async function runImageOcr(buffer) {
+  try {
+    return await extractTextWithVision(buffer);
+  } catch (err) {
+    console.warn("Google Vision indisponible, repli sur Tesseract:", err.message);
+    return extractTextWithTesseract(buffer);
+  }
+}
+
+async function ocrPdfPages(pdf, numPages) {
+  let combinedText = "";
+  for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
+    const imageBuffer = await renderPageAsImage(pdf, pageNumber, {
+      canvasImport: () => import("@napi-rs/canvas"),
+      scale: 2,
+    });
+    const pageText = await runImageOcr(Buffer.from(imageBuffer));
+    combinedText += `${pageText}\n`;
+  }
+  return combinedText;
 }
 
 const SECTION_HEADERS = {
@@ -72,7 +128,8 @@ function detectAnySectionHeader(line) {
 
 /**
  * Extrait le texte brut d'un fichier (PDF, DOCX, image) selon son type MIME/extension.
- * Les images passent par l'OCR (tesseract.js), les PDF/DOCX par une extraction textuelle native.
+ * Les images passent par l'OCR (Google Vision, repli automatique sur
+ * tesseract.js), les PDF/DOCX par une extraction textuelle native.
  */
 export async function extractTextFromFile(buffer, filename, mimeType) {
   const ext = (filename || "").split(".").pop().toLowerCase();
@@ -96,14 +153,7 @@ export async function extractTextFromFile(buffer, filename, mimeType) {
   }
 
   if (["png", "jpg", "jpeg", "webp", "bmp"].includes(ext) || mimeType?.startsWith("image/")) {
-    const { createWorker } = await import("tesseract.js");
-    const worker = await createWorker("fra+eng");
-    try {
-      const { data } = await worker.recognize(buffer);
-      return data.text || "";
-    } finally {
-      await worker.terminate();
-    }
+    return runImageOcr(buffer);
   }
 
   // Texte brut / formats non gérés : tentative de lecture directe
