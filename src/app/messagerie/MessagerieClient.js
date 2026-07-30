@@ -963,7 +963,8 @@ export default function MessagerieClient() {
       if (session?.user) {
         const { data: savedRow, error: sendError } = await sendMessage({
           senderId: session.user.id,
-          content: userMessageText
+          content: userMessageText,
+          typeDiscussion: discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE"
         });
 
         if (sendError) {
@@ -1001,6 +1002,69 @@ export default function MessagerieClient() {
 
     // 2. Trigger Bot Simulation
     triggerBotResponse(activeConvId, userMessageText);
+  };
+
+  // Ouvre/crée instantanément une discussion de type SUPPORT avec l'équipe
+  // Admin. Un seul message d'ouverture est envoyé (la première fois) : si un
+  // fil SUPPORT existe déjà, on se contente de basculer dessus pour éviter
+  // de spammer une nouvelle sollicitation à chaque clic.
+  const handleContactSupport = async () => {
+    if (!userSession?.user?.id) {
+      window.location.href = "/login";
+      return;
+    }
+
+    setDiscussionTypeFilter("SUPPORT");
+    setActiveConvId(1);
+    setMobileChatView(true);
+
+    const existingConv = conversations.find(c => c.id === 1);
+    const hasSupportThread = existingConv?.messages?.some(
+      m => (m.typeDiscussion || "ECHANGE") === "SUPPORT"
+    );
+    if (hasSupportThread) return;
+
+    const { data: savedRow, error } = await sendMessage({
+      senderId: userSession.user.id,
+      content: "Bonjour, j'ai besoin d'assistance sur la plateforme Facilite.",
+      typeDiscussion: "SUPPORT"
+    });
+
+    if (error || !savedRow) {
+      triggerToast("Impossible de contacter le support pour le moment.", "fa-triangle-exclamation");
+      return;
+    }
+
+    const formatted = formatMessageRow(savedRow, userSession.user.id);
+    setConversations(prev => {
+      if (prev.some(c => c.id === 1)) {
+        return prev.map(c => {
+          if (c.id !== 1) return c;
+          if (c.messages.some(m => m.id === formatted.id)) return c;
+          return { ...c, lastMessage: formatted.text, time: formatted.time, messages: [...c.messages, formatted] };
+        });
+      }
+      return [
+        ...prev,
+        {
+          id: 1,
+          name: "Support RH Facilité",
+          title: "Assistance & Recrutement",
+          company: "Facilite Corporation",
+          avatarColor: "bg-[#10E688]",
+          avatarInitials: "FC",
+          logo: "/logo.jpeg",
+          lastMessage: formatted.text,
+          time: formatted.time,
+          unreadCount: 0,
+          online: true,
+          favorite: true,
+          messages: [formatted]
+        }
+      ];
+    });
+
+    triggerToast("Le support Facilite a été contacté !", "fa-headset");
   };
 
   // Bot response simulator
@@ -1613,7 +1677,18 @@ export default function MessagerieClient() {
           }`}>
             {/* Header Recherche */}
             <div className="p-4 border-b border-gray-150 flex flex-col space-y-3">
-              <h2 className="text-lg font-extrabold text-gray-900">Messages</h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-lg font-extrabold text-gray-900">Messages</h2>
+                <button
+                  type="button"
+                  onClick={handleContactSupport}
+                  className="flex-shrink-0 flex items-center gap-1.5 text-[11px] font-extrabold text-white bg-gray-900 hover:bg-gray-800 px-3 py-1.5 rounded-xl transition cursor-pointer"
+                  title="Contacter le Support Facilite"
+                >
+                  <i className="fa-solid fa-headset"></i>
+                  <span>Support</span>
+                </button>
+              </div>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
                   <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
@@ -1656,6 +1731,15 @@ export default function MessagerieClient() {
                 }`}
               >
                 <span>🎓 Demande de stage</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscussionTypeFilter("SUPPORT")}
+                className={`flex-1 py-1.5 px-2 text-[11px] font-extrabold rounded-lg transition cursor-pointer text-center flex items-center justify-center space-x-1 ${
+                  discussionTypeFilter === "SUPPORT" ? "bg-gray-900 text-white shadow-xs" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                }`}
+              >
+                <span>🎧 Support Facilite</span>
               </button>
             </div>
 
@@ -1999,6 +2083,8 @@ export default function MessagerieClient() {
                     <div className="text-center text-xs text-gray-400 italic py-6">
                       {discussionTypeFilter === "OFFRE"
                         ? "Aucun échange lié à une candidature pour le moment."
+                        : discussionTypeFilter === "SUPPORT"
+                        ? "Aucune demande de support pour le moment."
                         : "Aucune demande de stage pour le moment."}
                     </div>
                   )}

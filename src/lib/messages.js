@@ -109,7 +109,7 @@ export async function toggleMessagePin(messageId, nextPinned) {
  * l'UI puisse remplacer son id temporaire — sans quoi l'épinglage d'un message
  * tout juste envoyé échouerait.
  */
-export async function sendMessage({ senderId, content, receiverId = null }) {
+export async function sendMessage({ senderId, content, receiverId = null, typeDiscussion = "ECHANGE", jobOfferId = null }) {
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -117,6 +117,8 @@ export async function sendMessage({ senderId, content, receiverId = null }) {
       receiver_id: receiverId,
       content,
       is_read: false,
+      type_discussion: typeDiscussion,
+      job_offer_id: jobOfferId,
     })
     .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id")
     .single();

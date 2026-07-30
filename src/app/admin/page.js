@@ -240,6 +240,10 @@ export default function AdminDashboardPage() {
             <span>💬</span>
             <span>Messagerie</span>
           </Link>
+          <Link href="/admin/support" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
+            <span>🎧</span>
+            <span>Support</span>
+          </Link>
           <button
             type="button"
             onClick={() => setActiveTab("dashboard")}
