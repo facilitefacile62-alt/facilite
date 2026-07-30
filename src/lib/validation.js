@@ -141,3 +141,11 @@ export const DiagnosticPayloadSchema = z.object({
 export const ParseDocumentJsonSchema = z.object({
   documentText: z.string().max(500_000),
 });
+
+// Payload de /api/send-application : volontairement PAS de candidateId ici.
+// Le candidat est déterminé côté serveur via requireUser (le JWT authentifié),
+// jamais par une valeur envoyée par le client — sans quoi n'importe qui
+// pourrait déclencher un envoi de candidature au nom d'un autre utilisateur.
+export const SendApplicationPayloadSchema = z.object({
+  recipientEmail: z.string().trim().email().max(254),
+});
