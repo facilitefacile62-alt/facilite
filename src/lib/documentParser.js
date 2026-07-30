@@ -20,12 +20,13 @@ function withTimeout(promise, ms, errorMessage) {
 
 // Modèles essayés dans l'ordre : gemini-1.5-flash en premier (rapide, léger,
 // disponible sur v1beta/v1 pour tous les projets), les suivants en repli
-// automatique si un modèle renvoie 404/NOT_FOUND (dépréciation, modèle non
-// activé sur le projet...) ou échoue pour toute autre raison — l'API Gemini
-// change régulièrement la disponibilité de ses modèles par projet/région, un
-// seul nom de modèle codé en dur casse donc la fonctionnalité entière dès
-// qu'il est retiré (c'est exactement ce qui est arrivé avec gemini-2.5-flash).
-const CANDIDATE_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-2.5-flash"];
+// automatique si un modèle échoue (404/NOT_FOUND, quota, etc.) — l'API
+// Gemini change régulièrement la disponibilité de ses modèles par
+// projet/région, un seul nom de modèle codé en dur casse donc la
+// fonctionnalité entière dès qu'il est retiré.
+// gemini-2.5-flash est volontairement exclu de cette liste : ce n'est pas un
+// identifiant stable de l'API REST v1beta (404 systématique constaté).
+const CANDIDATE_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
 
 /**
  * Extraction et OCR d'image avec l'API Gemini (appel REST direct, sans le
@@ -56,12 +57,11 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
   for (const model of CANDIDATE_MODELS) {
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-goog-api-key": apiKey,
           },
           body: JSON.stringify({
             contents: [
@@ -99,6 +99,7 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
           errJson = { raw: await response.text().catch(() => "Corps de réponse illisible.") };
         }
         console.error("[Gemini REST Error]", response.status, errJson);
+        console.warn(`[Gemini Fallback] Model ${model} failed, trying next...`);
         lastErrorDetail = {
           model,
           status: response.status,
@@ -132,6 +133,7 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
       if (parsed) return parsed;
     } catch (err) {
       console.error(`[Gemini REST] Erreur réseau/fetch avec ${model}:`, err.message);
+      console.warn(`[Gemini Fallback] Model ${model} failed, trying next...`);
       lastErrorDetail = { model, status: null, message: err.message };
     }
   }
