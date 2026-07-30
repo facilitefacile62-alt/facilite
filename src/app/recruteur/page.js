@@ -14,7 +14,11 @@ const EMPTY_OFFER = {
   contract_type: "CDI",
   salary_range: "",
   description: "",
+  image_url: "",
 };
+
+const OFFER_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const MAX_OFFER_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const APPLICATION_STATUSES = [
   { value: "pending", label: "En attente" },
@@ -34,6 +38,11 @@ export default function RecruteurDashboardPage() {
   const [editingOfferId, setEditingOfferId] = useState(null);
   const [savingOffer, setSavingOffer] = useState(false);
   const [togglingOfferId, setTogglingOfferId] = useState(null);
+  const [offerImageFile, setOfferImageFile] = useState(null);
+  const [offerImagePreview, setOfferImagePreview] = useState(null);
+  const [offerImageDragOver, setOfferImageDragOver] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
+  const offerImageInputRef = useRef(null);
 
   // --- Onglet Candidatures reçues ---
   const [applications, setApplications] = useState([]);
@@ -127,13 +136,51 @@ export default function RecruteurDashboardPage() {
       contract_type: offer.contract_type || "CDI",
       salary_range: offer.salary_range || "",
       description: offer.description || "",
+      image_url: offer.image_url || "",
     });
+    setOfferImageFile(null);
+    setOfferImagePreview(offer.image_url || null);
     setTimeout(() => offerFormRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   };
 
   const handleCancelEditOffer = () => {
     setEditingOfferId(null);
     setOfferForm(EMPTY_OFFER);
+    setOfferImageFile(null);
+    setOfferImagePreview(null);
+  };
+
+  const applyOfferImageFile = (file) => {
+    if (!file) return;
+    if (!OFFER_IMAGE_TYPES.includes(file.type)) {
+      triggerToast("Format d'image non supporté (PNG, JPG ou WEBP uniquement).");
+      return;
+    }
+    if (file.size > MAX_OFFER_IMAGE_BYTES) {
+      triggerToast("Image trop volumineuse (5 Mo maximum).");
+      return;
+    }
+    setOfferImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setOfferImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleOfferImageSelect = (e) => {
+    applyOfferImageFile(e.target.files?.[0]);
+  };
+
+  const handleOfferImageDrop = (e) => {
+    e.preventDefault();
+    setOfferImageDragOver(false);
+    applyOfferImageFile(e.dataTransfer.files?.[0]);
+  };
+
+  const handleRemoveOfferImage = () => {
+    setOfferImageFile(null);
+    setOfferImagePreview(null);
+    setOfferForm((prev) => ({ ...prev, image_url: "" }));
+    if (offerImageInputRef.current) offerImageInputRef.current.value = "";
   };
 
   const handleOpenPublishOffer = () => {
@@ -148,24 +195,47 @@ export default function RecruteurDashboardPage() {
     setSavingOffer(true);
 
     try {
+      let imageUrl = offerForm.image_url || "";
+
+      if (offerImageFile) {
+        const ext = offerImageFile.name.split(".").pop().toLowerCase();
+        const storagePath = `${userSession.user.id}/${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("job-offers")
+          .upload(storagePath, offerImageFile, { upsert: true, contentType: offerImageFile.type });
+
+        if (uploadError) {
+          console.error("Erreur upload image offre:", uploadError);
+          triggerToast("Erreur lors du téléversement de l'image.");
+          setSavingOffer(false);
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
+        imageUrl = publicUrlData?.publicUrl || "";
+      }
+
+      const payload = { ...offerForm, image_url: imageUrl };
+
       if (editingOfferId) {
         const { error } = await supabase
           .from("job_offers")
-          .update({ ...offerForm, updated_at: new Date().toISOString() })
+          .update({ ...payload, updated_at: new Date().toISOString() })
           .eq("id", editingOfferId)
           .eq("recruiter_id", userSession.user.id);
 
         if (error) {
           triggerToast("Erreur lors de la modification de l'offre.");
         } else {
-          setMyOffers((prev) => prev.map((o) => (o.id === editingOfferId ? { ...o, ...offerForm } : o)));
+          setMyOffers((prev) => prev.map((o) => (o.id === editingOfferId ? { ...o, ...payload } : o)));
           triggerToast("Offre mise à jour.");
           handleCancelEditOffer();
         }
       } else {
         const { data, error } = await supabase
           .from("job_offers")
-          .insert({ ...offerForm, recruiter_id: userSession.user.id })
+          .insert({ ...payload, recruiter_id: userSession.user.id })
           .select()
           .single();
 
@@ -175,6 +245,8 @@ export default function RecruteurDashboardPage() {
           setMyOffers((prev) => [data, ...prev]);
           triggerToast("Offre publiée !");
           setOfferForm(EMPTY_OFFER);
+          setOfferImageFile(null);
+          setOfferImagePreview(null);
         }
       }
     } catch (err) {
@@ -488,6 +560,51 @@ export default function RecruteurDashboardPage() {
                 </div>
 
                 <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Photo / affiche de l'annonce (optionnel)</label>
+                  <input
+                    type="file"
+                    ref={offerImageInputRef}
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleOfferImageSelect}
+                    className="hidden"
+                  />
+                  {offerImagePreview ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={offerImagePreview}
+                        alt="Aperçu de l'annonce"
+                        className="max-h-48 rounded-xl border border-gray-200 shadow-xs object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveOfferImage}
+                        className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-md cursor-pointer"
+                        title="Retirer l'image"
+                      >
+                        <i className="fa-solid fa-xmark text-xs"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => offerImageInputRef.current?.click()}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setOfferImageDragOver(true);
+                      }}
+                      onDragLeave={() => setOfferImageDragOver(false)}
+                      onDrop={handleOfferImageDrop}
+                      className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition ${
+                        offerImageDragOver ? "border-emerald-500 bg-emerald-50" : "border-gray-300 hover:border-emerald-400 bg-gray-50/50"
+                      }`}
+                    >
+                      <i className="fa-solid fa-image text-2xl text-gray-400 mb-2"></i>
+                      <p className="text-xs font-bold text-gray-600">Glissez-déposez une image ou cliquez pour en choisir une</p>
+                      <p className="text-[10px] text-gray-400 mt-1">PNG, JPG ou WEBP — 5 Mo maximum</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">Description du poste & Compétences requises</label>
                   <textarea
                     required
@@ -533,24 +650,35 @@ export default function RecruteurDashboardPage() {
                     const offerApplicationsCount = applications.filter((a) => a.job_offer_id === offer.id).length;
                     return (
                       <div key={offer.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-extrabold text-gray-900 text-sm">{offer.title}</h3>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                                offer.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"
-                              }`}
-                            >
-                              {offer.is_active ? "Active" : "Fermée"}
-                            </span>
+                        <div className="flex items-start space-x-4 min-w-0">
+                          {offer.image_url && (
+                            <img
+                              src={offer.image_url}
+                              alt={offer.title}
+                              onClick={() => setLightboxImage(offer.image_url)}
+                              className="w-16 h-16 rounded-2xl object-cover border border-gray-200 shadow-xs cursor-pointer hover:opacity-90 transition flex-shrink-0"
+                              title="Cliquer pour agrandir"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-extrabold text-gray-900 text-sm">{offer.title}</h3>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                                  offer.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"
+                                }`}
+                              >
+                                {offer.is_active ? "Active" : "Fermée"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 font-medium">
+                              {offer.company} — {offer.location} · {offer.contract_type}
+                            </p>
+                            <p className="text-[11px] text-gray-400 font-semibold mt-1">
+                              <i className="fa-solid fa-inbox mr-1"></i>
+                              {offerApplicationsCount} candidature{offerApplicationsCount !== 1 ? "s" : ""} reçue{offerApplicationsCount !== 1 ? "s" : ""}
+                            </p>
                           </div>
-                          <p className="text-xs text-gray-500 font-medium">
-                            {offer.company} — {offer.location} · {offer.contract_type}
-                          </p>
-                          <p className="text-[11px] text-gray-400 font-semibold mt-1">
-                            <i className="fa-solid fa-inbox mr-1"></i>
-                            {offerApplicationsCount} candidature{offerApplicationsCount !== 1 ? "s" : ""} reçue{offerApplicationsCount !== 1 ? "s" : ""}
-                          </p>
                         </div>
                         <div className="flex items-center space-x-2 flex-shrink-0">
                           <button
@@ -811,6 +939,24 @@ export default function RecruteurDashboardPage() {
                 Fermer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Agrandissement Photo de l'Offre (Lightbox) */}
+      {lightboxImage && (
+        <div
+          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-[800] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer animate-fade-in"
+        >
+          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-3xl">
+            <img src={lightboxImage} alt="Offre grand format" className="w-full h-full object-contain max-h-[85vh] rounded-3xl" />
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center text-lg backdrop-blur-md transition cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
