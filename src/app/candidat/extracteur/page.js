@@ -52,6 +52,13 @@ export default function ExtracteurPage() {
     setExtractionMessage(null);
     setSendSuccess(false);
 
+    // Filet de sécurité côté client : l'OCR (Vision + repli Tesseract) est
+    // borné côté serveur, mais si la réponse ne revient jamais (coupure
+    // réseau, fonction tuée sans réponse propre...), le bouton ne doit
+    // jamais rester bloqué indéfiniment sur "Analyse en cours".
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const formData = new FormData();
@@ -61,6 +68,7 @@ export default function ExtracteurPage() {
         method: "POST",
         headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
         body: formData,
+        signal: controller.signal,
       });
 
       const data = await res.json();
@@ -72,8 +80,13 @@ export default function ExtracteurPage() {
       }
     } catch (err) {
       console.error("Erreur d'extraction:", err);
-      setExtractionMessage("Erreur lors de la lecture de l'image.");
+      setExtractionMessage(
+        err.name === "AbortError"
+          ? "L'analyse a pris trop de temps. Réessayez avec une photo plus légère ou mieux cadrée."
+          : "Erreur lors de la lecture de l'image."
+      );
     } finally {
+      clearTimeout(timeoutId);
       setIsExtracting(false);
     }
   };

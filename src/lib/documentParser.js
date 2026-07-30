@@ -68,11 +68,21 @@ async function extractTextWithVision(buffer) {
   return text;
 }
 
+// Tesseract (WASM, CPU) peut être lent au premier démarrage dans un
+// environnement serverless contraint : borné lui aussi, pour que le pire cas
+// (Vision + fallback Tesseract) reste sous le maxDuration des routes API et
+// ne fasse jamais tourner la requête jusqu'au timeout brutal de Vercel.
+const TESSERACT_TIMEOUT_MS = 25000;
+
 async function extractTextWithTesseract(buffer) {
   const { createWorker } = await import("tesseract.js");
   const worker = await createWorker("fra+eng");
   try {
-    const { data } = await worker.recognize(buffer);
+    const { data } = await withTimeout(
+      worker.recognize(buffer),
+      TESSERACT_TIMEOUT_MS,
+      "Tesseract : délai dépassé"
+    );
     return data.text || "";
   } finally {
     await worker.terminate();

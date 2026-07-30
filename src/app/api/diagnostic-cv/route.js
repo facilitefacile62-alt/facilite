@@ -5,6 +5,9 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { DiagnosticPayloadSchema, validateUploadedFile } from "@/lib/validation";
 
 export const runtime = "nodejs";
+// L'OCR (Vision + repli Tesseract, jusqu'à ~33s dans le pire cas) doit avoir
+// le temps de se terminer proprement avant que Vercel ne tue la fonction.
+export const maxDuration = 55;
 
 const groq = new OpenAI({
   apiKey: process.env.GROQ_API_KEY || "dummy",

@@ -4,6 +4,10 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { validateUploadedFile } from "@/lib/validation";
 
 export const runtime = "nodejs";
+// L'OCR (Vision + repli Tesseract, jusqu'à ~33s dans le pire cas) doit avoir
+// le temps de se terminer proprement avant que Vercel ne tue la fonction —
+// sans quoi le client reste bloqué en attente d'une réponse qui n'arrive jamais.
+export const maxDuration = 55;
 
 // Même expression que mapTextToProfileFields (src/lib/documentParser.js) :
 // on reste cohérent avec la détection d'e-mail déjà utilisée ailleurs dans l'app.
