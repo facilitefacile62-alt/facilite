@@ -1419,6 +1419,18 @@ export default function ProfilPage() {
               </Link>
             )}
 
+            {/* L'Extracteur 1-Click pour Candidat */}
+            <Link
+              href="/candidat/extracteur"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-emerald-700 hover:text-emerald-800"
+              }`}
+              title="Postuler en 1 clic grâce à l'OCR"
+            >
+              <i className="fa-solid fa-bolt text-xl text-amber-500"></i>
+              <span className="text-[11px] font-extrabold tracking-tight text-emerald-700 truncate max-w-[76px]">Extracteur</span>
+            </Link>
+
             {/* Recrutement Spontané */}
             <a
               href="#"
