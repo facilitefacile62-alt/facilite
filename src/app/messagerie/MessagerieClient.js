@@ -252,6 +252,7 @@ export default function MessagerieClient() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [mobileChatView, setMobileChatView] = useState(false); // toggle list/chat on mobile
   const [filterTab, setFilterTab] = useState("all"); // 'all' | 'unread' | 'favorites'
+  const [discussionTypeFilter, setDiscussionTypeFilter] = useState("all"); // 'all' | 'OFFRE' | 'ECHANGE'
   
   // File upload ref
   const fileInputRef = useRef(null);
@@ -1619,8 +1620,39 @@ export default function MessagerieClient() {
               </div>
             </div>
 
-            {/* Filtres de messages */}
-            <div className="px-4 pb-3 border-b border-gray-150 flex items-center space-x-2 text-xs font-bold text-gray-500 bg-white">
+            {/* Barre d'onglets de type de discussion (Offres d'emploi vs Demandes d'échange) */}
+            <div className="px-4 py-2 border-b border-gray-150 bg-gray-50 flex items-center space-x-1">
+              <button
+                type="button"
+                onClick={() => setDiscussionTypeFilter("all")}
+                className={`flex-1 py-1.5 px-2 text-[11px] font-extrabold rounded-lg transition cursor-pointer text-center ${
+                  discussionTypeFilter === "all" ? "bg-white text-gray-900 shadow-xs border border-gray-200" : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                Tous
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscussionTypeFilter("OFFRE")}
+                className={`flex-1 py-1.5 px-2 text-[11px] font-extrabold rounded-lg transition cursor-pointer text-center flex items-center justify-center space-x-1 ${
+                  discussionTypeFilter === "OFFRE" ? "bg-emerald-600 text-white shadow-xs" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                }`}
+              >
+                <span>💼 Offres</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscussionTypeFilter("ECHANGE")}
+                className={`flex-1 py-1.5 px-2 text-[11px] font-extrabold rounded-lg transition cursor-pointer text-center flex items-center justify-center space-x-1 ${
+                  discussionTypeFilter === "ECHANGE" ? "bg-blue-600 text-white shadow-xs" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                }`}
+              >
+                <span>💬 Échanges</span>
+              </button>
+            </div>
+
+            {/* Filtres de messages secondaires */}
+            <div className="px-4 pb-3 pt-2 border-b border-gray-150 flex items-center space-x-2 text-xs font-bold text-gray-500 bg-white">
               <button
                 type="button"
                 onClick={() => setFilterTab("all")}

@@ -13,6 +13,7 @@ const EMPTY_OFFER = {
   location: "",
   contract_type: "CDI",
   salary_range: "",
+  min_education_level: "Aucun",
   description: "",
   image_url: "",
 };
@@ -135,6 +136,7 @@ export default function RecruteurDashboardPage() {
       location: offer.location || "",
       contract_type: offer.contract_type || "CDI",
       salary_range: offer.salary_range || "",
+      min_education_level: offer.min_education_level || "Aucun",
       description: offer.description || "",
       image_url: offer.image_url || "",
     });
@@ -545,6 +547,23 @@ export default function RecruteurDashboardPage() {
                     <option value="CDD">CDD</option>
                     <option value="Stage">Stage</option>
                     <option value="Freelance">Freelance</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Niveau d'étude requis</label>
+                  <select
+                    value={offerForm.min_education_level}
+                    onChange={(e) => handleOfferFieldChange("min_education_level", e.target.value)}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  >
+                    <option value="Aucun">Aucun exigé</option>
+                    <option value="CM2">CM2</option>
+                    <option value="Brevet">Brevet / BEPC</option>
+                    <option value="BAC">BAC</option>
+                    <option value="Licence">Licence / Bachelor</option>
+                    <option value="Master">Master</option>
+                    <option value="Doctorat">Doctorat</option>
                   </select>
                 </div>
 

@@ -46,7 +46,6 @@ export async function POST(req) {
     }
 
     // 3. Instancier le client Supabase avec le token de l'utilisateur connecté
-    // afin que toutes les opérations (storage et db) respectent les politiques RLS.
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -56,6 +55,49 @@ export async function POST(req) {
         },
       },
     });
+
+    // --- FILTRES D'ÉLIGIBILITÉ STRICTS ---
+    // A. Récupérer l'offre d'emploi pour connaître le diplôme requis et la description
+    const { data: offerData } = await supabase
+      .from("job_offers")
+      .select("min_education_level, description, recruiter_id")
+      .eq("id", jobId)
+      .single();
+
+    // B. Récupérer le profil du candidat pour vérifier son niveau d'études et ses compétences
+    const { data: candidateProfile } = await supabase
+      .from("profiles")
+      .select("degree, skills, bio")
+      .eq("id", user.id)
+      .single();
+
+    const requiredEducation = offerData?.min_education_level || "Aucun";
+    const candidateEducation = candidateProfile?.degree || "Aucun";
+
+    // Import helpers
+    const { isEducationEligible, calculateCvMatchScore } = await import("@/lib/eligibility");
+
+    // 1. Vérification du niveau d'études
+    if (!isEducationEligible(candidateEducation, requiredEducation)) {
+      return NextResponse.json(
+        { error: `Votre niveau d'étude (${candidateEducation}) est inférieur au niveau requis (${requiredEducation}) pour cette offre.` },
+        { status: 403 }
+      );
+    }
+
+    // 2. Vérification du Match Score CV (doit être >= 50%)
+    const cvMatchScore = calculateCvMatchScore(
+      candidateProfile?.skills || [],
+      candidateProfile?.bio || "",
+      offerData?.description || ""
+    );
+
+    if (cvMatchScore < 50) {
+      return NextResponse.json(
+        { error: `Votre CV n'est pas suffisamment adapté à cette offre (Score de correspondance: ${cvMatchScore}% < 50%).` },
+        { status: 403 }
+      );
+    }
 
     let cvUrl = "";
     let cvName = "";
@@ -129,7 +171,7 @@ export async function POST(req) {
       cvName = resumeRecord.title;
     }
 
-    // 4. Enregistrer la candidature en base dans la table public.candidatures
+    // 4. Enregistrer la candidature en base dans la table public.candidatures avec cv_match_score
     const { data: candidature, error: candidatureError } = await supabase
       .from("candidatures")
       .insert({
@@ -141,6 +183,7 @@ export async function POST(req) {
         email: email,
         cv_url: cvUrl,
         cover_letter: coverLetter,
+        cv_match_score: cvMatchScore,
         status: "pending",
       })
       .select()
@@ -152,6 +195,18 @@ export async function POST(req) {
         { error: "Impossible d'enregistrer la candidature." },
         { status: 500 }
       );
+    }
+
+    // Auto-création d'une conversation séparée de type 'OFFRE' dans Supabase
+    if (offerData?.recruiter_id) {
+      await supabase.from("messages").insert({
+        sender_id: user.id,
+        receiver_id: offerData.recruiter_id,
+        content: `Candidature envoyée pour le poste : ${jobTitle} (${company}) - Score Match CV: ${cvMatchScore}%`,
+        type_discussion: "OFFRE",
+        job_offer_id: jobId,
+        created_at: new Date().toISOString(),
+      });
     }
 
     // 5. Récupérer le fichier CV depuis le stockage privé pour le joindre à l'e-mail
