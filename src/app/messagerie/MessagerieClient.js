@@ -767,21 +767,27 @@ export default function MessagerieClient() {
           (payload) => {
             const newRow = payload.new;
             if (!newRow) return;
-            // Si le message concerne l'utilisateur (expéditeur ou destinataire)
+            // Si le message concerne l'utilisateur (expéditeur ou destinataire).
+            // Pas de filtre sur conversation_id ici (contrairement à
+            // /admin/messages, qui a une vraie liste de conversations) : ce
+            // fil fusionné agrège volontairement TOUS les messages de
+            // l'utilisateur, quel que soit leur conversation_id.
             if (newRow.sender_id === session.user.id || newRow.receiver_id === session.user.id) {
               const formatted = formatMessageRow(newRow, session.user.id);
               setConversations(prev => prev.map(c => {
-                if (c.id === 1 || c.id === "ai-assistant") {
-                  // Ne pas ajouter les doublons
-                  if (c.messages.some(m => m.id === formatted.id)) return c;
-                  return {
-                    ...c,
-                    lastMessage: formatted.text,
-                    time: formatted.time,
-                    messages: [...c.messages, formatted]
-                  };
-                }
-                return c;
+                // Uniquement le fil réel (id 1) : "ai-assistant" est alimenté
+                // par une table séparée (assistant_messages) — l'y ajouter
+                // aussi (bug précédent : condition OR au lieu d'un ciblage
+                // exclusif) polluait le fil IA avec de vrais messages support.
+                if (c.id !== 1) return c;
+                // Ne pas ajouter les doublons
+                if (c.messages.some(m => m.id === formatted.id)) return c;
+                return {
+                  ...c,
+                  lastMessage: formatted.text,
+                  time: formatted.time,
+                  messages: [...c.messages, formatted]
+                };
               }));
             }
           }
@@ -1063,6 +1069,7 @@ export default function MessagerieClient() {
     const tempId = `temp-${(tempIdCounterRef.current += 1)}`;
 
     // 1. Add user message to state
+    const optimisticTypeDiscussion = discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE";
     setConversations(prev => prev.map(c => {
       if (c.id === activeConvId) {
         const newMsg = {
@@ -1072,7 +1079,14 @@ export default function MessagerieClient() {
           time: timestamp,
           status: "sent",
           isPinned: false,
-          persisted: false
+          persisted: false,
+          // Sans ce champ, le filtre par onglet (visibleMessages, plus bas)
+          // retombait sur "ECHANGE" par défaut pour CE message optimiste —
+          // s'il ne correspondait pas à l'onglet actif au moment de l'envoi
+          // (ex. "Support Facilité"), la bulle disparaissait du fil affiché
+          // dès l'ajout, avant même la synchronisation Supabase, alors que
+          // l'aperçu de la colonne de gauche (non filtré) l'affichait déjà.
+          typeDiscussion: optimisticTypeDiscussion,
         };
         return {
           ...c,
@@ -1336,6 +1350,15 @@ export default function MessagerieClient() {
   };
 
   const startVoiceRecording = async () => {
+    // Vérification explicite avant tout appel : certains contextes (navigateur
+    // trop ancien, contexte non sécurisé...) n'exposent pas mediaDevices du
+    // tout, ce qui lèverait un TypeError peu explicite depuis getUserMedia
+    // directement plutôt qu'un message clair pour l'utilisateur.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      triggerToast("Micro non disponible sur ce navigateur.", "fa-microphone-slash");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -1378,7 +1401,13 @@ export default function MessagerieClient() {
       }, 1000);
     } catch (err) {
       console.error("Accès microphone refusé:", err);
-      triggerToast("Accès au microphone refusé ou non disponible.", "fa-triangle-exclamation");
+      const message =
+        err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError"
+          ? "Accès au microphone refusé. Autorisez-le dans les paramètres du navigateur."
+          : err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError"
+          ? "Aucun microphone détecté sur cet appareil."
+          : "Micro non disponible pour le moment.";
+      triggerToast(message, "fa-triangle-exclamation");
     }
   };
 
@@ -1407,6 +1436,10 @@ export default function MessagerieClient() {
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const tempId = `temp-${Date.now()}`;
 
+    // Même correctif que handleSendMessage : sans typeDiscussion, le filtre
+    // par onglet masque ce message optimiste s'il ne correspond pas à
+    // l'onglet actif au moment de l'envoi.
+    const optimisticTypeDiscussion = discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE";
     setConversations((prev) =>
       prev.map((c) => {
         if (c.id === activeConvId) {
@@ -1422,6 +1455,7 @@ export default function MessagerieClient() {
             status: "sent",
             isPinned: false,
             persisted: false,
+            typeDiscussion: optimisticTypeDiscussion,
           };
           return {
             ...c,

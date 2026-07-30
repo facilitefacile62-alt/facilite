@@ -302,16 +302,6 @@ export default function RegisterPage() {
                 <span>Continue with Google</span>
               </button>
 
-              {/* Bouton Apple */}
-              <button
-                type="button"
-                onClick={() => handleOAuthSignUp("apple")}
-                className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
-              >
-                <i className="fa-brands fa-apple text-base text-gray-900"></i>
-                <span>Continue with Apple</span>
-              </button>
-
               {/* Redirection Log in */}
               <div className="text-center pt-2">
                 <p className="text-xs text-gray-500 font-medium">

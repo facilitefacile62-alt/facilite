@@ -47,6 +47,16 @@ export default function AdminMessagesPage() {
   const adminFileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
+  // Retour non bloquant : remplace alert() (modale bloquante du navigateur,
+  // perçue comme une "alerte globale" intrusive) pour les erreurs qui
+  // n'empêchent pas de continuer à utiliser la page, à commencer par l'accès
+  // micro refusé/indisponible.
+  const [toast, setToast] = useState("");
+  const triggerToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3500);
+  };
+
   // 1. Initialisation de la session et contrôle du rôle Admin
   useEffect(() => {
     async function initAdminSession() {
@@ -267,6 +277,15 @@ export default function AdminMessagesPage() {
 
   // --- GESTION DES NOTES VOCALES (MICROPHONE) ---
   const startAdminVoiceRecording = async () => {
+    // Vérification explicite avant tout appel : certains contextes (navigateur
+    // trop ancien, contexte non sécurisé...) n'exposent pas mediaDevices du
+    // tout, ce qui lèverait un TypeError peu explicite depuis getUserMedia
+    // directement plutôt qu'un message clair pour l'utilisateur.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      triggerToast("Micro non disponible sur ce navigateur.");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -295,7 +314,13 @@ export default function AdminMessagesPage() {
       }, 1000);
     } catch (err) {
       console.error("Accès microphone refusé:", err);
-      alert("Impossible d'accéder au microphone. Veuillez autoriser l'accès dans votre navigateur.");
+      const message =
+        err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError"
+          ? "Accès au microphone refusé. Autorisez-le dans les paramètres du navigateur."
+          : err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError"
+          ? "Aucun microphone détecté sur cet appareil."
+          : "Micro non disponible pour le moment.";
+      triggerToast(message);
     }
   };
 
@@ -638,6 +663,15 @@ export default function AdminMessagesPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col justify-between">
+      {/* Toast */}
+      <div
+        className={`fixed top-20 right-4 z-[700] bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl transition-all duration-300 transform ${
+          toast ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0 pointer-events-none"
+        }`}
+      >
+        <span className="text-sm font-semibold">{toast}</span>
+      </div>
+
       {/* Modale Répertoire Utilisateurs (WhatsApp / Telegram Style) */}
       {isDirectoryModalOpen && (
         <div className="fixed inset-0 z-[600] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
