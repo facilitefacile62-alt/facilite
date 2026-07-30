@@ -1,8 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
@@ -10,6 +11,8 @@ import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 // Filet de sécurité : si le serveur renvoie malgré tout une erreur brute
 // (JSON stringifié d'un SDK, objet imbriqué...) plutôt qu'une phrase lisible,
 // on ne l'affiche jamais telle quelle à l'utilisateur.
+export const dynamic = "force-dynamic";
+
 function toReadableErrorMessage(error, fallback = "Impossible d'analyser l'image pour le moment. Réessayez dans quelques instants.") {
   if (!error) return fallback;
   if (typeof error !== "string") return fallback;
@@ -18,6 +21,23 @@ function toReadableErrorMessage(error, fallback = "Impossible d'analyser l'image
 }
 
 export default function ExtracteurPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FAF6F1] flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <ExtracteurContent />
+    </Suspense>
+  );
+}
+
+function ExtracteurContent() {
+  const searchParams = useSearchParams();
+  const posterId = searchParams.get("posterId");
+
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -26,6 +46,16 @@ export default function ExtracteurPage() {
   const [extractedEmail, setExtractedEmail] = useState(null);
   const [extractedData, setExtractedData] = useState(null);
   const [extractionMessage, setExtractionMessage] = useState(null);
+
+  // --- Mode "offre existante" (?posterId=..., ex. depuis /recruteurs/[id]) :
+  // saute entièrement l'étape OCR (il n'y a pas de photo à analyser, l'offre
+  // existe déjà en base) et postule via /api/postuler (crée candidatures +
+  // conversation) plutôt que /api/send-application (simple e-mail, ne
+  // fonctionne que quand on a extrait une adresse d'une photo sans compte).
+  const [posterOffer, setPosterOffer] = useState(null);
+  const [posterLoading, setPosterLoading] = useState(false);
+  const [posterError, setPosterError] = useState(null);
+  const [candidateIdentity, setCandidateIdentity] = useState({ fullName: "", email: "" });
 
   // --- Formulaire de préparation de candidature (étape 2) ---
   const [userResumes, setUserResumes] = useState([]);
@@ -58,28 +88,65 @@ export default function ExtracteurPage() {
       }
       setUserSession(session);
 
-      const { data: resumesList } = await supabase
-        .from("resumes")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
+      const [{ data: resumesList }, { data: profile }] = await Promise.all([
+        supabase.from("resumes").select("*").eq("user_id", session.user.id).order("created_at", { ascending: false }),
+        supabase.from("profiles").select("full_name, contact_email").eq("id", session.user.id).single(),
+      ]);
 
       setUserResumes(resumesList || []);
       if (resumesList && resumesList.length > 0) {
         setSelectedCvId(resumesList[0].id);
         setCvChoice("existing");
       }
+
+      setCandidateIdentity({
+        fullName: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "",
+        email: profile?.contact_email || session.user.email || "",
+      });
     }
     checkAuth();
   }, []);
 
-  // Pré-remplit l'objet et le message dès que l'IA a identifié le poste,
-  // et fait défiler la page jusqu'au formulaire de candidature.
+  // Mode "offre existante" : charge directement l'offre depuis job_offers
+  // (lecture publique) plutôt que de demander une photo à analyser.
   useEffect(() => {
-    if (!extractedEmail) return;
+    if (!posterId) return;
 
-    const title = extractedData?.job_title || "ce poste";
-    const company = extractedData?.company || "";
+    async function loadPosterOffer() {
+      setPosterLoading(true);
+      setPosterError(null);
+      try {
+        const { data, error } = await supabase
+          .from("job_offers")
+          .select("*")
+          .eq("id", posterId)
+          .single();
+
+        if (error || !data) {
+          setPosterError("Cette offre est introuvable ou n'est plus disponible.");
+          return;
+        }
+
+        setPosterOffer(data);
+      } catch (err) {
+        console.error("Erreur chargement de l'offre:", err);
+        setPosterError("Impossible de charger cette offre pour le moment.");
+      } finally {
+        setPosterLoading(false);
+      }
+    }
+
+    loadPosterOffer();
+  }, [posterId]);
+
+  // Pré-remplit l'objet et le message dès que l'IA a identifié le poste (mode
+  // photo) OU qu'une offre existante a été chargée (mode ?posterId=), et fait
+  // défiler la page jusqu'au formulaire de candidature.
+  useEffect(() => {
+    if (!extractedEmail && !posterOffer) return;
+
+    const title = posterOffer?.title || extractedData?.job_title || "ce poste";
+    const company = posterOffer?.company || extractedData?.company || "";
 
     setApplicationSubject(`Candidature au poste de ${title}${company ? ` - ${company}` : ""}`);
     setApplicationMessage(
@@ -90,7 +157,7 @@ export default function ExtracteurPage() {
       applicationFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 150);
     return () => clearTimeout(timer);
-  }, [extractedEmail, extractedData]);
+  }, [extractedEmail, extractedData, posterOffer]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -159,7 +226,7 @@ export default function ExtracteurPage() {
   };
 
   const handleSendOneClickApplication = async () => {
-    if (!extractedEmail || !userSession?.user?.id) return;
+    if ((!extractedEmail && !posterOffer) || !userSession?.user?.id) return;
 
     if (cvChoice === "existing" && !selectedCvId) {
       setSendErrorMessage("Sélectionnez un CV existant ou importez-en un nouveau.");
@@ -173,23 +240,54 @@ export default function ExtracteurPage() {
     setIsSending(true);
     setSendErrorMessage(null);
     try {
-      const formData = new FormData();
-      formData.append("recipientEmail", extractedEmail);
-      formData.append("subject", applicationSubject);
-      formData.append("message", applicationMessage);
-      if (cvChoice === "existing") {
-        formData.append("existingCvId", selectedCvId);
-      } else {
-        formData.append("cvFile", newCvFile);
-      }
+      let res;
 
-      const res = await fetch("/api/send-application", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${userSession.access_token}`,
-        },
-        body: formData,
-      });
+      if (posterOffer) {
+        // Mode "offre existante" : /api/postuler crée une vraie candidature
+        // (table candidatures) et la conversation associée avec le
+        // recruteur — /api/send-application (simple e-mail Resend) n'aurait
+        // laissé aucune trace exploitable côté recruteur sur la plateforme.
+        if (!candidateIdentity.fullName.trim() || !candidateIdentity.email.trim()) {
+          setSendErrorMessage("Complétez votre nom et votre e-mail dans votre profil avant de postuler.");
+          setIsSending(false);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("jobId", posterOffer.id);
+        formData.append("jobTitle", posterOffer.title);
+        formData.append("company", posterOffer.company);
+        formData.append("fullName", candidateIdentity.fullName);
+        formData.append("email", candidateIdentity.email);
+        formData.append("coverLetter", applicationMessage);
+        if (cvChoice === "existing") {
+          formData.append("existingCvId", selectedCvId);
+        } else {
+          formData.append("cvFile", newCvFile);
+        }
+
+        res = await fetch("/api/postuler", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${userSession.access_token}` },
+          body: formData,
+        });
+      } else {
+        const formData = new FormData();
+        formData.append("recipientEmail", extractedEmail);
+        formData.append("subject", applicationSubject);
+        formData.append("message", applicationMessage);
+        if (cvChoice === "existing") {
+          formData.append("existingCvId", selectedCvId);
+        } else {
+          formData.append("cvFile", newCvFile);
+        }
+
+        res = await fetch("/api/send-application", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${userSession.access_token}` },
+          body: formData,
+        });
+      }
 
       const data = await res.json();
 
@@ -269,69 +367,108 @@ export default function ExtracteurPage() {
               L'Extracteur d'Annonces
             </h1>
             <p className="text-sm text-emerald-100 font-medium leading-relaxed">
-              Importez la photo d'une offre d'emploi. Notre intelligence OCR extrait l'adresse e-mail du recruteur et vous permet d'envoyer votre CV instantanément.
+              {posterId
+                ? "Préparez votre candidature pour cette offre et envoyez votre CV en un clic."
+                : "Importez la photo d'une offre d'emploi. Notre intelligence OCR extrait l'adresse e-mail du recruteur et vous permet d'envoyer votre CV instantanément."}
             </p>
           </div>
         </div>
 
         {/* Card Import & Extraction */}
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 sm:p-8 space-y-6">
-          {/* Zone d'importation */}
-          <div>
-            <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-2">
-              1. Photo de l'annonce d'emploi
-            </label>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-gray-50/50 hover:bg-emerald-50/30 rounded-2xl p-8 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-3"
-            >
-              {imagePreview ? (
-                <div className="relative group max-w-xs">
-                  <img src={imagePreview} alt="Aperçu de l'annonce" className="max-h-60 rounded-xl shadow-md border border-gray-200" />
-                  <span className="mt-2 block text-xs font-bold text-emerald-700">Changer la photo</span>
+          {posterId ? (
+            // Mode "offre existante" : pas de photo à analyser, l'offre est
+            // déjà en base — juste un état de chargement / erreur / résumé.
+            <div>
+              <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-2">
+                Offre sélectionnée
+              </label>
+              {posterLoading ? (
+                <div className="flex items-center justify-center gap-3 p-8 bg-gray-50 rounded-2xl text-gray-500 text-sm font-bold">
+                  <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  Chargement de l'offre...
                 </div>
-              ) : (
-                <>
-                  <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
-                    📷
+              ) : posterError ? (
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs font-bold flex items-center gap-2">
+                  <i className="fa-solid fa-triangle-exclamation"></i>
+                  <span>{posterError}</span>
+                </div>
+              ) : posterOffer ? (
+                <div className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                  {posterOffer.image_url ? (
+                    <img src={posterOffer.image_url} alt={posterOffer.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-emerald-100" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-emerald-100 text-emerald-500 flex items-center justify-center text-2xl flex-shrink-0">
+                      <i className="fa-solid fa-briefcase"></i>
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-emerald-950 truncate">{posterOffer.title}</p>
+                    <p className="text-xs text-emerald-700 font-bold truncate">{posterOffer.company}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-extrabold text-gray-900">Cliquez pour importer la photo de l'annonce</p>
-                    <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG acceptés</p>
-                  </div>
-                </>
-              )}
+                </div>
+              ) : null}
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Zone d'importation */}
+              <div>
+                <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-2">
+                  1. Photo de l'annonce d'emploi
+                </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-gray-50/50 hover:bg-emerald-50/30 rounded-2xl p-8 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-3"
+                >
+                  {imagePreview ? (
+                    <div className="relative group max-w-xs">
+                      <img src={imagePreview} alt="Aperçu de l'annonce" className="max-h-60 rounded-xl shadow-md border border-gray-200" />
+                      <span className="mt-2 block text-xs font-bold text-emerald-700">Changer la photo</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
+                        📷
+                      </div>
+                      <div>
+                        <p className="text-sm font-extrabold text-gray-900">Cliquez pour importer la photo de l'annonce</p>
+                        <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG acceptés</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
 
-          {/* Bouton d'Extraction */}
-          {selectedFile && (
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleExtractEmail}
-                disabled={isExtracting}
-                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-60"
-              >
-                {isExtracting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Analyse de la photo en cours...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>🔍 L'Extracteur</span>
-                  </>
-                )}
-              </button>
-            </div>
+              {/* Bouton d'Extraction */}
+              {selectedFile && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleExtractEmail}
+                    disabled={isExtracting}
+                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-60"
+                  >
+                    {isExtracting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Analyse de la photo en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🔍 L'Extracteur</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
           {/* Message si pas d'email détecté */}
@@ -342,53 +479,59 @@ export default function ExtracteurPage() {
             </div>
           )}
 
-          {/* E-mail détecté & Bouton 1-Click */}
-          {extractedEmail && (
+          {/* E-mail détecté (mode photo) / Offre chargée (mode ?posterId=) & Bouton 1-Click */}
+          {(extractedEmail || posterOffer) && (
             <div className="space-y-4 animate-fade-in">
-              {/* Encadré vert de détection avec détails Gemini */}
-              <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center text-lg shadow-sm">
-                      ✉️
-                    </div>
-                    <div>
-                      <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider block">E-mail détecté par l'IA</span>
-                      <span className="text-sm font-black text-emerald-900 font-mono">{extractedEmail}</span>
+              {/* Encadré vert de détection avec détails Gemini — uniquement en mode photo, l'offre existante a déjà son propre résumé plus haut */}
+              {extractedEmail && (
+                <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center text-lg shadow-sm">
+                        ✉️
+                      </div>
+                      <div>
+                        <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider block">E-mail détecté par l'IA</span>
+                        <span className="text-sm font-black text-emerald-900 font-mono">{extractedEmail}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {extractedData && (extractedData.job_title || extractedData.company || extractedData.contract_type) && (
-                  <div className="pt-3 border-t border-emerald-200/60 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold text-emerald-950">
-                    {extractedData.job_title && (
-                      <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
-                        <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Poste</span>
-                        <span>{extractedData.job_title}</span>
-                      </div>
-                    )}
-                    {extractedData.company && (
-                      <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
-                        <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Entreprise</span>
-                        <span>{extractedData.company}</span>
-                      </div>
-                    )}
-                    {extractedData.contract_type && (
-                      <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
-                        <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Contrat</span>
-                        <span>{extractedData.contract_type}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                  {extractedData && (extractedData.job_title || extractedData.company || extractedData.contract_type) && (
+                    <div className="pt-3 border-t border-emerald-200/60 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold text-emerald-950">
+                      {extractedData.job_title && (
+                        <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
+                          <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Poste</span>
+                          <span>{extractedData.job_title}</span>
+                        </div>
+                      )}
+                      {extractedData.company && (
+                        <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
+                          <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Entreprise</span>
+                          <span>{extractedData.company}</span>
+                        </div>
+                      )}
+                      {extractedData.contract_type && (
+                        <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
+                          <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Contrat</span>
+                          <span>{extractedData.contract_type}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Confirmation de succès */}
               {sendSuccess ? (
                 <div className="p-6 bg-emerald-600 text-white rounded-2xl text-center space-y-2 shadow-lg animate-bounce">
                   <div className="text-3xl">🎉</div>
                   <h3 className="text-lg font-black">Candidature transmise avec succès !</h3>
-                  <p className="text-xs text-emerald-100 font-medium">Votre CV et votre demande ont été envoyés à {extractedEmail}.</p>
+                  <p className="text-xs text-emerald-100 font-medium">
+                    {posterOffer
+                      ? `Votre candidature a été envoyée pour le poste de ${posterOffer.title}.`
+                      : `Votre CV et votre demande ont été envoyés à ${extractedEmail}.`}
+                  </p>
                 </div>
               ) : (
                 <div ref={applicationFormRef} className="space-y-4 pt-2 scroll-mt-24">
@@ -514,6 +657,8 @@ export default function ExtracteurPage() {
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Envoi direct en cours...</span>
                       </>
+                    ) : posterOffer ? (
+                      <span>🚀 Postuler en 1 clic</span>
                     ) : (
                       <>
                         <span>🚀 Postuler en 1 clic à</span>
@@ -522,12 +667,16 @@ export default function ExtracteurPage() {
                     )}
                   </button>
 
-                  <a
-                    href={mailtoHref}
-                    className="block text-center text-[11px] font-bold text-gray-400 hover:text-emerald-700 transition underline"
-                  >
-                    Ou ouvrir dans votre messagerie (CV à joindre manuellement)
-                  </a>
+                  {/* Pas d'adresse e-mail brute en mode "offre existante" (la
+                      candidature passe par /api/postuler, pas par mailto:) */}
+                  {extractedEmail && (
+                    <a
+                      href={mailtoHref}
+                      className="block text-center text-[11px] font-bold text-gray-400 hover:text-emerald-700 transition underline"
+                    >
+                      Ou ouvrir dans votre messagerie (CV à joindre manuellement)
+                    </a>
+                  )}
                 </div>
               )}
             </div>
