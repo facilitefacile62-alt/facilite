@@ -23,6 +23,12 @@ export default function AdminMessagesPage() {
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
 
+  // State pour la Modale Répertoire Utilisateurs
+  const [isDirectoryModalOpen, setIsDirectoryModalOpen] = useState(false);
+  const [directorySearch, setDirectorySearch] = useState("");
+  const [allProfiles, setAllProfiles] = useState([]);
+  const [startingChat, setStartingChat] = useState(false);
+
   const messagesEndRef = useRef(null);
 
   // 1. Initialisation de la session et contrôle du rôle Admin
@@ -64,7 +70,9 @@ export default function AdminMessagesPage() {
       // Récupérer la cartographie de tous les profils (Candidats, Recruteurs, Admins)
       const { data: profilesData } = await supabase
         .from("profiles")
-        .select("id, full_name, email, role, avatar_url");
+        .select("id, full_name, email, phone, role, avatar_url");
+
+      setAllProfiles(profilesData || []);
 
       const map = {};
       (profilesData || []).forEach((p) => {
@@ -80,7 +88,6 @@ export default function AdminMessagesPage() {
 
       if (convsErr) console.error("Erreur chargement conversations:", convsErr);
 
-      // S'il n'y a pas encore de lignes dans conversations, construire dynamiquement la liste à partir des profils
       let finalConvs = convsData || [];
 
       // Si aucune conversation explicite n'existe, on génère une vue virtuelle des profils avec lesquels discuter
@@ -245,14 +252,12 @@ export default function AdminMessagesPage() {
 
         if (newConv) {
           realConvId = newConv.id;
-          // Mettre à jour l'ID localement
           setConversations((prev) =>
             prev.map((c) => (c.id === activeConvId ? { ...newConv, isVirtual: false } : c))
           );
           setActiveConvId(realConvId);
         }
       } else {
-        // Mettre à jour la date et dernier message de la conversation
         await supabase
           .from("conversations")
           .update({
@@ -262,7 +267,6 @@ export default function AdminMessagesPage() {
           .eq("id", realConvId);
       }
 
-      // Enregistrer le message
       const { data: savedMsg, error: msgError } = await supabase
         .from("messages")
         .insert({
@@ -288,7 +292,68 @@ export default function AdminMessagesPage() {
     }
   };
 
-  // Filtrage des conversations
+  // 6. Gestion du clic sur un utilisateur dans le Répertoire pour démarrer une discussion
+  const handleSelectUserFromDirectory = async (targetUser) => {
+    if (!userSession || startingChat) return;
+    setStartingChat(true);
+
+    try {
+      const adminId = userSession.user.id;
+      const targetUserId = targetUser.id;
+
+      // Chercher si une conversation existe déjà entre l'admin et cet utilisateur
+      const existingConv = conversations.find((c) => {
+        return (c.user_1_id === adminId && c.user_2_id === targetUserId) ||
+               (c.user_1_id === targetUserId && c.user_2_id === adminId);
+      });
+
+      if (existingConv) {
+        setActiveConvId(existingConv.id);
+        setIsDirectoryModalOpen(false);
+        setDirectorySearch("");
+        return;
+      }
+
+      // Si aucune conversation n'existe, créer la ligne dans la table public.conversations
+      const { data: newConv, error: createErr } = await supabase
+        .from("conversations")
+        .insert({
+          user_1_id: adminId,
+          user_2_id: targetUserId,
+          last_message: "Discussion initialisée par l'administration",
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (createErr) {
+        console.error("Erreur création conversation:", createErr);
+        const virtualId = `virtual-${targetUserId}`;
+        const newVirtual = {
+          id: virtualId,
+          user_1_id: adminId,
+          user_2_id: targetUserId,
+          last_message: "Discussion initialisée",
+          updated_at: new Date().toISOString(),
+          isVirtual: true,
+        };
+        setConversations((prev) => [newVirtual, ...prev]);
+        setActiveConvId(virtualId);
+      } else if (newConv) {
+        setConversations((prev) => [newConv, ...prev]);
+        setActiveConvId(newConv.id);
+      }
+
+      setIsDirectoryModalOpen(false);
+      setDirectorySearch("");
+    } catch (err) {
+      console.error("Exception sélection utilisateur répertoire:", err);
+    } finally {
+      setStartingChat(false);
+    }
+  };
+
+  // Filtrage des conversations dans la sidebar
   const filteredConversations = conversations.filter((conv) => {
     const otherUserId = conv.user_1_id === userSession?.user?.id ? conv.user_2_id : conv.user_1_id;
     const profile = profilesMap[otherUserId] || {};
@@ -302,6 +367,17 @@ export default function AdminMessagesPage() {
     const nameMatch = (profile.full_name || "").toLowerCase().includes(query);
     const emailMatch = (profile.email || "").toLowerCase().includes(query);
     return nameMatch || emailMatch;
+  });
+
+  // Filtrage du répertoire utilisateurs pour la modale
+  const filteredDirectoryUsers = allProfiles.filter((p) => {
+    if (p.id === userSession?.user?.id) return false;
+    const q = directorySearch.toLowerCase().trim();
+    if (!q) return true;
+    const nameMatch = (p.full_name || "").toLowerCase().includes(q);
+    const emailMatch = (p.email || "").toLowerCase().includes(q);
+    const phoneMatch = (p.phone || "").toLowerCase().includes(q);
+    return nameMatch || emailMatch || phoneMatch;
   });
 
   const activeConv = conversations.find((c) => c.id === activeConvId);
@@ -323,6 +399,109 @@ export default function AdminMessagesPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col justify-between">
+      {/* Modale Répertoire Utilisateurs (WhatsApp / Telegram Style) */}
+      {isDirectoryModalOpen && (
+        <div className="fixed inset-0 z-[600] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh] animate-scale-up">
+            {/* Header Modale */}
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-sm">
+                  <i className="fa-solid fa-address-book"></i>
+                </div>
+                <h3 className="text-base font-extrabold text-gray-900">Répertoire des Membres</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDirectoryModalOpen(false);
+                  setDirectorySearch("");
+                }}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            {/* Barre de Recherche Répertoire */}
+            <div className="p-4 border-b border-gray-150 bg-white">
+              <div className="relative">
+                <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                <input
+                  type="text"
+                  value={directorySearch}
+                  onChange={(e) => setDirectorySearch(e.target.value)}
+                  placeholder="Filtrer par nom, e-mail ou téléphone..."
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Liste scrollable des membres */}
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 p-2">
+              {filteredDirectoryUsers.length === 0 ? (
+                <div className="p-8 text-center text-gray-400 italic text-xs">
+                  Aucun membre trouvé pour cette recherche.
+                </div>
+              ) : (
+                filteredDirectoryUsers.map((profile) => (
+                  <div
+                    key={profile.id}
+                    onClick={() => handleSelectUserFromDirectory(profile)}
+                    className="p-3 rounded-2xl hover:bg-amber-50/60 transition cursor-pointer flex items-center space-x-3 group"
+                  >
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0">
+                      {profile.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt={profile.full_name}
+                          className="w-11 h-11 rounded-full object-cover border border-gray-200 shadow-2xs group-hover:scale-105 transition"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-extrabold text-sm shadow-2xs group-hover:scale-105 transition">
+                          <i className="fa-solid fa-user text-base"></i>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Informations du membre */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-extrabold text-gray-900 truncate">
+                          {profile.full_name || profile.email || "Utilisateur"}
+                        </span>
+                        <RoleBadge role={profile.role || "candidat"} />
+                      </div>
+                      <div className="flex flex-col space-y-0.5 text-[11px] text-gray-500 font-medium">
+                        {profile.phone && (
+                          <span className="text-gray-900 font-bold flex items-center gap-1">
+                            <i className="fa-solid fa-phone text-[9px] text-gray-400"></i>
+                            {profile.phone}
+                          </span>
+                        )}
+                        <span className="truncate">{profile.email}</span>
+                      </div>
+                    </div>
+
+                    {/* Icône Action */}
+                    <div className="text-gray-300 group-hover:text-amber-500 transition pl-1">
+                      <i className="fa-solid fa-chevron-right text-xs"></i>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer Modale */}
+            <div className="p-3 bg-gray-50 border-t border-gray-150 text-center text-[10px] text-gray-400 font-semibold">
+              {filteredDirectoryUsers.length} membre{filteredDirectoryUsers.length !== 1 ? "s" : ""} trouvé{filteredDirectoryUsers.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Admin Nav */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -360,9 +539,19 @@ export default function AdminMessagesPage() {
           <div className="md:col-span-4 border-r border-gray-200 flex flex-col bg-gray-50/50">
             {/* Entête colonne gauche */}
             <div className="p-4 border-b border-gray-200 bg-white">
-              <h1 className="text-lg font-extrabold text-gray-900 mb-3 flex items-center gap-2">
-                <span>💬 Messagerie Support Admin</span>
-              </h1>
+              <div className="flex items-center justify-between mb-3">
+                <h1 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
+                  <span>Discussions</span>
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => setIsDirectoryModalOpen(true)}
+                  className="w-9 h-9 rounded-full bg-gray-100 hover:bg-amber-500 hover:text-white text-gray-700 flex items-center justify-center transition shadow-2xs cursor-pointer border border-gray-200"
+                  title="Nouvelle discussion"
+                >
+                  <i className="fa-solid fa-square-plus text-base"></i>
+                </button>
+              </div>
 
               {/* Barre de recherche */}
               <div className="relative mb-3">
@@ -474,7 +663,10 @@ export default function AdminMessagesPage() {
                         <span>{activeProfile.full_name || activeProfile.email}</span>
                         <RoleBadge role={activeProfile.role || "candidat"} />
                       </h2>
-                      <p className="text-[11px] text-gray-400 font-medium">{activeProfile.email}</p>
+                      <p className="text-[11px] text-gray-400 font-medium flex items-center gap-2">
+                        <span>{activeProfile.email}</span>
+                        {activeProfile.phone && <span>· {activeProfile.phone}</span>}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -545,7 +737,7 @@ export default function AdminMessagesPage() {
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center p-8 text-center text-gray-400">
-                Sélectionnez une conversation à gauche pour démarrer le tchat.
+                Sélectionnez une conversation à gauche ou cliquez sur "+" pour démarrer un nouveau tchat.
               </div>
             )}
           </div>
