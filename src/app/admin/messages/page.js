@@ -88,21 +88,13 @@ export default function AdminMessagesPage() {
 
       if (convsErr) console.error("Erreur chargement conversations:", convsErr);
 
-      let finalConvs = convsData || [];
-
-      // Si aucune conversation explicite n'existe, on génère une vue virtuelle des profils avec lesquels discuter
-      if (finalConvs.length === 0 && profilesData) {
-        finalConvs = profilesData
-          .filter((p) => p.id !== adminId)
-          .map((p) => ({
-            id: `virtual-${p.id}`,
-            user_1_id: adminId,
-            user_2_id: p.id,
-            last_message: "Aucun message pour l'instant",
-            updated_at: p.created_at || new Date().toISOString(),
-            isVirtual: true,
-          }));
-      }
+      // Le répertoire ("+") est désormais l'unique point d'entrée pour
+      // démarrer une discussion avec un nouvel utilisateur : cette colonne
+      // n'affiche que les conversations réellement engagées. (Générer une
+      // conversation virtuelle par profil ici serait redondant avec la
+      // modale, et créait une incohérence — la liste "Tous les profils"
+      // disparaissait dès qu'une seule vraie conversation existait.)
+      const finalConvs = convsData || [];
 
       setConversations(finalConvs);
       if (finalConvs.length > 0) {
@@ -597,8 +589,17 @@ export default function AdminMessagesPage() {
             {/* Liste des discussions */}
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
               {filteredConversations.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 italic text-xs">
-                  Aucun utilisateur correspondant.
+                <div className="p-8 text-center text-gray-400 italic text-xs space-y-2">
+                  <p>{conversations.length === 0 ? "Aucune discussion pour le moment." : "Aucune conversation ne correspond."}</p>
+                  {conversations.length === 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsDirectoryModalOpen(true)}
+                      className="text-amber-600 font-bold not-italic cursor-pointer hover:underline"
+                    >
+                      Démarrer une nouvelle discussion
+                    </button>
+                  )}
                 </div>
               ) : (
                 filteredConversations.map((conv) => {
