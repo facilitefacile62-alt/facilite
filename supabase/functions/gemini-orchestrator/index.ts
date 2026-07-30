@@ -19,7 +19,16 @@
 // même liste déjà vérifiée en production plutôt que des modèles qui
 // échoueraient systématiquement.
 const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.0-flash"];
-const EMBEDDING_MODEL = "text-embedding-004";
+// text-embedding-004 (mentionné dans la demande initiale) n'existe pas pour
+// ce compte — confirmé par un appel réel à ListModels une fois la fonction
+// déployée (404 "is not found for API version v1beta"). Seuls les modèles
+// gemini-embedding-001/2/2-preview supportent embedContent ; gemini-embedding-001
+// produit nativement 3072 dimensions, réduites à 768 via outputDimensionality
+// pour matcher `vector(768)` (colonnes ajoutées par la migration
+// 20260730100000_ai_infrastructure.sql) — vérifié par un appel réel qui
+// renvoie bien un vecteur de longueur 768.
+const EMBEDDING_MODEL = "gemini-embedding-001";
+const EMBEDDING_OUTPUT_DIMENSIONALITY = 768;
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 const CORS_HEADERS = {
@@ -87,6 +96,7 @@ async function embedText(apiKey: string, text: string) {
     body: JSON.stringify({
       model: `models/${EMBEDDING_MODEL}`,
       content: { parts: [{ text }] },
+      outputDimensionality: EMBEDDING_OUTPUT_DIMENSIONALITY,
     }),
   });
 
