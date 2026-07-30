@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import { sendMessage } from "@/lib/messages";
@@ -16,18 +16,31 @@ const EMPTY_OFFER = {
   description: "",
 };
 
+const APPLICATION_STATUSES = [
+  { value: "pending", label: "En attente" },
+  { value: "accepted", label: "Accepté" },
+  { value: "rejected", label: "Refusé" },
+];
+
 export default function RecruteurDashboardPage() {
   const [userSession, setUserSession] = useState(null);
-  const [activeTab, setActiveTab] = useState("offres"); // 'offres' | 'candidats'
+  const [activeTab, setActiveTab] = useState("offres"); // 'offres' | 'candidatures' | 'cvtheque'
   const [loading, setLoading] = useState(true);
+  const offerFormRef = useRef(null);
 
   // --- Onglet Offres ---
   const [myOffers, setMyOffers] = useState([]);
   const [offerForm, setOfferForm] = useState(EMPTY_OFFER);
   const [editingOfferId, setEditingOfferId] = useState(null);
   const [savingOffer, setSavingOffer] = useState(false);
+  const [togglingOfferId, setTogglingOfferId] = useState(null);
 
-  // --- Onglet Candidats (CVthèque) ---
+  // --- Onglet Candidatures reçues ---
+  const [applications, setApplications] = useState([]);
+  const [updatingAppId, setUpdatingAppId] = useState(null);
+  const [downloadingCvId, setDownloadingCvId] = useState(null);
+
+  // --- Onglet CVthèque ---
   const [candidates, setCandidates] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
@@ -50,11 +63,35 @@ export default function RecruteurDashboardPage() {
           window.location.replace("/login");
           return;
         }
+
+        // Contrôle d'accès : réservé aux recruteurs (et aux admins, qui
+        // peuvent tout superviser). Un candidat qui atterrit ici (lien direct,
+        // ancien favori...) est renvoyé à l'accueil.
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (!profile || (profile.role !== "recruteur" && profile.role !== "admin")) {
+          window.location.replace("/");
+          return;
+        }
+
         setUserSession(session);
 
-        const [{ data: offers, error: offersErr }, { data: candidatesData, error: candidatesErr }] = await Promise.all([
+        const [
+          { data: offers, error: offersErr },
+          { data: candidatesData, error: candidatesErr },
+          { data: applicationsData, error: applicationsErr },
+        ] = await Promise.all([
           supabase.from("job_offers").select("*").eq("recruiter_id", session.user.id).order("created_at", { ascending: false }),
           supabase.from("candidats_recherche").select("*"),
+          supabase
+            .from("candidatures")
+            .select("*")
+            .not("job_offer_id", "is", null)
+            .order("created_at", { ascending: false }),
         ]);
 
         if (offersErr) console.error("Erreur chargement offres:", offersErr);
@@ -62,6 +99,9 @@ export default function RecruteurDashboardPage() {
 
         if (candidatesErr) console.error("Erreur chargement candidats:", candidatesErr);
         else setCandidates(candidatesData || []);
+
+        if (applicationsErr) console.error("Erreur chargement candidatures:", applicationsErr);
+        else setApplications(applicationsData || []);
       } catch (err) {
         console.error("Exception chargement dashboard recruteur:", err);
       } finally {
@@ -78,6 +118,7 @@ export default function RecruteurDashboardPage() {
   };
 
   const handleEditOffer = (offer) => {
+    setActiveTab("offres");
     setEditingOfferId(offer.id);
     setOfferForm({
       title: offer.title || "",
@@ -87,12 +128,18 @@ export default function RecruteurDashboardPage() {
       salary_range: offer.salary_range || "",
       description: offer.description || "",
     });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => offerFormRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   };
 
   const handleCancelEditOffer = () => {
     setEditingOfferId(null);
     setOfferForm(EMPTY_OFFER);
+  };
+
+  const handleOpenPublishOffer = () => {
+    setActiveTab("offres");
+    handleCancelEditOffer();
+    setTimeout(() => offerFormRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   };
 
   const handleSubmitOffer = async (e) => {
@@ -156,7 +203,64 @@ export default function RecruteurDashboardPage() {
     triggerToast("Offre supprimée.");
   };
 
-  // --- Gestion des candidats ---
+  const handleToggleOfferActive = async (offer) => {
+    setTogglingOfferId(offer.id);
+    const nextActive = !offer.is_active;
+
+    const { error } = await supabase
+      .from("job_offers")
+      .update({ is_active: nextActive, updated_at: new Date().toISOString() })
+      .eq("id", offer.id)
+      .eq("recruiter_id", userSession.user.id);
+
+    setTogglingOfferId(null);
+
+    if (error) {
+      triggerToast("Erreur lors du changement de statut.");
+      return;
+    }
+    setMyOffers((prev) => prev.map((o) => (o.id === offer.id ? { ...o, is_active: nextActive } : o)));
+    triggerToast(nextActive ? "Offre réactivée." : "Offre mise en pause.");
+  };
+
+  // --- Gestion des candidatures reçues ---
+  const myOfferIds = new Set(myOffers.map((o) => o.id));
+  const myApplications = applications.filter((a) => myOfferIds.has(a.job_offer_id));
+
+  const handleApplicationStatusChange = async (applicationId, newStatus) => {
+    const previous = applications;
+    setUpdatingAppId(applicationId);
+    setApplications((prev) => prev.map((a) => (a.id === applicationId ? { ...a, status: newStatus } : a)));
+
+    const { error } = await supabase
+      .from("candidatures")
+      .update({ status: newStatus })
+      .eq("id", applicationId);
+
+    setUpdatingAppId(null);
+
+    if (error) {
+      setApplications(previous);
+      triggerToast("Impossible de mettre à jour le statut.");
+      return;
+    }
+    triggerToast("Statut de la candidature mis à jour.");
+  };
+
+  const handleDownloadApplicationCv = async (application) => {
+    if (!application.cv_url) return;
+    setDownloadingCvId(application.id);
+    const url = await getSignedCvUrl(application.cv_url);
+    setDownloadingCvId(null);
+
+    if (!url) {
+      triggerToast("Impossible de récupérer le CV.");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  // --- Gestion CVthèque ---
   const handleOpenCandidateModal = async (candidate) => {
     setSelectedCandidate(candidate);
     setSignedCvUrl(null);
@@ -233,13 +337,21 @@ export default function RecruteurDashboardPage() {
             <RoleBadge role="recruteur" />
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={handleOpenPublishOffer}
+              className="text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-xs"
+            >
+              <i className="fa-solid fa-plus"></i>
+              <span>Publier une offre</span>
+            </button>
             <Link
               href="/messagerie"
               className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
             >
               <i className="fa-solid fa-comments"></i>
-              <span>Messagerie</span>
+              <span className="hidden sm:inline">Messagerie</span>
             </Link>
             <button
               onClick={handleGlobalSignOut}
@@ -259,41 +371,53 @@ export default function RecruteurDashboardPage() {
             <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-2">
               Tableau de bord Recrutement
             </span>
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">
-              Offres & CVthèque
-            </h1>
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">Espace Recruteur</h1>
             <p className="text-sm text-emerald-100 font-medium leading-relaxed">
-              Publiez vos offres d'emploi et recherchez les meilleurs talents parmi nos candidats.
+              Publiez vos offres, suivez les candidatures reçues et recherchez les meilleurs talents.
             </p>
           </div>
         </div>
 
         {/* Onglets */}
-        <div className="flex bg-white p-1.5 rounded-2xl border border-gray-200 shadow-xs mb-8 max-w-md">
+        <div className="flex bg-white p-1.5 rounded-2xl border border-gray-200 shadow-xs mb-8 max-w-xl overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab("offres")}
-            className={`flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
+            className={`flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 whitespace-nowrap ${
               activeTab === "offres" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
             }`}
           >
-            <span>📢 Mes Offres & Publication</span>
+            <span>📢 Mes Offres</span>
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("candidats")}
-            className={`flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
-              activeTab === "candidats" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
+            onClick={() => setActiveTab("candidatures")}
+            className={`flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 whitespace-nowrap ${
+              activeTab === "candidatures" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
             }`}
           >
-            <span>🔍 Recherche Candidats</span>
+            <span>📥 Candidatures reçues</span>
+            {myApplications.length > 0 && (
+              <span className={`ml-1 px-1.5 rounded-full text-[10px] ${activeTab === "candidatures" ? "bg-white/20" : "bg-gray-100"}`}>
+                {myApplications.length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("cvtheque")}
+            className={`flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 whitespace-nowrap ${
+              activeTab === "cvtheque" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            <span>🔍 CVthèque</span>
           </button>
         </div>
 
-        {activeTab === "offres" ? (
+        {activeTab === "offres" && (
           <div className="space-y-8">
             {/* Formulaire de publication */}
-            <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 sm:p-8">
+            <div ref={offerFormRef} className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 sm:p-8">
               <h2 className="text-lg font-extrabold text-gray-900 mb-1">
                 {editingOfferId ? "Modifier l'offre" : "Publier une nouvelle offre"}
               </h2>
@@ -349,7 +473,6 @@ export default function RecruteurDashboardPage() {
                     <option value="CDD">CDD</option>
                     <option value="Stage">Stage</option>
                     <option value="Freelance">Freelance</option>
-                    <option value="Alternance">Alternance</option>
                   </select>
                 </div>
 
@@ -365,13 +488,13 @@ export default function RecruteurDashboardPage() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Description du poste</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Description du poste & Compétences requises</label>
                   <textarea
                     required
                     rows={4}
                     value={offerForm.description}
                     onChange={(e) => handleOfferFieldChange("description", e.target.value)}
-                    placeholder="Missions, profil recherché, avantages..."
+                    placeholder="Missions, compétences requises, profil recherché, avantages..."
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition resize-none"
                   />
                 </div>
@@ -406,35 +529,136 @@ export default function RecruteurDashboardPage() {
                 <div className="p-8 text-center text-gray-400 italic text-xs">Aucune offre publiée pour le moment.</div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {myOffers.map((offer) => (
-                    <div key={offer.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-extrabold text-gray-900 text-sm">{offer.title}</h3>
-                        <p className="text-xs text-gray-500 font-medium">
-                          {offer.company} — {offer.location} · {offer.contract_type}
-                        </p>
+                  {myOffers.map((offer) => {
+                    const offerApplicationsCount = applications.filter((a) => a.job_offer_id === offer.id).length;
+                    return (
+                      <div key={offer.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-extrabold text-gray-900 text-sm">{offer.title}</h3>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                                offer.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"
+                              }`}
+                            >
+                              {offer.is_active ? "Active" : "Fermée"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 font-medium">
+                            {offer.company} — {offer.location} · {offer.contract_type}
+                          </p>
+                          <p className="text-[11px] text-gray-400 font-semibold mt-1">
+                            <i className="fa-solid fa-inbox mr-1"></i>
+                            {offerApplicationsCount} candidature{offerApplicationsCount !== 1 ? "s" : ""} reçue{offerApplicationsCount !== 1 ? "s" : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2 flex-shrink-0">
+                          <button
+                            onClick={() => handleEditOffer(offer)}
+                            className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            onClick={() => handleToggleOfferActive(offer)}
+                            disabled={togglingOfferId === offer.id}
+                            className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-60"
+                          >
+                            {offer.is_active ? "Mettre en pause" : "Réactiver"}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteOffer(offer.id)}
+                            className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2 flex-shrink-0">
-                        <button
-                          onClick={() => handleEditOffer(offer)}
-                          className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl transition cursor-pointer"
-                        >
-                          Modifier
-                        </button>
-                        <button
-                          onClick={() => handleDeleteOffer(offer.id)}
-                          className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl transition cursor-pointer"
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
-        ) : (
+        )}
+
+        {activeTab === "candidatures" && (
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-extrabold text-gray-900">Candidatures reçues ({myApplications.length})</h2>
+              <p className="text-xs text-gray-500 font-medium">Suivi des candidatures pour l'ensemble de vos offres</p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
+                    <th className="py-4 px-6">Candidat</th>
+                    <th className="py-4 px-6">Poste visé</th>
+                    <th className="py-4 px-6">Date</th>
+                    <th className="py-4 px-6">CV</th>
+                    <th className="py-4 px-6 text-right">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-xs font-medium">
+                  {myApplications.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="py-8 text-center text-gray-400 italic">
+                        Aucune candidature reçue pour le moment.
+                      </td>
+                    </tr>
+                  ) : (
+                    myApplications.map((application) => {
+                      const offer = myOffers.find((o) => o.id === application.job_offer_id);
+                      return (
+                        <tr key={application.id} className="hover:bg-emerald-50/30 transition">
+                          <td className="py-4 px-6">
+                            <span className="font-bold text-gray-900 block">{application.full_name}</span>
+                            <span className="text-[10px] text-gray-400">{application.email}</span>
+                          </td>
+                          <td className="py-4 px-6 text-gray-600">{offer?.title || application.job_title}</td>
+                          <td className="py-4 px-6 text-gray-500">
+                            {new Date(application.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                          </td>
+                          <td className="py-4 px-6">
+                            {application.cv_url ? (
+                              <button
+                                onClick={() => handleDownloadApplicationCv(application)}
+                                disabled={downloadingCvId === application.id}
+                                className="text-emerald-600 hover:text-emerald-800 font-extrabold flex items-center gap-1 cursor-pointer disabled:opacity-60"
+                              >
+                                <i className="fa-solid fa-file-pdf"></i>
+                                {downloadingCvId === application.id ? "..." : "Télécharger"}
+                              </button>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            <select
+                              value={application.status || "pending"}
+                              disabled={updatingAppId === application.id}
+                              onChange={(e) => handleApplicationStatusChange(application.id, e.target.value)}
+                              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-bold focus:outline-none focus:border-emerald-500 cursor-pointer shadow-xs disabled:opacity-50"
+                            >
+                              {APPLICATION_STATUSES.map((s) => (
+                                <option key={s.value} value={s.value}>
+                                  {s.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "cvtheque" && (
           <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
             <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
