@@ -468,7 +468,11 @@ export default function Home() {
       return;
     }
     
+    // Uniquement exécuté au clic (jamais pendant le rendu) : react-hooks/purity
+    // ne peut pas le déduire statiquement pour une fonction définie dans le
+    // corps du composant.
     const newExp = {
+      // eslint-disable-next-line react-hooks/purity
       id: Date.now(),
       title: expTitle,
       company: expCompany,

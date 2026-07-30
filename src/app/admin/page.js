@@ -149,6 +149,12 @@ export default function AdminDashboardPage() {
 
     const candidats = users.filter((u) => (u.role || "candidat") === "candidat");
     const recruteurs = users.filter((u) => u.role === "recruteur");
+    // Date.now() rend ce useMemo techniquement impur (react-hooks/purity) :
+    // le compteur "en ligne" ne se rafraîchit qu'aux re-renders déclenchés
+    // par d'autres causes (changement de filtre, KPI...), pas à l'horloge —
+    // acceptable pour un indicateur approximatif, pas besoin d'un vrai
+    // ticker temps réel ici.
+    // eslint-disable-next-line react-hooks/purity
     const onlineCount = scopedUsers.filter((u) => Date.now() - new Date(u.updated_at).getTime() < ONLINE_WINDOW_MS).length;
 
     const usersThisPeriod = countInWindow(scopedUsers, "created_at", periodMs, 0);

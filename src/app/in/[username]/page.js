@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -293,8 +294,8 @@ export default function PublicProfilePage() {
 
               {experiences.length > 0 ? (
                 <div className="space-y-4 divide-y divide-gray-100">
-                  {experiences.map((exp) => (
-                    <div key={exp.id || Math.random()} className="pt-4 first:pt-0 flex items-start space-x-4">
+                  {experiences.map((exp, idx) => (
+                    <div key={exp.id ?? idx} className="pt-4 first:pt-0 flex items-start space-x-4">
                       <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-extrabold text-xs flex items-center justify-center uppercase shadow-sm flex-shrink-0">
                         {exp.company ? exp.company.slice(0, 2) : "EX"}
                       </div>
@@ -333,8 +334,8 @@ export default function PublicProfilePage() {
 
               {educations.length > 0 ? (
                 <div className="space-y-4 divide-y divide-gray-100">
-                  {educations.map((edu) => (
-                    <div key={edu.id || Math.random()} className="pt-4 first:pt-0 flex items-start space-x-4">
+                  {educations.map((edu, idx) => (
+                    <div key={edu.id ?? idx} className="pt-4 first:pt-0 flex items-start space-x-4">
                       <div className="w-11 h-11 rounded-2xl bg-purple-100 text-purple-700 font-black text-xs flex items-center justify-center uppercase shadow-xs flex-shrink-0">
                         {edu.school ? edu.school.slice(0, 2) : "FD"}
                       </div>

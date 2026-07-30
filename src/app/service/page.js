@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -347,34 +347,13 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // --- RECHERCHE EN TEMPS RÉEL ---
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    const query = searchQuery.toLowerCase();
-    const filtered = slides.filter(slide => {
-      const title = (selectedLang === "FR" ? slide.titleFR : slide.titleEN).toLowerCase();
-      const desc = (selectedLang === "FR" ? slide.descFR : slide.descEN).toLowerCase();
-      return title.includes(query) || desc.includes(query);
-    });
-    setSearchResults(filtered);
-  }, [searchQuery, selectedLang]);
-
-  const handleSearchResultClick = (slide) => {
-    handleOpenPreview(slide);
-    const origIdx = slides.findIndex(s => s.id === slide.id);
-    if (origIdx !== -1) {
-      setCurrentIndex(origIdx + 2);
-    }
-    setSearchQuery("");
-  };
-
   // --- CARROUSEL 360° ---
-  const slides = [
-    { 
-      id: "s1", 
+  // Contenu statique (jamais dépendant de props/state) : mémoïsé pour une
+  // référence stable entre rendus, sans quoi l'effet de recherche plus bas
+  // (qui filtre ce tableau) se relancerait à chaque re-render.
+  const slides = useMemo(() => [
+    {
+      id: "s1",
       img: "model1.png", 
       titleFR: "Modèle 1 — Moderne et photographique", 
       titleEN: "Template 1 — Modern and photographic",
@@ -407,9 +386,34 @@ export default function Home() {
       titleEN: "Template 4 — New international design",
       descFR: "Format optimisé pour les candidatures globales, normes anglo-saxonnes et compatibilité ATS.",
       descEN: "Optimized format for global applications, western standards and ATS compatibility.",
-      preview: "https://canva.link/g1nh60hb6ddtx96" 
+      preview: "https://canva.link/g1nh60hb6ddtx96"
     },
-  ];
+  ], []);
+
+  // --- RECHERCHE EN TEMPS RÉEL ---
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const query = searchQuery.toLowerCase();
+    const filtered = slides.filter(slide => {
+      const title = (selectedLang === "FR" ? slide.titleFR : slide.titleEN).toLowerCase();
+      const desc = (selectedLang === "FR" ? slide.descFR : slide.descEN).toLowerCase();
+      return title.includes(query) || desc.includes(query);
+    });
+    setSearchResults(filtered);
+  }, [searchQuery, selectedLang, slides]);
+
+  const handleSearchResultClick = (slide) => {
+    handleOpenPreview(slide);
+    const origIdx = slides.findIndex(s => s.id === slide.id);
+    if (origIdx !== -1) {
+      setCurrentIndex(origIdx + 2);
+    }
+    setSearchQuery("");
+  };
+
 
   // Étendre les slides pour l'effet infini (clonage)
   const extendedSlides = [
@@ -692,13 +696,13 @@ export default function Home() {
           {/* Groupe Gauche : Logo + Recherche */}
           <div className="flex items-center space-x-3">
             {/* Logo */}
-            <a
+            <Link
               href="/"
               className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
             >
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
               <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
-            </a>
+            </Link>
 
             {/* Barre de recherche Desktop */}
             <div className="hidden md:block relative w-60 lg:w-72">

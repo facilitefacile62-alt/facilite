@@ -266,7 +266,12 @@ export default function MessagerieClient() {
   // Voice Recording & File Attachment states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
+  // useRef plutôt que useState : mediaRecorder est une instance MediaRecorder
+  // (API impérative — .stop(), .onstop), jamais lue en JSX ni censée
+  // déclencher un re-render ; la muter directement (nécessaire pour
+  // .stop()/.onstop) violait react-hooks/immutability tant qu'elle était en
+  // useState.
+  const mediaRecorderRef = useRef(null);
   const [audioChunks, setAudioChunks] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const timerRef = useRef(null);
@@ -489,8 +494,12 @@ export default function MessagerieClient() {
 
   // Démarrer une NOUVELLE DISCUSSION IA (+)
   const handleNewAiConversation = () => {
+    // Uniquement exécuté au clic (jamais pendant le rendu) : react-hooks/purity
+    // ne peut pas le déduire statiquement pour une fonction définie dans le
+    // corps du composant.
     const newId = (typeof window !== "undefined" && window.crypto && typeof window.crypto.randomUUID === "function")
       ? window.crypto.randomUUID()
+      // eslint-disable-next-line react-hooks/purity
       : `conv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     setCurrentConversationId(newId);
     setAssistantMessages([AI_WELCOME_MESSAGE]);
@@ -875,6 +884,13 @@ export default function MessagerieClient() {
       if (authSubscription) authSubscription.unsubscribe();
       if (realtimeChannel) supabase.removeChannel(realtimeChannel);
     };
+    // [] intentionnel : cet effet initialise la session UNE SEULE FOIS au
+    // montage (souscription Realtime incluse — voir le correctif plus haut
+    // sur la double souscription). loadAiMessagesFromSupabase (fonction non
+    // mémoïsée) et recipientParam y sont lus via la closure, volontairement
+    // pas en dépendance : les y ajouter re-déclencherait tout ce bloc
+    // (nouvelle souscription Realtime comprise) à chaque re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Scroll to bottom of chat whenever active conversation or messages or typing state changes
@@ -1470,7 +1486,7 @@ export default function MessagerieClient() {
       };
 
       recorder.start();
-      setMediaRecorder(recorder);
+      mediaRecorderRef.current = recorder;
       setAudioChunks(chunks);
       setIsRecording(true);
       setRecordingTime(0);
@@ -1491,19 +1507,21 @@ export default function MessagerieClient() {
   };
 
   const stopVoiceRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
     }
     clearInterval(timerRef.current);
     setIsRecording(false);
   };
 
   const cancelVoiceRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.onstop = null;
-      mediaRecorder.stop();
-      if (mediaRecorder.stream) {
-        mediaRecorder.stream.getTracks().forEach((t) => t.stop());
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.onstop = null;
+      recorder.stop();
+      if (recorder.stream) {
+        recorder.stream.getTracks().forEach((t) => t.stop());
       }
     }
     clearInterval(timerRef.current);

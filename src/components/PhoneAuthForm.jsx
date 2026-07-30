@@ -166,10 +166,10 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-100">
+    <div className="w-full mx-auto">
       {/* En-tête */}
-      <div className="text-center mb-6">
-        <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+      <div className="text-center mb-4">
+        <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 text-lg">
           📱
         </div>
         <h2 className="text-2xl font-extrabold text-gray-900">Connexion par Téléphone</h2>
@@ -200,7 +200,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
       {/* ÉTAPE 1 : Formulaire Numéro de Téléphone */}
       {/* ---------------------------------------------------- */}
       {step === "phone" ? (
-        <form onSubmit={handleSendOtp} className="space-y-4">
+        <form onSubmit={handleSendOtp} className="space-y-3">
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5">
@@ -234,7 +234,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
                   onChange={(e) => setCustomCountryCode(e.target.value)}
                   placeholder="+243"
                   required
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm transition font-medium placeholder-gray-400"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm transition font-medium placeholder-gray-400"
                 />
               </div>
             )}
@@ -249,7 +249,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
                 onChange={(e) => setLocalNumber(e.target.value)}
                 placeholder="77 123 45 67"
                 required
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm transition font-medium tracking-wide placeholder-gray-400"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm transition font-medium tracking-wide placeholder-gray-400"
               />
             </div>
           </div>
@@ -257,7 +257,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
           <button
             type="submit"
             disabled={loading || !localNumber.trim()}
-            className="w-full py-3.5 bg-[#10E688] hover:bg-emerald-400 text-gray-900 font-extrabold text-sm rounded-2xl shadow-md transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
+            className="w-full py-2.5 bg-[#10E688] hover:bg-emerald-400 text-gray-900 font-extrabold text-sm rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
@@ -270,7 +270,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
         /* ---------------------------------------------------- */
         /* ÉTAPE 2 : Formulaire Code OTP */
         /* ---------------------------------------------------- */
-        <form onSubmit={handleVerifyOtp} className="space-y-4">
+        <form onSubmit={handleVerifyOtp} className="space-y-3">
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5 text-center">
               Code de vérification (6 chiffres)
@@ -282,14 +282,14 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
               onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ""))}
               placeholder="123456"
               required
-              className="w-full px-4 py-3 text-center tracking-[0.5em] text-2xl font-extrabold rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition bg-gray-50"
+              className="w-full px-3 py-2.5 text-center tracking-[0.5em] text-2xl font-extrabold rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition bg-gray-50"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading || otpToken.length !== 6}
-            className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-extrabold text-sm rounded-2xl shadow-md transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
+            className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-extrabold text-sm rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

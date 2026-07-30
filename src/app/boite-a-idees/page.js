@@ -353,10 +353,10 @@ export default function BoiteAIdees() {
           {/* Groupe Gauche : Logo + Recherche */}
           <div className="flex items-center space-x-3">
             {/* Logo */}
-            <a href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
+            <Link href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
               <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
-            </a>
+            </Link>
 
             {/* Barre de recherche Desktop */}
             <div className="hidden md:block relative w-60 lg:w-72">
@@ -591,13 +591,13 @@ export default function BoiteAIdees() {
         {/* Horizontal Tab Bar on Mobile (LinkedIn-style tabs right under the top header) */}
         <div className="flex md:hidden items-center justify-around w-full border-t border-gray-200/60 pt-2 mt-2 bg-[#FAF6F1]">
           {/* Accueil */}
-          <a
+          <Link
             href="/"
             className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
           >
             <i className="fa-solid fa-house text-lg"></i>
             <span className="text-[9px] font-bold tracking-tight">{t.navHome}</span>
-          </a>
+          </Link>
 
           {/* Service */}
           <Link

@@ -297,6 +297,12 @@ export default function ImporterCvPage() {
       clearInterval(progressInterval);
       clearInterval(stepInterval);
     };
+    // parseFileContent et t.toastSuccessImport volontairement omis : ce sont
+    // des références recréées à chaque rendu (fonction non mémoïsée, objet
+    // de traduction), les ajouter relancerait toute l'animation de scan à
+    // chaque re-render du parent plutôt qu'une seule fois par changement
+    // réel de stage/file.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, file, scanSteps]);
 
   // Extraction réelle du contenu du document (jamais basée sur le nom du fichier)

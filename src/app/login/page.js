@@ -205,9 +205,9 @@ export default function LoginPage() {
       </header>
 
       {/* Conteneur Principal / Carte de Login OU Carte de Réinitialisation */}
-      <main className="w-full max-w-md px-4 py-8 z-10">
+      <main className="w-[90%] max-w-sm mx-auto py-8 z-10">
         {isRecoveryMode ? (
-          <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-center mb-5">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
             </div>
@@ -232,7 +232,7 @@ export default function LoginPage() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleResetPasswordSubmit} className="space-y-5">
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">
                     Nouveau mot de passe
@@ -279,7 +279,7 @@ export default function LoginPage() {
             )}
           </div>
         ) : (
-        <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300">
+        <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300 max-h-[90vh] overflow-y-auto">
 
           {/* Logo officiel du site au-dessus de la carte */}
           <div className="flex justify-center mb-5">
@@ -291,7 +291,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setLoginMethod("email")}
-              className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all duration-200 ${
+              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 ${
                 loginMethod === "email"
                   ? "bg-white text-gray-900 shadow-xs"
                   : "text-gray-500 hover:text-gray-900"
@@ -302,7 +302,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setLoginMethod("phone")}
-              className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-all duration-200 ${
+              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 ${
                 loginMethod === "phone"
                   ? "bg-white text-gray-900 shadow-xs"
                   : "text-gray-500 hover:text-gray-900"
@@ -341,7 +341,7 @@ export default function LoginPage() {
               </Link>
             </div>
           ) : loginMethod === "email" ? (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-3">
               {/* Champ Email */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">
@@ -357,7 +357,7 @@ export default function LoginPage() {
                     }}
                     required
                     placeholder="Enter your Email"
-                    className={`w-full px-4 py-3 bg-white border ${
+                    className={`w-full px-3 py-2.5 bg-white border ${
                       errorMessage
                         ? "border-red-400 ring-2 ring-red-100 text-red-900"
                         : "border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
@@ -389,7 +389,7 @@ export default function LoginPage() {
                     }}
                     required
                     placeholder="Enter your password"
-                    className="w-full pl-4 pr-10 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                    className="w-full pl-3 pr-10 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
                   />
                   <button
                     type="button"
@@ -420,7 +420,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2"
+                className="w-full py-2.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2"
               >
                 {isLoading ? (
                   <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>

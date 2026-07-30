@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -569,7 +570,11 @@ export default function ProfilPage() {
     e.preventDefault();
     if (!expTitle.trim() || !expCompany.trim()) return;
 
+    // Uniquement exécuté au clic (jamais pendant le rendu) : react-hooks/purity
+    // ne peut pas le déduire statiquement pour une fonction définie dans le
+    // corps du composant.
     const newExp = {
+      // eslint-disable-next-line react-hooks/purity
       id: Date.now(),
       title: expTitle,
       company: expCompany,
@@ -877,6 +882,10 @@ export default function ProfilPage() {
 
     try {
       const ext = file.name.split('.').pop().toLowerCase();
+      // Uniquement exécuté au clic (jamais pendant le rendu) : react-hooks/purity
+      // ne peut pas le déduire statiquement pour une fonction définie dans le
+      // corps du composant.
+      // eslint-disable-next-line react-hooks/purity
       const filePath = `${userSession.user.id}/documents/doc_ocr_${Date.now()}.${ext}`;
 
       let docPublicUrl = null;
@@ -1070,6 +1079,10 @@ export default function ProfilPage() {
     try {
       // 1. Sauvegarde dans Supabase Storage (Bucket resumes)
       let finalCvUrl = null;
+      // Uniquement exécuté au clic (jamais pendant le rendu) : react-hooks/purity
+      // ne peut pas le déduire statiquement pour une fonction définie dans le
+      // corps du composant.
+      // eslint-disable-next-line react-hooks/purity
       const filePath = `${userSession.user.id}/cvs/${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
@@ -1128,6 +1141,10 @@ export default function ProfilPage() {
         .single();
 
       const newDocument = insertedDoc || {
+        // Uniquement exécuté au clic (jamais pendant le rendu) : react-hooks/purity
+        // ne peut pas le déduire statiquement pour une fonction définie dans
+        // le corps du composant.
+        // eslint-disable-next-line react-hooks/purity
         id: Date.now(),
         title: file.name,
         type: docCategory,
@@ -1226,6 +1243,10 @@ export default function ProfilPage() {
     }
 
     const newEdu = {
+      // Uniquement exécuté au clic (jamais pendant le rendu) : react-hooks/purity
+      // ne peut pas le déduire statiquement pour une fonction définie dans le
+      // corps du composant.
+      // eslint-disable-next-line react-hooks/purity
       id: Date.now(),
       school: eduSchool.trim(),
       degree: eduDegree.trim(),
@@ -1377,10 +1398,10 @@ export default function ProfilPage() {
         <div className="max-w-[1180px] mx-auto w-full flex items-center justify-between">
           {/* Groupe Gauche : Logo + Recherche */}
           <div className="flex items-center space-x-3">
-            <a href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
+            <Link href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
               <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
-            </a>
+            </Link>
 
             <div className="hidden md:block relative w-60 lg:w-72">
               <div className="relative">
@@ -1646,13 +1667,13 @@ export default function ProfilPage() {
         {/* Horizontal Tab Bar on Mobile (LinkedIn-style tabs right under the top header) */}
         <div className="flex md:hidden items-center justify-around w-full border-t border-gray-200/60 pt-2 mt-2 bg-[#FAF6F1]">
           {/* Accueil */}
-          <a
+          <Link
             href="/"
             className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
           >
             <i className="fa-solid fa-house text-lg"></i>
             <span className="text-[9px] font-bold tracking-tight">Accueil</span>
-          </a>
+          </Link>
 
           {/* Service */}
           <Link

@@ -40,7 +40,12 @@ export default function AdminMessagesPage() {
   // Voice Recording & File Attachment states
   const [isAdminRecording, setIsAdminRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [adminMediaRecorder, setAdminMediaRecorder] = useState(null);
+  // useRef plutôt que useState : adminMediaRecorder est une instance
+  // MediaRecorder (API impérative — .stop(), .onstop), jamais lue en JSX ni
+  // censée déclencher un re-render ; la muter directement (nécessaire pour
+  // .stop()/.onstop) violait react-hooks/immutability tant qu'elle était en
+  // useState.
+  const adminMediaRecorderRef = useRef(null);
   const [adminAudioChunks, setAdminAudioChunks] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const timerRef = useRef(null);
@@ -57,41 +62,10 @@ export default function AdminMessagesPage() {
     setTimeout(() => setToast(""), 3500);
   };
 
-  // 1. Initialisation de la session et contrôle du rôle Admin
-  useEffect(() => {
-    async function initAdminSession() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          window.location.replace("/login");
-          return;
-        }
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
-
-        if (profile?.role !== "admin") {
-          window.location.replace("/");
-          return;
-        }
-
-        setUserSession(session);
-        await loadConversationsAndProfiles(session.user.id);
-      } catch (err) {
-        console.error("Erreur initialisation admin messages:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    initAdminSession();
-  }, []);
-
-  // 2. Récupérer toutes les conversations et les profils des utilisateurs
-  const loadConversationsAndProfiles = async (adminId) => {
+  // Récupère toutes les conversations et les profils des utilisateurs.
+  // Déclarée avant l'effet d'initialisation qui l'appelle (react-hooks/immutability
+  // ne crédite pas le hoisting des déclarations de fonction ici).
+  async function loadConversationsAndProfiles(adminId) {
     try {
       // Récupérer la cartographie de tous les profils (Candidats, Recruteurs, Admins)
       const { data: profilesData } = await supabase
@@ -129,7 +103,40 @@ export default function AdminMessagesPage() {
     } catch (err) {
       console.error("Exception chargement conversations:", err);
     }
-  };
+  }
+
+  // 1. Initialisation de la session et contrôle du rôle Admin
+  useEffect(() => {
+    async function initAdminSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.replace("/login");
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profile?.role !== "admin") {
+          window.location.replace("/");
+          return;
+        }
+
+        setUserSession(session);
+        await loadConversationsAndProfiles(session.user.id);
+      } catch (err) {
+        console.error("Erreur initialisation admin messages:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    initAdminSession();
+  }, []);
 
   // 3. Charger les messages de la conversation active et marquer comme lus
   useEffect(() => {
@@ -304,7 +311,7 @@ export default function AdminMessagesPage() {
       };
 
       recorder.start();
-      setAdminMediaRecorder(recorder);
+      adminMediaRecorderRef.current = recorder;
       setAdminAudioChunks(chunks);
       setIsAdminRecording(true);
       setRecordingTime(0);
@@ -325,19 +332,21 @@ export default function AdminMessagesPage() {
   };
 
   const stopAdminVoiceRecording = () => {
-    if (adminMediaRecorder && adminMediaRecorder.state !== "inactive") {
-      adminMediaRecorder.stop();
+    const recorder = adminMediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
     }
     clearInterval(timerRef.current);
     setIsAdminRecording(false);
   };
 
   const cancelAdminVoiceRecording = () => {
-    if (adminMediaRecorder && adminMediaRecorder.state !== "inactive") {
-      adminMediaRecorder.onstop = null;
-      adminMediaRecorder.stop();
-      if (adminMediaRecorder.stream) {
-        adminMediaRecorder.stream.getTracks().forEach((t) => t.stop());
+    const recorder = adminMediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.onstop = null;
+      recorder.stop();
+      if (recorder.stream) {
+        recorder.stream.getTracks().forEach((t) => t.stop());
       }
     }
     clearInterval(timerRef.current);
