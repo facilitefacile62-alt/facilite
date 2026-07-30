@@ -1,44 +1,59 @@
 import { NextResponse } from "next/server";
-import { createWorker } from "tesseract.js";
+import { extractTextFromFile } from "@/lib/documentParser";
+import { requireUser, checkRateLimit } from "@/lib/apiAuth";
+import { validateUploadedFile } from "@/lib/validation";
 
-export async function POST(request) {
+export const runtime = "nodejs";
+
+// Même expression que mapTextToProfileFields (src/lib/documentParser.js) :
+// on reste cohérent avec la détection d'e-mail déjà utilisée ailleurs dans l'app.
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+
+export async function POST(req) {
   try {
-    const formData = await request.formData();
-    const file = formData.get("image");
+    // OCR = opération coûteuse en CPU : jamais accessible sans authentification
+    // ni limite de débit, sans quoi n'importe qui peut la faire tourner en
+    // boucle (déni de service / explosion de coûts serveur).
+    const { user, error: authError } = await requireUser(req);
+    if (authError) return authError;
 
-    if (!file) {
-      return NextResponse.json({ error: "Aucun fichier image n'a été fourni." }, { status: 400 });
+    const { allowed, error: rateError } = checkRateLimit(user.id);
+    if (!allowed) return rateError;
+
+    const formData = await req.formData();
+    const file = formData.get("file");
+
+    if (!file || typeof file === "string") {
+      return NextResponse.json({ error: "Aucune image fournie." }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Initialisation du worker Tesseract.js pour l'analyse OCR
-    const worker = await createWorker("fra+eng");
-    const { data: { text } } = await worker.recognize(buffer);
-    await worker.terminate();
+    const check = validateUploadedFile(buffer, file.type, file.size);
+    if (!check.valid) {
+      return NextResponse.json({ error: check.error }, { status: check.status });
+    }
+    if (!file.type?.startsWith("image/")) {
+      return NextResponse.json({ error: "L'Extracteur ne lit que des images (photo de l'annonce)." }, { status: 415 });
+    }
 
-    // Regex robuste pour l'extraction de l'adresse e-mail dans le texte OCR
-    const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i;
-    const match = text.match(emailRegex);
+    // Réutilise l'OCR déjà en place pour les images (tesseract.js, fra+eng).
+    const text = await extractTextFromFile(buffer, file.name, file.type);
+    const match = text.match(EMAIL_REGEX);
 
     if (!match) {
       return NextResponse.json({
-        email: null,
-        extractedText: text,
-        message: "Aucune adresse e-mail détectée sur l'image."
-      }, { status: 200 });
+        success: false,
+        error: "Aucune adresse e-mail détectée sur cette image. Essayez une photo plus nette ou mieux cadrée.",
+      });
     }
 
-    const extractedEmail = match[1].toLowerCase();
-
-    return NextResponse.json({
-      success: true,
-      email: extractedEmail,
-      extractedText: text
-    });
+    return NextResponse.json({ success: true, email: match[0].toLowerCase() });
   } catch (error) {
-    console.error("Erreur API extract-email:", error);
-    return NextResponse.json({ error: "Échec de l'analyse OCR de l'image." }, { status: 500 });
+    console.error("[Extract Email Route Error]", error);
+    return NextResponse.json(
+      { error: "Une erreur est survenue lors de l'analyse de l'image." },
+      { status: 500 }
+    );
   }
 }

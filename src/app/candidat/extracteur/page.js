@@ -53,11 +53,13 @@ export default function ExtracteurPage() {
     setSendSuccess(false);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const formData = new FormData();
-      formData.append("image", selectedFile);
+      formData.append("file", selectedFile);
 
       const res = await fetch("/api/extract-email", {
         method: "POST",
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
         body: formData,
       });
 
@@ -66,7 +68,7 @@ export default function ExtracteurPage() {
       if (data.email) {
         setExtractedEmail(data.email);
       } else {
-        setExtractionMessage(data.message || "Aucune adresse e-mail détectée sur cette photo.");
+        setExtractionMessage(data.error || "Aucune adresse e-mail détectée sur cette photo.");
       }
     } catch (err) {
       console.error("Erreur d'extraction:", err);
@@ -83,11 +85,11 @@ export default function ExtracteurPage() {
     try {
       const res = await fetch("/api/send-application", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          toEmail: extractedEmail,
-          candidateId: userSession.user.id,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userSession.access_token}`,
+        },
+        body: JSON.stringify({ recipientEmail: extractedEmail }),
       });
 
       const data = await res.json();
