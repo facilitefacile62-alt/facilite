@@ -5,36 +5,69 @@ import mammoth from "mammoth";
 // (cas des documents scannés/photographiés) et qu'il faut basculer en OCR.
 const MIN_PDF_TEXT_LENGTH = 30;
 
+// Délai maximal accordé à Google Vision avant d'abandonner et de basculer sur
+// Tesseract. Sans ce garde-fou, un appel réseau qui traîne (clé invalide mal
+// détectée, API qui ne répond pas...) peut faire tourner la fonction jusqu'au
+// timeout de la plateforme Vercel — perçu côté utilisateur comme un blocage
+// en boucle de l'analyse d'image.
+const VISION_TIMEOUT_MS = 8000;
+
+function withTimeout(promise, ms, errorMessage) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      const timer = setTimeout(() => reject(new Error(errorMessage)), ms);
+      if (typeof timer.unref === "function") timer.unref();
+    }),
+  ]);
+}
+
 /**
  * OCR via Google Cloud Vision (documentTextDetection : optimisé pour du texte
  * dense/structuré comme un CV ou une annonce, plus précis que Tesseract sur
  * des photos de qualité moyenne). Lève une erreur si les identifiants
- * GOOGLE_* sont absents ou si l'appel échoue — à charge de l'appelant de
- * basculer sur le fallback.
+ * GOOGLE_* sont absents/invalides ou si l'appel échoue/traîne — à charge de
+ * l'appelant (runImageOcr) de basculer sur le fallback Tesseract.
  */
 async function extractTextWithVision(buffer) {
   const projectId = process.env.GOOGLE_PROJECT_ID;
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+  // Sur Vercel (comme la plupart des plateformes), les variables d'env sont
+  // stockées sur une seule ligne : les retours à la ligne du PEM sont
+  // échappés en "\n" littéral et doivent être reconvertis, sans quoi la clé
+  // est invalide et chaque appel Google échoue.
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error("Google Vision non configuré (variables GOOGLE_PROJECT_ID/GOOGLE_CLIENT_EMAIL/GOOGLE_PRIVATE_KEY manquantes).");
   }
 
-  const { ImageAnnotatorClient } = await import("@google-cloud/vision");
-  const client = new ImageAnnotatorClient({
-    projectId,
-    credentials: {
-      client_email: clientEmail,
-      // La clé est stockée dans .env avec des \n littéraux (échappés) : il
-      // faut les convertir en vrais retours à la ligne pour un PEM valide.
-      private_key: privateKey.replace(/\\n/g, "\n"),
-    },
-  });
+  // échappés en "\n" littéral et doivent être reconvertis.
+  const privateKey = rawPrivateKey.replace(/\\n/g, "\n");
 
-  const [result] = await client.documentTextDetection({ image: { content: buffer } });
+  let client;
+  try {
+    const { ImageAnnotatorClient } = await import("@google-cloud/vision");
+    client = new ImageAnnotatorClient({
+      projectId,
+      credentials: { client_email: clientEmail, private_key: privateKey },
+    });
+  } catch (initErr) {
+    throw new Error(`Initialisation du client Google Vision impossible : ${initErr.message}`);
+  }
+
+  let result;
+  try {
+    [result] = await withTimeout(
+      client.documentTextDetection({ image: { content: buffer } }),
+      VISION_TIMEOUT_MS,
+      "Google Vision : délai dépassé"
+    );
+  } catch (callErr) {
+    throw new Error(`Appel Google Vision échoué : ${callErr.message}`);
+  }
+
   const text = result?.fullTextAnnotation?.text || "";
-
   if (!text.trim()) {
     throw new Error("Google Vision n'a détecté aucun texte sur cette image.");
   }
@@ -62,7 +95,7 @@ async function runImageOcr(buffer) {
   try {
     return await extractTextWithVision(buffer);
   } catch (err) {
-    console.warn("Google Vision indisponible, repli sur Tesseract:", err.message);
+    console.warn("Google Vision indisponible, repli sur Tesseract:", err?.message || String(err));
     return extractTextWithTesseract(buffer);
   }
 }
