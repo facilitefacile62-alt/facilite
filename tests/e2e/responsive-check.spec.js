@@ -6,148 +6,211 @@ const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETes
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-test-admin@facilite-demo.local";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "FaciliteE2ETest2026!";
 
-// Helper to check for horizontal scroll overflow
-async function checkNoHorizontalOverflow(page) {
-  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-  const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
-  const innerWidth = await page.evaluate(() => window.innerWidth);
-  
-  // Verify horizontal overflow is strictly 0px (scrollWidth <= clientWidth)
-  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
-  expect(innerWidth).toBeLessThanOrEqual(clientWidth);
+async function loginAs(page, email, password, expectedUrlPattern) {
+  await page.goto("/login");
+  await page.getByPlaceholder("Enter your Email").fill(email);
+  await page.getByPlaceholder("Enter your password").fill(password);
+  await page.getByRole("button", { name: "Log In" }).click();
+  await page.waitForURL(expectedUrlPattern, { timeout: 20_000 });
+  await page.waitForLoadState("networkidle");
+}
+
+// Débordement horizontal strictement nul : scrollWidth ne doit jamais
+// dépasser clientWidth, quelle que soit la page.
+async function expectNoHorizontalOverflow(page, label) {
+  const { scrollWidth, clientWidth, innerWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+    innerWidth: window.innerWidth,
+  }));
+
+  expect(scrollWidth - clientWidth, `${label} : débordement horizontal (scrollWidth ${scrollWidth} > clientWidth ${clientWidth})`).toBeLessThanOrEqual(0);
+  expect(innerWidth, `${label} : innerWidth`).toBeLessThanOrEqual(clientWidth + 1);
 }
 
 test.describe("Tests de responsivité et de conformité Mobile UX", () => {
-  
-  // 1. Test Viewport 320px (Ultra-Small)
+  // 1. Viewport 320px (Ultra-Small) — 0px de débordement sur les pages principales
   test.describe("Viewport 320px - Petit Smartphone", () => {
     test.use({ viewport: { width: 320, height: 568 } });
 
-    test("Pas de débordement horizontal sur les pages publiques", async ({ page }) => {
-      // Page d'accueil
+    test("Pages publiques : accueil, login", async ({ page }) => {
       await page.goto("/");
       await page.waitForLoadState("networkidle");
-      await checkNoHorizontalOverflow(page);
+      await expectNoHorizontalOverflow(page, "/");
 
-      // Page de connexion
       await page.goto("/login");
       await page.waitForLoadState("networkidle");
-      await checkNoHorizontalOverflow(page);
+      await expectNoHorizontalOverflow(page, "/login");
+    });
 
-      // Créateur de CV (anonyme/initial)
+    test("Créateur de CV, Suivi Candidat et Messagerie (candidat authentifié)", async ({ page }) => {
+      // /creer-cv exige une session (absent de PUBLIC_ROUTES dans le
+      // middleware) : un accès anonyme redirige vers /login avant même
+      // d'atteindre la page, ce qui fausserait ce test sans connexion préalable.
+      await loginAs(page, CANDIDATE_EMAIL, CANDIDATE_PASSWORD, "**/messagerie");
+      await expectNoHorizontalOverflow(page, "/messagerie");
+
       await page.goto("/creer-cv");
       await page.waitForLoadState("networkidle");
-      await checkNoHorizontalOverflow(page);
-    });
+      await expectNoHorizontalOverflow(page, "/creer-cv");
 
-    test("Pas de débordement horizontal sur le Suivi Candidat (authentifié)", async ({ page }) => {
-      // Connexion candidat
-      await page.goto("/login");
-      await page.getByPlaceholder("Enter your Email").fill(CANDIDATE_EMAIL);
-      await page.getByPlaceholder("Enter your password").fill(CANDIDATE_PASSWORD);
-      await page.getByRole("button", { name: "Log In" }).click();
-      await page.waitForURL("**/messagerie", { timeout: 20_000 });
-      await page.waitForLoadState("networkidle");
-
-      // Suivi Candidat
       await page.goto("/candidat/candidatures");
       await page.waitForLoadState("networkidle");
-      await checkNoHorizontalOverflow(page);
+      await expectNoHorizontalOverflow(page, "/candidat/candidatures");
     });
 
-    test("Pas de débordement horizontal sur le Dashboard Admin (authentifié)", async ({ page }) => {
-      // Connexion admin
-      await page.goto("/login");
-      await page.getByPlaceholder("Enter your Email").fill(ADMIN_EMAIL);
-      await page.getByPlaceholder("Enter your password").fill(ADMIN_PASSWORD);
-      await page.getByRole("button", { name: "Log In" }).click();
-      await page.waitForURL("**/admin", { timeout: 20_000 });
-      await page.waitForLoadState("networkidle");
+    test("Dashboard Admin (admin authentifié)", async ({ page }) => {
+      await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, "**/admin");
 
-      // Dashboard Admin
       await page.goto("/admin/dashboard");
       await page.waitForLoadState("networkidle");
-      await checkNoHorizontalOverflow(page);
+      await expectNoHorizontalOverflow(page, "/admin/dashboard");
     });
   });
 
-  // 2. Test Viewport 375px (Mobile Standard)
+  // 2. Viewport 375px (Mobile Standard) — interactions : menu, modale, messagerie
   test.describe("Viewport 375px - Mobile Standard", () => {
     test.use({ viewport: { width: 375, height: 812 } });
 
-    test("Ouverture de la modale de tarification et du menu mobile", async ({ page }) => {
-      // Accès au créateur de CV
+    test("Menu hamburger sur la page d'accueil", async ({ page }) => {
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+
+      // Deux boutons "fa-bars" existent (dropdown desktop masqué + hamburger
+      // mobile) : :visible filtre sur celui réellement affiché à ce viewport.
+      const hamburgerButton = page.locator('button:has(i.fa-bars):visible').first();
+      await expect(hamburgerButton).toBeVisible();
+      await hamburgerButton.click();
+
+      // Le menu mobile doit s'ouvrir et rester dans les limites de l'écran.
+      await expectNoHorizontalOverflow(page, "/ (menu mobile ouvert)");
+    });
+
+    test("Modale de tarification (PricingModal) sur /creer-cv", async ({ page }) => {
+      await loginAs(page, CANDIDATE_EMAIL, CANDIDATE_PASSWORD, "**/messagerie");
       await page.goto("/creer-cv");
       await page.waitForLoadState("networkidle");
 
-      // Ouvrir la modale de tarification en sélectionnant une formule d'exportation
-      // Dans creer-cv, le bouton "Suivant" après l'étape finale déclenche l'ouverture de la PricingModal.
-      // Cherchons les boutons à l'étape finale ou cliquons sur le bouton "Exporter" / "Télécharger"
-      const exportBtn = page.getByRole("button", { name: /Télécharger|Exporter/i }).first();
-      if (await exportBtn.count() > 0 && await exportBtn.first().isVisible()) {
-        await exportBtn.first().click();
-        
-        // Attendre que la modale de tarification soit affichée
-        const modal = page.locator('role=dialog');
-        await expect(modal).toBeVisible();
-        
-        // Vérifier l'absence de débordement horizontal
-        await checkNoHorizontalOverflow(page);
-        
-        // Fermer la modale
-        const closeBtn = page.getByLabel("Fermer");
-        if (await closeBtn.isVisible()) {
-          await closeBtn.click();
-        } else {
-          await page.keyboard.press("Escape");
-        }
+      // Atteint l'étape finale du créateur de CV (handleNextStep incrémente
+      // sans validation bloquante — 6 clics suffisent), puis ouvre la modale.
+      for (let i = 0; i < 6; i++) {
+        await page.getByRole("button", { name: "Continuer" }).click();
       }
+      await page.getByRole("button", { name: "Télécharger mon CV (PDF)" }).first().click();
 
-      // Vérifier le menu burger / barre de navigation mobile sur la page d'accueil
-      await page.goto("/");
+      const modal = page.getByRole("dialog");
+      await expect(modal).toBeVisible();
+      await expect(page.getByText("Finalisez votre CV")).toBeVisible();
+
+      // Occupe toute la largeur disponible sur mobile, sans provoquer de débordement.
+      await expectNoHorizontalOverflow(page, "/creer-cv (PricingModal ouverte)");
+      const modalBox = await modal.boundingBox();
+      expect(modalBox.width).toBeGreaterThan(375 * 0.85);
+
+      // Bouton de fermeture toujours visible et accessible.
+      const closeBtn = page.getByLabel("Fermer");
+      await expect(closeBtn).toBeVisible();
+      const closeBox = await closeBtn.boundingBox();
+      expect(closeBox.width, "zone de toucher du bouton Fermer").toBeGreaterThanOrEqual(40);
+      expect(closeBox.height, "zone de toucher du bouton Fermer").toBeGreaterThanOrEqual(40);
+
+      await closeBtn.click();
+      await expect(modal).not.toBeVisible();
+    });
+
+    test("Messagerie : ouverture d'une discussion puis retour via la flèche ←", async ({ page }) => {
+      await loginAs(page, CANDIDATE_EMAIL, CANDIDATE_PASSWORD, "**/messagerie");
       await page.waitForLoadState("networkidle");
-      
-      const bottomNav = page.locator("nav");
-      await expect(bottomNav).toBeVisible();
+
+      const conversationList = page.locator("aside");
+
+      // État initial : liste visible, chat masqué (aucune discussion active).
+      await expect(conversationList).toBeVisible();
+
+      // Ouvre la discussion épinglée (toujours présente, quel que soit l'historique du compte).
+      // Scopé à la liste (aside) : "Assistance IA Facilite" apparaît aussi dans
+      // l'en-tête du panneau de chat une fois la discussion active.
+      await conversationList.getByText("Assistance IA Facilite").click();
+
+      // Sur mobile, la liste doit se masquer au profit du panneau de chat.
+      await expect(conversationList).toBeHidden();
+      const backButton = page.locator("button:has(i.fa-arrow-left)").first();
+      await expect(backButton).toBeVisible();
+      await expectNoHorizontalOverflow(page, "/messagerie (discussion ouverte)");
+
+      // Retour à la liste via la flèche ←.
+      await backButton.click();
+      await expect(conversationList).toBeVisible();
     });
   });
 
-  // 3. Test Viewport 768px (Tablette) & 1280px (Desktop)
-  test.describe("Différenciation Tablettes vs Desktop (Grilles & Colonnes)", () => {
-    test("Disposition responsive sur tablette (768px)", async ({ page }) => {
+  // 3. Viewport 768px (Tablette) & 1280px (Desktop) — mise en page côte à côte
+  test.describe("Tablette (768px) & Desktop (1280px)", () => {
+    test("Tablette 768px : messagerie côte à côte + grille KPI 2 colonnes", async ({ page }) => {
       await page.setViewportSize({ width: 768, height: 1024 });
-      
-      // Connexion admin
-      await page.goto("/login");
-      await page.getByPlaceholder("Enter your Email").fill(ADMIN_EMAIL);
-      await page.getByPlaceholder("Enter your password").fill(ADMIN_PASSWORD);
-      await page.getByRole("button", { name: "Log In" }).click();
-      await page.waitForURL("**/admin", { timeout: 20_000 });
-      
+
+      await loginAs(page, CANDIDATE_EMAIL, CANDIDATE_PASSWORD, "**/messagerie");
+      await page.waitForLoadState("networkidle");
+
+      // À partir de md (768px), liste ET chat sont visibles simultanément,
+      // même sans discussion active (activeConvId ? "hidden md:flex" : "flex").
+      const conversationList = page.locator("aside");
+      await expect(conversationList).toBeVisible();
+      await conversationList.getByText("Assistance IA Facilite").click();
+      await expect(conversationList).toBeVisible();
+      await expectNoHorizontalOverflow(page, "/messagerie@768px (discussion ouverte)");
+
+      await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, "**/admin");
       await page.goto("/admin/dashboard");
       await page.waitForLoadState("networkidle");
 
-      // Sur tablette, les cartes KPI ont 2 colonnes (sm:grid-cols-2), vérifier que le conteneur existe
       const kpiContainer = page.locator(".grid.grid-cols-1.sm\\:grid-cols-2");
-      await expect(kpiContainer).toBeVisible();
+      await expect(kpiContainer.first()).toBeVisible();
+      await expectNoHorizontalOverflow(page, "/admin/dashboard@768px");
     });
 
-    test("Disposition responsive sur PC Desktop (1280px)", async ({ page }) => {
+    test("Desktop 1280px : messagerie côte à côte + grille KPI 4 colonnes", async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 800 });
-      
-      // Connexion admin
-      await page.goto("/login");
-      await page.getByPlaceholder("Enter your Email").fill(ADMIN_EMAIL);
-      await page.getByPlaceholder("Enter your password").fill(ADMIN_PASSWORD);
-      await page.getByRole("button", { name: "Log In" }).click();
-      await page.waitForURL("**/admin", { timeout: 20_000 });
-      
+
+      await loginAs(page, CANDIDATE_EMAIL, CANDIDATE_PASSWORD, "**/messagerie");
+      await page.waitForLoadState("networkidle");
+
+      const conversationList = page.locator("aside");
+      await expect(conversationList).toBeVisible();
+      await conversationList.getByText("Assistance IA Facilite").click();
+      await expect(conversationList).toBeVisible();
+      await expectNoHorizontalOverflow(page, "/messagerie@1280px (discussion ouverte)");
+
+      await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD, "**/admin");
       await page.goto("/admin/dashboard");
       await page.waitForLoadState("networkidle");
 
-      // Sur desktop, les cartes KPI ont 4 colonnes (lg:grid-cols-4), vérifier que le conteneur existe
       const kpiContainer = page.locator(".grid.grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-4");
-      await expect(kpiContainer).toBeVisible();
+      await expect(kpiContainer.first()).toBeVisible();
+      await expectNoHorizontalOverflow(page, "/admin/dashboard@1280px");
+    });
+  });
+
+  // Règles d'ergonomie mobile : zoom iOS et zones de toucher.
+  test.describe("Ergonomie mobile (375px)", () => {
+    test.use({ viewport: { width: 375, height: 812 } });
+
+    test("Les champs de saisie du formulaire de connexion ont une taille de police >= 16px", async ({ page }) => {
+      await page.goto("/login");
+      await page.waitForLoadState("networkidle");
+
+      const emailInput = page.getByPlaceholder("Enter your Email");
+      const fontSize = await emailInput.evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
+      expect(fontSize, "font-size du champ e-mail (anti-zoom iOS)").toBeGreaterThanOrEqual(16);
+    });
+
+    test("Le bouton de connexion respecte une zone de toucher >= 44px de hauteur", async ({ page }) => {
+      await page.goto("/login");
+      await page.waitForLoadState("networkidle");
+
+      const loginButton = page.getByRole("button", { name: "Log In" });
+      const box = await loginButton.boundingBox();
+      expect(box.height, "hauteur du bouton Log In").toBeGreaterThanOrEqual(44);
     });
   });
 });
