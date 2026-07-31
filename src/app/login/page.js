@@ -318,7 +318,7 @@ export default function LoginPage() {
             <p className="text-sm font-medium text-gray-500">
               {loginMethod === "email"
                 ? "Saisissez vos identifiants pour vous connecter."
-                : "Connectez-vous à l'aide de votre numéro de téléphone."}
+                : "Choisissez votre pays et saisissez votre numéro."}
             </p>
           </div>
 

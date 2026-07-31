@@ -167,18 +167,14 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
 
   return (
     <div className="w-full mx-auto">
-      {/* En-tête */}
-      <div className="text-center mb-4">
-        <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 text-lg">
-          📱
+      {/* Affichage du numéro pour l'étape OTP (sans répéter le titre principal) */}
+      {step === "otp" && (
+        <div className="text-center mb-4">
+          <p className="text-sm font-medium text-gray-700 bg-white/50 backdrop-blur-sm border border-gray-200 py-1.5 px-3 rounded-lg inline-block">
+            Code envoyé au <span className="font-extrabold">{phone}</span>
+          </p>
         </div>
-        <h2 className="text-2xl font-extrabold text-gray-900">Connexion par Téléphone</h2>
-        <p className="text-xs text-gray-500 mt-1">
-          {step === "phone"
-            ? "Choisissez votre pays et saisissez votre numéro."
-            : `Code envoyé au ${phone}`}
-        </p>
-      </div>
+      )}
 
       {/* Alerte d'Erreur */}
       {error && (
