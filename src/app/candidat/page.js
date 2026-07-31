@@ -162,12 +162,26 @@ export default function CandidatDashboardPage() {
               <h2 className="text-lg font-extrabold text-gray-900">Historique des postulations ({candidatures.length})</h2>
               <p className="text-xs text-gray-500 font-medium">Liste exhaustive de vos démarches de recrutement</p>
             </div>
-            <Link
-              href="/candidat/extracteur"
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow-xs flex items-center space-x-1.5"
-            >
-              <span>⚡ L'Extracteur 1-Click</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/candidat/candidatures"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-extrabold rounded-xl transition flex items-center space-x-1.5"
+              >
+                <span>Suivi détaillé</span>
+              </Link>
+              <Link
+                href="/candidat/mes-cvs"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-extrabold rounded-xl transition flex items-center space-x-1.5"
+              >
+                <span>Mes CVs</span>
+              </Link>
+              <Link
+                href="/candidat/extracteur"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow-xs flex items-center space-x-1.5"
+              >
+                <span>⚡ L'Extracteur 1-Click</span>
+              </Link>
+            </div>
           </div>
 
           <div className="overflow-x-auto">

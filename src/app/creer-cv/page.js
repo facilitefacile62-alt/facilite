@@ -329,6 +329,30 @@ export default function CreerCv() {
     }, 3500);
   };
 
+  // Rechargement pour édition depuis /candidat/mes-cvs (?resumeId=...). Lecture
+  // de window.location.search dans un effet (jamais pendant le rendu, pour
+  // éviter un hydration mismatch — même raison que isRecoveryMode dans
+  // login/page.js) plutôt que useSearchParams(), qui imposerait de découper
+  // ce composant sous un <Suspense> rien que pour ce paramètre optionnel.
+  useEffect(() => {
+    const resumeId = new URLSearchParams(window.location.search).get("resumeId");
+    if (!resumeId) return;
+
+    async function loadExistingResume() {
+      const { data, error } = await supabase.from("resumes").select("content").eq("id", resumeId).single();
+
+      if (error || !data?.content) {
+        console.error("Erreur chargement CV existant:", error?.message);
+        return;
+      }
+
+      setCvData(data.content);
+      triggerToast("CV chargé pour modification.", "fa-file-import");
+    }
+
+    loadExistingResume();
+  }, []);
+
   // Synchronize language check from URL search parameter
   useEffect(() => {
     if (typeof window !== "undefined") {

@@ -1,0 +1,211 @@
+/* eslint-disable @next/next/no-img-element */
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
+import RoleBadge from "@/components/RoleBadge";
+import UnreadBadge from "@/components/UnreadBadge";
+import StatusBadge from "@/components/StatusBadge";
+import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+
+export default function CandidaturesPage() {
+  const [userSession, setUserSession] = useState(null);
+  const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
+  const [candidatures, setCandidatures] = useState([]);
+  const [offersById, setOffersById] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  useEffect(() => {
+    async function loadCandidatures() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.replace("/login");
+          return;
+        }
+        setUserSession(session);
+
+        const { data, error } = await supabase
+          .from("candidatures")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Erreur chargement candidatures:", error.message);
+          setLoading(false);
+          return;
+        }
+
+        const list = data || [];
+        setCandidatures(list);
+
+        const offerIds = [...new Set(list.map((c) => c.job_offer_id).filter(Boolean))];
+        if (offerIds.length > 0) {
+          const { data: offers } = await supabase
+            .from("job_offers")
+            .select("id, image_url, recruiter_id")
+            .in("id", offerIds);
+          setOffersById(Object.fromEntries((offers || []).map((o) => [o.id, o])));
+        }
+      } catch (err) {
+        console.error("Exception candidatures:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadCandidatures();
+  }, []);
+
+  const handleDownloadCv = async (candidature) => {
+    if (!candidature.cv_url) return;
+    setDownloadingId(candidature.id);
+    const url = await getSignedCvUrl(candidature.cv_url);
+    setDownloadingId(null);
+
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      alert("Impossible d'ouvrir le CV.");
+    }
+  };
+
+  // candidatures.status est un champ libre historique : les valeurs
+  // 'accepted'/'rejected' du flux recruteur sont mappées vers les libellés
+  // du cahier des charges ; toute autre valeur retombe sur "En attente".
+  const displayStatus = (status) => {
+    if (status === "accepted" || status === "rejected") return status;
+    return "pending";
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#FAF6F1] flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm font-bold text-gray-700">Chargement de vos candidatures...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-2">
+              <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="text-xl font-extrabold text-gray-900 tracking-tight">Facilite</span>
+            </Link>
+            <RoleBadge role="candidat" />
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <Link
+              href="/candidat"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+            >
+              <i className="fa-solid fa-arrow-left"></i>
+              <span>Mon espace</span>
+            </Link>
+            <Link
+              href="/candidat/mes-cvs"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+            >
+              <i className="fa-solid fa-file-lines"></i>
+              <span>Mes CVs</span>
+            </Link>
+            <Link
+              href="/messagerie"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 relative"
+            >
+              <i className="fa-solid fa-comments"></i>
+              <span>Messagerie</span>
+              <UnreadBadge count={unreadMessagesCount} />
+            </Link>
+            <button
+              onClick={handleGlobalSignOut}
+              className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition cursor-pointer"
+            >
+              Déconnexion
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1">
+          Suivi de mes Candidatures
+        </h1>
+        <p className="text-sm text-gray-500 font-medium mb-8">
+          Retrouvez le statut de chacune de vos postulations ({candidatures.length}).
+        </p>
+
+        {candidatures.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center text-gray-400 italic">
+            Vous n'avez envoyé aucune candidature pour le moment.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {candidatures.map((c) => {
+              const offer = c.job_offer_id ? offersById[c.job_offer_id] : null;
+              return (
+                <div key={c.id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                      {offer?.image_url ? (
+                        <img
+                          src={offer.image_url}
+                          alt={c.company}
+                          className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">
+                          <i className="fa-solid fa-building"></i>
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-extrabold text-gray-900 truncate">{c.job_title}</p>
+                        <p className="text-xs text-gray-500 truncate">{c.company}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          Postulé le {new Date(c.created_at).toLocaleDateString("fr-FR")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={displayStatus(c.status)} />
+                      {offer?.recruiter_id && (
+                        <Link
+                          href={`/recruteurs/${offer.recruiter_id}`}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-extrabold rounded-lg transition"
+                        >
+                          Revoir l'annonce
+                        </Link>
+                      )}
+                      {c.cv_url && (
+                        <button
+                          onClick={() => handleDownloadCv(c)}
+                          disabled={downloadingId === c.id}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold rounded-lg transition disabled:opacity-50 cursor-pointer"
+                        >
+                          {downloadingId === c.id ? "..." : "Télécharger CV"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

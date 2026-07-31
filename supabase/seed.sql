@@ -293,3 +293,30 @@ ON CONFLICT DO NOTHING;
 
 UPDATE public.profiles SET role = 'admin' WHERE id = '40000000-0000-4000-a000-000000000001';
 UPDATE public.profiles SET role = 'agent' WHERE id = '40000000-0000-4000-a000-000000000002';
+
+-- =============================================================================
+-- 5. Commande accompagnée "payée" de démonstration, pour que le workflow
+--    d'attribution agent (tests/e2e/admin-and-candidate.spec.js) ait un
+--    dossier "unassigned" réel à traiter. Rattachée au candidat de test créé
+--    par une session précédente (e2e-test-candidate@facilite-demo.local) —
+--    ON CONFLICT DO NOTHING si ce candidat n'existe pas encore dans cet
+--    environnement, la commande est simplement ignorée sans erreur.
+-- =============================================================================
+
+INSERT INTO public.orders (
+  id, user_id, cv_model_id, has_agent_option, amount, currency,
+  payment_status, payment_method, paystack_reference, created_at, updated_at
+)
+SELECT
+  '50000000-0000-4000-a000-000000000001',
+  id, 'modern', true, 2000, 'XOF', 'paid', 'card', 'qa-e2e-agent-flow-001', now(), now()
+FROM public.profiles WHERE email = 'e2e-test-candidate@facilite-demo.local'
+ON CONFLICT (id) DO UPDATE SET payment_status = 'paid';
+
+-- DO UPDATE (pas DO NOTHING) : remet le dossier à "unassigned" à chaque
+-- ré-exécution, pour que le test d'attribution reste rejouable même après
+-- qu'un run précédent l'ait fait avancer vers in_progress/completed.
+INSERT INTO public.agent_assignments (id, order_id, candidate_id, status, agent_id, completed_cv_url)
+SELECT '50000000-0000-4000-a000-000000000002', '50000000-0000-4000-a000-000000000001', id, 'unassigned', NULL, NULL
+FROM public.profiles WHERE email = 'e2e-test-candidate@facilite-demo.local'
+ON CONFLICT (id) DO UPDATE SET status = 'unassigned', agent_id = NULL, completed_cv_url = NULL;

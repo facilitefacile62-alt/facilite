@@ -264,6 +264,14 @@ export default function AdminDashboardPage() {
             <span>🎧</span>
             <span>Support</span>
           </Link>
+          <Link href="/admin/dashboard" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
+            <span>💳</span>
+            <span>Facturation & Transactions</span>
+          </Link>
+          <Link href="/admin/commandes-agent" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
+            <span>🧑‍💼</span>
+            <span>Commandes Agent</span>
+          </Link>
           <button
             type="button"
             onClick={() => setActiveTab("dashboard")}
