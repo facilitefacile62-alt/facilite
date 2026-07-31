@@ -671,7 +671,15 @@ export default function AdminMessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col justify-between">
+    // min-h-screen laissait toute la page grandir avec le contenu (une
+    // longue conversation poussait le formulaire d'envoi hors de l'écran).
+    // h-screen + overflow-hidden verrouille la hauteur au viewport ; chaque
+    // conteneur flex imbriqué en dessous reçoit min-h-0 pour empêcher son
+    // contenu de forcer une taille supérieure à l'espace qui lui est
+    // réellement alloué (la taille minimale automatique d'un enfant flex
+    // vaut son contenu par défaut, pas 0 — c'est ce qui contournait
+    // overflow-hidden et repoussait tout vers le bas).
+    <div className="h-screen overflow-hidden bg-[#FAF6F1] font-sans flex flex-col justify-between">
       {/* Toast */}
       <div
         className={`fixed top-20 right-4 z-[700] bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl transition-all duration-300 transform ${
@@ -785,7 +793,7 @@ export default function AdminMessagesPage() {
       )}
 
       {/* Header Admin Nav */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs flex-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2">
@@ -814,11 +822,13 @@ export default function AdminMessagesPage() {
       </header>
 
       {/* Main Content Layout 2 colonnes */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full flex flex-col">
-        <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden flex-1 grid grid-cols-1 md:grid-cols-12 min-h-[680px]">
-          
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 min-h-0 w-full flex flex-col overflow-hidden">
+        {/* min-h-0 remplace min-h-[680px] : un plancher de hauteur minimale
+            allait justement à l'encontre du confinement recherché. */}
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12">
+
           {/* COLONNE GAUCHE (4/12) : Liste des conversations & filtres */}
-          <div className="md:col-span-4 border-r border-gray-200 flex flex-col bg-gray-50/50">
+          <div className="md:col-span-4 border-r border-gray-200 flex flex-col bg-gray-50/50 min-h-0 overflow-hidden">
             {/* Entête colonne gauche */}
             <div className="p-4 border-b border-gray-200 bg-white">
               <div className="flex items-center justify-between mb-3">
@@ -877,7 +887,7 @@ export default function AdminMessagesPage() {
             </div>
 
             {/* Liste des discussions */}
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-100">
               {filteredConversations.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 italic text-xs space-y-2">
                   <p>{conversations.length === 0 ? "Aucune discussion pour le moment." : "Aucune conversation ne correspond."}</p>
@@ -936,7 +946,7 @@ export default function AdminMessagesPage() {
           </div>
 
           {/* COLONNE DROITE (8/12) : Zone de Tchat Dynamique */}
-          <div className="md:col-span-8 flex flex-col bg-white">
+          <div className="md:col-span-8 flex flex-col bg-white min-h-0 overflow-hidden">
             {activeConv && activeProfile ? (
               <>
                 {/* Entête du Tchat Actif */}
@@ -963,7 +973,7 @@ export default function AdminMessagesPage() {
                 </div>
 
                 {/* Zone de Messages (Scrollable) */}
-                <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-50/30">
+                <div className="flex-1 min-h-0 p-6 overflow-y-auto space-y-4 bg-gray-50/30">
                   {loadingMessages ? (
                     <div className="flex justify-center py-12">
                       <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
@@ -1132,7 +1142,7 @@ export default function AdminMessagesPage() {
       </main>
 
       {/* Footer Admin */}
-      <footer className="bg-white border-t border-gray-200 py-3 text-center text-xs font-medium text-gray-500">
+      <footer className="bg-white border-t border-gray-200 py-3 text-center text-xs font-medium text-gray-500 flex-none">
         © 2026 Facilite - Administration Support.
       </footer>
     </div>

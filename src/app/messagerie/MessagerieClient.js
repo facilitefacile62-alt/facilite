@@ -2092,10 +2092,10 @@ export default function MessagerieClient() {
             conflit avec h-full selon l'ordre de génération des classes
             Tailwind) : la hauteur vient désormais uniquement du <main>
             ci-dessus, correctement borné au viewport. */}
-        <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs h-full flex flex-row w-full overflow-hidden">
-          
+        <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs h-full min-h-0 flex flex-row w-full overflow-hidden">
+
           {/* COLONNE GAUCHE : LISTE DES DISCUSSIONS */}
-          <aside className={`w-full md:w-80 lg:w-1/3 flex flex-col h-full overflow-hidden border-r bg-white ${
+          <aside className={`w-full md:w-80 lg:w-1/3 flex flex-col h-full min-h-0 overflow-hidden border-r bg-white ${
             activeConvId ? "hidden md:flex" : "flex"
           }`}>
             {/* Header Recherche */}
@@ -2205,7 +2205,7 @@ export default function MessagerieClient() {
             </div>
 
             {/* Liste des conversations */}
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-100">
               {/* 🤖 Carte de discussion IA Épinglée toujours visible en haut */}
               <div
                 key={AI_PINNED_CHAT.id}
@@ -2312,7 +2312,7 @@ export default function MessagerieClient() {
           </aside>
 
           {/* COLONNE DROITE : CHAT ACTIF */}
-          <section className={`flex-1 flex flex-col h-full overflow-hidden bg-[#FAF9F6] relative ${
+          <section className={`flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[#FAF9F6] relative ${
             activeConvId ? "flex" : "hidden md:flex"
           }`}>
             {activeConversation ? (
@@ -2495,7 +2495,7 @@ export default function MessagerieClient() {
                 {/* Messages scrollarea */}
                 <div
                   ref={messagesContainerRef}
-                  className="flex-1 overflow-y-auto p-4 space-y-4"
+                  className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4"
                 >
                   {/* Séparateur visuel entre la zone épinglée et le fil chronologique */}
                   {pinnedMessage && (
