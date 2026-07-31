@@ -12,6 +12,7 @@ function formatFcfa(amount) {
 }
 
 export default function AdminDashboardKpiPage() {
+  const [userId, setUserId] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState([]);
@@ -20,61 +21,79 @@ export default function AdminDashboardKpiPage() {
   const [activeOffersCount, setActiveOffersCount] = useState(0);
   const [applicationsCount, setApplicationsCount] = useState(0);
 
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session) {
-          window.location.replace("/login");
-          return;
-        }
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single();
-
-        if (!profile || (profile.role !== "admin" && profile.role !== "agent")) {
-          window.location.replace(profile?.role ? `/${profile.role === "candidat" ? "messagerie" : profile.role}` : "/login");
-          return;
-        }
-        setUserRole(profile.role);
-
-        const [ordersRes, resumesRes, offersRes, applicationsRes] = await Promise.all([
-          supabase.from("orders").select("*").order("created_at", { ascending: false }),
-          supabase.from("resumes").select("id", { count: "exact", head: true }),
-          supabase.from("job_offers").select("id", { count: "exact", head: true }).eq("is_active", true),
-          supabase.from("candidatures").select("id", { count: "exact", head: true }),
-        ]);
-
-        const ordersList = ordersRes.data || [];
-        setOrders(ordersList);
-        setResumesCount(resumesRes.count || 0);
-        setActiveOffersCount(offersRes.count || 0);
-        setApplicationsCount(applicationsRes.count || 0);
-
-        const userIds = [...new Set(ordersList.map((o) => o.user_id))];
-        if (userIds.length > 0) {
-          const { data: profs } = await supabase
-            .from("profiles")
-            .select("id, full_name, email")
-            .in("id", userIds);
-          const map = {};
-          (profs || []).forEach((p) => (map[p.id] = p));
-          setProfilesById(map);
-        }
-      } catch (err) {
-        console.error("Exception admin dashboard KPI:", err);
-      } finally {
-        setLoading(false);
+  async function loadDashboard() {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.replace("/login");
+        return;
       }
-    }
 
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      if (!profile || (profile.role !== "admin" && profile.role !== "agent")) {
+        window.location.replace(profile?.role ? `/${profile.role === "candidat" ? "messagerie" : profile.role}` : "/login");
+        return;
+      }
+      setUserRole(profile.role);
+      setUserId(session.user.id);
+
+      const [ordersRes, resumesRes, offersRes, applicationsRes] = await Promise.all([
+        supabase.from("orders").select("*").order("created_at", { ascending: false }),
+        supabase.from("resumes").select("id", { count: "exact", head: true }),
+        supabase.from("job_offers").select("id", { count: "exact", head: true }).eq("is_active", true),
+        supabase.from("candidatures").select("id", { count: "exact", head: true }),
+      ]);
+
+      const ordersList = ordersRes.data || [];
+      setOrders(ordersList);
+      setResumesCount(resumesRes.count || 0);
+      setActiveOffersCount(offersRes.count || 0);
+      setApplicationsCount(applicationsRes.count || 0);
+
+      const userIds = [...new Set(ordersList.map((o) => o.user_id))];
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+        const map = {};
+        (profs || []).forEach((p) => (map[p.id] = p));
+        setProfilesById(map);
+      }
+    } catch (err) {
+      console.error("Exception admin dashboard KPI:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboard();
   }, []);
+
+  // Synchronisation temps réel : un nouveau paiement (webhook Paystack) doit
+  // apparaître dans les KPIs et la table des transactions sans que l'admin
+  // ait besoin de recharger la page.
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`admin-dashboard-orders:${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        loadDashboard();
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [userId]);
 
   const paidOrders = orders.filter((o) => o.payment_status === "paid");
   const totalRevenue = paidOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
@@ -99,31 +118,35 @@ export default function AdminDashboardKpiPage() {
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold text-gray-900 tracking-tight">Facilite</span>
+              <span className="text-xl font-extrabold text-gray-900 tracking-tight hidden sm:inline">Facilite</span>
             </Link>
             <RoleBadge role={userRole} />
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <Link
               href="/admin"
-              className="text-xs font-bold text-gray-700 hover:text-amber-700 bg-gray-100 hover:bg-amber-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+              className="text-xs font-bold text-gray-700 hover:text-amber-700 bg-gray-100 hover:bg-amber-50 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition flex items-center space-x-1.5"
+              title="Admin"
             >
               <i className="fa-solid fa-arrow-left"></i>
-              <span>Admin</span>
+              <span className="hidden md:inline">Admin</span>
             </Link>
             <Link
               href="/admin/commandes-agent"
-              className="text-xs font-bold text-gray-700 hover:text-amber-700 bg-gray-100 hover:bg-amber-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+              className="text-xs font-bold text-gray-700 hover:text-amber-700 bg-gray-100 hover:bg-amber-50 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition flex items-center space-x-1.5"
+              title="Commandes Agent"
             >
               <i className="fa-solid fa-user-tie"></i>
-              <span>Commandes Agent</span>
+              <span className="hidden md:inline">Commandes Agent</span>
             </Link>
             <button
               onClick={handleGlobalSignOut}
-              className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition cursor-pointer"
+              className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition cursor-pointer flex items-center space-x-1"
+              title="Déconnexion"
             >
-              Déconnexion
+              <i className="fa-solid fa-right-from-bracket"></i>
+              <span className="hidden md:inline">Déconnexion</span>
             </button>
           </div>
         </div>

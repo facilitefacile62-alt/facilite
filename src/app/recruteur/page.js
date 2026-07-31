@@ -173,6 +173,38 @@ export default function RecruteurDashboardPage() {
     loadRecruiterData();
   }, []);
 
+  // Synchronisation temps réel : une nouvelle candidature arrive quand un
+  // CANDIDAT postule depuis sa propre session — sans Realtime, le recruteur
+  // ne la verrait qu'après un F5. Pas de filtre par recruteur_id (la table
+  // candidatures n'a pas cette colonne, seulement job_offer_id) : les
+  // policies RLS de candidatures scopent déjà la visibilité aux candidatures
+  // liées aux offres de ce recruteur.
+  useEffect(() => {
+    const userId = userSession?.user?.id;
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`recruteur-candidatures:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "candidatures" },
+        (payload) => {
+          if (!payload.new.job_offer_id) return;
+          setApplications((prev) => [payload.new, ...prev]);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "candidatures" },
+        (payload) => {
+          setApplications((prev) => prev.map((a) => (a.id === payload.new.id ? payload.new : a)));
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [userSession?.user?.id]);
+
   // --- Gestion des offres ---
   const handleOfferFieldChange = (field, value) => {
     setOfferForm((prev) => ({ ...prev, [field]: value }));

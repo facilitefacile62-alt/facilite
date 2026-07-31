@@ -98,6 +98,30 @@ export default function AdminCommandesAgentPage() {
     loadData();
   }, []);
 
+  // Synchronisation temps réel : un nouveau dossier "unassigned" apparaît
+  // dès qu'un webhook Paystack confirme un paiement accompagné (aucune
+  // action de l'admin/agent sur cette page), et un autre admin/agent peut
+  // faire progresser un dossier en parallèle — sans Realtime, seul un F5 le
+  // ferait apparaître. Pas de filtre : les policies RLS scopent déjà
+  // correctement ce qui est livré (un agent ne reçoit que ses propres
+  // affectations, un admin reçoit tout).
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`admin-commandes-agent:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "agent_assignments" },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [userId]);
+
   const handleAssignAgent = async (assignmentId, agentId) => {
     if (!agentId) return;
     setAssigningId(assignmentId);

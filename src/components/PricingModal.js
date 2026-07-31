@@ -79,16 +79,16 @@ export default function PricingModal({ cvModelId, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8 relative max-h-[85vh] sm:max-h-[90vh] overflow-y-auto animate-fade-in-up">
         <button
           type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors cursor-pointer disabled:opacity-50"
+          className="absolute top-4 right-4 w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors cursor-pointer disabled:opacity-50 z-10"
           aria-label="Fermer"
         >
           <i className="fa-solid fa-xmark"></i>
@@ -102,6 +102,7 @@ export default function PricingModal({ cvModelId, onClose }) {
         <div className="space-y-3 mb-6">
           {OPTIONS.map((option) => {
             const isSelected = selectedOptionId === option.id;
+            const isRecommended = option.id === "accompagne";
             return (
               <button
                 key={option.id}
@@ -123,9 +124,16 @@ export default function PricingModal({ cvModelId, onClose }) {
                     <i className={option.icon}></i>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-bold text-gray-900 text-sm">{option.title}</p>
-                      <p className="font-extrabold text-[#10E688] whitespace-nowrap">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-bold text-gray-900 text-sm">{option.title}</p>
+                        {isRecommended && (
+                          <span className="bg-emerald-100 text-emerald-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider animated-gradient-badge border border-emerald-200">
+                            Recommandé ✨
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-extrabold text-[#10E688] text-sm whitespace-nowrap">
                         {option.price.toLocaleString("fr-FR")} FCFA
                       </p>
                     </div>
@@ -147,7 +155,7 @@ export default function PricingModal({ cvModelId, onClose }) {
           type="button"
           onClick={handlePayAndValidate}
           disabled={isSubmitting}
-          className="w-full py-3.5 rounded-xl bg-[#10E688] hover:bg-[#0dd17a] text-gray-900 font-extrabold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-xl bg-[#10E688] hover:bg-[#0dd17a] text-gray-900 font-extrabold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base min-h-[48px]"
         >
           {isSubmitting ? (
             <>

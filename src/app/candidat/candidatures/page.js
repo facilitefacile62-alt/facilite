@@ -62,6 +62,26 @@ export default function CandidaturesPage() {
     loadCandidatures();
   }, []);
 
+  // Synchronisation temps réel : le statut est changé par le RECRUTEUR sur
+  // une autre session — sans Realtime, seul un F5 le ferait apparaître ici.
+  useEffect(() => {
+    const userId = userSession?.user?.id;
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`candidat-candidatures-detail:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "candidatures", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          setCandidatures((prev) => prev.map((c) => (c.id === payload.new.id ? payload.new : c)));
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [userSession?.user?.id]);
+
   const handleDownloadCv = async (candidature) => {
     if (!candidature.cv_url) return;
     setDownloadingId(candidature.id);
@@ -101,39 +121,44 @@ export default function CandidaturesPage() {
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold text-gray-900 tracking-tight">Facilite</span>
+              <span className="text-xl font-extrabold text-gray-900 tracking-tight hidden sm:inline">Facilite</span>
             </Link>
             <RoleBadge role="candidat" />
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <Link
               href="/candidat"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition flex items-center space-x-1.5"
+              title="Mon espace"
             >
               <i className="fa-solid fa-arrow-left"></i>
-              <span>Mon espace</span>
+              <span className="hidden md:inline">Mon espace</span>
             </Link>
             <Link
               href="/candidat/mes-cvs"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition flex items-center space-x-1.5"
+              title="Mes CVs"
             >
               <i className="fa-solid fa-file-lines"></i>
-              <span>Mes CVs</span>
+              <span className="hidden md:inline">Mes CVs</span>
             </Link>
             <Link
               href="/messagerie"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 relative"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition flex items-center space-x-1.5 relative"
+              title="Messagerie"
             >
               <i className="fa-solid fa-comments"></i>
-              <span>Messagerie</span>
+              <span className="hidden md:inline">Messagerie</span>
               <UnreadBadge count={unreadMessagesCount} />
             </Link>
             <button
               onClick={handleGlobalSignOut}
-              className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition cursor-pointer"
+              className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition cursor-pointer flex items-center space-x-1"
+              title="Déconnexion"
             >
-              Déconnexion
+              <i className="fa-solid fa-right-from-bracket"></i>
+              <span className="hidden md:inline">Déconnexion</span>
             </button>
           </div>
         </div>

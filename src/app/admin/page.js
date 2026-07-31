@@ -434,7 +434,7 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Cartes KPI */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
                 {/* Carte 1 : Utilisateurs */}
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-6">
                   <div className="flex items-start justify-between mb-4">

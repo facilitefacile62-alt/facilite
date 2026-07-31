@@ -126,3 +126,11 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Empêcher le zoom automatique d'iOS Safari lors du focus sur les champs de saisie (Mobile UX) */
+@media (max-w: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+

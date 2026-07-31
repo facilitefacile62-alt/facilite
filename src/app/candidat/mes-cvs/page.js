@@ -61,6 +61,31 @@ export default function MesCvsPage() {
     loadData();
   }, []);
 
+  // Synchronisation temps réel : le statut (in_progress -> completed) et le
+  // CV livré sont mis à jour par un AGENT, sur une autre session — sans
+  // Realtime, le candidat ne verrait sa version révisée qu'après un F5.
+  useEffect(() => {
+    const userId = userSession?.user?.id;
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`candidat-mes-cvs-assignments:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "agent_assignments", filter: `candidate_id=eq.${userId}` },
+        (payload) => {
+          setAccompagnements((prev) =>
+            prev.map((entry) =>
+              entry.order.id === payload.new.order_id ? { ...entry, assignment: payload.new } : entry
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [userSession?.user?.id]);
+
   const handleDownloadImported = async (resume) => {
     if (!resume.file_url) return;
     setBusyId(resume.id);
@@ -218,7 +243,11 @@ export default function MesCvsPage() {
           ) : (
             <div className="divide-y divide-gray-100">
               {accompagnements.map(({ order, assignment }) => (
-                <div key={order.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div
+                  key={order.id}
+                  data-testid={`accompagnement-${order.id}`}
+                  className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
                       <i className="fa-solid fa-user-tie"></i>

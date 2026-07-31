@@ -57,6 +57,29 @@ export default function CandidatDashboardPage() {
     loadCandidatDashboard();
   }, []);
 
+  // Synchronisation temps réel : le statut d'une candidature (pending ->
+  // accepted/rejected) est changé par le RECRUTEUR, sur une session de
+  // navigateur différente — sans Realtime, le candidat ne le verrait qu'après
+  // un rechargement manuel. Même convention que useUnreadMessagesBadge
+  // (canal nommé par utilisateur, nettoyage via removeChannel).
+  useEffect(() => {
+    const userId = userSession?.user?.id;
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`candidat-candidatures:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "candidatures", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          setCandidatures((prev) => prev.map((c) => (c.id === payload.new.id ? payload.new : c)));
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [userSession?.user?.id]);
+
   const handleDownloadCv = async (candidature) => {
     if (!candidature.cv_url) return;
     setDownloadingCvId(candidature.id);
