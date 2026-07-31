@@ -12,14 +12,18 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
 endobj
 5 0 obj
-<< /Length 78 >>
+<< /Length 268 >>
 stream
-BT /F1 18 Tf 72 720 Td (Candidat Test E2E - CV de demonstration) Tj ET
+BT /F1 12 Tf 72 720 Td
+(Candidat Test E2E - Developpeur Full-Stack. Competences: JavaScript,) Tj 0 -16 Td
+(TypeScript, React, Node.js, PostgreSQL, Git, HTML, CSS, API REST,) Tj 0 -16 Td
+(developpement web full-stack, applications web, bases de donnees.) Tj 0 -16 Td
+ET
 endstream
 endobj
 xref
 0 6
-0000000000 65535 f 
+0000000000 65535 f
 trailer
 << /Size 6 /Root 1 0 R >>
 startxref

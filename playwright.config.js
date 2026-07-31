@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+const { defineConfig, devices } = require("@playwright/test");
 
 /**
  * Config Playwright pour les tests E2E du parcours candidat.
@@ -9,7 +9,7 @@ import { defineConfig, devices } from "@playwright/test";
  * attendus (surchargeables via E2E_CANDIDATE_EMAIL/E2E_CANDIDATE_PASSWORD/
  * E2E_RECRUITER_ID).
  */
-export default defineConfig({
+module.exports = defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
   expect: { timeout: 15_000 },

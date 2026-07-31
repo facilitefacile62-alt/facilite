@@ -1,8 +1,5 @@
-import { test, expect } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const { test, expect } = require("@playwright/test");
+const path = require("node:path");
 
 /**
  * Parcours candidat complet : connexion -> vitrine recruteur publique ->
@@ -38,9 +35,13 @@ test.describe("Parcours candidat : vitrine recruteur -> candidature", () => {
     await page.getByPlaceholder("Enter your password").fill(CANDIDATE_PASSWORD);
     await page.getByRole("button", { name: "Log In" }).click();
 
-    // Connexion réussie : redirection hors de /login (par défaut vers
-    // /messagerie pour un candidat, cf. src/app/login/page.js).
-    await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
+    // Connexion réussie : src/app/login/page.js redirige via
+    // window.location.replace() après un délai fixe de 500ms (setTimeout).
+    // Attendre précisément l'URL finale /messagerie, puis l'état "réseau
+    // inactif", évite une course avec ce setTimeout qui écraserait sinon la
+    // navigation suivante en plein vol.
+    await page.waitForURL("**/messagerie", { timeout: 20_000 });
+    await page.waitForLoadState("networkidle");
 
     // 2. Navigation vers la vitrine publique du recruteur.
     await page.goto(`/recruteurs/${RECRUITER_ID}`);
@@ -72,8 +73,10 @@ test.describe("Parcours candidat : vitrine recruteur -> candidature", () => {
       .fill("Candidature automatisée par le test E2E Playwright — merci de ne pas en tenir compte.");
 
     // Aucun CV existant pour ce compte de test : la modale bascule sur
-    // l'import d'un nouveau fichier par défaut.
-    await page.locator('input[type="file"]').setInputFiles(TEST_CV_PATH);
+    // l'import d'un nouveau fichier par défaut. Sélecteur scopé à la modale
+    // (#apply-modal-overlay) : le widget assistant IA, toujours monté en
+    // arrière-plan, a aussi son propre input[type="file"] caché.
+    await page.locator('#apply-modal-overlay input[type="file"]').setInputFiles(TEST_CV_PATH);
 
     await page.getByRole("button", { name: "Envoyer ma candidature" }).click();
 

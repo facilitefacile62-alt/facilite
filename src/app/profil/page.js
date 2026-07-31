@@ -5,7 +5,10 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
+import AIAssistantModal from "@/components/AIAssistantModal";
 import RoleBadge from "@/components/RoleBadge";
+import ThemeSettings from "@/components/ThemeSettings";
+import DiagnosticModal from "@/components/DiagnosticModal";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
@@ -2048,6 +2051,8 @@ export default function ProfilPage() {
                 </div>
               </div>
             </div>
+            {/* NOUVELLE SECTION PARAMÈTRES (THEME) */}
+            <ThemeSettings />
 
             {/* SECTION À PROPOS MULTI-ONGLETS (CENTRALISÉE & UNIFIÉE) */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">

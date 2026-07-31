@@ -19,12 +19,20 @@ const PUBLIC_ROUTES = [
   "/forgot-password",
   "/in", // profils publics
   "/service",
+  "/offres",
+  "/recruteurs", // vitrines publiques recruteur (/recruteurs/[id])
 ];
 
+// Comparaison par segment de chemin plutôt que préfixe brut : pathname.startsWith("/recruteur")
+// matche aussi "/recruteurs/xxx" (vitrine publique), pas seulement "/recruteur"
+// (dashboard recruteur) — un vrai bug trouvé via le test E2E, qui redirigeait
+// n'importe quel candidat hors des vitrines publiques.
+function pathnameMatchesRoute(pathname, route) {
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
 function estRoutePublique(pathname) {
-  return PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
+  return PUBLIC_ROUTES.some((route) => pathnameMatchesRoute(pathname, route));
 }
 
 export async function middleware(req) {
@@ -66,7 +74,9 @@ export async function middleware(req) {
   // de s'auto-attribuer l'accès à /admin sans jamais toucher à la base.
   if (
     user &&
-    (pathname.startsWith("/admin") || pathname.startsWith("/recruteur") || pathname.startsWith("/candidat"))
+    (pathnameMatchesRoute(pathname, "/admin") ||
+      pathnameMatchesRoute(pathname, "/recruteur") ||
+      pathnameMatchesRoute(pathname, "/candidat"))
   ) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -75,9 +85,9 @@ export async function middleware(req) {
       .single();
 
     const userRole = profile?.role || "candidat";
-    const requiredRole = pathname.startsWith("/admin")
+    const requiredRole = pathnameMatchesRoute(pathname, "/admin")
       ? "admin"
-      : pathname.startsWith("/recruteur")
+      : pathnameMatchesRoute(pathname, "/recruteur")
       ? "recruteur"
       : "candidat";
 
