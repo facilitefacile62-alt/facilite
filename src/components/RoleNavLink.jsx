@@ -15,6 +15,11 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
 
   useEffect(() => {
     if (!session?.user?.id) {
+      // Remise à zéro quand la session disparaît (déconnexion) ; le reste de
+      // l'effet fait une requête Supabase asynchrone pour la remplir à
+      // nouveau, donc role reste fondamentalement un état asynchrone, pas
+      // une valeur dérivable au rendu.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRole(null);
       return;
     }

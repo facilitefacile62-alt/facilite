@@ -1131,32 +1131,7 @@ export default function Home() {
               </li>
             </ul>
 
-            {/* Selecteur de langue */}
-            <div className="inline-flex items-center space-x-4 p-3 border border-gray-200 rounded-2xl bg-white self-start shadow-sm">
-              <span className="text-sm font-bold text-gray-700">{t.heroChooseLang}</span>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => changeLanguage("FR")}
-                  className={`flex items-center space-x-2 px-3.5 py-1.5 bg-gray-50 border rounded-full transition hover:shadow-md cursor-pointer ${
-                    selectedLang === "FR" ? "border-[#10E688] ring-2 ring-[#10E688]/30 font-bold opacity-100" : "border-gray-200 opacity-60"
-                  }`}
-                  title="Français"
-                >
-                  <img src="/francais.avif" alt="FR" className="w-5 h-5 rounded-full object-cover border border-gray-200" />
-                  <span className="text-xs text-gray-800">FR</span>
-                </button>
-                <button
-                  onClick={() => changeLanguage("GB")}
-                  className={`flex items-center space-x-2 px-3.5 py-1.5 bg-gray-50 border rounded-full transition hover:shadow-md cursor-pointer ${
-                    selectedLang === "GB" ? "border-[#E4B8F9] ring-2 ring-[#E4B8F9]/40 font-bold opacity-100" : "border-gray-200 opacity-60"
-                  }`}
-                  title="Anglais"
-                >
-                  <img src="/anglais.jpeg" alt="GB" className="w-5 h-5 rounded-full object-cover border border-gray-200" />
-                  <span className="text-xs text-gray-800">GB</span>
-                </button>
-              </div>
-            </div>
+
 
             {/* Boutons d'action Principaux */}
             <div className="flex flex-col sm:flex-row gap-4 pt-2">

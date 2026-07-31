@@ -25,6 +25,11 @@ export function useUnreadMessagesBadge(userId) {
     readyForAlertsRef.current = false;
 
     if (!userId) {
+      // Remise à zéro quand userId disparaît (déconnexion) ; le reste de
+      // l'effet fait une requête Supabase asynchrone pour la remplir à
+      // nouveau, donc unreadCount reste fondamentalement un état
+      // asynchrone, pas une valeur dérivable au rendu.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUnreadCount(0);
       return;
     }

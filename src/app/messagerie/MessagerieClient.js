@@ -1816,28 +1816,6 @@ export default function MessagerieClient() {
 
           {/* Groupe Droit : Langue & Profil */}
           <div className="hidden md:flex items-center space-x-4">
-            {/* Sélecteur de langue */}
-            <div className="flex bg-gray-100 rounded-full p-1 border border-gray-200">
-              <button
-                onClick={() => handleLangChange("FR")}
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  selectedLang === "FR" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                <img src="/francais.avif" alt="FR" className="w-3.5 h-3.5 rounded-full object-cover" />
-                <span>FR</span>
-              </button>
-              <button
-                onClick={() => handleLangChange("GB")}
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  selectedLang === "GB" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                <img src="/anglais.jpeg" alt="GB" className="w-3.5 h-3.5 rounded-full object-cover" />
-                <span>EN</span>
-              </button>
-            </div>
-
             {userSession ? (
               <div className="relative" ref={userMenuRef}>
                 <button

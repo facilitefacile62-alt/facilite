@@ -727,29 +727,8 @@ export default function ImporterCvPage() {
             </div>
           </div>
 
-          {/* Groupe Droit : Connexion / Profil & Sélecteur de langue */}
+          {/* Groupe Droit : Connexion / Profil */}
           <div className="hidden md:flex items-center space-x-4">
-            <div className="flex items-center space-x-1.5 p-1 bg-white border border-gray-200 rounded-full shadow-xs">
-              <button
-                onClick={() => changeLanguage("FR")}
-                className={`w-7 h-7 rounded-full flex items-center justify-center transition ${
-                  selectedLang === "FR" ? "bg-[#10E688] text-gray-900 shadow-xs" : "opacity-60 hover:opacity-100"
-                }`}
-                title="Français"
-              >
-                <img src="/francais.avif" alt="FR" className="w-5 h-5 rounded-full object-cover" />
-              </button>
-              <button
-                onClick={() => changeLanguage("GB")}
-                className={`w-7 h-7 rounded-full flex items-center justify-center transition ${
-                  selectedLang === "GB" ? "bg-[#E4B8F9] text-gray-900 shadow-xs" : "opacity-60 hover:opacity-100"
-                }`}
-                title="English"
-              >
-                <img src="/anglais.jpeg" alt="GB" className="w-5 h-5 rounded-full object-cover" />
-              </button>
-            </div>
-
             {userSession ? (
               <div className="relative" ref={userMenuRef}>
                 <button

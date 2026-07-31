@@ -25,6 +25,9 @@ export default function DiagnosticModal({ isOpen, onClose }) {
         "Calcul final du score de performance..."
       ];
       let currentStep = 0;
+      // Amorce l'animation de progression (setInterval juste après) : une
+      // vraie initialisation impérative, pas une valeur dérivable au rendu.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingStep(steps[0]);
       interval = setInterval(() => {
         currentStep = (currentStep + 1) % steps.length;

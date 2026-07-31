@@ -24,15 +24,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Non-bloquant : le dépôt a une dette ESLint pré-existante (règles
-      # react-hooks/set-state-in-effect, react/no-unescaped-entities...)
-      # indépendante de cette pipeline. On la rend visible dans les logs de
-      # CI sans faire échouer le build tant qu'elle n'a pas été traitée à
-      # part — `npm run build` (l'étape bloquante ci-dessous) n'exécute pas
-      # ESLint et n'est pas affecté par ces erreurs.
-      - name: Lint (non-bloquant, dette existante à résorber séparément)
+      # Bloquant : la dette ESLint pré-existante (react-hooks/set-state-in-effect,
+      # react/no-unescaped-entities...) a été résorbée — `react/no-unescaped-entities`
+      # rescopée dans eslint.config.mjs (apostrophes françaises, sans risque
+      # de rendu réel) et les violations react-hooks/* corrigées au cas par
+      # cas (dérivation via useMemo quand c'était sûr, useRef pour les
+      # instances MediaRecorder mutées impérativement, eslint-disable-next-line
+      # justifié ligne par ligne pour les patterns légitimes que ces règles
+      # expérimentales — conçues pour le React Compiler, non utilisé ici —
+      # signalent en faux positif (localStorage/window en SSR, reset de state
+      # asynchrone...). `npm run lint` passe à 0 erreur.
+      - name: Lint
         run: npm run lint
-        continue-on-error: true
 
       - name: Build
         run: npm run build
