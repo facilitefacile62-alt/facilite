@@ -178,15 +178,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col justify-between items-center relative overflow-hidden">
-      {/* Grille de fond subtile */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-40" 
-        style={{
-          backgroundImage: `radial-[#0000000a] 1px, transparent 1px), linear-gradient(to right, #00000008 1px, transparent 1px), linear-gradient(to bottom, #00000008 1px, transparent 1px)`,
-          backgroundSize: "24px 24px"
-        }}
-      ></div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 font-sans flex flex-col justify-between items-center relative overflow-hidden">
+      {/* Arrière-plan dynamique Premium */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vh] rounded-full bg-gradient-to-tr from-[#10E688]/20 to-teal-200/20 blur-[100px] animate-pulse"></div>
+        <div className="absolute top-[30%] -right-[20%] w-[50vw] h-[70vh] rounded-full bg-gradient-to-bl from-blue-300/20 to-[#10E688]/10 blur-[120px]"></div>
+        <div className="absolute -bottom-[20%] left-[10%] w-[70vw] h-[50vh] rounded-full bg-gradient-to-tl from-emerald-300/20 to-transparent blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
 
       {/* Navigation En-tête */}
       <header className="w-full max-w-[1180px] px-6 py-5 flex items-center justify-between z-10">
@@ -207,7 +205,7 @@ export default function LoginPage() {
       {/* Conteneur Principal / Carte de Login OU Carte de Réinitialisation */}
       <main className="w-[92%] max-w-xs sm:max-w-sm mx-auto py-4 z-10">
         {isRecoveryMode ? (
-          <div className="bg-white rounded-3xl p-4 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300 max-h-[85vh] overflow-y-auto">
+          <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/60 transition-all duration-300 max-h-[85vh] overflow-y-auto animate-fade-in-up">
             <div className="flex justify-center mb-5">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
             </div>
@@ -243,7 +241,7 @@ export default function LoginPage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     placeholder="Au moins 6 caractères"
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                    className="w-full px-4 py-3 bg-white/50 backdrop-blur-sm border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-300 hover:bg-white"
                   />
                 </div>
                 <div>
@@ -256,7 +254,7 @@ export default function LoginPage() {
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
                     required
                     placeholder="Confirmez le mot de passe"
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                    className="w-full px-4 py-3 bg-white/50 backdrop-blur-sm border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-300 hover:bg-white"
                   />
                 </div>
                 {recoveryError && (
@@ -267,7 +265,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={recoveryLoading}
-                  className="w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2"
+                  className="w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2"
                 >
                   {recoveryLoading ? (
                     <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
@@ -279,7 +277,7 @@ export default function LoginPage() {
             )}
           </div>
         ) : (
-        <div className="bg-white rounded-3xl p-4 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300 max-h-[85vh] overflow-y-auto">
+        <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/60 transition-all duration-300 max-h-[85vh] overflow-y-auto animate-fade-in-up">
 
           {/* Logo officiel du site au-dessus de la carte */}
           <div className="flex justify-center mb-3">
@@ -287,7 +285,7 @@ export default function LoginPage() {
           </div>
 
           {/* Sélecteur d'onglets Connexion (E-mail / Téléphone) */}
-          <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+          <div className="flex bg-white/50 backdrop-blur-sm p-1 rounded-xl mb-4 border border-white/40">
             <button
               type="button"
               onClick={() => setLoginMethod("email")}
@@ -357,11 +355,11 @@ export default function LoginPage() {
                     }}
                     required
                     placeholder="Enter your Email"
-                    className={`w-full px-3 py-2.5 bg-white border ${
+                    className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm hover:bg-white border ${
                       errorMessage
                         ? "border-red-400 ring-2 ring-red-100 text-red-900"
-                        : "border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                    } rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none transition`}
+                        : "border-gray-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    } rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none transition-all duration-300`}
                   />
                 </div>
               </div>
@@ -389,7 +387,7 @@ export default function LoginPage() {
                     }}
                     required
                     placeholder="Enter your password"
-                    className="w-full pl-3 pr-10 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                    className="w-full pl-3 pr-10 py-2.5 bg-white/50 backdrop-blur-sm hover:bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-300"
                   />
                   <button
                     type="button"
@@ -420,7 +418,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2"
+                className="w-full py-2.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-xl shadow-[0_4px_14px_0_rgba(16,230,136,0.39)] hover:shadow-[0_6px_20px_rgba(16,230,136,0.23)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2"
               >
                 {isLoading ? (
                   <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
@@ -441,7 +439,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => handleOAuthLogin("google")}
-                className="w-full py-2.5 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
+                className="w-full py-2.5 px-4 bg-white/60 backdrop-blur-sm border border-gray-200 hover:border-gray-300 hover:bg-white text-gray-800 font-bold text-sm rounded-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 shadow-sm hover:shadow-md cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path

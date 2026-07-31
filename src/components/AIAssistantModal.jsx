@@ -13,6 +13,11 @@ export default function AIAssistantModal() {
   // bloqueurs de pub…) qui injectent du DOM avant l'hydratation de React.
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    // Pattern standard de détection de montage client (voir commentaire
+    // au-dessus) : ne peut pas être calculé pendant le rendu par
+    // définition, l'objectif est justement de distinguer le premier rendu
+    // serveur/client du suivant.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

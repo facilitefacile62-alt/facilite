@@ -212,7 +212,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
                   setSelectedCountryCode(e.target.value);
                   setError(null);
                 }}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white transition font-medium text-gray-800"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white/50 backdrop-blur-sm hover:bg-white transition-all duration-300 font-medium text-gray-800"
               >
                 {COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -234,7 +234,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
                   onChange={(e) => setCustomCountryCode(e.target.value)}
                   placeholder="+243"
                   required
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm transition font-medium placeholder-gray-400"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm transition-all duration-300 bg-white/50 backdrop-blur-sm hover:bg-white font-medium placeholder-gray-400"
                 />
               </div>
             )}
@@ -249,7 +249,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
                 onChange={(e) => setLocalNumber(e.target.value)}
                 placeholder="77 123 45 67"
                 required
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm transition font-medium tracking-wide placeholder-gray-400"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm transition-all duration-300 bg-white/50 backdrop-blur-sm hover:bg-white font-medium tracking-wide placeholder-gray-400"
               />
             </div>
           </div>
@@ -257,7 +257,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
           <button
             type="submit"
             disabled={loading || !localNumber.trim()}
-            className="w-full py-2.5 bg-[#10E688] hover:bg-emerald-400 text-gray-900 font-extrabold text-sm rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
+            className="w-full py-2.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-xl shadow-[0_4px_14px_0_rgba(16,230,136,0.39)] hover:shadow-[0_6px_20px_rgba(16,230,136,0.23)] hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 flex items-center justify-center cursor-pointer"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
@@ -282,14 +282,14 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
               onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ""))}
               placeholder="123456"
               required
-              className="w-full px-3 py-2.5 text-center tracking-[0.5em] text-2xl font-extrabold rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition bg-gray-50"
+              className="w-full px-3 py-2.5 text-center tracking-[0.5em] text-2xl font-extrabold rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition-all duration-300 bg-white/50 backdrop-blur-sm hover:bg-white"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading || otpToken.length !== 6}
-            className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-extrabold text-sm rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
+            className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-extrabold text-sm rounded-xl shadow-md transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 flex items-center justify-center cursor-pointer"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

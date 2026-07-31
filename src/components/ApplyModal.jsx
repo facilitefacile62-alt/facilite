@@ -62,7 +62,9 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
     }
 
     loadData();
-    // Réinitialiser les états
+    // Réinitialiser les états à chaque (ré)ouverture de la modale — une vraie
+    // remise à zéro déclenchée par isOpen, pas une valeur dérivable au rendu.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNewCvFile(null);
     setCoverLetter("");
     setErrorMsg("");

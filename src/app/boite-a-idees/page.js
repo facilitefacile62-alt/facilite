@@ -190,19 +190,18 @@ export default function BoiteAIdees() {
     }, 3500);
   };
 
-  // --- RECHERCHE EN TEMPS RÉEL ---
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
+  // --- RECHERCHE EN TEMPS RÉEL --- entièrement dérivée de searchQuery/
+  // selectedLang (slides est stable, défini au niveau module) : calculée
+  // directement au rendu plutôt que synchronisée via un effet séparé, qui
+  // ajoutait un aller-retour de rendu superflu à chaque frappe.
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
-    const filtered = slides.filter(slide => {
+    return slides.filter(slide => {
       const title = (selectedLang === "FR" ? slide.titleFR : slide.titleEN).toLowerCase();
       const desc = (selectedLang === "FR" ? slide.descFR : slide.descEN).toLowerCase();
       return title.includes(query) || desc.includes(query);
     });
-    setSearchResults(filtered);
   }, [searchQuery, selectedLang]);
 
   const handleSearchResultClick = (slide) => {

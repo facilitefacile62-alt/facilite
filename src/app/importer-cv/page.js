@@ -190,6 +190,10 @@ export default function ImporterCvPage() {
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
     if (savedLang) {
+      // localStorage n'existe pas côté serveur : cette lecture doit rester
+      // dans un effet (jamais pendant le rendu, pour éviter un hydration
+      // mismatch).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedLang(savedLang);
     }
   }, []);

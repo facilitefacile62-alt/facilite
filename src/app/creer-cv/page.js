@@ -333,6 +333,10 @@ export default function CreerCv() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const urlTemplate = params.get("template");
+      // window.location.search n'existe pas côté serveur : cette lecture
+      // doit rester dans un effet (jamais pendant le rendu, pour éviter un
+      // hydration mismatch).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (urlTemplate === "1" || urlTemplate === "s1" || urlTemplate === "modern") setSelectedTemplate("modern");
       if (urlTemplate === "2" || urlTemplate === "s2" || urlTemplate === "minimal" || urlTemplate === "minimalist") setSelectedTemplate("minimalist");
       if (urlTemplate === "3" || urlTemplate === "s3" || urlTemplate === "classic") setSelectedTemplate("classic");
@@ -348,6 +352,10 @@ export default function CreerCv() {
         try {
           const imported = JSON.parse(importedStr);
           if (imported) {
+            // localStorage n'existe pas côté serveur : cette lecture doit
+            // rester dans un effet (jamais pendant le rendu, pour éviter un
+            // hydration mismatch).
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCvData(prev => ({
               ...prev,
               firstName: imported.firstName || prev.firstName,

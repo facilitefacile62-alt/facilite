@@ -365,7 +365,6 @@ export default function Home() {
   // directement au rendu plutôt que synchronisé via un effet séparé, qui
   // ajoutait un aller-retour de rendu superflu à chaque changement.
   const allJobs = useMemo(() => [...dynamicJobs, ...initialJobs], [dynamicJobs]);
-  const [jobs, setJobs] = useState(initialJobs);
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
@@ -525,8 +524,11 @@ export default function Home() {
     }, 3500);
   };
 
-  // --- FILTRAGE DES OFFRES D'EMPLOI ---
-  useEffect(() => {
+  // --- FILTRAGE DES OFFRES D'EMPLOI --- entièrement dérivé de ses
+  // dépendances : calculé directement au rendu plutôt que synchronisé via un
+  // effet séparé, qui ajoutait un aller-retour de rendu superflu à chaque
+  // frappe dans la recherche.
+  const jobs = useMemo(() => {
     let filtered = allJobs;
 
     // Filtre mot-clé (titre ou entreprise ou description)
@@ -549,7 +551,7 @@ export default function Home() {
       filtered = filtered.filter(job => job.contract.toLowerCase() === contractFilter.toLowerCase());
     }
 
-    setJobs(filtered);
+    return filtered;
   }, [keyword, locationFilter, contractFilter, selectedLang, allJobs]);
 
   // Infinite Scroll / Looping Feed listener

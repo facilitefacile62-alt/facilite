@@ -148,6 +148,10 @@ function ExtracteurContent() {
     const title = posterOffer?.title || extractedData?.job_title || "ce poste";
     const company = posterOffer?.company || extractedData?.company || "";
 
+    // Pré-remplissage initial d'un champ librement éditable ensuite par
+    // l'utilisateur (pas une donnée dérivée à garder synchronisée) ; l'effet
+    // gère aussi le scroll-into-view associé, qui doit rester ici.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setApplicationSubject(`Candidature au poste de ${title}${company ? ` - ${company}` : ""}`);
     setApplicationMessage(
       `Bonjour,\n\nSuite à votre offre pour le poste de ${title}${company ? ` chez ${company}` : ""}, je me permets de vous adresser ma candidature. Vous trouverez ci-joint mon CV détaillant mon parcours et mes compétences.\n\nJe reste à votre disposition pour un entretien à votre convenance.\n\nCordialement.`

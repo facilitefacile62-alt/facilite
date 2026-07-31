@@ -298,6 +298,10 @@ export default function MessagerieClient() {
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
     if (savedLang) {
+      // localStorage n'existe pas côté serveur : cette lecture doit rester
+      // dans un effet (jamais pendant le rendu, pour éviter un hydration
+      // mismatch).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedLang(savedLang);
     }
   }, []);
@@ -641,6 +645,12 @@ export default function MessagerieClient() {
   // Synchronise le fil useChat vers l'entrée ai-assistant de `conversations`
   useEffect(() => {
     const lastMsg = assistantMessages[assistantMessages.length - 1];
+    // conversations est un état composite alimenté par de nombreux autres
+    // points d'écriture (envoi, Realtime...) : le dériver entièrement par
+    // useMemo casserait ces autres mises à jour. Synchroniser seulement
+    // l'entrée IA depuis le hook useChat externe reste la façon la plus
+    // sûre de les faire cohabiter.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConversations(prev => prev.map(c => {
       if (c.id !== AI_PINNED_CHAT.id) return c;
       return {
@@ -904,6 +914,10 @@ export default function MessagerieClient() {
   useEffect(() => {
     if (!activeConvId) return;
 
+    // conversations est un état composite alimenté par de nombreux autres
+    // points d'écriture (envoi, Realtime...) : le dériver entièrement par
+    // useMemo casserait ces autres mises à jour.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConversations(prev => prev.map(c => {
       if (c.id === activeConvId && c.unreadCount > 0) {
         return { ...c, unreadCount: 0 };
