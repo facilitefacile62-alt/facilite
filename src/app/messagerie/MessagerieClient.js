@@ -314,6 +314,7 @@ export default function MessagerieClient() {
 
   // Protection stricte et isolation des messages par l'ID d'utilisateur Supabase
   const [userSession, setUserSession] = useState(null);
+  const [userAvatarUrl, setUserAvatarUrl] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
 
   // Conversation résolue avec un administrateur (créée si nécessaire) : tout
@@ -703,13 +704,14 @@ export default function MessagerieClient() {
       // destinataire (voir resolveSupportConversation).
       supabase
         .from("profiles")
-        .select("role")
+        .select("role, avatar_url")
         .eq("id", session.user.id)
         .single()
         .then(({ data: profile }) => {
           if (!isActive) return;
           const role = profile?.role || null;
           setCurrentUserRole(role);
+          setUserAvatarUrl(profile?.avatar_url || null);
           if (role !== "admin") {
             resolveSupportConversation(session.user.id).then((result) => {
               if (result && isActive) {
@@ -1831,8 +1833,15 @@ export default function MessagerieClient() {
                     pathname === "/profil" ? "text-[#10E688] font-bold" : "text-gray-500 hover:text-gray-800"
                   }`}
                 >
-                  <i className="fa-solid fa-circle-user text-xl"></i>
-                  <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
+                  {userAvatarUrl && userAvatarUrl !== "/logo.jpeg" ? (
+                    <img src={userAvatarUrl} alt="Profil" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                  ) : (
+                    <i className="fa-solid fa-circle-user text-xl"></i>
+                  )}
+                  <div className="flex items-center space-x-0.5 text-[11px] font-bold tracking-tight">
+                    <span>Profil</span>
+                    <i className={`fa-solid fa-caret-down text-[9px] transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}></i>
+                  </div>
                 </button>
 
                 {userMenuOpen && (
@@ -2070,8 +2079,20 @@ export default function MessagerieClient() {
       </nav>
 
       {/* Interface de Messagerie */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-28 md:pb-10 px-4 md:px-6">
-        <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden h-[calc(100vh-200px)] md:h-[calc(100vh-120px)] flex flex-row w-full h-full overflow-hidden">
+      {/*
+        min-h-screen laissait le <main> grandir avec le contenu (une longue
+        conversation poussait la zone de saisie hors de l'écran, obligeant à
+        faire défiler toute la page). h-screen + overflow-hidden verrouille
+        la hauteur au viewport une fois pour toutes ; c'est la boîte de chat
+        ci-dessous (flex-1 overflow-y-auto sur la zone de messages) qui doit
+        seule défiler, jamais la page.
+      */}
+      <main className="h-screen overflow-hidden bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-28 md:pb-10 px-4 md:px-6">
+        {/* h-full seul (pas de calc() redondant en doublon, qui entrait en
+            conflit avec h-full selon l'ordre de génération des classes
+            Tailwind) : la hauteur vient désormais uniquement du <main>
+            ci-dessus, correctement borné au viewport. */}
+        <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs h-full flex flex-row w-full overflow-hidden">
           
           {/* COLONNE GAUCHE : LISTE DES DISCUSSIONS */}
           <aside className={`w-full md:w-80 lg:w-1/3 flex flex-col h-full overflow-hidden border-r bg-white ${
@@ -2513,7 +2534,7 @@ export default function MessagerieClient() {
                       )}
 
                       <div
-                        className={`max-w-[75%] rounded-2xl p-3.5 shadow-xs border relative group transition-all hover:shadow-md ${
+                        className={`max-w-[75%] md:max-w-md rounded-2xl p-3.5 shadow-xs border relative group transition-all hover:shadow-md ${
                           msg.sender === "me"
                             ? "bg-[#2563EB] text-white border-blue-600 rounded-br-xs"
                             : "bg-white text-gray-800 border-gray-200 rounded-bl-xs"
@@ -2559,7 +2580,7 @@ export default function MessagerieClient() {
                               <i className={`fa-solid ${msg.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
                             </div>
                             <div className="min-w-0 flex-1">
-                              <span className="text-xs font-extrabold block truncate max-w-[170px]">
+                              <span className="text-xs font-extrabold block truncate max-w-xs md:max-w-md">
                                 {msg.file_name || msg.file?.name || "Document"}
                               </span>
                               <span className="text-[10px] opacity-80 block font-semibold">
@@ -2579,7 +2600,16 @@ export default function MessagerieClient() {
                           </div>
                         )}
 
-                        {msg.text && <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+                        {/* La légende auto-générée ("📎 Fichier joint : <nom>") duplique
+                            exactement le nom déjà affiché — tronqué — dans la carte
+                            ci-dessus ; l'afficher en clair produisait un texte très long
+                            (nom de fichier répété) qui s'enroulait sur plusieurs lignes et
+                            étirait la bulle verticalement. Un vrai message tapé par
+                            l'utilisateur continue de s'afficher normalement (multi-lignes
+                            légitimes, whitespace-pre-wrap conservé). */}
+                        {msg.text && !(msg.attachment_url && msg.attachment_type !== "audio" && msg.text.startsWith("📎")) && (
+                          <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                        )}
                         
                         <div className="flex items-center justify-end space-x-1 mt-1 text-[9px] opacity-75 font-bold" suppressHydrationWarning>
                           <span>{msg.time}</span>
@@ -2728,12 +2758,11 @@ export default function MessagerieClient() {
         </div>
       </main>
 
-      {/* FOOTER */}
-      <footer className="bg-gray-950 text-gray-400 py-6 border-t border-gray-900 mt-auto">
-        <div className="max-w-[1180px] mx-auto px-4 text-center text-xs font-semibold text-gray-500">
-          <p>{t.footerCopyright}</p>
-        </div>
-      </footer>
+      {/* Pas de footer sur cette page : <main> occupe déjà h-screen (vue
+          verrouillée façon WhatsApp) — un footer en flux normal après un
+          bloc de 100vh dépasse nécessairement la hauteur de la fenêtre et
+          réintroduit le défilement de la page entière que cette page doit
+          justement éliminer. */}
 
       {/* MODAL CONTACT */}
       {contactModalOpen && (

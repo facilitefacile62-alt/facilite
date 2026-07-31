@@ -1572,7 +1572,11 @@ export default function ProfilPage() {
                 pathname === "/profil" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
               }`}
             >
-              <i className="fa-solid fa-circle-user text-xl"></i>
+              {avatarUrl && avatarUrl !== "/logo.jpeg" ? (
+                <img src={avatarUrl} alt="Profil" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+              ) : (
+                <i className="fa-solid fa-circle-user text-xl"></i>
+              )}
               <div className="flex items-center space-x-0.5 text-[11px] font-bold tracking-tight">
                 <span>Profil</span>
                 <i className={`fa-solid fa-caret-down text-[9px] transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}></i>

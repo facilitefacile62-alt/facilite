@@ -123,6 +123,7 @@ export default function BoiteAIdees() {
 
   // Supabase auth state
   const [userSession, setUserSession] = useState(null);
+  const [userAvatarUrl, setUserAvatarUrl] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
@@ -295,14 +296,30 @@ export default function BoiteAIdees() {
     }, 1200);
   };
 
-  // Sync Supabase Auth session
+  // Sync Supabase Auth session & profile
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    async function syncSessionAndProfile(session) {
       setUserSession(session);
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", session.user.id)
+          .single();
+        if (profile) {
+          setUserAvatarUrl(profile.avatar_url || null);
+        }
+      } else {
+        setUserAvatarUrl(null);
+      }
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      syncSessionAndProfile(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserSession(session);
+      syncSessionAndProfile(session);
     });
 
     return () => subscription.unsubscribe();
@@ -531,8 +548,15 @@ export default function BoiteAIdees() {
                     pathname === "/profil" ? "text-[#10E688] font-bold" : "text-gray-500 hover:text-gray-800"
                   }`}
                 >
-                  <i className="fa-solid fa-circle-user text-xl"></i>
-                  <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Mon Profil</span>
+                  {userAvatarUrl && userAvatarUrl !== "/logo.jpeg" ? (
+                    <img src={userAvatarUrl} alt="Profil" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                  ) : (
+                    <i className="fa-solid fa-circle-user text-xl"></i>
+                  )}
+                  <div className="flex items-center space-x-0.5 text-[11px] font-bold tracking-tight">
+                    <span>Profil</span>
+                    <i className={`fa-solid fa-caret-down text-[9px] transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}></i>
+                  </div>
                 </button>
 
                 {userMenuOpen && (

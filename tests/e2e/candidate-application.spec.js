@@ -72,10 +72,22 @@ test.describe("Parcours candidat : vitrine recruteur -> candidature", () => {
     await page.getByPlaceholder("Parlez-nous brièvement de vos motivations ou ajoutez un message à l'attention du recruteur...")
       .fill("Candidature automatisée par le test E2E Playwright — merci de ne pas en tenir compte.");
 
-    // Aucun CV existant pour ce compte de test : la modale bascule sur
-    // l'import d'un nouveau fichier par défaut. Sélecteur scopé à la modale
-    // (#apply-modal-overlay) : le widget assistant IA, toujours monté en
-    // arrière-plan, a aussi son propre input[type="file"] caché.
+    // Sélectionne explicitement "Importer un nouveau CV" : ce compte de test
+    // partagé accumule des brouillons (resumes sans file_url) au fil des
+    // autres suites E2E de cette session (creer-cv -> PricingModal), ce qui
+    // change le choix par défaut de la modale ("CV déjà enregistré") et fait
+    // échouer la candidature si on ne le force pas explicitement ici.
+    // Sélecteur scopé à la modale (#apply-modal-overlay) : le widget
+    // assistant IA, toujours monté en arrière-plan, a aussi son propre
+    // input[type="file"] caché.
+    const importRadio = page.locator('#apply-modal-overlay input[type="radio"][value="new"]');
+    // Le radio n'existe que si des CV existants ont eu le temps de charger
+    // (resumes.length > 0) ; attend son apparition sans échouer si le compte
+    // n'en a réellement aucun (cas nominal du test, cvChoice="new" par défaut).
+    await importRadio.waitFor({ state: "visible", timeout: 5_000 }).catch(() => {});
+    if (await importRadio.count() > 0) {
+      await importRadio.click({ force: true });
+    }
     await page.locator('#apply-modal-overlay input[type="file"]').setInputFiles(TEST_CV_PATH);
 
     await page.getByRole("button", { name: "Envoyer ma candidature" }).click();
