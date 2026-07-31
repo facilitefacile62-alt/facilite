@@ -19,11 +19,10 @@ export default function LoginPage() {
   const router = useRouter();
 
   // Flux "mot de passe oublié" : Supabase ouvre une session temporaire de type
-  // recovery quand l'utilisateur clique sur le lien reçu par email (redirectTo=/login?reset=true)
-  const [isRecoveryMode, setIsRecoveryMode] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return new URLSearchParams(window.location.search).get("reset") === "true";
-  });
+  // recovery quand l'utilisateur clique sur le lien reçu par email (redirectTo=/login?reset=true).
+  // Initialisé à false (identique au rendu serveur) puis mis à jour côté client dans un useEffect
+  // ci-dessous, pour éviter un hydration mismatch (le HTML serveur ne connaît pas window.location.search).
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [recoveryError, setRecoveryError] = useState("");
@@ -33,6 +32,13 @@ export default function LoginPage() {
   const [loginMethod, setLoginMethod] = useState("email");
 
   useEffect(() => {
+    // Lecture de window.location.search : ne peut pas être calculé pendant le rendu serveur,
+    // objectif justement de synchroniser l'état client une fois le composant monté.
+    if (new URLSearchParams(window.location.search).get("reset") === "true") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsRecoveryMode(true);
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecoveryMode(true);
