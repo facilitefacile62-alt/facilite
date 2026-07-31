@@ -1051,17 +1051,27 @@ export default function Home() {
                 >
                   <i className="fa-solid fa-arrow-up-down text-lg"></i>
                 </button>
-                <button
-                  onClick={() => triggerToast("Recherche...", "fa-magnifying-glass")}
-                  className="hover:opacity-85 focus:outline-none cursor-pointer"
-                >
-                  <i className="fa-solid fa-magnifying-glass text-lg"></i>
-                </button>
               </div>
             </div>
 
             {/* Corps du Menu */}
             <div className="flex-grow p-4 space-y-3 overflow-y-auto">
+              {/* Recherche intégrée en haut du menu — même état "keyword" que
+                  le reste de la page, la liste d'offres se refiltre déjà
+                  dessus (getLoopedJobs), pas besoin d'une logique séparée. */}
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                  <i className="fa-solid fa-magnifying-glass text-gray-400 text-sm"></i>
+                </span>
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder={t.searchPlaceholder}
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all shadow-xs"
+                />
+              </div>
+
               {/* Card 1 : Profil (Rendu conditionnel selon la session) */}
               {userSession ? (
                 <Link
@@ -1112,6 +1122,38 @@ export default function Home() {
               >
                 <span className="text-2xl flex-shrink-0">❤️</span>
                 <span className="text-sm font-extrabold text-gray-950">Inviter des ami(e)s</span>
+              </button>
+
+              {/* Outils & IA */}
+              <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider px-1 pt-2">Outils &amp; IA</p>
+              <Link
+                href={userSession ? "/candidat/extracteur" : "/login"}
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full bg-white rounded-xl p-4 flex items-center space-x-4 border border-gray-200 shadow-xs active:bg-gray-50 transition"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                  <i className="fa-solid fa-bolt text-lg"></i>
+                </div>
+                <div className="flex-grow text-left">
+                  <span className="text-sm font-extrabold text-gray-950 block">Extracteur</span>
+                  <span className="text-[11px] text-gray-500 font-medium">Postulez en 1 clic depuis une affiche</span>
+                </div>
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  window.dispatchEvent(new Event("facilite:open-ai-assistant"));
+                }}
+                className="w-full bg-white rounded-xl p-4 flex items-center space-x-4 border border-gray-200 shadow-xs active:bg-gray-50 transition text-left cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                  <i className="fa-solid fa-robot text-lg"></i>
+                </div>
+                <div className="flex-grow text-left">
+                  <span className="text-sm font-extrabold text-gray-950 block">Assistant IA</span>
+                  <span className="text-[11px] text-gray-500 font-medium">CV, lettre de motivation, conseils carrière</span>
+                </div>
               </button>
             </div>
 
@@ -1179,6 +1221,24 @@ export default function Home() {
                 <i className="fa-solid fa-user-plus text-gray-400 text-lg"></i>
                 <span>Ajouter un compte</span>
               </button>
+
+              {/* Compte : Déconnexion, clairement accessible en bas du menu */}
+              {userSession && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    triggerToast("Déconnexion en cours...", "fa-right-from-bracket");
+                    setTimeout(() => {
+                      handleGlobalSignOut();
+                    }, 400);
+                  }}
+                  className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-extrabold text-red-600 active:bg-red-50 cursor-pointer"
+                >
+                  <i className="fa-solid fa-right-from-bracket text-red-500 text-lg"></i>
+                  <span>Déconnexion</span>
+                </button>
+              )}
             </div>
           </div>
         )}

@@ -22,6 +22,17 @@ export default function AIAssistantModal() {
   }, []);
 
   const [isOpen, setIsOpen] = useState(false);
+
+  // Ouverture externe (ex: bouton "Assistant IA" du menu "Plus" mobile) : ce
+  // widget est monté une seule fois dans le layout racine, son état isOpen
+  // n'est exposé à aucun parent — un CustomEvent global évite d'introduire un
+  // Context juste pour ce déclenchement ponctuel depuis une page distante.
+  useEffect(() => {
+    const handleOpenRequest = () => setIsOpen(true);
+    window.addEventListener("facilite:open-ai-assistant", handleOpenRequest);
+    return () => window.removeEventListener("facilite:open-ai-assistant", handleOpenRequest);
+  }, []);
+
   const [attachments, setAttachments] = useState([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [showMenu, setShowMenu] = useState(false);

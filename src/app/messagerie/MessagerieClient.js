@@ -213,6 +213,49 @@ const AI_PINNED_CHAT = {
 // Initialisation avec la discussion IA épinglée permanente
 const initialConversations = [AI_PINNED_CHAT];
 
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/**
+ * Les messages optimistes (juste envoyés, pas encore réconciliés avec la
+ * ligne Supabase) n'ont pas de createdAt — new Date() ici reste correct
+ * (un message qu'on vient d'envoyer est par définition "maintenant"), et
+ * l'envelopper dans cette fonction plutôt que d'appeler new Date() en ligne
+ * dans le corps du composant évite l'appel de fonction impure pendant le
+ * rendu (react-hooks/purity).
+ */
+function resolveMessageDate(msg) {
+  return msg?.createdAt ? new Date(msg.createdAt) : new Date();
+}
+
+function shouldShowDateSeparator(msg, prevMsg) {
+  if (!prevMsg) return true;
+  return !isSameDay(resolveMessageDate(msg), resolveMessageDate(prevMsg));
+}
+
+/**
+ * Libellé du séparateur de date (style Messenger) au-dessus du premier
+ * message de chaque jour. Les messages optimistes (juste envoyés, pas
+ * encore réconciliés avec la ligne Supabase) n'ont pas de createdAt — le
+ * point d'appel passe alors la date du jour, ce qui reste correct puisqu'un
+ * message qu'on vient d'envoyer est par définition "d'aujourd'hui".
+ */
+function formatDateSeparatorLabel(dateInput) {
+  const date = new Date(dateInput);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  if (isSameDay(date, now)) return "Aujourd'hui";
+  if (isSameDay(date, yesterday)) return "Hier";
+  return date.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
+}
+
 export default function MessagerieClient() {
   const pathname = usePathname();
   // Ouvre directement une conversation avec un destinataire précis (ex.
@@ -259,6 +302,13 @@ export default function MessagerieClient() {
   const [messageText, setMessageText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  // Popover "+" (style Messenger) regroupant Stickers/GIF — décoratif pour le
+  // moment (aucune bibliothèque de stickers/GIF réelle intégrée), séparé du
+  // reste de la barre pour ne pas ajouter d'icônes en continu et faire
+  // déborder la barre de saisie sur mobile.
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  // Panneau "Info" (i) du header de discussion, style Messenger.
+  const [conversationInfoOpen, setConversationInfoOpen] = useState(false);
   const [mobileChatView, setMobileChatView] = useState(false); // toggle list/chat on mobile
   const [filterTab, setFilterTab] = useState("all"); // 'all' | 'unread' | 'favorites'
   const [discussionTypeFilter, setDiscussionTypeFilter] = useState("all"); // 'all' | 'OFFRE' | 'ECHANGE'
@@ -1164,13 +1214,18 @@ export default function MessagerieClient() {
     return { receiverId: lastIncoming.senderId, conversationId: result.conversationId, error: null };
   };
 
-  const handleSendMessage = async (e) => {
+  // textOverride : permet au bouton "Like" (pouce bleu, style Messenger,
+  // envoyé quand le champ est vide) de déclencher un envoi de "👍" sans passer
+  // par messageText — setMessageText() est asynchrone, le lire juste après
+  // l'avoir défini renverrait encore l'ancienne valeur (fermeture React).
+  const handleSendMessage = async (e, textOverride) => {
     if (e) e.preventDefault();
-    if (!messageText.trim()) return;
+    const textToSend = (textOverride !== undefined ? textOverride : messageText).trim();
+    if (!textToSend) return;
 
     // Discussion IA : streaming réel via useChat, jamais persisté dans Supabase.
     if (activeConvId === AI_PINNED_CHAT.id) {
-      const userMessageText = messageText;
+      const userMessageText = textToSend;
       setMessageText("");
       setShowEmojiPicker(false);
 
@@ -1180,7 +1235,7 @@ export default function MessagerieClient() {
     }
 
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const userMessageText = messageText;
+    const userMessageText = textToSend;
     // Id temporaire : remplacé par l'UUID renvoyé par la base dès l'insertion
     // réussie, sans quoi le message ne serait pas épinglable avant rechargement.
     const tempId = `temp-${(tempIdCounterRef.current += 1)}`;
@@ -2371,13 +2426,30 @@ export default function MessagerieClient() {
                         <i className={`${activeConversation.favorite ? "fa-solid fa-heart" : "fa-regular fa-heart"}`}></i>
                       </button>
                       {!activeConversation.isAI && (
-                        <button
-                          onClick={() => triggerToast(`Appel simulé vers ${activeConversation.name}...`, "fa-phone")}
-                          className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
-                        >
-                          <i className="fa-solid fa-phone"></i>
-                        </button>
+                        <>
+                          <button
+                            onClick={() => triggerToast(`Appel simulé vers ${activeConversation.name}...`, "fa-phone")}
+                            className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
+                            title="Appel vocal"
+                          >
+                            <i className="fa-solid fa-phone"></i>
+                          </button>
+                          <button
+                            onClick={() => triggerToast(`Appel vidéo simulé vers ${activeConversation.name}...`, "fa-video")}
+                            className="hidden sm:flex text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl items-center justify-center cursor-pointer"
+                            title="Appel vidéo"
+                          >
+                            <i className="fa-solid fa-video"></i>
+                          </button>
+                        </>
                       )}
+                      <button
+                        onClick={() => setConversationInfoOpen(true)}
+                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
+                        title="Infos sur la discussion"
+                      >
+                        <i className="fa-solid fa-circle-info"></i>
+                      </button>
                       {activeConversation.isAI && (
                         <div className="flex items-center space-x-1.5 pl-1 border-l border-gray-200">
                           <button
@@ -2518,9 +2590,20 @@ export default function MessagerieClient() {
                     </div>
                   )}
 
-                  {visibleMessages.map(msg => (
+                  {visibleMessages.map((msg, index) => {
+                    const prevMsg = visibleMessages[index - 1];
+                    const showDateSeparator = shouldShowDateSeparator(msg, prevMsg);
+
+                    return (
+                    <div key={msg.id}>
+                      {showDateSeparator && (
+                        <div className="flex items-center justify-center my-3">
+                          <span className="text-[10px] font-extrabold text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                            {formatDateSeparatorLabel(resolveMessageDate(msg))}
+                          </span>
+                        </div>
+                      )}
                     <div
-                      key={msg.id}
                       ref={(node) => {
                         if (node) messageNodesRef.current[msg.id] = node;
                         else delete messageNodesRef.current[msg.id];
@@ -2626,7 +2709,9 @@ export default function MessagerieClient() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    </div>
+                    );
+                  })}
 
                   {(isTyping || (activeConvId === AI_PINNED_CHAT.id && assistantLoading)) && (
                     <div className="flex justify-start items-end space-x-2 animate-pulse">
@@ -2643,10 +2728,40 @@ export default function MessagerieClient() {
 
                 </div>
 
-                {/* Input Area */}
-                <div className="bg-white p-4 border-t border-gray-200 relative flex-none">
+                {/* Input Area (style Messenger : actions rapides à gauche,
+                    champ épuré au centre, émoji + Like/Envoyer à droite) */}
+                <div className="bg-white p-3 sm:p-4 border-t border-gray-200 relative flex-none">
+                  {showQuickActions && (
+                    <div className="absolute bottom-full left-3 sm:left-4 bg-white border border-gray-200 p-2 rounded-2xl shadow-xl flex gap-2 z-40 mb-2 animate-fade-in-up">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowQuickActions(false);
+                          triggerToast("Stickers — bientôt disponible", "fa-icons");
+                        }}
+                        className="w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 text-amber-500 hover:bg-amber-50 transition cursor-pointer"
+                        title="Stickers"
+                      >
+                        <i className="fa-solid fa-icons text-lg"></i>
+                        <span className="text-[8px] font-bold">Stickers</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowQuickActions(false);
+                          triggerToast("GIF — bientôt disponible", "fa-film");
+                        }}
+                        className="w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 text-purple-500 hover:bg-purple-50 transition cursor-pointer"
+                        title="GIF"
+                      >
+                        <i className="fa-solid fa-film text-lg"></i>
+                        <span className="text-[8px] font-bold">GIF</span>
+                      </button>
+                    </div>
+                  )}
+
                   {showEmojiPicker && (
-                    <div className="absolute bottom-full left-4 bg-white border border-gray-200 p-2.5 rounded-2xl shadow-xl flex gap-1.5 z-40 mb-2 max-w-xs flex-wrap animate-fade-in-up">
+                    <div className="absolute bottom-full right-3 sm:right-4 bg-white border border-gray-200 p-2.5 rounded-2xl shadow-xl flex gap-1.5 z-40 mb-2 max-w-xs flex-wrap animate-fade-in-up">
                       {emojis.map(e => (
                         <button
                           key={e}
@@ -2691,54 +2806,78 @@ export default function MessagerieClient() {
                       </div>
                     </div>
                   ) : (
-                    <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+                    <form onSubmit={handleSendMessage} className="flex items-center space-x-1 sm:space-x-1.5">
+                      {/* Galerie photo — réutilise le sélecteur de fichier existant
+                          (accepte déjà .png/.jpg/.jpeg), pas de doublon de logique. */}
                       <button
                         type="button"
                         disabled={uploadingFile}
                         onClick={handleAttachmentClick}
-                        className="text-gray-400 hover:text-blue-600 transition hover:bg-blue-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer disabled:opacity-50"
-                        title={t.attachmentTooltip}
+                        className="text-gray-400 hover:text-blue-600 transition hover:bg-blue-50 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer disabled:opacity-50"
+                        title="Galerie photo"
                       >
-                        <i className="fa-solid fa-paperclip text-lg"></i>
+                        <i className="fa-solid fa-image text-base"></i>
                       </button>
 
                       <button
                         type="button"
                         onClick={startVoiceRecording}
-                        className="text-gray-400 hover:text-red-600 transition hover:bg-red-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
+                        className="text-gray-400 hover:text-red-600 transition hover:bg-red-50 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
                         title="Enregistrer un message vocal"
                       >
-                        <i className="fa-solid fa-microphone text-lg"></i>
+                        <i className="fa-solid fa-microphone text-base"></i>
                       </button>
 
+                      {/* "+" Stickers / GIF — regroupés dans un petit popover
+                          plutôt qu'affichés en continu, pour ne jamais faire
+                          déborder la barre sur les petits écrans. */}
                       <button
                         type="button"
-                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className="text-gray-400 hover:text-amber-500 transition hover:bg-amber-50 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
-                        title={t.emojiTooltip}
+                        onClick={() => setShowQuickActions(!showQuickActions)}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition cursor-pointer ${
+                          showQuickActions ? "text-white bg-gray-700" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                        }`}
+                        title="Stickers, GIF"
                       >
-                        <i className="fa-regular fa-smile text-lg"></i>
+                        <i className="fa-solid fa-plus text-base"></i>
                       </button>
 
                       <input
                         type="text"
                         value={messageText}
                         onChange={(e) => setMessageText(e.target.value)}
-                        placeholder={t.inputPlaceholder}
-                        className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-semibold text-gray-900 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all placeholder-[#9CA3AF]"
+                        placeholder="Aa"
+                        className="flex-1 min-w-0 bg-gray-100 border border-transparent rounded-full px-4 py-2.5 text-sm font-medium text-gray-900 focus:outline-none focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/10 transition-all placeholder-gray-400"
                       />
 
                       <button
-                        type="submit"
-                        disabled={!messageText.trim()}
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all cursor-pointer ${
-                          messageText.trim()
-                            ? "bg-[#2563EB] text-white hover:bg-blue-700 shadow-md hover:scale-105 active:scale-95"
-                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        }`}
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className="text-gray-400 hover:text-amber-500 transition hover:bg-amber-50 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
+                        title={t.emojiTooltip}
                       >
-                        <i className="fa-solid fa-paper-plane text-sm"></i>
+                        <i className="fa-regular fa-smile text-base"></i>
                       </button>
+
+                      {/* Like (pouce bleu, style Messenger) quand le champ est
+                          vide, sinon Envoyer — jamais les deux à la fois. */}
+                      {messageText.trim() ? (
+                        <button
+                          type="submit"
+                          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all cursor-pointer bg-[#2563EB] text-white hover:bg-blue-700 shadow-md hover:scale-105 active:scale-95"
+                        >
+                          <i className="fa-solid fa-paper-plane text-sm"></i>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSendMessage(null, "👍")}
+                          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all cursor-pointer text-[#2563EB] hover:bg-blue-50 hover:scale-110 active:scale-95"
+                          title="Envoyer un pouce bleu"
+                        >
+                          <i className="fa-solid fa-thumbs-up text-lg"></i>
+                        </button>
+                      )}
                     </form>
                   )}
                 </div>
@@ -2763,6 +2902,65 @@ export default function MessagerieClient() {
           bloc de 100vh dépasse nécessairement la hauteur de la fenêtre et
           réintroduit le défilement de la page entière que cette page doit
           justement éliminer. */}
+
+      {/* PANNEAU INFO DISCUSSION (icône "i" du header, style Messenger) */}
+      {conversationInfoOpen && activeConversation && (
+        <div
+          className="fixed inset-0 z-[700] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in-up"
+          onClick={() => setConversationInfoOpen(false)}
+        >
+          <div
+            className="relative bg-white rounded-3xl border border-gray-200 shadow-2xl w-full max-w-xs p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setConversationInfoOpen(false)}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition cursor-pointer"
+              aria-label="Fermer"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center text-white font-extrabold text-2xl shadow-inner mb-3 ${activeConversation.avatarColor}`}>
+              {activeConversation.isAI ? "🤖" : activeConversation.avatarInitials}
+            </div>
+            <h3 className="text-base font-extrabold text-gray-900">{activeConversation.name}</h3>
+            {activeConversation.online && !activeConversation.isAI && (
+              <p className="text-xs font-bold text-emerald-600 mt-1 flex items-center justify-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                En ligne
+              </p>
+            )}
+            {!activeConversation.isAI && (activeConversation.title || activeConversation.company) && (
+              <p className="text-xs text-gray-500 font-medium mt-2">
+                {activeConversation.title}
+                {activeConversation.title && activeConversation.company && " — "}
+                <span className="font-bold text-gray-700">{activeConversation.company}</span>
+              </p>
+            )}
+            {activeConversation.isAI && (
+              <p className="text-xs text-gray-500 font-medium mt-2 leading-relaxed">
+                Votre assistant IA Facilite : rédaction &amp; optimisation de CV, coach recrutement, orientation.
+              </p>
+            )}
+
+            <div className="border-t border-gray-100 mt-4 pt-4 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setConversationInfoOpen(false);
+                  toggleFavorite(activeConversation.id);
+                }}
+                className="w-full py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-extrabold transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                <i className={activeConversation.favorite ? "fa-solid fa-heart text-red-500" : "fa-regular fa-heart"}></i>
+                {activeConversation.favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CONTACT */}
       {contactModalOpen && (
