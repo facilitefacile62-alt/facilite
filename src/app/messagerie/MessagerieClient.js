@@ -254,7 +254,7 @@ export default function MessagerieClient() {
 
   // Messaging States
   const [conversations, setConversations] = useState(initialConversations);
-  const [activeConvId, setActiveConvId] = useState("ai-assistant");
+  const [activeConvId, setActiveConvId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -277,8 +277,8 @@ export default function MessagerieClient() {
   const timerRef = useRef(null);
   const fileInputDocRef = useRef(null);
   const fileInputRef = useRef(null);
-  // Chat scroll anchor ref
-  const chatBottomRef = useRef(null);
+  // Chat scroll container ref
+  const messagesContainerRef = useRef(null);
   // Registre des noeuds DOM par id de message (scroll vers le message épinglé)
   const messageNodesRef = useRef({});
   // Compteur d'ids temporaires pour les messages en cours d'envoi
@@ -815,13 +815,17 @@ export default function MessagerieClient() {
             const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
             return [aiConv, userConv];
           });
-          setActiveConvId("ai-assistant");
+          if (window.innerWidth >= 768) {
+            setActiveConvId("ai-assistant");
+          }
         } else {
           setConversations(prev => {
             const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
             return [aiConv];
           });
-          setActiveConvId("ai-assistant");
+          if (window.innerWidth >= 768) {
+            setActiveConvId("ai-assistant");
+          }
         }
       } catch (err) {
         console.error("Erreur de chargement des messages utilisateur:", err);
@@ -829,7 +833,9 @@ export default function MessagerieClient() {
           const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
           return [aiConv];
         });
-        setActiveConvId("ai-assistant");
+        if (window.innerWidth >= 768) {
+          setActiveConvId("ai-assistant");
+        }
       }
 
       if (!isActive) return;
@@ -903,10 +909,10 @@ export default function MessagerieClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Scroll to bottom of chat whenever active conversation or messages or typing state changes
+  // Scroll to bottom of chat whenever active conversation or messages or typing state changes (scrollTop = scrollHeight)
   useEffect(() => {
-    if (chatBottomRef.current) {
-      chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [activeConvId, conversations, isTyping]);
 
@@ -1659,7 +1665,7 @@ export default function MessagerieClient() {
            c.company.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const activeConversation = conversations.find(c => c.id === activeConvId) || conversations[0];
+  const activeConversation = conversations.find(c => c.id === activeConvId) || null;
 
   // Message épinglé de la discussion active (au plus un, garanti par la RPC)
   const pinnedMessage = activeConversation?.messages?.find(m => m.isPinned) || null;
@@ -2065,14 +2071,14 @@ export default function MessagerieClient() {
 
       {/* Interface de Messagerie */}
       <main className="min-h-screen bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-28 md:pb-10 px-4 md:px-6">
-        <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden h-[calc(100vh-200px)] md:h-[calc(100vh-120px)] flex relative">
+        <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden h-[calc(100vh-200px)] md:h-[calc(100vh-120px)] flex flex-row w-full h-full overflow-hidden">
           
           {/* COLONNE GAUCHE : LISTE DES DISCUSSIONS */}
-          <aside className={`w-full md:w-[350px] border-r border-gray-200 flex flex-col bg-white h-full ${
-            mobileChatView ? "hidden md:flex" : "flex"
+          <aside className={`w-full md:w-80 lg:w-1/3 flex flex-col h-full overflow-hidden border-r bg-white ${
+            activeConvId ? "hidden md:flex" : "flex"
           }`}>
             {/* Header Recherche */}
-            <div className="p-4 border-b border-gray-150 flex flex-col space-y-3">
+            <div className="p-4 border-b border-gray-150 flex flex-col space-y-3 flex-none">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-lg font-extrabold text-gray-900">Messages</h2>
                 <button
@@ -2100,7 +2106,7 @@ export default function MessagerieClient() {
             </div>
 
             {/* Barre d'onglets de type de discussion (Offres d'emploi vs Demandes d'échange) */}
-            <div className="px-4 py-2 border-b border-gray-150 bg-gray-50 flex items-center space-x-1">
+            <div className="px-4 py-2 border-b border-gray-150 bg-gray-50 flex items-center space-x-1 flex-none">
               <button
                 type="button"
                 onClick={() => setDiscussionTypeFilter("all")}
@@ -2140,7 +2146,7 @@ export default function MessagerieClient() {
             </div>
 
             {/* Filtres de messages secondaires */}
-            <div className="px-4 pb-3 pt-2 border-b border-gray-150 flex items-center space-x-2 text-xs font-bold text-gray-500 bg-white">
+            <div className="px-4 pb-3 pt-2 border-b border-gray-150 flex items-center space-x-2 text-xs font-bold text-gray-500 bg-white flex-none">
               <button
                 type="button"
                 onClick={() => setFilterTab("all")}
@@ -2285,16 +2291,19 @@ export default function MessagerieClient() {
           </aside>
 
           {/* COLONNE DROITE : CHAT ACTIF */}
-          <section className={`flex-1 flex flex-col bg-[#FAF9F6] h-full relative ${
-            !mobileChatView ? "hidden md:flex" : "flex"
+          <section className={`flex-1 flex flex-col h-full overflow-hidden bg-[#FAF9F6] relative ${
+            activeConvId ? "flex" : "hidden md:flex"
           }`}>
             {activeConversation ? (
               <>
-                <div className="bg-white p-4 border-b border-gray-200 flex flex-col space-y-3 shadow-xs">
+                <div className="bg-white p-4 border-b border-gray-200 flex flex-col space-y-3 shadow-xs flex-none">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3 min-w-0">
                       <button
-                        onClick={() => setMobileChatView(false)}
+                        onClick={() => {
+                          setActiveConvId(null);
+                          setMobileChatView(false);
+                        }}
                         className="md:hidden text-gray-500 hover:text-gray-800 p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer mr-1"
                       >
                         <i className="fa-solid fa-arrow-left text-lg"></i>
@@ -2463,7 +2472,10 @@ export default function MessagerieClient() {
                 )}
 
                 {/* Messages scrollarea */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div
+                  ref={messagesContainerRef}
+                  className="flex-1 overflow-y-auto p-4 space-y-4"
+                >
                   {/* Séparateur visuel entre la zone épinglée et le fil chronologique */}
                   {pinnedMessage && (
                     <div className="flex items-center gap-3 pb-1">
@@ -2599,11 +2611,10 @@ export default function MessagerieClient() {
                     </div>
                   )}
 
-                  <div ref={chatBottomRef} />
                 </div>
 
                 {/* Input Area */}
-                <div className="bg-white p-4 border-t border-gray-200 relative">
+                <div className="bg-white p-4 border-t border-gray-200 relative flex-none">
                   {showEmojiPicker && (
                     <div className="absolute bottom-full left-4 bg-white border border-gray-200 p-2.5 rounded-2xl shadow-xl flex gap-1.5 z-40 mb-2 max-w-xs flex-wrap animate-fade-in-up">
                       {emojis.map(e => (

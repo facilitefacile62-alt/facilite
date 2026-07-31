@@ -239,3 +239,57 @@ ON CONFLICT (id) DO UPDATE SET
   is_active = EXCLUDED.is_active,
   deadline = EXCLUDED.deadline,
   updated_at = now();
+
+-- =============================================================================
+-- 4. Comptes de test back-office (admin + agent) pour tests E2E
+--    (tests/e2e/admin-and-candidate.spec.js). Le trigger handle_new_user()
+--    force toujours 'candidat' pour un rôle hors candidat/recruteur au
+--    signup — le rôle admin/agent est donc affecté ici par un UPDATE direct
+--    (exécuté en migration/seed, hors contexte PostgREST : le trigger
+--    anti-escalade prevent_role_self_escalation ne s'applique qu'aux
+--    requêtes authentifiées via auth.role(), absent ici).
+-- =============================================================================
+
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+) VALUES
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '40000000-0000-4000-a000-000000000001',
+    'authenticated', 'authenticated',
+    'e2e-test-admin@facilite-demo.local',
+    crypt('FaciliteE2ETest2026!', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}',
+    '{"role":"candidat","full_name":"Admin E2E Test"}',
+    now(), now(), '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '40000000-0000-4000-a000-000000000002',
+    'authenticated', 'authenticated',
+    'e2e-test-agent@facilite-demo.local',
+    crypt('FaciliteE2ETest2026!', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}',
+    '{"role":"candidat","full_name":"Agent E2E Test"}',
+    now(), now(), '', '', '', ''
+  )
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+  id, provider_id, user_id, identity_data, provider, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(), u.id::text, u.id,
+  jsonb_build_object('sub', u.id::text, 'email', u.email),
+  'email', now(), now()
+FROM auth.users u
+WHERE u.email IN ('e2e-test-admin@facilite-demo.local', 'e2e-test-agent@facilite-demo.local')
+ON CONFLICT DO NOTHING;
+
+UPDATE public.profiles SET role = 'admin' WHERE id = '40000000-0000-4000-a000-000000000001';
+UPDATE public.profiles SET role = 'agent' WHERE id = '40000000-0000-4000-a000-000000000002';

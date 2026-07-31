@@ -3,7 +3,7 @@
  * redirection après connexion) et le middleware (contrôle d'accès réel).
  */
 export function roleHomePath(role) {
-  if (role === "admin") return "/admin";
+  if (role === "admin" || role === "agent") return "/admin";
   if (role === "recruteur") return "/recruteur";
   return "/messagerie";
 }

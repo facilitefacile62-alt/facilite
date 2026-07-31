@@ -85,13 +85,18 @@ export async function middleware(req) {
       .single();
 
     const userRole = profile?.role || "candidat";
-    const requiredRole = pathnameMatchesRoute(pathname, "/admin")
-      ? "admin"
-      : pathnameMatchesRoute(pathname, "/recruteur")
-      ? "recruteur"
-      : "candidat";
 
-    if (userRole !== requiredRole && userRole !== "admin") {
+    // /admin est accessible à 'admin' ET 'agent' (back-office commun) ; les
+    // deux autres espaces restent strictement mono-rôle. 'admin' garde par
+    // ailleurs un accès universel (bypass), déjà en place avant l'ajout du
+    // rôle agent.
+    const isAuthorized = pathnameMatchesRoute(pathname, "/admin")
+      ? userRole === "admin" || userRole === "agent"
+      : pathnameMatchesRoute(pathname, "/recruteur")
+      ? userRole === "recruteur" || userRole === "admin"
+      : userRole === "candidat" || userRole === "admin";
+
+    if (!isAuthorized) {
       const url = req.nextUrl.clone();
       url.pathname = roleHomePath(userRole);
       return NextResponse.redirect(url);

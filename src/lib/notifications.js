@@ -62,6 +62,56 @@ export async function sendInvoiceEmail({ to, fullName, invoiceNumber, order, pdf
 }
 
 /**
+ * E-mail informant le candidat que son CV finalisé par un expert Facilite
+ * est disponible dans son espace « Mes CVs » — déclenché quand un agent
+ * bascule agent_assignments.status sur "completed".
+ */
+export async function sendCvReadyEmail({ to, fullName }) {
+  const isProd = process.env.NODE_ENV === "production";
+  const sender =
+    process.env.RESEND_FROM_BILLING ||
+    (isProd ? "Facilite Facturation <facturation@ffacilite.com>" : "Facilite <onboarding@resend.dev>");
+
+  const isOnboarding = sender.includes("onboarding@resend.dev");
+  const testRecipient = isOnboarding ? process.env.RESEND_TEST_RECIPIENT || process.env.RESEND_VERIFIED_EMAIL : null;
+  const finalRecipient = testRecipient || to;
+
+  if (!finalRecipient) {
+    console.error("[Notifications] Aucun destinataire e-mail disponible pour la notification CV finalisé.");
+    return { delivered: false, reason: "no_recipient" };
+  }
+
+  try {
+    const { error } = await resend.emails.send({
+      from: sender,
+      to: finalRecipient,
+      subject: "[Facilite] Votre CV finalisé par notre expert est prêt !",
+      html: `
+        <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
+          <h2 style="color: #10E688;">Bonjour ${fullName || "cher candidat"},</h2>
+          <p>Bonne nouvelle : notre expert a terminé la relecture et l'optimisation de votre CV.</p>
+          <p>La version finalisée est dès maintenant disponible au téléchargement dans votre espace
+             « Mes CVs » sur Facilite.</p>
+          <br/>
+          <p style="border-top: 1px solid #eee; padding-top: 15px; font-size: 12px; color: #777;">
+            Cordialement,<br/>L'équipe Facilite
+          </p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("[Notifications] Échec envoi e-mail CV finalisé :", error.message || error);
+      return { delivered: false, reason: error.message };
+    }
+    return { delivered: true };
+  } catch (err) {
+    console.error("[Notifications] Exception envoi e-mail CV finalisé :", err?.message);
+    return { delivered: false, reason: err?.message };
+  }
+}
+
+/**
  * Notification WhatsApp de confirmation d'achat (API Twilio).
  *
  * Best-effort et silencieux par conception : TWILIO_ACCOUNT_SID/AUTH_TOKEN
