@@ -916,14 +916,6 @@ export default function Home() {
               <i className="fa-regular fa-comments text-sm"></i>
               <UnreadBadge count={unreadMessagesCount} />
             </Link>
-
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-blue-600 shadow-xs focus:outline-none transition cursor-pointer"
-              aria-label="Toggle Navigation"
-            >
-              <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-sm`}></i>
-            </button>
           </div>
         </div>
 
@@ -1094,7 +1086,7 @@ export default function Home() {
       </nav>
 
       {/* Contenu Principal avec Marge pt-[52px] */}
-      <main className="flex-grow flex flex-col pt-[100px] md:pt-[52px]">
+      <main className="flex-grow flex flex-col pt-[100px] md:pt-[52px] pb-28 md:pb-0">
         
         {/* Section Hero */}
         <section className="flex-grow flex flex-col md:flex-row items-center justify-center px-4 py-12 md:py-16 max-w-[1128px] mx-auto gap-12 lg:gap-20 w-full">

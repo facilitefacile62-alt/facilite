@@ -954,15 +954,6 @@ export default function Home() {
                 <UnreadBadge count={unreadMessagesCount} />
               </Link>
             )}
-
-            {/* Mobile Hamburger Menu */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-blue-600 shadow-xs focus:outline-none transition cursor-pointer"
-              aria-label="Toggle Navigation"
-            >
-              <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-sm`}></i>
-            </button>
           </div>
         </div>
 
@@ -1176,7 +1167,7 @@ export default function Home() {
       </nav>
 
       {/* Main Job Board Feed (LinkedIn Style) */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-16 px-4 md:px-6">
+      <main className="min-h-screen bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-32 md:pb-16 px-4 md:px-6">
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}

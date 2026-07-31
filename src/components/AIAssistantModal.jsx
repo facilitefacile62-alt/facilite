@@ -187,7 +187,7 @@ export default function AIAssistantModal() {
       {/* 1. Bouton Flottant (FAB) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group focus:outline-none"
+        className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group focus:outline-none"
         aria-label="Assistant IA"
       >
         {isOpen ? (
@@ -202,7 +202,7 @@ export default function AIAssistantModal() {
 
       {/* 2. Chat Modal Window */}
       <div
-        className={`fixed bottom-24 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] h-[550px] bg-white border border-neutral-100 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform origin-bottom-right ${
+        className={`fixed bottom-36 md:bottom-24 right-4 md:right-6 z-50 w-96 max-w-[calc(100vw-2rem)] h-[550px] bg-white border border-neutral-100 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform origin-bottom-right ${
           isOpen
             ? "scale-100 opacity-100 pointer-events-auto"
             : "scale-75 opacity-0 pointer-events-none"

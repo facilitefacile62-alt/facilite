@@ -783,7 +783,7 @@ export default function ImporterCvPage() {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-grow pt-24 pb-20 px-4 max-w-[1180px] w-full mx-auto flex flex-col justify-center items-center">
+      <main className="flex-grow pt-24 pb-32 md:pb-20 px-4 max-w-[1180px] w-full mx-auto flex flex-col justify-center items-center">
         
         {/* STAGE 1: UPLOAD ZONE (Exact design matching Image 2) */}
         {stage === "upload" && (

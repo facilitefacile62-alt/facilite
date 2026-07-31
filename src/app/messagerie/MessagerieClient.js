@@ -1892,14 +1892,6 @@ export default function MessagerieClient() {
               <i className="fa-regular fa-comments text-sm"></i>
               <UnreadBadge count={unreadMessagesCount} />
             </Link>
-
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-blue-600 shadow-xs focus:outline-none transition cursor-pointer"
-              aria-label="Toggle Navigation"
-            >
-              <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-sm`}></i>
-            </button>
           </div>
         </div>
 
@@ -2072,8 +2064,8 @@ export default function MessagerieClient() {
       </nav>
 
       {/* Interface de Messagerie */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-10 px-4 md:px-6">
-        <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden h-[calc(100vh-168px)] md:h-[calc(100vh-120px)] flex relative">
+      <main className="min-h-screen bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-28 md:pb-10 px-4 md:px-6">
+        <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden h-[calc(100vh-200px)] md:h-[calc(100vh-120px)] flex relative">
           
           {/* COLONNE GAUCHE : LISTE DES DISCUSSIONS */}
           <aside className={`w-full md:w-[350px] border-r border-gray-200 flex flex-col bg-white h-full ${
