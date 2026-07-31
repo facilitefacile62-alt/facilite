@@ -291,8 +291,8 @@ export default function LoginPage() {
               onClick={() => setLoginMethod("email")}
               className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 ${
                 loginMethod === "email"
-                  ? "bg-white text-gray-900 shadow-xs"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
+                  : "text-gray-500 hover:text-gray-900 hover:bg-white/40"
               }`}
             >
               📧 E-mail
@@ -302,8 +302,8 @@ export default function LoginPage() {
               onClick={() => setLoginMethod("phone")}
               className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 ${
                 loginMethod === "phone"
-                  ? "bg-white text-gray-900 shadow-xs"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
+                  : "text-gray-500 hover:text-gray-900 hover:bg-white/40"
               }`}
             >
               📱 Téléphone
