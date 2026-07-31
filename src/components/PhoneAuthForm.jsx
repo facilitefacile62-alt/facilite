@@ -4,18 +4,18 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
-// Liste des pays demandés
+// Liste des pays demandés avec ISO pour les drapeaux réels (FlagCDN)
 const COUNTRIES = [
-  { code: "+221", flag: "🇸🇳", name: "Sénégal" },
-  { code: "+225", flag: "🇨🇮", name: "Côte d'Ivoire" },
-  { code: "+212", flag: "🇲🇦", name: "Maroc" },
-  { code: "+33", flag: "🇫🇷", name: "France" },
-  { code: "+223", flag: "🇲🇱", name: "Mali" },
-  { code: "+224", flag: "🇬🇳", name: "Guinée" },
-  { code: "+229", flag: "🇧🇯", name: "Bénin" },
-  { code: "+228", flag: "🇹🇬", name: "Togo" },
-  { code: "+237", flag: "🇨🇲", name: "Cameroun" },
-  { code: "other", flag: "🌍", name: "Autre (Saisie libre)" },
+  { code: "+221", iso: "sn", name: "Sénégal" },
+  { code: "+225", iso: "ci", name: "Côte d'Ivoire" },
+  { code: "+212", iso: "ma", name: "Maroc" },
+  { code: "+33", iso: "fr", name: "France" },
+  { code: "+223", iso: "ml", name: "Mali" },
+  { code: "+224", iso: "gn", name: "Guinée" },
+  { code: "+229", iso: "bj", name: "Bénin" },
+  { code: "+228", iso: "tg", name: "Togo" },
+  { code: "+237", iso: "cm", name: "Cameroun" },
+  { code: "other", iso: "other", name: "Autre (Saisie libre)" },
 ];
 
 export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
@@ -28,6 +28,8 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
   const [selectedCountryCode, setSelectedCountryCode] = useState("+221");
   const [localNumber, setLocalNumber] = useState("");
   const [customCountryCode, setCustomCountryCode] = useState("");
+  
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   const [phone, setPhone] = useState(""); // Numéro international complet final
   const [otpToken, setOtpToken] = useState("");
@@ -202,20 +204,57 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
               <label className="block text-xs font-bold text-gray-700 mb-1.5">
                 Pays / Indicatif
               </label>
-              <select
-                value={selectedCountryCode}
-                onChange={(e) => {
-                  setSelectedCountryCode(e.target.value);
-                  setError(null);
-                }}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white/50 backdrop-blur-sm hover:bg-white transition-all duration-300 font-medium text-gray-800"
-              >
-                {COUNTRIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.name} {c.code !== "other" ? `(${c.code})` : ""}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white/50 backdrop-blur-sm hover:bg-white transition-all duration-300 font-medium text-gray-800 flex items-center justify-between"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    {(() => {
+                      const sel = COUNTRIES.find(c => c.code === selectedCountryCode) || COUNTRIES[0];
+                      return (
+                        <>
+                          {sel.iso === "other" ? (
+                            <span className="text-base">🌍</span>
+                          ) : (
+                            <img src={`https://flagcdn.com/w20/${sel.iso}.png`} alt={sel.name} className="w-5 h-auto rounded-sm shadow-xs" />
+                          )}
+                          <span>{sel.name} {sel.code !== "other" ? `(${sel.code})` : ""}</span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <svg className={`w-4 h-4 text-gray-500 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+
+                {isDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)}></div>
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl max-h-56 overflow-y-auto py-1 animate-fade-in-up origin-top">
+                      {COUNTRIES.map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCountryCode(c.code);
+                            setIsDropdownOpen(false);
+                            setError(null);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-sm flex items-center space-x-3 hover:bg-emerald-50 transition-colors ${selectedCountryCode === c.code ? "bg-emerald-50 text-emerald-700 font-bold" : "text-gray-700 font-medium"}`}
+                        >
+                          {c.iso === "other" ? (
+                            <span className="text-base w-5 text-center">🌍</span>
+                          ) : (
+                            <img src={`https://flagcdn.com/w20/${c.iso}.png`} alt={c.name} className="w-5 h-auto rounded-sm shadow-xs" />
+                          )}
+                          <span>{c.name} {c.code !== "other" ? `(${c.code})` : ""}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Saisie libre si "Autre" sélectionné */}
