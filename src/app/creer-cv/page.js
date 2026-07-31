@@ -2316,7 +2316,7 @@ export default function CreerCv() {
         </div>
       </div>
 
-      {/* --- MODALE DE TARIFICATION (paiement Paystack requis pour finaliser le CV) --- */}
+      {/* --- MODALE DE TARIFICATION (paiement KPay requis pour finaliser le CV) --- */}
       {showPricingModal && (
         <PricingModal cvModelId={selectedTemplate} onClose={() => setShowPricingModal(false)} />
       )}

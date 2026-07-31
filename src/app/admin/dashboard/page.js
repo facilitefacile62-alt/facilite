@@ -79,7 +79,7 @@ export default function AdminDashboardKpiPage() {
     loadDashboard();
   }, []);
 
-  // Synchronisation temps réel : un nouveau paiement (webhook Paystack) doit
+  // Synchronisation temps réel : un nouveau paiement (webhook KPay) doit
   // apparaître dans les KPIs et la table des transactions sans que l'admin
   // ait besoin de recharger la page.
   useEffect(() => {
@@ -196,7 +196,7 @@ export default function AdminDashboardKpiPage() {
 
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-extrabold text-gray-900">Transactions Paystack ({orders.length})</h2>
+            <h2 className="text-lg font-extrabold text-gray-900">Transactions KPay ({orders.length})</h2>
             <p className="text-xs text-gray-500 font-medium">Historique complet des commandes de la plateforme</p>
           </div>
 
@@ -206,7 +206,7 @@ export default function AdminDashboardKpiPage() {
                 <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
                   <th className="py-4 px-6">Date</th>
                   <th className="py-4 px-6">Client</th>
-                  <th className="py-4 px-6">Référence Paystack</th>
+                  <th className="py-4 px-6">Référence KPay</th>
                   <th className="py-4 px-6">Formule</th>
                   <th className="py-4 px-6">Montant</th>
                   <th className="py-4 px-6">Statut</th>
@@ -232,7 +232,7 @@ export default function AdminDashboardKpiPage() {
                           <span className="text-gray-400">{client?.email || order.user_id}</span>
                         </td>
                         <td className="py-4 px-6 text-gray-500 font-mono text-[11px]">
-                          {order.paystack_reference || "—"}
+                          {order.payment_reference || "—"}
                         </td>
                         <td className="py-4 px-6">
                           {order.has_agent_option ? (

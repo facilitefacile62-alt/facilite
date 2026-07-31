@@ -63,13 +63,13 @@ export default function PricingModal({ cvModelId, onClose }) {
 
       const data = await res.json().catch(() => ({}));
 
-      if (!res.ok || !data.authorizationUrl) {
+      if (!res.ok || !data.checkoutUrl) {
         setErrorMessage(data.error || "Impossible d'initialiser le paiement. Réessayez.");
         setIsSubmitting(false);
         return;
       }
 
-      window.location.assign(data.authorizationUrl);
+      window.location.assign(data.checkoutUrl);
     } catch (err) {
       console.error("Erreur checkout:", err);
       setErrorMessage("Une erreur réseau est survenue. Vérifiez votre connexion et réessayez.");
@@ -168,7 +168,7 @@ export default function PricingModal({ cvModelId, onClose }) {
         </button>
 
         <p className="text-[11px] text-gray-400 text-center mt-3">
-          Paiement sécurisé via Paystack — Wave, Orange Money, MTN Mobile Money, Carte bancaire.
+          Paiement sécurisé via KPay — Wave, Orange Money, MTN Mobile Money.
         </p>
       </div>
     </div>

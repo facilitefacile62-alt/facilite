@@ -53,4 +53,7 @@ next-env.d.ts
 
 .vercel
 .env*
+# .env.example ne contient aucun secret (valeurs vides, gabarit à copier
+# vers .env.local) — sûr à committer, contrairement aux autres .env*.
+!.env.example
 client_secret_*.json

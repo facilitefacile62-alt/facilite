@@ -2,22 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
+import { initKpayGatewayPayment } from "@/lib/kpay";
 
 export const runtime = "nodejs";
 
 const PRICE_AUTONOME = 1500;
 const PRICE_ACCOMPAGNE = 2000;
-
-/**
- * Paystack attend le montant dans la plus petite unité de la devise (comme
- * les centimes pour l'EUR/USD). Le XOF (franc CFA) n'a pas de sous-unité
- * (devise "zero-decimal") : contrairement à NGN/GHS, le montant est transmis
- * tel quel, sans multiplication par 100.
- */
-function toPaystackAmount(amount, currency) {
-  const zeroDecimalCurrencies = ["XOF", "XAF"];
-  return zeroDecimalCurrencies.includes(currency) ? Math.round(amount) : Math.round(amount * 100);
-}
 
 export async function POST(req) {
   try {
@@ -38,9 +28,9 @@ export async function POST(req) {
     const amount = hasAgent ? PRICE_ACCOMPAGNE : PRICE_AUTONOME;
     const currency = "XOF";
 
-    if (!process.env.PAYSTACK_SECRET_KEY) {
+    if (!process.env.NEXT_PUBLIC_KPAY_PUBLIC_KEY || !process.env.KPAY_SECRET_KEY) {
       return NextResponse.json(
-        { error: "Le paiement en ligne n'est pas encore configuré (PAYSTACK_SECRET_KEY manquant)." },
+        { error: "Le paiement en ligne n'est pas encore configuré (clés KPay manquantes)." },
         { status: 503 }
       );
     }
@@ -70,51 +60,41 @@ export async function POST(req) {
       return NextResponse.json({ error: "Impossible de créer la commande." }, { status: 500 });
     }
 
-    // 2. Initialisation de la transaction Paystack
-    const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_SITE_URL || "";
-    const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: user.email,
-        amount: toPaystackAmount(amount, currency),
-        currency,
-        callback_url: origin ? `${origin}/candidat/facturation` : undefined,
+    // 2. Initialisation du paiement KPay (mode Gateway : la page hébergée par
+    // KPay laisse le client choisir Wave / Orange Money / MTN lui-même).
+    // NEXT_PUBLIC_APP_URL, jamais localhost en production — voir .env.production.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "";
+
+    let kpayPayment;
+    try {
+      kpayPayment = await initKpayGatewayPayment({
+        amount,
+        externalId: order.id,
+        returnUrl: `${appUrl}/candidat/facturation`,
+        cancelUrl: `${appUrl}/creer-cv`,
+        description: `Confection de CV Facilite — ${hasAgent ? "accompagnée" : "autonome"}`,
         metadata: {
           order_id: order.id,
           user_id: user.id,
           has_agent_option: hasAgent,
           cv_model_id: cvModelId,
         },
-      }),
-    });
-
-    const paystackData = await paystackRes.json().catch(() => null);
-
-    if (!paystackRes.ok || !paystackData?.status) {
-      console.error("[Checkout] Échec initialisation Paystack :", paystackData);
+      });
+    } catch (kpayError) {
+      console.error("[Checkout] Échec initialisation KPay :", kpayError.message);
       // La commande "pending" reste en base — utile en debug, sans conséquence
       // pour l'utilisateur (elle n'apparaît jamais comme payée sans webhook validé).
-      return NextResponse.json(
-        { error: paystackData?.message || "Impossible d'initialiser le paiement." },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: kpayError.message }, { status: 502 });
     }
 
-    // 3. La référence Paystack est connue dès l'initialisation : on la
-    // rattache tout de suite à la commande pour que le webhook puisse la
-    // retrouver de façon fiable même si metadata.order_id venait à manquer.
-    await supabase
-      .from("orders")
-      .update({ paystack_reference: paystackData.data.reference })
-      .eq("id", order.id);
+    // 3. L'identifiant KPay est connu dès l'initialisation : on le rattache
+    // tout de suite à la commande pour que le webhook puisse la retrouver de
+    // façon fiable même si metadata.order_id venait à manquer.
+    await supabase.from("orders").update({ payment_reference: kpayPayment.id }).eq("id", order.id);
 
     return NextResponse.json({
-      authorizationUrl: paystackData.data.authorization_url,
-      reference: paystackData.data.reference,
+      checkoutUrl: kpayPayment.gatewayUrl,
+      reference: kpayPayment.id,
       orderId: order.id,
     });
   } catch (error) {

@@ -130,8 +130,8 @@ export function generateInvoicePdfBuffer({ order, customer }) {
         .font("Helvetica")
         .fontSize(10)
         .fillColor("#6B7280")
-        .text(`Moyen de paiement : ${order.payment_method || "Paystack"}`, 50, rowY)
-        .text(`Référence de transaction : ${order.paystack_reference || "—"}`, 50, rowY + 15);
+        .text(`Moyen de paiement : ${order.payment_method || "KPay"}`, 50, rowY)
+        .text(`Référence de transaction : ${order.payment_reference || "—"}`, 50, rowY + 15);
 
       doc
         .fontSize(9)

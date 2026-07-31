@@ -99,7 +99,7 @@ export default function AdminCommandesAgentPage() {
   }, []);
 
   // Synchronisation temps réel : un nouveau dossier "unassigned" apparaît
-  // dès qu'un webhook Paystack confirme un paiement accompagné (aucune
+  // dès qu'un webhook KPay confirme un paiement accompagné (aucune
   // action de l'admin/agent sur cette page), et un autre admin/agent peut
   // faire progresser un dossier en parallèle — sans Realtime, seul un F5 le
   // ferait apparaître. Pas de filtre : les policies RLS scopent déjà

@@ -184,7 +184,7 @@ export default function FacturationPage() {
                         {new Date(order.created_at).toLocaleDateString("fr-FR")}
                       </td>
                       <td className="py-4 px-6 text-gray-500 font-mono text-[11px]">
-                        {order.paystack_reference || "—"}
+                        {order.payment_reference || "—"}
                       </td>
                       <td className="py-4 px-6 font-bold text-gray-900">{labelForCvModel(order.cv_model_id)}</td>
                       <td className="py-4 px-6">

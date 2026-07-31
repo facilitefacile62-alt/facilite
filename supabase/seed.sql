@@ -305,7 +305,7 @@ UPDATE public.profiles SET role = 'agent' WHERE id = '40000000-0000-4000-a000-00
 
 INSERT INTO public.orders (
   id, user_id, cv_model_id, has_agent_option, amount, currency,
-  payment_status, payment_method, paystack_reference, created_at, updated_at
+  payment_status, payment_method, payment_reference, created_at, updated_at
 )
 SELECT
   '50000000-0000-4000-a000-000000000001',

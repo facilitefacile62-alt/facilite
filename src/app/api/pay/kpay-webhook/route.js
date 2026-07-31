@@ -7,16 +7,17 @@ import { sendInvoiceEmail, sendWhatsAppConfirmation } from "@/lib/notifications"
 export const runtime = "nodejs";
 
 /**
- * Vérifie que la requête provient bien de Paystack : le corps brut (non
- * parsé) doit produire, une fois signé en HMAC SHA512 avec la clé secrète,
- * exactement la valeur du header x-paystack-signature. Sans cette
- * vérification, n'importe qui connaissant l'URL du webhook pourrait
- * simuler un paiement réussi.
+ * Vérifie que la requête provient bien de KPay : le corps brut (non parsé)
+ * doit produire, une fois signé en HMAC SHA256 avec le secret webhook,
+ * exactement la valeur du header X-KPAY-Signature (voir
+ * https://kpay.site/documentation/webhooks). Sans cette vérification,
+ * n'importe qui connaissant l'URL du webhook pourrait simuler un paiement
+ * réussi.
  */
-function isValidPaystackSignature(rawBody, signatureHeader, secret) {
+function isValidKpaySignature(rawBody, signatureHeader, secret) {
   if (!signatureHeader) return false;
 
-  const expectedHash = crypto.createHmac("sha512", secret).update(rawBody).digest("hex");
+  const expectedHash = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
 
   const expectedBuf = Buffer.from(expectedHash, "utf8");
   const receivedBuf = Buffer.from(signatureHeader, "utf8");
@@ -26,17 +27,17 @@ function isValidPaystackSignature(rawBody, signatureHeader, secret) {
 }
 
 export async function POST(req) {
-  const secret = process.env.PAYSTACK_SECRET_KEY;
+  const secret = process.env.KPAY_WEBHOOK_SECRET;
   if (!secret) {
-    console.error("[Webhook Paystack] PAYSTACK_SECRET_KEY manquant côté serveur.");
+    console.error("[Webhook KPay] KPAY_WEBHOOK_SECRET manquant côté serveur.");
     return NextResponse.json({ error: "Webhook non configuré." }, { status: 503 });
   }
 
   const rawBody = await req.text();
-  const signature = req.headers.get("x-paystack-signature");
+  const signature = req.headers.get("x-kpay-signature");
 
-  if (!isValidPaystackSignature(rawBody, signature, secret)) {
-    console.error("[Webhook Paystack] Signature invalide — requête rejetée.");
+  if (!isValidKpaySignature(rawBody, signature, secret)) {
+    console.error("[Webhook KPay] Signature invalide — requête rejetée.");
     return NextResponse.json({ error: "Signature invalide." }, { status: 401 });
   }
 
@@ -47,9 +48,9 @@ export async function POST(req) {
     return NextResponse.json({ error: "Corps de requête invalide." }, { status: 400 });
   }
 
-  // Tout événement autre que charge.success est acquitté sans action
-  // (ex: charge.failed, transfer.success...) — Paystack ne doit pas réessayer indéfiniment.
-  if (event?.event !== "charge.success") {
+  // Tout statut autre que COMPLETED est acquitté sans action (PENDING,
+  // FAILED, CANCELLED...) — KPay ne doit pas réessayer indéfiniment.
+  if (event?.status !== "COMPLETED") {
     return NextResponse.json({ received: true });
   }
 
@@ -57,22 +58,24 @@ export async function POST(req) {
   try {
     supabaseAdmin = getSupabaseAdmin();
   } catch (err) {
-    console.error("[Webhook Paystack]", err.message);
+    console.error("[Webhook KPay]", err.message);
     return NextResponse.json({ error: "Webhook non configuré (service role manquant)." }, { status: 503 });
   }
 
-  const data = event.data || {};
-  const reference = data.reference;
-  const orderId = data.metadata?.order_id;
+  // externalId = orders.id, fixé lors de l'initialisation dans
+  // /api/pay/checkout (voir initKpayGatewayPayment). paymentId (l'id KPay)
+  // sert de filet de secours si externalId venait à manquer.
+  const orderId = event.externalId;
+  const kpayPaymentId = event.paymentId;
 
   try {
     const orderQuery = supabaseAdmin.from("orders").select("*");
     const { data: order, error: orderError } = orderId
       ? await orderQuery.eq("id", orderId).single()
-      : await orderQuery.eq("paystack_reference", reference).single();
+      : await orderQuery.eq("payment_reference", kpayPaymentId).single();
 
     if (orderError || !order) {
-      console.error("[Webhook Paystack] Commande introuvable pour la référence", reference, orderError?.message);
+      console.error("[Webhook KPay] Commande introuvable pour externalId/paymentId", orderId, kpayPaymentId, orderError?.message);
       // 200 volontaire : rejouer le webhook ne fera pas apparaître une commande
       // qui n'existe pas. Une alerte serait préférable en prod (hors périmètre ici).
       return NextResponse.json({ received: true, warning: "order_not_found" });
@@ -91,15 +94,15 @@ export async function POST(req) {
       .from("orders")
       .update({
         payment_status: "paid",
-        payment_method: data.channel || "paystack",
-        paystack_reference: reference,
+        payment_method: "kpay",
+        payment_reference: kpayPaymentId || order.payment_reference,
       })
       .eq("id", order.id)
       .eq("payment_status", "pending")
       .select();
 
     if (updateError) {
-      console.error("[Webhook Paystack] Échec mise à jour de la commande :", updateError.message);
+      console.error("[Webhook KPay] Échec mise à jour de la commande :", updateError.message);
       return NextResponse.json({ error: "Échec de la mise à jour de la commande." }, { status: 500 });
     }
 
@@ -119,7 +122,7 @@ export async function POST(req) {
         status: "unassigned",
       });
       if (assignmentError) {
-        console.error("[Webhook Paystack] Échec création agent_assignments :", assignmentError.message);
+        console.error("[Webhook KPay] Échec création agent_assignments :", assignmentError.message);
       }
     }
 
@@ -135,7 +138,7 @@ export async function POST(req) {
     const customer = {
       fullName: profile?.full_name || authUser?.user?.email || "Client Facilite",
       email: profile?.contact_email || profile?.email || authUser?.user?.email || null,
-      phone: profile?.phone || authUser?.user?.phone || null,
+      phone: profile?.phone || authUser?.user?.phone || event.phoneNumber || null,
     };
 
     // Génération et stockage de la facture PDF — le paiement doit rester
@@ -153,7 +156,7 @@ export async function POST(req) {
         .createSignedUrl(result.storagePath, 60 * 60 * 24 * 7); // valable 7 jours
       invoiceSignedUrl = signedUrlData?.signedUrl || null;
     } catch (invoiceErr) {
-      console.error("[Webhook Paystack] Échec génération/stockage de la facture :", invoiceErr?.message);
+      console.error("[Webhook KPay] Échec génération/stockage de la facture :", invoiceErr?.message);
     }
 
     if (invoiceNumber) {
@@ -175,7 +178,7 @@ export async function POST(req) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("[Webhook Paystack] Erreur interne :", error);
+    console.error("[Webhook KPay] Erreur interne :", error);
     return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
   }
 }
