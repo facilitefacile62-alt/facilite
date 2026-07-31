@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import PricingModal from "@/components/PricingModal";
 
 // --- DICTIONNAIRE DE TRADUCTION POUR LE CREATEUR DE CV ---
 const translations = {
@@ -238,7 +239,7 @@ export default function CreerCv() {
   const [activeStep, setActiveStep] = useState(0);
   const [selectedTemplate, setSelectedTemplate] = useState("modern");
   const [accentColor, setAccentColor] = useState("#10E688"); // Primary Green by default
-  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
   const [photoPreview, setPhotoPreview] = useState(null);
   
@@ -667,15 +668,14 @@ export default function CreerCv() {
     if (activeStep > 0) setActiveStep(activeStep - 1);
   };
 
-  // Final Download as PDF & Sync to Supabase
-  const handleDownloadPdf = async () => {
-    // Open loading state or modal
-    setDownloadModalOpen(true);
-
+  // Sauvegarde du brouillon de CV avant d'ouvrir la modale de paiement : la
+  // confection finale (export PDF) est désormais une prestation payante
+  // (voir PricingModal) — on ne perd pas pour autant le travail déjà saisi.
+  const saveCvDraftAndOpenPricing = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const resumeTitle = cvData.personal.firstName && cvData.personal.lastName 
-        ? `CV - ${cvData.personal.firstName} ${cvData.personal.lastName}` 
+      const resumeTitle = cvData.firstName && cvData.lastName
+        ? `CV - ${cvData.firstName} ${cvData.lastName}`
         : "Mon CV Facilité";
 
       await supabase.from("resumes").insert({
@@ -686,15 +686,12 @@ export default function CreerCv() {
         ats_score: 95,
       });
 
-      triggerToast("CV sauvegardé sur votre compte Supabase !", "fa-cloud-arrow-up");
+      triggerToast("Brouillon sauvegardé sur votre compte Supabase !", "fa-cloud-arrow-up");
     } catch (e) {
       console.error("Erreur de sauvegarde Supabase CV:", e);
     }
-    
-    // Execute page print natively to export PDF
-    setTimeout(() => {
-      window.print();
-    }, 1000);
+
+    setShowPricingModal(true);
   };
 
   // Contact form modal
@@ -732,12 +729,12 @@ export default function CreerCv() {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         if (contactModalOpen) handleCloseContactModal();
-        if (downloadModalOpen) setDownloadModalOpen(false);
+        if (showPricingModal) setShowPricingModal(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [contactModalOpen, downloadModalOpen]);
+  }, [contactModalOpen, showPricingModal]);
 
   // Sidebar navigation mapping
   const stepsList = [
@@ -1723,7 +1720,7 @@ export default function CreerCv() {
                   </div>
 
                   <button
-                    onClick={handleDownloadPdf}
+                    onClick={saveCvDraftAndOpenPricing}
                     className="bg-gray-900 text-white font-extrabold py-3 px-6 rounded-full text-sm shadow-lg hover:bg-gray-800 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center space-x-2"
                   >
                     <i className="fa-solid fa-download"></i>
@@ -1756,7 +1753,7 @@ export default function CreerCv() {
               ) : (
                 <button
                   type="button"
-                  onClick={handleDownloadPdf}
+                  onClick={saveCvDraftAndOpenPricing}
                   className="px-7 py-3 bg-[#2563EB] text-white rounded-full text-xs font-extrabold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition cursor-pointer"
                 >
                   <i className="fa-solid fa-download mr-1.5"></i>
@@ -2295,36 +2292,9 @@ export default function CreerCv() {
         </div>
       </div>
 
-      {/* --- MOCK DOWNLOAD SUCCESS MODAL --- */}
-      {downloadModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[999] no-print animate-fade-in-up">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl border border-gray-100">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-5">
-              <i className="fa-solid fa-file-pdf text-[#10E688] text-2xl animate-bounce"></i>
-            </div>
-            
-            <h3 className="text-xl font-black text-gray-900">{t.modalSuccessTitle}</h3>
-            <p className="text-sm font-semibold text-gray-500 mt-2.5 leading-relaxed">
-              {t.modalSuccessDesc}
-            </p>
-
-            <div className="mt-6 flex flex-col gap-2.5">
-              <Link
-                href="/"
-                className="bg-[#10E688] text-gray-900 font-extrabold py-3 px-6 rounded-full text-sm shadow-md hover:shadow-lg transition cursor-pointer"
-              >
-                {t.btnGoToJobs}
-              </Link>
-              <button
-                type="button"
-                onClick={() => setDownloadModalOpen(false)}
-                className="py-3 px-6 text-xs font-bold text-gray-500 hover:text-gray-800 transition cursor-pointer"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* --- MODALE DE TARIFICATION (paiement Paystack requis pour finaliser le CV) --- */}
+      {showPricingModal && (
+        <PricingModal cvModelId={selectedTemplate} onClose={() => setShowPricingModal(false)} />
       )}
 
       {/* --- CONTACT MODAL (GLOBAL ACCORDING TO GEMINI.MD RULES) --- */}

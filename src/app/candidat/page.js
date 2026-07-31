@@ -114,6 +114,13 @@ export default function CandidatDashboardPage() {
               <span>Voir les Offres</span>
             </Link>
             <Link
+              href="/candidat/facturation"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+            >
+              <i className="fa-solid fa-file-invoice"></i>
+              <span>Facturation</span>
+            </Link>
+            <Link
               href="/messagerie"
               className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 relative"
             >
