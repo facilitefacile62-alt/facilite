@@ -15,6 +15,18 @@ export function buildInvoiceNumber(order) {
 }
 
 /**
+ * Number.toLocaleString("fr-FR") sépare les milliers avec U+202F (espace fine
+ * insécable) — absent de l'encodage WinAnsi des polices standard PDFKit
+ * (Helvetica), il s'affichait comme un caractère corrompu dans le PDF généré
+ * (ex: "2 /000" au lieu de "2 000", confirmé en générant et ré-analysant un
+ * vrai PDF). Formatage manuel avec un espace ASCII normal, seul caractère de
+ * séparation garanti supporté par cet encodage.
+ */
+function formatFcfaAmount(amount) {
+  return Math.round(Number(amount)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+/**
  * Génère le PDF de facture en mémoire (Buffer), sans toucher au stockage.
  * Séparé de generateAndStoreInvoice pour pouvoir être testé/réutilisé
  * (ex : pièce jointe e-mail) sans dépendre de Supabase Storage.
@@ -59,13 +71,19 @@ export function generateInvoicePdfBuffer({ order, customer }) {
         .font("Helvetica-Bold")
         .text("Facturé à", 50, 170);
 
+      // width + height + ellipsis force un rendu sur une seule ligne : sans
+      // ces contraintes, un nom très long revient à la ligne (comportement
+      // par défaut de PDFKit) et chevauche visuellement la ligne suivante,
+      // positionnée en coordonnées absolues — confirmé en générant un PDF
+      // réel avec un nom de 104 caractères.
+      const singleLineOpts = { width: 495, height: 14, ellipsis: true };
       doc
         .fontSize(10)
         .font("Helvetica")
         .fillColor("#374151")
-        .text(customer.fullName || "Client Facilite", 50, 188)
-        .text(customer.email || "", 50, 203)
-        .text(customer.phone || "", 50, 218);
+        .text(customer.fullName || "Client Facilite", 50, 188, singleLineOpts)
+        .text(customer.email || "", 50, 203, singleLineOpts)
+        .text(customer.phone || "", 50, 218, singleLineOpts);
 
       // Tableau de la prestation
       const tableTop = 260;
@@ -102,7 +120,7 @@ export function generateInvoicePdfBuffer({ order, customer }) {
         .fontSize(12)
         .fillColor("#111827")
         .text("Total réglé", 50, rowY)
-        .text(`${Number(order.amount).toLocaleString("fr-FR")} ${order.currency || "XOF"}`, 420, rowY, {
+        .text(`${formatFcfaAmount(order.amount)} ${order.currency || "XOF"}`, 420, rowY, {
           width: 125,
           align: "right",
         });

@@ -53,7 +53,14 @@ export async function POST(req) {
     return NextResponse.json({ received: true });
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
+  let supabaseAdmin;
+  try {
+    supabaseAdmin = getSupabaseAdmin();
+  } catch (err) {
+    console.error("[Webhook Paystack]", err.message);
+    return NextResponse.json({ error: "Webhook non configuré (service role manquant)." }, { status: 503 });
+  }
+
   const data = event.data || {};
   const reference = data.reference;
   const orderId = data.metadata?.order_id;
@@ -71,14 +78,16 @@ export async function POST(req) {
       return NextResponse.json({ received: true, warning: "order_not_found" });
     }
 
-    // Idempotence : Paystack peut renvoyer le même événement plusieurs fois.
-    // Si la commande est déjà marquée payée, on évite de dupliquer la facture,
-    // l'affectation agent et les notifications.
-    if (order.payment_status === "paid") {
-      return NextResponse.json({ received: true, alreadyProcessed: true });
-    }
-
-    const { data: updatedOrder, error: updateError } = await supabaseAdmin
+    // Idempotence sous concurrence réelle : deux livraisons quasi simultanées
+    // du même événement liraient toutes les deux payment_status="pending"
+    // AVANT que l'une ou l'autre n'ait eu le temps d'écrire — un simple test
+    // en lecture puis écriture séparée (TOCTOU) ne suffit pas à l'empêcher.
+    // La condition .eq("payment_status", "pending") sur l'UPDATE lui-même
+    // rend la transition atomique au niveau de la ligne Postgres : une seule
+    // requête peut réellement faire basculer pending -> paid, l'autre reçoit
+    // 0 ligne modifiée et s'arrête ici sans dupliquer facture/notifications/
+    // agent_assignments.
+    const { data: updatedOrders, error: updateError } = await supabaseAdmin
       .from("orders")
       .update({
         payment_status: "paid",
@@ -86,13 +95,21 @@ export async function POST(req) {
         paystack_reference: reference,
       })
       .eq("id", order.id)
-      .select()
-      .single();
+      .eq("payment_status", "pending")
+      .select();
 
-    if (updateError || !updatedOrder) {
-      console.error("[Webhook Paystack] Échec mise à jour de la commande :", updateError?.message);
+    if (updateError) {
+      console.error("[Webhook Paystack] Échec mise à jour de la commande :", updateError.message);
       return NextResponse.json({ error: "Échec de la mise à jour de la commande." }, { status: 500 });
     }
+
+    if (!updatedOrders || updatedOrders.length === 0) {
+      // Déjà "paid" (traité par cette requête ou une requête concurrente
+      // entre-temps) : on acquitte sans rejouer les effets de bord.
+      return NextResponse.json({ received: true, alreadyProcessed: true });
+    }
+
+    const updatedOrder = updatedOrders[0];
 
     // Option "Accompagnement par un agent" : crée l'entrée à traiter côté dashboard admin
     if (updatedOrder.has_agent_option) {
