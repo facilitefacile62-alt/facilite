@@ -278,6 +278,18 @@ export async function POST(req) {
       return err;
     };
 
+    // La candidature (étape 3 ci-dessus) est déjà enregistrée en base à ce
+    // stade : un échec d'envoi d'e-mail à partir d'ici ne doit JAMAIS faire
+    // échouer toute la requête. Constaté en conditions réelles (test E2E,
+    // clé Resend absente en environnement de dev) : la candidature était
+    // bien créée, mais l'API renvoyait quand même une erreur 500 au
+    // candidat, qui voyait un message d'échec alors que sa candidature avait
+    // réussi — au mieux déroutant, au pire l'incitant à recandidater en
+    // double. L'envoi d'e-mail reste tenté (log de l'erreur) mais devient
+    // "best effort" : la réponse reflète l'état réel (la candidature), pas
+    // la disponibilité du service d'e-mail.
+    let emailDelivered = true;
+
     if (fileBuffer) {
       const { data, error } = await resend.emails.send({
         from: recruiterSender,
@@ -318,7 +330,8 @@ export async function POST(req) {
 
       console.log("Resend response:", data, error);
       if (error) {
-        return NextResponse.json({ error: handleResendError(error) }, { status: 500 });
+        console.error("[Resend] Échec e-mail recruteur (candidature déjà enregistrée) :", handleResendError(error));
+        emailDelivered = false;
       }
     }
 
@@ -342,7 +355,8 @@ export async function POST(req) {
 
     console.log("Resend response:", data, error);
     if (error) {
-      return NextResponse.json({ error: handleResendError(error) }, { status: 500 });
+      console.error("[Resend] Échec e-mail candidat (candidature déjà enregistrée) :", handleResendError(error));
+      emailDelivered = false;
     }
 
     // 7. Enregistrement automatique de l'e-mail dans la messagerie interne Supabase (messages)
@@ -369,7 +383,7 @@ export async function POST(req) {
       console.error("Erreur de synchronisation de l'e-mail dans la messagerie Supabase:", msgErr?.message);
     }
 
-    return NextResponse.json({ success: true, candidature });
+    return NextResponse.json({ success: true, candidature, emailDelivered });
   } catch (error) {
     console.error("[Quick Apply API Error]", error);
     return NextResponse.json(

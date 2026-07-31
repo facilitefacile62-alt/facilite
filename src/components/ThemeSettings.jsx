@@ -8,6 +8,11 @@ export default function ThemeSettings() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Pattern standard de détection de montage client : ne peut pas être
+    // calculé pendant le rendu par définition, l'objectif est justement de
+    // distinguer le premier rendu serveur/client du suivant (next-themes
+    // dépend de localStorage, absent côté serveur).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
