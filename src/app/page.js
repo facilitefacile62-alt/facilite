@@ -304,6 +304,10 @@ export default function Home() {
   const pathname = usePathname();
   // --- ÉTATS GÉNÉRAUX ---
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Bloc "Fil d'attente des offres d'emploi" (recherche + filtres ville/contrat) :
+  // masqué du flux mobile par défaut, affiché via cette modale déclenchée par
+  // l'icône loupe du header. Le bloc desktop inline reste inchangé (hidden md:flex).
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState("FR");
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -681,6 +685,7 @@ export default function Home() {
         if (plusDropdownOpen) setPlusDropdownOpen(false);
         if (notificationsModalOpen) setNotificationsModalOpen(false);
         if (userMenuOpen) setUserMenuOpen(false);
+        if (mobileSearchOpen) setMobileSearchOpen(false);
       }
     };
     const handleClickOutside = (e) => {
@@ -697,7 +702,7 @@ export default function Home() {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [contactModalOpen, recruitmentModalOpen, noCvModalOpen, plusDropdownOpen, notificationsModalOpen, userMenuOpen]);
+  }, [contactModalOpen, recruitmentModalOpen, noCvModalOpen, plusDropdownOpen, notificationsModalOpen, userMenuOpen, mobileSearchOpen]);
 
   return (
     <>
@@ -931,36 +936,19 @@ export default function Home() {
             )}
           </div>
 
-          {/* Mobile Header Right Controls (Image 2 style: Bell & Messagerie icons) */}
+          {/* Mobile Header Right Controls : juste la recherche. Notifications et
+              Messagerie sont déjà dans la barre de navigation du bas
+              (Notifs/Messagerie) — les dupliquer ici n'apportait rien de plus
+              qu'un raccourci redondant, retiré pour épurer le header. */}
           <div className="flex md:hidden items-center space-x-2">
-            {/* Notification Bell Icon (Visible uniquement pour les utilisateurs connectés) */}
-            {userSession && (
-              <button
-                type="button"
-                onClick={() => setNotificationsModalOpen(true)}
-                className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
-                aria-label="Notifications"
-              >
-                <i className="fa-regular fa-bell text-sm"></i>
-                {unreadNotifCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border border-white">
-                    {unreadNotifCount}
-                  </span>
-                )}
-              </button>
-            )}
-
-            {/* Messagerie Icon (Visible uniquement pour les utilisateurs connectés) */}
-            {userSession && (
-              <Link
-                href="/messagerie"
-                className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
-                aria-label="Messagerie"
-              >
-                <i className="fa-regular fa-comments text-sm"></i>
-                <UnreadBadge count={unreadMessagesCount} />
-              </Link>
-            )}
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(true)}
+              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs cursor-pointer"
+              aria-label="Rechercher une offre"
+            >
+              <i className="fa-solid fa-magnifying-glass text-sm"></i>
+            </button>
           </div>
         </div>
 
@@ -1129,6 +1117,29 @@ export default function Home() {
 
             {/* Bas du Menu (Options fixes au bas) */}
             <div className="bg-white border-t border-gray-200 divide-y divide-gray-150 mt-auto">
+              {/* Service (même lien que le dropdown "Plus" desktop) */}
+              <Link
+                href="/service"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-briefcase text-gray-400 text-lg"></i>
+                <span>Service</span>
+              </Link>
+
+              {/* Contact (même modale que le dropdown "Plus" desktop) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleOpenModal();
+                }}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-regular fa-comment-dots text-gray-400 text-lg"></i>
+                <span>Contact</span>
+              </button>
+
               {/* Option 1: Paramètres */}
               <div className="flex flex-col">
                 <button
@@ -1412,8 +1423,12 @@ export default function Home() {
               </div>
             )}
 
-            {/* Barre de Recherche Intégrée au Flux */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col space-y-3.5">
+            {/* Barre de Recherche Intégrée au Flux — masquée par défaut sur
+                mobile (hidden), toujours visible en ligne sur desktop
+                (md:flex) : sur mobile, ces mêmes champs sont accessibles via
+                la modale de recherche déclenchée par l'icône loupe du header
+                (état mobileSearchOpen, voir plus bas) plutôt que dans le flux. */}
+            <div className="hidden md:flex bg-white rounded-xl border border-gray-200 p-4 shadow-xs md:flex-col space-y-3.5">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <h3 className="text-sm font-extrabold text-gray-900">{t.jobBoardTitle}</h3>
                 <Link
@@ -1476,6 +1491,85 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* Modale de recherche mobile : mêmes champs que la barre inline
+                desktop ci-dessus (mêmes états keyword/locationFilter/
+                contractFilter, filtrage déjà réactif), présentés en overlay
+                plein écran déclenché par l'icône loupe du header mobile. */}
+            {mobileSearchOpen && (
+              <div className="fixed inset-0 z-[600] bg-black/40 backdrop-blur-xs flex items-start justify-center p-4 pt-24 md:hidden animate-fade-in-up">
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md p-4 space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-extrabold text-gray-900">{t.jobBoardTitle}</h3>
+                    <button
+                      type="button"
+                      onClick={() => setMobileSearchOpen(false)}
+                      className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition cursor-pointer"
+                      aria-label="Fermer"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+
+                  {/* Mot-clé */}
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <i className="fa-solid fa-magnifying-glass text-gray-400 text-xs"></i>
+                    </span>
+                    <input
+                      type="text"
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                      placeholder={t.searchJobPlaceholder}
+                      autoFocus
+                      className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:border-blue-600 transition"
+                    />
+                  </div>
+
+                  {/* Localisation */}
+                  <div className="relative">
+                    <select
+                      value={locationFilter}
+                      onChange={(e) => setLocationFilter(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 focus:outline-none focus:border-blue-600 transition appearance-none cursor-pointer"
+                    >
+                      <option value="">{t.allLocations}</option>
+                      <option value="dakar">Dakar</option>
+                      <option value="pikine">Pikine</option>
+                      <option value="thies">Thies</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-500 text-[10px]">
+                      <i className="fa-solid fa-chevron-down"></i>
+                    </div>
+                  </div>
+
+                  {/* Contrat */}
+                  <div className="relative">
+                    <select
+                      value={contractFilter}
+                      onChange={(e) => setContractFilter(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 focus:outline-none focus:border-blue-600 transition appearance-none cursor-pointer"
+                    >
+                      <option value="">{t.allContracts}</option>
+                      <option value="cdi">CDI</option>
+                      <option value="cdd">CDD</option>
+                      <option value="stage">Stage</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-500 text-[10px]">
+                      <i className="fa-solid fa-chevron-down"></i>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setMobileSearchOpen(false)}
+                    className="w-full py-3 rounded-xl bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-sm transition cursor-pointer min-h-[44px]"
+                  >
+                    Voir les résultats
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Liste des Offres d'emploi */}
             <div className="space-y-4">
