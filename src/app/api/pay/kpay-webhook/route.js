@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { generateAndStoreInvoice } from "@/lib/invoiceGenerator";
 import { sendInvoiceEmail, sendWhatsAppConfirmation } from "@/lib/notifications";
+import { isEquivalentCfaCurrency, isPlaceholderKpaySecret } from "@/lib/kpay";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,19 @@ export async function POST(req) {
   if (!secret) {
     console.error("[Webhook KPay] KPAY_WEBHOOK_SECRET manquant côté serveur.");
     return NextResponse.json({ error: "Webhook non configuré." }, { status: 503 });
+  }
+
+  // Alerte explicite (pas un blocage) : une valeur de substitution est
+  // "configurée" au sens strict (la variable n'est pas vide) mais ne
+  // correspond à aucun vrai secret KPay — toute notification réelle
+  // échouera silencieusement la vérification de signature ci-dessous sans
+  // ce signal, ce qui est très difficile à diagnostiquer en production.
+  if (isPlaceholderKpaySecret(secret)) {
+    console.error(
+      "[Webhook KPay] ALERTE : KPAY_WEBHOOK_SECRET ressemble à une valeur de substitution, pas à un vrai " +
+        "secret du tableau de bord KPay. Toutes les notifications KPay réelles seront rejetées (signature " +
+        "invalide) tant que la vraie valeur n'aura pas été renseignée."
+    );
   }
 
   const rawBody = await req.text();
@@ -79,6 +93,27 @@ export async function POST(req) {
       // 200 volontaire : rejouer le webhook ne fera pas apparaître une commande
       // qui n'existe pas. Une alerte serait préférable en prod (hors périmètre ici).
       return NextResponse.json({ received: true, warning: "order_not_found" });
+    }
+
+    // Vérification défensive du montant : ne jamais marquer "paid" sur la
+    // seule foi du statut si le montant confirmé par KPay ne correspond pas
+    // à la commande. 200 volontaire (comme order_not_found ci-dessus) :
+    // rejouer un webhook au montant erroné ne le corrigera pas.
+    if (typeof event.amount === "number" && event.amount !== Number(order.amount)) {
+      console.error(
+        `[Webhook KPay] Montant incohérent pour la commande ${order.id} : reçu ${event.amount}, attendu ${order.amount}.`
+      );
+      return NextResponse.json({ received: true, warning: "amount_mismatch" });
+    }
+
+    // Idem pour la devise, avec XOF/XAF traités comme équivalents (voir
+    // isEquivalentCfaCurrency) — seule une devise réellement différente
+    // (ni XOF ni XAF) doit bloquer.
+    if (event.currency && !isEquivalentCfaCurrency(event.currency, order.currency)) {
+      console.error(
+        `[Webhook KPay] Devise incohérente pour la commande ${order.id} : reçu ${event.currency}, attendu ${order.currency}.`
+      );
+      return NextResponse.json({ received: true, warning: "currency_mismatch" });
     }
 
     // Idempotence sous concurrence réelle : deux livraisons quasi simultanées

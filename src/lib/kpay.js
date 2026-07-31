@@ -14,6 +14,63 @@
 
 const KPAY_API_BASE = "https://admin.kpay.site/api/v1";
 
+/**
+ * XOF (Sénégal, zone UEMOA) et XAF (zone CEMAC) sont deux codes ISO
+ * distincts pour deux monnaies "franc CFA" différentes, mais toutes deux
+ * historiquement arrimées au même taux fixe (655.957 pour 1 EUR) — 1 XOF
+ * vaut donc exactement 1 XAF en pratique. Le compte marchand KPay utilisé
+ * ici règle en XAF alors que Facilite enregistre ses commandes en XOF
+ * (marché sénégalais) : sans cette équivalence, une comparaison de devise
+ * stricte rejetterait à tort des paiements par ailleurs corrects.
+ */
+const CFA_FRANC_CURRENCIES = ["XOF", "XAF"];
+
+export function isEquivalentCfaCurrency(currencyA, currencyB) {
+  if (!currencyA || !currencyB) return false;
+  const a = currencyA.toUpperCase();
+  const b = currencyB.toUpperCase();
+  if (a === b) return true;
+  return CFA_FRANC_CURRENCIES.includes(a) && CFA_FRANC_CURRENCIES.includes(b);
+}
+
+/** Normalise un code devise franc CFA vers XOF, la devise de référence de
+ * Facilite — les devises non-CFA sont renvoyées inchangées. */
+export function normalizeCfaCurrency(currency) {
+  if (!currency) return currency;
+  return CFA_FRANC_CURRENCIES.includes(currency.toUpperCase()) ? "XOF" : currency;
+}
+
+/**
+ * Valeurs de substitution connues (celle du .env.example fourni par
+ * l'utilisateur, plus quelques variantes usuelles) — permet de distinguer
+ * "pas encore configuré" d'un vrai secret, pour émettre une alerte claire
+ * plutôt que de laisser échouer silencieusement chaque vérification de
+ * signature sans explication.
+ */
+const PLACEHOLDER_SECRET_VALUES = ["ton_webhook_secret_ici", "your_webhook_secret_here", "changeme", "todo"];
+
+export function isPlaceholderKpaySecret(value) {
+  if (!value) return true;
+  const normalized = value.trim().toLowerCase();
+  return PLACEHOLDER_SECRET_VALUES.includes(normalized) || normalized.length < 16;
+}
+
+/**
+ * Garde-fou de bascule en production : si NODE_ENV=production tourne encore
+ * avec des clés kpay_test_/sk_test_, tous les paiements passent par le
+ * sandbox KPay et aucun ne débite réellement le client — une confusion
+ * classique et coûteuse à diagnostiquer sans ce signal explicite.
+ */
+function warnIfSandboxKeysInProduction(apiKey) {
+  if (process.env.NODE_ENV === "production" && apiKey?.startsWith("kpay_test_")) {
+    console.error(
+      "[KPay] ALERTE : clés SANDBOX (kpay_test_...) utilisées alors que NODE_ENV=production. " +
+        "Aucun paiement réel ne sera traité tant que les clés kpay_live_/sk_live_ du tableau de bord KPay " +
+        "n'auront pas été renseignées dans les variables d'environnement de production."
+    );
+  }
+}
+
 function getKpayHeaders() {
   const apiKey = process.env.NEXT_PUBLIC_KPAY_PUBLIC_KEY;
   const secretKey = process.env.KPAY_SECRET_KEY;
@@ -23,6 +80,8 @@ function getKpayHeaders() {
       "[Configuration] NEXT_PUBLIC_KPAY_PUBLIC_KEY et/ou KPAY_SECRET_KEY manquants côté serveur."
     );
   }
+
+  warnIfSandboxKeysInProduction(apiKey);
 
   return {
     "X-API-Key": apiKey,
