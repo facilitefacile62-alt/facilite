@@ -112,6 +112,57 @@ export async function sendCvReadyEmail({ to, fullName }) {
 }
 
 /**
+ * E-mail de relance générique — utilisé par le cron /api/cron/reminders
+ * pour deux cas distincts (candidature en attente depuis trop longtemps,
+ * brouillon de CV jamais finalisé) : le contenu varie, la mécanique
+ * d'envoi (expéditeur, repli test, non-bloquant) est identique aux autres
+ * notifications de ce fichier.
+ */
+export async function sendReminderEmail({ to, fullName, subject, message, ctaLabel, ctaUrl }) {
+  const isProd = process.env.NODE_ENV === "production";
+  const sender =
+    process.env.RESEND_FROM_BILLING ||
+    (isProd ? "Facilite <notifications@ffacilite.com>" : "Facilite <onboarding@resend.dev>");
+
+  const isOnboarding = sender.includes("onboarding@resend.dev");
+  const testRecipient = isOnboarding ? process.env.RESEND_TEST_RECIPIENT || process.env.RESEND_VERIFIED_EMAIL : null;
+  const finalRecipient = testRecipient || to;
+
+  if (!finalRecipient) {
+    console.error("[Notifications] Aucun destinataire e-mail disponible pour la relance :", subject);
+    return { delivered: false, reason: "no_recipient" };
+  }
+
+  try {
+    const { error } = await resend.emails.send({
+      from: sender,
+      to: finalRecipient,
+      subject,
+      html: `
+        <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
+          <h2 style="color: #10E688;">Bonjour ${fullName || "cher utilisateur"},</h2>
+          <p>${message}</p>
+          ${ctaUrl ? `<p><a href="${ctaUrl}" style="display:inline-block;background:#10E688;color:#0a0a0a;font-weight:bold;padding:10px 20px;border-radius:8px;text-decoration:none;">${ctaLabel || "Voir sur Facilite"}</a></p>` : ""}
+          <br/>
+          <p style="border-top: 1px solid #eee; padding-top: 15px; font-size: 12px; color: #777;">
+            Cordialement,<br/>L'équipe Facilite
+          </p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("[Notifications] Échec envoi e-mail de relance :", error.message || error);
+      return { delivered: false, reason: error.message };
+    }
+    return { delivered: true };
+  } catch (err) {
+    console.error("[Notifications] Exception envoi e-mail de relance :", err?.message);
+    return { delivered: false, reason: err?.message };
+  }
+}
+
+/**
  * Notification WhatsApp de confirmation d'achat (API Twilio).
  *
  * Best-effort et silencieux par conception : TWILIO_ACCOUNT_SID/AUTH_TOKEN

@@ -4,6 +4,9 @@ export const CV_MODEL_LABELS = {
   modern: "Modèle Moderne",
   minimalist: "Modèle Minimaliste",
   classic: "Modèle Classique",
+  executif: "Modèle Exécutif",
+  creatif: "Modèle Créatif",
+  technique: "Modèle Technique",
 };
 
 export function labelForCvModel(cvModelId) {
