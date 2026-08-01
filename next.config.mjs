@@ -23,7 +23,14 @@ const cspReportOnly = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
   "font-src 'self' data: https://cdnjs.cloudflare.com",
-  "img-src 'self' data: blob: https://*.supabase.co",
+  // *.googleusercontent.com : photo de profil Google, copiée dans
+  // profiles.avatar_url à l'inscription par le trigger handle_new_user
+  // (raw_user_meta_data->>'avatar_url') pour les comptes connectés via
+  // Google OAuth (seul provider OAuth branché sur /login et /register).
+  // images.unsplash.com : visuels des offres d'emploi de démonstration
+  // (supabase/seed.sql) — les images réellement uploadées par un recruteur
+  // passent toujours par supabase.storage (déjà couvert par *.supabase.co).
+  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com",
   // *.sentry.io : ingestion des événements par le SDK Sentry (client-side).
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io",
   "frame-src 'self' blob: data: https://*.supabase.co",
@@ -31,7 +38,11 @@ const cspReportOnly = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
+  // upgrade-insecure-requests n'a aucun effet en mode Report-Only (le
+  // navigateur le rapporte explicitement comme ignoré) : cette directive ne
+  // fait que réécrire les requêtes http:// en https://, ce qui exige une
+  // application réelle. À réintroduire uniquement au moment du bascule vers
+  // le header "Content-Security-Policy" (enforced), pas avant.
 ].join("; ");
 
 const nextConfig = {
