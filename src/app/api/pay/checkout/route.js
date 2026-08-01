@@ -6,9 +6,6 @@ import { initKpayGatewayPayment } from "@/lib/kpay";
 
 export const runtime = "nodejs";
 
-const PRICE_AUTONOME = 1500;
-const PRICE_ACCOMPAGNE = 2000;
-
 export async function POST(req) {
   try {
     const { user, error: authError } = await requireUser(req);
@@ -18,14 +15,12 @@ export async function POST(req) {
     if (!allowed) return rateError;
 
     const body = await req.json().catch(() => ({}));
-    const { cvModelId, hasAgentOption } = body;
+    const { amount, planName, description } = body;
 
-    if (!cvModelId || typeof cvModelId !== "string") {
-      return NextResponse.json({ error: "Le modèle de CV choisi est requis." }, { status: 400 });
+    if (!amount || typeof amount !== "number" || amount <= 0) {
+      return NextResponse.json({ error: "Le montant est invalide." }, { status: 400 });
     }
 
-    const hasAgent = hasAgentOption === true;
-    const amount = hasAgent ? PRICE_ACCOMPAGNE : PRICE_AUTONOME;
     const currency = "XOF";
 
     if (!process.env.NEXT_PUBLIC_KPAY_PUBLIC_KEY || !process.env.KPAY_SECRET_KEY) {
@@ -35,67 +30,61 @@ export async function POST(req) {
       );
     }
 
-    // Client au nom de l'utilisateur connecté (respecte RLS : orders.user_id doit être auth.uid())
+    // Client au nom de l'utilisateur connecté (respecte RLS : transactions.user_id doit être auth.uid())
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
 
-    // 1. Création de la commande en base, statut "pending"
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
+    // 1. Création de la transaction en base, statut "pending"
+    const { data: transaction, error: transactionError } = await supabase
+      .from("transactions")
       .insert({
         user_id: user.id,
-        cv_model_id: cvModelId,
-        has_agent_option: hasAgent,
         amount,
         currency,
+        provider: "kpay",
+        status: "pending",
+        metadata: { plan_name: planName || "credit_topup", description: description || "Recharge" }
       })
       .select()
       .single();
 
-    if (orderError || !order) {
-      console.error("[Checkout] Échec création commande :", orderError?.message);
-      return NextResponse.json({ error: "Impossible de créer la commande." }, { status: 500 });
+    if (transactionError || !transaction) {
+      console.error("[Checkout] Échec création transaction :", transactionError?.message);
+      return NextResponse.json({ error: "Impossible de créer la transaction." }, { status: 500 });
     }
 
-    // 2. Initialisation du paiement KPay (mode Gateway : la page hébergée par
-    // KPay laisse le client choisir Wave / Orange Money / MTN lui-même).
-    // NEXT_PUBLIC_APP_URL, jamais localhost en production — voir .env.production.
+    // 2. Initialisation du paiement KPay (mode Gateway)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "";
 
     let kpayPayment;
     try {
       kpayPayment = await initKpayGatewayPayment({
         amount,
-        externalId: order.id,
+        externalId: transaction.id,
         returnUrl: `${appUrl}/candidat/facturation`,
-        cancelUrl: `${appUrl}/creer-cv`,
-        description: `Confection de CV Facilite — ${hasAgent ? "accompagnée" : "autonome"}`,
+        cancelUrl: `${appUrl}/candidat/facturation`,
+        description: description || `Paiement Facilite - ${amount} XOF`,
         metadata: {
-          order_id: order.id,
+          transaction_id: transaction.id,
           user_id: user.id,
-          has_agent_option: hasAgent,
-          cv_model_id: cvModelId,
+          plan_name: planName || "credit_topup"
         },
       });
     } catch (kpayError) {
       console.error("[Checkout] Échec initialisation KPay :", kpayError.message);
-      // La commande "pending" reste en base — utile en debug, sans conséquence
-      // pour l'utilisateur (elle n'apparaît jamais comme payée sans webhook validé).
       return NextResponse.json({ error: kpayError.message }, { status: 502 });
     }
 
-    // 3. L'identifiant KPay est connu dès l'initialisation : on le rattache
-    // tout de suite à la commande pour que le webhook puisse la retrouver de
-    // façon fiable même si metadata.order_id venait à manquer.
-    await supabase.from("orders").update({ payment_reference: kpayPayment.id }).eq("id", order.id);
+    // 3. Rattacher la référence de paiement KPay à notre transaction
+    await supabase.from("transactions").update({ provider_reference: kpayPayment.id }).eq("id", transaction.id);
 
     return NextResponse.json({
       checkoutUrl: kpayPayment.gatewayUrl,
       reference: kpayPayment.id,
-      orderId: order.id,
+      transactionId: transaction.id,
     });
   } catch (error) {
     console.error("[Checkout API Error]", error);

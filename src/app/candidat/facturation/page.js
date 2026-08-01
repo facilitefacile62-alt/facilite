@@ -13,7 +13,10 @@ export default function FacturationPage() {
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [orders, setOrders] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingPayment, setLoadingPayment] = useState(false);
   const [downloadingOrderId, setDownloadingOrderId] = useState(null);
 
   useEffect(() => {
@@ -29,14 +32,31 @@ export default function FacturationPage() {
 
         setUserSession(session);
 
-        const { data, error } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
+        const [ordersRes, transRes, subRes] = await Promise.all([
+          supabase
+            .from("orders")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("transactions")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("subscriptions")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .single()
+        ]);
 
-        if (error) console.error("Erreur chargement des commandes:", error);
-        else setOrders(data || []);
+        if (ordersRes.error) console.error("Erreur chargement des commandes:", ordersRes.error);
+        else setOrders(ordersRes.data || []);
+        
+        if (transRes.error) console.error("Erreur chargement transactions:", transRes.error);
+        else setTransactions(transRes.data || []);
+        
+        if (subRes.data) setSubscription(subRes.data);
       } catch (err) {
         console.error("Exception facturation dashboard:", err);
       } finally {
@@ -46,6 +66,27 @@ export default function FacturationPage() {
 
     loadOrders();
   }, []);
+
+  const handleBuyCredits = async () => {
+    setLoadingPayment(true);
+    try {
+      const res = await fetch("/api/pay/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userSession.access_token}`,
+        },
+        body: JSON.stringify({ amount: 5000, planName: "Premium", description: "Abonnement Premium (1 crédit)" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erreur de paiement");
+      if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoadingPayment(false);
+    }
+  };
 
   const handleDownloadInvoice = async (order) => {
     if (!order.invoice_url) return;
@@ -149,6 +190,31 @@ export default function FacturationPage() {
               Retrouvez toutes vos commandes de confection de CV et téléchargez vos factures.
             </p>
           </div>
+        </div>
+
+        {/* Mon Solde et Achats de Crédits */}
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden mb-8 p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div>
+            <h2 className="text-lg font-extrabold text-gray-900">Mon Forfait</h2>
+            <p className="text-sm text-gray-500 font-medium mt-1">
+              {subscription ? `Plan actuel : ${subscription.plan_name.toUpperCase()}` : "Aucun forfait actif."}
+            </p>
+            <p className="text-2xl font-extrabold text-emerald-600 mt-2">
+              {subscription?.credits || 0} <span className="text-sm font-bold text-gray-500">crédits restants</span>
+            </p>
+          </div>
+          <button
+            onClick={handleBuyCredits}
+            disabled={loadingPayment}
+            className="px-6 py-3 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 text-sm font-extrabold rounded-2xl transition shadow-md disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+          >
+            {loadingPayment ? (
+              <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              <i className="fa-solid fa-bolt"></i>
+            )}
+            <span>Recharger mon compte (5000 XOF)</span>
+          </button>
         </div>
 
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
