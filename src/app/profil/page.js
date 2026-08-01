@@ -11,6 +11,7 @@ import ThemeSettings from "@/components/ThemeSettings";
 import DiagnosticModal from "@/components/DiagnosticModal";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import SecurityTabContent from "@/components/SecurityTabContent";
 
 export default function ProfilPage() {
   const pathname = usePathname();
@@ -1861,6 +1862,36 @@ export default function ProfilPage() {
           
           {/* COLONNE GAUCHE & CENTRALE COMBINÉE : Carte Profil Principale & Sections */}
           <div className="w-full lg:w-[830px] flex flex-col space-y-4">
+            
+            {/* BANNIÈRE DE SÉCURITÉ */}
+            {userSession?.user && (
+              (!userSession.user.email_confirmed_at && userSession.user.email) ||
+              (!userSession.user.phone_confirmed_at && userSession.user.phone)
+            ) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 shadow-sm animate-fade-in-up">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                    <i className="fa-solid fa-shield-halved text-amber-600 text-lg"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-amber-900">Sécurisez votre compte</h4>
+                    <p className="text-xs font-medium text-amber-700 mt-0.5">
+                      Un ou plusieurs de vos identifiants (E-mail ou Téléphone) ne sont pas encore vérifiés.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const el = document.getElementById("section-mon-profil-cv");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                    setActiveAboutTab("securite");
+                  }}
+                  className="px-4 py-2 w-full sm:w-auto text-center bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition shadow-sm cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  Vérifier maintenant
+                </button>
+              </div>
+            )}
 
             {/* CARTE HERO PROFIL STYLE LINKEDIN */}
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs relative">
@@ -2122,6 +2153,7 @@ export default function ProfilPage() {
                     { id: "interets", label: "Centres d'intérêt", icon: "fa-solid fa-heart" },
                     { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
                     { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
+                    { id: "securite", label: "Sécurité & Connexion", icon: "fa-solid fa-lock" },
                     { id: "noms", label: "Noms", icon: "fa-regular fa-user" },
                   ].map((tab) => {
                     const isActive = activeAboutTab === tab.id;
@@ -3044,7 +3076,12 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {!["intro", "info_perso", "langues", "experiences", "formation", "competences", "interets", "coordonnees", "confidentialite", "noms"].includes(activeAboutTab) && (
+                  {/* ONGLET SÉCURITÉ : Mot de passe et identifiants */}
+                  {activeAboutTab === "securite" && (
+                    <SecurityTabContent userSession={userSession} />
+                  )}
+
+                  {!["intro", "info_perso", "langues", "experiences", "formation", "competences", "interets", "coordonnees", "confidentialite", "securite", "noms"].includes(activeAboutTab) && (
                     <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 space-y-2">
                       <p className="text-xs font-bold text-gray-700">Aucune donnée spécifique enregistrée pour cet onglet.</p>
                       <p className="text-[11px] text-gray-500">Cliquez sur l'icône de crayon pour ajouter des informations.</p>
