@@ -30,10 +30,14 @@ const cspReportOnly = [
   // images.unsplash.com : visuels des offres d'emploi de démonstration
   // (supabase/seed.sql) — les images réellement uploadées par un recruteur
   // passent toujours par supabase.storage (déjà couvert par *.supabase.co).
-  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com",
+  // flagcdn.com : drapeaux des indicatifs pays dans PhoneAuthForm.jsx.
+  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com",
   // *.sentry.io : ingestion des événements par le SDK Sentry (client-side).
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io",
-  "frame-src 'self' blob: data: https://*.supabase.co",
+  // *.daily.co : signalisation WebRTC de VideoInterviewModal.jsx (daily-js).
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co",
+  // *.daily.co : iframe Daily Prebuilt embarquée par VideoInterviewModal.jsx
+  // (DailyIframe.createFrame() pointe vers room_url, un sous-domaine daily.co).
+  "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

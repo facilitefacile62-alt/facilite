@@ -50,14 +50,26 @@ import { Redis } from "@upstash/redis";
 const RATE_LIMIT_WINDOW_S = 60; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 20;
 
+// Le constructeur Redis() n'échoue jamais quand url/token manquent — il se
+// contente d'un warning interne et renvoie un client non fonctionnel. Sans
+// cette vérification explicite, chaque appel à checkRateLimit() tentait
+// quand même pipeline().exec() sur ce client invalide, qui échoue au bout
+// de ~4.3s (retries internes du SDK avant l'erreur "Failed to parse URL")
+// avant de retomber sur le mode mémoire — 4+ secondes ajoutées à CHAQUE
+// requête API authentifiée tant qu'Upstash n'est pas configuré (constaté en
+// production : ni UPSTASH_REDIS_REST_URL ni _TOKEN n'y sont renseignés).
 let redis;
-try {
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  });
-} catch (e) {
-  console.warn("[Rate Limiter] Upstash Redis non configuré. Mode dégradé en mémoire locale.");
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  try {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  } catch (e) {
+    console.warn("[Rate Limiter] Échec d'initialisation Upstash Redis. Mode dégradé en mémoire locale.");
+  }
+} else {
+  console.warn("[Rate Limiter] Upstash Redis non configuré (UPSTASH_REDIS_REST_URL/_TOKEN absents). Mode dégradé en mémoire locale.");
 }
 
 const localFallbackLog = new Map();
