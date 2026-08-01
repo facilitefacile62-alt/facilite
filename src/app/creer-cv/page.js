@@ -256,6 +256,7 @@ export default function CreerCv() {
   // envoyé depuis /candidat/facturation une fois la commande "paid").
   const [downloadMode, setDownloadMode] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   // Aperçu plein écran d'un modèle avant sélection (TemplatePreviewModal.tsx
   // est en TypeScript ; pas d'annotation de type ici, ce fichier reste en JS.
   const [previewTemplate, setPreviewTemplate] = useState(null);
@@ -776,6 +777,8 @@ export default function CreerCv() {
   // confection finale (export PDF) est désormais une prestation payante
   // (voir PricingModal) — on ne perd pas pour autant le travail déjà saisi.
   const saveCvDraftAndOpenPricing = async () => {
+    if (savingDraft) return; // évite une double insertion en base sur un double-clic
+    setSavingDraft(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const resumeTitle = cvData.firstName && cvData.lastName
@@ -803,6 +806,9 @@ export default function CreerCv() {
       triggerToast("Brouillon sauvegardé sur votre compte Supabase !", "fa-cloud-arrow-up");
     } catch (e) {
       console.error("Erreur de sauvegarde Supabase CV:", e);
+      triggerToast("Échec de la sauvegarde du brouillon. Réessayez.", "fa-triangle-exclamation");
+    } finally {
+      setSavingDraft(false);
     }
 
     setShowPricingModal(true);
@@ -1891,11 +1897,11 @@ export default function CreerCv() {
 
                   <button
                     onClick={downloadMode ? handleDownloadPdf : saveCvDraftAndOpenPricing}
-                    disabled={downloadingPdf}
+                    disabled={downloadingPdf || savingDraft}
                     className="bg-gray-900 text-white font-extrabold py-3 px-6 rounded-full text-sm shadow-lg hover:bg-gray-800 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center space-x-2 disabled:opacity-60"
                   >
-                    <i className={`fa-solid ${downloadingPdf ? "fa-spinner fa-spin" : "fa-download"}`}></i>
-                    <span>{downloadingPdf ? "Génération..." : downloadMode ? "Télécharger le PDF" : t.btnFinish}</span>
+                    <i className={`fa-solid ${downloadingPdf || savingDraft ? "fa-spinner fa-spin" : "fa-download"}`}></i>
+                    <span>{downloadingPdf ? "Génération..." : savingDraft ? "Enregistrement..." : downloadMode ? "Télécharger le PDF" : t.btnFinish}</span>
                   </button>
                 </div>
 
@@ -1925,11 +1931,11 @@ export default function CreerCv() {
                 <button
                   type="button"
                   onClick={downloadMode ? handleDownloadPdf : saveCvDraftAndOpenPricing}
-                  disabled={downloadingPdf}
+                  disabled={downloadingPdf || savingDraft}
                   className="px-7 py-3 bg-[#2563EB] text-white rounded-full text-xs font-extrabold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition cursor-pointer disabled:opacity-60"
                 >
-                  <i className={`fa-solid ${downloadingPdf ? "fa-spinner fa-spin" : "fa-download"} mr-1.5`}></i>
-                  {downloadingPdf ? "Génération..." : downloadMode ? "Télécharger le PDF" : t.btnFinish}
+                  <i className={`fa-solid ${downloadingPdf || savingDraft ? "fa-spinner fa-spin" : "fa-download"} mr-1.5`}></i>
+                  {downloadingPdf ? "Génération..." : savingDraft ? "Enregistrement..." : downloadMode ? "Télécharger le PDF" : t.btnFinish}
                 </button>
               )}
             </div>

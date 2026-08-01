@@ -112,6 +112,7 @@ export default function ProfilPage() {
   const aiCvFileInputRef = useRef(null);
   const [isParsingCv, setIsParsingCv] = useState(false);
   const [scanModalOpen, setScanModalOpen] = useState(false);
+  const [savingScanData, setSavingScanData] = useState(false);
   const [scanModalActiveTab, setScanModalActiveTab] = useState("general");
   const [scannedData, setScannedData] = useState({
     firstName: "",
@@ -951,7 +952,8 @@ export default function ProfilPage() {
 
   // Validation et enregistrement définitif des données de la modale dans le profil & Supabase
   const handleConfirmScanData = async () => {
-    if (!scannedData || !userSession?.user) return;
+    if (!scannedData || !userSession?.user || savingScanData) return;
+    setSavingScanData(true);
 
     // 1. Écraser et remplacer directement les anciennes informations dans l'état de l'application
     setFirstName(scannedData.firstName);
@@ -992,32 +994,41 @@ export default function ProfilPage() {
     }
 
     // 2. Persister et écraser dans Supabase (la structure visuelle UI restant 100% intacte)
-    await supabase.from("profiles").upsert({
-      id: userSession.user.id,
-      email: userSession.user.email,
-      full_name: `${scannedData.firstName} ${scannedData.lastName}`.trim(),
-      headline: scannedData.jobTitle,
-      bio: scannedData.bio,
-      city: scannedData.city,
-      country: scannedData.country,
-      birth_date: scannedData.birthDate,
-      gender: scannedData.gender,
-      marital_status: scannedData.maritalStatus,
-      driver_license: scannedData.driverLicense,
-      phone: scannedData.phone || phone,
-      contact_email: scannedData.email || contactEmail,
-      skills: scannedData.skills,
-      interests: scannedData.interests && scannedData.interests.length > 0 ? scannedData.interests : userInterests,
-      experiences: scannedData.experiences,
-      educations: scannedData.educations,
-      languages: scannedData.languages,
-      cv_url: scannedData.docUrl || cvUrl,
-      cv_name: scannedData.docName,
-      updated_at: new Date().toISOString(),
-    });
+    try {
+      const { error } = await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        full_name: `${scannedData.firstName} ${scannedData.lastName}`.trim(),
+        headline: scannedData.jobTitle,
+        bio: scannedData.bio,
+        city: scannedData.city,
+        country: scannedData.country,
+        birth_date: scannedData.birthDate,
+        gender: scannedData.gender,
+        marital_status: scannedData.maritalStatus,
+        driver_license: scannedData.driverLicense,
+        phone: scannedData.phone || phone,
+        contact_email: scannedData.email || contactEmail,
+        skills: scannedData.skills,
+        interests: scannedData.interests && scannedData.interests.length > 0 ? scannedData.interests : userInterests,
+        experiences: scannedData.experiences,
+        educations: scannedData.educations,
+        languages: scannedData.languages,
+        cv_url: scannedData.docUrl || cvUrl,
+        cv_name: scannedData.docName,
+        updated_at: new Date().toISOString(),
+      });
 
-    setScanModalOpen(false);
-    triggerToast("✓ Données validées ! Les informations du profil ont été écrasées et enregistrées.", "fa-circle-check");
+      if (error) throw error;
+
+      setScanModalOpen(false);
+      triggerToast("✓ Données validées ! Les informations du profil ont été écrasées et enregistrées.", "fa-circle-check");
+    } catch (err) {
+      console.error("Erreur enregistrement des données scannées:", err);
+      triggerToast("Échec de l'enregistrement. Réessayez.", "fa-triangle-exclamation");
+    } finally {
+      setSavingScanData(false);
+    }
   };
 
   // Suppression d'un document de la base de données Supabase et de l'interface
@@ -4503,10 +4514,11 @@ export default function ProfilPage() {
                 <button
                   type="button"
                   onClick={handleConfirmScanData}
-                  className="px-5 py-2.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-black rounded-xl text-xs transition shadow-md cursor-pointer flex items-center space-x-1.5"
+                  disabled={savingScanData}
+                  className="px-5 py-2.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-black rounded-xl text-xs transition shadow-md cursor-pointer flex items-center space-x-1.5 disabled:opacity-60"
                 >
-                  <i className="fa-solid fa-check text-xs"></i>
-                  <span>Valider et Enregistrer dans mon profil</span>
+                  <i className={`fa-solid ${savingScanData ? "fa-spinner fa-spin" : "fa-check"} text-xs`}></i>
+                  <span>{savingScanData ? "Enregistrement..." : "Valider et Enregistrer dans mon profil"}</span>
                 </button>
               </div>
             </div>

@@ -41,11 +41,16 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             setFullName(session.user.user_metadata?.full_name || session.user.email.split("@")[0] || "");
           }
 
-          // Charger la liste des CVs existants
+          // Charger la liste des CVs existants — uniquement ceux avec un
+          // vrai fichier (file_url) : un CV créé via /creer-cv n'en a
+          // jamais (son contenu est structuré en JSON, pas un fichier), le
+          // sélectionner ici ferait échouer la candidature (cv_url NOT NULL
+          // en base) avec un message d'erreur générique et déroutant.
           const { data: resumesList } = await supabase
             .from("resumes")
             .select("*")
             .eq("user_id", session.user.id)
+            .not("file_url", "is", null)
             .order("created_at", { ascending: false });
 
           setResumes(resumesList || []);

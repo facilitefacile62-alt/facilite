@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [role, setRole] = useState("candidat");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   // Méthode d'inscription sélectionnée : 'email' ou 'phone'
   const [registerMethod, setRegisterMethod] = useState("email");
@@ -85,15 +86,21 @@ export default function RegisterPage() {
   };
 
   const handleOAuthSignUp = async (provider) => {
+    if (oauthLoading) return; // évite un double déclenchement de la redirection OAuth
+    setOauthLoading(true);
     try {
-      await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
           redirectTo: `${window.location.origin}/profil`,
         },
       });
+      // Succès : le navigateur est redirigé vers Google, pas besoin de
+      // réinitialiser l'état — la page est sur le point d'être déchargée.
+      if (error) throw error;
     } catch (err) {
       setErrorMessage(`Erreur lors de l'inscription via ${provider}`);
+      setOauthLoading(false);
     }
   };
 
@@ -395,7 +402,8 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => handleOAuthSignUp("google")}
-                className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer"
+                disabled={oauthLoading}
+                className="w-full py-3 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-sm rounded-xl transition flex items-center justify-center space-x-2.5 shadow-xs cursor-pointer disabled:opacity-60"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
@@ -415,7 +423,7 @@ export default function RegisterPage() {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.37 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>Continue with Google</span>
+                <span>{oauthLoading ? "Redirection..." : "Continue with Google"}</span>
               </button>
 
               {/* Redirection Log in */}

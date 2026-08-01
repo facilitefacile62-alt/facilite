@@ -166,6 +166,7 @@ export default function ImporterCvPage() {
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savingImport, setSavingImport] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", subject: "", message: "" });
   
@@ -484,6 +485,8 @@ export default function ImporterCvPage() {
 
   // Submit and export data to Supabase Storage + resumes/profiles tables
   const handleFinalSubmit = async () => {
+    if (savingImport) return; // évite un double envoi/upload sur un double-clic
+    setSavingImport(true);
     localStorage.setItem("imported_cv_data", JSON.stringify(parsedData));
 
     try {
@@ -532,6 +535,8 @@ export default function ImporterCvPage() {
     } catch (e) {
       console.error("Erreur d'enregistrement Supabase CV importé:", e);
       triggerToast("Erreur lors de la sauvegarde du CV importé.", "fa-triangle-exclamation");
+    } finally {
+      setSavingImport(false);
     }
 
     triggerToast(selectedLang === "FR" ? "Données transmises au Builder !" : "Data sent to Builder!", "fa-circle-check");
@@ -1052,9 +1057,10 @@ export default function ImporterCvPage() {
                 </button>
                 <button
                   onClick={handleFinalSubmit}
-                  className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold px-6 py-2.5 rounded-xl text-xs transition shadow-xs cursor-pointer flex-1 sm:flex-initial"
+                  disabled={savingImport}
+                  className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold px-6 py-2.5 rounded-xl text-xs transition shadow-xs cursor-pointer flex-1 sm:flex-initial disabled:opacity-60"
                 >
-                  {t.btnContinue}
+                  {savingImport ? "Enregistrement..." : t.btnContinue}
                 </button>
               </div>
             </div>
@@ -1383,10 +1389,11 @@ export default function ImporterCvPage() {
               </button>
               <button
                 onClick={handleFinalSubmit}
-                className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold px-8 py-3 rounded-xl text-xs transition shadow-xs cursor-pointer flex items-center justify-center space-x-2"
+                disabled={savingImport}
+                className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold px-8 py-3 rounded-xl text-xs transition shadow-xs cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-60"
               >
-                <i className="fa-solid fa-arrow-right-long text-sm"></i>
-                <span>{t.btnContinue}</span>
+                <i className={`fa-solid ${savingImport ? "fa-spinner fa-spin" : "fa-arrow-right-long"} text-sm`}></i>
+                <span>{savingImport ? "Enregistrement..." : t.btnContinue}</span>
               </button>
             </div>
           </div>

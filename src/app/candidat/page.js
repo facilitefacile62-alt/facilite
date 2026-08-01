@@ -55,6 +55,21 @@ export default function CandidatDashboardPage() {
     }
 
     loadCandidatDashboard();
+
+    // Sans ça, une session qui expire/est révoquée pendant que l'utilisateur
+    // est déjà sur ce dashboard ne se remarque qu'à un appel Supabase qui
+    // échoue silencieusement (RLS refusée, erreur juste consignée en
+    // console) — l'utilisateur reste sur des données figées sans comprendre
+    // pourquoi. Même convention que MessagerieClient.js.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (!currentSession) {
+        window.location.replace("/login");
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Synchronisation temps réel : le statut d'une candidature (pending ->

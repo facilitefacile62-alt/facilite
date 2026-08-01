@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -201,15 +202,21 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = async (provider) => {
+    if (oauthLoading) return; // évite un double déclenchement de la redirection OAuth
+    setOauthLoading(true);
     try {
-      await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
           redirectTo: `${window.location.origin}/profil`,
         },
       });
+      // Succès : le navigateur est redirigé vers Google, pas besoin de
+      // réinitialiser l'état — la page est sur le point d'être déchargée.
+      if (error) throw error;
     } catch (err) {
       setErrorMessage(`Erreur de connexion via ${provider}`);
+      setOauthLoading(false);
     }
   };
 
@@ -493,7 +500,8 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => handleOAuthLogin("google")}
-                className="w-full py-2.5 px-4 bg-white/60 backdrop-blur-sm border border-gray-200 hover:border-gray-300 hover:bg-white text-gray-800 font-bold text-sm rounded-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 shadow-sm hover:shadow-md cursor-pointer"
+                disabled={oauthLoading}
+                className="w-full py-2.5 px-4 bg-white/60 backdrop-blur-sm border border-gray-200 hover:border-gray-300 hover:bg-white text-gray-800 font-bold text-sm rounded-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 shadow-sm hover:shadow-md cursor-pointer disabled:opacity-60"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
@@ -513,7 +521,7 @@ export default function LoginPage() {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.37 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>Continue with Google</span>
+                <span>{oauthLoading ? "Redirection..." : "Continue with Google"}</span>
               </button>
 
               {/* Inscription Sign up */}
