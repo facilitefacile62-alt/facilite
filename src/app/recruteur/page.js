@@ -3,10 +3,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import { sendMessage } from "@/lib/messages";
 import RoleBadge from "@/components/RoleBadge";
 import UnreadBadge from "@/components/UnreadBadge";
+import VideoInterviewModal from "@/components/VideoInterviewModal";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 const EMPTY_OFFER = {
@@ -34,6 +36,14 @@ const EMPTY_RECRUITER_PROFILE = {
 const OFFER_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_OFFER_IMAGE_BYTES = 5 * 1024 * 1024;
 
+// Extrait hors du composant (react-hooks/purity) : Date.now() ne doit pas
+// être appelé pendant le rendu, uniquement depuis un gestionnaire d'événement.
+function buildStoragePath(userId, ext, { folder = "", prefix = "" } = {}) {
+  const folderPart = folder ? `${folder}/` : "";
+  const prefixPart = prefix ? `${prefix}-` : "";
+  return `${userId}/${folderPart}${prefixPart}${Date.now()}.${ext}`;
+}
+
 const APPLICATION_STATUSES = [
   { value: "pending", label: "En attente" },
   { value: "accepted", label: "Accepté" },
@@ -41,6 +51,7 @@ const APPLICATION_STATUSES = [
 ];
 
 export default function RecruteurDashboardPage() {
+  const router = useRouter();
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [activeTab, setActiveTab] = useState("offres"); // 'offres' | 'candidatures' | 'cvtheque' | 'profil'
@@ -74,6 +85,43 @@ export default function RecruteurDashboardPage() {
   const [applications, setApplications] = useState([]);
   const [updatingAppId, setUpdatingAppId] = useState(null);
   const [downloadingCvId, setDownloadingCvId] = useState(null);
+  const [startingInterviewId, setStartingInterviewId] = useState(null);
+  const [activeInterviewId, setActiveInterviewId] = useState(null);
+
+  const handleStartInterview = async (application) => {
+    setStartingInterviewId(application.id);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        triggerToast("Session expirée, reconnectez-vous.");
+        return;
+      }
+
+      const res = await fetch("/api/interviews/create-room", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ applicationId: application.id }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data?.interviewId) {
+        triggerToast(data?.error || "Échec de la création de l'entretien.");
+        return;
+      }
+
+      setActiveInterviewId(data.interviewId);
+    } catch (err) {
+      console.error("Erreur démarrage entretien:", err);
+      triggerToast("Échec de la création de l'entretien.");
+    } finally {
+      setStartingInterviewId(null);
+    }
+  };
   const [sortByScore, setSortByScore] = useState(false);
 
   // --- Onglet CVthèque ---
@@ -328,7 +376,7 @@ export default function RecruteurDashboardPage() {
       // rien que pour le logo/la bannière.
       if (logoFile) {
         const ext = logoFile.name.split(".").pop().toLowerCase();
-        const path = `${userSession.user.id}/branding/logo-${Date.now()}.${ext}`;
+        const path = buildStoragePath(userSession.user.id, ext, { folder: "branding", prefix: "logo" });
         const { error: uploadError } = await supabase.storage
           .from("job-offers")
           .upload(path, logoFile, { upsert: true, contentType: logoFile.type });
@@ -338,7 +386,7 @@ export default function RecruteurDashboardPage() {
 
       if (bannerFile) {
         const ext = bannerFile.name.split(".").pop().toLowerCase();
-        const path = `${userSession.user.id}/branding/banner-${Date.now()}.${ext}`;
+        const path = buildStoragePath(userSession.user.id, ext, { folder: "branding", prefix: "banner" });
         const { error: uploadError } = await supabase.storage
           .from("job-offers")
           .upload(path, bannerFile, { upsert: true, contentType: bannerFile.type });
@@ -426,7 +474,7 @@ export default function RecruteurDashboardPage() {
 
       if (offerImageFile) {
         const ext = offerImageFile.name.split(".").pop().toLowerCase();
-        const storagePath = `${userSession.user.id}/${Date.now()}.${ext}`;
+        const storagePath = buildStoragePath(userSession.user.id, ext);
 
         const { error: uploadError } = await supabase.storage
           .from("job-offers")
@@ -593,7 +641,7 @@ export default function RecruteurDashboardPage() {
       triggerToast("Impossible d'envoyer le message.");
       return;
     }
-    window.location.href = "/messagerie";
+    router.push("/messagerie");
   };
 
   // Recherche sémantique : génère l'embedding de la requête via l'Edge
@@ -1059,13 +1107,14 @@ export default function RecruteurDashboardPage() {
                     <th className="py-4 px-6">Score Match CV</th>
                     <th className="py-4 px-6">Date</th>
                     <th className="py-4 px-6">CV</th>
+                    <th className="py-4 px-6">Entretien</th>
                     <th className="py-4 px-6 text-right">Statut</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-xs font-medium">
                   {myApplications.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="py-8 text-center text-gray-400 italic">
+                      <td colSpan="7" className="py-8 text-center text-gray-400 italic">
                         Aucune candidature reçue pour le moment.
                       </td>
                     </tr>
@@ -1113,6 +1162,18 @@ export default function RecruteurDashboardPage() {
                             ) : (
                               <span className="text-gray-400">—</span>
                             )}
+                          </td>
+                          <td className="py-4 px-6">
+                            <button
+                              type="button"
+                              onClick={() => handleStartInterview(application)}
+                              disabled={startingInterviewId === application.id}
+                              className="text-blue-600 hover:text-blue-800 font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-60 whitespace-nowrap"
+                              title="Démarrer un entretien vidéo"
+                            >
+                              <i className={`fa-solid ${startingInterviewId === application.id ? "fa-spinner fa-spin" : "fa-video"}`}></i>
+                              {startingInterviewId === application.id ? "Création..." : "Démarrer"}
+                            </button>
                           </td>
                           <td className="py-4 px-6 text-right">
                             <select
@@ -1493,6 +1554,12 @@ export default function RecruteurDashboardPage() {
       <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs font-medium text-gray-500">
         © 2026 Facilite - Espace Recruteur Sécurisé.
       </footer>
+
+      <VideoInterviewModal
+        interviewId={activeInterviewId}
+        isOpen={!!activeInterviewId}
+        onClose={() => setActiveInterviewId(null)}
+      />
     </div>
   );
 }

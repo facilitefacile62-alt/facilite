@@ -13,6 +13,7 @@
     "@ai-sdk/google": "^4.0.27",
     "@ai-sdk/openai": "^4.0.23",
     "@ai-sdk/react": "^4.0.44",
+    "@daily-co/daily-js": "^0.91.0",
     "@google-cloud/vision": "^5.3.7",
     "@google/genai": "^2.14.0",
     "@napi-rs/canvas": "^1.0.2",

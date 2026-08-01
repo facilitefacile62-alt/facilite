@@ -3,13 +3,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, resolveConversationWith, touchConversation } from "@/lib/messages";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
+import VideoInterviewModal from "@/components/VideoInterviewModal";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
@@ -259,6 +260,7 @@ function formatDateSeparatorLabel(dateInput) {
 
 export default function MessagerieClient() {
   const pathname = usePathname();
+  const router = useRouter();
   // Ouvre directement une conversation avec un destinataire précis (ex.
   // bouton "Contacter le recruteur" d'une vitrine /recruteurs/[id]) —
   // safe sans Suspense ici : la page parente charge ce composant via
@@ -310,6 +312,7 @@ export default function MessagerieClient() {
   const [showQuickActions, setShowQuickActions] = useState(false);
   // Panneau "Info" (i) du header de discussion, style Messenger.
   const [conversationInfoOpen, setConversationInfoOpen] = useState(false);
+  const [activeInterviewId, setActiveInterviewId] = useState(null);
   const [mobileChatView, setMobileChatView] = useState(false); // toggle list/chat on mobile
   const [filterTab, setFilterTab] = useState("all"); // 'all' | 'unread' | 'favorites'
   const [discussionTypeFilter, setDiscussionTypeFilter] = useState("all"); // 'all' | 'OFFRE' | 'ECHANGE'
@@ -2469,7 +2472,20 @@ export default function MessagerieClient() {
                             <i className="fa-solid fa-phone"></i>
                           </button>
                           <button
-                            onClick={() => triggerToast(`Appel vidéo simulé vers ${activeConversation.name}...`, "fa-video")}
+                            onClick={() => {
+                              if (currentUserRole === "recruteur") {
+                                // La création d'un entretien exige de savoir à quelle
+                                // candidature précise le rattacher (application_id,
+                                // NOT NULL) — cette page ne porte pas cette info de
+                                // façon fiable pour une conversation quelconque.
+                                // L'onglet "Candidatures reçues" est le seul point
+                                // d'entrée qui la connaît avec certitude.
+                                triggerToast("Démarrez l'entretien depuis l'onglet Candidatures reçues.", "fa-video");
+                                router.push("/recruteur");
+                              } else {
+                                triggerToast(`Appel vidéo simulé vers ${activeConversation.name}...`, "fa-video");
+                              }
+                            }}
                             className="hidden sm:flex text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl items-center justify-center cursor-pointer"
                             title="Appel vidéo"
                           >
@@ -2692,8 +2708,31 @@ export default function MessagerieClient() {
                           </div>
                         )}
 
+                        {/* Entretien vidéo (Daily.co) — attachment_url porte l'id de
+                            la ligne interviews, pas une URL directe : le jeton de
+                            participation est minté à la demande au clic, jamais
+                            persisté (voir src/lib/dailyco.js). */}
+                        {msg.attachment_type === "video-interview" && msg.attachment_url && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveInterviewId(msg.attachment_url)}
+                            className="flex items-center space-x-3 bg-[#2563EB]/90 hover:bg-[#2563EB] text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition cursor-pointer w-full"
+                          >
+                            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                              <i className="fa-solid fa-video text-lg"></i>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs font-extrabold block">Entretien vidéo</span>
+                              <span className="text-[10px] opacity-80 block font-semibold truncate">
+                                {msg.file_name || "Rejoindre l'entretien"}
+                              </span>
+                            </div>
+                            <i className="fa-solid fa-arrow-right text-xs opacity-80"></i>
+                          </button>
+                        )}
+
                         {/* Pièce jointe PDF / Document (Carte Bleue Ergonomique) */}
-                        {(msg.attachment_url || msg.file) && msg.attachment_type !== "audio" && (
+                        {(msg.attachment_url || msg.file) && msg.attachment_type !== "audio" && msg.attachment_type !== "video-interview" && (
                           <a
                             href={msg.attachment_url || "#"}
                             target="_blank"
@@ -3423,6 +3462,12 @@ export default function MessagerieClient() {
           </div>
         </div>
       )}
+
+      <VideoInterviewModal
+        interviewId={activeInterviewId}
+        isOpen={!!activeInterviewId}
+        onClose={() => setActiveInterviewId(null)}
+      />
     </div>
   );
 }
