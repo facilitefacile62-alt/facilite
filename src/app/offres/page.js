@@ -266,7 +266,9 @@ export default function OffresPage() {
                         </span>
                       )}
                     </div>
-                    <h3 className="font-extrabold text-gray-900 text-sm mb-1">{offer.title}</h3>
+                    <Link href={`/offres/${offer.id}`} className="font-extrabold text-gray-900 text-sm mb-1 hover:text-emerald-700 hover:underline transition block">
+                      {offer.title}
+                    </Link>
                     <p className="text-xs text-gray-500 font-semibold mb-1">{offer.company}</p>
                     <p className="text-[11px] text-gray-400 font-medium mb-3">
                       <i className="fa-solid fa-location-dot mr-1"></i>

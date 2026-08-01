@@ -9,9 +9,33 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://ffacilite.com";
+const DEFAULT_DESCRIPTION =
+  "Facilite est votre allié de confiance pour concevoir des CV percutants, trouver des offres d'emploi et être accompagné par des recruteurs au Sénégal et en Afrique de l'Ouest.";
+
 export const metadata = {
-  title: "Facilite - Création de CV",
-  description: "Facilite est votre allié de confiance pour concevoir des CV percutants et professionnels.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Facilite - Création de CV & Offres d'emploi",
+    template: "%s | Facilite",
+  },
+  description: DEFAULT_DESCRIPTION,
+  keywords: ["CV", "création de CV", "emploi Sénégal", "offres d'emploi Dakar", "recrutement Afrique de l'Ouest", "CV ATS"],
+  openGraph: {
+    title: "Facilite - Création de CV & Offres d'emploi",
+    description: DEFAULT_DESCRIPTION,
+    url: SITE_URL,
+    siteName: "Facilite",
+    locale: "fr_SN",
+    type: "website",
+    images: [{ url: "/logo.jpeg" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Facilite - Création de CV & Offres d'emploi",
+    description: DEFAULT_DESCRIPTION,
+    images: ["/logo.jpeg"],
+  },
 };
 
 export default function RootLayout({ children }) {

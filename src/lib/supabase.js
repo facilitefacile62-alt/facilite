@@ -1,5 +1,19 @@
+import { createClient } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./env";
+
+/**
+ * Client anonyme "stateless" (pas de gestion de cookies/session) pour les
+ * lectures publiques exécutées côté serveur (generateMetadata, sitemap.js,
+ * Server Components) : createBrowserClient dépend de document.cookie, absent
+ * hors navigateur. Lit les mêmes données que n'importe quel visiteur anonyme
+ * — la RLS de Supabase reste la seule barrière, pas ce client.
+ */
+export function getSupabasePublicClient() {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 /**
  * createBrowserClient stocke la session dans des cookies au format attendu par

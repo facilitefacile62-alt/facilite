@@ -3,13 +3,25 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import DiagnosticModal from "@/components/DiagnosticModal";
 import ApplyModal from "@/components/ApplyModal";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
+import TemplatePreviewModal from "@/components/TemplatePreviewModal";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://ffacilite.com";
+
+// Modèles de CV proposés dans le carrousel "Stories" du fil d'actualité —
+// mêmes 3 modèles réellement sélectionnables dans /creer-cv (voir son
+// urlTemplate côté client), pas de 4e modèle décoratif sans mapping clair.
+const CV_TEMPLATE_STORIES = [
+  { id: "modern", name: "Moderne", previewUrl: "/model1.png", description: "2 colonnes structuré" },
+  { id: "minimalist", name: "Minimaliste", previewUrl: "/model2.png", description: "Aéré & moderne" },
+  { id: "classic", name: "Classique", previewUrl: "/model3.png", description: "Traditionnel & chic" },
+];
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -302,6 +314,9 @@ We are actively recruiting for the following positions:
 
 export default function Home() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   // --- ÉTATS GÉNÉRAUX ---
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Bloc "Fil d'attente des offres d'emploi" (recherche + filtres ville/contrat) :
@@ -706,6 +721,35 @@ export default function Home() {
 
   return (
     <>
+      {/* Organization + WebSite (schema.org) : injecté une seule fois sur la
+          page d'accueil, pas sur chaque route — c'est l'entité canonique du
+          site pour les moteurs de recherche. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "Organization",
+                "@id": `${SITE_URL}/#organization`,
+                name: "Facilite",
+                url: SITE_URL,
+                logo: `${SITE_URL}/logo.jpeg`,
+              },
+              {
+                "@type": "WebSite",
+                "@id": `${SITE_URL}/#website`,
+                url: SITE_URL,
+                name: "Facilite",
+                publisher: { "@id": `${SITE_URL}/#organization` },
+                inLanguage: "fr-SN",
+              },
+            ],
+          }),
+        }}
+      />
+
       {/* Toast Notification Top Floating */}
       <div
         className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
@@ -1468,7 +1512,39 @@ export default function Home() {
 
           {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
           <section className="w-full lg:w-[555px] flex-shrink-0 flex flex-col space-y-4">
-            
+
+            {/* Carrousel "Stories" des modèles de CV — tout en haut du fil,
+                juste sous la navbar. Le clic ouvre TemplatePreviewModal (même
+                composant que /creer-cv) ; "Utiliser ce modèle" redirige vers
+                le créateur de CV avec le modèle pré-sélectionné (creer-cv lit
+                déjà ?template= au montage). */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-3.5">
+              <div className="flex items-center gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-0.5">
+                {CV_TEMPLATE_STORIES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => {
+                      setPreviewTemplate(tpl);
+                      setIsPreviewOpen(true);
+                    }}
+                    className="flex flex-col items-center gap-1.5 flex-shrink-0 w-16 snap-start cursor-pointer group"
+                  >
+                    <span className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-[#10E688] to-blue-500 flex-shrink-0">
+                      <span className="block w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
+                        <img
+                          src={tpl.previewUrl}
+                          alt={`Modèle de CV ${tpl.name}`}
+                          className="w-full h-full object-cover object-top group-hover:scale-105 transition"
+                        />
+                      </span>
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-700 truncate w-full text-center">{tpl.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Message d'accueil personnalisé si connecté */}
             {userSession && (
               <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-indigo-950 text-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-700 flex items-center justify-between">
@@ -1887,6 +1963,17 @@ export default function Home() {
           <p>{t.footerCopyright}</p>
         </div>
       </footer>
+
+      {/* Aperçu plein écran d'un modèle de CV (carrousel Stories ci-dessus) */}
+      <TemplatePreviewModal
+        template={previewTemplate}
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        onConfirm={(tpl) => {
+          setIsPreviewOpen(false);
+          router.push(`/creer-cv?template=${tpl.id}`);
+        }}
+      />
 
       {/* Modal 1: CV Requis pour postuler */}
       {noCvModalOpen && (

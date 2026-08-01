@@ -49,6 +49,10 @@ export default function ProfilPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [educationLevel, setEducationLevel] = useState("Aucun");
   const [activeAboutTab, setActiveAboutTab] = useState("info_perso");
+  // Accordéon mobile de la liste d'onglets "À propos" : replié par défaut
+  // pour économiser l'espace d'écran (sans effet en desktop, où la liste
+  // reste une barre latérale toujours visible via md:flex).
+  const [aboutTabsOpen, setAboutTabsOpen] = useState(false);
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("");
   const [company, setCompany] = useState("");
@@ -2062,10 +2066,20 @@ export default function ProfilPage() {
             {/* SECTION À PROPOS MULTI-ONGLETS (CENTRALISÉE & UNIFIÉE) */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
               <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight pb-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-                <span className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setAboutTabsOpen((v) => !v)}
+                  aria-expanded={aboutTabsOpen}
+                  className="flex items-center space-x-2 md:cursor-default md:pointer-events-none cursor-pointer"
+                >
                   <span>À propos</span>
-                </span>
-                
+                  <i
+                    className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 md:hidden ${
+                      aboutTabsOpen ? "rotate-180" : ""
+                    }`}
+                  ></i>
+                </button>
+
                 <div className="flex items-center space-x-3">
                   <input
                     type="file"
@@ -2090,8 +2104,14 @@ export default function ProfilPage() {
 
               <div className="flex flex-col md:flex-row items-start gap-6 pt-1">
                 
-                {/* BARRE LATÉRALE GAUCHE (ONGLETS À PROPOS) */}
-                <div className="w-full md:w-64 flex-shrink-0 border-r-0 md:border-r border-gray-200/80 pr-0 md:pr-4 space-y-1">
+                {/* BARRE LATÉRALE GAUCHE (ONGLETS À PROPOS) — repliable sur
+                    mobile (accordéon piloté par aboutTabsOpen), toujours
+                    visible en rail latéral à partir de md: */}
+                <div
+                  className={`w-full md:w-64 flex-shrink-0 border-r-0 md:border-r border-gray-200/80 pr-0 md:pr-4 space-y-1 overflow-hidden transition-all duration-200 ${
+                    aboutTabsOpen ? "flex flex-col" : "hidden"
+                  } md:flex md:flex-col`}
+                >
                   {[
                     { id: "intro", label: "Intro", icon: "fa-solid fa-hand" },
                     { id: "info_perso", label: "Informations personnelles", icon: "fa-regular fa-id-card" },
@@ -2109,7 +2129,10 @@ export default function ProfilPage() {
                       <button
                         key={tab.id}
                         type="button"
-                        onClick={() => setActiveAboutTab(tab.id)}
+                        onClick={() => {
+                          setActiveAboutTab(tab.id);
+                          setAboutTabsOpen(false);
+                        }}
                         className={`w-full text-left px-4 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center space-x-2.5 ${
                           isActive
                             ? "bg-[#E8F0FE] text-[#1D4ED8] font-extrabold shadow-xs"
@@ -2121,6 +2144,16 @@ export default function ProfilPage() {
                       </button>
                     );
                   })}
+
+                  {/* Repli manuel, mobile uniquement */}
+                  <button
+                    type="button"
+                    onClick={() => setAboutTabsOpen(false)}
+                    className="w-full md:hidden text-center px-4 py-2.5 rounded-xl text-xs font-extrabold text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition cursor-pointer flex items-center justify-center space-x-1.5"
+                  >
+                    <i className="fa-solid fa-chevron-up text-[10px]"></i>
+                    <span>Replier le menu</span>
+                  </button>
                 </div>
 
                 {/* ZONE DE CONTENU DÉTAILLÉE À DROITE */}

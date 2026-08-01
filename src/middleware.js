@@ -108,8 +108,11 @@ export async function middleware(req) {
 
 export const config = {
   matcher: [
-    // Tout sauf les assets statiques et les routes /api (celles-ci valident
-    // elles-mêmes le jeton Bearer via requireUser dans lib/apiAuth.js).
-    "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?)$).*)",
+    // Tout sauf les assets statiques, les routes /api (celles-ci valident
+    // elles-mêmes le jeton Bearer via requireUser dans lib/apiAuth.js), et
+    // robots.txt/sitemap.xml : sans cette exclusion, un crawler anonyme était
+    // redirigé vers /login et ne voyait jamais le vrai contenu généré par
+    // src/app/robots.js et src/app/sitemap.js.
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|api/|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?)$).*)",
   ],
 };
