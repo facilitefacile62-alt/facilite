@@ -807,7 +807,7 @@ export default function ImporterCvPage() {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-grow pt-16 pb-32 md:pb-20 px-4 max-w-[1180px] w-full mx-auto flex flex-col justify-center items-center">
+      <main className="flex-grow pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-20 px-4 max-w-[1180px] w-full mx-auto flex flex-col justify-center items-center">
         
         {/* STAGE 1: UPLOAD ZONE (Exact design matching Image 2) */}
         {stage === "upload" && (
@@ -1457,7 +1457,10 @@ export default function ImporterCvPage() {
       )}
 
       {/* Fixed Bottom Mobile Navigation Bar (LinkedIn Mobile Style) */}
-      <div className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl py-2 px-3 items-center justify-around">
+      <div
+        className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl min-h-16 px-3 items-center justify-around"
+        style={{ paddingTop: "0.5rem", paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
+      >
         <Link
           href="/"
           className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${

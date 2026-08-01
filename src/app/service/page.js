@@ -945,7 +945,10 @@ export default function Home() {
         </div>
 
         {/* Fixed Bottom Mobile Navigation Bar (LinkedIn Mobile Style) */}
-        <div className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl py-2 px-3 items-center justify-around">
+        <div
+          className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl min-h-16 px-3 items-center justify-around"
+          style={{ paddingTop: "0.5rem", paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
+        >
           <Link
             href="/"
             className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
@@ -1111,7 +1114,7 @@ export default function Home() {
       </nav>
 
       {/* Contenu Principal avec Marge = hauteur exacte du nav fixe (h-16) */}
-      <main className="flex-grow flex flex-col pt-16 pb-28 md:pb-0">
+      <main className="flex-grow flex flex-col pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
         
         {/* Section Hero */}
         <section className="flex-grow flex flex-col md:flex-row items-center justify-center px-4 py-12 md:py-16 max-w-[1128px] mx-auto gap-12 lg:gap-20 w-full overflow-x-hidden">

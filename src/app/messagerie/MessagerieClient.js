@@ -1967,7 +1967,10 @@ export default function MessagerieClient() {
         </div>
 
         {/* Fixed Bottom Mobile Navigation Bar (LinkedIn Mobile Style) */}
-        <div className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl py-2 px-3 items-center justify-around">
+        <div
+          className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl min-h-16 px-3 items-center justify-around"
+          style={{ paddingTop: "0.5rem", paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
+        >
           <Link
             href="/"
             className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
@@ -2143,7 +2146,7 @@ export default function MessagerieClient() {
         ci-dessous (flex-1 overflow-y-auto sur la zone de messages) qui doit
         seule défiler, jamais la page.
       */}
-      <main className="h-screen overflow-hidden bg-[#F4F2EE] pt-16 pb-28 md:pb-10 px-4 md:px-6">
+      <main className="h-screen overflow-hidden bg-[#F4F2EE] pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-10 px-4 md:px-6">
         {/* h-full seul (pas de calc() redondant en doublon, qui entrait en
             conflit avec h-full selon l'ordre de génération des classes
             Tailwind) : la hauteur vient désormais uniquement du <main>
