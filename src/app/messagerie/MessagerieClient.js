@@ -1760,7 +1760,7 @@ export default function MessagerieClient() {
               className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
             >
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+              <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
             </Link>
 
             {/* Barre de recherche */}
@@ -1939,92 +1939,60 @@ export default function MessagerieClient() {
             )}
           </div>
 
-          {/* Mobile Right Controls: Bell & Messagerie */}
-          <div className="flex md:hidden items-center space-x-2">
+          {/* Mobile Header Right Controls : navigation centralisée dans le
+              header (style Facebook), la barre de navigation du bas ayant
+              été retirée. */}
+          <div className="flex md:hidden items-center space-x-1">
+            <Link
+              href="/"
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
+              aria-label="Accueil"
+            >
+              <i className="fa-solid fa-house text-sm"></i>
+            </Link>
+
+            <Link
+              href="/messagerie"
+              className="relative w-8 h-8 flex items-center justify-center text-[#10E688] rounded-full hover:bg-black/5 transition cursor-pointer"
+              aria-label="Messagerie"
+            >
+              <i className="fa-regular fa-comments text-sm"></i>
+              <UnreadBadge count={unreadMessagesCount} />
+            </Link>
+
             <button
               type="button"
               onClick={() => setNotificationsModalOpen(true)}
-              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
+              className="relative w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
               aria-label="Notifications"
             >
               <i className="fa-regular fa-bell text-sm"></i>
               {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border border-white">
+                <span className="absolute top-0.5 right-0.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
                   {unreadNotifCount}
                 </span>
               )}
             </button>
 
             <Link
-              href="/messagerie"
-              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs relative cursor-pointer"
-              aria-label="Messagerie"
+              href={userSession ? "/profil" : "/login"}
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
+              aria-label="Profil"
             >
-              <i className="fa-regular fa-comments text-sm"></i>
-              <UnreadBadge count={unreadMessagesCount} />
+              <i className="fa-solid fa-circle-user text-lg"></i>
             </Link>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
+              aria-label="Plus"
+            >
+              <i className="fa-solid fa-bars text-sm"></i>
+            </button>
           </div>
         </div>
 
-        {/* Fixed Bottom Mobile Navigation Bar (LinkedIn Mobile Style) */}
-        <div
-          className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl min-h-16 px-3 items-center justify-around"
-          style={{ paddingTop: "0.5rem", paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
-        >
-          <Link
-            href="/"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
-              pathname === "/" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <i className="fa-solid fa-house text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">{t.navHome}</span>
-          </Link>
-
-          <Link
-            href="/service"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
-              pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <i className="fa-solid fa-briefcase text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">{t.navService}</span>
-          </Link>
-
-          <Link
-            href="/messagerie"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 relative ${
-              pathname === "/messagerie" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <i className="fa-regular fa-comments text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>
-            <UnreadBadge count={unreadMessagesCount} />
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setNotificationsModalOpen(true)}
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
-          >
-            <i className="fa-regular fa-bell text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">Notifs</span>
-            {unreadNotifCount > 0 && (
-              <span className="absolute -top-0.5 right-1.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
-                {unreadNotifCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
-          >
-            <i className="fa-solid fa-bars text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">Plus</span>
-          </button>
-        </div>
 
         {/* Menu Déroulant Mobile Plein Écran */}
         {mobileMenuOpen && (
@@ -2093,6 +2061,39 @@ export default function MessagerieClient() {
 
             {/* Bas du Menu (Options fixes au bas) */}
             <div className="bg-white border-t border-gray-200 divide-y divide-gray-150 mt-auto">
+              {/* Offres d'emploi publiées par les recruteurs */}
+              <Link
+                href="/offres"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-list-check text-gray-400 text-lg"></i>
+                <span>Offres</span>
+              </Link>
+
+              {/* Service (même lien que le dropdown "Plus" desktop) */}
+              <Link
+                href="/service"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-briefcase text-gray-400 text-lg"></i>
+                <span>Service</span>
+              </Link>
+
+              {/* Contact (même modale que le dropdown "Plus" desktop) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleOpenContactModal();
+                }}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-regular fa-comment-dots text-gray-400 text-lg"></i>
+                <span>Contact</span>
+              </button>
+
               {/* Option 1: Paramètres */}
               <div className="flex flex-col">
                 <button
@@ -2132,6 +2133,24 @@ export default function MessagerieClient() {
                 <i className="fa-solid fa-user-plus text-gray-400 text-lg"></i>
                 <span>Ajouter un compte</span>
               </button>
+
+              {/* Compte : Déconnexion, clairement accessible en bas du menu */}
+              {userSession && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    triggerToast("Déconnexion en cours...", "fa-right-from-bracket");
+                    setTimeout(() => {
+                      handleGlobalSignOut();
+                    }, 400);
+                  }}
+                  className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-extrabold text-red-600 active:bg-red-50 cursor-pointer"
+                >
+                  <i className="fa-solid fa-right-from-bracket text-red-500 text-lg"></i>
+                  <span>Déconnexion</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -2146,7 +2165,7 @@ export default function MessagerieClient() {
         ci-dessous (flex-1 overflow-y-auto sur la zone de messages) qui doit
         seule défiler, jamais la page.
       */}
-      <main className="h-screen overflow-hidden bg-[#F4F2EE] pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-10 px-4 md:px-6">
+      <main className="h-screen overflow-hidden bg-[#F4F2EE] pt-16 pb-4 md:pb-10 px-4 md:px-6">
         {/* h-full seul (pas de calc() redondant en doublon, qui entrait en
             conflit avec h-full selon l'ordre de génération des classes
             Tailwind) : la hauteur vient désormais uniquement du <main>

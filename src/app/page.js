@@ -733,7 +733,7 @@ export default function Home() {
               }}
             >
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+              <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
             </div>
 
             {/* Barre de recherche de la Navbar */}
@@ -936,103 +936,86 @@ export default function Home() {
             )}
           </div>
 
-          {/* Mobile Header Right Controls : juste la recherche. Notifications et
-              Messagerie sont déjà dans la barre de navigation du bas
-              (Notifs/Messagerie) — les dupliquer ici n'apportait rien de plus
-              qu'un raccourci redondant, retiré pour épurer le header. */}
-          <div className="flex md:hidden items-center space-x-2">
+          {/* Mobile Header Right Controls : navigation centralisée dans le
+              header (style Facebook), la barre de navigation du bas ayant
+              été retirée. Accueil/Messagerie/Notifications/Profil en accès
+              direct ; Offres et Service rejoignent le tiroir "Plus" (icône
+              grille) pour tenir dans la largeur d'un mobile à 320px. */}
+          <div className="flex md:hidden items-center space-x-1">
             <button
               type="button"
               onClick={() => setMobileSearchOpen(true)}
-              className="w-9 h-9 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-xs cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
               aria-label="Rechercher une offre"
             >
               <i className="fa-solid fa-magnifying-glass text-sm"></i>
             </button>
+
+            <Link
+              href="/"
+              className={`w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition cursor-pointer ${
+                pathname === "/" ? "text-[#10E688]" : "text-gray-600 hover:text-gray-900"
+              }`}
+              aria-label="Accueil"
+            >
+              <i className="fa-solid fa-house text-sm"></i>
+            </Link>
+
+            {userSession && (
+              <Link
+                href="/messagerie"
+                className={`relative w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition cursor-pointer ${
+                  pathname === "/messagerie" ? "text-[#10E688]" : "text-gray-600 hover:text-gray-900"
+                }`}
+                aria-label="Messagerie"
+              >
+                <i className="fa-regular fa-comments text-sm"></i>
+                <UnreadBadge count={unreadMessagesCount} />
+              </Link>
+            )}
+
+            {userSession && (
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(true)}
+                className="relative w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
+                aria-label="Notifications"
+              >
+                <i className="fa-regular fa-bell text-sm"></i>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            <Link
+              href={userSession ? "/profil" : "/login"}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition cursor-pointer overflow-hidden"
+              aria-label="Profil"
+            >
+              {userProfile?.avatar_url && userProfile.avatar_url !== "/logo.jpeg" ? (
+                <img src={userProfile.avatar_url} alt="Profil" className="w-full h-full object-cover" />
+              ) : (
+                <i className="fa-solid fa-circle-user text-gray-600 text-lg"></i>
+              )}
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
+              aria-label="Plus"
+            >
+              <i className="fa-solid fa-bars text-sm"></i>
+            </button>
           </div>
         </div>
 
-        {/* Fixed Bottom Mobile Navigation Bar (LinkedIn Mobile Style as shown in Image 2) */}
-        <div
-          className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl min-h-16 px-3 items-center justify-around"
-          style={{ paddingTop: "0.5rem", paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
-        >
-          {/* Accueil */}
-          <Link
-            href="/"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
-              pathname === "/" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <i className="fa-solid fa-house text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">{t.navHome}</span>
-          </Link>
-
-          {/* Offres d'emploi publiées par les recruteurs (job_offers) */}
-          <Link
-            href="/offres"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
-              pathname === "/offres" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <i className="fa-solid fa-list-check text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">Offres</span>
-          </Link>
-
-          {/* Service */}
-          <Link
-            href="/service"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
-              pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <i className="fa-solid fa-briefcase text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">{t.navService}</span>
-          </Link>
-
-          {/* Messagerie (Visible uniquement pour les utilisateurs connectés) */}
-          {userSession && (
-            <Link
-              href="/messagerie"
-              className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 relative ${
-                pathname === "/messagerie" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <i className="fa-regular fa-comments text-lg"></i>
-              <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>
-              <UnreadBadge count={unreadMessagesCount} />
-            </Link>
-          )}
-
-          {/* Notifications (Visibles uniquement pour les utilisateurs connectés) */}
-          {userSession && (
-            <button
-              type="button"
-              onClick={() => setNotificationsModalOpen(true)}
-              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
-            >
-              <i className="fa-regular fa-bell text-lg"></i>
-              <span className="text-[9px] font-bold tracking-tight">Notifs</span>
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-0.5 right-1.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
-                  {unreadNotifCount}
-                </span>
-              )}
-            </button>
-          )}
-
-          {/* Plus */}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
-          >
-            <i className="fa-solid fa-bars text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight">Plus</span>
-          </button>
-        </div>
-
-        {/* Menu Déroulant Mobile Plein Écran */}
+        {/* Menu Déroulant Mobile Plein Écran (Style Facebook : tous les accès
+            secondaires centralisés ici, ouvert depuis l'icône grille du
+            header — plus de barre de navigation fixe en bas de l'écran). */}
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-[600] bg-[#F4F2EE] flex flex-col md:hidden animate-fade-in-up">
             {/* Entête du Menu */}
@@ -1162,6 +1145,17 @@ export default function Home() {
 
             {/* Bas du Menu (Options fixes au bas) */}
             <div className="bg-white border-t border-gray-200 divide-y divide-gray-150 mt-auto">
+              {/* Offres d'emploi publiées par les recruteurs — accès direct
+                  retiré du header mobile faute de place, déplacé ici. */}
+              <Link
+                href="/offres"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-list-check text-gray-400 text-lg"></i>
+                <span>Offres</span>
+              </Link>
+
               {/* Service (même lien que le dropdown "Plus" desktop) */}
               <Link
                 href="/service"
@@ -1248,7 +1242,7 @@ export default function Home() {
       </nav>
 
       {/* Main Job Board Feed (LinkedIn Style) */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-16 px-4 md:px-6">
+      <main className="min-h-screen bg-[#F4F2EE] pt-16 pb-8 md:pb-16 px-4 md:px-6">
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}

@@ -624,7 +624,7 @@ export default function ImporterCvPage() {
               className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
             >
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+              <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
             </Link>
 
             {/* Barre de recherche de la Navbar */}
@@ -803,11 +803,74 @@ export default function ImporterCvPage() {
               </Link>
             )}
           </div>
+
+          {/* Mobile Header Right Controls : navigation centralisée dans le
+              header (style Facebook), la barre de navigation du bas ayant
+              été retirée. */}
+          <div className="flex md:hidden items-center space-x-1">
+            <Link
+              href="/"
+              className={`w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition cursor-pointer ${
+                pathname === "/" ? "text-[#10E688]" : "text-gray-600 hover:text-gray-900"
+              }`}
+              aria-label="Accueil"
+            >
+              <i className="fa-solid fa-house text-sm"></i>
+            </Link>
+
+            {userSession && (
+              <Link
+                href="/messagerie"
+                className="relative w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
+                aria-label="Messagerie"
+              >
+                <i className="fa-regular fa-comments text-sm"></i>
+                <UnreadBadge count={unreadMessagesCount} />
+              </Link>
+            )}
+
+            {userSession && (
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(true)}
+                className="relative w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
+                aria-label="Notifications"
+              >
+                <i className="fa-regular fa-bell text-sm"></i>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            <Link
+              href={userSession ? "/profil" : "/login"}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 transition cursor-pointer overflow-hidden"
+              aria-label="Profil"
+            >
+              {userAvatarUrl && userAvatarUrl !== "/logo.jpeg" ? (
+                <img src={userAvatarUrl} alt="Profil" className="w-full h-full object-cover" />
+              ) : (
+                <i className="fa-solid fa-circle-user text-gray-600 text-lg"></i>
+              )}
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
+              aria-label="Plus"
+            >
+              <i className="fa-solid fa-bars text-sm"></i>
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-grow pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-20 px-4 max-w-[1180px] w-full mx-auto flex flex-col justify-center items-center">
+      <main className="flex-grow pt-16 pb-8 md:pb-20 px-4 max-w-[1180px] w-full mx-auto flex flex-col justify-center items-center">
         
         {/* STAGE 1: UPLOAD ZONE (Exact design matching Image 2) */}
         {stage === "upload" && (
@@ -1456,65 +1519,112 @@ export default function ImporterCvPage() {
         </div>
       )}
 
-      {/* Fixed Bottom Mobile Navigation Bar (LinkedIn Mobile Style) */}
-      <div
-        className="flex md:hidden fixed bottom-0 left-0 right-0 z-[500] bg-[#FAF6F1] border-t border-gray-200 shadow-xl min-h-16 px-3 items-center justify-around"
-        style={{ paddingTop: "0.5rem", paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
-      >
-        <Link
-          href="/"
-          className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
-            pathname === "/" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-          }`}
-        >
-          <i className="fa-solid fa-house text-lg"></i>
-          <span className="text-[9px] font-bold tracking-tight">{t.navHome}</span>
-        </Link>
+      {/* Menu Déroulant Mobile Plein Écran (style Facebook : centralise les
+          accès secondaires, ouvert depuis l'icône grille du header — plus de
+          barre de navigation fixe en bas de l'écran). */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-[600] bg-[#F4F2EE] flex flex-col md:hidden animate-fade-in-up">
+          <div className="bg-white px-4 py-3 border-b border-gray-200 flex items-center justify-between shadow-xs">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-gray-700 hover:text-gray-900 focus:outline-none cursor-pointer flex items-center"
+              >
+                <i className="fa-solid fa-chevron-left text-xl"></i>
+              </button>
+              <h1 className="text-lg font-extrabold text-gray-900">Menu</h1>
+            </div>
+          </div>
 
-        <Link
-          href="/service"
-          className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 ${
-            pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-          }`}
-        >
-          <i className="fa-solid fa-briefcase text-lg"></i>
-          <span className="text-[9px] font-bold tracking-tight">{t.navService}</span>
-        </Link>
+          <div className="flex-grow p-4 space-y-3 overflow-y-auto">
+            {userSession ? (
+              <Link
+                href="/profil"
+                onClick={() => setMobileMenuOpen(false)}
+                className="bg-white rounded-xl p-4 flex items-center space-x-4 border border-gray-200 shadow-xs active:bg-gray-50 transition"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#D946EF] flex-shrink-0 flex items-center justify-center text-white font-extrabold text-lg overflow-hidden">
+                  {userAvatarUrl && userAvatarUrl !== "/logo.jpeg" ? (
+                    <img src={userAvatarUrl} alt="Profil" className="w-full h-full object-cover" />
+                  ) : (
+                    (userSession.user.user_metadata?.full_name || userSession.user.email || "?").charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="flex-grow text-left">
+                  <h3 className="text-sm font-extrabold text-gray-900">
+                    {userSession.user.user_metadata?.full_name || userSession.user.email}
+                  </h3>
+                  <span className="text-xs text-gray-500 font-medium">Voir votre profil</span>
+                </div>
+              </Link>
+            ) : (
+              <div className="bg-white rounded-xl p-4 flex items-center space-x-3 border border-gray-200 shadow-xs">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex-1 text-center text-xs font-extrabold text-gray-800 hover:text-gray-900 bg-white border border-gray-200 px-3.5 py-2 rounded-full shadow-xs hover:border-gray-300 transition"
+                >
+                  Connexion
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex-1 text-center text-xs font-extrabold text-gray-900 bg-[#10E688] hover:bg-[#0fd57d] px-4 py-2 rounded-full shadow-xs transition"
+                >
+                  S'inscrire
+                </Link>
+              </div>
+            )}
+          </div>
 
-        <Link
-          href="/messagerie"
-          className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 relative ${
-            pathname === "/messagerie" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
-          }`}
-        >
-          <i className="fa-regular fa-comments text-lg"></i>
-          <span className="text-[9px] font-bold tracking-tight">{t.navMessages}</span>
-          <UnreadBadge count={unreadMessagesCount} />
-        </Link>
+          {/* Bas du Menu (Options fixes au bas) */}
+          <div className="bg-white border-t border-gray-200 divide-y divide-gray-150 mt-auto">
+            <Link
+              href="/offres"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+            >
+              <i className="fa-solid fa-list-check text-gray-400 text-lg"></i>
+              <span>Offres</span>
+            </Link>
 
-        <button
-          type="button"
-          onClick={() => setNotificationsModalOpen(true)}
-          className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800 relative"
-        >
-          <i className="fa-regular fa-bell text-lg"></i>
-          <span className="text-[9px] font-bold tracking-tight">Notifs</span>
-          {unreadNotifCount > 0 && (
-            <span className="absolute -top-0.5 right-1.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
-              {unreadNotifCount}
-            </span>
-          )}
-        </button>
+            <Link
+              href="/service"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+            >
+              <i className="fa-solid fa-briefcase text-gray-400 text-lg"></i>
+              <span>Service</span>
+            </Link>
 
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 text-gray-500 hover:text-gray-800"
-        >
-          <i className="fa-solid fa-bars text-lg"></i>
-          <span className="text-[9px] font-bold tracking-tight">Plus</span>
-        </button>
-      </div>
+            <button
+              type="button"
+              onClick={() => handleOpenContactModal()}
+              className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+            >
+              <i className="fa-regular fa-comment-dots text-gray-400 text-lg"></i>
+              <span>Contact</span>
+            </button>
+
+            {userSession && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  triggerToast("Déconnexion en cours...", "fa-right-from-bracket");
+                  setTimeout(() => {
+                    handleGlobalSignOut();
+                  }, 400);
+                }}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-extrabold text-red-600 active:bg-red-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-right-from-bracket text-red-500 text-lg"></i>
+                <span>Déconnexion</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal/Drawer de Notifications (LinkedIn Style) */}
       {notificationsModalOpen && (
