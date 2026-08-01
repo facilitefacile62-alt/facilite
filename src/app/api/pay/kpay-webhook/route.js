@@ -76,12 +76,9 @@ export async function POST(req) {
     return NextResponse.json({ error: "Webhook non configuré (service role manquant)." }, { status: 503 });
   }
 
-  // externalId = orders.id, fixé lors de l'initialisation dans
+  // externalId = transactions.id, fixé lors de l'initialisation dans
   // /api/pay/checkout (voir initKpayGatewayPayment). paymentId (l'id KPay)
   // sert de filet de secours si externalId venait à manquer.
-  const orderId = event.externalId;
-  const kpayPaymentId = event.paymentId;
-
   const externalId = event.externalId;
   const kpayPaymentId = event.paymentId;
 
