@@ -28,7 +28,21 @@ export async function requireUser(req) {
     };
   }
 
-  return { user: data.user, error: null };
+  // Vérifier qu'au moins un identifiant (Email ou Téléphone) est confirmé (mesure de sécurité hybride)
+  const isEmailConfirmed = !!data.user.email_confirmed_at;
+  const isPhoneConfirmed = !!data.user.phone_confirmed_at;
+  
+  if (!isEmailConfirmed && !isPhoneConfirmed) {
+    return {
+      user: null,
+      error: NextResponse.json({ error: "Votre compte doit avoir au moins un identifiant (Email ou Téléphone) vérifié." }, { status: 403 }),
+    };
+  }
+
+  // Déterminer l'identifiant principal actif pour les logs ou limites personnalisées
+  const primaryIdentifier = data.user.email || data.user.phone || data.user.id;
+
+  return { user: data.user, identifier: primaryIdentifier, error: null };
 }
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
