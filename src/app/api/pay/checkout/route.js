@@ -4,6 +4,14 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { initKpayGatewayPayment } from "@/lib/kpay";
 
+import { z } from "zod";
+
+const checkoutSchema = z.object({
+  amount: z.number().int().positive("Le montant doit être strictement positif"),
+  planName: z.string().optional(),
+  description: z.string().optional(),
+});
+
 export const runtime = "nodejs";
 
 export async function POST(req) {
@@ -11,15 +19,18 @@ export async function POST(req) {
     const { user, error: authError } = await requireUser(req);
     if (authError) return authError;
 
-    const { allowed, error: rateError } = checkRateLimit(user.id);
+    const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
 
     const body = await req.json().catch(() => ({}));
-    const { amount, planName, description } = body;
-
-    if (!amount || typeof amount !== "number" || amount <= 0) {
-      return NextResponse.json({ error: "Le montant est invalide." }, { status: 400 });
+    
+    // Validation stricte Anti-Bot & Input Sanitization
+    const parseResult = checkoutSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json({ error: "Données de paiement invalides.", details: parseResult.error.format() }, { status: 400 });
     }
+    
+    const { amount, planName, description } = parseResult.data;
 
     const currency = "XOF";
 

@@ -8,6 +8,7 @@ import PhoneAuthForm from "@/components/PhoneAuthForm";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -19,6 +20,15 @@ export default function ForgotPasswordPage() {
 
     if (!email.includes("@")) {
       setErrorMessage("Veuillez saisir une adresse email valide.");
+      return;
+    }
+    
+    if (honeypot) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+        setIsSuccess(true);
+      }, 1500);
       return;
     }
 
@@ -135,6 +145,15 @@ export default function ForgotPasswordPage() {
             </div>
           ) : method === "email" ? (
             <form onSubmit={handleSubmit} className="space-y-5">
+              <input
+                type="text"
+                name="address"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1 }}
+                tabIndex={-1}
+                autoComplete="off"
+              />
               {/* Champ Email */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">

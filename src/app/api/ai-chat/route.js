@@ -122,7 +122,7 @@ export async function POST(req) {
     const { user, error: authError } = await requireUser(req);
     if (authError) return authError;
 
-    const { allowed, error: rateError } = checkRateLimit(user.id);
+    const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
 
     // 2. Validation du payload

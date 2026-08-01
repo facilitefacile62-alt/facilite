@@ -19,7 +19,7 @@ const COUNTRIES = [
   { code: "other", iso: "other", name: "Autre (Saisie libre)" },
 ];
 
-export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
+export default function PhoneAuthForm({ onSuccessRedirect = "/profil", signupMetadata = null }) {
   const router = useRouter();
 
   // Étape 1 : 'phone' (Saisie numéro) | Étape 2 : 'otp' (Saisie code 6 chiffres)
@@ -77,6 +77,10 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil" }) {
         phone: fullPhoneNumber,
         options: {
           shouldCreateUser: true, // Crée l'utilisateur automatiquement s'il n'existe pas encore
+          // Attaché à raw_user_meta_data si le compte est créé ici (contexte
+          // inscription) — sans effet si le numéro correspond à un compte
+          // existant (contexte connexion), Supabase l'ignore silencieusement.
+          ...(signupMetadata ? { data: signupMetadata } : {}),
         },
       });
 

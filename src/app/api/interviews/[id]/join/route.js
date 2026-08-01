@@ -16,7 +16,7 @@ export async function POST(req, { params }) {
     const { user, error: authError } = await requireUser(req);
     if (authError) return authError;
 
-    const { allowed, error: rateError } = checkRateLimit(user.id);
+    const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
 
     const authHeader = req.headers.get("authorization") || "";

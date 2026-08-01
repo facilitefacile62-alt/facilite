@@ -10,6 +10,7 @@ import PhoneAuthForm from "@/components/PhoneAuthForm";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +57,17 @@ export default function LoginPage() {
       setRecoveryError("Le mot de passe doit contenir au moins 6 caractères.");
       return;
     }
+    
+    // Honeypot anti-bot
+    if (honeypot) {
+      setRecoveryLoading(true);
+      setTimeout(() => {
+        setRecoveryLoading(false);
+        setRecoveryError("Lien invalide ou expiré.");
+      }, 1500);
+      return;
+    }
+
     if (newPassword !== confirmNewPassword) {
       setRecoveryError("Les mots de passe ne correspondent pas.");
       return;
@@ -86,6 +98,16 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMessage("");
     setNeedsConfirmation(false);
+    
+    if (honeypot) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+        setErrorMessage("Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.");
+      }, 1500);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -245,6 +267,15 @@ export default function LoginPage() {
               </div>
             ) : (
               <form onSubmit={handleResetPasswordSubmit} className="space-y-2.5">
+                <input
+                  type="text"
+                  name="address"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  style={{ display: "none" }}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">
                     Nouveau mot de passe
@@ -354,6 +385,15 @@ export default function LoginPage() {
             </div>
           ) : loginMethod === "email" ? (
             <form onSubmit={handleSubmit} className="space-y-2.5">
+              <input
+                type="text"
+                name="website"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1 }}
+                tabIndex={-1}
+                autoComplete="off"
+              />
               {/* Champ Email */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">

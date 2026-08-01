@@ -28,6 +28,14 @@ function isValidKpaySignature(rawBody, signatureHeader, secret) {
 }
 
 export async function POST(req) {
+  // Hardening : Filtrer les agents utilisateurs suspects
+  const userAgent = req.headers.get("user-agent")?.toLowerCase() || "";
+  const suspectAgents = ["curl", "postman", "insomnia", "wget", "python-requests", "go-http-client"];
+  if (suspectAgents.some((agent) => userAgent.includes(agent))) {
+    console.warn(`[Webhook KPay] Tentative bloquée depuis User-Agent suspect : ${userAgent}`);
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
   const secret = process.env.KPAY_WEBHOOK_SECRET;
   if (!secret) {
     console.error("[Webhook KPay] KPAY_WEBHOOK_SECRET manquant côté serveur.");

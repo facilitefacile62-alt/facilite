@@ -46,6 +46,7 @@ const cspReportOnly = [
 ].join("; ");
 
 const nextConfig = {
+  poweredByHeader: false,
   serverExternalPackages: ["unpdf", "mammoth", "tesseract.js", "@napi-rs/canvas", "canvas"],
   async headers() {
     return [

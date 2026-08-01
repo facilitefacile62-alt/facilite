@@ -5,17 +5,21 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import PhoneAuthForm from "@/components/PhoneAuthForm";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState("candidat");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  // Méthode d'inscription sélectionnée : 'email' ou 'phone'
+  const [registerMethod, setRegisterMethod] = useState("email");
   const router = useRouter();
 
   const handleSubmit = async (e) => {
@@ -29,6 +33,15 @@ export default function RegisterPage() {
 
     if (password.length < 6) {
       setErrorMessage("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+    
+    if (honeypot) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+        setIsSuccess(true); // Fake success for bots
+      }, 1500);
       return;
     }
 
@@ -120,17 +133,111 @@ export default function RegisterPage() {
             <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
           </div>
 
+          {/* Sélecteur d'onglets Inscription (E-mail / Téléphone) */}
+          <div className="flex bg-gray-100 p-1 rounded-xl mb-5">
+            <button
+              type="button"
+              onClick={() => setRegisterMethod("email")}
+              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 cursor-pointer ${
+                registerMethod === "email"
+                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
+                  : "text-gray-500 hover:text-gray-900 hover:bg-white/60"
+              }`}
+            >
+              📧 E-mail
+            </button>
+            <button
+              type="button"
+              onClick={() => setRegisterMethod("phone")}
+              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 cursor-pointer ${
+                registerMethod === "phone"
+                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
+                  : "text-gray-500 hover:text-gray-900 hover:bg-white/60"
+              }`}
+            >
+              📱 Téléphone
+            </button>
+          </div>
+
           {/* Titre & Sous-titre */}
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
               Sign Up
             </h1>
             <p className="text-sm font-medium text-gray-500">
-              Create your account to get started.
+              {registerMethod === "email"
+                ? "Create your account to get started."
+                : "Choisissez votre pays et saisissez votre numéro."}
             </p>
           </div>
 
-          {isSuccess ? (
+          {registerMethod === "phone" ? (
+            <div className="space-y-4">
+              {/* Sélecteur de rôle (Candidat / Recruteur) */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Type de compte
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setRole("candidat")}
+                    className={`py-2 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
+                      role === "candidat"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
+                    }`}
+                  >
+                    <span>👨‍🎓 Candidat</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("recruteur")}
+                    className={`py-2 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
+                      role === "recruteur"
+                        ? "bg-white text-emerald-800 shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
+                    }`}
+                  >
+                    <span>💼 Recruteur</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Champ Nom Complet */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  placeholder="Enter your full name"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                />
+              </div>
+
+              {/* shouldCreateUser: true dans PhoneAuthForm crée le compte au
+                  premier OTP vérifié ; signupMetadata attache nom/rôle à ce
+                  moment précis (ignoré si le numéro correspond à un compte
+                  déjà existant). */}
+              <PhoneAuthForm
+                signupMetadata={{ full_name: fullName.trim(), role }}
+                onSuccessRedirect="/profil"
+              />
+
+              <div className="text-center pt-2">
+                <p className="text-xs text-gray-500 font-medium">
+                  Already have an account?{" "}
+                  <Link href="/login" className="font-extrabold text-gray-900 hover:underline cursor-pointer">
+                    Log In
+                  </Link>
+                </p>
+              </div>
+            </div>
+          ) : isSuccess ? (
             <div className="text-center py-6 animate-fade-in">
               <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
                 ✓
@@ -148,6 +255,15 @@ export default function RegisterPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              <input
+                type="text"
+                name="website"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1 }}
+                tabIndex={-1}
+                autoComplete="off"
+              />
               {/* Sélecteur de rôle (Candidat / Recruteur) */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">

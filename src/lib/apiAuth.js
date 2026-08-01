@@ -45,46 +45,71 @@ export async function requireUser(req) {
   return { user: data.user, identifier: primaryIdentifier, error: null };
 }
 
-const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const RATE_LIMIT_MAX_REQUESTS = 10;
-const requestLog = new Map();
+import { Redis } from "@upstash/redis";
+
+const RATE_LIMIT_WINDOW_S = 60; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 20;
+
+let redis;
+try {
+  redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+} catch (e) {
+  console.warn("[Rate Limiter] Upstash Redis non configuré. Mode dégradé en mémoire locale.");
+}
+
+const localFallbackLog = new Map();
 
 /**
- * Limitation de débit par utilisateur authentifié.
- *
- * Limite connue : le compteur vit en mémoire du processus. Il est donc remis à
- * zéro à chaque redéploiement et n'est pas partagé entre instances serverless
- * concurrentes. C'est un garde-fou utile contre l'abus basique, PAS une défense
- * solide contre un attaquant déterminé. Migrer vers Upstash Redis pour un quota
- * réellement distribué et persistant.
+ * Limitation de débit distribuée (Redis) ou dégradée en mémoire.
  */
-export function checkRateLimit(identifier) {
-  const now = Date.now();
-
-  // Purge périodique pour éviter une croissance mémoire non bornée
-  if (requestLog.size > 1000) {
-    for (const [key, timestamps] of requestLog.entries()) {
-      const encoreValides = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-      if (encoreValides.length === 0) requestLog.delete(key);
-      else requestLog.set(key, encoreValides);
+export async function checkRateLimit(identifier) {
+  if (redis) {
+    try {
+      const key = `rate-limit:${identifier}`;
+      
+      const [current] = await redis.pipeline()
+        .incr(key)
+        .expire(key, RATE_LIMIT_WINDOW_S)
+        .exec();
+        
+      if (current > RATE_LIMIT_MAX_REQUESTS) {
+        return {
+          allowed: false,
+          error: NextResponse.json({ error: "Trop de requêtes, réessayez dans une minute." }, { status: 429 }),
+        };
+      }
+      return { allowed: true, error: null };
+    } catch (error) {
+      console.error("[Rate Limiter Redis Error]", error);
+      // Fallback au local en cas d'erreur réseau Redis
     }
   }
 
-  const timestamps = (requestLog.get(identifier) || []).filter(
-    (t) => now - t < RATE_LIMIT_WINDOW_MS
+  // Fallback Local Memory
+  const now = Date.now();
+  if (localFallbackLog.size > 1000) {
+    for (const [key, timestamps] of localFallbackLog.entries()) {
+      const valides = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_S * 1000);
+      if (valides.length === 0) localFallbackLog.delete(key);
+      else localFallbackLog.set(key, valides);
+    }
+  }
+
+  const timestamps = (localFallbackLog.get(identifier) || []).filter(
+    (t) => now - t < RATE_LIMIT_WINDOW_S * 1000
   );
 
   if (timestamps.length >= RATE_LIMIT_MAX_REQUESTS) {
     return {
       allowed: false,
-      error: NextResponse.json(
-        { error: "Trop de requêtes, réessayez dans une minute." },
-        { status: 429 }
-      ),
+      error: NextResponse.json({ error: "Trop de requêtes, réessayez dans une minute." }, { status: 429 }),
     };
   }
 
   timestamps.push(now);
-  requestLog.set(identifier, timestamps);
+  localFallbackLog.set(identifier, timestamps);
   return { allowed: true, error: null };
 }
