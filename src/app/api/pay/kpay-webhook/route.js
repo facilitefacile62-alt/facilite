@@ -27,8 +27,163 @@ function isValidKpaySignature(rawBody, signatureHeader, secret) {
   return crypto.timingSafeEqual(expectedBuf, receivedBuf);
 }
 
+// --- Flux 1 : confection de CV (table "orders") ---
+// Restauré à l'identique de la version pré-refactor (commit c9a75f7) :
+// facture PDF + email + confirmation WhatsApp, idempotence via la
+// transition atomique payment_status pending -> paid.
+async function handleCvOrderPayment(supabaseAdmin, event, orderId, kpayPaymentId) {
+  const orderQuery = supabaseAdmin.from("orders").select("*");
+  const { data: order, error: orderError } = orderId
+    ? await orderQuery.eq("id", orderId).single()
+    : await orderQuery.eq("payment_reference", kpayPaymentId).single();
+
+  if (orderError || !order) return { handled: false };
+
+  if (typeof event.amount === "number" && event.amount !== Number(order.amount)) {
+    console.error(`[Webhook KPay] Montant incohérent pour la commande ${order.id} : reçu ${event.amount}, attendu ${order.amount}.`);
+    return { handled: true, response: NextResponse.json({ received: true, warning: "amount_mismatch" }) };
+  }
+
+  if (event.currency && !isEquivalentCfaCurrency(event.currency, order.currency)) {
+    console.error(`[Webhook KPay] Devise incohérente pour la commande ${order.id} : reçu ${event.currency}, attendu ${order.currency}.`);
+    return { handled: true, response: NextResponse.json({ received: true, warning: "currency_mismatch" }) };
+  }
+
+  const { data: updatedOrders, error: updateError } = await supabaseAdmin
+    .from("orders")
+    .update({
+      payment_status: "paid",
+      payment_method: "kpay",
+      payment_reference: kpayPaymentId || order.payment_reference,
+    })
+    .eq("id", order.id)
+    .eq("payment_status", "pending")
+    .select();
+
+  if (updateError) {
+    console.error("[Webhook KPay] Échec mise à jour de la commande :", updateError.message);
+    return { handled: true, response: NextResponse.json({ error: "Échec de la mise à jour de la commande." }, { status: 500 }) };
+  }
+
+  if (!updatedOrders || updatedOrders.length === 0) {
+    return { handled: true, response: NextResponse.json({ received: true, alreadyProcessed: true }) };
+  }
+
+  const updatedOrder = updatedOrders[0];
+
+  if (updatedOrder.has_agent_option) {
+    const { error: assignmentError } = await supabaseAdmin.from("agent_assignments").insert({
+      order_id: updatedOrder.id,
+      candidate_id: updatedOrder.user_id,
+      status: "unassigned",
+    });
+    if (assignmentError) {
+      console.error("[Webhook KPay] Échec création agent_assignments :", assignmentError.message);
+    }
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("full_name, email, phone, contact_email")
+    .eq("id", updatedOrder.user_id)
+    .single();
+
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(updatedOrder.user_id);
+
+  const customer = {
+    fullName: profile?.full_name || authUser?.user?.email || "Client Facilite",
+    email: profile?.contact_email || profile?.email || authUser?.user?.email || null,
+    phone: profile?.phone || authUser?.user?.phone || event.phoneNumber || null,
+  };
+
+  let invoiceNumber = null;
+  let invoiceSignedUrl = null;
+  let pdfBuffer = null;
+  try {
+    const result = await generateAndStoreInvoice(updatedOrder, customer);
+    invoiceNumber = result.invoiceNumber;
+    pdfBuffer = result.buffer;
+
+    const { data: signedUrlData } = await supabaseAdmin.storage
+      .from("invoices")
+      .createSignedUrl(result.storagePath, 60 * 60 * 24 * 7);
+    invoiceSignedUrl = signedUrlData?.signedUrl || null;
+  } catch (invoiceErr) {
+    console.error("[Webhook KPay] Échec génération/stockage de la facture :", invoiceErr?.message);
+  }
+
+  if (invoiceNumber) {
+    await sendInvoiceEmail({ to: customer.email, fullName: customer.fullName, invoiceNumber, order: updatedOrder, pdfBuffer });
+    await sendWhatsAppConfirmation({ phone: customer.phone, fullName: customer.fullName, invoiceNumber, invoiceSignedUrl });
+  }
+
+  return { handled: true, response: NextResponse.json({ received: true }) };
+}
+
+// --- Flux 2 : recharge de crédits générique (table "transactions") ---
+async function handleCreditTopupPayment(supabaseAdmin, event, transactionId, kpayPaymentId) {
+  const transactionQuery = supabaseAdmin.from("transactions").select("*");
+  const { data: transaction, error: transactionError } = transactionId
+    ? await transactionQuery.eq("id", transactionId).single()
+    : await transactionQuery.eq("provider_reference", kpayPaymentId).single();
+
+  if (transactionError || !transaction) return { handled: false };
+
+  if (typeof event.amount === "number" && event.amount !== Number(transaction.amount)) {
+    console.error(`[Webhook KPay] Montant incohérent pour la transaction ${transaction.id} : reçu ${event.amount}, attendu ${transaction.amount}.`);
+    return { handled: true, response: NextResponse.json({ received: true, warning: "amount_mismatch" }) };
+  }
+
+  if (event.currency && !isEquivalentCfaCurrency(event.currency, transaction.currency)) {
+    console.error(`[Webhook KPay] Devise incohérente pour la transaction ${transaction.id} : reçu ${event.currency}, attendu ${transaction.currency}.`);
+    return { handled: true, response: NextResponse.json({ received: true, warning: "currency_mismatch" }) };
+  }
+
+  const { data: updatedTransactions, error: updateError } = await supabaseAdmin
+    .from("transactions")
+    .update({ status: "success", provider_reference: kpayPaymentId || transaction.provider_reference })
+    .eq("id", transaction.id)
+    .eq("status", "pending")
+    .select();
+
+  if (updateError) {
+    console.error("[Webhook KPay] Échec mise à jour de la transaction :", updateError.message);
+    return { handled: true, response: NextResponse.json({ error: "Échec de la mise à jour de la transaction." }, { status: 500 }) };
+  }
+
+  if (!updatedTransactions || updatedTransactions.length === 0) {
+    return { handled: true, response: NextResponse.json({ received: true, alreadyProcessed: true }) };
+  }
+
+  const updatedTransaction = updatedTransactions[0];
+
+  const { data: subscription, error: subSelectError } = await supabaseAdmin
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", updatedTransaction.user_id)
+    .single();
+
+  if (!subscription && subSelectError?.code === "PGRST116") {
+    await supabaseAdmin.from("subscriptions").insert({
+      user_id: updatedTransaction.user_id,
+      plan_name: updatedTransaction.metadata?.plan_name || "premium",
+      credits: 1,
+      status: "active",
+    });
+  } else if (subscription) {
+    await supabaseAdmin
+      .from("subscriptions")
+      .update({
+        credits: (subscription.credits || 0) + 1,
+        plan_name: updatedTransaction.metadata?.plan_name || subscription.plan_name,
+      })
+      .eq("id", subscription.id);
+  }
+
+  return { handled: true, response: NextResponse.json({ received: true }) };
+}
+
 export async function POST(req) {
-  // Hardening : Filtrer les agents utilisateurs suspects
   const userAgent = req.headers.get("user-agent")?.toLowerCase() || "";
   const suspectAgents = ["curl", "postman", "insomnia", "wget", "python-requests", "go-http-client"];
   if (suspectAgents.some((agent) => userAgent.includes(agent))) {
@@ -42,11 +197,6 @@ export async function POST(req) {
     return NextResponse.json({ error: "Webhook non configuré." }, { status: 503 });
   }
 
-  // Alerte explicite (pas un blocage) : une valeur de substitution est
-  // "configurée" au sens strict (la variable n'est pas vide) mais ne
-  // correspond à aucun vrai secret KPay — toute notification réelle
-  // échouera silencieusement la vérification de signature ci-dessous sans
-  // ce signal, ce qui est très difficile à diagnostiquer en production.
   if (isPlaceholderKpaySecret(secret)) {
     console.error(
       "[Webhook KPay] ALERTE : KPAY_WEBHOOK_SECRET ressemble à une valeur de substitution, pas à un vrai " +
@@ -70,8 +220,6 @@ export async function POST(req) {
     return NextResponse.json({ error: "Corps de requête invalide." }, { status: 400 });
   }
 
-  // Tout statut autre que COMPLETED est acquitté sans action (PENDING,
-  // FAILED, CANCELLED...) — KPay ne doit pas réessayer indéfiniment.
   if (event?.status !== "COMPLETED") {
     return NextResponse.json({ received: true });
   }
@@ -84,105 +232,23 @@ export async function POST(req) {
     return NextResponse.json({ error: "Webhook non configuré (service role manquant)." }, { status: 503 });
   }
 
-  // externalId = transactions.id, fixé lors de l'initialisation dans
-  // /api/pay/checkout (voir initKpayGatewayPayment). paymentId (l'id KPay)
-  // sert de filet de secours si externalId venait à manquer.
+  // externalId porte soit un orders.id (confection de CV), soit un
+  // transactions.id (recharge de crédits) — les deux checkouts génèrent des
+  // UUID depuis des tables distinctes, aucune collision possible. On essaie
+  // "orders" d'abord (flux historique), puis "transactions" seulement si
+  // aucune commande ne correspond.
   const externalId = event.externalId;
   const kpayPaymentId = event.paymentId;
 
   try {
-    const transactionQuery = supabaseAdmin.from("transactions").select("*");
-    const { data: transaction, error: transactionError } = externalId
-      ? await transactionQuery.eq("id", externalId).single()
-      : await transactionQuery.eq("provider_reference", kpayPaymentId).single();
+    const orderResult = await handleCvOrderPayment(supabaseAdmin, event, externalId, kpayPaymentId);
+    if (orderResult.handled) return orderResult.response;
 
-    if (transactionError || !transaction) {
-      console.error("[Webhook KPay] Transaction introuvable pour externalId/paymentId", externalId, kpayPaymentId, transactionError?.message);
-      return NextResponse.json({ received: true, warning: "transaction_not_found" });
-    }
+    const transactionResult = await handleCreditTopupPayment(supabaseAdmin, event, externalId, kpayPaymentId);
+    if (transactionResult.handled) return transactionResult.response;
 
-    if (typeof event.amount === "number" && event.amount !== Number(transaction.amount)) {
-      console.error(`[Webhook KPay] Montant incohérent pour la transaction ${transaction.id} : reçu ${event.amount}, attendu ${transaction.amount}.`);
-      return NextResponse.json({ received: true, warning: "amount_mismatch" });
-    }
-
-    if (event.currency && !isEquivalentCfaCurrency(event.currency, transaction.currency)) {
-      console.error(`[Webhook KPay] Devise incohérente pour la transaction ${transaction.id} : reçu ${event.currency}, attendu ${transaction.currency}.`);
-      return NextResponse.json({ received: true, warning: "currency_mismatch" });
-    }
-
-    // Atomicity
-    const { data: updatedTransactions, error: updateError } = await supabaseAdmin
-      .from("transactions")
-      .update({
-        status: "success",
-        provider_reference: kpayPaymentId || transaction.provider_reference,
-      })
-      .eq("id", transaction.id)
-      .eq("status", "pending")
-      .select();
-
-    if (updateError) {
-      console.error("[Webhook KPay] Échec mise à jour de la transaction :", updateError.message);
-      return NextResponse.json({ error: "Échec de la mise à jour de la transaction." }, { status: 500 });
-    }
-
-    if (!updatedTransactions || updatedTransactions.length === 0) {
-      return NextResponse.json({ received: true, alreadyProcessed: true });
-    }
-
-    const updatedTransaction = updatedTransactions[0];
-    
-    // Créditer la souscription/le solde
-    const { data: subscription, error: subSelectError } = await supabaseAdmin
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", updatedTransaction.user_id)
-      .single();
-      
-    if (!subscription && subSelectError?.code === "PGRST116") { // Non trouvé
-       await supabaseAdmin.from("subscriptions").insert({
-         user_id: updatedTransaction.user_id,
-         plan_name: updatedTransaction.metadata?.plan_name || "premium",
-         credits: 1, // On ajoute 1 crédit ou autre
-         status: "active"
-       });
-    } else if (subscription) {
-       await supabaseAdmin.from("subscriptions").update({
-         credits: (subscription.credits || 0) + 1,
-         plan_name: updatedTransaction.metadata?.plan_name || subscription.plan_name
-       }).eq("id", subscription.id);
-    }
-
-    // Option "Accompagnement par un agent" (pour transactions spécifiques)
-    if (updatedTransaction.metadata?.has_agent_option) {
-      const { error: assignmentError } = await supabaseAdmin.from("agent_assignments").insert({
-        order_id: updatedTransaction.id,
-        candidate_id: updatedTransaction.user_id,
-        status: "unassigned",
-      });
-      if (assignmentError) {
-        console.error("[Webhook KPay] Échec création agent_assignments :", assignmentError.message);
-      }
-    }
-
-    // Profil client pour les notifications
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("full_name, email, phone, contact_email")
-      .eq("id", updatedTransaction.user_id)
-      .single();
-
-    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(updatedTransaction.user_id);
-
-    const customer = {
-      fullName: profile?.full_name || authUser?.user?.email || "Client Facilite",
-      email: profile?.contact_email || profile?.email || authUser?.user?.email || null,
-      phone: profile?.phone || authUser?.user?.phone || event.phoneNumber || null,
-    };
-
-    // On retourne succès
-    return NextResponse.json({ received: true });
+    console.error("[Webhook KPay] Ni commande ni transaction introuvable pour externalId/paymentId", externalId, kpayPaymentId);
+    return NextResponse.json({ received: true, warning: "not_found" });
   } catch (error) {
     console.error("[Webhook KPay] Erreur interne :", error);
     return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
