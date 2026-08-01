@@ -291,7 +291,7 @@ export async function POST(req) {
     let emailDelivered = true;
 
     if (fileBuffer) {
-      const { data, error } = await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: recruiterSender,
         to: finalRecruiterEmail,
         subject: `[Facilite] Nouvelle candidature : ${fullName} - ${jobTitle} chez ${company}`,
@@ -328,14 +328,13 @@ export async function POST(req) {
         ],
       });
 
-      console.log("Resend response:", data, error);
       if (error) {
         console.error("[Resend] Échec e-mail recruteur (candidature déjà enregistrée) :", handleResendError(error));
         emailDelivered = false;
       }
     }
 
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: candidateSender,
       to: finalCandidateEmail,
       subject: `Confirmation de votre candidature : ${jobTitle} chez ${company}`,
@@ -353,7 +352,6 @@ export async function POST(req) {
       `,
     });
 
-    console.log("Resend response:", data, error);
     if (error) {
       console.error("[Resend] Échec e-mail candidat (candidature déjà enregistrée) :", handleResendError(error));
       emailDelivered = false;

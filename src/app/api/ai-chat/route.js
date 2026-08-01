@@ -15,7 +15,7 @@ export const runtime = "nodejs";
  * prix d'une réponse non streamée.
  */
 
-const BASE_PROMPT = `Tu es l'assistant IA officiel de la plateforme Facilite (facilitefacile.com).
+const BASE_PROMPT = `Tu es l'assistant IA officiel de la plateforme Facilite (ffacilite.com).
 Ton rôle est d'aider les utilisateurs professionnels et candidats au Sénégal.
 Sois clair, dynamique, courtois et structuré dans tes réponses.`;
 
