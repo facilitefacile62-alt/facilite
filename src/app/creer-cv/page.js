@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
+import TemplatePreviewModal from "@/components/TemplatePreviewModal";
 
 // --- DICTIONNAIRE DE TRADUCTION POUR LE CREATEUR DE CV ---
 const translations = {
@@ -240,6 +241,10 @@ export default function CreerCv() {
   const [selectedTemplate, setSelectedTemplate] = useState("modern");
   const [accentColor, setAccentColor] = useState("#10E688"); // Primary Green by default
   const [showPricingModal, setShowPricingModal] = useState(false);
+  // Aperçu plein écran d'un modèle avant sélection (TemplatePreviewModal.tsx
+  // est en TypeScript ; pas d'annotation de type ici, ce fichier reste en JS.
+  const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
   const [photoPreview, setPhotoPreview] = useState(null);
   
@@ -1682,25 +1687,44 @@ export default function CreerCv() {
                   <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">{t.chooseTemplate}</h3>
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { id: "modern", name: t.templateModern, desc: "2 Colonnes structuré", icon: "fa-grip" },
-                      { id: "minimalist", name: t.templateMinimal, desc: "Aéré & Moderne", icon: "fa-align-left" },
-                      { id: "classic", name: t.templateClassic, desc: "Traditionnel & Chic", icon: "fa-newspaper" }
+                      { id: "modern", name: t.templateModern, desc: "2 Colonnes structuré", icon: "fa-grip", previewUrl: "/model1.png" },
+                      { id: "minimalist", name: t.templateMinimal, desc: "Aéré & Moderne", icon: "fa-align-left", previewUrl: "/model2.png" },
+                      { id: "classic", name: t.templateClassic, desc: "Traditionnel & Chic", icon: "fa-newspaper", previewUrl: "/model3.png" }
                     ].map((tpl) => {
                       const active = selectedTemplate === tpl.id;
                       return (
-                        <button
+                        <div
                           key={tpl.id}
+                          role="button"
+                          tabIndex={0}
                           onClick={() => setSelectedTemplate(tpl.id)}
-                          className={`p-4 border-2 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                          onKeyDown={(e) => {
+                            if (e.key !== "Enter" && e.key !== " ") return;
+                            e.preventDefault();
+                            setSelectedTemplate(tpl.id);
+                          }}
+                          className={`relative p-4 border-2 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
                             active
                               ? "bg-blue-50/40 border-blue-600 text-blue-700 shadow-md ring-2 ring-blue-500/10"
                               : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
                           }`}
                         >
+                          <button
+                            type="button"
+                            title="Aperçu plein écran"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewTemplate(tpl);
+                              setIsPreviewOpen(true);
+                            }}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-300 transition cursor-pointer"
+                          >
+                            <i className="fa-solid fa-eye text-[10px]"></i>
+                          </button>
                           <i className={`fa-solid ${tpl.icon} text-xl mb-2.5`}></i>
                           <span className="text-xs font-extrabold block">{tpl.name}</span>
                           <span className="text-[9px] text-gray-400 font-medium mt-1">{tpl.desc}</span>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -2320,6 +2344,17 @@ export default function CreerCv() {
       {showPricingModal && (
         <PricingModal cvModelId={selectedTemplate} onClose={() => setShowPricingModal(false)} />
       )}
+
+      {/* --- APERÇU PLEIN ÉCRAN D'UN MODÈLE DE CV --- */}
+      <TemplatePreviewModal
+        template={previewTemplate}
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        onConfirm={(tpl) => {
+          setSelectedTemplate(tpl.id);
+          setIsPreviewOpen(false);
+        }}
+      />
 
       {/* --- CONTACT MODAL (GLOBAL ACCORDING TO GEMINI.MD RULES) --- */}
       {contactModalOpen && (
