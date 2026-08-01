@@ -54,10 +54,14 @@ const nextConfig = {
             value: "strict-origin-when-cross-origin",
           },
           {
-            // camera=(self) et non camera=() : l'import de CV par photo
-            // (DiagnosticModal) utilise capture="environment" et serait bloqué.
+            // camera=(self) : l'import de CV par photo (DiagnosticModal) utilise
+            // capture="environment" et serait bloqué avec camera=().
+            // microphone=(self) : la note vocale de /messagerie (getUserMedia
+            // audio, déclenchée au clic sur le bouton micro) serait bloquée par
+            // le navigateur AVANT même l'appel JS avec microphone=() — quel que
+            // soit le geste utilisateur, un allowlist vide refuse toujours.
             key: "Permissions-Policy",
-            value: "camera=(self), microphone=(), geolocation=(), payment=(), usb=()",
+            value: "camera=(self), microphone=(self), geolocation=(), payment=(), usb=()",
           },
           {
             key: "Strict-Transport-Security",
