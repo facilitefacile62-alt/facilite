@@ -20,6 +20,10 @@ const PRICE_ACCOMPAGNE = 2000;
 const cvOrderSchema = z.object({
   cvModelId: z.string().min(1, "Le modèle de CV choisi est requis."),
   hasAgentOption: z.boolean().optional(),
+  // Lie la commande au brouillon exact (resumes.id) qui l'a déclenchée —
+  // sans ça, impossible de savoir plus tard quel contenu régénérer en PDF
+  // après paiement. Optionnel : reste compatible avec un appel sans brouillon.
+  resumeId: z.string().uuid().optional(),
 });
 
 const creditTopupSchema = z.object({
@@ -64,14 +68,21 @@ export async function POST(req) {
           { status: 400 }
         );
       }
-      const { cvModelId, hasAgentOption } = parseResult.data;
+      const { cvModelId, hasAgentOption, resumeId } = parseResult.data;
       const hasAgent = hasAgentOption === true;
       const amount = hasAgent ? PRICE_ACCOMPAGNE : PRICE_AUTONOME;
       const currency = "XOF";
 
       const { data: order, error: orderError } = await supabase
         .from("orders")
-        .insert({ user_id: user.id, cv_model_id: cvModelId, has_agent_option: hasAgent, amount, currency })
+        .insert({
+          user_id: user.id,
+          cv_model_id: cvModelId,
+          has_agent_option: hasAgent,
+          amount,
+          currency,
+          resume_id: resumeId || null,
+        })
         .select()
         .single();
 

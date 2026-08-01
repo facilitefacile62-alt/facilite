@@ -28,7 +28,7 @@ const OPTIONS = [
  * (ex: "modern", "minimalist", "classic") — la modale ne fait que choisir la
  * formule de paiement, pas le modèle lui-même.
  */
-export default function PricingModal({ cvModelId, onClose }) {
+export default function PricingModal({ cvModelId, resumeId, onClose }) {
   const [selectedOptionId, setSelectedOptionId] = useState("autonome");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -58,6 +58,7 @@ export default function PricingModal({ cvModelId, onClose }) {
         body: JSON.stringify({
           cvModelId,
           hasAgentOption: selectedOption.hasAgentOption,
+          ...(resumeId ? { resumeId } : {}),
         }),
       });
 

@@ -241,6 +241,15 @@ export default function CreerCv() {
   const [selectedTemplate, setSelectedTemplate] = useState("modern");
   const [accentColor, setAccentColor] = useState("#10E688"); // Primary Green by default
   const [showPricingModal, setShowPricingModal] = useState(false);
+  // Id du brouillon (resumes.id) une fois sauvegardé — lie la commande KPay
+  // au contenu exact qui a servi à la payer, pour pouvoir régénérer le PDF
+  // après paiement (le state React est perdu au retour de la redirection
+  // KPay, seul ce qui est persisté en base survit).
+  const [savedResumeId, setSavedResumeId] = useState(null);
+  // Mode téléchargement post-paiement (?resumeId=...&download=1, lien
+  // envoyé depuis /candidat/facturation une fois la commande "paid").
+  const [downloadMode, setDownloadMode] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   // Aperçu plein écran d'un modèle avant sélection (TemplatePreviewModal.tsx
   // est en TypeScript ; pas d'annotation de type ici, ce fichier reste en JS.
   const [previewTemplate, setPreviewTemplate] = useState(null);
@@ -340,8 +349,11 @@ export default function CreerCv() {
   // login/page.js) plutôt que useSearchParams(), qui imposerait de découper
   // ce composant sous un <Suspense> rien que pour ce paramètre optionnel.
   useEffect(() => {
-    const resumeId = new URLSearchParams(window.location.search).get("resumeId");
+    const params = new URLSearchParams(window.location.search);
+    const resumeId = params.get("resumeId");
     if (!resumeId) return;
+
+    const isDownload = params.get("download") === "1";
 
     async function loadExistingResume() {
       const { data, error } = await supabase.from("resumes").select("content").eq("id", resumeId).single();
@@ -352,7 +364,20 @@ export default function CreerCv() {
       }
 
       setCvData(data.content);
-      triggerToast("CV chargé pour modification.", "fa-file-import");
+      // selectedTemplate/accentColor sont embarqués dans content depuis
+      // saveCvDraftAndOpenPricing (des clés en plus des champs cvData
+      // habituels) — absents sur les brouillons enregistrés avant cet ajout,
+      // les valeurs par défaut du composant s'appliquent alors normalement.
+      if (data.content.selectedTemplate) setSelectedTemplate(data.content.selectedTemplate);
+      if (data.content.accentColor) setAccentColor(data.content.accentColor);
+
+      setSavedResumeId(resumeId);
+      if (isDownload) {
+        setDownloadMode(true);
+        setActiveStep(6);
+      } else {
+        triggerToast("CV chargé pour modification.", "fa-file-import");
+      }
     }
 
     loadExistingResume();
@@ -748,20 +773,52 @@ export default function CreerCv() {
         ? `CV - ${cvData.firstName} ${cvData.lastName}`
         : "Mon CV Facilité";
 
-      await supabase.from("resumes").insert({
-        user_id: session?.user?.id || null,
-        title: resumeTitle,
-        type: "created",
-        content: cvData,
-        ats_score: 95,
-      });
+      const { data: savedResume, error: saveError } = await supabase
+        .from("resumes")
+        .insert({
+          user_id: session?.user?.id || null,
+          title: resumeTitle,
+          type: "created",
+          // selectedTemplate/accentColor embarqués aux côtés des champs
+          // cvData habituels : régénérer le PDF après paiement (voir
+          // pdfExport.js) a besoin des trois pour reconstruire le même rendu.
+          content: { ...cvData, selectedTemplate, accentColor },
+          ats_score: 95,
+        })
+        .select("id")
+        .single();
 
+      if (saveError) throw saveError;
+
+      setSavedResumeId(savedResume.id);
       triggerToast("Brouillon sauvegardé sur votre compte Supabase !", "fa-cloud-arrow-up");
     } catch (e) {
       console.error("Erreur de sauvegarde Supabase CV:", e);
     }
 
     setShowPricingModal(true);
+  };
+
+  // Génération réelle du PDF — n'existe qu'en mode téléchargement
+  // (?resumeId=...&download=1, atteint uniquement depuis un lien "Télécharger
+  // mon CV" sur une commande déjà payée dans /candidat/facturation). Capture
+  // l'aperçu déjà rendu à l'écran, WYSIWYG garanti (voir src/lib/pdfExport.js).
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const { exportElementToPdf } = await import("@/lib/pdfExport");
+      const element = document.getElementById("cv-preview-sheet");
+      const filename = cvData.firstName && cvData.lastName
+        ? `CV-${cvData.firstName}-${cvData.lastName}.pdf`
+        : "Mon-CV-Facilite.pdf";
+      await exportElementToPdf(element, filename);
+      triggerToast("PDF téléchargé avec succès !", "fa-file-pdf");
+    } catch (e) {
+      console.error("Erreur export PDF:", e);
+      triggerToast("Échec de la génération du PDF. Réessayez.", "fa-triangle-exclamation");
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   // Contact form modal
@@ -1815,15 +1872,18 @@ export default function CreerCv() {
                       <i className="fa-solid fa-file-circle-check text-blue-600 mr-2"></i>
                       Document optimisé & validé
                     </h4>
-                    <p className="text-xs text-gray-500 font-medium mt-1">{t.previewNotice}</p>
+                    <p className="text-xs text-gray-500 font-medium mt-1">
+                      {downloadMode ? "Paiement confirmé — votre PDF est prêt." : t.previewNotice}
+                    </p>
                   </div>
 
                   <button
-                    onClick={saveCvDraftAndOpenPricing}
-                    className="bg-gray-900 text-white font-extrabold py-3 px-6 rounded-full text-sm shadow-lg hover:bg-gray-800 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center space-x-2"
+                    onClick={downloadMode ? handleDownloadPdf : saveCvDraftAndOpenPricing}
+                    disabled={downloadingPdf}
+                    className="bg-gray-900 text-white font-extrabold py-3 px-6 rounded-full text-sm shadow-lg hover:bg-gray-800 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center space-x-2 disabled:opacity-60"
                   >
-                    <i className="fa-solid fa-download"></i>
-                    <span>{t.btnFinish}</span>
+                    <i className={`fa-solid ${downloadingPdf ? "fa-spinner fa-spin" : "fa-download"}`}></i>
+                    <span>{downloadingPdf ? "Génération..." : downloadMode ? "Télécharger le PDF" : t.btnFinish}</span>
                   </button>
                 </div>
 
@@ -1852,11 +1912,12 @@ export default function CreerCv() {
               ) : (
                 <button
                   type="button"
-                  onClick={saveCvDraftAndOpenPricing}
-                  className="px-7 py-3 bg-[#2563EB] text-white rounded-full text-xs font-extrabold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition cursor-pointer"
+                  onClick={downloadMode ? handleDownloadPdf : saveCvDraftAndOpenPricing}
+                  disabled={downloadingPdf}
+                  className="px-7 py-3 bg-[#2563EB] text-white rounded-full text-xs font-extrabold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition cursor-pointer disabled:opacity-60"
                 >
-                  <i className="fa-solid fa-download mr-1.5"></i>
-                  {t.btnFinish}
+                  <i className={`fa-solid ${downloadingPdf ? "fa-spinner fa-spin" : "fa-download"} mr-1.5`}></i>
+                  {downloadingPdf ? "Génération..." : downloadMode ? "Télécharger le PDF" : t.btnFinish}
                 </button>
               )}
             </div>
@@ -2393,7 +2454,7 @@ export default function CreerCv() {
 
       {/* --- MODALE DE TARIFICATION (paiement KPay requis pour finaliser le CV) --- */}
       {showPricingModal && (
-        <PricingModal cvModelId={selectedTemplate} onClose={() => setShowPricingModal(false)} />
+        <PricingModal cvModelId={selectedTemplate} resumeId={savedResumeId} onClose={() => setShowPricingModal(false)} />
       )}
 
       {/* --- APERÇU PLEIN ÉCRAN D'UN MODÈLE DE CV --- */}

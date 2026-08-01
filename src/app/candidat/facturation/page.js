@@ -269,17 +269,27 @@ export default function FacturationPage() {
                       </td>
                       <td className="py-4 px-6">{getStatusBadge(order.payment_status)}</td>
                       <td className="py-4 px-6 text-right">
-                        {order.invoice_url ? (
-                          <button
-                            onClick={() => handleDownloadInvoice(order)}
-                            disabled={downloadingOrderId === order.id}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer"
-                          >
-                            {downloadingOrderId === order.id ? "..." : "Télécharger PDF"}
-                          </button>
-                        ) : (
-                          <span className="text-gray-300 text-[11px]">Indisponible</span>
-                        )}
+                        <div className="flex flex-col items-end gap-1.5">
+                          {order.payment_status === "paid" && order.resume_id && (
+                            <Link
+                              href={`/creer-cv?resumeId=${order.resume_id}&download=1`}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold rounded-lg transition shadow-xs cursor-pointer whitespace-nowrap"
+                            >
+                              Télécharger mon CV
+                            </Link>
+                          )}
+                          {order.invoice_url ? (
+                            <button
+                              onClick={() => handleDownloadInvoice(order)}
+                              disabled={downloadingOrderId === order.id}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                            >
+                              {downloadingOrderId === order.id ? "..." : "Facture PDF"}
+                            </button>
+                          ) : (
+                            <span className="text-gray-300 text-[11px]">Facture indisponible</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
