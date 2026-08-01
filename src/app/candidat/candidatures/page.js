@@ -95,13 +95,11 @@ export default function CandidaturesPage() {
     }
   };
 
-  // candidatures.status est un champ libre historique : les valeurs
-  // 'accepted'/'rejected' du flux recruteur sont mappées vers les libellés
-  // du cahier des charges ; toute autre valeur retombe sur "En attente".
-  const displayStatus = (status) => {
-    if (status === "accepted" || status === "rejected") return status;
-    return "pending";
-  };
+  // candidatures.status est un champ libre historique : seules les valeurs
+  // reconnues du workflow recruteur sont affichées telles quelles, toute
+  // autre valeur (legacy ou inattendue) retombe sur "En attente".
+  const KNOWN_STATUSES = ["pending", "reviewed", "interview_scheduled", "accepted", "rejected"];
+  const displayStatus = (status) => (KNOWN_STATUSES.includes(status) ? status : "pending");
 
   if (loading) {
     return (

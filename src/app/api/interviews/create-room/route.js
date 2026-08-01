@@ -125,6 +125,21 @@ export async function POST(req) {
       console.error("[Entretiens] Échec de l'envoi du message au candidat :", messageError.message);
     }
 
+    // Fait avancer le suivi de candidature en cohérence avec l'action réelle
+    // du recruteur — best effort, ne doit jamais faire échouer la création
+    // de l'entretien déjà confirmée. N'écrase jamais un statut final
+    // (accepted/rejected) : un entretien démarré après une décision ne doit
+    // pas revenir en arrière dans le suivi du candidat.
+    const { error: statusError } = await supabase
+      .from("candidatures")
+      .update({ status: "interview_scheduled" })
+      .eq("id", application.id)
+      .in("status", ["pending", "reviewed", "interview_scheduled"]);
+
+    if (statusError) {
+      console.error("[Entretiens] Échec de mise à jour du statut de candidature :", statusError.message);
+    }
+
     return NextResponse.json({
       interviewId: interview.id,
       roomName: interview.room_name,

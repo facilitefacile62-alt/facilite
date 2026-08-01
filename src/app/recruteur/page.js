@@ -45,7 +45,9 @@ function buildStoragePath(userId, ext, { folder = "", prefix = "" } = {}) {
 }
 
 const APPLICATION_STATUSES = [
-  { value: "pending", label: "En attente" },
+  { value: "pending", label: "Envoyée" },
+  { value: "reviewed", label: "En revue" },
+  { value: "interview_scheduled", label: "Entretien programmé" },
   { value: "accepted", label: "Accepté" },
   { value: "rejected", label: "Refusé" },
 ];

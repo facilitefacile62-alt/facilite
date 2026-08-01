@@ -99,8 +99,12 @@ export default function CandidatDashboardPage() {
         return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">Retenu 🎉</span>;
       case "rejected":
         return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-red-100 text-red-800 border border-red-200">Refusé</span>;
+      case "interview_scheduled":
+        return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">Entretien programmé 🎥</span>;
+      case "reviewed":
+        return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800 border border-purple-200">En revue 🔎</span>;
       default:
-        return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-200">En attente ⏳</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-200">Envoyée ⏳</span>;
     }
   };
 
