@@ -1,0 +1,12 @@
+-- handle_new_user() (20260729232500_profiles_multi_roles.sql) insère
+-- NEW.email tel quel dans public.profiles.email, colonne NOT NULL depuis sa
+-- création initiale (20260726200730_init_facilite_core.sql). Un compte créé
+-- par téléphone (signInWithOtp({phone, options:{shouldCreateUser:true}}))
+-- n'a jamais d'email : auth.users.email est alors NULL, l'INSERT du trigger
+-- viole la contrainte NOT NULL, toute la transaction d'inscription échoue
+-- (HTTP 500 côté client) — l'inscription par téléphone n'a donc jamais
+-- fonctionné pour un numéro réellement nouveau. Un compte téléphone est
+-- légitimement sans email tant qu'il n'en confirme pas un depuis son profil
+-- (SecurityTabContent.jsx) : la colonne doit accepter NULL plutôt que
+-- recevoir une valeur inventée.
+ALTER TABLE public.profiles ALTER COLUMN email DROP NOT NULL;
