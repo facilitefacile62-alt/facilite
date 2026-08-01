@@ -861,7 +861,7 @@ export default function CreerCv() {
       </nav>
 
       {/* Main Workspace Wrapper (Full viewport, height minus navbar) */}
-      <div className="flex-grow flex flex-col md:flex-row pt-[52px] min-h-[calc(100vh-52px)] bg-gray-50">
+      <div className="flex-grow flex flex-col md:flex-row pt-[52px] min-h-[calc(100vh-52px)] bg-gray-50 w-full max-w-full overflow-x-hidden">
         
         {/* SIDEBAR (WIZARD STEPS) - Hides on print */}
         <aside className="w-full md:w-64 bg-[#0F172A] text-white flex flex-col justify-between flex-shrink-0 border-r border-slate-800 no-print">
