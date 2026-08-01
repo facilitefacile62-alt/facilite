@@ -481,16 +481,6 @@ export default function BoiteAIdees() {
               </button>
             )}
 
-            {/* Recrutement Spontané */}
-            <a
-              href="#"
-              onClick={handleOpenRecruitmentModal}
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-solid fa-user-tie text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
-            </a>
-
             <RoleNavLink session={userSession} />
 
             {/* Plus Dropdown Menu (Service & Contact) */}
@@ -520,6 +510,17 @@ export default function BoiteAIdees() {
                     <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
                     <span>Service</span>
                   </Link>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      setPlusDropdownOpen(false);
+                      handleOpenRecruitmentModal(e);
+                    }}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
+                    <span>Recrutement</span>
+                  </a>
                   <a
                     href="#"
                     onClick={(e) => {
@@ -649,16 +650,6 @@ export default function BoiteAIdees() {
             <UnreadBadge count={unreadMessagesCount} />
           </Link>
 
-          {/* Recrutement */}
-          <a
-            href="#"
-            onClick={handleOpenRecruitmentModal}
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-16 text-gray-500 hover:text-gray-800"
-          >
-            <i className="fa-solid fa-user-tie text-lg"></i>
-            <span className="text-[9px] font-bold tracking-tight truncate max-w-[64px]">Recrutement</span>
-          </a>
-
           {/* Contact */}
           <a
             href="#"
@@ -737,6 +728,16 @@ export default function BoiteAIdees() {
 
             {/* Bas du Menu (Options fixes au bas) */}
             <div className="bg-white border-t border-gray-200 divide-y divide-gray-150 mt-auto">
+              {/* Recrutement Spontané (même modale que la barre d'onglets et le dropdown "Plus" desktop) */}
+              <button
+                type="button"
+                onClick={() => handleOpenRecruitmentModal()}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-user-tie text-gray-400 text-lg"></i>
+                <span>Recrutement</span>
+              </button>
+
               {/* Option 1: Paramètres */}
               <div className="flex flex-col">
                 <button

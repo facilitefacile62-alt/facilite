@@ -28,21 +28,21 @@ export default function ThemeSettings() {
       </h2>
       
       <div className="flex flex-col space-y-3">
-        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800/60">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800/60">
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
               <i className="fa-solid fa-circle-half-stroke"></i>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">Thème de l'application</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Personnalisez l'apparence de Facilite</p>
             </div>
           </div>
-          
+
           <div className="flex bg-gray-200 dark:bg-gray-900 p-1 rounded-xl">
             <button
               onClick={() => setTheme("system")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 theme === "system"
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
@@ -53,7 +53,7 @@ export default function ThemeSettings() {
             </button>
             <button
               onClick={() => setTheme("light")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 theme === "light"
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
@@ -64,7 +64,7 @@ export default function ThemeSettings() {
             </button>
             <button
               onClick={() => setTheme("dark")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 theme === "dark"
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"

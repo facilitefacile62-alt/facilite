@@ -819,16 +819,6 @@ export default function Home() {
               </button>
             )}
 
-            {/* Recrutement Spontané */}
-            <a
-              href="#"
-              onClick={handleOpenRecruitmentModal}
-              className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 transition space-y-1 cursor-pointer w-16"
-            >
-              <i className="fa-solid fa-user-tie text-xl"></i>
-              <span className="text-[11px] font-bold tracking-tight truncate max-w-[76px]">Recrutement</span>
-            </a>
-
             <RoleNavLink session={userSession} />
 
             {/* Plus Dropdown Menu (Service & Contact) */}
@@ -862,6 +852,17 @@ export default function Home() {
                   >
                     <i className="fa-solid fa-briefcase text-lg w-5 text-center"></i>
                     <span>Service</span>
+                  </a>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      setPlusDropdownOpen(false);
+                      handleOpenRecruitmentModal(e);
+                    }}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
+                    <span>Recrutement</span>
                   </a>
                   <a
                     href="#"
@@ -1074,6 +1075,16 @@ export default function Home() {
                 <i className="fa-solid fa-list-check text-gray-400 text-lg"></i>
                 <span>Offres</span>
               </Link>
+
+              {/* Recrutement Spontané (même modale que le dropdown "Plus" desktop) */}
+              <button
+                type="button"
+                onClick={() => handleOpenRecruitmentModal()}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-user-tie text-gray-400 text-lg"></i>
+                <span>Recrutement</span>
+              </button>
 
               {/* Contact (même modale que le dropdown "Plus" desktop) */}
               <button
