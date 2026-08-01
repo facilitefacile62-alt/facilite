@@ -1748,8 +1748,8 @@ export default function MessagerieClient() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 md:px-6 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
-        <div className="max-w-[1180px] mx-auto w-full flex items-center justify-between">
+      <nav className="bg-[#FAF6F1] px-4 md:px-6 shadow-sm fixed top-0 left-0 w-full z-50 h-16">
+        <div className="max-w-[1180px] mx-auto w-full h-full flex items-center justify-between">
           
           {/* Groupe Gauche : Logo + Barre de Recherche */}
           <div className="flex items-center space-x-3">
@@ -2142,7 +2142,7 @@ export default function MessagerieClient() {
         ci-dessous (flex-1 overflow-y-auto sur la zone de messages) qui doit
         seule défiler, jamais la page.
       */}
-      <main className="h-screen overflow-hidden bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-28 md:pb-10 px-4 md:px-6">
+      <main className="h-screen overflow-hidden bg-[#F4F2EE] pt-16 pb-28 md:pb-10 px-4 md:px-6">
         {/* h-full seul (pas de calc() redondant en doublon, qui entrait en
             conflit avec h-full selon l'ordre de génération des classes
             Tailwind) : la hauteur vient désormais uniquement du <main>

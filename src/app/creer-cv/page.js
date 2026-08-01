@@ -804,8 +804,8 @@ export default function CreerCv() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 md:px-6 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50 no-print">
-        <div className="max-w-[1440px] mx-auto w-full flex items-center justify-between">
+      <nav className="bg-[#FAF6F1] px-4 md:px-6 shadow-sm fixed top-0 left-0 w-full z-50 h-16 no-print">
+        <div className="max-w-[1440px] mx-auto w-full h-full flex items-center justify-between">
           
           {/* Logo brand */}
           <div className="flex items-center space-x-3">
@@ -861,7 +861,7 @@ export default function CreerCv() {
       </nav>
 
       {/* Main Workspace Wrapper (Full viewport, height minus navbar) */}
-      <div className="flex-grow flex flex-col md:flex-row pt-[52px] min-h-[calc(100vh-52px)] bg-gray-50 w-full max-w-full overflow-x-hidden">
+      <div className="flex-grow flex flex-col md:flex-row pt-16 min-h-[calc(100vh-4rem)] bg-gray-50 w-full max-w-full overflow-x-hidden">
         
         {/* SIDEBAR (WIZARD STEPS) - Hides on print */}
         <aside className="w-full md:w-64 bg-[#0F172A] text-white flex flex-col justify-between flex-shrink-0 border-r border-slate-800 no-print">

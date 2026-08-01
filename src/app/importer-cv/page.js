@@ -614,8 +614,8 @@ export default function ImporterCvPage() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) Identique au site principal */}
-      <nav className="bg-[#FAF6F1] px-4 md:px-6 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
-        <div className="max-w-[1180px] mx-auto w-full flex items-center justify-between">
+      <nav className="bg-[#FAF6F1] px-4 md:px-6 shadow-sm fixed top-0 left-0 w-full z-50 h-16">
+        <div className="max-w-[1180px] mx-auto w-full h-full flex items-center justify-between">
           {/* Groupe Gauche : Logo + Recherche */}
           <div className="flex items-center space-x-3">
             {/* Logo */}
@@ -807,7 +807,7 @@ export default function ImporterCvPage() {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-grow pt-24 pb-32 md:pb-20 px-4 max-w-[1180px] w-full mx-auto flex flex-col justify-center items-center">
+      <main className="flex-grow pt-16 pb-32 md:pb-20 px-4 max-w-[1180px] w-full mx-auto flex flex-col justify-center items-center">
         
         {/* STAGE 1: UPLOAD ZONE (Exact design matching Image 2) */}
         {stage === "upload" && (

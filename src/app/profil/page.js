@@ -1398,8 +1398,8 @@ export default function ProfilPage() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 md:px-6 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
-        <div className="max-w-[1180px] mx-auto w-full flex items-center justify-between">
+      <nav className="bg-[#FAF6F1] px-4 md:px-6 shadow-sm fixed top-0 left-0 w-full z-50 h-16">
+        <div className="max-w-[1180px] mx-auto w-full h-full flex items-center justify-between">
           {/* Groupe Gauche : Logo + Recherche */}
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
@@ -1851,7 +1851,7 @@ export default function ProfilPage() {
       </nav>
 
       {/* Main Profile Page Container */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-16 px-4 md:px-6">
+      <main className="min-h-screen bg-[#F4F2EE] pt-16 pb-16 px-4 md:px-6">
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* COLONNE GAUCHE & CENTRALE COMBINÉE : Carte Profil Principale & Sections */}

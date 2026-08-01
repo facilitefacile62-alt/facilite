@@ -707,8 +707,8 @@ export default function Home() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 md:px-6 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
-        <div className="max-w-[1180px] mx-auto w-full flex items-center justify-between">
+      <nav className="bg-[#FAF6F1] px-4 md:px-6 shadow-sm fixed top-0 left-0 w-full z-50 h-16">
+        <div className="max-w-[1180px] mx-auto w-full h-full flex items-center justify-between">
           {/* Groupe Gauche : Logo + Recherche */}
           <div className="flex items-center space-x-3">
             {/* Logo */}
@@ -1110,11 +1110,11 @@ export default function Home() {
         )}
       </nav>
 
-      {/* Contenu Principal avec Marge pt-[52px] */}
-      <main className="flex-grow flex flex-col pt-[100px] md:pt-[52px] pb-28 md:pb-0">
+      {/* Contenu Principal avec Marge = hauteur exacte du nav fixe (h-16) */}
+      <main className="flex-grow flex flex-col pt-16 pb-28 md:pb-0">
         
         {/* Section Hero */}
-        <section className="flex-grow flex flex-col md:flex-row items-center justify-center px-4 py-12 md:py-16 max-w-[1128px] mx-auto gap-12 lg:gap-20 w-full">
+        <section className="flex-grow flex flex-col md:flex-row items-center justify-center px-4 py-12 md:py-16 max-w-[1128px] mx-auto gap-12 lg:gap-20 w-full overflow-x-hidden">
           {/* Contenu Texte */}
           <div className="w-full md:w-1/2 flex flex-col space-y-8 animate-fade-in-up">
             <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.15] text-gray-900">

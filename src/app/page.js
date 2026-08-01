@@ -717,8 +717,8 @@ export default function Home() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 md:px-6 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
-        <div className="max-w-[1180px] mx-auto w-full flex items-center justify-between">
+      <nav className="bg-[#FAF6F1] px-4 md:px-6 shadow-sm fixed top-0 left-0 w-full z-50 h-16">
+        <div className="max-w-[1180px] mx-auto w-full h-full flex items-center justify-between">
           {/* Groupe Gauche : Logo + Recherche */}
           <div className="flex items-center space-x-3">
             {/* Logo */}
@@ -1245,7 +1245,7 @@ export default function Home() {
       </nav>
 
       {/* Main Job Board Feed (LinkedIn Style) */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-[124px] md:pt-[76px] pb-32 md:pb-16 px-4 md:px-6">
+      <main className="min-h-screen bg-[#F4F2EE] pt-16 pb-32 md:pb-16 px-4 md:px-6">
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}

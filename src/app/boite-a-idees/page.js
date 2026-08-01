@@ -372,8 +372,8 @@ export default function BoiteAIdees() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 md:px-6 py-2.5 shadow-sm fixed top-0 left-0 w-full z-50">
-        <div className="max-w-[1180px] mx-auto w-full flex items-center justify-between">
+      <nav className="bg-[#FAF6F1] px-4 md:px-6 shadow-sm fixed top-0 left-0 w-full z-50 h-16">
+        <div className="max-w-[1180px] mx-auto w-full h-full flex items-center justify-between">
           {/* Groupe Gauche : Logo + Recherche */}
           <div className="flex items-center space-x-3">
             {/* Logo */}
@@ -782,7 +782,7 @@ export default function BoiteAIdees() {
       </nav>
 
       {/* Page Content */}
-      <main className="flex-grow pt-[100px] md:pt-[52px] bg-white">
+      <main className="flex-grow pt-16 bg-white">
         
         {/* Banner Section */}
         <section className="w-full bg-[#E2ECE9]/70 py-12 px-4 border-b border-gray-200/50 relative overflow-hidden">
