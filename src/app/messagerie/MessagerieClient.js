@@ -9,6 +9,7 @@ import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessage
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
+import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
@@ -2611,8 +2612,15 @@ export default function MessagerieClient() {
                       className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"} items-end space-x-1.5 rounded-2xl transition-all duration-500`}
                     >
                       {msg.sender === "them" && (
-                        <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white font-extrabold text-[10px] shadow-inner ${activeConversation.avatarColor}`}>
-                          {activeConversation.avatarInitials}
+                        <div className="relative flex-shrink-0">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-extrabold text-[10px] shadow-inner ${activeConversation.avatarColor}`}>
+                            {activeConversation.avatarInitials}
+                          </div>
+                          {msg.attachment_type === "audio" && (
+                            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-gray-500 border-2 border-[#FAF9F6] flex items-center justify-center">
+                              <i className="fa-solid fa-microphone text-white text-[7px]"></i>
+                            </span>
+                          )}
                         </div>
                       )}
 
@@ -2676,10 +2684,13 @@ export default function MessagerieClient() {
                           </a>
                         )}
 
-                        {/* Note Vocale (Lecteur Audio Ergonomique) */}
+                        {/* Note Vocale (Lecteur Audio Style Messenger/WhatsApp) */}
                         {msg.attachment_type === "audio" && msg.attachment_url && (
-                          <div className="mb-2 bg-black/10 p-2 rounded-2xl border border-white/10">
-                            <audio controls src={msg.attachment_url} className="w-full h-8 rounded-lg outline-none" />
+                          <div className="mb-1 min-w-[200px] md:min-w-[240px]">
+                            <VoiceMessagePlayer
+                              src={msg.attachment_url}
+                              variant={msg.sender === "me" ? "sent" : "received"}
+                            />
                           </div>
                         )}
 
