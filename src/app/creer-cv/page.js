@@ -612,6 +612,47 @@ export default function CreerCv() {
     }));
   };
 
+  const [improvingExpId, setImprovingExpId] = useState(null);
+
+  const handleImproveWithAI = async (exp) => {
+    if (!exp.description?.trim()) {
+      triggerToast("Rédigez d'abord une description à améliorer.", "fa-triangle-exclamation");
+      return;
+    }
+    setImprovingExpId(exp.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        triggerToast("Session expirée, reconnectez-vous.", "fa-triangle-exclamation");
+        return;
+      }
+
+      const res = await fetch("/api/cv/improve-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ text: exp.description }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (res.status === 402) {
+        triggerToast("Crédits insuffisants. Rechargez votre compte pour utiliser l'IA.", "fa-coins");
+        return;
+      }
+      if (!res.ok || !data?.improvedText) {
+        triggerToast(data?.error || "Échec de la reformulation IA.", "fa-triangle-exclamation");
+        return;
+      }
+
+      handleExpChange(exp.id, "description", data.improvedText);
+      triggerToast("Description améliorée par l'IA !", "fa-wand-magic-sparkles");
+    } catch (err) {
+      console.error("Erreur amélioration IA:", err);
+      triggerToast("Échec de la reformulation IA.", "fa-triangle-exclamation");
+    } finally {
+      setImprovingExpId(null);
+    }
+  };
+
   const handleDeleteExp = (id) => {
     setCvData(prev => ({
       ...prev,
@@ -1385,6 +1426,16 @@ export default function CreerCv() {
                         className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-600 transition bg-white"
                         placeholder="Rédigez les tâches réalisées..."
                       ></textarea>
+
+                      <button
+                        type="button"
+                        onClick={() => handleImproveWithAI(exp)}
+                        disabled={improvingExpId === exp.id}
+                        className="mt-2 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-extrabold rounded-lg border border-purple-200 transition cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+                      >
+                        <i className={`fa-solid ${improvingExpId === exp.id ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"}`}></i>
+                        {improvingExpId === exp.id ? "Amélioration en cours..." : "Améliorer avec l'IA"}
+                      </button>
 
                       {/* AI-like Assistant Phrase Suggester */}
                       <div className="mt-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100/50">
