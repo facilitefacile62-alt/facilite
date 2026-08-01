@@ -115,6 +115,14 @@ export default function LoginPage() {
       if (data?.session) {
         setIsSuccess(true);
 
+        // Best-effort, ne bloque jamais la connexion : Supabase ne marque
+        // email_confirmed_at/phone_confirmed_at qu'après un OTP/lien, jamais
+        // après un mot de passe — voir /api/auth/confirm-after-login.
+        fetch("/api/auth/confirm-after-login", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        }).catch(() => {});
+
         const userId = data.session.user.id;
         let targetRole = data.session.user?.user_metadata?.role || "candidat";
 

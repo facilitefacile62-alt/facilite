@@ -320,3 +320,41 @@ INSERT INTO public.agent_assignments (id, order_id, candidate_id, status, agent_
 SELECT '50000000-0000-4000-a000-000000000002', '50000000-0000-4000-a000-000000000001', id, 'unassigned', NULL, NULL
 FROM public.profiles WHERE email = 'e2e-test-candidate@facilite-demo.local'
 ON CONFLICT (id) DO UPDATE SET status = 'unassigned', agent_id = NULL, completed_cv_url = NULL;
+
+-- =============================================================================
+-- 6. Compte de test dédié à l'onglet Sécurité du profil
+--    (tests/e2e/security-profile.spec.js). Isolé des autres comptes de démo
+--    pour que les tests de changement de mot de passe/dissociation ne
+--    perturbent jamais un compte utilisé ailleurs. Email uniquement (pas de
+--    téléphone) : la confirmation téléphone dépend d'un provider SMS non
+--    configurable depuis ce script — voir le composant SecurityTabContent.jsx.
+-- =============================================================================
+
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+) VALUES (
+  '00000000-0000-0000-0000-000000000000',
+  '40000000-0000-4000-a000-000000000003',
+  'authenticated', 'authenticated',
+  'e2e-test-security@facilite-demo.local',
+  crypt('FaciliteE2ETest2026!', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}',
+  '{"role":"candidat","full_name":"Sécurité E2E Test"}',
+  now(), now(), '', '', '', ''
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+  id, provider_id, user_id, identity_data, provider, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(), u.id::text, u.id,
+  jsonb_build_object('sub', u.id::text, 'email', u.email),
+  'email', now(), now()
+FROM auth.users u
+WHERE u.email = 'e2e-test-security@facilite-demo.local'
+ON CONFLICT DO NOTHING;

@@ -49,7 +49,15 @@ export default function ProfilPage() {
   const [driverLicense, setDriverLicense] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [educationLevel, setEducationLevel] = useState("Aucun");
-  const [activeAboutTab, setActiveAboutTab] = useState("info_perso");
+  // Ouvre directement un onglet précis via ?tab=... (ex: lien "Sécurisez votre
+  // compte" ou redirection post-connexion OTP depuis /forgot-password).
+  // Initialiseur paresseux plutôt qu'un effet : window.location.search est
+  // lu une seule fois, sans setState supplémentaire ni Suspense boundary.
+  const [activeAboutTab, setActiveAboutTab] = useState(() => {
+    if (typeof window === "undefined") return "info_perso";
+    return new URLSearchParams(window.location.search).get("tab") || "info_perso";
+  });
+
   // Accordéon mobile de la liste d'onglets "À propos" : replié par défaut
   // pour économiser l'espace d'écran (sans effet en desktop, où la liste
   // reste une barre latérale toujours visible via md:flex).
