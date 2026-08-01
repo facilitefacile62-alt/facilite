@@ -118,7 +118,7 @@ export default function CandidatDashboardPage() {
   return (
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col justify-between">
       {/* Header Nav */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2">
@@ -162,7 +162,7 @@ export default function CandidatDashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8 flex-1 w-full">
         {/* Banner Section */}
         <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-teal-900 rounded-3xl p-6 sm:p-8 text-white mb-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">

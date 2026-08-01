@@ -165,7 +165,7 @@ export default function RecruiterShowcasePage() {
         <span className="text-sm font-semibold">{toast}</span>
       </div>
 
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
             <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
@@ -180,7 +180,7 @@ export default function RecruiterShowcasePage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8 flex-1 w-full">
         {/* En-tête entreprise */}
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden mb-8">
           <div

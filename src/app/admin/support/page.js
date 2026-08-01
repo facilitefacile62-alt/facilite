@@ -249,7 +249,7 @@ export default function AdminSupportPage() {
         <span className="text-xs font-extrabold">{toast}</span>
       </div>
 
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/admin" className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition">
@@ -262,7 +262,7 @@ export default function AdminSupportPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-6 flex-1 w-full">
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden h-[calc(100vh-140px)] flex">
           {/* Colonne gauche : liste des demandes */}
           <aside className="w-full sm:w-[340px] border-r border-gray-200 flex flex-col flex-shrink-0">

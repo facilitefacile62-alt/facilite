@@ -128,7 +128,7 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-screen bg-[#FAF6F1] text-gray-900 font-sans pb-16">
       {/* HEADER NAV UNIFIÉ */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-50 shadow-xs">
+      <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-3 group">
             <Image
@@ -168,7 +168,7 @@ export default function PublicProfilePage() {
       </header>
 
       {/* CONTENU PRINCIPAL DU PROFIL */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-16 space-y-6">
         
         {/* CARTE HERO : COUVERTURE & AVATAR */}
         <div className="bg-white rounded-3xl border border-gray-200/90 shadow-md overflow-hidden relative">

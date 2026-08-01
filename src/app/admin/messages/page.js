@@ -793,7 +793,7 @@ export default function AdminMessagesPage() {
       )}
 
       {/* Header Admin Nav */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs flex-none">
+      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs flex-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2">
@@ -822,7 +822,7 @@ export default function AdminMessagesPage() {
       </header>
 
       {/* Main Content Layout 2 colonnes */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 min-h-0 w-full flex flex-col overflow-hidden">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-6 flex-1 min-h-0 w-full flex flex-col overflow-hidden">
         {/* min-h-0 remplace min-h-[680px] : un plancher de hauteur minimale
             allait justement à l'encontre du confinement recherché. */}
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12">

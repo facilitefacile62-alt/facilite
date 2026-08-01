@@ -155,7 +155,7 @@ export default function OffresPage() {
         <span className="text-sm font-semibold">{toast}</span>
       </div>
 
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
             <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
@@ -170,7 +170,7 @@ export default function OffresPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8 flex-1 w-full">
         <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-8 text-white mb-8 shadow-xl">
           <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-2">Recherche d'emploi</span>
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">Toutes les offres</h1>

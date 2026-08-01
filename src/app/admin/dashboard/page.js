@@ -113,7 +113,7 @@ export default function AdminDashboardKpiPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2">
@@ -152,7 +152,7 @@ export default function AdminDashboardKpiPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8 flex-1 w-full">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1">
           Dashboard Analytics Global
         </h1>
