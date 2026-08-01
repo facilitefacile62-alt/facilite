@@ -248,7 +248,23 @@ export default function OffresPage() {
               return (
                 <div key={offer.id} className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden flex flex-col">
                   {offer.image_url && (
-                    <img src={offer.image_url} alt={offer.title} className="w-full h-36 object-cover" />
+                    <div className="relative w-full h-48 sm:h-56 overflow-hidden bg-gray-100">
+                      {/* Fond flouté + image en object-contain (façon Facebook) :
+                          une affiche recruteur au format A4 n'était pas coupée
+                          avant en haut/bas par object-cover seul. */}
+                      <img
+                        src={offer.image_url}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none"
+                      />
+                      <img
+                        src={offer.image_url}
+                        alt={offer.title}
+                        className="relative z-10 w-full h-full object-contain mx-auto block"
+                        loading="lazy"
+                      />
+                    </div>
                   )}
                   <div className="p-5 flex flex-col flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">

@@ -1753,13 +1753,26 @@ export default function Home() {
                       {selectedLang === "FR" ? job.descFR : job.descEN}
                     </p>
 
-                    {/* Visuel de l'offre */}
+                    {/* Visuel de l'offre — double couche façon Facebook : le
+                        recruteur peut envoyer une affiche dans n'importe quel
+                        ratio (A4 vertical, carré, horizontal) ; object-cover
+                        seul coupait systématiquement le texte en haut/bas
+                        d'une affiche verticale. Le fond flouté comble
+                        l'espace vide sans bandes noires, l'image au premier
+                        plan reste intégralement visible via object-contain. */}
                     {job.image && (
-                      <div className="rounded-xl overflow-hidden border border-gray-150 max-h-[300px] flex items-center justify-center bg-gray-50 mt-2">
+                      <div className="relative w-full h-[380px] sm:h-[480px] max-h-[550px] rounded-xl overflow-hidden bg-gray-100 mt-2 border border-gray-150">
+                        <img
+                          src={job.image}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none"
+                        />
                         <img
                           src={job.image}
                           alt="Affiche de recrutement"
-                          className="max-h-[300px] w-full object-cover animate-fade-in"
+                          className="relative z-10 w-full h-full object-contain mx-auto block animate-fade-in"
+                          loading="lazy"
                         />
                       </div>
                     )}

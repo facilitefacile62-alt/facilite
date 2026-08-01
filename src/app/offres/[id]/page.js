@@ -125,7 +125,22 @@ export default async function OffreDetailPage({ params }) {
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8">
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
           {offer.image_url && (
-            <img src={offer.image_url} alt={offer.title} className="w-full h-56 sm:h-72 object-cover" />
+            <div className="relative w-full h-[380px] sm:h-[480px] max-h-[550px] overflow-hidden bg-gray-100">
+              {/* Fond flouté + image en object-contain (façon Facebook) : une
+                  affiche recruteur au format A4 n'est plus coupée en haut/bas. */}
+              <img
+                src={offer.image_url}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none"
+              />
+              <img
+                src={offer.image_url}
+                alt={offer.title}
+                className="relative z-10 w-full h-full object-contain mx-auto block"
+                loading="lazy"
+              />
+            </div>
           )}
 
           <div className="p-6 sm:p-8">
