@@ -40,7 +40,7 @@ export async function GET(req) {
     // ou un candidat obtient simplement un résultat vide, sans code
     // d'autorisation dupliqué ici.
     const { data, error, count } = await supabase
-      .from("candidats_recherche")
+      .rpc("get_candidats_recherche")
       .select("*", { count: "exact" })
       .range(from, to);
 

@@ -31,7 +31,7 @@ export default function PublicProfilePage() {
 
         // 1. Recherche par slug
         let { data } = await supabase
-          .from("profils_publics")
+          .rpc("get_profils_publics")
           .select("*")
           .eq("slug", decoded)
           .maybeSingle();
@@ -39,7 +39,7 @@ export default function PublicProfilePage() {
         // 2. Si pas trouvé par slug, recherche par ID
         if (!data) {
           const { data: idData } = await supabase
-            .from("profils_publics")
+            .rpc("get_profils_publics")
             .select("*")
             .eq("id", decoded)
             .maybeSingle();
@@ -53,7 +53,7 @@ export default function PublicProfilePage() {
         // la page affiche "Profil introuvable".
         if (!data) {
           const { data: nameData } = await supabase
-            .from("profils_publics")
+            .rpc("get_profils_publics")
             .select("*")
             .ilike("full_name", `%${decoded}%`)
             .limit(1);

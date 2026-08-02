@@ -10,7 +10,10 @@ const { defineConfig, devices } = require("@playwright/test");
  * E2E_RECRUITER_ID).
  */
 module.exports = defineConfig({
-  testDir: "./tests/e2e",
+  // ./tests (pas seulement ./tests/e2e) : couvre aussi tests/security/, les
+  // 6 invariants de sécurité (docs/invariants-securite.md) — doivent tourner
+  // en CI au même titre que le reste, pas dans un coin isolé qu'on oublie.
+  testDir: "./tests",
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
