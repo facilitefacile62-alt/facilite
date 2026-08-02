@@ -8,7 +8,6 @@ import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
-import ApplyModal from "@/components/ApplyModal";
 
 const translations = {
   FR: {
@@ -164,7 +163,6 @@ export default function ImporterCvPage() {
   // Global Layout Elements
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1784,14 +1782,6 @@ export default function ImporterCvPage() {
         </div>
       )}
 
-      {/* Modal ApplyModal pour Recrutement Spontané */}
-      <ApplyModal
-        isOpen={applyModalOpen}
-        onClose={() => setApplyModalOpen(false)}
-        job={{ isSpontaneous: true, company: "Facilite" }}
-        selectedLang={selectedLang}
-        triggerToast={triggerToast}
-      />
     </div>
   );
 }

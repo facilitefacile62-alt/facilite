@@ -13,7 +13,6 @@ import DiagnosticModal from "@/components/DiagnosticModal";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityTabContent from "@/components/SecurityTabContent";
-import ApplyModal from "@/components/ApplyModal";
 
 export default function ProfilPage() {
   const pathname = usePathname();
@@ -667,11 +666,6 @@ export default function ProfilPage() {
     if (e) e.preventDefault();
     setContactModalOpen(true);
     setMobileMenuOpen(false);
-  };
-
-  const handleOpenRecruitmentModal = (e) => {
-    e.preventDefault();
-    setApplyModalOpen(true);
   };
 
   const handleFormSubmit = (e) => {
@@ -4547,14 +4541,6 @@ export default function ProfilPage() {
           </div>
         </div>
       )}
-      {/* Modal ApplyModal pour Recrutement Spontané */}
-      <ApplyModal
-        isOpen={applyModalOpen}
-        onClose={() => setApplyModalOpen(false)}
-        job={{ isSpontaneous: true, company: "Facilite" }}
-        selectedLang={selectedLang}
-        triggerToast={triggerToast}
-      />
     </>
   );
 }
