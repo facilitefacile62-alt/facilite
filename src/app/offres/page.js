@@ -63,7 +63,23 @@ export default function OffresPage() {
           // basculé via /recruteur) : un filtre dessus était toujours vrai et
           // ne faisait rien, laissé par erreur lors d'une évolution passée.
           const activeOffers = (data || []).filter((o) => o.is_active !== false);
-          setOffers(activeOffers);
+          
+          const seterOffer = {
+            id: "seter-spontanee",
+            title: "Candidature Spontanée - SETER",
+            company: "SETER",
+            location: "Sénégal",
+            contract_type: "SPONTANÉ",
+            description: "Rejoignez la SETER et participez au développement du Train Express Régional !\nPôles & Domaines de recrutement : Ressources Humaines, Logistique, Transport, SI, Maintenance...\nDocuments requis : CV & Lettre de motivation.",
+            image_url: "/seterimage.avif",
+            min_education_level: "Aucun",
+            isSpontaneous: true,
+            allowSpontaneousModal: true,
+            externalLink: "https://seter.sn/recrutement/",
+            externalButtonLabel: "Postuler sur le site SETER",
+          };
+
+          setOffers([seterOffer, ...activeOffers]);
         }
       } catch (err) {
         console.error("Exception chargement des offres:", err);
@@ -300,13 +316,36 @@ export default function OffresPage() {
                       </p>
                     )}
 
-                    <button
-                      onClick={() => handleApplyClick(offer)}
-                      disabled={userSession && !eligible}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-300 disabled:bg-gray-300"
-                    >
-                      {userSession && !eligible ? "Niveau insuffisant" : "Postuler"}
-                    </button>
+                    {offer.externalLink ? (
+                      <div className="flex flex-col gap-2 w-full mt-2">
+                        <a
+                          href={offer.externalLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full text-center py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-external-link-alt mr-1.5"></i>
+                          {offer.externalButtonLabel || "Lien externe"}
+                        </a>
+                        {offer.allowSpontaneousModal && (
+                          <button
+                            onClick={() => handleApplyClick({ ...offer, isSpontaneous: true })}
+                            className="w-full py-2.5 bg-white hover:bg-emerald-50 text-emerald-600 border border-emerald-500 font-extrabold text-xs rounded-xl transition cursor-pointer"
+                          >
+                            <i className="fa-regular fa-paper-plane mr-1.5"></i>
+                            Candidature Rapide
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleApplyClick(offer)}
+                        disabled={userSession && !eligible}
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-300 disabled:bg-gray-300 mt-2"
+                      >
+                        {userSession && !eligible ? "Niveau insuffisant" : "Postuler"}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -325,6 +364,7 @@ export default function OffresPage() {
                 titleFR: applyingOffer.title,
                 titleEN: applyingOffer.title,
                 company: applyingOffer.company,
+                isSpontaneous: applyingOffer.isSpontaneous,
               }
             : null
         }
