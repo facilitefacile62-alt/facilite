@@ -134,6 +134,9 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       if (job.recruiterEmail) {
         formData.append("recruiterEmail", job.recruiterEmail);
       }
+      if (job.recruiterId) {
+        formData.append("recruiterId", job.recruiterId);
+      }
 
       if (cvChoice === "existing") {
         formData.append("existingCvId", existingCvId);
@@ -200,7 +203,11 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             <div className="space-y-2">
               <h3 className="text-xl font-extrabold text-gray-900">Candidature transmise !</h3>
               <p className="text-xs text-gray-500 font-medium leading-relaxed max-w-sm mx-auto">
-                Félicitations, votre candidature pour le poste de <strong>{selectedLang === "FR" ? job.titleFR : job.titleEN}</strong> chez <strong>{job.company}</strong> a bien été enregistrée et envoyée au recruteur.
+                {job.isSpontaneous ? (
+                  <>Félicitations, votre candidature spontanée pour <strong>{job.company}</strong> a bien été enregistrée et envoyée au recruteur.</>
+                ) : (
+                  <>Félicitations, votre candidature pour le poste de <strong>{selectedLang === "FR" ? job.titleFR : job.titleEN}</strong> chez <strong>{job.company}</strong> a bien été enregistrée et envoyée au recruteur.</>
+                )}
               </p>
             </div>
             <button
@@ -215,10 +222,14 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             <div className="border-b border-gray-100 pb-3">
               <h3 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
                 <i className="fa-solid fa-paper-plane text-emerald-500 text-sm"></i>
-                Candidature Rapide
+                {job.isSpontaneous ? "Candidature Spontanée" : "Candidature Rapide"}
               </h3>
               <p className="text-[11px] text-gray-500 mt-1 leading-snug">
-                Postuler pour le poste de <span className="font-extrabold text-gray-800">{selectedLang === "FR" ? job.titleFR : job.titleEN}</span> chez <span className="font-extrabold text-gray-800">{job.company}</span>.
+                {job.isSpontaneous ? (
+                  <>Envoyer une candidature spontanée à <span className="font-extrabold text-gray-800">{job.company}</span>.</>
+                ) : (
+                  <>Postuler pour le poste de <span className="font-extrabold text-gray-800">{selectedLang === "FR" ? job.titleFR : job.titleEN}</span> chez <span className="font-extrabold text-gray-800">{job.company}</span>.</>
+                )}
               </p>
             </div>
 

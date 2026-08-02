@@ -228,19 +228,40 @@ export default function RecruiterShowcasePage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (!userSession) {
-                    router.push("/login");
-                    return;
-                  }
-                  router.push(`/messagerie?recipient=${recruiterId}`);
-                }}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer shadow-sm flex-shrink-0"
-              >
-                <i className="fa-solid fa-comments"></i> Contacter le recruteur
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!userSession) {
+                      router.push("/login");
+                      return;
+                    }
+                    setApplyingOffer({
+                      id: "spontaneous",
+                      title: "Candidature Spontanée",
+                      company: companyName,
+                      isSpontaneous: true,
+                      recruiterId: recruiterId
+                    });
+                  }}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-extrabold text-xs rounded-xl transition cursor-pointer shadow-sm flex-shrink-0"
+                >
+                  <i className="fa-solid fa-paper-plane"></i> Candidature Spontanée
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!userSession) {
+                      router.push("/login");
+                      return;
+                    }
+                    router.push(`/messagerie?recipient=${recruiterId}`);
+                  }}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer shadow-sm flex-shrink-0"
+                >
+                  <i className="fa-solid fa-comments"></i> Contacter
+                </button>
+              </div>
             </div>
 
             {recruiterProfile?.description && (
@@ -413,12 +434,14 @@ export default function RecruiterShowcasePage() {
         onClose={() => setApplyingOffer(null)}
         job={
           applyingOffer
-            ? {
-                id: applyingOffer.id,
-                titleFR: applyingOffer.title,
-                titleEN: applyingOffer.title,
-                company: companyName,
-              }
+            ? applyingOffer.isSpontaneous
+              ? applyingOffer
+              : {
+                  id: applyingOffer.id,
+                  titleFR: applyingOffer.title,
+                  titleEN: applyingOffer.title,
+                  company: companyName,
+                }
             : null
         }
         selectedLang="FR"

@@ -168,7 +168,18 @@ export default function LoginPage() {
 
         // Redirection dynamique selon le rôle
         let redirectUrl = "/messagerie";
-        if (targetRole === "admin" || targetRole === "publisher") redirectUrl = "/admin";
+        if (targetRole === "admin" || targetRole === "publisher") {
+          redirectUrl = "/admin";
+        } else if (targetRole === "user") {
+          try {
+            const { data: hasVerifiedBadge } = await supabase.rpc("has_badge", { check_user_id: userId, badge_name: "verified_recruiter" });
+            if (hasVerifiedBadge === true) {
+              redirectUrl = "/recruteur";
+            }
+          } catch (e) {
+            console.warn("Impossible de vérifier le badge recruteur:", e);
+          }
+        }
 
         setTimeout(() => {
           window.location.replace(redirectUrl);

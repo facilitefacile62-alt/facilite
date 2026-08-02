@@ -29,6 +29,7 @@ export async function POST(req) {
     const existingCvId = formData.get("existingCvId");
     const cvFile = formData.get("cvFile");
     const recruiterEmail = formData.get("recruiterEmail") || "contact@facilite.sn";
+    const explicitRecruiterId = formData.get("recruiterId");
 
     // Validation des données requises
     if (!jobId || !jobTitle || !company || !fullName || !email) {
@@ -69,7 +70,7 @@ export async function POST(req) {
     const jobOfferId = UUID_RE.test(String(jobId)) ? String(jobId) : null;
 
     let cvMatchScore = null;
-    let offerRecruiterId = null;
+    let offerRecruiterId = explicitRecruiterId || null;
 
     if (jobOfferId) {
       // A. Récupérer l'offre pour connaître le diplôme requis et la description
@@ -198,8 +199,9 @@ export async function POST(req) {
       .from("candidatures")
       .insert({
         user_id: user.id,
-        job_id: jobOfferId ? null : parseInt(jobId, 10),
+        job_id: jobOfferId ? null : (explicitRecruiterId ? null : parseInt(jobId, 10)),
         job_offer_id: jobOfferId,
+        recruiter_id: explicitRecruiterId || null,
         job_title: jobTitle,
         company: company,
         full_name: fullName,

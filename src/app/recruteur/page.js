@@ -294,7 +294,6 @@ export default function RecruteurDashboardPage() {
           supabase
             .from("candidatures")
             .select("*")
-            .not("job_offer_id", "is", null)
             .order("created_at", { ascending: false }),
           supabase.from("recruiter_profiles").select("*").eq("user_id", session.user.id).maybeSingle(),
         ]);
@@ -1263,7 +1262,14 @@ export default function RecruteurDashboardPage() {
                               <span className="font-bold text-gray-900 block">{application.full_name}</span>
                               <span className="text-[10px] text-gray-400">{application.email}</span>
                             </td>
-                            <td className="py-4 px-6 text-gray-600">{offer?.title || application.job_title}</td>
+                            <td className="py-4 px-6 text-gray-600">
+                              {offer?.title || application.job_title}
+                              {!application.job_offer_id && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                                  Spontanée
+                                </span>
+                              )}
+                            </td>
                             <td className="py-4 px-6">
                               <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-extrabold border whitespace-nowrap ${scoreBadgeClass}`}>
                                 <span>⚡ Match</span>
