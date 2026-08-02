@@ -1861,7 +1861,7 @@ export default function MessagerieClient() {
                     className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
                   >
                     <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
-                    <span>Recrutement</span>
+                    <span>Recrutement spontané</span>
                   </a>
                   <a
                     href="#"
@@ -2090,7 +2090,7 @@ export default function MessagerieClient() {
                 className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
               >
                 <i className="fa-solid fa-user-tie text-gray-400 text-lg"></i>
-                <span>Recrutement</span>
+                <span>Recrutement spontané</span>
               </button>
 
               {/* Contact (même modale que le dropdown "Plus" desktop) */}
