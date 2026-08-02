@@ -4,18 +4,30 @@ const fs = require("fs");
 const path = require("path");
 
 /**
- * Régression pour l'audit sécurité (référentiel 101-150, points 121+122) :
- * n'importe quel compte auto-inscrit "recruteur" pouvait interroger
- * candidats_recherche sans aucune vérification et en obtenir l'intégralité
- * en un appel. Corrigé par : colonne profiles.recruiter_verified (gate côté
- * vue + nouvelle route paginée/rate-limitée), et un trigger qui empêche un
- * recruteur de s'auto-approuver.
+ * SUSPENDU (2026-08-02) — le chantier RBAC (user/publisher/admin,
+ * 20260802050000 et suivantes) a supprimé profiles.role et, avec lui,
+ * candidats_recherche (dépendait de role='candidat' en dur) : la fonctionnalité
+ * que ce test protège est déjà hors service, indépendamment de ce fichier.
  *
- * Plutôt que de créer un nouveau compte recruteur (orphelin impossible à
- * nettoyer sans service_role, absent en local — limitation déjà documentée
- * dans ce repo), ce test bascule temporairement recruiter_verified sur un
- * compte de démo existant (via une session admin), puis le restaure — même
- * logique que les autres specs de sécurité de ce dossier.
+ * Le setup de ce test (bascule recruiter_verified via le client admin,
+ * ligne "await adminClient.from('profiles').update({ recruiter_verified })")
+ * échoue désormais aussi, pour une raison distincte trouvée en le relançant
+ * après 20260802060000 (deny-by-default sur profiles) : recruiter_verified
+ * n'est plus dans la liste des colonnes GRANTées à authenticated, et est de
+ * toute façon protégée par trg_protect_cosmetic_columns depuis 20260802051000
+ * (silencieusement, avant même ce GRANT). Ce n'est pas une régression du
+ * GRANT — la même écriture échouait déjà silencieusement avant lui. Le bouton
+ * "Valider" de l'admin (src/app/admin/page.js, handleVerifyRecruiter) fait
+ * exactement le même appel client et est donc, lui aussi, déjà inopérant.
+ *
+ * À reconstruire entièrement sur badge_requests (section 4/5), pas à
+ * réparer tel quel : la logique métier "recruteur vérifié" elle-même
+ * n'existe plus sous cette forme dans le nouveau modèle de rôles.
+ *
+ * Régression originale pour l'audit sécurité (référentiel 101-150, points
+ * 121+122) : n'importe quel compte auto-inscrit "recruteur" pouvait
+ * interroger candidats_recherche sans aucune vérification et en obtenir
+ * l'intégralité en un appel.
  */
 
 function loadEnvLocal() {
@@ -34,7 +46,7 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "FaciliteE2ETest2026!";
 const RECRUITER_EMAIL = process.env.E2E_RECRUITER_EMAIL || "demo.senetech@facilite-demo.local";
 const RECRUITER_PASSWORD = process.env.E2E_RECRUITER_PASSWORD || "FaciliteDemo2026!";
 
-test.describe("Sécurité — vérification recruteur avant accès à la CVthèque", () => {
+test.describe.skip("Sécurité — vérification recruteur avant accès à la CVthèque (suspendu, voir commentaire d'en-tête)", () => {
   let env;
   let adminClient;
   let recruiterClient;
