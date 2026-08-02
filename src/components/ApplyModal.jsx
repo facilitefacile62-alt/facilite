@@ -226,7 +226,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               </h3>
               <p className="text-[11px] text-gray-500 mt-1 leading-snug">
                 {job.isSpontaneous ? (
-                  <>Envoyer une candidature spontanée à <span className="font-extrabold text-gray-800">{job.company}</span>.</>
+                  <>Envoyez-nous votre profil pour de futures opportunités.</>
                 ) : (
                   <>Postuler pour le poste de <span className="font-extrabold text-gray-800">{selectedLang === "FR" ? job.titleFR : job.titleEN}</span> chez <span className="font-extrabold text-gray-800">{job.company}</span>.</>
                 )}
@@ -382,7 +382,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               ) : (
                 <>
                   <i className="fa-regular fa-paper-plane text-xs"></i>
-                  <span>Envoyer ma candidature</span>
+                  <span>{job.isSpontaneous ? "Soumettre ma candidature" : "Envoyer ma candidature"}</span>
                 </>
               )}
             </button>

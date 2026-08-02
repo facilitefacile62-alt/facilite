@@ -169,15 +169,15 @@ const translations = {
 const initialJobs = [
   {
     id: 100,
-    titleFR: "Candidature Spontanée : Multiples Domaines",
-    titleEN: "Spontaneous Application: Multiple Domains",
+    titleFR: "Candidature Spontanée - SETER",
+    titleEN: "Spontaneous Application - SETER",
     company: "SETER",
     logoColor: "bg-amber-600",
     initials: "SE",
     location: "Sénégal",
     timeFR: "À l'instant",
     timeEN: "Just now",
-    contract: "Divers",
+    contract: "SPONTANÉ",
     descFR: `Rejoignez la SETER et participez au développement du Train Express Régional !
     
 Pôles & Domaines de recrutement :
@@ -220,11 +220,12 @@ Recruitment Domains:
 • Audit
 
 Required documents: Resume & Cover letter.`,
-    tags: ["Sénégal", "Spontanée"],
+    tags: ["SPONTANÉ", "SETER"],
     salary: "Selon profil",
     image: "/seterimage.avif",
     externalLink: "https://seter.sn/recrutement/",
-    externalButtonLabel: "Postuler via ce site"
+    externalButtonLabel: "Postuler sur le site SETER",
+    allowSpontaneousModal: true
   },
   {
     id: 99,
@@ -1844,15 +1845,26 @@ export default function Home() {
                       </span>
                       
                       {job.externalLink ? (
-                        <a
-                          href={job.externalLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
-                        >
-                          <i className="fa-solid fa-external-link-alt text-xs"></i>
-                          <span>{job.externalButtonLabel || t.applyNow}</span>
-                        </a>
+                        <div className="flex flex-wrap gap-2">
+                          <a
+                            href={job.externalLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
+                          >
+                            <i className="fa-solid fa-external-link-alt text-xs"></i>
+                            <span>{job.externalButtonLabel || t.applyNow}</span>
+                          </a>
+                          {job.allowSpontaneousModal && (
+                            <button
+                              onClick={() => handleApplyClick({ ...job, isSpontaneous: true })}
+                              className="bg-white hover:bg-emerald-50 text-emerald-600 border border-emerald-500 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
+                            >
+                              <i className="fa-regular fa-paper-plane text-xs"></i>
+                              <span>Candidature Rapide</span>
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         <button
                           onClick={() => handleApplyClick(job)}
