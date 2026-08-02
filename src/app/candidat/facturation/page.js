@@ -8,6 +8,7 @@ import RoleBadge from "@/components/RoleBadge";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { labelForCvModel } from "@/lib/cvModels";
+import { KPAY_TEST_MODE } from "@/lib/kpayClientInfo";
 
 export default function FacturationPage() {
   const [userSession, setUserSession] = useState(null);
@@ -192,6 +193,16 @@ export default function FacturationPage() {
             </p>
           </div>
         </div>
+
+        {KPAY_TEST_MODE && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium flex items-start gap-2">
+            <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+            <span>
+              Mode test — la validation du compte marchand KPay est en cours. Les paiements ci-dessous
+              n&apos;effectuent aucun débit réel pour le moment.
+            </span>
+          </div>
+        )}
 
         {/* Mon Solde et Achats de Crédits */}
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden mb-8 p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
