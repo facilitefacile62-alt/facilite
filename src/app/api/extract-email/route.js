@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { extractJobAnnouncementWithGemini } from "@/lib/documentParser";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { validateUploadedFile } from "@/lib/validation";
+import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -13,6 +14,13 @@ export async function POST(req) {
 
     const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
+
+    if (!(await checkAiQuota(user.id))) {
+      return NextResponse.json(
+        { error: `Quota IA quotidien atteint (${AI_DAILY_QUOTA} requêtes/jour). Réessayez demain.` },
+        { status: 429 }
+      );
+    }
 
     const formData = await req.formData();
     const file = formData.get("file");

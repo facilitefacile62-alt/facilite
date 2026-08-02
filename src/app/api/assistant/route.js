@@ -4,6 +4,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { streamText } from "ai";
 import { extractTextFromFile } from "@/lib/documentParser";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
+import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
 import { AssistantPayloadSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -51,6 +52,13 @@ export async function POST(req) {
 
     const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
+
+    if (!(await checkAiQuota(user.id))) {
+      return NextResponse.json(
+        { error: `Quota IA quotidien atteint (${AI_DAILY_QUOTA} requêtes/jour). Réessayez demain.` },
+        { status: 429 }
+      );
+    }
 
     // 2. Validation du payload
     const parsed = AssistantPayloadSchema.safeParse(await req.json());
