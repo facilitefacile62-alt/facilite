@@ -168,6 +168,65 @@ const translations = {
 
 const initialJobs = [
   {
+    id: 100,
+    titleFR: "Candidature Spontanée : Multiples Domaines",
+    titleEN: "Spontaneous Application: Multiple Domains",
+    company: "SETER",
+    logoColor: "bg-amber-600",
+    initials: "SE",
+    location: "Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Divers",
+    descFR: `Rejoignez la SETER et participez au développement du Train Express Régional !
+    
+Pôles & Domaines de recrutement :
+• Ressources Humaines
+• Transport & logistique
+• Achats
+• Communication
+• Marketing
+• Services Voyageurs
+• Maintenance
+• Finances & Comptabilité
+• Qualité, Hygiène, Sécurité, Environnement
+• Sûreté
+• Systèmes d'Information
+• Conducteur de trains
+• Relation clients
+• Juridique
+• Exploitation
+• Audit
+
+Documents requis : CV & Lettre de motivation.`,
+    descEN: `Join SETER and participate in the development of the Regional Express Train!
+    
+Recruitment Domains:
+• Human Resources
+• Transport & Logistics
+• Purchasing
+• Communication
+• Marketing
+• Passenger Services
+• Maintenance
+• Finance & Accounting
+• Quality, Health, Safety, Environment
+• Security
+• Information Systems
+• Train Driver
+• Customer Relations
+• Legal
+• Operations
+• Audit
+
+Required documents: Resume & Cover letter.`,
+    tags: ["Sénégal", "Spontanée"],
+    salary: "Selon profil",
+    image: "/seterimage.avif",
+    externalLink: "https://seter.sn/recrutement/",
+    externalButtonLabel: "Postuler via ce site"
+  },
+  {
     id: 99,
     titleFR: "Équipiers Polyvalents en Formation",
     titleEN: "Polyvalent Team Members in Training",
@@ -1784,13 +1843,25 @@ export default function Home() {
                         💰 {job.salary}
                       </span>
                       
-                      <button
-                        onClick={() => handleApplyClick(job)}
-                        className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
-                      >
-                        <i className="fa-regular fa-paper-plane text-xs"></i>
-                        <span>{t.applyNow}</span>
-                      </button>
+                      {job.externalLink ? (
+                        <a
+                          href={job.externalLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <i className="fa-solid fa-external-link-alt text-xs"></i>
+                          <span>{job.externalButtonLabel || t.applyNow}</span>
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => handleApplyClick(job)}
+                          className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <i className="fa-regular fa-paper-plane text-xs"></i>
+                          <span>{t.applyNow}</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))
