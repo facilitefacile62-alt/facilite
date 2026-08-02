@@ -63,23 +63,7 @@ export default function OffresPage() {
           // basculé via /recruteur) : un filtre dessus était toujours vrai et
           // ne faisait rien, laissé par erreur lors d'une évolution passée.
           const activeOffers = (data || []).filter((o) => o.is_active !== false);
-          
-          const seterOffer = {
-            id: "seter-spontanee",
-            title: "Candidature Spontanée - SETER",
-            company: "SETER",
-            location: "Sénégal",
-            contract_type: "SPONTANÉ",
-            description: "Rejoignez la SETER et participez au développement du Train Express Régional !\nPôles & Domaines de recrutement : Ressources Humaines, Logistique, Transport, SI, Maintenance...\nDocuments requis : CV & Lettre de motivation.",
-            image_url: "/seterimage.avif",
-            min_education_level: "Aucun",
-            isSpontaneous: true,
-            allowSpontaneousModal: true,
-            externalLink: "https://seter.sn/recrutement/",
-            externalButtonLabel: "Postuler sur le site SETER",
-          };
-
-          setOffers([seterOffer, ...activeOffers]);
+          setOffers(activeOffers);
         }
       } catch (err) {
         console.error("Exception chargement des offres:", err);

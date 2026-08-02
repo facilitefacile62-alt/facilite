@@ -168,66 +168,6 @@ const translations = {
 
 const initialJobs = [
   {
-    id: 100,
-    titleFR: "Candidature Spontanée - SETER",
-    titleEN: "Spontaneous Application - SETER",
-    company: "SETER",
-    logoColor: "bg-amber-600",
-    initials: "SE",
-    location: "Sénégal",
-    timeFR: "À l'instant",
-    timeEN: "Just now",
-    contract: "SPONTANÉ",
-    descFR: `Rejoignez la SETER et participez au développement du Train Express Régional !
-    
-Pôles & Domaines de recrutement :
-• Ressources Humaines
-• Transport & logistique
-• Achats
-• Communication
-• Marketing
-• Services Voyageurs
-• Maintenance
-• Finances & Comptabilité
-• Qualité, Hygiène, Sécurité, Environnement
-• Sûreté
-• Systèmes d'Information
-• Conducteur de trains
-• Relation clients
-• Juridique
-• Exploitation
-• Audit
-
-Documents requis : CV & Lettre de motivation.`,
-    descEN: `Join SETER and participate in the development of the Regional Express Train!
-    
-Recruitment Domains:
-• Human Resources
-• Transport & Logistics
-• Purchasing
-• Communication
-• Marketing
-• Passenger Services
-• Maintenance
-• Finance & Accounting
-• Quality, Health, Safety, Environment
-• Security
-• Information Systems
-• Train Driver
-• Customer Relations
-• Legal
-• Operations
-• Audit
-
-Required documents: Resume & Cover letter.`,
-    tags: ["SPONTANÉ", "SETER"],
-    salary: "Selon profil",
-    image: "/seterimage.avif",
-    externalLink: "https://seter.sn/recrutement/",
-    externalButtonLabel: "Postuler sur le site SETER",
-    allowSpontaneousModal: true
-  },
-  {
     id: 99,
     titleFR: "Équipiers Polyvalents en Formation",
     titleEN: "Polyvalent Team Members in Training",
@@ -947,17 +887,14 @@ export default function Home() {
                     <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
                     <span>Service</span>
                   </Link>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      setPlusDropdownOpen(false);
-                      handleOpenRecruitmentModal(e);
-                    }}
+                  <Link
+                    href="/recrutement-spontane"
+                    onClick={() => setPlusDropdownOpen(false)}
                     className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
                   >
                     <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
                     <span>Recrutement spontané</span>
-                  </a>
+                  </Link>
                   <a
                     href="#"
                     onClick={(e) => {
@@ -1273,14 +1210,14 @@ export default function Home() {
               </Link>
 
               {/* Recrutement Spontané (même modale que le dropdown "Plus" desktop) */}
-              <button
-                type="button"
-                onClick={() => handleOpenRecruitmentModal()}
+              <Link
+                href="/recrutement-spontane"
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
               >
                 <i className="fa-solid fa-user-tie text-gray-400 text-lg"></i>
                 <span>Recrutement spontané</span>
-              </button>
+              </Link>
 
               {/* Contact (même modale que le dropdown "Plus" desktop) */}
               <button

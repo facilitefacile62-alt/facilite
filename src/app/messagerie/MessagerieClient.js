@@ -1852,17 +1852,14 @@ export default function MessagerieClient() {
                     <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
                     <span>Service</span>
                   </Link>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      setPlusDropdownOpen(false);
-                      handleOpenRecruitmentModal(e);
-                    }}
+                  <Link
+                    href="/recrutement-spontane"
+                    onClick={() => setPlusDropdownOpen(false)}
                     className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
                   >
                     <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
-                    <span>Recrutement spontané</span>
-                  </a>
+                    <span>{t.navRecruitment}</span>
+                  </Link>
                   <a
                     href="#"
                     onClick={(e) => {
@@ -2084,14 +2081,14 @@ export default function MessagerieClient() {
               </Link>
 
               {/* Recrutement Spontané (même modale que le dropdown "Plus" desktop) */}
-              <button
-                type="button"
-                onClick={() => handleOpenRecruitmentModal()}
+              <Link
+                href="/recrutement-spontane"
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
               >
                 <i className="fa-solid fa-user-tie text-gray-400 text-lg"></i>
-                <span>Recrutement spontané</span>
-              </button>
+                <span>{t.navRecruitment}</span>
+              </Link>
 
               {/* Contact (même modale que le dropdown "Plus" desktop) */}
               <button

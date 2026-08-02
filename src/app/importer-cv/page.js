@@ -724,18 +724,14 @@ export default function ImporterCvPage() {
                     <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
                     <span>Service</span>
                   </Link>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPlusDropdownOpen(false);
-                      setApplyModalOpen(true);
-                    }}
+                  <Link
+                    href="/recrutement-spontane"
+                    onClick={() => setPlusDropdownOpen(false)}
                     className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
                   >
                     <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
-                    <span>Recrutement spontané</span>
-                  </a>
+                    <span>{t.navRecruitment}</span>
+                  </Link>
                   <a
                     href="#"
                     onClick={(e) => {
