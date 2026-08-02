@@ -8,6 +8,7 @@ import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import ApplyModal from "@/components/ApplyModal";
 
 const translations = {
   FR: {
@@ -163,6 +164,7 @@ export default function ImporterCvPage() {
   // Global Layout Elements
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -727,7 +729,7 @@ export default function ImporterCvPage() {
                     onClick={(e) => {
                       e.preventDefault();
                       setPlusDropdownOpen(false);
-                      triggerToast("Recrutement Spontané", "fa-user-tie");
+                      setApplyModalOpen(true);
                     }}
                     className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
                   >
@@ -1610,7 +1612,7 @@ export default function ImporterCvPage() {
               type="button"
               onClick={() => {
                 setMobileMenuOpen(false);
-                triggerToast("Recrutement Spontané", "fa-user-tie");
+                setApplyModalOpen(true);
               }}
               className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
             >
@@ -1786,6 +1788,14 @@ export default function ImporterCvPage() {
         </div>
       )}
 
+      {/* Modal ApplyModal pour Recrutement Spontané */}
+      <ApplyModal
+        isOpen={applyModalOpen}
+        onClose={() => setApplyModalOpen(false)}
+        job={{ isSpontaneous: true, company: "Facilite" }}
+        selectedLang={selectedLang}
+        triggerToast={triggerToast}
+      />
     </div>
   );
 }

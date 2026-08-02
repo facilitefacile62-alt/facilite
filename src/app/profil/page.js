@@ -13,6 +13,7 @@ import DiagnosticModal from "@/components/DiagnosticModal";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityTabContent from "@/components/SecurityTabContent";
+import ApplyModal from "@/components/ApplyModal";
 
 export default function ProfilPage() {
   const pathname = usePathname();
@@ -669,11 +670,8 @@ export default function ProfilPage() {
   };
 
   const handleOpenRecruitmentModal = (e) => {
-    if (e) e.preventDefault();
-    triggerToast("Redirection vers l'accueil pour le recrutement...", "fa-user-tie");
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 1000);
+    e.preventDefault();
+    setApplyModalOpen(true);
   };
 
   const handleFormSubmit = (e) => {
@@ -3096,7 +3094,7 @@ export default function ProfilPage() {
                           disabled={savingVisibility || !isPublic}
                           onClick={() => handleSaveVisibility("show_contact", !showContact)}
                           className={`relative shrink-0 w-12 h-6 rounded-full transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
-                            showContact && isPublic ? "bg-[#10E688]" : "bg-gray-300"
+                            showContact && isPublic ? "bg-[#10E688] " : "bg-gray-300"
                           }`}
                         >
                           <span
@@ -4552,6 +4550,14 @@ export default function ProfilPage() {
           </div>
         </div>
       )}
+      {/* Modal ApplyModal pour Recrutement Spontané */}
+      <ApplyModal
+        isOpen={applyModalOpen}
+        onClose={() => setApplyModalOpen(false)}
+        job={{ isSpontaneous: true, company: "Facilite" }}
+        selectedLang={selectedLang}
+        triggerToast={triggerToast}
+      />
     </>
   );
 }
