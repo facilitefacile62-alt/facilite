@@ -40,6 +40,7 @@ test.describe("Sécurité — vérification recruteur avant accès à la CVthèq
   let candidateId;
   let candidateAccessToken;
   let requestId;
+  let visibleTargetId;
 
   test.beforeAll(async () => {
     const env = loadEnvLocal();
@@ -59,6 +60,18 @@ test.describe("Sécurité — vérification recruteur avant accès à la CVthèq
       password: ADMIN_PASSWORD,
     });
     expect(adminErr, `Connexion admin échouée : ${adminErr?.message}`).toBeNull();
+
+    // cv_visible_recruteurs=false par défaut depuis 20260802150000 : bascule
+    // un profil réel existant pour que ce test ait quelque chose à trouver.
+    const { data: otherProfile } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("is_test_account", false)
+      .neq("id", candidateId)
+      .limit(1)
+      .single();
+    visibleTargetId = otherProfile.id;
+    await adminClient.from("profiles").update({ cv_visible_recruteurs: true }).eq("id", visibleTargetId);
   });
 
   test.afterAll(async () => {
@@ -71,6 +84,9 @@ test.describe("Sécurité — vérification recruteur avant accès à la CVthèq
     }
     if (adminClient && requestId) {
       await adminClient.from("badge_requests").delete().eq("id", requestId);
+    }
+    if (adminClient && visibleTargetId) {
+      await adminClient.from("profiles").update({ cv_visible_recruteurs: false }).eq("id", visibleTargetId);
     }
   });
 

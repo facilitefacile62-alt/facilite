@@ -80,26 +80,25 @@ export async function middleware(req) {
       pathnameMatchesRoute(pathname, "/recruteur") ||
       pathnameMatchesRoute(pathname, "/candidat"))
   ) {
-    const [{ data: userRoleRow }, { data: profile }] = await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", user.id).single(),
-      supabase.from("profiles").select("badges").eq("id", user.id).single(),
-    ]);
+    const { data: userRoleRow } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
 
     const userRole = userRoleRow?.role || "user";
-    const badges = profile?.badges || [];
-    const isOfficialStaff = badges.includes("official_staff");
 
-    // /admin : accessible à 'admin', 'publisher' (rôle interne, section 5),
-    // et à tout compte portant le badge cosmétique 'official_staff' — la
-    // seule lecture d'autorisation à partir de badges dans tout ce projet,
-    // volontairement isolée ici plutôt que dans une policy RLS (le principe
-    // "badges est purement cosmétique, RLS ne le lit jamais" reste respecté
-    // au niveau base ; ce détour applicatif au niveau middleware est un
-    // choix produit explicite du 2026-08-02, pas un oubli).
-    // /recruteur et /candidat : accessibles à 'user' et 'admin' — 'publisher'
-    // (personnel interne) en est exclu, son périmètre reste /admin.
+    // Correctif escalade de privilèges (2026-08-02) : badges ne doit JAMAIS
+    // décider d'une autorisation, y compris ici — un ancien détour lisait
+    // le badge cosmétique 'official_staff' pour accorder /admin, une
+    // deuxième source de vérité pour les mêmes droits que role='publisher'.
+    // role (public.user_roles) est désormais la SEULE source lue pour
+    // toute décision d'accès, sans exception.
+    // /admin : 'admin' et 'publisher' uniquement.
+    // /recruteur et /candidat : 'user' et 'admin' — 'publisher' (personnel
+    // interne) en est exclu, son périmètre reste /admin.
     const isAuthorized = pathnameMatchesRoute(pathname, "/admin")
-      ? userRole === "admin" || userRole === "publisher" || isOfficialStaff
+      ? userRole === "admin" || userRole === "publisher"
       : userRole === "user" || userRole === "admin";
 
     if (!isAuthorized) {

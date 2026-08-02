@@ -30,6 +30,7 @@ test.describe("RBAC — reconstruction candidats_recherche / match_resumes", () 
   let adminClient;
   let candidateId;
   let requestId;
+  let visibleTargetId;
 
   test.beforeAll(async () => {
     const env = loadEnvLocal();
@@ -48,6 +49,21 @@ test.describe("RBAC — reconstruction candidats_recherche / match_resumes", () 
       password: ADMIN_PASSWORD,
     });
     expect(adminErr).toBeNull();
+
+    // Depuis le durcissement cv_visible_recruteurs (défaut false, opt-in
+    // explicite requis, cf. 20260802150000), aucun profil réel n'est
+    // trouvable par défaut — bascule un profil réel existant (pas le
+    // candidat de test lui-même, exclu de sa propre recherche une fois
+    // badgé) pour que ce test ait quelque chose de réel à trouver.
+    const { data: otherProfile } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("is_test_account", false)
+      .neq("id", candidateId)
+      .limit(1)
+      .single();
+    visibleTargetId = otherProfile.id;
+    await adminClient.from("profiles").update({ cv_visible_recruteurs: true }).eq("id", visibleTargetId);
   });
 
   test.afterAll(async () => {
@@ -61,6 +77,9 @@ test.describe("RBAC — reconstruction candidats_recherche / match_resumes", () 
     }
     if (adminClient && requestId) {
       await adminClient.from("badge_requests").delete().eq("id", requestId);
+    }
+    if (adminClient && visibleTargetId) {
+      await adminClient.from("profiles").update({ cv_visible_recruteurs: false }).eq("id", visibleTargetId);
     }
   });
 

@@ -54,6 +54,7 @@ export default function AdminDashboardPage() {
   const [roleFilter, setRoleFilter] = useState("all"); // 'all' | 'none' | 'verified_recruiter' (filtre par badge, plus par rôle depuis le chantier RBAC — candidat/recruteur ont fusionné en 'user')
 
   const [users, setUsers] = useState([]);
+  const [myRole, setMyRole] = useState(null);
   const [offers, setOffers] = useState([]);
   const [applications, setApplications] = useState([]);
   const [resumes, setResumes] = useState([]);
@@ -94,6 +95,18 @@ export default function AdminDashboardPage() {
           return;
         }
         setUserSession(session);
+
+        // Rôle du modérateur connecté : purement pour l'UX (masquer les
+        // actions Approuver/Rejeter à un publisher plutôt que d'offrir un
+        // bouton qui échouera systématiquement) — la vraie autorisation est
+        // vérifiée à l'intérieur de approve_badge_request()/
+        // reject_badge_request() (admin uniquement), pas ici.
+        const { data: myRoleRow } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+        setMyRole(myRoleRow?.role || null);
 
         const [profilesRes, rolesRes, offersRes, applicationsRes, resumesRes, badgeRequestsRes] = await Promise.all([
           supabase.from("profiles").select("*").order("created_at", { ascending: false }),
@@ -693,31 +706,38 @@ export default function AdminDashboardPage() {
                           {" · "}{request.document_urls?.length || 0} document(s) joint(s)
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <input
-                          type="text"
-                          placeholder="Motif de rejet (optionnel)"
-                          value={rejectReasonDraft[request.id] || ""}
-                          onChange={(e) => setRejectReasonDraft((prev) => ({ ...prev, [request.id]: e.target.value }))}
-                          className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-orange-500 w-40"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleRejectBadgeRequest(request.id, rejectReasonDraft[request.id])}
-                          disabled={updatingUserId === request.id}
-                          className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
-                        >
-                          Rejeter
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleApproveBadgeRequest(request.id)}
-                          disabled={updatingUserId === request.id}
-                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
-                        >
-                          Approuver
-                        </button>
-                      </div>
+                      {myRole === "admin" ? (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <input
+                            type="text"
+                            placeholder="Motif de rejet (optionnel)"
+                            value={rejectReasonDraft[request.id] || ""}
+                            onChange={(e) => setRejectReasonDraft((prev) => ({ ...prev, [request.id]: e.target.value }))}
+                            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-orange-500 w-40"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRejectBadgeRequest(request.id, rejectReasonDraft[request.id])}
+                            disabled={updatingUserId === request.id}
+                            className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                          >
+                            Rejeter
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApproveBadgeRequest(request.id)}
+                            disabled={updatingUserId === request.id}
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                          >
+                            Approuver
+                          </button>
+                        </div>
+                      ) : (
+                        // publisher : lecture seule (peut préparer le dossier,
+                        // ne signe pas — voir approve_badge_request(), admin
+                        // uniquement).
+                        <span className="text-[10px] text-gray-400 italic shrink-0">Décision réservée à un administrateur</span>
+                      )}
                     </div>
                   ))}
                 </div>
