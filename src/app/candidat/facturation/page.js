@@ -47,7 +47,7 @@ export default function FacturationPage() {
             .from("subscriptions")
             .select("*")
             .eq("user_id", session.user.id)
-            .single()
+            .maybeSingle()
         ]);
 
         if (ordersRes.error) console.error("Erreur chargement des commandes:", ordersRes.error);
