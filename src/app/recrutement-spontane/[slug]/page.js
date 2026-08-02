@@ -56,6 +56,32 @@ export default function RecrutementSpontaneDetailPage() {
         "Audit"
       ],
       requirements: ["CV", "Lettre de motivation"]
+    },
+    soboa: {
+      id: "soboa-spontanee",
+      title: "Candidature Spontanée - SOBOA",
+      company: "SOBOA",
+      location: "Rte des Brasseries, Dakar, Sénégal",
+      contract_type: "Stage, Intérim, CDD, CDI",
+      description: "La Société des Brasseries de l'Ouest-Africain (SOBOA) recherche des talents passionnés. N'hésitez pas à nous envoyer votre candidature spontanée pour rejoindre nos équipes dans un environnement dynamique et innovant.",
+      image_url: "/soboa.png",
+      min_education_level: "Aucun",
+      isSpontaneous: true,
+      allowSpontaneousModal: true,
+      externalLink: "https://soboa.sn/carriere/",
+      externalButtonLabel: "Postuler via le site SOBOA",
+      poles: [
+        "Production",
+        "Qualité",
+        "Maintenance",
+        "Logistique & Supply Chain",
+        "Commercial & Vente",
+        "Marketing",
+        "Ressources Humaines",
+        "Finances & Comptabilité",
+        "Systèmes d'Information"
+      ],
+      requirements: ["CV", "Lettre de motivation"]
     }
   };
 

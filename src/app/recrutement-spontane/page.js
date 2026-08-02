@@ -35,6 +35,20 @@ export default function RecrutementSpontanePage() {
       externalLink: "https://seter.sn/recrutement/",
       externalButtonLabel: "Postuler sur le site SETER",
     },
+    {
+      id: "soboa-spontanee",
+      title: "Candidature Spontanée - SOBOA",
+      company: "SOBOA",
+      location: "Rte des Brasseries, Dakar, Sénégal",
+      contract_type: "Stage, Intérim, CDD, CDI",
+      description: "Rejoignez la Société des Brasseries de l'Ouest-Africain (SOBOA) et développez votre carrière dans un environnement dynamique.\nTypes de contrats : Stage Académique, Stage Professionnel, Intérim, CDD, CDI.\nDocuments requis : CV & Lettre de motivation.",
+      image_url: "/soboa.png",
+      min_education_level: "Aucun",
+      isSpontaneous: true,
+      allowSpontaneousModal: true,
+      externalLink: "https://soboa.sn/carriere/",
+      externalButtonLabel: "Postuler via le site SOBOA",
+    },
   ];
 
   return (
