@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabasePublicClient } from "@/lib/supabase";
 import OffreApplySection from "@/components/OffreApplySection";
+import { safeJsonLdString } from "@/lib/jsonLd";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://ffacilite.com";
 
@@ -110,7 +111,7 @@ export default async function OffreDetailPage({ params }) {
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(jobPostingSchema) }}
       />
 
       <header className="bg-white border-b border-gray-200 shadow-xs">

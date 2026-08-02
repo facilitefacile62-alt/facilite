@@ -11,6 +11,7 @@ import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import TemplatePreviewModal from "@/components/TemplatePreviewModal";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import { safeJsonLdString } from "@/lib/jsonLd";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://ffacilite.com";
 
@@ -727,7 +728,7 @@ export default function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLdString({
             "@context": "https://schema.org",
             "@graph": [
               {
