@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { generateAndStoreInvoice } from "@/lib/invoiceGenerator";
 import { sendInvoiceEmail, sendWhatsAppConfirmation } from "@/lib/notifications";
 import { isEquivalentCfaCurrency, isPlaceholderKpaySecret } from "@/lib/kpay";
+import { labelForCvModel } from "@/lib/cvModels";
 
 export const runtime = "nodejs";
 
@@ -100,9 +101,23 @@ async function handleCvOrderPayment(supabaseAdmin, event, orderId, kpayPaymentId
   let invoiceSignedUrl = null;
   let pdfBuffer = null;
   try {
-    const result = await generateAndStoreInvoice(updatedOrder, customer);
+    const lineItems = [
+      { description: `Confection de CV — ${labelForCvModel(updatedOrder.cv_model_id)}`, amount: 1500 },
+    ];
+    if (updatedOrder.has_agent_option) {
+      lineItems.push({ description: "Option accompagnement personnalisé par un expert", amount: 500 });
+    }
+
+    const result = await generateAndStoreInvoice(updatedOrder, customer, {
+      lineItems,
+      documentLabel: "Facture de confection de CV",
+      paymentMethod: updatedOrder.payment_method,
+      paymentReference: updatedOrder.payment_reference,
+    });
     invoiceNumber = result.invoiceNumber;
     pdfBuffer = result.buffer;
+
+    await supabaseAdmin.from("orders").update({ invoice_url: result.storagePath }).eq("id", updatedOrder.id);
 
     const { data: signedUrlData } = await supabaseAdmin.storage
       .from("invoices")
@@ -113,7 +128,15 @@ async function handleCvOrderPayment(supabaseAdmin, event, orderId, kpayPaymentId
   }
 
   if (invoiceNumber) {
-    await sendInvoiceEmail({ to: customer.email, fullName: customer.fullName, invoiceNumber, order: updatedOrder, pdfBuffer });
+    await sendInvoiceEmail({
+      to: customer.email,
+      fullName: customer.fullName,
+      invoiceNumber,
+      amount: updatedOrder.amount,
+      currency: updatedOrder.currency,
+      description: `la confection de votre CV${updatedOrder.has_agent_option ? " avec accompagnement personnalisé" : ""}`,
+      pdfBuffer,
+    });
     await sendWhatsAppConfirmation({ phone: customer.phone, fullName: customer.fullName, invoiceNumber, invoiceSignedUrl });
   }
 
@@ -178,6 +201,49 @@ async function handleCreditTopupPayment(supabaseAdmin, event, transactionId, kpa
         plan_name: updatedTransaction.metadata?.plan_name || subscription.plan_name,
       })
       .eq("id", subscription.id);
+  }
+
+  // Reçu (PDF + email) pour la recharge de crédits — même mécanique que les
+  // commandes de CV (voir handleCvOrderPayment). Best effort : un échec ici
+  // ne doit jamais remettre en cause le crédit déjà accordé ci-dessus.
+  try {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, email, phone, contact_email")
+      .eq("id", updatedTransaction.user_id)
+      .single();
+
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(updatedTransaction.user_id);
+
+    const customer = {
+      fullName: profile?.full_name || authUser?.user?.email || "Client Facilite",
+      email: profile?.contact_email || profile?.email || authUser?.user?.email || null,
+      phone: profile?.phone || authUser?.user?.phone || event.phoneNumber || null,
+    };
+
+    const planName = updatedTransaction.metadata?.plan_name || "Recharge de crédits";
+    const result = await generateAndStoreInvoice(updatedTransaction, customer, {
+      lineItems: [{ description: `${planName} — crédits IA Facilite`, amount: updatedTransaction.amount }],
+      documentLabel: "Reçu de recharge de crédits",
+      paymentMethod: "kpay",
+      paymentReference: updatedTransaction.provider_reference,
+    });
+
+    await supabaseAdmin.from("transactions").update({ invoice_url: result.storagePath }).eq("id", updatedTransaction.id);
+
+    if (customer.email) {
+      await sendInvoiceEmail({
+        to: customer.email,
+        fullName: customer.fullName,
+        invoiceNumber: result.invoiceNumber,
+        amount: updatedTransaction.amount,
+        currency: updatedTransaction.currency,
+        description: "la recharge de vos crédits IA Facilite",
+        pdfBuffer: result.buffer,
+      });
+    }
+  } catch (invoiceErr) {
+    console.error("[Webhook KPay] Échec génération/envoi du reçu de crédits :", invoiceErr?.message);
   }
 
   return { handled: true, response: NextResponse.json({ received: true }) };

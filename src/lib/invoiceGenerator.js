@@ -1,16 +1,16 @@
 import PDFDocument from "pdfkit";
 import { getSupabaseAdmin } from "./supabaseAdmin";
-import { labelForCvModel } from "./cvModels";
 
 /**
  * Numéro de facture unique et déterministe : FACT-{année}-{8 premiers
- * caractères de l'UUID de la commande, en majuscules}. Pas de compteur
- * séquentiel partagé (pas de table dédiée) — l'UUID de orders.id garantit
- * l'unicité sans risque de collision entre requêtes concurrentes.
+ * caractères de l'UUID de l'enregistrement, en majuscules}. Pas de compteur
+ * séquentiel partagé (pas de table dédiée) — l'UUID (orders.id ou
+ * transactions.id, les deux espaces ne collisionnent jamais entre eux)
+ * garantit l'unicité sans risque de collision entre requêtes concurrentes.
  */
-export function buildInvoiceNumber(order) {
-  const year = new Date(order.created_at || Date.now()).getFullYear();
-  const shortId = String(order.id).replace(/-/g, "").slice(0, 8).toUpperCase();
+export function buildInvoiceNumber(record) {
+  const year = new Date(record.created_at || Date.now()).getFullYear();
+  const shortId = String(record.id).replace(/-/g, "").slice(0, 8).toUpperCase();
   return `FACT-${year}-${shortId}`;
 }
 
@@ -27,11 +27,15 @@ function formatFcfaAmount(amount) {
 }
 
 /**
- * Génère le PDF de facture en mémoire (Buffer), sans toucher au stockage.
+ * Génère le PDF de reçu/facture en mémoire (Buffer), sans toucher au
+ * stockage. Générique : ni le type de prestation (CV, recharge de crédits...)
+ * ni le nombre de lignes ne sont figés — `lineItems` porte tout le détail
+ * métier, cette fonction ne fait que la mise en page.
+ *
  * Séparé de generateAndStoreInvoice pour pouvoir être testé/réutilisé
  * (ex : pièce jointe e-mail) sans dépendre de Supabase Storage.
  */
-export function generateInvoicePdfBuffer({ order, customer }) {
+export function generateInvoicePdfBuffer({ record, customer, documentLabel, lineItems, paymentMethod, paymentReference }) {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: "A4", margin: 50 });
@@ -40,8 +44,8 @@ export function generateInvoicePdfBuffer({ order, customer }) {
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
-      const invoiceNumber = buildInvoiceNumber(order);
-      const issueDate = new Date(order.updated_at || order.created_at || Date.now());
+      const invoiceNumber = buildInvoiceNumber(record);
+      const issueDate = new Date(record.updated_at || record.created_at || Date.now());
 
       // En-tête
       doc
@@ -54,7 +58,7 @@ export function generateInvoicePdfBuffer({ order, customer }) {
         .fillColor("#111827")
         .fontSize(11)
         .font("Helvetica")
-        .text("Facture de confection de CV", 50, 82);
+        .text(documentLabel, 50, 82);
 
       doc
         .fontSize(10)
@@ -97,21 +101,17 @@ export function generateInvoicePdfBuffer({ order, customer }) {
       doc.moveTo(50, tableTop + 18).lineTo(545, tableTop + 18).strokeColor("#E5E7EB").stroke();
 
       let rowY = tableTop + 30;
-      doc
-        .font("Helvetica")
-        .fontSize(10)
-        .fillColor("#374151")
-        .text(`Confection de CV — ${labelForCvModel(order.cv_model_id)}`, 50, rowY)
-        .text("1 500", 420, rowY, { width: 125, align: "right" });
-
-      if (order.has_agent_option) {
-        rowY += 22;
+      for (const item of lineItems) {
         doc
-          .text("Option accompagnement personnalisé par un expert", 50, rowY)
-          .text("500", 420, rowY, { width: 125, align: "right" });
+          .font("Helvetica")
+          .fontSize(10)
+          .fillColor("#374151")
+          .text(item.description, 50, rowY, { width: 340 })
+          .text(formatFcfaAmount(item.amount), 420, rowY, { width: 125, align: "right" });
+        rowY += 22;
       }
 
-      rowY += 35;
+      rowY += 13;
       doc.moveTo(50, rowY).lineTo(545, rowY).strokeColor("#E5E7EB").stroke();
 
       rowY += 15;
@@ -120,7 +120,7 @@ export function generateInvoicePdfBuffer({ order, customer }) {
         .fontSize(12)
         .fillColor("#111827")
         .text("Total réglé", 50, rowY)
-        .text(`${formatFcfaAmount(order.amount)} ${order.currency || "XOF"}`, 420, rowY, {
+        .text(`${formatFcfaAmount(record.amount)} ${record.currency || "XOF"}`, 420, rowY, {
           width: 125,
           align: "right",
         });
@@ -130,8 +130,8 @@ export function generateInvoicePdfBuffer({ order, customer }) {
         .font("Helvetica")
         .fontSize(10)
         .fillColor("#6B7280")
-        .text(`Moyen de paiement : ${order.payment_method || "KPay"}`, 50, rowY)
-        .text(`Référence de transaction : ${order.payment_reference || "—"}`, 50, rowY + 15);
+        .text(`Moyen de paiement : ${paymentMethod || "KPay"}`, 50, rowY)
+        .text(`Référence de transaction : ${paymentReference || "—"}`, 50, rowY + 15);
 
       doc
         .fontSize(9)
@@ -146,15 +146,18 @@ export function generateInvoicePdfBuffer({ order, customer }) {
 }
 
 /**
- * Génère la facture PDF, la stocke dans le bucket privé "invoices" (chemin
- * {user_id}/{order_id}.pdf) et met à jour orders.invoice_url avec ce chemin
- * de stockage (pas une URL publique — le bucket est privé, la page de
- * facturation génère une URL signée à la demande, comme pour les CV).
+ * Génère la facture PDF et la stocke dans le bucket privé "invoices"
+ * (chemin {user_id}/{record.id}.pdf) — bucket partagé entre commandes de CV
+ * et recharges de crédits, le préfixe user_id + l'UUID de l'enregistrement
+ * suffisent à éviter toute collision. Ne met PAS à jour la ligne
+ * orders/transactions elle-même : chaque appelant connaît sa propre table
+ * et le fait directement (pas une URL publique — le bucket est privé, la
+ * page de facturation génère une URL signée à la demande).
  */
-export async function generateAndStoreInvoice(order, customer) {
-  const buffer = await generateInvoicePdfBuffer({ order, customer });
+export async function generateAndStoreInvoice(record, customer, { lineItems, documentLabel, paymentMethod, paymentReference }) {
+  const buffer = await generateInvoicePdfBuffer({ record, customer, documentLabel, lineItems, paymentMethod, paymentReference });
   const supabaseAdmin = getSupabaseAdmin();
-  const storagePath = `${order.user_id}/${order.id}.pdf`;
+  const storagePath = `${record.user_id}/${record.id}.pdf`;
 
   const { error: uploadError } = await supabaseAdmin.storage
     .from("invoices")
@@ -164,14 +167,5 @@ export async function generateAndStoreInvoice(order, customer) {
     throw new Error(`Échec du stockage de la facture : ${uploadError.message}`);
   }
 
-  const { error: updateError } = await supabaseAdmin
-    .from("orders")
-    .update({ invoice_url: storagePath })
-    .eq("id", order.id);
-
-  if (updateError) {
-    console.error("Facture stockée mais échec de la mise à jour de orders.invoice_url :", updateError.message);
-  }
-
-  return { storagePath, buffer, invoiceNumber: buildInvoiceNumber(order) };
+  return { storagePath, buffer, invoiceNumber: buildInvoiceNumber(record) };
 }

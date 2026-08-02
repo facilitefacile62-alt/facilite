@@ -11,7 +11,7 @@ const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
  * (RESEND_TEST_RECIPIENT). Ne lève jamais d'exception : un échec d'envoi ne
  * doit pas remettre en cause un paiement déjà confirmé côté webhook.
  */
-export async function sendInvoiceEmail({ to, fullName, invoiceNumber, order, pdfBuffer }) {
+export async function sendInvoiceEmail({ to, fullName, invoiceNumber, amount, currency, description, pdfBuffer }) {
   const isProd = process.env.NODE_ENV === "production";
   const sender =
     process.env.RESEND_FROM_BILLING ||
@@ -35,8 +35,8 @@ export async function sendInvoiceEmail({ to, fullName, invoiceNumber, order, pdf
         <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
           <h2 style="color: #10E688;">Bonjour ${fullName || "cher client"},</h2>
           <p>Nous vous confirmons la réception de votre paiement de
-             <strong>${Number(order.amount).toLocaleString("fr-FR")} ${order.currency}</strong>
-             pour la confection de votre CV${order.has_agent_option ? " avec accompagnement personnalisé" : ""}.</p>
+             <strong>${Number(amount).toLocaleString("fr-FR")} ${currency}</strong>
+             pour ${description}.</p>
           <p>Votre facture <strong>${invoiceNumber}</strong> est disponible en pièce jointe de cet e-mail,
              ainsi que dans votre espace « Facturation & Historique ».</p>
           <br/>
