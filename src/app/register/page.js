@@ -49,13 +49,20 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
+      // role n'est plus envoyé : depuis le chantier RBAC (2026-08-02),
+      // public.profiles n'a plus de colonne "role" (déplacée vers
+      // public.user_roles, jamais écrite par le client) et
+      // handle_new_user() attribue 'user' à tout nouveau compte sans
+      // exception, quoi que le client envoie ici — envoyer role dans
+      // raw_user_meta_data n'aurait de toute façon jamais eu d'effet sur
+      // l'autorisation réelle (déjà vrai avant ce nettoyage), voir
+      // 20260729232500_profiles_multi_roles.sql.
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
           data: {
             full_name: fullName.trim(),
-            role: role
           },
         },
       });
@@ -67,12 +74,15 @@ export default function RegisterPage() {
       }
 
       if (data?.user) {
-        // Insertion ou mise à jour directe dans la table public.profiles avec le rôle
+        // handle_new_user() (trigger serveur) a déjà créé les lignes
+        // profiles + user_roles pour ce compte au moment du signUp()
+        // ci-dessus — cet upsert redondant échouait silencieusement depuis
+        // la suppression de profiles.role (erreur jamais vérifiée), sans
+        // jamais avoir été nécessaire au bon fonctionnement de l'inscription.
         await supabase.from("profiles").upsert({
           id: data.user.id,
           email: email.trim(),
           full_name: fullName.trim(),
-          role: role,
           updated_at: new Date().toISOString(),
         });
       }
@@ -227,11 +237,12 @@ export default function RegisterPage() {
               </div>
 
               {/* shouldCreateUser: true dans PhoneAuthForm crée le compte au
-                  premier OTP vérifié ; signupMetadata attache nom/rôle à ce
+                  premier OTP vérifié ; signupMetadata attache le nom à ce
                   moment précis (ignoré si le numéro correspond à un compte
-                  déjà existant). */}
+                  déjà existant). role retiré : handle_new_user() attribue
+                  'user' sans exception depuis le chantier RBAC. */}
               <PhoneAuthForm
-                signupMetadata={{ full_name: fullName.trim(), role }}
+                signupMetadata={{ full_name: fullName.trim() }}
                 onSuccessRedirect="/profil"
               />
 

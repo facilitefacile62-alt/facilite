@@ -66,35 +66,41 @@ export async function middleware(req) {
 
   // Vérification des autorisations selon le rôle pour les routes restreintes.
   //
-  // Source de vérité : UNIQUEMENT public.profiles.role, jamais
-  // user.user_metadata.role. user_metadata (raw_user_meta_data) est fourni
-  // par le client au signup (options.data) — un attaquant peut y écrire
-  // n'importe quoi ("role": "admin") et ce claim finit dans son propre JWT.
-  // Le lire ici pour une décision d'autorisation aurait permis à quiconque
-  // de s'auto-attribuer l'accès à /admin sans jamais toucher à la base.
+  // Source de vérité : UNIQUEMENT public.user_roles.role (jamais
+  // user.user_metadata.role, ni l'ancienne public.profiles.role — supprimée
+  // par le chantier RBAC, 20260802050000). user_metadata (raw_user_meta_data)
+  // est fourni par le client au signup (options.data) — un attaquant peut y
+  // écrire n'importe quoi ("role": "admin") et ce claim finit dans son
+  // propre JWT. Le lire ici pour une décision d'autorisation aurait permis
+  // à quiconque de s'auto-attribuer l'accès à /admin sans jamais toucher à
+  // la base.
   if (
     user &&
     (pathnameMatchesRoute(pathname, "/admin") ||
       pathnameMatchesRoute(pathname, "/recruteur") ||
       pathnameMatchesRoute(pathname, "/candidat"))
   ) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    const [{ data: userRoleRow }, { data: profile }] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", user.id).single(),
+      supabase.from("profiles").select("badges").eq("id", user.id).single(),
+    ]);
 
-    const userRole = profile?.role || "candidat";
+    const userRole = userRoleRow?.role || "user";
+    const badges = profile?.badges || [];
+    const isOfficialStaff = badges.includes("official_staff");
 
-    // /admin est accessible à 'admin' ET 'agent' (back-office commun) ; les
-    // deux autres espaces restent strictement mono-rôle. 'admin' garde par
-    // ailleurs un accès universel (bypass), déjà en place avant l'ajout du
-    // rôle agent.
+    // /admin : accessible à 'admin', 'publisher' (rôle interne, section 5),
+    // et à tout compte portant le badge cosmétique 'official_staff' — la
+    // seule lecture d'autorisation à partir de badges dans tout ce projet,
+    // volontairement isolée ici plutôt que dans une policy RLS (le principe
+    // "badges est purement cosmétique, RLS ne le lit jamais" reste respecté
+    // au niveau base ; ce détour applicatif au niveau middleware est un
+    // choix produit explicite du 2026-08-02, pas un oubli).
+    // /recruteur et /candidat : accessibles à 'user' et 'admin' — 'publisher'
+    // (personnel interne) en est exclu, son périmètre reste /admin.
     const isAuthorized = pathnameMatchesRoute(pathname, "/admin")
-      ? userRole === "admin" || userRole === "agent"
-      : pathnameMatchesRoute(pathname, "/recruteur")
-      ? userRole === "recruteur" || userRole === "admin"
-      : userRole === "candidat" || userRole === "admin";
+      ? userRole === "admin" || userRole === "publisher" || isOfficialStaff
+      : userRole === "user" || userRole === "admin";
 
     if (!isAuthorized) {
       const url = req.nextUrl.clone();

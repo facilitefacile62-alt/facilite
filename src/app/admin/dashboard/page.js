@@ -31,17 +31,21 @@ export default function AdminDashboardKpiPage() {
         return;
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
+      // Section 5 du chantier RBAC : données financières (orders/transactions
+      // KPay) strictement réservées à 'admin' — 'publisher' (personnel
+      // interne, modération) en est explicitement exclu ici, contrairement
+      // aux autres pages du dossier /admin.
+      const { data: userRoleRow } = await supabase
+        .from("user_roles")
         .select("role")
-        .eq("id", session.user.id)
+        .eq("user_id", session.user.id)
         .single();
 
-      if (!profile || (profile.role !== "admin" && profile.role !== "agent")) {
-        window.location.replace(profile?.role ? `/${profile.role === "candidat" ? "messagerie" : profile.role}` : "/login");
+      if (!userRoleRow || userRoleRow.role !== "admin") {
+        window.location.replace("/messagerie");
         return;
       }
-      setUserRole(profile.role);
+      setUserRole(userRoleRow.role);
       setUserId(session.user.id);
 
       const [ordersRes, resumesRes, offersRes, applicationsRes] = await Promise.all([

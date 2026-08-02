@@ -24,15 +24,17 @@ export default function CandidatDashboardPage() {
           return;
         }
 
-        // Vérification de rôle : réservé aux candidats et administrateurs
-        const { data: profile } = await supabase
-          .from("profiles")
+        // Vérification de rôle : réservé aux comptes 'user' (candidat et
+        // recruteur ont fusionné, chantier RBAC) et aux administrateurs —
+        // 'publisher' (personnel interne) en est exclu.
+        const { data: userRoleRow } = await supabase
+          .from("user_roles")
           .select("role")
-          .eq("id", session.user.id)
+          .eq("user_id", session.user.id)
           .single();
 
-        if (!profile || (profile.role !== "candidat" && profile.role !== "admin")) {
-          window.location.replace(profile?.role === "recruteur" ? "/recruteur" : "/");
+        if (!userRoleRow || (userRoleRow.role !== "user" && userRoleRow.role !== "admin")) {
+          window.location.replace("/");
           return;
         }
 

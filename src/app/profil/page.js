@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import AIAssistantModal from "@/components/AIAssistantModal";
 import RoleBadge from "@/components/RoleBadge";
+import BadgeDisplay from "@/components/BadgeDisplay";
 import ThemeSettings from "@/components/ThemeSettings";
 import DiagnosticModal from "@/components/DiagnosticModal";
 import UnreadBadge from "@/components/UnreadBadge";
@@ -37,7 +38,8 @@ export default function ProfilPage() {
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [profileName, setProfileName] = useState("");
-  const [profileRole, setProfileRole] = useState("candidat");
+  const [profileRole, setProfileRole] = useState("user");
+  const [profileBadges, setProfileBadges] = useState([]);
   const [profileSubtitle, setProfileSubtitle] = useState("");
   const [profileLocation, setProfileLocation] = useState("");
   const [profileBio, setProfileBio] = useState("");
@@ -272,9 +274,20 @@ export default function ProfilPage() {
         .eq("id", session.user.id)
         .single();
 
+      const { data: userRoleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .single();
+
       if (profile) {
         setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
-        setProfileRole(profile.role || "candidat");
+        // 'recruteur' n'existe plus comme rôle (chantier RBAC, fusionné dans
+        // 'user') — l'onglet raccourci "Recruteur" plus bas ne s'affichera
+        // donc plus jamais ; /recruteur reste accessible à tout 'user' via
+        // la navigation normale, ce raccourci n'est plus qu'une redondance.
+        setProfileRole(userRoleRow?.role || "user");
+        setProfileBadges(profile.badges || []);
         setEducationLevel(profile.education_level || "Aucun");
         setProfileSubtitle(profile.headline || "");
         setProfileLocation(profile.location || "");
@@ -2071,6 +2084,7 @@ export default function ProfilPage() {
                         {profileName}
                       </h1>
                       <RoleBadge role={profileRole} />
+                      <BadgeDisplay badges={profileBadges} />
                       <span className="bg-emerald-100 text-[#047857] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">
                         Profil Vérifié
                       </span>
@@ -2356,8 +2370,20 @@ export default function ProfilPage() {
                             onClick={() => {
                               const newCompany = prompt("Modifier votre organisation/société :", company || "");
                               if (newCompany !== null) {
-                                setCompany(newCompany.trim());
-                                handleSaveAboutField("company", newCompany.trim());
+                                const trimmed = newCompany.trim();
+                                setCompany(trimmed);
+                                // Pas de colonne "company" dans profiles (audit
+                                // sécurité 2026-08, section 7) : handleSaveAboutField
+                                // upsertait vers une colonne inexistante, échec
+                                // silencieux à chaque sauvegarde. localStorage est
+                                // déjà le repli lu au chargement (ligne ~302) — en
+                                // faire aussi la cible d'écriture rend le champ
+                                // réellement persistant, plutôt que de simplement
+                                // supprimer l'appel cassé et laisser la fonctionnalité
+                                // perdre sa valeur au moindre rafraîchissement.
+                                if (typeof window !== "undefined") {
+                                  localStorage.setItem("user_company", trimmed);
+                                }
                               }
                             }}
                             className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"

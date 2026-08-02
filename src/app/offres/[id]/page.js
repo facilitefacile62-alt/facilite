@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getSupabasePublicClient } from "@/lib/supabase";
 import OffreApplySection from "@/components/OffreApplySection";
 import { safeJsonLdString } from "@/lib/jsonLd";
+import BadgeDisplay from "@/components/BadgeDisplay";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://ffacilite.com";
 
@@ -17,7 +18,20 @@ async function fetchOffer(id) {
     .single();
 
   if (error || !data) return null;
-  return data;
+
+  // has_badge() est GRANT à anon (public.has_badge, migration
+  // 20260802080000) : l'affichage du badge "Recruteur vérifié" est
+  // volontairement public, comme le reste de la page.
+  let recruiterVerified = false;
+  if (data.recruiter_id) {
+    const { data: verified } = await supabase.rpc("has_badge", {
+      check_user_id: data.recruiter_id,
+      badge_name: "verified_recruiter",
+    });
+    recruiterVerified = verified === true;
+  }
+
+  return { ...data, recruiterVerified };
 }
 
 // schema.org JobPosting.employmentType n'a pas d'équivalent 1:1 avec
@@ -157,7 +171,10 @@ export default async function OffreDetailPage({ params }) {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">{offer.title}</h1>
-            <p className="text-base font-bold text-gray-600 mb-1">{offer.company}</p>
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <p className="text-base font-bold text-gray-600">{offer.company}</p>
+              {offer.recruiterVerified && <BadgeDisplay badges={["verified_recruiter"]} />}
+            </div>
             <p className="text-sm text-gray-400 font-medium mb-6">
               <i className="fa-solid fa-location-dot mr-1"></i>
               {offer.location}

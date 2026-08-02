@@ -43,14 +43,14 @@ export default function AdminCommandesAgentPage() {
       return;
     }
 
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", session.user.id).single();
+    const { data: userRoleRow } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).single();
 
-    if (!profile || (profile.role !== "admin" && profile.role !== "agent")) {
-      window.location.replace(profile?.role ? `/${profile.role === "candidat" ? "messagerie" : profile.role}` : "/login");
+    if (!userRoleRow || (userRoleRow.role !== "admin" && userRoleRow.role !== "publisher")) {
+      window.location.replace("/messagerie");
       return;
     }
 
-    setUserRole(profile.role);
+    setUserRole(userRoleRow.role);
     setUserId(session.user.id);
 
     const { data: assignmentsData, error: assignmentsError } = await supabase
@@ -85,8 +85,15 @@ export default function AdminCommandesAgentPage() {
     setCandidatesById(Object.fromEntries((candidatesRes.data || []).map((p) => [p.id, p])));
     setAgentsById(Object.fromEntries((agentsRes.data || []).map((p) => [p.id, p])));
 
-    if (profile.role === "admin") {
-      const { data: agentsList } = await supabase.from("profiles").select("id, full_name, email").eq("role", "agent");
+    if (userRoleRow.role === "admin") {
+      // Deux requêtes : profiles et user_roles n'ont pas de relation FK
+      // directe (toutes deux référencent séparément auth.users), pas
+      // d'embedding PostgREST possible.
+      const { data: publisherRoles } = await supabase.from("user_roles").select("user_id").eq("role", "publisher");
+      const publisherIds = (publisherRoles || []).map((r) => r.user_id);
+      const { data: agentsList } = publisherIds.length
+        ? await supabase.from("profiles").select("id, full_name, email").in("id", publisherIds)
+        : { data: [] };
       setAvailableAgents(agentsList || []);
     }
 

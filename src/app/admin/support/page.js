@@ -52,13 +52,13 @@ export default function AdminSupportPage() {
           return;
         }
 
-        const { data: profile } = await supabase
-          .from("profiles")
+        const { data: userRoleRow } = await supabase
+          .from("user_roles")
           .select("role")
-          .eq("id", session.user.id)
+          .eq("user_id", session.user.id)
           .single();
 
-        if (!profile || profile.role !== "admin") {
+        if (!userRoleRow || (userRoleRow.role !== "admin" && userRoleRow.role !== "publisher")) {
           window.location.replace("/");
           return;
         }
@@ -67,7 +67,14 @@ export default function AdminSupportPage() {
 
         const [{ data: threadsData, error: threadsErr }, { data: profilesData, error: profilesErr }] = await Promise.all([
           supabase.from("support_threads").select("*").order("last_message_at", { ascending: false }),
-          supabase.from("profiles").select("id, full_name, email, role"),
+          // "role" retiré : plus une colonne de profiles depuis le chantier
+          // RBAC (déplacée vers user_roles) — sa présence ici ferait
+          // échouer la requête entière (PostgREST rejette une colonne
+          // inconnue dans un select explicite). Le badge de rôle par
+          // participant (ligne ~320, {p?.role && <RoleBadge .../>}) ne
+          // s'affiche donc plus — dégradation cosmétique mineure, pas une
+          // erreur, cohérente avec le même choix fait dans admin/messages.
+          supabase.from("profiles").select("id, full_name, email"),
         ]);
 
         if (threadsErr) console.error("Erreur chargement des demandes de support:", threadsErr);

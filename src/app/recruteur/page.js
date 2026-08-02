@@ -130,6 +130,11 @@ export default function RecruteurDashboardPage() {
   const [candidates, setCandidates] = useState([]);
   const [candidatesLoading, setCandidatesLoading] = useState(true);
   const [recruiterVerified, setRecruiterVerified] = useState(true);
+  const [pendingBadgeRequest, setPendingBadgeRequest] = useState(null);
+  const [badgeRequestForm, setBadgeRequestForm] = useState({ company_name: "", ninea_number: "", rccm_number: "" });
+  const [badgeDocumentFile, setBadgeDocumentFile] = useState(null);
+  const [submittingBadgeRequest, setSubmittingBadgeRequest] = useState(false);
+  const [badgeRequestError, setBadgeRequestError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState(null);
@@ -148,6 +153,55 @@ export default function RecruteurDashboardPage() {
   const triggerToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
+  };
+
+  // Dépôt d'une demande d'accréditation "Recruteur vérifié" (section 4 du
+  // chantier RBAC) : NINEA/RCCM obligatoires, imposé par la contrainte SQL
+  // verified_recruiter_requires_company_docs, pas seulement ce formulaire.
+  const handleSubmitBadgeRequest = async (e) => {
+    e.preventDefault();
+    if (!userSession?.user) return;
+    setBadgeRequestError("");
+
+    if (!badgeRequestForm.company_name.trim() || !badgeRequestForm.ninea_number.trim() || !badgeRequestForm.rccm_number.trim()) {
+      setBadgeRequestError("Nom de l'entreprise, NINEA et RCCM sont obligatoires.");
+      return;
+    }
+
+    setSubmittingBadgeRequest(true);
+    try {
+      const documentPaths = [];
+      if (badgeDocumentFile) {
+        const ext = badgeDocumentFile.name.split(".").pop().toLowerCase();
+        const storagePath = buildStoragePath(userSession.user.id, ext);
+        const { error: uploadError } = await supabase.storage
+          .from("badge-documents")
+          .upload(storagePath, badgeDocumentFile, { contentType: badgeDocumentFile.type });
+        if (uploadError) throw new Error("Échec du téléversement du document : " + uploadError.message);
+        documentPaths.push(storagePath);
+      }
+
+      const { data: created, error } = await supabase
+        .from("badge_requests")
+        .insert({
+          user_id: userSession.user.id,
+          requested_badge: "verified_recruiter",
+          company_name: badgeRequestForm.company_name.trim(),
+          ninea_number: badgeRequestForm.ninea_number.trim(),
+          rccm_number: badgeRequestForm.rccm_number.trim(),
+          document_urls: documentPaths,
+        })
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+      setPendingBadgeRequest(created);
+      triggerToast("Demande envoyée — notre équipe la traite sous peu.");
+    } catch (err) {
+      setBadgeRequestError(err.message || "Une erreur est survenue.");
+    } finally {
+      setSubmittingBadgeRequest(false);
+    }
   };
 
   // Pagine /api/recruteur/candidats-recherche jusqu'à épuisement (ou une
@@ -191,25 +245,39 @@ export default function RecruteurDashboardPage() {
           return;
         }
 
-        // Contrôle d'accès : réservé aux recruteurs (et aux admins, qui
-        // peuvent tout superviser). Un candidat qui atterrit ici (lien direct,
-        // ancien favori...) est renvoyé à l'accueil.
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role, recruiter_verified")
-          .eq("id", session.user.id)
-          .single();
+        // Contrôle d'accès : réservé aux comptes 'user' (candidat et
+        // recruteur ont fusionné, chantier RBAC) et aux admins, qui
+        // peuvent tout superviser. 'publisher' (personnel interne) en est
+        // exclu, son périmètre reste /admin.
+        const [{ data: userRoleRow }, { data: hasVerifiedBadge }] = await Promise.all([
+          supabase.from("user_roles").select("role").eq("user_id", session.user.id).single(),
+          supabase.rpc("has_badge", { check_user_id: session.user.id, badge_name: "verified_recruiter" }),
+        ]);
 
-        if (!profile || (profile.role !== "recruteur" && profile.role !== "admin")) {
+        if (!userRoleRow || (userRoleRow.role !== "user" && userRoleRow.role !== "admin")) {
           window.location.replace("/");
           return;
         }
 
-        // Un admin n'a pas de notion de "vérification recruteur" — seul un
-        // compte role=recruteur non encore validé par un admin voit la
-        // bannière d'attente et un répertoire candidats vide (imposé côté
-        // vue candidats_recherche, pas seulement ici).
-        setRecruiterVerified(profile.role === "admin" ? true : profile.recruiter_verified === true);
+        // Un admin n'a pas besoin du badge verified_recruiter — seul un
+        // compte 'user' sans ce badge voit la bannière d'attente et un
+        // répertoire candidats vide (imposé côté vue candidats_recherche,
+        // pas seulement ici).
+        const isVerified = userRoleRow.role === "admin" ? true : hasVerifiedBadge === true;
+        setRecruiterVerified(isVerified);
+
+        if (!isVerified) {
+          const { data: latestRequest } = await supabase
+            .from("badge_requests")
+            .select("id, status, rejection_reason, created_at")
+            .eq("user_id", session.user.id)
+            .eq("requested_badge", "verified_recruiter")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (latestRequest?.status === "pending") setPendingBadgeRequest(latestRequest);
+          else if (latestRequest?.status === "rejected") setPendingBadgeRequest(latestRequest);
+        }
 
         setUserSession(session);
         // Fire-and-forget : ne bloque pas le reste du dashboard (offres,
@@ -1255,17 +1323,76 @@ export default function RecruteurDashboardPage() {
           </div>
         )}
 
-        {activeTab === "cvtheque" && !recruiterVerified && (
+        {activeTab === "cvtheque" && !recruiterVerified && pendingBadgeRequest?.status === "pending" && (
           <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 mb-6 flex items-start gap-3">
             <i className="fa-solid fa-hourglass-half text-amber-600 mt-0.5"></i>
             <div>
-              <h2 className="text-sm font-extrabold text-amber-900">Compte en attente de validation</h2>
+              <h2 className="text-sm font-extrabold text-amber-900">Demande en cours de revue</h2>
               <p className="text-xs text-amber-800 font-medium mt-1">
-                Pour protéger les données de nos candidats, l&apos;accès au répertoire CVthèque est activé
-                manuellement par notre équipe après vérification de votre compte recruteur. Vous pouvez déjà
-                publier des offres d&apos;emploi en attendant.
+                Votre demande d&apos;accréditation « Recruteur vérifié » est en cours de traitement par notre
+                équipe. Vous pouvez déjà publier des offres d&apos;emploi en attendant.
               </p>
             </div>
+          </div>
+        )}
+
+        {activeTab === "cvtheque" && !recruiterVerified && pendingBadgeRequest?.status !== "pending" && (
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 mb-6">
+            {pendingBadgeRequest?.status === "rejected" && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                Votre précédente demande a été rejetée
+                {pendingBadgeRequest.rejection_reason ? ` : ${pendingBadgeRequest.rejection_reason}` : "."} Vous pouvez
+                soumettre une nouvelle demande ci-dessous.
+              </div>
+            )}
+            <h2 className="text-sm font-extrabold text-gray-900 mb-1">Devenir un recruteur vérifié</h2>
+            <p className="text-xs text-gray-500 font-medium mb-4">
+              Pour protéger les données de nos candidats, l&apos;accès au répertoire CVthèque nécessite une
+              accréditation d&apos;entreprise (NINEA, RCCM et attestation officielle). Vous pouvez déjà publier des
+              offres d&apos;emploi en attendant la validation.
+            </p>
+            <form onSubmit={handleSubmitBadgeRequest} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                type="text"
+                placeholder="Nom de l'entreprise"
+                value={badgeRequestForm.company_name}
+                onChange={(e) => setBadgeRequestForm((prev) => ({ ...prev, company_name: e.target.value }))}
+                className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Numéro NINEA"
+                value={badgeRequestForm.ninea_number}
+                onChange={(e) => setBadgeRequestForm((prev) => ({ ...prev, ninea_number: e.target.value }))}
+                className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Numéro RCCM"
+                value={badgeRequestForm.rccm_number}
+                onChange={(e) => setBadgeRequestForm((prev) => ({ ...prev, rccm_number: e.target.value }))}
+                className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500"
+                required
+              />
+              <input
+                type="file"
+                accept="application/pdf,image/png,image/jpeg"
+                onChange={(e) => setBadgeDocumentFile(e.target.files?.[0] || null)}
+                className="text-xs font-medium file:mr-3 file:px-3.5 file:py-2 file:rounded-xl file:border-0 file:bg-emerald-50 file:text-emerald-700 file:font-extrabold file:cursor-pointer"
+              />
+              {badgeRequestError && (
+                <p className="sm:col-span-2 text-xs font-medium text-red-600">{badgeRequestError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={submittingBadgeRequest}
+                className="sm:col-span-2 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
+              >
+                {submittingBadgeRequest ? "Envoi..." : "Envoyer ma demande"}
+              </button>
+            </form>
           </div>
         )}
 

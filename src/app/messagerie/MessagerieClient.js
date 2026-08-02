@@ -756,14 +756,12 @@ export default function MessagerieClient() {
       // consulte /messagerie n'est pas "en recherche de support" — le
       // résoudre quand même l'aurait fait se désigner lui-même comme
       // destinataire (voir resolveSupportConversation).
-      supabase
-        .from("profiles")
-        .select("role, avatar_url")
-        .eq("id", session.user.id)
-        .single()
-        .then(({ data: profile }) => {
+      Promise.all([
+        supabase.from("profiles").select("avatar_url").eq("id", session.user.id).single(),
+        supabase.from("user_roles").select("role").eq("user_id", session.user.id).single(),
+      ]).then(([{ data: profile }, { data: userRoleRow }]) => {
           if (!isActive) return;
-          const role = profile?.role || null;
+          const role = userRoleRow?.role || null;
           setCurrentUserRole(role);
           setUserAvatarUrl(profile?.avatar_url || null);
           if (role !== "admin") {

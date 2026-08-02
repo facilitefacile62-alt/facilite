@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import ApplyModal from "@/components/ApplyModal";
+import BadgeDisplay from "@/components/BadgeDisplay";
 
 const EDUCATION_LEVELS = ["Aucun", "CM2", "Brevet", "BAC", "Licence", "Master", "Doctorat"];
 const levelRank = (level) => {
@@ -43,6 +44,7 @@ export default function RecruiterShowcasePage() {
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [applyingOffer, setApplyingOffer] = useState(null);
   const [toast, setToast] = useState("");
+  const [recruiterVerified, setRecruiterVerified] = useState(false);
 
   const triggerToast = useCallback((msg) => {
     setToast(msg);
@@ -87,6 +89,12 @@ export default function RecruiterShowcasePage() {
 
         setRecruiterProfile(recruiterData || null);
         setOffers(offersData || []);
+
+        const { data: verified } = await supabase.rpc("has_badge", {
+          check_user_id: recruiterId,
+          badge_name: "verified_recruiter",
+        });
+        setRecruiterVerified(verified === true);
 
         // Ni profil vitrine, ni offre active : rien de public à montrer pour
         // cet id — distingue "recruteur inconnu/vide" d'une vraie erreur réseau.
@@ -202,7 +210,10 @@ export default function RecruiterShowcasePage() {
                   </div>
                 )}
                 <div className="pb-1">
-                  <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900">{companyName}</h1>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900">{companyName}</h1>
+                    {recruiterVerified && <BadgeDisplay badges={["verified_recruiter"]} />}
+                  </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                     {recruiterProfile?.sector && (
                       <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">

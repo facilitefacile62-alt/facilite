@@ -5,10 +5,15 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 /**
- * Lien de navigation conditionnel vers /admin ou /recruteur, affiché
- * uniquement si l'utilisateur connecté a le rôle correspondant. À utiliser
- * dans la navbar principale de chaque page (pas de Navbar partagée dans ce
- * projet — chaque page a son propre markup dupliqué).
+ * Lien de navigation conditionnel vers /admin, affiché uniquement si
+ * l'utilisateur connecté a le rôle correspondant. À utiliser dans la navbar
+ * principale de chaque page (pas de Navbar partagée dans ce projet — chaque
+ * page a son propre markup dupliqué).
+ *
+ * Le raccourci "Recruteur" a disparu avec le chantier RBAC : candidat et
+ * recruteur ont fusionné dans le rôle unique 'user', /recruteur est
+ * désormais ouvert à tout compte 'user' (voir middleware.js) — ce n'est
+ * plus un privilège distinctif à signaler ici.
  */
 export default function RoleNavLink({ session, className, variant = "desktop" }) {
   const [role, setRole] = useState(null);
@@ -25,9 +30,9 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
     }
     let cancelled = false;
     supabase
-      .from("profiles")
+      .from("user_roles")
       .select("role")
-      .eq("id", session.user.id)
+      .eq("user_id", session.user.id)
       .single()
       .then(({ data }) => {
         if (!cancelled) setRole(data?.role || null);
@@ -37,11 +42,11 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
     };
   }, [session?.user?.id]);
 
-  if (role !== "admin" && role !== "recruteur") return null;
+  if (role !== "admin" && role !== "publisher") return null;
 
-  const href = role === "admin" ? "/admin" : "/recruteur";
-  const label = role === "admin" ? "Admin" : "Recruteur";
-  const icon = role === "admin" ? "fa-shield-halved" : "fa-briefcase";
+  const href = "/admin";
+  const label = "Admin";
+  const icon = "fa-shield-halved";
 
   if (variant === "mobile") {
     return (

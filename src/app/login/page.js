@@ -147,27 +147,28 @@ export default function LoginPage() {
         }).catch(() => {});
 
         const userId = data.session.user.id;
-        let targetRole = data.session.user?.user_metadata?.role || "candidat";
+        // Uniquement pour l'UX de redirection immédiate — jamais une
+        // décision d'autorisation (middleware.js revérifie indépendamment
+        // via public.user_roles, seule source de vérité réelle).
+        let targetRole = "user";
 
-        // Interroger la table profiles pour vérifier le rôle à jour
         try {
-          const { data: profile } = await supabase
-            .from("profiles")
+          const { data: userRoleRow } = await supabase
+            .from("user_roles")
             .select("role")
-            .eq("id", userId)
+            .eq("user_id", userId)
             .single();
 
-          if (profile?.role) {
-            targetRole = profile.role;
+          if (userRoleRow?.role) {
+            targetRole = userRoleRow.role;
           }
         } catch (pErr) {
-          console.warn("Impossible de lire le profil:", pErr);
+          console.warn("Impossible de lire le rôle:", pErr);
         }
 
         // Redirection dynamique selon le rôle
         let redirectUrl = "/messagerie";
-        if (targetRole === "admin") redirectUrl = "/admin";
-        else if (targetRole === "recruteur") redirectUrl = "/recruteur";
+        if (targetRole === "admin" || targetRole === "publisher") redirectUrl = "/admin";
 
         setTimeout(() => {
           window.location.replace(redirectUrl);

@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
+import BadgeDisplay from "@/components/BadgeDisplay";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
@@ -12,6 +13,7 @@ const TABS = [
   { id: "dashboard", label: "Tableau de bord", icon: "📊" },
   { id: "messages", label: "Messagerie Support", icon: "💬", href: "/admin/messages" },
   { id: "utilisateurs", label: "Utilisateurs", icon: "👥" },
+  { id: "badges", label: "Demandes de badge", icon: "🎖️" },
   { id: "offres", label: "Offres d'emploi", icon: "💼" },
   { id: "ia", label: "Assistant IA & CV", icon: "🤖" },
   { id: "tarification", label: "Tarification", icon: "💳" },
@@ -49,12 +51,14 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [periodDays, setPeriodDays] = useState(7);
   const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
-  const [roleFilter, setRoleFilter] = useState("all"); // 'all' | 'candidat' | 'recruteur'
+  const [roleFilter, setRoleFilter] = useState("all"); // 'all' | 'none' | 'verified_recruiter' (filtre par badge, plus par rôle depuis le chantier RBAC — candidat/recruteur ont fusionné en 'user')
 
   const [users, setUsers] = useState([]);
   const [offers, setOffers] = useState([]);
   const [applications, setApplications] = useState([]);
   const [resumes, setResumes] = useState([]);
+  const [badgeRequests, setBadgeRequests] = useState([]);
+  const [rejectReasonDraft, setRejectReasonDraft] = useState({});
 
   const [searchQuery, setSearchQuery] = useState("");
   const [tableRoleFilter, setTableRoleFilter] = useState("all");
@@ -91,15 +95,33 @@ export default function AdminDashboardPage() {
         }
         setUserSession(session);
 
-        const [profilesRes, offersRes, applicationsRes, resumesRes] = await Promise.all([
+        const [profilesRes, rolesRes, offersRes, applicationsRes, resumesRes, badgeRequestsRes] = await Promise.all([
           supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+          supabase.from("user_roles").select("*"),
           supabase.from("job_offers").select("id, created_at").order("created_at", { ascending: false }),
           supabase.from("candidatures").select("id, created_at").order("created_at", { ascending: false }),
           supabase.from("resumes").select("id, user_id, created_at, type").order("created_at", { ascending: false }),
+          supabase
+            .from("badge_requests")
+            .select("*")
+            .eq("status", "pending")
+            .order("created_at", { ascending: true }),
         ]);
 
-        if (profilesRes.error) console.error("Erreur chargement profils:", profilesRes.error);
-        else setUsers(profilesRes.data || []);
+        if (profilesRes.error || rolesRes.error) {
+          console.error("Erreur chargement profils/rôles:", profilesRes.error || rolesRes.error);
+        } else {
+          // profiles et user_roles n'ont pas de relation FK directe entre
+          // elles (toutes deux référencent séparément auth.users) : pas
+          // d'embedding PostgREST possible, fusion faite ici côté client.
+          const roleByUserId = new Map((rolesRes.data || []).map((r) => [r.user_id, r]));
+          const merged = (profilesRes.data || []).map((p) => ({
+            ...p,
+            role: roleByUserId.get(p.id)?.role || "user",
+            status: roleByUserId.get(p.id)?.status || "active",
+          }));
+          setUsers(merged);
+        }
 
         if (offersRes.error) console.error("Erreur chargement offres:", offersRes.error);
         else setOffers(offersRes.data || []);
@@ -109,6 +131,9 @@ export default function AdminDashboardPage() {
 
         if (resumesRes.error) console.error("Erreur chargement CV:", resumesRes.error);
         else setResumes(resumesRes.data || []);
+
+        if (badgeRequestsRes.error) console.error("Erreur chargement demandes de badge:", badgeRequestsRes.error);
+        else setBadgeRequests(badgeRequestsRes.data || []);
       } catch (err) {
         console.error("Exception chargement dashboard admin:", err);
       } finally {
@@ -125,17 +150,22 @@ export default function AdminDashboardPage() {
     // Mise à jour optimiste : bascule immédiate de l'UI, restaurée en cas d'échec.
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({ role: newRole, updated_at: new Date().toISOString() })
-      .eq("id", userId);
+    // user_roles n'accorde aucun privilège d'écriture direct à authenticated
+    // (RBAC, 20260802050000) : toute écriture passe par cette route
+    // service_role, qui revérifie elle-même que l'appelant est admin.
+    const res = await fetch(`/api/admin/users/${userId}/role`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${userSession.access_token}` },
+      body: JSON.stringify({ role: newRole }),
+    });
+    const body = await res.json().catch(() => ({}));
 
     setUpdatingUserId(null);
 
-    if (error) {
-      console.error("Erreur mise à jour rôle:", error);
+    if (!res.ok) {
+      console.error("Erreur mise à jour rôle:", body.error);
       setUsers(previousUsers);
-      triggerToast("Impossible de mettre à jour le rôle : " + error.message, "fa-triangle-exclamation");
+      triggerToast("Impossible de mettre à jour le rôle : " + (body.error || "erreur inconnue"), "fa-triangle-exclamation");
       return;
     }
 
@@ -143,30 +173,38 @@ export default function AdminDashboardPage() {
     triggerToast(`Rôle de ${target?.full_name || target?.email || "l'utilisateur"} mis à jour : ${newRole.toUpperCase()}`, "fa-circle-check");
   };
 
-  // Point 122 de l'audit sécurité : un compte recruteur ne doit accéder au
-  // répertoire candidats (CVthèque) qu'après validation manuelle — voir la
-  // policy de public.candidats_recherche (migration recruiter_verification).
-  const handleVerifyRecruiter = async (userId) => {
-    const previousUsers = users;
-    setUpdatingUserId(userId);
-    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, recruiter_verified: true } : u)));
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ recruiter_verified: true, updated_at: new Date().toISOString() })
-      .eq("id", userId);
-
+  // Section 4 du chantier RBAC : approve_badge_request()/reject_badge_request()
+  // sont conçues pour être appelées directement (autorisation vérifiée à
+  // l'intérieur de la fonction SQL elle-même, pas seulement ici).
+  const handleApproveBadgeRequest = async (requestId) => {
+    setUpdatingUserId(requestId);
+    const { data: approved, error } = await supabase.rpc("approve_badge_request", { request_id: requestId });
     setUpdatingUserId(null);
 
-    if (error) {
-      console.error("Erreur validation recruteur:", error);
-      setUsers(previousUsers);
-      triggerToast("Impossible de valider ce recruteur : " + error.message, "fa-triangle-exclamation");
+    if (error || !approved) {
+      triggerToast("Impossible d'approuver cette demande : " + (error?.message || "déjà traitée"), "fa-triangle-exclamation");
       return;
     }
 
-    const target = previousUsers.find((u) => u.id === userId);
-    triggerToast(`${target?.full_name || target?.email || "Le recruteur"} peut désormais accéder à la CVthèque.`, "fa-circle-check");
+    setBadgeRequests((prev) => prev.filter((r) => r.id !== requestId));
+    triggerToast("Badge approuvé.", "fa-circle-check");
+  };
+
+  const handleRejectBadgeRequest = async (requestId, reason) => {
+    setUpdatingUserId(requestId);
+    const { data: rejected, error } = await supabase.rpc("reject_badge_request", {
+      request_id: requestId,
+      reason: reason || "Non conforme",
+    });
+    setUpdatingUserId(null);
+
+    if (error || !rejected) {
+      triggerToast("Impossible de rejeter cette demande : " + (error?.message || "déjà traitée"), "fa-triangle-exclamation");
+      return;
+    }
+
+    setBadgeRequests((prev) => prev.filter((r) => r.id !== requestId));
+    triggerToast("Demande rejetée.", "fa-circle-check");
   };
 
   // --- KPI ---
@@ -175,11 +213,12 @@ export default function AdminDashboardPage() {
   const kpi = useMemo(() => {
     const scopedUsers = users.filter((u) => {
       if (roleFilter === "all") return true;
-      return (u.role || "candidat") === roleFilter;
+      const isVerifiedRecruiter = (u.badges || []).includes("verified_recruiter");
+      return roleFilter === "verified_recruiter" ? isVerifiedRecruiter : !isVerifiedRecruiter;
     });
 
-    const candidats = users.filter((u) => (u.role || "candidat") === "candidat");
-    const recruteurs = users.filter((u) => u.role === "recruteur");
+    const candidats = users.filter((u) => !(u.badges || []).includes("verified_recruiter"));
+    const recruteurs = users.filter((u) => (u.badges || []).includes("verified_recruiter"));
     // Date.now() rend ce useMemo techniquement impur (react-hooks/purity) :
     // le compteur "en ligne" ne se rafraîchit qu'aux re-renders déclenchés
     // par d'autres causes (changement de filtre, KPI...), pas à l'horloge —
@@ -223,7 +262,7 @@ export default function AdminDashboardPage() {
     const matchesSearch =
       (u.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.email || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = tableRoleFilter === "all" || (u.role || "candidat") === tableRoleFilter;
+    const matchesRole = tableRoleFilter === "all" || (u.role || "user") === tableRoleFilter;
     return matchesSearch && matchesRole;
   });
 
@@ -442,8 +481,8 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-full p-1 shadow-xs">
                   {[
                     { id: "all", label: "Tous" },
-                    { id: "candidat", label: "Candidats" },
-                    { id: "recruteur", label: "Recruteurs" },
+                    { id: "none", label: "Sans accréditation" },
+                    { id: "verified_recruiter", label: "Recruteurs vérifiés" },
                   ].map((f) => (
                     <button
                       key={f.id}
@@ -539,8 +578,8 @@ export default function AdminDashboardPage() {
                     className="px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-orange-500"
                   >
                     <option value="all">Tous les rôles</option>
-                    <option value="candidat">Candidats</option>
-                    <option value="recruteur">Recruteurs</option>
+                    <option value="user">Utilisateurs</option>
+                    <option value="publisher">Éditeurs</option>
                     <option value="admin">Administrateurs</option>
                   </select>
                   <div className="relative max-w-xs w-full">
@@ -563,7 +602,7 @@ export default function AdminDashboardPage() {
                       <th className="py-4 px-6">Utilisateur</th>
                       <th className="py-4 px-6">Email</th>
                       <th className="py-4 px-6">Rôle Actuel</th>
-                      <th className="py-4 px-6">Statut Recruteur</th>
+                      <th className="py-4 px-6">Badges</th>
                       <th className="py-4 px-6">Inscription</th>
                       <th className="py-4 px-6 text-right">Action (Rôle)</th>
                     </tr>
@@ -597,42 +636,23 @@ export default function AdminDashboardPage() {
                           </td>
                           <td className="py-4 px-6 text-gray-600 font-mono text-[11px]">{user.email}</td>
                           <td className="py-4 px-6">
-                            <RoleBadge role={user.role || "candidat"} />
+                            <RoleBadge role={user.role || "user"} />
                           </td>
                           <td className="py-4 px-6">
-                            {user.role !== "recruteur" ? (
-                              <span className="text-gray-300">—</span>
-                            ) : user.recruiter_verified ? (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                ✅ Validé
-                              </span>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
-                                  ⏳ En attente
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleVerifyRecruiter(user.id)}
-                                  disabled={updatingUserId === user.id}
-                                  className="text-[10px] font-extrabold text-emerald-700 hover:text-emerald-900 underline cursor-pointer disabled:opacity-50"
-                                >
-                                  Valider
-                                </button>
-                              </div>
-                            )}
+                            <BadgeDisplay badges={user.badges} />
+                            {(!user.badges || user.badges.length === 0) && <span className="text-gray-300">—</span>}
                           </td>
                           <td className="py-4 px-6 text-gray-500 font-medium">
                             {user.created_at ? new Date(user.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "Inconnue"}
                           </td>
                           <td className="py-4 px-6 text-right">
                             <select
-                              value={user.role || "candidat"}
+                              value={user.role || "user"}
                               onChange={(e) => handleRoleChange(user.id, e.target.value)}
                               className="px-3 py-1.5 bg-white border border-gray-300 rounded-xl text-xs font-extrabold focus:outline-none focus:border-orange-500 cursor-pointer shadow-xs"
                             >
-                              <option value="candidat">🟢 Candidat</option>
-                              <option value="recruteur">💼 Recruteur</option>
+                              <option value="user">🟢 Utilisateur</option>
+                              <option value="publisher">🎧 Éditeur</option>
                               <option value="admin">🛡️ Administrateur</option>
                             </select>
                           </td>
@@ -642,6 +662,66 @@ export default function AdminDashboardPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {activeTab === "badges" && (
+            <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-lg font-extrabold text-gray-900">Demandes de badge ({badgeRequests.length})</h2>
+                <p className="text-xs text-gray-500 font-medium">
+                  Accréditation « Recruteur vérifié » — NINEA, RCCM et attestation vérifiés avant approbation.
+                </p>
+              </div>
+              {badgeRequests.length === 0 ? (
+                <div className="p-8 text-center text-gray-400 italic text-xs">Aucune demande en attente.</div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {badgeRequests.map((request) => (
+                    <div key={request.id} className="p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="text-sm font-extrabold text-gray-900">{request.company_name}</span>
+                          <BadgeDisplay badges={[request.requested_badge]} />
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium">
+                          NINEA : <span className="font-mono">{request.ninea_number}</span> · RCCM :{" "}
+                          <span className="font-mono">{request.rccm_number}</span>
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          Demandée le {new Date(request.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" })}
+                          {" · "}{request.document_urls?.length || 0} document(s) joint(s)
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <input
+                          type="text"
+                          placeholder="Motif de rejet (optionnel)"
+                          value={rejectReasonDraft[request.id] || ""}
+                          onChange={(e) => setRejectReasonDraft((prev) => ({ ...prev, [request.id]: e.target.value }))}
+                          className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-orange-500 w-40"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRejectBadgeRequest(request.id, rejectReasonDraft[request.id])}
+                          disabled={updatingUserId === request.id}
+                          className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                        >
+                          Rejeter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApproveBadgeRequest(request.id)}
+                          disabled={updatingUserId === request.id}
+                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                        >
+                          Approuver
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

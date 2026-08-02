@@ -115,13 +115,13 @@ export default function AdminMessagesPage() {
           return;
         }
 
-        const { data: profile } = await supabase
-          .from("profiles")
+        const { data: userRoleRow } = await supabase
+          .from("user_roles")
           .select("role")
-          .eq("id", session.user.id)
+          .eq("user_id", session.user.id)
           .single();
 
-        if (profile?.role !== "admin") {
+        if (userRoleRow?.role !== "admin" && userRoleRow?.role !== "publisher") {
           window.location.replace("/");
           return;
         }
