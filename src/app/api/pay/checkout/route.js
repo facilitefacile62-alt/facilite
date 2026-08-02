@@ -26,10 +26,18 @@ const cvOrderSchema = z.object({
   resumeId: z.string().uuid().optional(),
 });
 
+// Une seule offre de recharge existe actuellement : montant et nom de plan
+// sont donc fixés ici, jamais acceptés depuis le client. Un ancien schéma
+// prenait `amount`/`planName` tels quels depuis le corps de la requête —
+// n'importe quel utilisateur authentifié pouvait poster `{ amount: 1 }` et
+// obtenir un vrai lien de paiement KPay à 1 XOF, crédité comme un forfait
+// complet par le webhook (qui accorde 1 crédit dès que la transaction
+// réussit, sans reproportionner au montant réellement payé).
+const CREDIT_TOPUP_PRICE_XOF = 5000;
+const CREDIT_TOPUP_PLAN_NAME = "Premium";
+
 const creditTopupSchema = z.object({
-  amount: z.number().int().positive("Le montant doit être strictement positif"),
-  planName: z.string().optional(),
-  description: z.string().optional(),
+  description: z.string().max(200).optional(),
 });
 
 export const runtime = "nodejs";
@@ -123,7 +131,9 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { amount, planName, description } = parseResult.data;
+    const { description } = parseResult.data;
+    const amount = CREDIT_TOPUP_PRICE_XOF;
+    const planName = CREDIT_TOPUP_PLAN_NAME;
     const currency = "XOF";
 
     const { data: transaction, error: transactionError } = await supabase

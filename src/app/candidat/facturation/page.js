@@ -77,7 +77,7 @@ export default function FacturationPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${userSession.access_token}`,
         },
-        body: JSON.stringify({ amount: 5000, planName: "Premium", description: "Abonnement Premium (1 crédit)" }),
+        body: JSON.stringify({ description: "Abonnement Premium (1 crédit)" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur de paiement");
