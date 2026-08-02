@@ -163,9 +163,6 @@ export default function AdminDashboardPage() {
     // Mise à jour optimiste : bascule immédiate de l'UI, restaurée en cas d'échec.
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
 
-    // user_roles n'accorde aucun privilège d'écriture direct à authenticated
-    // (RBAC, 20260802050000) : toute écriture passe par cette route
-    // service_role, qui revérifie elle-même que l'appelant est admin.
     const res = await fetch(`/api/admin/users/${userId}/role`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${userSession.access_token}` },
@@ -186,9 +183,6 @@ export default function AdminDashboardPage() {
     triggerToast(`Rôle de ${target?.full_name || target?.email || "l'utilisateur"} mis à jour : ${newRole.toUpperCase()}`, "fa-circle-check");
   };
 
-  // Section 4 du chantier RBAC : approve_badge_request()/reject_badge_request()
-  // sont conçues pour être appelées directement (autorisation vérifiée à
-  // l'intérieur de la fonction SQL elle-même, pas seulement ici).
   const handleApproveBadgeRequest = async (requestId) => {
     setUpdatingUserId(requestId);
     const { data: approved, error } = await supabase.rpc("approve_badge_request", { request_id: requestId });
