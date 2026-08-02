@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ApplyModal from "@/components/ApplyModal";
 
 export default function RecrutementSpontanePage() {
+  const router = useRouter();
   const [applyingOffer, setApplyingOffer] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -76,7 +78,11 @@ export default function RecrutementSpontanePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {spontaneousOffers.map((offer) => (
-            <div key={offer.id} className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col group">
+            <div 
+              key={offer.id} 
+              onClick={() => router.push(`/recrutement-spontane/${offer.company.toLowerCase()}`)}
+              className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col group cursor-pointer"
+            >
               {offer.image_url && (
                 <div className="relative w-full h-48 sm:h-56 overflow-hidden bg-gray-100">
                   <img
@@ -105,7 +111,9 @@ export default function RecrutementSpontanePage() {
                   <i className="fa-solid fa-location-dot"></i>
                   {offer.location}
                 </p>
-                <p className="text-sm text-gray-600 leading-relaxed flex-1 mb-6 whitespace-pre-line">{offer.description}</p>
+                <p className="text-sm text-gray-600 leading-relaxed flex-1 mb-6 whitespace-pre-line line-clamp-3">
+                  {offer.description}
+                </p>
 
                 <div className="flex flex-col gap-3 w-full mt-auto">
                   {offer.externalLink && (
@@ -113,6 +121,7 @@ export default function RecrutementSpontanePage() {
                       href={offer.externalLink}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="w-full text-center py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl transition cursor-pointer shadow-sm hover:shadow"
                     >
                       <i className="fa-solid fa-external-link-alt mr-2"></i>
@@ -121,8 +130,11 @@ export default function RecrutementSpontanePage() {
                   )}
                   {offer.allowSpontaneousModal && (
                     <button
-                      onClick={() => handleApplyClick(offer)}
-                      className="w-full py-3 bg-white hover:bg-emerald-50 text-emerald-600 border-2 border-emerald-500 font-extrabold text-sm rounded-xl transition cursor-pointer shadow-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleApplyClick(offer);
+                      }}
+                      className="w-full py-3 bg-white hover:bg-emerald-50 text-emerald-600 border-2 border-emerald-500 font-extrabold text-sm rounded-xl transition cursor-pointer shadow-sm md:hidden"
                     >
                       <i className="fa-regular fa-paper-plane mr-2"></i>
                       Candidature Rapide
