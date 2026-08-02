@@ -143,6 +143,32 @@ export default function AdminDashboardPage() {
     triggerToast(`Rôle de ${target?.full_name || target?.email || "l'utilisateur"} mis à jour : ${newRole.toUpperCase()}`, "fa-circle-check");
   };
 
+  // Point 122 de l'audit sécurité : un compte recruteur ne doit accéder au
+  // répertoire candidats (CVthèque) qu'après validation manuelle — voir la
+  // policy de public.candidats_recherche (migration recruiter_verification).
+  const handleVerifyRecruiter = async (userId) => {
+    const previousUsers = users;
+    setUpdatingUserId(userId);
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, recruiter_verified: true } : u)));
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ recruiter_verified: true, updated_at: new Date().toISOString() })
+      .eq("id", userId);
+
+    setUpdatingUserId(null);
+
+    if (error) {
+      console.error("Erreur validation recruteur:", error);
+      setUsers(previousUsers);
+      triggerToast("Impossible de valider ce recruteur : " + error.message, "fa-triangle-exclamation");
+      return;
+    }
+
+    const target = previousUsers.find((u) => u.id === userId);
+    triggerToast(`${target?.full_name || target?.email || "Le recruteur"} peut désormais accéder à la CVthèque.`, "fa-circle-check");
+  };
+
   // --- KPI ---
   const periodMs = periodDays * 24 * 60 * 60 * 1000;
 
@@ -537,6 +563,7 @@ export default function AdminDashboardPage() {
                       <th className="py-4 px-6">Utilisateur</th>
                       <th className="py-4 px-6">Email</th>
                       <th className="py-4 px-6">Rôle Actuel</th>
+                      <th className="py-4 px-6">Statut Recruteur</th>
                       <th className="py-4 px-6">Inscription</th>
                       <th className="py-4 px-6 text-right">Action (Rôle)</th>
                     </tr>
@@ -544,7 +571,7 @@ export default function AdminDashboardPage() {
                   <tbody className="divide-y divide-gray-100 text-xs font-medium">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan="5" className="py-8 text-center text-gray-400 italic">
+                        <td colSpan="6" className="py-8 text-center text-gray-400 italic">
                           Aucun utilisateur trouvé.
                         </td>
                       </tr>
@@ -571,6 +598,29 @@ export default function AdminDashboardPage() {
                           <td className="py-4 px-6 text-gray-600 font-mono text-[11px]">{user.email}</td>
                           <td className="py-4 px-6">
                             <RoleBadge role={user.role || "candidat"} />
+                          </td>
+                          <td className="py-4 px-6">
+                            {user.role !== "recruteur" ? (
+                              <span className="text-gray-300">—</span>
+                            ) : user.recruiter_verified ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                ✅ Validé
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+                                  ⏳ En attente
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleVerifyRecruiter(user.id)}
+                                  disabled={updatingUserId === user.id}
+                                  className="text-[10px] font-extrabold text-emerald-700 hover:text-emerald-900 underline cursor-pointer disabled:opacity-50"
+                                >
+                                  Valider
+                                </button>
+                              </div>
+                            )}
                           </td>
                           <td className="py-4 px-6 text-gray-500 font-medium">
                             {user.created_at ? new Date(user.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "Inconnue"}

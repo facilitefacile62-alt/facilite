@@ -128,6 +128,8 @@ export default function RecruteurDashboardPage() {
 
   // --- Onglet CVthèque ---
   const [candidates, setCandidates] = useState([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(true);
+  const [recruiterVerified, setRecruiterVerified] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState(null);
@@ -148,6 +150,38 @@ export default function RecruteurDashboardPage() {
     setTimeout(() => setToast(""), 3000);
   };
 
+  // Pagine /api/recruteur/candidats-recherche jusqu'à épuisement (ou une
+  // borne haute raisonnable) pour reconstituer la liste complète attendue
+  // par la recherche texte/sémantique existante, sans revenir à un .select("*")
+  // direct et non borné sur la vue (la faille corrigée par cette route).
+  async function loadAllCandidates(accessToken) {
+    const PAGE_SIZE = 30;
+    const MAX_PAGES = 20; // ~600 candidats — largement au-delà du volume actuel
+    let page = 0;
+    let all = [];
+    setCandidatesLoading(true);
+    try {
+      while (page < MAX_PAGES) {
+        const res = await fetch(`/api/recruteur/candidats-recherche?page=${page}&pageSize=${PAGE_SIZE}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          console.error("Erreur chargement candidats:", data.error);
+          break;
+        }
+        all = all.concat(data.candidates || []);
+        if (!data.hasMore) break;
+        page += 1;
+      }
+    } catch (err) {
+      console.error("Exception chargement candidats:", err);
+    } finally {
+      setCandidates(all);
+      setCandidatesLoading(false);
+    }
+  }
+
   useEffect(() => {
     async function loadRecruiterData() {
       try {
@@ -162,7 +196,7 @@ export default function RecruteurDashboardPage() {
         // ancien favori...) est renvoyé à l'accueil.
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, recruiter_verified")
           .eq("id", session.user.id)
           .single();
 
@@ -171,16 +205,24 @@ export default function RecruteurDashboardPage() {
           return;
         }
 
+        // Un admin n'a pas de notion de "vérification recruteur" — seul un
+        // compte role=recruteur non encore validé par un admin voit la
+        // bannière d'attente et un répertoire candidats vide (imposé côté
+        // vue candidats_recherche, pas seulement ici).
+        setRecruiterVerified(profile.role === "admin" ? true : profile.recruiter_verified === true);
+
         setUserSession(session);
+        // Fire-and-forget : ne bloque pas le reste du dashboard (offres,
+        // candidatures, profil vitrine) le temps de paginer le répertoire
+        // candidats, potentiellement plusieurs allers-retours réseau.
+        loadAllCandidates(session.access_token);
 
         const [
           { data: offers, error: offersErr },
-          { data: candidatesData, error: candidatesErr },
           { data: applicationsData, error: applicationsErr },
           { data: recruiterProfileData, error: recruiterProfileErr },
         ] = await Promise.all([
           supabase.from("job_offers").select("*").eq("recruiter_id", session.user.id).order("created_at", { ascending: false }),
-          supabase.from("candidats_recherche").select("*"),
           supabase
             .from("candidatures")
             .select("*")
@@ -191,9 +233,6 @@ export default function RecruteurDashboardPage() {
 
         if (offersErr) console.error("Erreur chargement offres:", offersErr);
         else setMyOffers(offers || []);
-
-        if (candidatesErr) console.error("Erreur chargement candidats:", candidatesErr);
-        else setCandidates(candidatesData || []);
 
         if (applicationsErr) console.error("Erreur chargement candidatures:", applicationsErr);
         else setApplications(applicationsData || []);
@@ -1216,11 +1255,27 @@ export default function RecruteurDashboardPage() {
           </div>
         )}
 
-        {activeTab === "cvtheque" && (
+        {activeTab === "cvtheque" && !recruiterVerified && (
+          <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 mb-6 flex items-start gap-3">
+            <i className="fa-solid fa-hourglass-half text-amber-600 mt-0.5"></i>
+            <div>
+              <h2 className="text-sm font-extrabold text-amber-900">Compte en attente de validation</h2>
+              <p className="text-xs text-amber-800 font-medium mt-1">
+                Pour protéger les données de nos candidats, l&apos;accès au répertoire CVthèque est activé
+                manuellement par notre équipe après vérification de votre compte recruteur. Vous pouvez déjà
+                publier des offres d&apos;emploi en attendant.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "cvtheque" && recruiterVerified && (
           <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
             <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-extrabold text-gray-900">CVthèque ({filteredCandidates.length})</h2>
+                <h2 className="text-lg font-extrabold text-gray-900">
+                  CVthèque ({filteredCandidates.length}{candidatesLoading ? "…" : ""})
+                </h2>
                 <p className="text-xs text-gray-500 font-medium">
                   {semanticResults ? "Résultats triés par compatibilité IA" : "Recherchez par nom, métier ou compétence"}
                 </p>
