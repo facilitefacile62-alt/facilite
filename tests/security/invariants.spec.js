@@ -364,33 +364,61 @@ test.describe("Invariants de sécurité", () => {
     ).toBe(true);
   });
 
-  test("Invariant 10 — aucun objet en base absent des migrations ni déclencheur/fonction mort(e) obsolète", async () => {
-    // Vérifie qu'aucun déclencheur doublon ni fonction morte obsolète n'existe sur auth.users
-    const triggers = await runIntrospectionSql(`
-      SELECT t.tgname
-      FROM pg_trigger t
-      JOIN pg_class c ON c.oid = t.tgrelid
-      WHERE c.relname = 'users' AND t.tgname IN ('on_auth_user_created_create_profile', 'on_auth_user_created_auto_confirm');
-    `);
+  test("Invariant 10 — aucune fonction ni déclencheur (public, ou auth.users) absent de toute migration", async () => {
+    // Générique, pas une liste de 4 noms en dur : c'est exactement la classe
+    // de bug qui a laissé auto_confirm_user() invisible pendant des jours
+    // (créée directement dans l'éditeur SQL du Dashboard, jamais dans une
+    // migration — voir docs/diagnostic-2026-08.md). Toute fonction public.*
+    // ou déclencheur sur public.*/auth.users dont le nom n'apparaît dans
+    // AUCUN fichier de supabase/migrations est suspect : soit créé hors
+    // migration (à rapatrier), soit mort et jamais nettoyé.
+    const JUSTIFIED = new Set([
+      // format : "function:proname" ou "trigger:schema.table:tgname"
+    ]);
 
-    const deadFuncs = await runIntrospectionSql(`
+    const functions = await runIntrospectionSql(`
       SELECT p.proname
       FROM pg_proc p
       JOIN pg_namespace n ON n.oid = p.pronamespace
-      WHERE n.nspname = 'public' AND p.proname IN ('auto_confirm_user', 'auto_confirm_user_on_signup');
+      WHERE n.nspname = 'public' AND p.prokind IN ('f', 'p')
+      ORDER BY p.proname;
     `);
 
+    const triggers = await runIntrospectionSql(`
+      SELECT t.tgname, c.relnamespace::regnamespace::text AS schema_name, c.relname AS table_name
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      WHERE NOT t.tgisinternal
+        AND (c.relnamespace::regnamespace::text = 'public'
+          OR (c.relnamespace::regnamespace::text = 'auth' AND c.relname = 'users'))
+      ORDER BY t.tgname;
+    `);
+
+    const migrationsDir = path.resolve(__dirname, "../../supabase/migrations");
+    const migrationFiles = fs.readdirSync(migrationsDir).filter((f) => f.endsWith(".sql"));
+    const allMigrationsText = migrationFiles.map((f) => fs.readFileSync(path.join(migrationsDir, f), "utf-8")).join("\n");
+
+    const orphanFunctions = functions.filter(
+      (f) => !allMigrationsText.includes(f.proname) && !JUSTIFIED.has(`function:${f.proname}`)
+    );
+    const orphanTriggers = triggers.filter(
+      (t) => !allMigrationsText.includes(t.tgname) && !JUSTIFIED.has(`trigger:${t.schema_name}.${t.table_name}:${t.tgname}`)
+    );
+
     const violations = [
-      ...triggers.map((t) => `trigger auth.users:${t.tgname}`),
-      ...deadFuncs.map((f) => `fonction public.${f.proname}()`),
+      ...orphanFunctions.map((f) => `fonction public.${f.proname}()`),
+      ...orphanTriggers.map((t) => `trigger ${t.schema_name}.${t.table_name}:${t.tgname}`),
     ];
 
     if (violations.length > 0) {
-      console.log(`\n[INVARIANT 10] ${violations.length} objet(s) mort(s)/obsolète(s) détecté(s) en base :`);
+      console.log(`\n[INVARIANT 10] ${violations.length} objet(s) en base absent(s) de toute migration :`);
       for (const v of violations) console.log(`  - ${v}`);
     }
 
-    expect(violations, "Objet en base mort ou obsolète détecté (trigger/fonction) — voir console").toEqual([]);
+    expect(
+      violations,
+      "Fonction/déclencheur en base introuvable dans les migrations — probablement créé via le Dashboard, jamais tracé. Voir console."
+    ).toEqual([]);
   });
 });
 

@@ -164,6 +164,26 @@ dangereux en JS.
 une des trois conditions — les restaurer, ne jamais assouplir ce fichier
 pour faire passer le test.
 
+## Invariant 10 — Aucune fonction ni déclencheur absent de toute migration
+
+**Ce qu'il protège** : `auto_confirm_user()` a existé en base pendant des
+jours sans jamais apparaître dans une seule migration versionnée — créée
+directement dans l'éditeur SQL du Dashboard Supabase, invisible à quiconque
+ne pense pas à comparer manuellement la base et le dépôt. Cet invariant scanne
+toute fonction `public.*` et tout déclencheur sur `public.*`/`auth.users`, et
+vérifie que son nom apparaît dans au moins un fichier de
+`supabase/migrations/` — sinon, il a été créé hors du processus de migration
+et personne n'en garde la trace écrite.
+
+**Quoi faire quand il échoue** : rapatrier l'objet trouvé dans une vraie
+migration (`CREATE OR REPLACE FUNCTION`/`CREATE TRIGGER` avec son contenu
+réel, lu en base via `pg_get_functiondef`/`pg_get_triggerdef`), pour qu'il
+survive à une reconstruction de la base depuis zéro. Si l'objet est mort
+(plus utilisé), le supprimer par migration plutôt que de le laisser traîner.
+Un faux positif légitime (objet fourni par une extension/le système,
+jamais créé par nous) s'ajoute à `JUSTIFIED` avec le format
+`"function:proname"` ou `"trigger:schema.table:tgname"`.
+
 ## Exécution
 
 ```bash
