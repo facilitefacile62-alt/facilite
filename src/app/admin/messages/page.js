@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
+import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
 import RoleBadge from "@/components/RoleBadge";
 
 // Trie les conversations par activité la plus récente — utilisé après chaque
@@ -1005,33 +1006,41 @@ export default function AdminMessagesPage() {
                           >
                             {/* Pièce jointe PDF / Document (Carte Bleue Ergonomique) */}
                             {m.attachment_url && m.attachment_type !== "audio" && (
-                              <a
-                                href={m.attachment_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center space-x-3 bg-blue-600/90 hover:bg-blue-700 text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition group/file"
-                              >
-                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
-                                  <i className={`fa-solid ${m.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <span className="text-xs font-extrabold block truncate max-w-[170px]">
-                                    {m.file_name || "Document"}
-                                  </span>
-                                  <span className="text-[10px] opacity-80 block font-semibold">
-                                    {m.file_size || "Fichier"}
-                                  </span>
-                                </div>
-                                <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
-                                  <i className="fa-solid fa-download text-xs"></i>
-                                </div>
-                              </a>
+                              <ChatAttachmentUrl path={m.attachment_url}>
+                                {(resolvedUrl) => (
+                                  <a
+                                    href={resolvedUrl || "#"}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center space-x-3 bg-blue-600/90 hover:bg-blue-700 text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition group/file"
+                                  >
+                                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                                      <i className={`fa-solid ${m.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <span className="text-xs font-extrabold block truncate max-w-[170px]">
+                                        {m.file_name || "Document"}
+                                      </span>
+                                      <span className="text-[10px] opacity-80 block font-semibold">
+                                        {m.file_size || "Fichier"}
+                                      </span>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
+                                      <i className="fa-solid fa-download text-xs"></i>
+                                    </div>
+                                  </a>
+                                )}
+                              </ChatAttachmentUrl>
                             )}
 
                             {/* Note Vocale (Lecteur Audio Ergonomique) */}
                             {m.attachment_type === "audio" && m.attachment_url && (
                               <div className="mb-2 bg-black/10 p-2 rounded-2xl border border-white/10">
-                                <audio controls src={m.attachment_url} className="w-full h-8 rounded-lg outline-none" />
+                                <ChatAttachmentUrl path={m.attachment_url}>
+                                  {(resolvedUrl) => (
+                                    <audio controls src={resolvedUrl || undefined} className="w-full h-8 rounded-lg outline-none" />
+                                  )}
+                                </ChatAttachmentUrl>
                               </div>
                             )}
 

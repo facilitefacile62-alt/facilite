@@ -1053,11 +1053,14 @@ export default function ProfilPage() {
           updated_at: new Date().toISOString(),
         });
       } else {
-        await supabase
-          .from("resumes")
-          .delete()
-          .eq("id", docId)
-          .eq("user_id", userSession.user.id);
+        // delete_own_resume() (SECURITY DEFINER) supprime la ligne et
+        // renvoie le chemin Storage associé, s'il existe — la suppression du
+        // fichier lui-même passe par l'API Storage (pas par un DELETE SQL
+        // direct sur storage.objects, bloqué par la plateforme Supabase).
+        const { data: filePath } = await supabase.rpc("delete_own_resume", { resume_id: docId });
+        if (filePath) {
+          await supabase.storage.from("resumes").remove([filePath]);
+        }
       }
 
       // 2. Mettre à jour l'état local userDocuments

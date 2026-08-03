@@ -7,6 +7,7 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, resolveConversationWith, touchConversation } from "@/lib/messages";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
+import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
@@ -525,11 +526,7 @@ export default function MessagerieClient() {
     if (!userId) return;
 
     try {
-      const { error } = await supabase
-        .from("assistant_messages")
-        .delete()
-        .eq("user_id", userId)
-        .eq("conversation_id", convId);
+      const { error } = await supabase.rpc("clear_own_assistant_messages", { conv_id: convId });
 
       if (error) {
         console.error("Erreur lors de la suppression de la discussion IA:", error);
@@ -2728,36 +2725,46 @@ export default function MessagerieClient() {
 
                         {/* Pièce jointe PDF / Document (Carte Bleue Ergonomique) */}
                         {(msg.attachment_url || msg.file) && msg.attachment_type !== "audio" && msg.attachment_type !== "video-interview" && (
-                          <a
-                            href={msg.attachment_url || "#"}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center space-x-3 bg-blue-600/90 hover:bg-blue-700 text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition group/file"
-                          >
-                            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
-                              <i className={`fa-solid ${msg.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="text-xs font-extrabold block truncate max-w-xs md:max-w-md">
-                                {msg.file_name || msg.file?.name || "Document"}
-                              </span>
-                              <span className="text-[10px] opacity-80 block font-semibold">
-                                {msg.file_size || msg.file?.size || "PDF / Fichier"}
-                              </span>
-                            </div>
-                            <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
-                              <i className="fa-solid fa-download text-xs"></i>
-                            </div>
-                          </a>
+                          <ChatAttachmentUrl path={msg.attachment_url}>
+                            {(resolvedUrl) => (
+                              <a
+                                href={resolvedUrl || "#"}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center space-x-3 bg-blue-600/90 hover:bg-blue-700 text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition group/file"
+                              >
+                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                                  <i className={`fa-solid ${msg.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-xs font-extrabold block truncate max-w-xs md:max-w-md">
+                                    {msg.file_name || msg.file?.name || "Document"}
+                                  </span>
+                                  <span className="text-[10px] opacity-80 block font-semibold">
+                                    {msg.file_size || msg.file?.size || "PDF / Fichier"}
+                                  </span>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
+                                  <i className="fa-solid fa-download text-xs"></i>
+                                </div>
+                              </a>
+                            )}
+                          </ChatAttachmentUrl>
                         )}
 
                         {/* Note Vocale (Lecteur Audio Style Messenger/WhatsApp) */}
                         {msg.attachment_type === "audio" && msg.attachment_url && (
                           <div className="mb-1 min-w-[200px] md:min-w-[240px]">
-                            <VoiceMessagePlayer
-                              src={msg.attachment_url}
-                              variant={msg.sender === "me" ? "sent" : "received"}
-                            />
+                            <ChatAttachmentUrl path={msg.attachment_url}>
+                              {(resolvedUrl) =>
+                                resolvedUrl && (
+                                  <VoiceMessagePlayer
+                                    src={resolvedUrl}
+                                    variant={msg.sender === "me" ? "sent" : "received"}
+                                  />
+                                )
+                              }
+                            </ChatAttachmentUrl>
                           </div>
                         )}
 

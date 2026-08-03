@@ -82,6 +82,39 @@ export default function RecrutementSpontaneDetailPage() {
         "Systèmes d'Information"
       ],
       requirements: ["CV", "Lettre de motivation"]
+    },
+    "dakar-dem-dikk": {
+      id: "dakardemdikk-spontanee",
+      title: "Candidature Spontanée - Dakar Dem Dikk",
+      company: "Dakar Dem Dikk",
+      location: "Sénégal",
+      contract_type: "SPONTANÉ",
+      description: "Dakar Dem Dikk vous offre l'opportunité de rejoindre ses équipes et de participer à l'amélioration de la mobilité urbaine et interurbaine au Sénégal. N'hésitez pas à nous envoyer votre candidature spontanée.",
+      image_url: "/demdikk.jpeg",
+      min_education_level: "Aucun",
+      isSpontaneous: true,
+      allowSpontaneousModal: true,
+      externalLink: "https://jobs.demdikk.sn/offres/candidature-spontanee/",
+      externalButtonLabel: "Postuler via le site Dakar Dem Dikk",
+      poles: [
+        "Conducteur",
+        "Receveur",
+        "Contrôleur",
+        "Informatique et Technologies",
+        "RH",
+        "Gestion Finance Comptabilité",
+        "Marketing",
+        "Commercial - Vente",
+        "Téléconseiller - Télémarketing",
+        "Communication",
+        "Maintenance automobile",
+        "Métiers du BTP",
+        "Service juridique",
+        "Gestion administrative",
+        "Secrétariat - Assistanat",
+        "Autres"
+      ],
+      requirements: ["CV", "Lettre de motivation"]
     }
   };
 

@@ -50,10 +50,15 @@ export function validateChatFile(file) {
 }
 
 /**
- * Téléverse un fichier (ou un Blob audio enregistré) dans le bucket public
+ * Téléverse un fichier (ou un Blob audio enregistré) dans le bucket privé
  * chat-attachments, sous {userId}/{timestamp}_{nom}, et renvoie les
  * métadonnées prêtes à insérer dans messages.attachment_url /
  * attachment_type / file_name / file_size.
+ *
+ * attachment_url stocke désormais le CHEMIN de stockage (comme
+ * resumes.file_url), pas une URL publique — le bucket est privé depuis la
+ * Partie 2 du chantier (invariant 4). Résoudre en URL affichable via
+ * getChatAttachmentSignedUrl().
  */
 export async function uploadChatAttachment({ file, userId, fileName, attachmentType }) {
   const rawName = fileName || file.name || "fichier";
@@ -72,13 +77,43 @@ export async function uploadChatAttachment({ file, userId, fileName, attachmentT
     return { error: uploadError.message };
   }
 
-  const { data: publicUrlData } = supabase.storage.from("chat-attachments").getPublicUrl(storagePath);
-
   return {
-    attachment_url: publicUrlData?.publicUrl || "",
+    attachment_url: storagePath,
     attachment_type: attachmentType || classifyAttachment(file.type),
     file_name: rawName,
     file_size: formatFileSize(file.size),
     error: null,
   };
+}
+
+// Expiration courte : une URL signée fuitée (copiée, cachée navigateur) ne
+// reste exploitable que quelques minutes, pas indéfiniment comme l'ancienne
+// URL publique.
+const SIGNED_URL_TTL_SECONDS = 300;
+
+/**
+ * Résout un chemin de pièce jointe en URL signée temporaire. La policy
+ * Storage "Participants lisent les pieces jointes de leur conversation"
+ * est le contrôle d'accès réel : ce client porte le JWT de l'utilisateur,
+ * la RLS refuse la signature si l'appelant n'est ni participant ni
+ * admin/publisher — pas une simple convention côté app.
+ *
+ * Les valeurs déjà en `http(s)://` sont d'anciens messages envoyés avant ce
+ * correctif (URL publique historique) : renvoyées telles quelles, sans
+ * tentative de signature — elles ne fonctionneront plus une fois le bucket
+ * basculé en privé (comportement attendu, pas un bug).
+ */
+export async function getChatAttachmentSignedUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const { data, error } = await supabase.storage
+    .from("chat-attachments")
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+
+  if (error) {
+    console.error("Erreur génération URL signée pièce jointe:", error.message);
+    return null;
+  }
+  return data?.signedUrl || null;
 }

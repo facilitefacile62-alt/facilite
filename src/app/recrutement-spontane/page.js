@@ -49,6 +49,20 @@ export default function RecrutementSpontanePage() {
       externalLink: "https://soboa.sn/carriere/",
       externalButtonLabel: "Postuler via le site SOBOA",
     },
+    {
+      id: "dakardemdikk-spontanee",
+      title: "Candidature Spontanée - Dakar Dem Dikk",
+      company: "Dakar Dem Dikk",
+      location: "Sénégal",
+      contract_type: "SPONTANÉ",
+      description: "Dakar Dem Dikk vous offre l'opportunité de rejoindre ses équipes. Envoyez votre candidature spontanée pour les postes de : Conducteur, Receveur, Contrôleur, Informatique, RH, Finance, Marketing, Commercial, Téléconseiller, Communication, Maintenance, BTP, etc.\nDocuments requis : CV & Lettre de motivation.",
+      image_url: "/demdikk.jpeg",
+      min_education_level: "Aucun",
+      isSpontaneous: true,
+      allowSpontaneousModal: true,
+      externalLink: "https://jobs.demdikk.sn/offres/candidature-spontanee/",
+      externalButtonLabel: "Postuler via le site Dakar Dem Dikk",
+    },
   ];
 
   return (

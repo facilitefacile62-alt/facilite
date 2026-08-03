@@ -564,24 +564,26 @@ export default function RecruteurDashboardPage() {
   // job_offers.embedding resterait NULL pour toute nouvelle offre. Appelé en
   // tâche de fond (non "await"-é par l'appelant) pour ne pas retarder le
   // toast de confirmation de publication/modification.
+  // L'embedding se calcule et s'écrit côté serveur (route dédiée, service_role)
+  // depuis la Vague 3 (Partie 1 du chantier) : job_offers.embedding n'est
+  // plus accordée en UPDATE à authenticated, pour empêcher un recruteur
+  // d'écrire directement un vecteur arbitraire et manipuler son classement
+  // dans la recherche sémantique.
   const generateOfferEmbedding = async (offerId, title, description) => {
     try {
-      const text = `${title || ""}\n\n${description || ""}`.trim().slice(0, 8000);
+      const text = `${title || ""}\n\n${description || ""}`.trim();
       if (!text) return;
 
-      const { data: embedData, error: embedError } = await supabase.functions.invoke("gemini-orchestrator", {
-        body: { action: "embed", text },
+      const res = await fetch(`/api/recruteur/offres/${offerId}/embedding`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${userSession.access_token}` },
+        body: JSON.stringify({ title, description }),
       });
 
-      if (embedError || !embedData?.success || !Array.isArray(embedData?.embedding)) {
-        console.error("Erreur génération embedding offre:", embedData?.error || embedError?.message);
-        return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("Erreur génération embedding offre:", body.error);
       }
-
-      await supabase
-        .from("job_offers")
-        .update({ embedding: `[${embedData.embedding.join(",")}]` })
-        .eq("id", offerId);
     } catch (err) {
       console.error("Erreur génération embedding offre:", err);
     }
@@ -661,21 +663,20 @@ export default function RecruteurDashboardPage() {
   };
 
   const handleDeleteOffer = async (offerId) => {
-    if (!window.confirm("Supprimer définitivement cette offre ?")) return;
+    if (!window.confirm("Retirer définitivement cette offre de la liste publique ?")) return;
 
-    const { error } = await supabase
-      .from("job_offers")
-      .delete()
-      .eq("id", offerId)
-      .eq("recruiter_id", userSession.user.id);
+    // archive_own_job_offer() (SECURITY DEFINER) : archive plutôt que
+    // supprimer la ligne — les candidatures déjà reçues sur cette offre
+    // gardent leur contexte (le candidat sait toujours à quoi il a postulé).
+    const { error } = await supabase.rpc("archive_own_job_offer", { offer_id: offerId });
 
     if (error) {
-      triggerToast("Erreur lors de la suppression.");
+      triggerToast("Erreur lors de l'archivage.");
       return;
     }
     setMyOffers((prev) => prev.filter((o) => o.id !== offerId));
     if (editingOfferId === offerId) handleCancelEditOffer();
-    triggerToast("Offre supprimée.");
+    triggerToast("Offre archivée.");
   };
 
   const handleToggleOfferActive = async (offer) => {
@@ -1187,7 +1188,7 @@ export default function RecruteurDashboardPage() {
                             onClick={() => handleDeleteOffer(offer.id)}
                             className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl transition cursor-pointer"
                           >
-                            Supprimer
+                            Archiver
                           </button>
                         </div>
                       </div>

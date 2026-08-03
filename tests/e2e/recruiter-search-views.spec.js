@@ -7,6 +7,11 @@ const path = require("path");
  * Section 7 du chantier RBAC : candidats_recherche et match_resumes
  * reconstruites sur has_badge('verified_recruiter') au lieu de
  * role='recruteur' (valeur disparue). Contre l'API réelle.
+ *
+ * candidats_recherche a été transformée de VUE en fonction SECURITY DEFINER
+ * get_candidats_recherche() (migration 20260802200000, hors de cette
+ * session) — appelée ici via .rpc(), plus .from("candidats_recherche")
+ * (la vue n'existe plus, DROP VIEW ... CASCADE).
  */
 
 function loadEnvLocal() {
@@ -84,7 +89,7 @@ test.describe("RBAC — reconstruction candidats_recherche / match_resumes", () 
   });
 
   test("un compte 'user' sans badge verified_recruiter n'a accès à aucun candidat", async () => {
-    const { data, error } = await candidateClient.from("candidats_recherche").select("*");
+    const { data, error } = await candidateClient.rpc("get_candidats_recherche");
     expect(error).toBeNull();
     expect(data).toEqual([]);
   });
@@ -110,7 +115,7 @@ test.describe("RBAC — reconstruction candidats_recherche / match_resumes", () 
     expect(approveError).toBeNull();
     expect(approved).toBe(true);
 
-    const { data, error } = await candidateClient.from("candidats_recherche").select("*");
+    const { data, error } = await candidateClient.rpc("get_candidats_recherche");
     expect(error).toBeNull();
     expect(data.length, "Un recruteur vérifié ne voit aucun candidat.").toBeGreaterThan(0);
 
