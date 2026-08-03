@@ -130,11 +130,20 @@ export default function SecurityTabContent({ userSession }) {
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
       if (updateError) throw updateError;
 
-      setMessage("Votre mot de passe a été mis à jour avec succès.");
+      setMessage("Mot de passe mis à jour. Déconnexion des autres appareils en cours...");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setSkipCurrentPassword(false);
+
+      // scope: "global" révoque TOUTES les sessions de ce compte, y compris
+      // celle-ci — l'utilisateur doit se reconnecter, même sur cet appareil,
+      // cohérent avec le fait qu'un changement de mot de passe doit invalider
+      // toute session ouverte avant ce changement (fuite potentielle du
+      // précédent mot de passe).
+      await supabase.auth.signOut({ scope: "global" });
+      window.location.href = "/login";
+      return;
     } catch (err) {
       console.error(err);
       setError(err.message || "Erreur lors de la mise à jour du mot de passe.");

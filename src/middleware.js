@@ -64,6 +64,30 @@ export async function middleware(req) {
     return NextResponse.redirect(url);
   }
 
+  // Une seule lecture de user_roles pour cette requête : le statut (pour le
+  // blocage suspension ci-dessous, sur TOUTE page protégée) et le rôle (pour
+  // l'autorisation par section plus bas) — éviter d'interroger deux fois la
+  // même ligne.
+  let userRoleRow = null;
+  if (user && !estRoutePublique(pathname)) {
+    const { data } = await supabase.from("user_roles").select("role, status").eq("user_id", user.id).single();
+    userRoleRow = data;
+
+    // Un compte suspendu perd l'accès à toute page protégée immédiatement —
+    // pas seulement aux actions gérées par current_user_role() côté SQL. Le
+    // verrou réel tient déjà au niveau PostgreSQL (voir
+    // 20260803040000_moderation_et_suspension.sql) ; ce blocage ici est la
+    // couche UX qui évite d'atterrir sur une page qui échoue silencieusement
+    // requête par requête.
+    if (userRoleRow?.status === "suspended") {
+      await supabase.auth.signOut();
+      const url = req.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("suspended", "true");
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Vérification des autorisations selon le rôle pour les routes restreintes.
   //
   // Source de vérité : UNIQUEMENT public.user_roles.role (jamais
@@ -80,12 +104,6 @@ export async function middleware(req) {
       pathnameMatchesRoute(pathname, "/recruteur") ||
       pathnameMatchesRoute(pathname, "/candidat"))
   ) {
-    const { data: userRoleRow } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
-
     const userRole = userRoleRow?.role || "user";
 
     // Correctif escalade de privilèges (2026-08-02) : badges ne doit JAMAIS
@@ -106,6 +124,17 @@ export async function middleware(req) {
       url.pathname = roleHomePath(userRole);
       return NextResponse.redirect(url);
     }
+
+    // Étape D (2026-08-03) : verified_recruiter gate désormais tout l'espace
+    // /recruteur au niveau RLS (20260803110000_badge_gate_espace_recruteur.sql)
+    // et côté page (l'écran d'accréditation NINEA/RCCM remplace le tableau
+    // de bord tant que le badge n'est pas accordé). Volontairement PAS de
+    // redirection ici pour un 'user' non badgé : /recruteur est aussi le
+    // seul endroit où soumettre la demande d'accréditation — rediriger
+    // ailleurs empêcherait justement d'y accéder. Le rôle reste vérifié
+    // ci-dessus (user/admin, pas publisher) ; le badge est vérifié à la
+    // couche donnée (seule couche où la décision "encore, ou pas encore ?"
+    // change sans rechargement de page).
   }
 
   return res;

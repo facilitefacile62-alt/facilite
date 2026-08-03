@@ -2,6 +2,7 @@ const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("fs");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Vague 3 (Partie 1 du chantier, docs/grants-matrix.md) : UPDATE
@@ -50,6 +51,16 @@ test.describe("Vague 3 — colonnes UPDATE restreintes (job_offers)", () => {
     });
     securityId = secAuth.user.id;
 
+    // Étape D (2026-08-03) : créer une offre exige désormais le badge
+    // verified_recruiter (20260803110000_badge_gate_espace_recruteur.sql) —
+    // accordé pour la durée de ce fichier seulement (workers:1 dans
+    // playwright.config.js, exécution séquentielle, jamais en parallèle
+    // avec recruiter-search-views.spec.js qui exige ce même compte NON badgé).
+    await runPrivilegedSql(`
+      UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
+      WHERE id = '${candidateId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);
+    `);
+
     const { data: offer } = await candidateClient
       .from("job_offers")
       .insert({ title: "Offre test Vague 3", company: "Test SARL", location: "Dakar", recruiter_id: candidateId, is_active: true })
@@ -59,7 +70,14 @@ test.describe("Vague 3 — colonnes UPDATE restreintes (job_offers)", () => {
   });
 
   test.afterAll(async () => {
-    if (offerId) await candidateClient.rpc("archive_own_job_offer", { offer_id: offerId });
+    // Étapes indépendantes (.catch) : voir docs/diagnostic-tests-bloquants.md.
+    if (offerId) {
+      const { error } = await candidateClient.rpc("archive_own_job_offer", { offer_id: offerId });
+      if (error) console.error("Nettoyage échoué (non bloquant) :", error.message);
+    }
+    await runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${candidateId}';`).catch((e) =>
+      console.error("Nettoyage échoué (non bloquant) :", e.message)
+    );
   });
 
   test("le propriétaire peut toujours modifier les champs légitimes de son offre", async () => {

@@ -19,7 +19,12 @@ module.exports = defineConfig({
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: [["list"]],
+  // "list" reste pour le suivi en direct ; "json" écrit un résultat
+  // structuré et complet dans test-results/results.json (gitignored) —
+  // avant ça, la sortie de compilation du serveur Next.js (webServer.stdout
+  // ci-dessous) noyait le résumé final dans un log illisible, faisant
+  // perdre du temps à chaque lecture du résultat d'un run complet.
+  reporter: [["list"], ["json", { outputFile: "test-results/results.json" }]],
 
   use: {
     baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
@@ -41,5 +46,12 @@ module.exports = defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // "ignore" (stderr est forwardé par défaut par Playwright si non précisé
+    // explicitement, contrairement à stdout — asymétrie source de la
+    // pollution du log jusqu'ici) : la sortie du serveur Next.js
+    // (compilation, warnings de dépréciation, logs applicatifs) n'est plus
+    // streamée dans le log de test, quel que soit le résultat du run.
+    stdout: "ignore",
+    stderr: "ignore",
   },
 });

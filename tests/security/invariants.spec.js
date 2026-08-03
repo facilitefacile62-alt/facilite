@@ -1,8 +1,7 @@
 const { test, expect } = require("@playwright/test");
-const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
+const { runIntrospectionSql } = require("../helpers/privilegedSql");
 
 /**
  * Les 6 invariants de sécurité — voir docs/invariants-securite.md pour
@@ -18,22 +17,6 @@ const os = require("os");
  * dans ce projet — uniquement des Route Handlers, le vrai équivalent
  * "endpoint public" ici, cf. commentaire de l'invariant 5).
  */
-
-function runIntrospectionSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `invariant-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    const parsed = JSON.parse(output.slice(output.indexOf("{")));
-    return parsed.rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
-}
 
 function listFilesRecursive(dir, extensions) {
   let results = [];
@@ -62,7 +45,7 @@ test.describe("Invariants de sécurité", () => {
       // format : "table_name:grantee:privilege_type"
     ]);
 
-    const rows = runIntrospectionSql(`
+    const rows = await runIntrospectionSql(`
       SELECT table_name, grantee, privilege_type
       FROM information_schema.role_table_grants
       WHERE table_schema='public' AND grantee IN ('authenticated','anon')
@@ -85,7 +68,7 @@ test.describe("Invariants de sécurité", () => {
       "ai_usage_daily", // service_role uniquement par design, aucune policy authenticated n'a jamais existé
     ]);
 
-    const rows = runIntrospectionSql(`
+    const rows = await runIntrospectionSql(`
       SELECT c.relname AS table_name, c.relrowsecurity AS rls_enabled, count(p.polname) AS policy_count
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -112,7 +95,7 @@ test.describe("Invariants de sécurité", () => {
   });
 
   test("Invariant 3 — aucune fonction SECURITY DEFINER sans search_path figé", async () => {
-    const rows = runIntrospectionSql(`
+    const rows = await runIntrospectionSql(`
       SELECT p.proname,
         (SELECT count(*) FROM unnest(p.proconfig) cfg WHERE cfg LIKE 'search_path=%') AS has_search_path
       FROM pg_proc p
@@ -139,7 +122,7 @@ test.describe("Invariants de sécurité", () => {
     // qu'il n'est pas corrigé.
     const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers"]);
 
-    const rows = runIntrospectionSql(`SELECT id, public FROM storage.buckets ORDER BY id;`);
+    const rows = await runIntrospectionSql(`SELECT id, public FROM storage.buckets ORDER BY id;`);
     const violations = rows.filter((r) => r.public === true && !JUSTIFIED_PUBLIC_BUCKETS.has(r.id));
 
     if (violations.length > 0) {
@@ -201,5 +184,183 @@ test.describe("Invariants de sécurité", () => {
     }
 
     expect(unscoped, "Usage service_role sans filtrage manuel apparent — voir la liste ci-dessus (console)").toEqual([]);
+  });
+
+  test("Invariant 7 — aucune policy RLS permissive tautologique (public + storage), ni référence à un rôle obsolète", async () => {
+    // Liste blanche VOLONTAIREMENT vide pour le premier passage — demande
+    // explicite : voir l'ampleur exacte avant toute décision. Format :
+    // "schema.table:policyname". Une lecture réellement publique peut être
+    // légitime, mais ça doit être un choix écrit ici, pas un accident.
+    const JUSTIFIED = new Set([
+      // Page vitrine entreprise (/recruteurs/[id]), publique par nature :
+      // company_name/sector/location/logo_url/banner_url/description/website,
+      // aucune colonne personnelle ou sensible. Décision écrite le 2026-08-03.
+      "public.recruiter_profiles:Lecture publique des profils recruteurs",
+    ]);
+
+    const rows = await runIntrospectionSql(`
+      SELECT schemaname, tablename, policyname, permissive, roles::text[] AS roles, cmd, qual, with_check
+      FROM pg_policies
+      WHERE schemaname IN ('public','storage')
+      ORDER BY schemaname, tablename, policyname;
+    `);
+
+    // Tautologie stricte : USING ou WITH CHECK vaut littéralement true (ou un
+    // équivalent trivial). Les policies pour service_role seul sont ignorées
+    // — ce rôle bypass la RLS de toute façon, une policy dessus ne change
+    // rien à la surface d'exposition réelle.
+    const isTautological = (expr) => {
+      if (!expr) return false;
+      const normalized = expr.trim().toLowerCase();
+      return normalized === "true" || normalized === "(true)" || /^\(?\s*1\s*=\s*1\s*\)?$/.test(normalized);
+    };
+
+    // Motif exact du bug trouvé deux fois (job_offers, chat-attachments) :
+    // un bucket_id vérifié seul, sans restriction de dossier/propriétaire —
+    // n'importe quel authenticated écrit/lit n'importe où dans le bucket.
+    const isBucketOnly = (expr) => {
+      if (!expr) return false;
+      return /^\(bucket_id = '[^']+'::text\)$/.test(expr.trim());
+    };
+
+    const violations = rows.filter((r) => {
+      const roles = r.roles || [];
+      const onlyServiceRole = roles.length === 1 && roles[0] === "service_role";
+      if (onlyServiceRole) return false;
+      if (r.permissive !== "PERMISSIVE") return false; // RESTRICTIVE se combine en ET, pas en OU : pas le même risque
+
+      const flagged =
+        isTautological(r.qual) || isTautological(r.with_check) || isBucketOnly(r.qual) || isBucketOnly(r.with_check);
+      if (!flagged) return false;
+
+      return !JUSTIFIED.has(`${r.schemaname}.${r.tablename}:${r.policyname}`);
+    });
+
+    if (violations.length > 0) {
+      console.log(`\n[INVARIANT 7] ${violations.length} policy(ies) permissive(s) tautologique(s) :`);
+      for (const r of violations) {
+        console.log(`  - ${r.schemaname}.${r.tablename} : "${r.policyname}" (${r.cmd}, roles=${(r.roles || []).join(",")})`);
+        console.log(`      USING: ${r.qual}`);
+        console.log(`      CHECK: ${r.with_check}`);
+      }
+    }
+
+    expect(
+      violations,
+      "Policy RLS permissive tautologique — voir la liste ci-dessus (console)"
+    ).toEqual([]);
+
+    // Étape A du chantier (2026-08-03) : le modèle de rôle pré-RBAC
+    // (candidat/recruteur/agent/entreprise) a été remplacé par
+    // user/publisher/admin + badges (20260802050000_rbac_user_roles.sql).
+    // Deux policies Storage référençant encore 'recruteur' sont restées
+    // invisibles jusqu'à un scan manuel dédié — trouvées deux fois dans ce
+    // chantier (docs/diagnostic-2026-08.md, puis ici) : c'est la classe de
+    // bug que cette section détecte automatiquement désormais, sur toute
+    // policy ET toute fonction, pas seulement celles déjà connues.
+    const OBSOLETE_ROLE_LITERAL = /'(candidat|recruteur|agent|entreprise)'/;
+    const JUSTIFIED_ROLE_LITERAL = new Set([
+      // format : "policy:schema.table:policyname" ou "function:proname"
+    ]);
+
+    const policyRoleViolations = rows.filter((r) => {
+      const text = `${r.qual || ""} ${r.with_check || ""}`;
+      return OBSOLETE_ROLE_LITERAL.test(text) && !JUSTIFIED_ROLE_LITERAL.has(`policy:${r.schemaname}.${r.tablename}:${r.policyname}`);
+    });
+
+    const functionRows = await runIntrospectionSql(`
+      SELECT p.proname, pg_get_functiondef(p.oid) AS def
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.prokind IN ('f','p');
+    `);
+    const functionRoleViolations = functionRows.filter(
+      (r) => OBSOLETE_ROLE_LITERAL.test(r.def || "") && !JUSTIFIED_ROLE_LITERAL.has(`function:${r.proname}`)
+    );
+
+    const roleLiteralViolations = [
+      ...policyRoleViolations.map((r) => `policy ${r.schemaname}.${r.tablename}:"${r.policyname}"`),
+      ...functionRoleViolations.map((r) => `fonction public.${r.proname}()`),
+    ];
+
+    if (roleLiteralViolations.length > 0) {
+      console.log(`\n[INVARIANT 7] ${roleLiteralViolations.length} référence(s) à un rôle obsolète (candidat/recruteur/agent/entreprise) :`);
+      for (const v of roleLiteralViolations) console.log(`  - ${v}`);
+    }
+
+    expect(
+      roleLiteralViolations,
+      "Policy ou fonction référençant un rôle du modèle pré-RBAC, qui n'existe plus — voir la liste ci-dessus (console)"
+    ).toEqual([]);
+  });
+
+  test("Invariant 8 — aucune garde de rôle/statut fragile face à NULL (SQL <>/!= au lieu de IS DISTINCT FROM)", async () => {
+    // NULL <> 'admin' vaut NULL (ni vrai ni faux) en SQL — un `IF` sur ce
+    // résultat ne se déclenche JAMAIS, laissant passer silencieusement
+    // l'action censée être bloquée. Bug trouvé et corrigé sur 4 fonctions
+    // (approve_badge_request, reject_badge_request, revoke_badge,
+    // moderate_job_offer — 20260803050000_fix_null_unsafe_admin_checks.sql)
+    // dès que current_user_role() a pu renvoyer NULL (compte suspendu). Ce
+    // volet scanne TOUTE fonction SECURITY DEFINER pour la même classe de
+    // comparaison, pas seulement les 4 cas déjà connus.
+    const JUSTIFIED_SQL_GUARD = new Set([
+      // auth.role() et current_user sont des GUC de session PostgreSQL —
+      // toujours peuplés par PostgREST pour un appel API réel (jamais NULL
+      // sous le modèle de menace "appel direct à la clé anon"), contrairement
+      // à current_user_role() qui dépend d'une jointure user_roles pouvant
+      // légitimement ne renvoyer aucune ligne pour un compte suspendu. Pas la
+      // même classe de risque. Décision écrite le 2026-08-03.
+      "function:prevent_order_status_spoofing",
+      "function:protect_cosmetic_columns",
+    ]);
+
+    const secdefRows = await runIntrospectionSql(`
+      SELECT n.nspname AS schema, p.proname, pg_get_functiondef(p.oid) AS def
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.prosecdef = true AND p.prokind IN ('f','p')
+      ORDER BY p.proname;
+    `);
+
+    const unsafeComparison = /(<>|!=)\s*'[^']*'|'[^']*'\s*(<>|!=)/;
+    const sqlGuardViolations = secdefRows.filter(
+      (r) => unsafeComparison.test(r.def) && !JUSTIFIED_SQL_GUARD.has(`function:${r.proname}`)
+    );
+
+    if (sqlGuardViolations.length > 0) {
+      console.log(`\n[INVARIANT 8] ${sqlGuardViolations.length} fonction(s) SECURITY DEFINER avec une comparaison <>/!= fragile face à NULL :`);
+      for (const r of sqlGuardViolations) console.log(`  - public.${r.proname}() — remplacer par IS DISTINCT FROM`);
+    }
+
+    expect(
+      sqlGuardViolations,
+      "Fonction SECURITY DEFINER utilisant <>/!= au lieu de IS DISTINCT FROM pour une comparaison de rôle/statut — voir la liste ci-dessus (console)"
+    ).toEqual([]);
+
+    // Volet JS : contrairement à SQL, `===`/`!==` traitent null/undefined
+    // sans ambiguïté (pas de logique ternaire) — un scan mot-à-mot de tout
+    // `.role`/`.status` dans src/ produirait surtout du bruit (statut d'un
+    // message de chat, d'une pièce jointe OCR, etc., aucun rapport avec
+    // l'autorisation). Le vrai bug JS trouvé (isCallerAdmin, src/lib/rbac.js)
+    // n'était pas une comparaison NULL-fragile mais un contrôle OMIS (role
+    // vérifié, status oublié) — sur les routes admin qui écrivent en
+    // service_role, donc HORS RLS : ce fichier est la seule barrière réelle.
+    // On pin donc précisément sa complétude plutôt que de scanner un pattern
+    // qui n'est pas dangereux en JS.
+    const rbacSource = fs.readFileSync(path.resolve(__dirname, "../../src/lib/rbac.js"), "utf-8");
+    const checksRole = /role\s*===\s*['"]admin['"]/.test(rbacSource);
+    const checksStatus = /status\s*===\s*['"]active['"]/.test(rbacSource);
+    const guardsNullRow = /if\s*\(\s*error\s*\|\|\s*!data\s*\)/.test(rbacSource);
+
+    if (!checksRole || !checksStatus || !guardsNullRow) {
+      console.log(
+        `\n[INVARIANT 8] src/lib/rbac.js isCallerAdmin() incomplet : checksRole=${checksRole}, checksStatus=${checksStatus}, guardsNullRow=${guardsNullRow}`
+      );
+    }
+
+    expect(
+      checksRole && checksStatus && guardsNullRow,
+      "isCallerAdmin() (src/lib/rbac.js) doit vérifier role ET status, et se refermer sur une ligne absente/en erreur — c'est la seule barrière des routes admin qui écrivent en service_role, hors RLS."
+    ).toBe(true);
   });
 });

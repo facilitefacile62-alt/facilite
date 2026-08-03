@@ -1,15 +1,16 @@
-# Les 6 invariants de sécurité
+# Les 7 invariants de sécurité
 
-`tests/security/invariants.spec.js` — six vérifications contre la base réelle
-(pas de simulation). Chacune doit renvoyer zéro ligne pour passer.
+`tests/security/invariants.spec.js` — sept vérifications contre la base
+réelle (pas de simulation). Chacune doit renvoyer zéro ligne pour passer.
 
-**⚠️ Pas encore branché en CI.** `.github/workflows/ci.yml` ne lance
-actuellement aucun test Playwright (ni e2e, ni sécurité) — seulement lint et
-build. Les faire tourner en CI nécessite d'exposer des secrets au workflow
-GitHub Actions (au minimum `SUPABASE_ACCESS_TOKEN` pour que la CLI
-s'authentifie ; les invariants passent par `npx supabase db query`, pas par
-la clé anon). C'est une décision à prendre consciemment, pas un ajout
-silencieux — voir docs/diagnostic-2026-08.md.
+**Branché en CI** (`.github/workflows/ci.yml`, job `security-invariants`) —
+tourne à chaque push et chaque pull request vers `main`, échoue le build si
+un seul invariant est rouge. Nécessite le secret GitHub Actions
+`SUPABASE_DB_URL` (chaîne de connexion Postgres directe, Dashboard Supabase
+→ Project Settings → Database → Connection string) — sans lui, le job
+échoue explicitement plutôt que de tourner silencieusement à vide. En local,
+la CLI utilise l'état "linked" existant (`--linked`) à la place ; aucun
+changement du geste local (`npx playwright test tests/security/invariants.spec.js`).
 
 ## Invariant 1 — Aucun GRANT de table non justifié
 
@@ -88,6 +89,80 @@ TOUTE la base sans restriction.
 scopé à un utilisateur précis (dérivé d'un JWT vérifié, jamais d'une valeur
 brute fournie par le client). Heuristique par mots-clés également — relire
 à la main, pas de correction automatique.
+
+## Invariant 7 — Aucune policy RLS permissive tautologique, ni référence à un rôle obsolète
+
+**Ce qu'il protège (volet 1 — tautologie)** : les policies RLS permissives se
+combinent en OU — une seule policy dont le `USING`/`WITH CHECK` vaut `true`
+(ou un chemin trop large comme `bucket_id = 'x'` sans restriction de dossier)
+rend TOUTES les autres policies de la même commande inopérantes, même si
+elles sont parfaitement écrites. C'est la classe de faille trouvée deux fois
+de suite (`job_offers`, `chat-attachments`) : un scan manuel ponctuel qui
+conclut "isolé" après avoir trouvé un seul cas ne suffit pas.
+
+**Quoi faire quand il échoue** : lire la policy et les colonnes réellement
+exposées. Si la lecture/écriture publique est réellement voulue, documenter
+la décision dans `docs/rls-policies.md` et ajouter l'entrée à la liste
+blanche du test (`JUSTIFIED`, format `"schema.table:policyname"`). Sinon,
+supprimer la policy ou la remplacer par une condition explicite — et
+vérifier l'effet de bord sur les lectures/écritures légitimes qui pouvaient
+en dépendre sans qu'on le sache (cas vécu : `job_offers` a nécessité l'ajout
+d'une policy compensatoire pour que le recruteur garde accès à ses propres
+offres archivées).
+
+**Ce qu'il protège (volet 2 — rôle obsolète, ajouté 2026-08-03)** : la
+migration RBAC (`20260802050000_rbac_user_roles.sql`) a remplacé le modèle
+`candidat`/`recruteur`/`agent`/`entreprise` par `user`/`publisher`/`admin` +
+badges, mais `pg_depend` ne voit pas les littéraux de rôle codés en dur dans
+le corps d'une policy ou d'une fonction — deux policies Storage
+(`"Recruteurs et admins lisent les CV"`, `"Un recruteur televerse ses visuels
+d'offres"`) ont continué à comparer `current_user_role()` à `'recruteur'`,
+une valeur qui n'existe plus, cassant silencieusement la CVthèque et
+l'upload de visuels pour tout recruteur vérifié réel. Ce volet scanne
+`pg_policies` ET `pg_proc` pour tout littéral `'candidat'`, `'recruteur'`,
+`'agent'` ou `'entreprise'` codé en dur, pas seulement les deux cas déjà
+connus.
+
+**Quoi faire quand il échoue** : réécrire la policy/fonction sur le modèle
+actuel (`current_user_role() = 'admin' OR (current_user_role() = 'user' AND
+has_badge(auth.uid(), '<badge>'))`, voir
+`20260803090000_fix_storage_role_literals.sql`). Si un littéral matché n'est
+en réalité pas une comparaison de rôle (faux positif), ajouter l'entrée à
+`JUSTIFIED_ROLE_LITERAL` avec le format `"policy:schema.table:policyname"` ou
+`"function:proname"`, jamais en silence.
+
+## Invariant 8 — Aucune garde de rôle/statut fragile face à NULL
+
+**Ce qu'il protège (volet SQL)** : `NULL <> 'admin'` vaut `NULL` (ni vrai ni
+faux) en SQL — un `IF` sur ce résultat ne se déclenche jamais, laissant
+passer silencieusement l'action censée être bloquée. C'est exactement le bug
+trouvé sur 4 fonctions (`approve_badge_request`, `reject_badge_request`,
+`revoke_badge`, `moderate_job_offer`) dès que `current_user_role()` a pu
+renvoyer `NULL` pour un compte suspendu (`20260803050000_fix_null_unsafe_admin_checks.sql`).
+Ce volet scanne toute fonction `SECURITY DEFINER` pour `<>`/`!=` contre un
+littéral texte, pas seulement les 4 cas déjà connus.
+
+**Quoi faire quand il échoue** : remplacer `<>`/`!=` par `IS DISTINCT FROM`.
+Si le littéral matché compare `auth.role()` ou `current_user` (GUC de session
+Postgres, toujours peuplés par PostgREST — pas la même classe de risque que
+`current_user_role()`), documenter la décision et ajouter l'entrée à
+`JUSTIFIED_SQL_GUARD` (format `"function:proname"`).
+
+**Ce qu'il protège (volet JS)** : `===`/`!==` en JavaScript traitent
+`null`/`undefined` sans ambiguïté (contrairement à SQL) — un scan mot-à-mot
+de tout `.role`/`.status` dans `src/` produirait surtout du bruit (statut
+d'un message de chat, d'un document OCR, etc.). Le vrai bug JS trouvé
+(`isCallerAdmin()`, `src/lib/rbac.js`) n'était pas une comparaison
+NULL-fragile mais un contrôle **omis** (`role` vérifié, `status` oublié) —
+sur les routes admin qui écrivent en `service_role`, donc hors RLS : ce
+fichier est leur seule barrière réelle. Ce volet pin donc précisément sa
+complétude (vérifie `role === 'admin'` ET `status === 'active'` ET la garde
+sur ligne absente/en erreur) plutôt que de scanner un pattern qui n'est pas
+dangereux en JS.
+
+**Quoi faire quand il échoue** : `src/lib/rbac.js` a été modifié pour retirer
+une des trois conditions — les restaurer, ne jamais assouplir ce fichier
+pour faire passer le test.
 
 ## Exécution
 

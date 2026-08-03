@@ -384,6 +384,11 @@ export default function MessagerieClient() {
   // seul interlocuteur fixe ("le support") comme un candidat/recruteur — il
   // doit répondre au dernier expéditeur du message qu'il consulte.
   const [currentUserRole, setCurrentUserRole] = useState(null);
+  // 'recruteur' n'existe plus comme valeur de user_roles.role depuis le
+  // chantier RBAC (fusionné dans 'user') — savoir si CE compte agit comme
+  // recruteur ne peut donc plus se lire sur le rôle, seulement sur le fait
+  // qu'il a publié au moins une offre (voir handleVideoCallClick).
+  const [isRecruiterAccount, setIsRecruiterAccount] = useState(false);
 
   // Conversation directe ouverte via ?recipient=<userId> (ex. vitrine
   // recruteur) — distincte du fil fusionné "Support RH Facilité" (id 1).
@@ -756,10 +761,12 @@ export default function MessagerieClient() {
       Promise.all([
         supabase.from("profiles").select("avatar_url").eq("id", session.user.id).single(),
         supabase.from("user_roles").select("role").eq("user_id", session.user.id).single(),
-      ]).then(([{ data: profile }, { data: userRoleRow }]) => {
+        supabase.from("job_offers").select("id", { count: "exact", head: true }).eq("recruiter_id", session.user.id),
+      ]).then(([{ data: profile }, { data: userRoleRow }, { count: ownedOfferCount }]) => {
           if (!isActive) return;
           const role = userRoleRow?.role || null;
           setCurrentUserRole(role);
+          setIsRecruiterAccount((ownedOfferCount || 0) > 0);
           setUserAvatarUrl(profile?.avatar_url || null);
           if (role !== "admin") {
             resolveSupportConversation(session.user.id).then((result) => {
@@ -2465,7 +2472,7 @@ export default function MessagerieClient() {
                           </button>
                           <button
                             onClick={() => {
-                              if (currentUserRole === "recruteur") {
+                              if (isRecruiterAccount) {
                                 // La création d'un entretien exige de savoir à quelle
                                 // candidature précise le rattacher (application_id,
                                 // NOT NULL) — cette page ne porte pas cette info de

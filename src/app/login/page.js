@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [honeypot, setHoneypot] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showSuspendedNotice, setShowSuspendedNotice] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -25,6 +26,7 @@ export default function LoginPage() {
   // Initialisé à false (identique au rendu serveur) puis mis à jour côté client dans un useEffect
   // ci-dessous, pour éviter un hydration mismatch (le HTML serveur ne connaît pas window.location.search).
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [isGoogleOnlyAccount, setIsGoogleOnlyAccount] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [recoveryError, setRecoveryError] = useState("");
@@ -36,9 +38,13 @@ export default function LoginPage() {
   useEffect(() => {
     // Lecture de window.location.search : ne peut pas être calculé pendant le rendu serveur,
     // objectif justement de synchroniser l'état client une fois le composant monté.
-    if (new URLSearchParams(window.location.search).get("reset") === "true") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reset") === "true") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsRecoveryMode(true);
+    }
+    if (params.get("suspended") === "true") {
+      setShowSuspendedNotice(true);
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -49,6 +55,26 @@ export default function LoginPage() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Détection "compte Google" : uniquement une fois la session de récupération
+  // établie (donc après que la personne a prouvé l'accès au compte en
+  // cliquant le lien reçu par e-mail) — jamais avant, sinon interroger les
+  // identités d'un compte reviendrait à confirmer son existence à qui ne l'a
+  // pas encore prouvée (énumération de comptes).
+  useEffect(() => {
+    if (!isRecoveryMode) return;
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data }) => {
+      if (cancelled) return;
+      const identities = data?.user?.identities || [];
+      const hasPasswordIdentity = identities.some((i) => i.provider === "email");
+      const hasGoogleIdentity = identities.some((i) => i.provider === "google");
+      setIsGoogleOnlyAccount(hasGoogleIdentity && !hasPasswordIdentity);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isRecoveryMode]);
 
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
@@ -85,7 +111,12 @@ export default function LoginPage() {
       }
 
       setRecoverySuccess(true);
-      await supabase.auth.signOut();
+      // scope: "global" révoque TOUTES les sessions de ce compte (autres
+      // appareils/onglets compris), pas seulement celle-ci — un mot de passe
+      // qu'on vient de changer via "mot de passe oublié" l'a probablement été
+      // parce qu'il a fuité ; laisser d'anciennes sessions actives ailleurs
+      // annulerait l'intérêt du changement.
+      await supabase.auth.signOut({ scope: "global" });
       setTimeout(() => {
         window.location.replace("/login");
       }, 2000);
@@ -274,6 +305,15 @@ export default function LoginPage() {
               </p>
             </div>
 
+            {isGoogleOnlyAccount && !recoverySuccess && (
+              <p className="text-xs font-semibold text-blue-800 bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
+                ℹ️ Ce compte utilise la connexion Google. Vous pouvez tout de
+                même définir un mot de passe ci-dessous pour vous connecter
+                aussi par e-mail, ou continuer à utiliser "Se connecter avec
+                Google" sans rien changer.
+              </p>
+            )}
+
             {recoverySuccess ? (
               <div className="text-center py-6 animate-fade-in">
                 <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
@@ -403,6 +443,12 @@ export default function LoginPage() {
               </Link>
             </div>
           ) : loginMethod === "email" ? (
+            <>
+            {showSuspendedNotice && (
+              <p className="mb-3 text-xs font-semibold text-red-700 bg-red-50 p-3 rounded-xl border border-red-200">
+                ⚠️ Ce compte a été suspendu. Contactez le support si vous pensez qu'il s'agit d'une erreur.
+              </p>
+            )}
             <form onSubmit={handleSubmit} className="space-y-2.5">
               <input
                 type="text"
@@ -549,6 +595,7 @@ export default function LoginPage() {
                 </p>
               </div>
             </form>
+            </>
           ) : (
             <div className="mt-4">
               <PhoneAuthForm onSuccessRedirect="/profil" />

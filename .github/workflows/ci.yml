@@ -87,3 +87,60 @@ jobs:
       # distinct non couvert par cette étape.
       - name: Lint database schema
         run: supabase db lint --local --level warning --fail-on warning
+
+  security-invariants:
+    name: Invariants de sécurité
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Les 7 invariants (tests/security/invariants.spec.js, voir
+      # docs/invariants-securite.md) n'utilisent jamais de page/navigateur —
+      # ils interrogent la base réelle (CLI Supabase) et lisent le dépôt sur
+      # disque. Chromium reste installé par prudence (comportement interne
+      # du fixture-loading de Playwright non garanti entre versions), coût
+      # négligeable comparé au risque d'un échec de setup non lié aux
+      # invariants eux-mêmes.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # SUPABASE_DB_URL doit être configuré comme secret GitHub Actions
+      # (Settings → Secrets and variables → Actions) — chaîne de connexion
+      # directe (Dashboard Supabase → Project Settings → Database →
+      # Connection string, variante "Session pooler" recommandée pour un
+      # runner éphémère). Sans ce secret, ce job échoue explicitement au
+      # lieu de tourner à vide sur une base vide/absente — un job vert qui
+      # n'a rien vérifié serait pire qu'un rouge honnête.
+      - name: Vérifier que SUPABASE_DB_URL est configuré
+        run: |
+          if [ -z "${{ secrets.SUPABASE_DB_URL }}" ]; then
+            echo "::error::SUPABASE_DB_URL n'est pas configuré (Settings → Secrets and variables → Actions). Les invariants 1-4 et 7 ne peuvent pas interroger la base réelle sans lui — voir docs/invariants-securite.md."
+            exit 1
+          fi
+
+      - name: Exécuter les 7 invariants de sécurité
+        run: npx playwright test tests/security/invariants.spec.js --project=chromium
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: "https://ci-placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key"
+          CI: true
+
+      - name: Publier le rapport en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: invariants-playwright-report
+          path: playwright-report/
+          retention-days: 14

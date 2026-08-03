@@ -66,6 +66,32 @@ test.describe("Tests de responsivité et de conformité Mobile UX", () => {
       await page.waitForLoadState("networkidle");
       await expectNoHorizontalOverflow(page, "/admin/dashboard");
     });
+
+    test("Espace Recruteur — Vue d'ensemble (compte démo badgé, données riches)", async ({ page }) => {
+      // Compte démo (Étape E) : c'est le seul compte avec assez de données
+      // (8 offres, ~38 candidatures) pour que le graphique et l'entonnoir
+      // rendent leur pire cas de largeur (nombreuses barres, longs titres).
+      await page.goto("/login");
+      await page.getByPlaceholder("Enter your Email").fill("demo.investisseur@facilite-demo.local");
+      await page.getByPlaceholder("Enter your password").fill("CompteDemoNonUtilisable2026!");
+      await page.getByRole("button", { name: "Log In" }).click();
+      await page.waitForURL("**/recruteur", { timeout: 20_000 });
+      await page.waitForLoadState("networkidle");
+      await expectNoHorizontalOverflow(page, "/recruteur (vue d'ensemble, démo)");
+    });
+
+    test("Espace Recruteur — écran d'accréditation (compte 'user' sans badge)", async ({ page }) => {
+      // e2e-test-candidate n'a ni offre ni badge (nettoyé —
+      // 20260803120000_correction_e2e_test_candidate_debris.sql) : sert de
+      // fixture "visiteur par défaut" de l'espace recruteur, exactement ce
+      // qu'un investisseur non pré-badgé verrait (Étape D du chantier).
+      await loginAs(page, CANDIDATE_EMAIL, CANDIDATE_PASSWORD, "**/messagerie");
+      await page.goto("/recruteur");
+      await page.waitForLoadState("networkidle");
+      await expectNoHorizontalOverflow(page, "/recruteur (non badgé)");
+      await expect(page.getByText("Accréditation entreprise requise")).toBeVisible();
+      await expect(page.getByPlaceholder("Numéro NINEA")).toBeVisible();
+    });
   });
 
   // 2. Viewport 375px (Mobile Standard) — interactions : menu, modale, messagerie

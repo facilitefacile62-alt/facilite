@@ -1,0 +1,12 @@
+-- =====================================================================
+-- Ferme le contournement direct de get_recruiter_candidatures() : la
+-- policy RLS "Un recruteur lit les candidatures de ses offres" donnait un
+-- accès SELECT non masqué à email/cv_url sur la table brute — la RLS filtre
+-- les LIGNES, jamais les COLONNES, donc le masquage ajouté dans
+-- 20260803060000 ne protégeait rien tant que cette policy existait encore :
+-- un simple .from("candidatures").select("email,cv_url") la contournait
+-- entièrement. Un recruteur passe désormais exclusivement par
+-- get_recruiter_candidatures() pour LIRE ; la policy UPDATE (changement de
+-- statut) reste inchangée, elle ne renvoie pas les coordonnées.
+-- =====================================================================
+DROP POLICY IF EXISTS "Un recruteur lit les candidatures de ses offres" ON public.candidatures;

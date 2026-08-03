@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Correctif escalade de privilèges (2026-08-02, sur commit e5fe703) :
@@ -32,19 +31,6 @@ function loadEnvLocal() {
 // official_staff, volontairement non exposé par aucune fonction RPC (voir
 // docs/acces-secours.md). Utilisé ici pour reproduire fidèlement ce
 // qu'un admin ferait en SQL direct, pas un raccourci de test.
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `badge-escalation-test-${Date.now()}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      stdio: "pipe",
-    });
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
-}
-
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
 const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETest2026!";
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-test-admin@facilite-demo.local";
@@ -199,11 +185,11 @@ test.describe("RBAC — correctif escalade de privilèges (badges)", () => {
     // sur une table vide ne prouve rien).
     const { data: adminAuthUser } = await adminClient.auth.getUser();
     const otherUserId = adminAuthUser.user.id;
-    runPrivilegedSql(
+    await runPrivilegedSql(
       `INSERT INTO public.badge_requests (user_id, requested_badge, company_name, ninea_number, rccm_number)
        VALUES ('${otherUserId}', 'verified_recruiter', 'Autre Compte SARL', '1112223334446', 'SN.DKR.2026.A.44444');`
     );
-    runPrivilegedSql(
+    await runPrivilegedSql(
       `UPDATE public.profiles SET badges = badges || '["official_staff"]'::jsonb WHERE id = '${candidateId}';`
     );
 
@@ -215,7 +201,7 @@ test.describe("RBAC — correctif escalade de privilèges (badges)", () => {
         "Un compte role='user' avec le badge official_staff a pu lire la demande d'un autre utilisateur."
       ).toEqual([]);
     } finally {
-      runPrivilegedSql(
+      await runPrivilegedSql(
         `UPDATE public.profiles SET badges = badges - 'official_staff' WHERE id = '${candidateId}';
          DELETE FROM public.badge_requests WHERE user_id = '${otherUserId}';`
       );

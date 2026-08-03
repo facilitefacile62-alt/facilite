@@ -2,6 +2,7 @@ const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("fs");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Régression pour le XSS stocké trouvé lors de l'audit sécurité (point 107
@@ -27,6 +28,8 @@ function loadEnvLocal() {
 
 const RECRUITER_EMAIL = process.env.E2E_RECRUITER_EMAIL || "demo.senetech@facilite-demo.local";
 const RECRUITER_PASSWORD = process.env.E2E_RECRUITER_PASSWORD || "FaciliteDemo2026!";
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-test-admin@facilite-demo.local";
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "FaciliteE2ETest2026!";
 const XSS_MARKER = "__xss_json_ld_audit__";
 
 test.describe("Sécurité — XSS stocké via JSON-LD (offre d'emploi)", () => {
@@ -36,6 +39,7 @@ test.describe("Sécurité — XSS stocké via JSON-LD (offre d'emploi)", () => {
   test.beforeAll(async () => {
     const env = loadEnvLocal();
     supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    const adminClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
     const { error: authError } = await supabase.auth.signInWithPassword({
       email: RECRUITER_EMAIL,
@@ -68,11 +72,25 @@ test.describe("Sécurité — XSS stocké via JSON-LD (offre d'emploi)", () => {
 
     expect(error, `Insertion de l'offre de test échouée : ${error?.message}`).toBeNull();
     offerId = data.id;
+
+    // Depuis la modération des offres (Étape 3) : une offre naît en
+    // pending_review et n'est lisible par personne d'autre que son
+    // recruteur tant qu'elle n'est pas approuvée. Ce test vérifie
+    // l'échappement JSON-LD sur la page publique, pas le circuit de
+    // modération lui-même — approbation explicite nécessaire ici pour que
+    // la page /offres/[id] soit atteignable anonymement.
+    const { error: adminErr } = await adminClient.auth.signInWithPassword({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+    expect(adminErr, `Connexion admin de test échouée : ${adminErr?.message}`).toBeNull();
+    const { error: modErr } = await adminClient.rpc("moderate_job_offer", { offer_id: offerId, decision: "approved" });
+    expect(modErr, `Approbation de l'offre de test échouée : ${modErr?.message}`).toBeNull();
   });
 
   test.afterAll(async () => {
+    // DELETE est révoqué de authenticated depuis la Vague 2 (Partie 1) —
+    // seule une connexion privilégiée peut encore nettoyer cette ligne de
+    // test, un simple .delete() côté client échouerait silencieusement.
     if (offerId) {
-      await supabase.from("job_offers").delete().eq("id", offerId);
+      await runPrivilegedSql(`DELETE FROM public.job_offers WHERE id = '${offerId}';`);
     }
   });
 

@@ -9,10 +9,14 @@
 export async function isCallerAdmin(supabaseAdmin, userId) {
   const { data, error } = await supabaseAdmin
     .from("user_roles")
-    .select("role")
+    .select("role, status")
     .eq("user_id", userId)
     .single();
 
   if (error || !data) return false;
-  return data.role === "admin";
+  // status vérifié explicitement : un compte suspendu qui avait le rôle
+  // admin avant sa suspension ne doit pas pouvoir continuer à agir depuis
+  // les routes qui passent par ce helper (elles écrivent via service_role,
+  // donc hors RLS/current_user_role() — ce contrôle est leur seule barrière).
+  return data.role === "admin" && data.status === "active";
 }
