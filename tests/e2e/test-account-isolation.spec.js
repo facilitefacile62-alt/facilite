@@ -28,10 +28,12 @@ function runPrivilegedSql(sql) {
   const tmpFile = path.join(os.tmpdir(), `test-isolation-${Date.now()}.sql`);
   fs.writeFileSync(tmpFile, sql);
   try {
-    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
+    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
       cwd: path.resolve(__dirname, "../.."),
-      stdio: "pipe",
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
     });
+    return JSON.parse(output.slice(output.indexOf("{"))).rows || [];
   } finally {
     fs.unlinkSync(tmpFile);
   }
@@ -53,6 +55,7 @@ test.describe("Protection phase de test — isolation is_test_account", () => {
   let candidateId;
   let candidateAccessToken;
   let requestId;
+  let allTestAccountIds;
 
   test.beforeAll(async () => {
     const env = loadEnvLocal();
@@ -72,6 +75,13 @@ test.describe("Protection phase de test — isolation is_test_account", () => {
       password: ADMIN_PASSWORD,
     });
     expect(adminErr, `Connexion admin échouée : ${adminErr?.message}`).toBeNull();
+
+    // Dérivé de la base plutôt que codé en dur : FICTIONAL_PROFILE_IDS ne
+    // couvre que les 3 profils fictifs originaux (20260802150000). D'autres
+    // comptes is_test_account légitimes ont été ajoutés depuis (funnel du
+    // mode démo, Étape E) — une liste figée aurait rendu ce test rouge à
+    // chaque nouveau compte fictif, sans qu'aucune fuite réelle n'existe.
+    allTestAccountIds = runPrivilegedSql(`SELECT id FROM public.profiles WHERE is_test_account = true;`).map((r) => r.id);
   });
 
   test.afterAll(async () => {
@@ -122,7 +132,7 @@ test.describe("Protection phase de test — isolation is_test_account", () => {
     });
     const body = await response.json();
     const returnedIds = (body.candidates || []).map((c) => c.id);
-    const leaked = FICTIONAL_PROFILE_IDS.filter((id) => returnedIds.includes(id));
+    const leaked = allTestAccountIds.filter((id) => returnedIds.includes(id));
     expect(leaked, "Un compte réel a reçu des profils fictifs de test.").toEqual([]);
   });
 
@@ -141,7 +151,7 @@ test.describe("Protection phase de test — isolation is_test_account", () => {
 
     expect(returnedIds.length, "Un compte de test n'a reçu aucun profil (même pas les fictifs).").toBeGreaterThan(0);
     for (const id of returnedIds) {
-      expect(FICTIONAL_PROFILE_IDS, `Le profil ${id} n'est pas marqué is_test_account — fuite d'un profil réel.`).toContain(id);
+      expect(allTestAccountIds, `Le profil ${id} n'est pas marqué is_test_account — fuite d'un profil réel.`).toContain(id);
     }
   });
 
