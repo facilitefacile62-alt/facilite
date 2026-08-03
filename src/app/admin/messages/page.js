@@ -632,8 +632,12 @@ export default function AdminMessagesPage() {
     const otherUserId = conv.user_1_id === userSession?.user?.id ? conv.user_2_id : conv.user_1_id;
     const profile = profilesMap[otherUserId] || {};
 
-    const role = profile.role || "candidat";
-    if (filterRole !== "all" && role !== filterRole) return false;
+    // Classification par badge plutôt que par l'ancien champ role (supprimé
+    // de profiles par le chantier RBAC — voir 20260729232500). Un utilisateur
+    // avec le badge verified_recruiter est classé "recruteur", tous les
+    // autres sont "candidat" (libellé décoratif, pas un rôle technique).
+    const effectiveRole = (profile.badges || []).includes("verified_recruiter") ? "recruteur" : "candidat";
+    if (filterRole !== "all" && effectiveRole !== filterRole) return false;
 
     const query = searchQuery.toLowerCase();
     if (!query) return true;

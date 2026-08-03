@@ -1564,8 +1564,8 @@ export default function ProfilPage() {
               </Link>
             )}
 
-            {/* Onglet Recruteur si l'utilisateur est recruteur */}
-            {profileRole === "recruteur" && (
+            {/* Onglet Recruteur si l'utilisateur a le badge verified_recruiter */}
+            {profileBadges?.includes("verified_recruiter") && (
               <Link
                 href="/recruteur"
                 className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
@@ -1700,7 +1700,7 @@ export default function ProfilPage() {
                     </Link>
                   )}
 
-                  {profileRole === "recruteur" && (
+                  {profileBadges?.includes("verified_recruiter") && (
                     <Link
                       href="/recruteur"
                       onClick={() => setUserMenuOpen(false)}
