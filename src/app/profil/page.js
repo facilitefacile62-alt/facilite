@@ -102,6 +102,9 @@ export default function ProfilPage() {
   const [isPublic, setIsPublic] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
+  const [cvVisibleRecruteurs, setCvVisibleRecruteurs] = useState(false);
+  const [savingCvVisibility, setSavingCvVisibility] = useState(false);
+  const [showCvVisibilityInvite, setShowCvVisibilityInvite] = useState(false);
   const [uploadedCvFileName, setUploadedCvFileName] = useState(null);
   const [cvUrl, setCvUrl] = useState(null);
   // cvUrl contient un CHEMIN de stockage (bucket privé) ; cvDisplayUrl contient
@@ -243,6 +246,38 @@ export default function ProfilPage() {
     );
   };
 
+  /**
+   * Consentement explicite du candidat à apparaître dans la CVthèque des
+   * recruteurs vérifiés (cv_visible_recruteurs, FALSE par défaut — déposer
+   * un CV n'est pas un consentement à être présenté, voir
+   * docs/purge-avant-lancement.md). Distinct de is_public : un profil peut
+   * être privé au grand public tout en étant visible des recruteurs
+   * vérifiés, et inversement.
+   */
+  const handleSaveCvVisibility = async (valeur) => {
+    if (!userSession?.user) return;
+    setSavingCvVisibility(true);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ cv_visible_recruteurs: valeur })
+      .eq("id", userSession.user.id);
+
+    setSavingCvVisibility(false);
+
+    if (error) {
+      triggerToast("Impossible d'enregistrer ce réglage.", "fa-triangle-exclamation");
+      return;
+    }
+
+    setCvVisibleRecruteurs(valeur);
+    if (valeur) setShowCvVisibilityInvite(false);
+    triggerToast(
+      valeur ? "Votre CV est désormais visible par les recruteurs vérifiés." : "Votre CV n'est plus visible par les recruteurs.",
+      valeur ? "fa-eye" : "fa-eye-slash"
+    );
+  };
+
   const triggerToast = (msg, icon = "fa-check") => {
     setToast({ show: true, message: msg, icon });
     setTimeout(() => setToast({ show: false, message: "", icon: "" }), 3000);
@@ -315,6 +350,7 @@ export default function ProfilPage() {
         // publié sans l'avoir explicitement demandé.
         setIsPublic(profile.is_public === true);
         setShowContact(profile.show_contact === true);
+        setCvVisibleRecruteurs(profile.cv_visible_recruteurs === true);
 
         let profileCvUrl = profile?.cv_url;
         let profileCvName = profile?.cv_name;
@@ -996,6 +1032,7 @@ export default function ProfilPage() {
         type: scannedData.isIdentityDoc ? "Identité" : "CV",
         created_at: new Date().toISOString()
       }, ...prev]);
+      if (!scannedData.isIdentityDoc && !cvVisibleRecruteurs) setShowCvVisibilityInvite(true);
     }
 
     // 2. Persister et écraser dans Supabase (la structure visuelle UI restant 100% intacte)
@@ -1059,7 +1096,15 @@ export default function ProfilPage() {
         // direct sur storage.objects, bloqué par la plateforme Supabase).
         const { data: filePath } = await supabase.rpc("delete_own_resume", { resume_id: docId });
         if (filePath) {
-          await supabase.storage.from("resumes").remove([filePath]);
+          const { error: removeError } = await supabase.storage.from("resumes").remove([filePath]);
+          // La ligne resumes est déjà supprimée à ce stade : un échec ici
+          // laisse un fichier orphelin dans le bucket, sans plus aucune
+          // ligne pour le retrouver. Journalisé pour qu'un nettoyage manuel
+          // reste possible (voir docs/fichiers-orphelins.md), sans bloquer
+          // l'utilisateur — de son point de vue, la suppression a réussi.
+          if (removeError) {
+            await supabase.rpc("log_own_storage_deletion_failure", { p_bucket: "resumes", p_path: filePath });
+          }
         }
       }
 
@@ -1190,6 +1235,10 @@ export default function ProfilPage() {
       };
 
       setUserDocuments((prevDocs) => [newDocument, ...prevDocs]);
+      // Invitation à activer la visibilité recruteurs juste après le dépôt
+      // d'un CV — jamais activée automatiquement (cv_visible_recruteurs
+      // reste FALSE tant que le candidat ne l'a pas décidé lui-même).
+      if (isCv && !cvVisibleRecruteurs) setShowCvVisibilityInvite(true);
 
       setIsUploadingCv(false);
       triggerToast(
@@ -3110,6 +3159,41 @@ export default function ProfilPage() {
                           </p>
                         </div>
                       )}
+
+                      <div className="flex items-start justify-between gap-4 p-4 bg-white rounded-2xl border border-gray-200">
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
+                            <i className="fa-solid fa-file-shield text-xs text-emerald-600"></i>
+                            Rendre mon CV visible aux recruteurs vérifiés
+                          </h4>
+                          <p className="text-[11px] text-gray-500 font-medium mt-1 leading-relaxed">
+                            Seuls les recruteurs ayant validé leur vérification
+                            (badge Recruteur vérifié) pourront trouver votre profil
+                            dans leur répertoire de recherche de candidats.
+                            <br />
+                            <span className="font-bold text-gray-700">
+                              Déposer un CV n&apos;active pas cette visibilité automatiquement
+                              — c&apos;est désactivé par défaut, à vous de l&apos;activer.
+                            </span>
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={cvVisibleRecruteurs}
+                          disabled={savingCvVisibility}
+                          onClick={() => handleSaveCvVisibility(!cvVisibleRecruteurs)}
+                          className={`relative shrink-0 w-12 h-6 rounded-full transition cursor-pointer disabled:opacity-50 ${
+                            cvVisibleRecruteurs ? "bg-[#10E688]" : "bg-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                              cvVisibleRecruteurs ? "translate-x-6" : "translate-x-0"
+                            }`}
+                          ></span>
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -3185,6 +3269,38 @@ export default function ProfilPage() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Invitation à activer la visibilité recruteurs, affichée juste
+                      après le dépôt d'un CV — jamais d'activation automatique. */}
+                  {showCvVisibilityInvite && !cvVisibleRecruteurs && (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                      <div className="min-w-0 flex items-start gap-2.5">
+                        <i className="fa-solid fa-circle-info text-emerald-600 text-sm mt-0.5"></i>
+                        <p className="text-xs font-semibold text-emerald-900 leading-relaxed">
+                          CV ajouté ! Voulez-vous le rendre visible aux recruteurs vérifiés
+                          pour qu&apos;ils puissent vous contacter directement ? Vous pouvez
+                          changer d&apos;avis à tout moment dans l&apos;onglet Confidentialité.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                        <button
+                          type="button"
+                          disabled={savingCvVisibility}
+                          onClick={() => handleSaveCvVisibility(true)}
+                          className="bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-extrabold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex-1 sm:flex-none"
+                        >
+                          Rendre visible
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCvVisibilityInvite(false)}
+                          className="text-emerald-700 hover:text-emerald-900 font-bold px-3 py-2 rounded-xl text-xs transition cursor-pointer"
+                        >
+                          Plus tard
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Liste des Documents Utilisateur */}
                   {userDocuments.length > 0 ? (

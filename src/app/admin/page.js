@@ -38,6 +38,17 @@ function countInWindow(rows, dateField, startMsAgo, endMsAgo) {
   }).length;
 }
 
+// Ancienneté lisible pour la file de modération — c'est ce qui indique à
+// l'admin qu'une offre attend depuis trop longtemps, pas juste sa date brute.
+function formatAge(isoDate) {
+  const ms = Date.now() - new Date(isoDate).getTime();
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  if (hours < 1) return "à l'instant";
+  if (hours < 24) return `il y a ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `il y a ${days} j`;
+}
+
 function growthPercent(current, previous) {
   if (previous === 0) return current > 0 ? 100 : 0;
   return Math.round(((current - previous) / previous) * 100);
@@ -60,6 +71,9 @@ export default function AdminDashboardPage() {
   const [resumes, setResumes] = useState([]);
   const [badgeRequests, setBadgeRequests] = useState([]);
   const [rejectReasonDraft, setRejectReasonDraft] = useState({});
+  const [pendingOffers, setPendingOffers] = useState([]);
+  const [pendingReports, setPendingReports] = useState([]);
+  const [moderatingId, setModeratingId] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [tableRoleFilter, setTableRoleFilter] = useState("all");
@@ -108,7 +122,7 @@ export default function AdminDashboardPage() {
           .single();
         setMyRole(myRoleRow?.role || null);
 
-        const [profilesRes, rolesRes, offersRes, applicationsRes, resumesRes, badgeRequestsRes] = await Promise.all([
+        const [profilesRes, rolesRes, offersRes, applicationsRes, resumesRes, badgeRequestsRes, pendingOffersRes, pendingReportsRes] = await Promise.all([
           supabase.from("profiles").select("*").order("created_at", { ascending: false }),
           supabase.from("user_roles").select("*"),
           supabase.from("job_offers").select("id, created_at").order("created_at", { ascending: false }),
@@ -119,7 +133,23 @@ export default function AdminDashboardPage() {
             .select("*")
             .eq("status", "pending")
             .order("created_at", { ascending: true }),
+          supabase
+            .from("job_offers")
+            .select("id, title, company, recruiter_id, created_at, status_updated_at")
+            .eq("status", "pending_review")
+            .order("status_updated_at", { ascending: true }),
+          supabase
+            .from("reports")
+            .select("id, reporter_id, target_type, target_id, reason, created_at")
+            .eq("status", "pending")
+            .order("created_at", { ascending: true }),
         ]);
+
+        if (pendingOffersRes.error) console.error("Erreur chargement file de modération:", pendingOffersRes.error);
+        else setPendingOffers(pendingOffersRes.data || []);
+
+        if (pendingReportsRes.error) console.error("Erreur chargement signalements:", pendingReportsRes.error);
+        else setPendingReports(pendingReportsRes.data || []);
 
         if (profilesRes.error || rolesRes.error) {
           console.error("Erreur chargement profils/rôles:", profilesRes.error || rolesRes.error);
@@ -181,6 +211,85 @@ export default function AdminDashboardPage() {
 
     const target = previousUsers.find((u) => u.id === userId);
     triggerToast(`Rôle de ${target?.full_name || target?.email || "l'utilisateur"} mis à jour : ${newRole.toUpperCase()}`, "fa-circle-check");
+  };
+
+  const handleSuspendToggle = async (targetUser) => {
+    const nextStatus = targetUser.status === "suspended" ? "active" : "suspended";
+    const previousUsers = users;
+    setUpdatingUserId(targetUser.id);
+    setUsers((prev) => prev.map((u) => (u.id === targetUser.id ? { ...u, status: nextStatus } : u)));
+
+    const res = await fetch(`/api/admin/users/${targetUser.id}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${userSession.access_token}` },
+      body: JSON.stringify({ status: nextStatus }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setUpdatingUserId(null);
+
+    if (!res.ok) {
+      setUsers(previousUsers);
+      triggerToast("Impossible de mettre à jour le statut : " + (body.error || "erreur inconnue"), "fa-triangle-exclamation");
+      return;
+    }
+
+    triggerToast(
+      nextStatus === "suspended"
+        ? `${targetUser.full_name || targetUser.email} suspendu. Réversible à tout moment.`
+        : `${targetUser.full_name || targetUser.email} réactivé.`,
+      nextStatus === "suspended" ? "fa-user-slash" : "fa-user-check"
+    );
+  };
+
+  const handleRevokeBadge = async (targetUser, badgeName) => {
+    setUpdatingUserId(targetUser.id);
+    const { error } = await supabase.rpc("revoke_badge", {
+      target_user_id: targetUser.id,
+      badge_name: badgeName,
+      reason: "Retiré depuis le panneau admin",
+    });
+    setUpdatingUserId(null);
+
+    if (error) {
+      triggerToast("Impossible de retirer ce badge : " + error.message, "fa-triangle-exclamation");
+      return;
+    }
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === targetUser.id ? { ...u, badges: (u.badges || []).filter((b) => b !== badgeName) } : u))
+    );
+    triggerToast("Badge retiré.", "fa-circle-check");
+  };
+
+  const handleModerateOffer = async (offerId, decision) => {
+    setModeratingId(offerId);
+    const { data: ok, error } = await supabase.rpc("moderate_job_offer", { offer_id: offerId, decision });
+    setModeratingId(null);
+
+    if (error || !ok) {
+      triggerToast("Impossible de traiter cette offre : " + (error?.message || "déjà traitée"), "fa-triangle-exclamation");
+      return;
+    }
+
+    setPendingOffers((prev) => prev.filter((o) => o.id !== offerId));
+    triggerToast(decision === "approved" ? "Offre approuvée, visible publiquement." : "Offre rejetée.", "fa-circle-check");
+  };
+
+  const handleResolveReport = async (reportId) => {
+    setModeratingId(reportId);
+    const { error } = await supabase
+      .from("reports")
+      .update({ status: "resolved", resolved_by: userSession.user.id, resolved_at: new Date().toISOString() })
+      .eq("id", reportId);
+    setModeratingId(null);
+
+    if (error) {
+      triggerToast("Impossible de résoudre ce signalement : " + error.message, "fa-triangle-exclamation");
+      return;
+    }
+
+    setPendingReports((prev) => prev.filter((r) => r.id !== reportId));
+    triggerToast("Signalement marqué comme résolu.", "fa-circle-check");
   };
 
   const handleApproveBadgeRequest = async (requestId) => {
@@ -609,15 +718,16 @@ export default function AdminDashboardPage() {
                       <th className="py-4 px-6">Utilisateur</th>
                       <th className="py-4 px-6">Email</th>
                       <th className="py-4 px-6">Rôle Actuel</th>
+                      <th className="py-4 px-6">Statut</th>
                       <th className="py-4 px-6">Badges</th>
                       <th className="py-4 px-6">Inscription</th>
-                      <th className="py-4 px-6 text-right">Action (Rôle)</th>
+                      <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs font-medium">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="py-8 text-center text-gray-400 italic">
+                        <td colSpan="7" className="py-8 text-center text-gray-400 italic">
                           Aucun utilisateur trouvé.
                         </td>
                       </tr>
@@ -646,22 +756,63 @@ export default function AdminDashboardPage() {
                             <RoleBadge role={user.role || "user"} />
                           </td>
                           <td className="py-4 px-6">
-                            <BadgeDisplay badges={user.badges} />
-                            {(!user.badges || user.badges.length === 0) && <span className="text-gray-300">—</span>}
+                            {user.status === "suspended" ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-700">
+                                🔒 Suspendu
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700">
+                                ✓ Actif
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {(user.badges || []).map((badge) => (
+                                <span key={badge} className="inline-flex items-center gap-1">
+                                  <BadgeDisplay badges={[badge]} />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRevokeBadge(user, badge)}
+                                    disabled={updatingUserId === user.id}
+                                    title={`Retirer le badge ${badge}`}
+                                    className="text-gray-300 hover:text-red-500 transition cursor-pointer disabled:opacity-50"
+                                  >
+                                    <i className="fa-solid fa-xmark text-[10px]"></i>
+                                  </button>
+                                </span>
+                              ))}
+                              {(!user.badges || user.badges.length === 0) && <span className="text-gray-300">—</span>}
+                            </div>
                           </td>
                           <td className="py-4 px-6 text-gray-500 font-medium">
                             {user.created_at ? new Date(user.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "Inconnue"}
                           </td>
                           <td className="py-4 px-6 text-right">
-                            <select
-                              value={user.role || "user"}
-                              onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                              className="px-3 py-1.5 bg-white border border-gray-300 rounded-xl text-xs font-extrabold focus:outline-none focus:border-orange-500 cursor-pointer shadow-xs"
-                            >
-                              <option value="user">🟢 Utilisateur</option>
-                              <option value="publisher">🎧 Éditeur</option>
-                              <option value="admin">🛡️ Administrateur</option>
-                            </select>
+                            <div className="flex items-center justify-end gap-2">
+                              <select
+                                value={user.role || "user"}
+                                onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                disabled={updatingUserId === user.id}
+                                className="px-3 py-1.5 bg-white border border-gray-300 rounded-xl text-xs font-extrabold focus:outline-none focus:border-orange-500 cursor-pointer shadow-xs disabled:opacity-50"
+                              >
+                                <option value="user">🟢 Utilisateur</option>
+                                <option value="publisher">🎧 Éditeur</option>
+                                <option value="admin">🛡️ Administrateur</option>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => handleSuspendToggle(user)}
+                                disabled={updatingUserId === user.id}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer shadow-xs disabled:opacity-50 ${
+                                  user.status === "suspended"
+                                    ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
+                                    : "bg-red-50 hover:bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {user.status === "suspended" ? "Réactiver" : "Suspendre"}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -740,15 +891,85 @@ export default function AdminDashboardPage() {
           )}
 
           {activeTab === "offres" && (
-            <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-extrabold text-gray-900">Offres d'emploi ({offers.length})</h2>
-                <p className="text-xs text-gray-500 font-medium">Vue d'ensemble de toutes les offres publiées sur la plateforme</p>
+            <div className="space-y-6">
+              {/* File de modération : offres en attente d'approbation. Toute
+                  offre nouvelle ou modifiée substantiellement repasse ici
+                  (trigger SQL) — jamais d'approbation automatique. */}
+              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-extrabold text-gray-900">File de modération — Offres ({pendingOffers.length})</h2>
+                  <p className="text-xs text-gray-500 font-medium">En attente d'approbation, triées par ancienneté</p>
+                </div>
+                {pendingOffers.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400 italic text-xs">Aucune offre en attente.</div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {pendingOffers.map((offer) => (
+                      <div key={offer.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <span className="text-sm font-extrabold text-gray-900 block">{offer.title}</span>
+                          <span className="text-xs text-gray-500 font-medium">{offer.company}</span>
+                          <p className="text-[10px] text-gray-400 mt-1">{formatAge(offer.status_updated_at || offer.created_at)}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleModerateOffer(offer.id, "rejected")}
+                            disabled={moderatingId === offer.id}
+                            className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                          >
+                            Rejeter
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleModerateOffer(offer.id, "approved")}
+                            disabled={moderatingId === offer.id}
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                          >
+                            Approuver
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="p-6 text-xs text-gray-500 font-medium">
-                {offers.length === 0
-                  ? "Aucune offre publiée pour le moment."
-                  : `${offers.length} offre(s) au total, dont ${kpi.offersThisPeriod} sur les ${periodDays} derniers jours. La gestion détaillée (création, modification) se fait depuis l'Espace Recruteur.`}
+
+              {/* Signalements : reports.pending, résolution = état, jamais suppression. */}
+              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-extrabold text-gray-900">Signalements ({pendingReports.length})</h2>
+                  <p className="text-xs text-gray-500 font-medium">Contenus signalés par des utilisateurs, triés par ancienneté</p>
+                </div>
+                {pendingReports.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400 italic text-xs">Aucun signalement en attente.</div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {pendingReports.map((report) => (
+                      <div key={report.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <span className="text-sm font-extrabold text-gray-900 block">
+                            {report.target_type === "job_offer" ? "Offre d'emploi" : report.target_type} — {report.target_id.slice(0, 8)}...
+                          </span>
+                          <span className="text-xs text-gray-500 font-medium">{report.reason}</span>
+                          <p className="text-[10px] text-gray-400 mt-1">{formatAge(report.created_at)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleResolveReport(report.id)}
+                          disabled={moderatingId === report.id}
+                          className="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50 shrink-0"
+                        >
+                          Marquer comme résolu
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 text-xs text-gray-500 font-medium">
+                {offers.length} offre(s) au total sur la plateforme, dont {kpi.offersThisPeriod} sur les {periodDays} derniers jours.
               </div>
             </div>
           )}

@@ -9,11 +9,13 @@ exigent `current_user_role() = 'admin'` (ex. `approve_badge_request`,
 `auth.uid()` y est toujours `NULL`. C'est pourquoi les requêtes ci-dessous
 écrivent directement dans les tables plutôt que d'appeler ces fonctions.
 
-**Testées de bout en bout le 2026-08-02** contre la base réelle (compte
-`facilitefacile62@gmail.com`, id `eda26422-98b2-436f-b3b6-8beaaebf1188`) :
-marquage `is_test_account`, attribution du badge, vérification via
-`has_badge()`, retrait du badge, re-confirmation du rôle admin. Les quatre
-étapes ont produit exactement le résultat attendu.
+**Testées de bout en bout le 2026-08-02, re-testées le 2026-08-03** contre
+la base réelle (compte `facilitefacile62@gmail.com`, id
+`eda26422-98b2-436f-b3b6-8beaaebf1188`) : marquage `is_test_account`,
+attribution du badge, vérification via `has_badge()`, retrait du badge,
+re-confirmation du rôle admin intact tout du long. Utilisable même si
+l'application est complètement cassée — ces requêtes ne dépendent d'aucun
+code applicatif, seulement de tables/fonctions Postgres de base.
 
 ## 1. Trouver un `user_id`
 

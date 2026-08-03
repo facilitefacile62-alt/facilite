@@ -50,7 +50,29 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Utilisateur introuvable." }, { status: 404 });
     }
 
-    // TODO (section 6, pas encore construite) : journaliser dans audit_log.
+    // Empêche toute NOUVELLE connexion tant que le compte est suspendu — le
+    // verrou réellement immédiat sur les sessions déjà ouvertes est assuré
+    // côté PostgreSQL (current_user_role() renvoie NULL si status <>
+    // 'active', voir 20260803040000_moderation_et_suspension.sql) : chaque
+    // action privilégiée est revérifiée en base à chaque requête, donc un
+    // token déjà émis perd immédiatement ses droits sans attendre son
+    // expiration. auth.admin.signOut() n'existe que pour une session
+    // précise (un jeton), pas pour "toutes les sessions d'un utilisateur" —
+    // inadapté ici, d'où banned_until en complément plutôt qu'en remplacement.
+    const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+      ban_duration: status === "suspended" ? "876000h" : "none",
+    });
+    if (banError) {
+      console.error("[Admin Status API] Échec mise à jour du bannissement:", banError.message);
+    }
+
+    await supabaseAdmin.rpc("log_security_event", {
+      p_event_type: "user_status_changed",
+      p_severity: status === "suspended" ? "warning" : "info",
+      p_actor_id: user.id,
+      p_target_user_id: targetUserId,
+      p_details: { status },
+    });
 
     return NextResponse.json({ success: true, userRole: updated });
   } catch (err) {

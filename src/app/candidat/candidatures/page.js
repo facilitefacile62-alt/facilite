@@ -16,6 +16,7 @@ export default function CandidaturesPage() {
   const [offersById, setOffersById] = useState({});
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [revealingId, setRevealingId] = useState(null);
 
   useEffect(() => {
     async function loadCandidatures() {
@@ -81,6 +82,18 @@ export default function CandidaturesPage() {
 
     return () => supabase.removeChannel(channel);
   }, [userSession?.user?.id]);
+
+  const handleRevealContact = async (candidature) => {
+    setRevealingId(candidature.id);
+    const { error } = await supabase.rpc("reveal_contact_to_recruiter", { candidature_id: candidature.id });
+    setRevealingId(null);
+
+    if (error) {
+      alert("Impossible d'autoriser le recruteur pour le moment.");
+      return;
+    }
+    setCandidatures((prev) => prev.map((c) => (c.id === candidature.id ? { ...c, contact_revealed: true } : c)));
+  };
 
   const handleDownloadCv = async (candidature) => {
     if (!candidature.cv_url) return;
@@ -202,7 +215,7 @@ export default function CandidaturesPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                       <StatusBadge status={displayStatus(c.status)} />
                       {offer?.recruiter_id && (
                         <Link
@@ -211,6 +224,21 @@ export default function CandidaturesPage() {
                         >
                           Revoir l'annonce
                         </Link>
+                      )}
+                      {(offer?.recruiter_id || c.recruiter_id) && !c.contact_revealed && (
+                        <button
+                          onClick={() => handleRevealContact(c)}
+                          disabled={revealingId === c.id}
+                          title="Autoriser ce recruteur à voir votre e-mail et télécharger votre CV pour cette candidature"
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-extrabold rounded-lg transition disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                        >
+                          {revealingId === c.id ? "..." : "🔓 Autoriser le contact"}
+                        </button>
+                      )}
+                      {c.contact_revealed && (
+                        <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[11px] font-extrabold rounded-lg whitespace-nowrap">
+                          ✓ Coordonnées visibles
+                        </span>
                       )}
                       {c.cv_url && (
                         <button

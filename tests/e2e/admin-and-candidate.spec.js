@@ -1,4 +1,8 @@
 const { test, expect } = require("@playwright/test");
+const { execSync } = require("child_process");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 
 /**
  * Back-office admin (analytics + attribution d'une commande à un agent) et
@@ -12,9 +16,28 @@ const { test, expect } = require("@playwright/test");
  *
  * seed.sql crée aussi une commande accompagnée "paid" pour ce candidat avec
  * une agent_assignments "unassigned" (id fixe 50000000-0000-4000-a000-
- * 000000000002), remise à "unassigned" à chaque ré-exécution du seed — c'est
- * le dossier que ce test attribue à l'agent de test.
+ * 000000000002). seed.sql la remet à "unassigned" à chaque exécution, mais
+ * `npx playwright test` ne relance jamais seed.sql tout seul : après un
+ * premier passage réussi, le dossier reste "in_progress" et ce test rouge
+ * en permanence tant que personne n'a pensé à re-seeder à la main. Le
+ * beforeAll ci-dessous applique le même reset directement (connexion CLI
+ * privilégiée, même pattern que test-account-isolation.spec.js) — le test
+ * redevient rejouable tout seul, sans dépendance externe.
  */
+
+function runPrivilegedSql(sql) {
+  const tmpFile = path.join(os.tmpdir(), `admin-candidate-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
+  fs.writeFileSync(tmpFile, sql);
+  try {
+    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
+      cwd: path.resolve(__dirname, "../.."),
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+  } finally {
+    fs.unlinkSync(tmpFile);
+  }
+}
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-test-admin@facilite-demo.local";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "FaciliteE2ETest2026!";
@@ -24,6 +47,12 @@ const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETes
 const SEEDED_ASSIGNMENT_ID = "50000000-0000-4000-a000-000000000002";
 
 test.describe("Back-office Admin & Suivi Candidat", () => {
+  test.beforeAll(() => {
+    runPrivilegedSql(
+      `UPDATE public.agent_assignments SET status = 'unassigned', agent_id = NULL, completed_cv_url = NULL WHERE id = '${SEEDED_ASSIGNMENT_ID}';`
+    );
+  });
+
   test("admin : analytics + attribution d'une commande à un agent, puis candidat : suivi et gestion des CVs", async ({ page }) => {
     // 1. Connexion admin.
     await page.goto("/login");

@@ -13,11 +13,21 @@
 # testing
 /coverage
 
-# Playwright E2E
+# Playwright E2E — un trace.zip contient des requêtes réseau en clair,
+# tokens de session compris (voir docs/diagnostic-2026-08.md, JWT expiré
+# trouvé dans l'historique via un commit de trace) : jamais suivi.
 /test-results/
+test-results/
 /playwright-report/
+playwright-report/
 /blob-report/
 /playwright/.cache/
+**/trace.zip
+
+# Permissions Claude Code locales à ce dépôt (peuvent évoluer sans qu'on y
+# pense — jamais committées, pour éviter qu'une permission trop large
+# passe inaperçue dans l'historique).
+.claude/settings.local.json
 
 # next.js
 /.next/

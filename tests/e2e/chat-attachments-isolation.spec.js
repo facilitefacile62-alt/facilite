@@ -143,4 +143,13 @@ test.describe("Sécurité — chat-attachments privé, participants uniquement",
       .upload(foreignPath, new Blob(["x"], { type: "application/pdf" }));
     expect(error, "Un upload en dehors de son propre dossier doit être refusé.").not.toBeNull();
   });
+
+  test("les anciennes pièces jointes (migration du 2026-08-03) sont récupérées, plus d'URL publique en base", async () => {
+    const { data } = await adminClient
+      .from("messages")
+      .select("id, attachment_url")
+      .not("attachment_url", "is", null)
+      .like("attachment_url", "http%");
+    expect(data, "Aucune ligne messages.attachment_url ne devrait plus contenir une URL http(s) (chat-attachments).").toEqual([]);
+  });
 });

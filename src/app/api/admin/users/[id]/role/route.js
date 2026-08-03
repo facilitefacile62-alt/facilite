@@ -66,8 +66,13 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Utilisateur introuvable." }, { status: 404 });
     }
 
-    // TODO (section 6, pas encore construite) : journaliser cette décision
-    // dans audit_log (acteur=user.id, action="role_change", cible=targetUserId).
+    await supabaseAdmin.rpc("log_security_event", {
+      p_event_type: "user_role_changed",
+      p_severity: role === "admin" ? "warning" : "info",
+      p_actor_id: user.id,
+      p_target_user_id: targetUserId,
+      p_details: { role },
+    });
 
     return NextResponse.json({ success: true, userRole: updated });
   } catch (err) {
