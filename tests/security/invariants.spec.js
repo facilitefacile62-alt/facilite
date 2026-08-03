@@ -449,7 +449,10 @@ test.describe("Invariants de sécurité", () => {
     const JUSTIFIED = new Set([
       // register/page.js : le toggle candidat/recruteur est un état local
       // purement UI, jamais transmis au backend (voir commentaire lignes 52-58)
-      "register/page.js",
+      "app/register/page.js",
+      // admin/messages/page.js : filterRole est un état local UI pour
+      // classifier l'affichage par badge, pas un gate d'autorisation.
+      "app/admin/messages/page.js",
       // RoleBadge.jsx : composant décoratif, pas un gate
       "RoleBadge.jsx",
     ]);
@@ -461,7 +464,7 @@ test.describe("Invariants de sécurité", () => {
 
     for (const filePath of files) {
       const basename = path.basename(filePath);
-      const relPath = path.relative(srcDir, filePath).replace(/\\\\/g, "/");
+      const relPath = path.relative(srcDir, filePath).replace(/\\/g, "/");
 
       // Skip justified files entirely
       if (JUSTIFIED.has(basename) || JUSTIFIED.has(relPath)) continue;
