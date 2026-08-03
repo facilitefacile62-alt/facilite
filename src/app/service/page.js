@@ -1233,7 +1233,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-bl from-[#E4B8F9]/20 to-[#10E688]/20 rounded-[2.5rem] transform -rotate-2 scale-105 -z-20"></div>
               <img
                 src="/photo1.jpg"
-                alt="Femme travaillant sur son CV"
+                alt="Affiche Tarifs et Services"
                 className="w-full h-full object-cover rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-[6px] border-white transition-transform duration-500 group-hover:-translate-y-2"
               />
             </div>
