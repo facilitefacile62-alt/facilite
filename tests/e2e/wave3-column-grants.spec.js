@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Vague 3 (Partie 1 du chantier, docs/grants-matrix.md) : UPDATE
@@ -24,20 +23,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `wave3-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -71,7 +56,7 @@ test.describe("Vague 3 — colonnes UPDATE restreintes (job_offers)", () => {
     // accordé pour la durée de ce fichier seulement (workers:1 dans
     // playwright.config.js, exécution séquentielle, jamais en parallèle
     // avec recruiter-search-views.spec.js qui exige ce même compte NON badgé).
-    runPrivilegedSql(`
+    await runPrivilegedSql(`
       UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
       WHERE id = '${candidateId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);
     `);
@@ -85,8 +70,14 @@ test.describe("Vague 3 — colonnes UPDATE restreintes (job_offers)", () => {
   });
 
   test.afterAll(async () => {
-    if (offerId) await candidateClient.rpc("archive_own_job_offer", { offer_id: offerId });
-    runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${candidateId}';`);
+    // Étapes indépendantes (.catch) : voir docs/diagnostic-tests-bloquants.md.
+    if (offerId) {
+      const { error } = await candidateClient.rpc("archive_own_job_offer", { offer_id: offerId });
+      if (error) console.error("Nettoyage échoué (non bloquant) :", error.message);
+    }
+    await runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${candidateId}';`).catch((e) =>
+      console.error("Nettoyage échoué (non bloquant) :", e.message)
+    );
   });
 
   test("le propriétaire peut toujours modifier les champs légitimes de son offre", async () => {

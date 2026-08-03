@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Régression pour le XSS stocké trouvé lors de l'audit sécurité (point 107
@@ -25,20 +24,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `xssjsonld-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const RECRUITER_EMAIL = process.env.E2E_RECRUITER_EMAIL || "demo.senetech@facilite-demo.local";
@@ -100,12 +85,12 @@ test.describe("Sécurité — XSS stocké via JSON-LD (offre d'emploi)", () => {
     expect(modErr, `Approbation de l'offre de test échouée : ${modErr?.message}`).toBeNull();
   });
 
-  test.afterAll(() => {
+  test.afterAll(async () => {
     // DELETE est révoqué de authenticated depuis la Vague 2 (Partie 1) —
     // seule une connexion privilégiée peut encore nettoyer cette ligne de
     // test, un simple .delete() côté client échouerait silencieusement.
     if (offerId) {
-      runPrivilegedSql(`DELETE FROM public.job_offers WHERE id = '${offerId}';`);
+      await runPrivilegedSql(`DELETE FROM public.job_offers WHERE id = '${offerId}';`);
     }
   });
 

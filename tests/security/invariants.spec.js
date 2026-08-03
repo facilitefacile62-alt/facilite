@@ -1,8 +1,7 @@
 const { test, expect } = require("@playwright/test");
-const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
+const { runIntrospectionSql } = require("../helpers/privilegedSql");
 
 /**
  * Les 6 invariants de sécurité — voir docs/invariants-securite.md pour
@@ -18,28 +17,6 @@ const os = require("os");
  * dans ce projet — uniquement des Route Handlers, le vrai équivalent
  * "endpoint public" ici, cf. commentaire de l'invariant 5).
  */
-
-function runIntrospectionSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `invariant-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    // En local, la CLI est déjà "linked" (état interactif, supabase link).
-    // En CI (voir .github/workflows/ci.yml, job security-invariants), ce
-    // lien n'existe pas — SUPABASE_DB_URL (secret GitHub Actions, chaîne de
-    // connexion directe) est utilisé à la place, sans dépendre d'un état de
-    // link ni d'un token d'accès Management API.
-    const connFlag = process.env.SUPABASE_DB_URL ? `--db-url "${process.env.SUPABASE_DB_URL}"` : "--linked";
-    const output = execSync(`npx supabase db query ${connFlag} --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    const parsed = JSON.parse(output.slice(output.indexOf("{")));
-    return parsed.rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
-}
 
 function listFilesRecursive(dir, extensions) {
   let results = [];
@@ -68,7 +45,7 @@ test.describe("Invariants de sécurité", () => {
       // format : "table_name:grantee:privilege_type"
     ]);
 
-    const rows = runIntrospectionSql(`
+    const rows = await runIntrospectionSql(`
       SELECT table_name, grantee, privilege_type
       FROM information_schema.role_table_grants
       WHERE table_schema='public' AND grantee IN ('authenticated','anon')
@@ -91,7 +68,7 @@ test.describe("Invariants de sécurité", () => {
       "ai_usage_daily", // service_role uniquement par design, aucune policy authenticated n'a jamais existé
     ]);
 
-    const rows = runIntrospectionSql(`
+    const rows = await runIntrospectionSql(`
       SELECT c.relname AS table_name, c.relrowsecurity AS rls_enabled, count(p.polname) AS policy_count
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -118,7 +95,7 @@ test.describe("Invariants de sécurité", () => {
   });
 
   test("Invariant 3 — aucune fonction SECURITY DEFINER sans search_path figé", async () => {
-    const rows = runIntrospectionSql(`
+    const rows = await runIntrospectionSql(`
       SELECT p.proname,
         (SELECT count(*) FROM unnest(p.proconfig) cfg WHERE cfg LIKE 'search_path=%') AS has_search_path
       FROM pg_proc p
@@ -145,7 +122,7 @@ test.describe("Invariants de sécurité", () => {
     // qu'il n'est pas corrigé.
     const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers"]);
 
-    const rows = runIntrospectionSql(`SELECT id, public FROM storage.buckets ORDER BY id;`);
+    const rows = await runIntrospectionSql(`SELECT id, public FROM storage.buckets ORDER BY id;`);
     const violations = rows.filter((r) => r.public === true && !JUSTIFIED_PUBLIC_BUCKETS.has(r.id));
 
     if (violations.length > 0) {
@@ -221,7 +198,7 @@ test.describe("Invariants de sécurité", () => {
       "public.recruiter_profiles:Lecture publique des profils recruteurs",
     ]);
 
-    const rows = runIntrospectionSql(`
+    const rows = await runIntrospectionSql(`
       SELECT schemaname, tablename, policyname, permissive, roles::text[] AS roles, cmd, qual, with_check
       FROM pg_policies
       WHERE schemaname IN ('public','storage')
@@ -291,7 +268,7 @@ test.describe("Invariants de sécurité", () => {
       return OBSOLETE_ROLE_LITERAL.test(text) && !JUSTIFIED_ROLE_LITERAL.has(`policy:${r.schemaname}.${r.tablename}:${r.policyname}`);
     });
 
-    const functionRows = runIntrospectionSql(`
+    const functionRows = await runIntrospectionSql(`
       SELECT p.proname, pg_get_functiondef(p.oid) AS def
       FROM pg_proc p
       JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -337,7 +314,7 @@ test.describe("Invariants de sécurité", () => {
       "function:protect_cosmetic_columns",
     ]);
 
-    const secdefRows = runIntrospectionSql(`
+    const secdefRows = await runIntrospectionSql(`
       SELECT n.nspname AS schema, p.proname, pg_get_functiondef(p.oid) AS def
       FROM pg_proc p
       JOIN pg_namespace n ON n.oid = p.pronamespace

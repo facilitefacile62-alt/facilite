@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Vague 2 (Partie 1 du chantier, docs/grants-matrix.md) : DELETE est révoqué
@@ -29,20 +28,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `wave2-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -80,14 +65,14 @@ test.describe("Vague 2 — remplacement des DELETE client par des fonctions SECU
     // pour la durée de ce fichier seulement (workers:1, exécution
     // séquentielle, jamais en parallèle avec recruiter-search-views.spec.js
     // qui exige candidateId NON badgé par défaut).
-    runPrivilegedSql(`
+    await runPrivilegedSql(`
       UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
       WHERE id IN ('${candidateId}', '${securityId}') AND NOT (badges @> '["verified_recruiter"]'::jsonb);
     `);
   });
 
-  test.afterAll(() => {
-    runPrivilegedSql(`
+  test.afterAll(async () => {
+    await runPrivilegedSql(`
       UPDATE public.profiles SET badges = badges - 'verified_recruiter'
       WHERE id IN ('${candidateId}', '${securityId}');
     `);
@@ -113,7 +98,7 @@ test.describe("Vague 2 — remplacement des DELETE client par des fonctions SECU
     const { data: stillThere } = await candidateClient.from("resumes").select("id").eq("id", resume.id).maybeSingle();
     expect(stillThere, "La ligne devait survivre à un DELETE brut sans privilège.").not.toBeNull();
 
-    runPrivilegedSql(`DELETE FROM public.resumes WHERE id = '${resume.id}';`);
+    await runPrivilegedSql(`DELETE FROM public.resumes WHERE id = '${resume.id}';`);
   });
 
   test("delete_own_resume() supprime la ligne pour le propriétaire et renvoie le chemin Storage à nettoyer", async () => {
@@ -166,7 +151,7 @@ test.describe("Vague 2 — remplacement des DELETE client par des fonctions SECU
     const { data: stillThere } = await securityClient.from("resumes").select("id").eq("id", resume.id).maybeSingle();
     expect(stillThere, "Le CV de security doit toujours exister.").not.toBeNull();
 
-    runPrivilegedSql(`DELETE FROM public.resumes WHERE id = '${resume.id}';`);
+    await runPrivilegedSql(`DELETE FROM public.resumes WHERE id = '${resume.id}';`);
   });
 
   test("archive_own_job_offer() archive l'offre et la rend invisible publiquement", async () => {
@@ -195,7 +180,7 @@ test.describe("Vague 2 — remplacement des DELETE client par des fonctions SECU
     const { data: publicView } = await anonClient.from("job_offers").select("id").eq("id", offer.id).maybeSingle();
     expect(publicView, "Une offre archivée ne doit plus être lisible publiquement (RLS).").toBeNull();
 
-    runPrivilegedSql(`DELETE FROM public.job_offers WHERE id = '${offer.id}';`);
+    await runPrivilegedSql(`DELETE FROM public.job_offers WHERE id = '${offer.id}';`);
   });
 
   test("archive_own_job_offer() refuse d'archiver l'offre d'un autre recruteur", async () => {
@@ -217,7 +202,7 @@ test.describe("Vague 2 — remplacement des DELETE client par des fonctions SECU
     const { data: rowAfter } = await securityClient.from("job_offers").select("archived_at").eq("id", offer.id).single();
     expect(rowAfter.archived_at).toBeNull();
 
-    runPrivilegedSql(`DELETE FROM public.job_offers WHERE id = '${offer.id}';`);
+    await runPrivilegedSql(`DELETE FROM public.job_offers WHERE id = '${offer.id}';`);
   });
 
   test("clear_own_assistant_messages() efface uniquement les messages du propriétaire pour cette conversation", async () => {
@@ -249,6 +234,6 @@ test.describe("Vague 2 — remplacement des DELETE client par des fonctions SECU
       .eq("conversation_id", convId);
     expect(securityRows.length, "Les messages de security n'auraient jamais dû être touchés.").toBe(1);
 
-    runPrivilegedSql(`DELETE FROM public.assistant_messages WHERE conversation_id = '${convId}';`);
+    await runPrivilegedSql(`DELETE FROM public.assistant_messages WHERE conversation_id = '${convId}';`);
   });
 });

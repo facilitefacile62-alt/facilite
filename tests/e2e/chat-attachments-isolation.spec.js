@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Partie 2 du chantier (invariant 4) : chat-attachments était un bucket
@@ -24,20 +23,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `chatattach-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -94,7 +79,7 @@ test.describe("Sécurité — chat-attachments privé, participants uniquement",
   });
 
   test.afterAll(async () => {
-    if (messageId) runPrivilegedSql(`DELETE FROM public.messages WHERE id = '${messageId}';`);
+    if (messageId) await runPrivilegedSql(`DELETE FROM public.messages WHERE id = '${messageId}';`);
     if (candidateId && storagePath) {
       await candidateClient.storage.from("chat-attachments").remove([storagePath]);
     }

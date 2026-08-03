@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Étape 3 du chantier : une suspension de compte doit tenir au niveau
@@ -23,21 +22,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `suspension-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return JSON.parse(output.slice(output.indexOf("{"))).rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const SECURITY_EMAIL = process.env.E2E_SECURITY_EMAIL || "e2e-test-security@facilite-demo.local";
@@ -66,11 +50,18 @@ test.describe("Suspension de compte — verrou PostgreSQL, pas seulement l'écra
     adminId = adminData.user.id;
   });
 
-  test.afterAll(() => {
-    runPrivilegedSql(`UPDATE public.user_roles SET status = 'active' WHERE user_id = '${securityId}';`);
-    // Filet de sécurité : si l'assertion échoue au milieu du test ci-dessous,
-    // le compte admin de test ne doit jamais rester suspendu pour les runs suivants.
-    runPrivilegedSql(`UPDATE public.user_roles SET status = 'active' WHERE user_id = '${adminId}';`);
+  test.afterAll(async () => {
+    // Chaque étape est indépendante (.catch plutôt que laisser un échec
+    // interrompre les suivantes) : un flake CLI ponctuel sur la première ne
+    // doit jamais laisser le compte admin suspendu pour les runs suivants —
+    // exactement le bug de contamination trouvé le 2026-08-03 (voir
+    // docs/diagnostic-tests-bloquants.md).
+    await runPrivilegedSql(`UPDATE public.user_roles SET status = 'active' WHERE user_id = '${securityId}';`).catch((e) =>
+      console.error("Nettoyage échoué (non bloquant) :", e.message)
+    );
+    await runPrivilegedSql(`UPDATE public.user_roles SET status = 'active' WHERE user_id = '${adminId}';`).catch((e) =>
+      console.error("Nettoyage échoué (non bloquant) :", e.message)
+    );
   });
 
   test("current_user_role() renvoie NULL pour un compte suspendu, avec le MÊME token déjà émis", async () => {
@@ -78,7 +69,7 @@ test.describe("Suspension de compte — verrou PostgreSQL, pas seulement l'écra
     const { data: beforeRole } = await securityClient.rpc("current_user_role");
     expect(beforeRole).toBe("user");
 
-    runPrivilegedSql(`UPDATE public.user_roles SET status = 'suspended' WHERE user_id = '${securityId}';`);
+    await runPrivilegedSql(`UPDATE public.user_roles SET status = 'suspended' WHERE user_id = '${securityId}';`);
 
     // Même client, même token — aucune reconnexion. C'est la preuve que le
     // verrou est réévalué en base à chaque appel, pas mis en cache dans le JWT.
@@ -87,7 +78,7 @@ test.describe("Suspension de compte — verrou PostgreSQL, pas seulement l'écra
   });
 
   test("un token de compte suspendu ne peut plus déclencher d'action réservée à un rôle", async () => {
-    runPrivilegedSql(`UPDATE public.user_roles SET status = 'suspended' WHERE user_id = '${securityId}';`);
+    await runPrivilegedSql(`UPDATE public.user_roles SET status = 'suspended' WHERE user_id = '${securityId}';`);
 
     // approve_badge_request() exige current_user_role() = 'admin' — même si
     // ce compte avait un rôle privilégié avant suspension, l'appel échoue.
@@ -108,7 +99,7 @@ test.describe("Suspension de compte — verrou PostgreSQL, pas seulement l'écra
     const { data: roleBefore } = await adminClient.rpc("current_user_role");
     expect(roleBefore, "Sanity check : ce compte doit réellement être admin avant suspension.").toBe("admin");
 
-    runPrivilegedSql(`UPDATE public.user_roles SET status = 'suspended' WHERE user_id = '${adminId}';`);
+    await runPrivilegedSql(`UPDATE public.user_roles SET status = 'suspended' WHERE user_id = '${adminId}';`);
 
     const { data: roleAfter } = await adminClient.rpc("current_user_role");
     expect(roleAfter).toBeNull();
@@ -130,13 +121,13 @@ test.describe("Suspension de compte — verrou PostgreSQL, pas seulement l'écra
       expect(threw, `${fn}() ne doit plus être exécutable par un admin suspendu.`).toBe(true);
     }
 
-    runPrivilegedSql(`UPDATE public.user_roles SET status = 'active' WHERE user_id = '${adminId}';`);
+    await runPrivilegedSql(`UPDATE public.user_roles SET status = 'active' WHERE user_id = '${adminId}';`);
     const { data: roleRestored } = await adminClient.rpc("current_user_role");
     expect(roleRestored).toBe("admin");
   });
 
   test("la réactivation restaure immédiatement le rôle sans nouvelle connexion", async () => {
-    runPrivilegedSql(`UPDATE public.user_roles SET status = 'active' WHERE user_id = '${securityId}';`);
+    await runPrivilegedSql(`UPDATE public.user_roles SET status = 'active' WHERE user_id = '${securityId}';`);
 
     const { data: restoredRole } = await securityClient.rpc("current_user_role");
     expect(restoredRole).toBe("user");

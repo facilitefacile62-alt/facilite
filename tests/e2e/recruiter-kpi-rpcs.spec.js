@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Étape F du chantier (2026-08-03) — get_recruiter_overview_stats(),
@@ -24,21 +23,6 @@ function loadEnvLocal() {
   return env;
 }
 
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `kpirpc-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return JSON.parse(output.slice(output.indexOf("{"))).rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
-}
-
 const SECURITY_EMAIL = process.env.E2E_SECURITY_EMAIL || "e2e-test-security@facilite-demo.local";
 const SECURITY_PASSWORD = process.env.E2E_SECURITY_PASSWORD || "FaciliteE2ETest2026!";
 const DEMO_RECRUITER_ID = "90000000-0000-4000-a000-000000000099";
@@ -53,8 +37,8 @@ test.describe("KPI recruteur — get_recruiter_overview_stats / daily_candidatur
     securityId = data.user.id;
   });
 
-  test.afterAll(() => {
-    runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${securityId}';`);
+  test.afterAll(async () => {
+    await runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${securityId}';`);
   });
 
   test("sans badge : les 3 fonctions renvoient un résultat vide/neutre, jamais une erreur ni une fuite", async () => {
@@ -72,7 +56,7 @@ test.describe("KPI recruteur — get_recruiter_overview_stats / daily_candidatur
   });
 
   test("après badge, sans offre : active_offers_count=0, pas les offres d'un autre recruteur (isolation)", async () => {
-    runPrivilegedSql(`
+    await runPrivilegedSql(`
       UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
       WHERE id = '${securityId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);
     `);

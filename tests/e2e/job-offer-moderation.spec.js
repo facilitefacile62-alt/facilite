@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Étape 3 du chantier : modération des offres (draft/pending_review/
@@ -22,21 +21,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `moderation-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return JSON.parse(output.slice(output.indexOf("{"))).rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -70,17 +54,24 @@ test.describe("Modération des offres d'emploi", () => {
     // playwright.config.js, exécution séquentielle, jamais en parallèle
     // avec recruiter-search-views.spec.js qui exige au contraire que ce
     // même compte reste NON badgé par défaut).
-    runPrivilegedSql(`
+    await runPrivilegedSql(`
       UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
       WHERE id = '${candidateId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);
     `);
   });
 
-  test.afterAll(() => {
+  test.afterAll(async () => {
+    // Étapes indépendantes (.catch) : un flake CLI sur la première ne doit
+    // jamais empêcher la révocation du badge — voir
+    // docs/diagnostic-tests-bloquants.md.
     if (createdOfferIds.length > 0) {
-      runPrivilegedSql(`DELETE FROM public.job_offers WHERE id IN (${createdOfferIds.map((id) => `'${id}'`).join(",")});`);
+      await runPrivilegedSql(`DELETE FROM public.job_offers WHERE id IN (${createdOfferIds.map((id) => `'${id}'`).join(",")});`).catch(
+        (e) => console.error("Nettoyage échoué (non bloquant) :", e.message)
+      );
     }
-    runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${candidateId}';`);
+    await runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${candidateId}';`).catch((e) =>
+      console.error("Nettoyage échoué (non bloquant) :", e.message)
+    );
   });
 
   test("une nouvelle offre n'est PAS visible publiquement avant approbation", async () => {
@@ -129,7 +120,7 @@ test.describe("Modération des offres d'emploi", () => {
 
     const { data: stillPending } = await securityClient.from("job_offers").select("status").eq("id", offer.id).maybeSingle();
     // securityClient n'est pas propriétaire, mais on vérifie via privilégié pour être sûr.
-    const rows = runPrivilegedSql(`SELECT status FROM public.job_offers WHERE id = '${offer.id}';`);
+    const rows = await runPrivilegedSql(`SELECT status FROM public.job_offers WHERE id = '${offer.id}';`);
     expect(rows[0].status).toBe("pending_review");
     void stillPending;
   });
@@ -166,7 +157,7 @@ test.describe("Modération des offres d'emploi", () => {
       .eq("id", offer.id);
     expect(updateErr).toBeNull();
 
-    const rows = runPrivilegedSql(`SELECT status FROM public.job_offers WHERE id = '${offer.id}';`);
+    const rows = await runPrivilegedSql(`SELECT status FROM public.job_offers WHERE id = '${offer.id}';`);
     expect(rows[0].status, "Une modification substantielle doit repasser l'offre en pending_review.").toBe("pending_review");
 
     const { data: publicView } = await anonClient.from("job_offers").select("id").eq("id", offer.id).maybeSingle();
@@ -184,7 +175,7 @@ test.describe("Modération des offres d'emploi", () => {
 
     await candidateClient.from("job_offers").update({ is_active: false }).eq("id", offer.id);
 
-    const rows = runPrivilegedSql(`SELECT status FROM public.job_offers WHERE id = '${offer.id}';`);
+    const rows = await runPrivilegedSql(`SELECT status FROM public.job_offers WHERE id = '${offer.id}';`);
     expect(rows[0].status, "Une simple pause ne doit pas nécessiter une nouvelle modération.").toBe("approved");
   });
 
@@ -218,9 +209,9 @@ test.describe("Signalements (reports)", () => {
     await adminClient.auth.signInWithPassword({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
   });
 
-  test.afterAll(() => {
+  test.afterAll(async () => {
     if (createdReportIds.length > 0) {
-      runPrivilegedSql(`DELETE FROM public.reports WHERE id IN (${createdReportIds.map((id) => `'${id}'`).join(",")});`);
+      await runPrivilegedSql(`DELETE FROM public.reports WHERE id IN (${createdReportIds.map((id) => `'${id}'`).join(",")});`);
     }
   });
 
@@ -255,7 +246,7 @@ test.describe("Signalements (reports)", () => {
     if (!deleteErr) {
       expect(count, "Aucun rôle, admin compris, ne doit pouvoir supprimer un signalement.").toBe(0);
     }
-    const rows = runPrivilegedSql(`SELECT id FROM public.reports WHERE id = '${report.id}';`);
+    const rows = await runPrivilegedSql(`SELECT id FROM public.reports WHERE id = '${report.id}';`);
     expect(rows.length, "Le signalement doit toujours exister après une tentative de suppression.").toBe(1);
   });
 });

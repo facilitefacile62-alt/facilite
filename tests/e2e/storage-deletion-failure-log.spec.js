@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Partie 2, Étape 3.1 du chantier : un échec de suppression Storage après
@@ -23,21 +22,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `storagefail-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return JSON.parse(output.slice(output.indexOf("{"))).rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -93,7 +77,7 @@ test.describe("Journalisation d'un échec de suppression Storage", () => {
     });
     expect(error).toBeNull();
 
-    const rows = runPrivilegedSql(
+    const rows = await runPrivilegedSql(
       `SELECT actor_id, target_user_id, event_type, details FROM public.security_logs WHERE event_type = 'storage_deletion_failed' AND details->>'path' = '${marker}';`
     );
     expect(rows.length).toBe(1);
@@ -111,7 +95,7 @@ test.describe("Journalisation d'un échec de suppression Storage", () => {
     const marker = `spoof-test-${Date.now()}.pdf`;
     await securityClient.rpc("log_own_storage_deletion_failure", { p_bucket: "resumes", p_path: marker });
 
-    const rows = runPrivilegedSql(
+    const rows = await runPrivilegedSql(
       `SELECT actor_id FROM public.security_logs WHERE event_type = 'storage_deletion_failed' AND details->>'path' = '${marker}';`
     );
     expect(rows.length).toBe(1);

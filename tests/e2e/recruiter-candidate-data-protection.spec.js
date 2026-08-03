@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Étape 4 du chantier — protection des données candidat (non négociable) :
@@ -23,21 +22,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `dataprotect-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return JSON.parse(output.slice(output.indexOf("{"))).rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -65,20 +49,27 @@ test.describe("Protection des données candidat — tableau de bord recruteur", 
     // créer une offre exige désormais le badge verified_recruiter
     // (20260803110000_badge_gate_espace_recruteur.sql). Accordé pour la
     // durée de ce fichier seulement (workers:1, exécution séquentielle).
-    runPrivilegedSql(`
+    await runPrivilegedSql(`
       UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
       WHERE id = '${securityId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);
     `);
   });
 
-  test.afterAll(() => {
+  test.afterAll(async () => {
+    // Étapes indépendantes (.catch) : voir docs/diagnostic-tests-bloquants.md.
     if (createdCandidatureIds.length > 0) {
-      runPrivilegedSql(`DELETE FROM public.candidatures WHERE id IN (${createdCandidatureIds.map((id) => `'${id}'`).join(",")});`);
+      await runPrivilegedSql(`DELETE FROM public.candidatures WHERE id IN (${createdCandidatureIds.map((id) => `'${id}'`).join(",")});`).catch(
+        (e) => console.error("Nettoyage échoué (non bloquant) :", e.message)
+      );
     }
     if (createdOfferIds.length > 0) {
-      runPrivilegedSql(`DELETE FROM public.job_offers WHERE id IN (${createdOfferIds.map((id) => `'${id}'`).join(",")});`);
+      await runPrivilegedSql(`DELETE FROM public.job_offers WHERE id IN (${createdOfferIds.map((id) => `'${id}'`).join(",")});`).catch(
+        (e) => console.error("Nettoyage échoué (non bloquant) :", e.message)
+      );
     }
-    runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${securityId}';`);
+    await runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${securityId}';`).catch((e) =>
+      console.error("Nettoyage échoué (non bloquant) :", e.message)
+    );
   });
 
   test("les coordonnées sont masquées tant que le candidat n'a pas révélé, puis visibles après", async () => {

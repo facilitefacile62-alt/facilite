@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Étape E du chantier (2026-08-03) — mode démo : le compte
@@ -22,20 +21,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `demoiso-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const DEMO_RECRUITER_ID = "90000000-0000-4000-a000-000000000099";
@@ -60,14 +45,14 @@ test.describe("Mode démo — isolation vis-à-vis du site public", () => {
     // Un VRAI recruteur vérifié (pas is_test_account) est le seul cas où
     // une fuite serait détectable — un compte sans badge reçoit de toute
     // façon un résultat vide, ce qui ne prouverait rien.
-    runPrivilegedSql(`
+    await runPrivilegedSql(`
       UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
       WHERE id = '${securityId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);
     `);
   });
 
-  test.afterAll(() => {
-    runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${securityId}';`);
+  test.afterAll(async () => {
+    await runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${securityId}';`);
   });
 
   test("aucune offre démo n'est lisible via la lecture publique (clé anon, sans session)", async () => {

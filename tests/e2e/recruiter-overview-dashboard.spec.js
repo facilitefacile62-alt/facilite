@@ -1,4 +1,19 @@
 const { test, expect } = require("@playwright/test");
+const { createClient } = require("@supabase/supabase-js");
+const fs = require("fs");
+const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
+
+function loadEnvLocal() {
+  const envPath = path.resolve(__dirname, "../../.env.local");
+  const content = fs.readFileSync(envPath, "utf-8");
+  const env = {};
+  for (const line of content.split("\n")) {
+    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    if (match) env[match[1]] = match[2].trim();
+  }
+  return env;
+}
 
 /**
  * Étape F du chantier (2026-08-03) — onglet "Vue d'ensemble" du tableau de
@@ -44,31 +59,11 @@ test.describe("Tableau de bord recruteur — Vue d'ensemble (KPI + entonnoir)", 
     // voir un état vide explicite plutôt qu'un tableau de bord cassé —
     // vérifié en isolation, sans dépendre de l'état laissé par d'autres
     // fichiers (badge accordé/révoqué localement à ce test).
-    const { createClient } = require("@supabase/supabase-js");
-    const { execSync } = require("child_process");
-    const fs = require("fs");
-    const os = require("os");
-    const path = require("path");
-    const envPath = path.resolve(__dirname, "../../.env.local");
-    const content = fs.readFileSync(envPath, "utf-8");
-    const env = {};
-    for (const line of content.split("\n")) {
-      const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-      if (match) env[match[1]] = match[2].trim();
-    }
-    function runPrivilegedSql(sql) {
-      const tmpFile = path.join(os.tmpdir(), `overview-${Date.now()}.sql`);
-      fs.writeFileSync(tmpFile, sql);
-      try {
-        execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, { cwd: path.resolve(__dirname, "../.."), stdio: ["pipe", "pipe", "pipe"] });
-      } finally {
-        fs.unlinkSync(tmpFile);
-      }
-    }
+    const env = loadEnvLocal();
     const client = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     const { data } = await client.auth.signInWithPassword({ email: "e2e-test-security@facilite-demo.local", password: "FaciliteE2ETest2026!" });
     const securityId = data.user.id;
-    runPrivilegedSql(`UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb WHERE id = '${securityId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);`);
+    await runPrivilegedSql(`UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb WHERE id = '${securityId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);`);
 
     try {
       await page.goto("/login");
@@ -79,7 +74,7 @@ test.describe("Tableau de bord recruteur — Vue d'ensemble (KPI + entonnoir)", 
       await page.waitForLoadState("networkidle");
       await expect(page.getByText("Aucune statistique pour le moment")).toBeVisible();
     } finally {
-      runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${securityId}';`);
+      await runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${securityId}';`);
     }
   });
 });

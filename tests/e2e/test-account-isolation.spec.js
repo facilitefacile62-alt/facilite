@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Protection de la phase de test (2026-08-02) : un compte badgé
@@ -22,21 +21,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `test-isolation-${Date.now()}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return JSON.parse(output.slice(output.indexOf("{"))).rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -81,20 +65,33 @@ test.describe("Protection phase de test — isolation is_test_account", () => {
     // comptes is_test_account légitimes ont été ajoutés depuis (funnel du
     // mode démo, Étape E) — une liste figée aurait rendu ce test rouge à
     // chaque nouveau compte fictif, sans qu'aucune fuite réelle n'existe.
-    allTestAccountIds = runPrivilegedSql(`SELECT id FROM public.profiles WHERE is_test_account = true;`).map((r) => r.id);
+    allTestAccountIds = (await runPrivilegedSql(`SELECT id FROM public.profiles WHERE is_test_account = true;`)).map((r) => r.id);
   });
 
   test.afterAll(async () => {
+    // Étapes indépendantes (.catch) : voir docs/diagnostic-tests-bloquants.md.
     if (candidateId) {
-      runPrivilegedSql(`UPDATE public.profiles SET is_test_account = false WHERE id = '${candidateId}';`);
-      await adminClient.rpc("revoke_badge", {
-        target_user_id: candidateId,
-        badge_name: "verified_recruiter",
-        reason: "Nettoyage post-test",
-      });
+      await runPrivilegedSql(`UPDATE public.profiles SET is_test_account = false WHERE id = '${candidateId}';`).catch((e) =>
+        console.error("Nettoyage échoué (non bloquant) :", e.message)
+      );
+      await adminClient
+        .rpc("revoke_badge", {
+          target_user_id: candidateId,
+          badge_name: "verified_recruiter",
+          reason: "Nettoyage post-test",
+        })
+        .then(({ error }) => {
+          if (error) console.error("Nettoyage échoué (non bloquant) :", error.message);
+        });
     }
     if (requestId) {
-      await adminClient.from("badge_requests").delete().eq("id", requestId);
+      // DELETE authenticated est révoqué sur badge_requests depuis la Vague
+      // 2 — même un admin client (pas service_role) l'a découvert ici via
+      // le nouveau log non bloquant : .from(...).delete() échouait déjà
+      // silencieusement avant, jamais remarqué.
+      await runPrivilegedSql(`DELETE FROM public.badge_requests WHERE id = '${requestId}';`).catch((e) =>
+        console.error("Nettoyage échoué (non bloquant) :", e.message)
+      );
     }
   });
 
@@ -140,7 +137,7 @@ test.describe("Protection phase de test — isolation is_test_account", () => {
     // Bascule le compte candidat de test lui-même en is_test_account=true
     // (accès SQL direct — cette colonne n'est jamais grantée à
     // authenticated, cf. 20260802150000) : simule un "ami" en simulation.
-    runPrivilegedSql(`UPDATE public.profiles SET is_test_account = true WHERE id = '${candidateId}';`);
+    await runPrivilegedSql(`UPDATE public.profiles SET is_test_account = true WHERE id = '${candidateId}';`);
 
     const response = await request.get("/api/recruteur/candidats-recherche?pageSize=1000", {
       headers: { Authorization: `Bearer ${candidateAccessToken}` },
@@ -156,7 +153,7 @@ test.describe("Protection phase de test — isolation is_test_account", () => {
   });
 
   test("cv_visible_recruteurs=false exclut un profil même avec is_test_account correct", async ({ request }) => {
-    runPrivilegedSql(
+    await runPrivilegedSql(
       `UPDATE public.profiles SET cv_visible_recruteurs = false WHERE id = '90000000-0000-4000-a000-000000000001';`
     );
 
@@ -171,7 +168,7 @@ test.describe("Protection phase de test — isolation is_test_account", () => {
         "Un profil avec cv_visible_recruteurs=false a été renvoyé par la CVthèque."
       ).not.toContain("90000000-0000-4000-a000-000000000001");
     } finally {
-      runPrivilegedSql(
+      await runPrivilegedSql(
         `UPDATE public.profiles SET cv_visible_recruteurs = true WHERE id = '90000000-0000-4000-a000-000000000001';`
       );
     }

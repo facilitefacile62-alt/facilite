@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Étape D du chantier (2026-08-03) : verified_recruiter conditionne
@@ -23,21 +22,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `badgegate-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return JSON.parse(output.slice(output.indexOf("{"))).rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const SECURITY_EMAIL = process.env.E2E_SECURITY_EMAIL || "e2e-test-security@facilite-demo.local";
@@ -63,7 +47,7 @@ test.describe("Bascule badge — tout l'espace recruteur gated (RLS)", () => {
     // Une offre créée en amont (SQL privilégié, hors RLS) pour prouver que
     // même une offre PRÉEXISTANTE devient invisible/non modifiable sans
     // badge — pas seulement la création de nouvelles offres.
-    const rows = runPrivilegedSql(`
+    const rows = await runPrivilegedSql(`
       INSERT INTO public.job_offers (title, company, location, recruiter_id, status, is_active)
       VALUES ('Offre préexistante gate test', 'Test SARL', 'Dakar', '${securityId}', 'approved', true)
       RETURNING id;
@@ -72,8 +56,21 @@ test.describe("Bascule badge — tout l'espace recruteur gated (RLS)", () => {
   });
 
   test.afterAll(async () => {
-    if (preexistingOfferId) runPrivilegedSql(`DELETE FROM public.job_offers WHERE id = '${preexistingOfferId}';`);
-    if (badgeRequestId) runPrivilegedSql(`DELETE FROM public.badge_requests WHERE id = '${badgeRequestId}';`);
+    // Étapes indépendantes (.catch) : un flake CLI sur les deux premières ne
+    // doit jamais empêcher revoke_badge de s'exécuter — c'est exactement ce
+    // qui a laissé securityId badgé et fait échouer
+    // storage-role-literals-fix.spec.js en aval le 2026-08-03, voir
+    // docs/diagnostic-tests-bloquants.md.
+    if (preexistingOfferId) {
+      await runPrivilegedSql(`DELETE FROM public.job_offers WHERE id = '${preexistingOfferId}';`).catch((e) =>
+        console.error("Nettoyage échoué (non bloquant) :", e.message)
+      );
+    }
+    if (badgeRequestId) {
+      await runPrivilegedSql(`DELETE FROM public.badge_requests WHERE id = '${badgeRequestId}';`).catch((e) =>
+        console.error("Nettoyage échoué (non bloquant) :", e.message)
+      );
+    }
     await adminClient.rpc("revoke_badge", { target_user_id: securityId, badge_name: "verified_recruiter", reason: "Nettoyage post-test" });
   });
 

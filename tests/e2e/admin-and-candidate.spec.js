@@ -1,8 +1,7 @@
 const { test, expect } = require("@playwright/test");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Back-office admin (analytics + attribution d'une commande à un agent) et
@@ -25,20 +24,6 @@ const path = require("path");
  * redevient rejouable tout seul, sans dépendance externe.
  */
 
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `admin-candidate-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
-}
-
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-test-admin@facilite-demo.local";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "FaciliteE2ETest2026!";
 const AGENT_FULL_NAME = "Agent E2E Test";
@@ -47,8 +32,8 @@ const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETes
 const SEEDED_ASSIGNMENT_ID = "50000000-0000-4000-a000-000000000002";
 
 test.describe("Back-office Admin & Suivi Candidat", () => {
-  test.beforeAll(() => {
-    runPrivilegedSql(
+  test.beforeAll(async () => {
+    await runPrivilegedSql(
       `UPDATE public.agent_assignments SET status = 'unassigned', agent_id = NULL, completed_cv_url = NULL WHERE id = '${SEEDED_ASSIGNMENT_ID}';`
     );
   });

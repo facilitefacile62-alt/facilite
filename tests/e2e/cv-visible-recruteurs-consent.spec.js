@@ -1,9 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const { execSync } = require("child_process");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
+const { runPrivilegedSql } = require("../helpers/privilegedSql");
 
 /**
  * Partie 2, Étape 4.3 du chantier : cv_visible_recruteurs est le
@@ -23,21 +22,6 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
-}
-
-function runPrivilegedSql(sql) {
-  const tmpFile = path.join(os.tmpdir(), `cvvisible-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  fs.writeFileSync(tmpFile, sql);
-  try {
-    const output = execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
-      cwd: path.resolve(__dirname, "../.."),
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return JSON.parse(output.slice(output.indexOf("{"))).rows || [];
-  } finally {
-    fs.unlinkSync(tmpFile);
-  }
 }
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -67,8 +51,8 @@ test.describe("Consentement cv_visible_recruteurs — un candidat ne modifie que
     securityId = secAuth.user.id;
   });
 
-  test.afterAll(() => {
-    runPrivilegedSql(
+  test.afterAll(async () => {
+    await runPrivilegedSql(
       `UPDATE public.profiles SET cv_visible_recruteurs = false WHERE id IN ('${candidateId}', '${securityId}');`
     );
   });
@@ -96,7 +80,7 @@ test.describe("Consentement cv_visible_recruteurs — un candidat ne modifie que
 
   test("un candidat ne peut PAS modifier la valeur d'un autre profil, même en ciblant son id explicitement", async () => {
     // Valeur de référence connue avant tentative.
-    runPrivilegedSql(`UPDATE public.profiles SET cv_visible_recruteurs = false WHERE id = '${securityId}';`);
+    await runPrivilegedSql(`UPDATE public.profiles SET cv_visible_recruteurs = false WHERE id = '${securityId}';`);
 
     const { error, count } = await candidateClient
       .from("profiles")
@@ -119,7 +103,7 @@ test.describe("Consentement cv_visible_recruteurs — un candidat ne modifie que
   });
 
   test("aucun backfill : la valeur par défaut reste false pour un profil qui vient d'être créé", async () => {
-    const rows = runPrivilegedSql(
+    const rows = await runPrivilegedSql(
       `SELECT column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='profiles' AND column_name='cv_visible_recruteurs';`
     );
     expect(rows[0].column_default).toBe("false");
