@@ -184,6 +184,12 @@ Un faux positif légitime (objet fourni par une extension/le système,
 jamais créé par nous) s'ajoute à `JUSTIFIED` avec le format
 `"function:proname"` ou `"trigger:schema.table:tgname"`.
 
+## Invariant 11 — Aucun lien de navigation ni gate conditionné à un rôle obsolète dans le frontend
+
+**Ce qu'il protège** : Trois fois la même classe de bug a cassé le projet : le lien Admin conditionné à `profiles.role='admin'`, les policies Storage conditionnées à `role='recruteur'`, et le lien Recruteur conditionné à `profileRole==='recruteur'`. Depuis la migration RBAC, ces littéraux de rôles (`'recruteur'`, `'candidat'`, `'agent'`) n'existent plus dans `user_roles`. Ce test scanne tous les fichiers `.js/.jsx` de `src/` pour identifier les littéraux de rôles obsolètes utilisés dans des CONDITIONS de gate (`===` ou `!==`), excluant les usages décoratifs légitimes (ex: `RoleBadge role="candidat"`).
+
+**Quoi faire quand il échoue** : Remplacer l'utilisation du rôle obsolète par un contrôle sur les badges (`has_badge()` via RPC ou `profileBadges.includes()`). Si c'est un faux positif (ex: état local purement UI non transmis au serveur), ajouter le fichier à la liste `JUSTIFIED` dans le test.
+
 ## Exécution
 
 ```bash

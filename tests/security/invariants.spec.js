@@ -412,13 +412,95 @@ test.describe("Invariants de sécurité", () => {
 
     if (violations.length > 0) {
       console.log(`\n[INVARIANT 10] ${violations.length} objet(s) en base absent(s) de toute migration :`);
-      for (const v of violations) console.log(`  - ${v}`);
-    }
-
-    expect(
-      violations,
-      "Fonction/déclencheur en base introuvable dans les migrations — probablement créé via le Dashboard, jamais tracé. Voir console."
-    ).toEqual([]);
-  });
-});
-
+      for (const v of violations) console.log(`  - ${v}`);\r
+    }\r
+\r
+    expect(\r
+      violations,\r
+      "Fonction/déclencheur en base introuvable dans les migrations — probablement créé via le Dashboard, jamais tracé. Voir console."\r
+    ).toEqual([]);\r
+  });\r
+\r
+  test("Invariant 11 — aucun lien de navigation ni gate conditionné à un rôle obsolète dans le frontend", async () => {\r
+    // Trois fois la même classe de bug a cassé le projet :\r
+    // 1) le lien Admin conditionné à profiles.role='admin' (corrigé étape A)\r
+    // 2) les policies Storage conditionnées à role='recruteur' (corrigé étape A)\r
+    // 3) le lien Recruteur conditionné à profileRole==='recruteur' (corrigé ici)\r
+    //\r
+    // Ce test scanne tous les fichiers .js/.jsx de src/ pour les littéraux\r
+    // de rôle obsolètes utilisés dans des CONDITIONS (=== / !==), en excluant\r
+    // les usages légitimes :\r
+    // - RoleBadge role="candidat" (composant décoratif, pas un gate)\r
+    // - Commentaires (// ou /* */)\r
+    // - Le toggle candidat/recruteur de register/page.js (état local UI,\r
+    //   jamais envoyé au serveur — voir lignes 52-58 du fichier)\r
+    // - Filtres admin qui utilisent le badge pour classifier (effectiveRole)\r
+    // - Littéraux dans des chaînes de texte UI (labels, placeholders)\r
+\r
+    const OBSOLETE_ROLE_LITERALS = ["recruteur", "candidat", "agent"];\r
+\r
+    // Pattern : quelque chose === "recruteur" ou "recruteur" === quelque chose\r
+    // ou !== variantes — la forme standard d'un gate conditionnel.\r
+    const GATE_PATTERNS = OBSOLETE_ROLE_LITERALS.map(\r
+      (role) => new RegExp(`(?:===|!==)\\s*["']${role}["']|["']${role}["']\\s*(?:===|!==)`, "g")\r
+    );\r
+\r
+    // Fichiers/lignes explicitement justifiés (faux positifs connus)\r
+    const JUSTIFIED = new Set([\r
+      // register/page.js : le toggle candidat/recruteur est un état local\r
+      // purement UI, jamais transmis au backend (voir commentaire lignes 52-58)\r
+      "register/page.js",\r
+      // RoleBadge.jsx : composant décoratif, pas un gate\r
+      "RoleBadge.jsx",\r
+    ]);\r
+\r
+    const srcDir = path.resolve(__dirname, "../../src");\r
+    const files = listFilesRecursive(srcDir, [".js", ".jsx"]);\r
+\r
+    const violations = [];\r
+\r
+    for (const filePath of files) {\r
+      const basename = path.basename(filePath);\r
+      const relPath = path.relative(srcDir, filePath).replace(/\\\\/g, "/");\r
+\r
+      // Skip justified files entirely\r
+      if (JUSTIFIED.has(basename) || JUSTIFIED.has(relPath)) continue;\r
+\r
+      const content = fs.readFileSync(filePath, "utf-8");\r
+      const lines = content.split("\n");\r
+\r
+      for (let i = 0; i < lines.length; i++) {\r
+        const line = lines[i];\r
+        const trimmed = line.trim();\r
+\r
+        // Skip comment lines\r
+        if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) continue;\r
+\r
+        for (const pattern of GATE_PATTERNS) {\r
+          pattern.lastIndex = 0;\r
+          if (pattern.test(line)) {\r
+            // Check it's not inside a comment on the same line\r
+            const commentIdx = line.indexOf("//");\r
+            const matchIdx = line.search(pattern);\r
+            if (commentIdx >= 0 && matchIdx > commentIdx) continue;\r
+\r
+            violations.push(`${relPath}:${i + 1} → ${trimmed.substring(0, 120)}`);\r
+          }\r
+        }\r
+      }\r
+    }\r
+\r
+    if (violations.length > 0) {\r
+      console.log(`\n[INVARIANT 11] ${violations.length} gate(s) conditionné(s) à un rôle obsolète :`);\r
+      for (const v of violations) console.log(`  - ${v}`);\r
+    }\r
+\r
+    expect(\r
+      violations,\r
+      "Gate conditionné à un rôle obsolète ('recruteur'/'candidat'/'agent') trouvé dans le frontend. " +\r
+        "Depuis le chantier RBAC, ces littéraux n'existent plus dans user_roles — utiliser " +\r
+        "has_badge() ou profileBadges.includes() à la place. Voir console."\r
+    ).toEqual([]);\r
+  });\r
+});\r
+\r
