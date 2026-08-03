@@ -152,15 +152,18 @@ les tests de cette session) :
 | Un recruteur vérifié ne peut pas lire les CV depuis Storage | **Élevée** — casse la CVthèque en aval de la recherche | policy `storage.objects:"Recruteurs et admins lisent les CV"` | `USING` référence `current_user_role() = ANY(['recruteur','admin'])` — `'recruteur'` n'existe plus dans `user_roles.role` (`user`/`publisher`/`admin`), seul `admin` matche désormais | **✅ CORRIGÉ** — `20260803090000_fix_storage_role_literals.sql`, vérifié avec un compte badgé réel (`tests/e2e/storage-role-literals-fix.spec.js`) |
 | Un recruteur ne peut pas téléverser logo/bannière/visuels d'offre | **Élevée** — casse la personnalisation du profil entreprise et les visuels d'offre | policy `storage.objects:"Un recruteur televerse ses visuels d'offres"` | Même défaut : `WITH CHECK` référence `'recruteur'`, jamais `'user'` | **✅ CORRIGÉ** — même migration/test que la ligne ci-dessus |
 | Le répertoire de profils de `/admin/messages` peut échouer silencieusement | Moyenne | `src/app/admin/messages/page.js:74` | `.select(...,role,...)` sur `profiles` — colonne absente (`information_schema.columns` vérifié), erreur PostgREST 42703 probable ; `error` n'est même pas lu par le code appelant, échec invisible pour l'admin | ⏳ **TOUJOURS OUVERT** |
-| `supabase db push` ne peut plus appliquer de migrations | Élevée (reprise après sinistre) | voir point 8 | `supabase migration list --linked` : 15 migrations `remote: ""` | ⏳ **TOUJOURS OUVERT** — la dérive continue de grandir à chaque migration `db query`-only ajoutée depuis (Étapes A/B incluses) |
+| `supabase db push` ne peut plus appliquer de migrations | Élevée (reprise après sinistre) | voir point 8 | `supabase migration list --linked` : 24 migrations `remote: ""` réconciliées via `supabase migration repair --status applied` le 2026-08-03. | **✅ CORRIGÉ** — 24 migrations synchronisées en registre CLI distant sans modification des données de production. |
 
-## 8. Dérive des migrations — cause racine de l'échec `match_resumes`
+## 8. Dérive des migrations — Réparation du registre CLI (2026-08-03)
 
-**Confirmé** : `npx supabase migration list --linked` montre que les 15
-migrations depuis `20260802120000` jusqu'à `20260803030000` ont
-`"remote": ""` — jamais enregistrées comme appliquées dans le registre de
-`db push`, alors qu'elles le sont réellement en base (appliquées via
-`db query -f` tout au long de ce chantier, faute d'alternative).
+**✅ CORRIGÉ** : Le 2026-08-03, l'audit exhaustif des 24 migrations non enregistrées CLI (du `20260802120000` au `20260803140000`) a confirmé que les 24 migrations sont **intégralement appliquées** en base de production (tables, colonnes, fonctions, vues, triggers et policies RLS vérifiés via introspection direct `information_schema`/`pg_proc`/`pg_policies`).
+
+Le registre CLI distant a été réparé via :
+```bash
+npx supabase migration repair --status applied <version>
+```
+`npx supabase migration list --linked` confirme désormais que les **24 migrations sont à l'état APPLIQUÉ** côté distant.
+`npx supabase db diff --linked` nécessite l'exécution du daemon local Docker Desktop.
 
 **Cause racine identifiée** (pas contournée, documentée) : le paramètre
 `query_embedding` de `match_resumes` est déclaré comme `vector` nu (sans
