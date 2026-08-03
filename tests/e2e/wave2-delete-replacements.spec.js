@@ -73,6 +73,24 @@ test.describe("Vague 2 — remplacement des DELETE client par des fonctions SECU
     });
     expect(secErr, `Connexion security échouée : ${secErr?.message}`).toBeNull();
     securityId = secAuth.user.id;
+
+    // Étape D (2026-08-03) : créer une offre exige désormais le badge
+    // verified_recruiter (20260803110000_badge_gate_espace_recruteur.sql) —
+    // les deux comptes créent une offre plus bas dans ce fichier. Accordé
+    // pour la durée de ce fichier seulement (workers:1, exécution
+    // séquentielle, jamais en parallèle avec recruiter-search-views.spec.js
+    // qui exige candidateId NON badgé par défaut).
+    runPrivilegedSql(`
+      UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
+      WHERE id IN ('${candidateId}', '${securityId}') AND NOT (badges @> '["verified_recruiter"]'::jsonb);
+    `);
+  });
+
+  test.afterAll(() => {
+    runPrivilegedSql(`
+      UPDATE public.profiles SET badges = badges - 'verified_recruiter'
+      WHERE id IN ('${candidateId}', '${securityId}');
+    `);
   });
 
   test("DELETE brut sur resumes échoue désormais au niveau PostgreSQL pour authenticated", async () => {

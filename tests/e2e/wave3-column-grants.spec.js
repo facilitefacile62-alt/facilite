@@ -1,6 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
+const { execSync } = require("child_process");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
 /**
@@ -22,6 +24,20 @@ function loadEnvLocal() {
     if (match) env[match[1]] = match[2].trim();
   }
   return env;
+}
+
+function runPrivilegedSql(sql) {
+  const tmpFile = path.join(os.tmpdir(), `wave3-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
+  fs.writeFileSync(tmpFile, sql);
+  try {
+    execSync(`npx supabase db query --linked --yes -f "${tmpFile}"`, {
+      cwd: path.resolve(__dirname, "../.."),
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+  } finally {
+    fs.unlinkSync(tmpFile);
+  }
 }
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -50,6 +66,16 @@ test.describe("Vague 3 — colonnes UPDATE restreintes (job_offers)", () => {
     });
     securityId = secAuth.user.id;
 
+    // Étape D (2026-08-03) : créer une offre exige désormais le badge
+    // verified_recruiter (20260803110000_badge_gate_espace_recruteur.sql) —
+    // accordé pour la durée de ce fichier seulement (workers:1 dans
+    // playwright.config.js, exécution séquentielle, jamais en parallèle
+    // avec recruiter-search-views.spec.js qui exige ce même compte NON badgé).
+    runPrivilegedSql(`
+      UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
+      WHERE id = '${candidateId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);
+    `);
+
     const { data: offer } = await candidateClient
       .from("job_offers")
       .insert({ title: "Offre test Vague 3", company: "Test SARL", location: "Dakar", recruiter_id: candidateId, is_active: true })
@@ -60,6 +86,7 @@ test.describe("Vague 3 — colonnes UPDATE restreintes (job_offers)", () => {
 
   test.afterAll(async () => {
     if (offerId) await candidateClient.rpc("archive_own_job_offer", { offer_id: offerId });
+    runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${candidateId}';`);
   });
 
   test("le propriétaire peut toujours modifier les champs légitimes de son offre", async () => {

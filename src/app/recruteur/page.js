@@ -44,19 +44,55 @@ function buildStoragePath(userId, ext, { folder = "", prefix = "" } = {}) {
   return `${userId}/${folderPart}${prefixPart}${Date.now()}.${ext}`;
 }
 
+// Delta période précédente → période courante, en pourcentage. "prev=0"
+// n'a pas de variation relative sensée (division par zéro) : on affiche
+// "Nouveau" plutôt qu'un pourcentage fabriqué.
+function formatPeriodDelta(current, prev) {
+  if (!prev || prev === 0) return current > 0 ? { text: "Nouveau", positive: true } : { text: "—", positive: null };
+  const pct = Math.round(((current - prev) / prev) * 100);
+  return { text: `${pct > 0 ? "+" : ""}${pct}%`, positive: pct >= 0 };
+}
+
+function formatHours(hours) {
+  if (hours === null || hours === undefined) return "—";
+  const h = Number(hours);
+  if (h < 24) return `${h.toFixed(1)} h`;
+  return `${(h / 24).toFixed(1)} j`;
+}
+
 const APPLICATION_STATUSES = [
   { value: "pending", label: "Envoyée" },
-  { value: "reviewed", label: "En revue" },
+  { value: "reviewed", label: "Présélection" },
+  { value: "contacted", label: "Contacté" },
   { value: "interview_scheduled", label: "Entretien programmé" },
-  { value: "accepted", label: "Accepté" },
-  { value: "rejected", label: "Refusé" },
+  { value: "accepted", label: "Retenu" },
+  { value: "rejected", label: "Écarté" },
 ];
+
+const STATUS_BADGE_COLORS = {
+  pending: "bg-gray-100 text-gray-600",
+  reviewed: "bg-blue-50 text-blue-700",
+  contacted: "bg-indigo-50 text-indigo-700",
+  interview_scheduled: "bg-purple-50 text-purple-700",
+  accepted: "bg-emerald-50 text-emerald-700",
+  rejected: "bg-red-50 text-red-600",
+};
+
+function StatusBadgeMini({ status }) {
+  const label = APPLICATION_STATUSES.find((s) => s.value === status)?.label || status;
+  const colorClass = STATUS_BADGE_COLORS[status] || "bg-gray-100 text-gray-600";
+  return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap ${colorClass}`}>{label}</span>;
+}
 
 export default function RecruteurDashboardPage() {
   const router = useRouter();
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
-  const [activeTab, setActiveTab] = useState("offres"); // 'offres' | 'candidatures' | 'cvtheque' | 'profil'
+  const [activeTab, setActiveTab] = useState("vue-ensemble"); // 'vue-ensemble' | 'offres' | 'candidatures' | 'cvtheque' | 'profil'
+  const [overviewStats, setOverviewStats] = useState(null);
+  const [dailySeries, setDailySeries] = useState([]);
+  const [funnelData, setFunnelData] = useState([]);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const offerFormRef = useRef(null);
 
@@ -291,12 +327,34 @@ export default function RecruteurDashboardPage() {
           { data: recruiterProfileData, error: recruiterProfileErr },
         ] = await Promise.all([
           supabase.from("job_offers").select("*").eq("recruiter_id", session.user.id).order("created_at", { ascending: false }),
-          supabase
-            .from("candidatures")
-            .select("*")
-            .order("created_at", { ascending: false }),
+          // get_recruiter_candidatures() (SECURITY DEFINER) masque email/cv_url
+          // tant que le candidat n'a pas explicitement consenti à les révéler
+          // (reveal_contact_to_recruiter) — la table candidatures elle-même
+          // n'accorde plus aucun SELECT direct au recruteur (voir
+          // 20260803080000_close_candidatures_direct_read_bypass.sql), un
+          // .from("candidatures").select() ne renverrait plus rien.
+          supabase.rpc("get_recruiter_candidatures"),
           supabase.from("recruiter_profiles").select("*").eq("user_id", session.user.id).maybeSingle(),
         ]);
+
+        if (isVerified) {
+          const [
+            { data: statsData, error: statsErr },
+            { data: seriesData, error: seriesErr },
+            { data: funnelRows, error: funnelErr },
+          ] = await Promise.all([
+            supabase.rpc("get_recruiter_overview_stats").single(),
+            supabase.rpc("get_recruiter_daily_candidatures", { p_days: 30 }),
+            supabase.rpc("get_recruiter_funnel"),
+          ]);
+          if (statsErr) console.error("Erreur chargement statistiques:", statsErr);
+          else setOverviewStats(statsData);
+          if (seriesErr) console.error("Erreur chargement historique:", seriesErr);
+          else setDailySeries(seriesData || []);
+          if (funnelErr) console.error("Erreur chargement entonnoir:", funnelErr);
+          else setFunnelData(funnelRows || []);
+        }
+        setStatsLoading(false);
 
         if (offersErr) console.error("Erreur chargement offres:", offersErr);
         else setMyOffers(offers || []);
@@ -344,37 +402,32 @@ export default function RecruteurDashboardPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Synchronisation temps réel : une nouvelle candidature arrive quand un
-  // CANDIDAT postule depuis sa propre session — sans Realtime, le recruteur
-  // ne la verrait qu'après un F5. Pas de filtre par recruteur_id (la table
-  // candidatures n'a pas cette colonne, seulement job_offer_id) : les
-  // policies RLS de candidatures scopent déjà la visibilité aux candidatures
-  // liées aux offres de ce recruteur.
+  // Recharge la liste masquée depuis get_recruiter_candidatures() — utilisé
+  // après chaque action qui change son contenu (changement de statut,
+  // révélation de contact côté candidat détectée au retour d'onglet).
+  const reloadApplications = async () => {
+    const { data, error } = await supabase.rpc("get_recruiter_candidatures");
+    if (error) {
+      console.error("Erreur rechargement candidatures:", error);
+      return;
+    }
+    setApplications(data || []);
+  };
+
+  // Pas de Realtime sur `candidatures` ici : depuis que le recruteur n'a
+  // plus aucune policy SELECT directe sur la table (email/cv_url masqués via
+  // la RPC uniquement, 20260803080000), postgres_changes n'a plus de ligne à
+  // lui transmettre — Realtime respecte la même RLS que les requêtes
+  // classiques. Une nouvelle candidature apparaît au prochain chargement de
+  // l'onglet plutôt qu'en direct ; compromis assumé pour ne pas rouvrir le
+  // contournement du masquage.
   useEffect(() => {
-    const userId = userSession?.user?.id;
-    if (!userId) return;
-
-    const channel = supabase
-      .channel(`recruteur-candidatures:${userId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "candidatures" },
-        (payload) => {
-          if (!payload.new.job_offer_id) return;
-          setApplications((prev) => [payload.new, ...prev]);
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "candidatures" },
-        (payload) => {
-          setApplications((prev) => prev.map((a) => (a.id === payload.new.id ? payload.new : a)));
-        }
-      )
-      .subscribe();
-
-    return () => supabase.removeChannel(channel);
-  }, [userSession?.user?.id]);
+    if (activeTab !== "candidatures" || !userSession?.user?.id) return;
+    async function load() {
+      await reloadApplications();
+    }
+    load();
+  }, [activeTab, userSession?.user?.id]);
 
   // --- Gestion des offres ---
   const handleOfferFieldChange = (field, value) => {
@@ -701,7 +754,11 @@ export default function RecruteurDashboardPage() {
 
   // --- Gestion des candidatures reçues ---
   const myOfferIds = new Set(myOffers.map((o) => o.id));
-  const myApplications = applications.filter((a) => myOfferIds.has(a.job_offer_id));
+  // get_recruiter_candidatures() filtre déjà aux candidatures de ce
+  // recruteur (offres + candidatures spontanées qui lui sont adressées
+  // directement) — un filtre client par myOfferIds exclurait à tort ces
+  // dernières (job_offer_id NULL, jamais dans myOfferIds).
+  const myApplications = applications;
 
   const handleApplicationStatusChange = async (applicationId, newStatus) => {
     const previous = applications;
@@ -863,14 +920,16 @@ export default function RecruteurDashboardPage() {
           </div>
 
           <div className="flex items-center space-x-3">
-            <button
-              type="button"
-              onClick={handleOpenPublishOffer}
-              className="text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-xs"
-            >
-              <i className="fa-solid fa-plus"></i>
-              <span>Publier une offre</span>
-            </button>
+            {recruiterVerified && (
+              <button
+                type="button"
+                onClick={handleOpenPublishOffer}
+                className="text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-xs"
+              >
+                <i className="fa-solid fa-plus"></i>
+                <span>Publier une offre</span>
+              </button>
+            )}
             <Link
               href="/messagerie"
               className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 relative"
@@ -904,8 +963,19 @@ export default function RecruteurDashboardPage() {
           </div>
         </div>
 
+        {recruiterVerified ? (
+          <>
         {/* Onglets */}
-        <div className="flex bg-white p-1.5 rounded-2xl border border-gray-200 shadow-xs mb-8 max-w-xl overflow-x-auto">
+        <div className="flex bg-white p-1.5 rounded-2xl border border-gray-200 shadow-xs mb-8 max-w-2xl overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab("vue-ensemble")}
+            className={`flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 whitespace-nowrap ${
+              activeTab === "vue-ensemble" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            <span>📊 Vue d&apos;ensemble</span>
+          </button>
           <button
             type="button"
             onClick={() => setActiveTab("offres")}
@@ -948,6 +1018,176 @@ export default function RecruteurDashboardPage() {
             <span>🏢 Profil Entreprise</span>
           </button>
         </div>
+
+        {activeTab === "vue-ensemble" && (
+          <div className="space-y-8">
+            {statsLoading ? (
+              <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center text-gray-400 italic">
+                Chargement des statistiques...
+              </div>
+            ) : !overviewStats || overviewStats.active_offers_count === 0 ? (
+              <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center">
+                <i className="fa-solid fa-chart-line text-3xl text-gray-300 mb-3"></i>
+                <p className="text-sm font-bold text-gray-700 mb-1">Aucune statistique pour le moment</p>
+                <p className="text-xs text-gray-400 mb-6">Publiez votre première offre pour voir apparaître vos indicateurs ici.</p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("offres")}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer"
+                >
+                  Publier une offre
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* KPI */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
+                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1">Offres actives</p>
+                    <p className="text-2xl font-extrabold text-gray-900">{overviewStats.active_offers_count}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
+                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1">Candidatures (7j)</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-2xl font-extrabold text-gray-900">{overviewStats.candidatures_7j}</p>
+                      {(() => {
+                        const d = formatPeriodDelta(overviewStats.candidatures_7j, overviewStats.candidatures_prev_7j);
+                        return (
+                          <span className={`text-[11px] font-bold ${d.positive === null ? "text-gray-400" : d.positive ? "text-emerald-600" : "text-red-500"}`}>
+                            {d.text}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
+                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1">Candidatures (30j)</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-2xl font-extrabold text-gray-900">{overviewStats.candidatures_30j}</p>
+                      {(() => {
+                        const d = formatPeriodDelta(overviewStats.candidatures_30j, overviewStats.candidatures_prev_30j);
+                        return (
+                          <span className={`text-[11px] font-bold ${d.positive === null ? "text-gray-400" : d.positive ? "text-emerald-600" : "text-red-500"}`}>
+                            {d.text}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
+                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1">Vues totales</p>
+                    <p className="text-2xl font-extrabold text-gray-900">{overviewStats.total_views}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
+                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1">Taux de conversion</p>
+                    <p className="text-2xl font-extrabold text-gray-900">{overviewStats.conversion_rate}%</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Vue → candidature</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
+                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1">Délai moyen de réponse</p>
+                    <p className="text-2xl font-extrabold text-gray-900">{formatHours(overviewStats.avg_first_response_hours)}</p>
+                  </div>
+                </div>
+
+                {/* Graphique 30 jours */}
+                <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6">
+                  <h2 className="text-sm font-extrabold text-gray-900 mb-4">Candidatures reçues — 30 derniers jours</h2>
+                  <div className="overflow-x-auto">
+                    <div className="flex items-end gap-1 h-32 min-w-[600px]">
+                      {(() => {
+                        const max = Math.max(1, ...dailySeries.map((d) => d.count));
+                        return dailySeries.map((d) => (
+                          <div key={d.day} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                            <div
+                              className="w-full bg-emerald-500 hover:bg-emerald-600 rounded-t-sm transition-all"
+                              style={{ height: `${Math.max(2, (d.count / max) * 100)}%` }}
+                              title={`${new Date(d.day).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })} : ${d.count} candidature(s)`}
+                            ></div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                    <div className="flex justify-between text-[10px] text-gray-400 font-medium mt-2 min-w-[600px]">
+                      <span>{dailySeries[0] && new Date(dailySeries[0].day).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}</span>
+                      <span>Aujourd&apos;hui</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Entonnoir par offre */}
+                <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6">
+                  <h2 className="text-sm font-extrabold text-gray-900 mb-1">Entonnoir de recrutement</h2>
+                  <p className="text-xs text-gray-500 font-medium mb-5">Vues → Candidatures → Présélection → Contactés → Entretien → Retenu / Écarté, par offre active.</p>
+                  {funnelData.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">Aucune offre active pour le moment.</p>
+                  ) : (
+                    <div className="space-y-5">
+                      {funnelData.map((f) => {
+                        const stages = [
+                          { label: "Vues", count: f.view_count, color: "bg-gray-300" },
+                          { label: "Présélection", count: f.reviewed_count, color: "bg-blue-400" },
+                          { label: "Contactés", count: f.contacted_count, color: "bg-indigo-500" },
+                          { label: "Entretien", count: f.interview_count, color: "bg-purple-500" },
+                          { label: "Retenu", count: f.accepted_count, color: "bg-emerald-600" },
+                        ];
+                        const maxStage = Math.max(1, f.view_count);
+                        return (
+                          <div key={f.job_offer_id} className="border-b border-gray-100 last:border-0 pb-5 last:pb-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs font-extrabold text-gray-900 truncate">{f.title}</p>
+                              <span className="text-[10px] text-gray-400 font-bold whitespace-nowrap ml-2">
+                                {f.pending_count} en attente · délai moy. {formatHours(f.avg_response_hours)}
+                              </span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {stages.map((s) => (
+                                <div key={s.label} className="flex items-center gap-2">
+                                  <span className="text-[10px] font-bold text-gray-500 w-20 shrink-0">{s.label}</span>
+                                  <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden min-w-0">
+                                    <div className={`${s.color} h-full rounded-full transition-all`} style={{ width: `${Math.min(100, (s.count / maxStage) * 100)}%` }}></div>
+                                  </div>
+                                  <span className="text-[10px] font-extrabold text-gray-700 w-6 text-right shrink-0">{s.count}</span>
+                                </div>
+                              ))}
+                            </div>
+                            {f.rejected_count > 0 && (
+                              <p className="text-[10px] text-gray-400 mt-1.5">{f.rejected_count} candidature(s) écartée(s)</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 5 dernières candidatures */}
+                <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6">
+                  <h2 className="text-sm font-extrabold text-gray-900 mb-4">Dernières candidatures</h2>
+                  {myApplications.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">Aucune candidature reçue pour le moment.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {myApplications.slice(0, 5).map((c) => (
+                        <div key={c.id} className="flex items-center justify-between gap-3 py-2 border-b border-gray-50 last:border-0">
+                          <div className="min-w-0">
+                            <p className="text-xs font-extrabold text-gray-900 truncate">{c.full_name}</p>
+                            <p className="text-[11px] text-gray-400 truncate">{c.job_title}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <StatusBadgeMini status={c.status} />
+                            <p className="text-[10px] text-gray-400 mt-1">
+                              {new Date(c.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {activeTab === "offres" && (
           <div className="space-y-8">
@@ -1261,7 +1501,13 @@ export default function RecruteurDashboardPage() {
                           <tr key={application.id} className="hover:bg-emerald-50/30 transition">
                             <td className="py-4 px-6">
                               <span className="font-bold text-gray-900 block">{application.full_name}</span>
-                              <span className="text-[10px] text-gray-400">{application.email}</span>
+                              {application.contact_revealed ? (
+                                <span className="text-[10px] text-gray-400">{application.email}</span>
+                              ) : (
+                                <span className="text-[10px] text-amber-600 font-semibold" title="Visible seulement après acceptation du candidat">
+                                  🔒 Coordonnées non révélées
+                                </span>
+                              )}
                             </td>
                             <td className="py-4 px-6 text-gray-600">
                               {offer?.title || application.job_title}
@@ -1290,8 +1536,10 @@ export default function RecruteurDashboardPage() {
                                 <i className="fa-solid fa-file-pdf"></i>
                                 {downloadingCvId === application.id ? "..." : "Télécharger"}
                               </button>
-                            ) : (
+                            ) : application.contact_revealed ? (
                               <span className="text-gray-400">—</span>
+                            ) : (
+                              <span className="text-gray-300 text-[10px] italic">Non révélé</span>
                             )}
                           </td>
                           <td className="py-4 px-6">
@@ -1330,80 +1578,7 @@ export default function RecruteurDashboardPage() {
           </div>
         )}
 
-        {activeTab === "cvtheque" && !recruiterVerified && pendingBadgeRequest?.status === "pending" && (
-          <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 mb-6 flex items-start gap-3">
-            <i className="fa-solid fa-hourglass-half text-amber-600 mt-0.5"></i>
-            <div>
-              <h2 className="text-sm font-extrabold text-amber-900">Demande en cours de revue</h2>
-              <p className="text-xs text-amber-800 font-medium mt-1">
-                Votre demande d&apos;accréditation « Recruteur vérifié » est en cours de traitement par notre
-                équipe. Vous pouvez déjà publier des offres d&apos;emploi en attendant.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "cvtheque" && !recruiterVerified && pendingBadgeRequest?.status !== "pending" && (
-          <div className="bg-white border border-gray-200 rounded-3xl p-6 mb-6">
-            {pendingBadgeRequest?.status === "rejected" && (
-              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-                Votre précédente demande a été rejetée
-                {pendingBadgeRequest.rejection_reason ? ` : ${pendingBadgeRequest.rejection_reason}` : "."} Vous pouvez
-                soumettre une nouvelle demande ci-dessous.
-              </div>
-            )}
-            <h2 className="text-sm font-extrabold text-gray-900 mb-1">Devenir un recruteur vérifié</h2>
-            <p className="text-xs text-gray-500 font-medium mb-4">
-              Pour protéger les données de nos candidats, l&apos;accès au répertoire CVthèque nécessite une
-              accréditation d&apos;entreprise (NINEA, RCCM et attestation officielle). Vous pouvez déjà publier des
-              offres d&apos;emploi en attendant la validation.
-            </p>
-            <form onSubmit={handleSubmitBadgeRequest} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                type="text"
-                placeholder="Nom de l'entreprise"
-                value={badgeRequestForm.company_name}
-                onChange={(e) => setBadgeRequestForm((prev) => ({ ...prev, company_name: e.target.value }))}
-                className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Numéro NINEA"
-                value={badgeRequestForm.ninea_number}
-                onChange={(e) => setBadgeRequestForm((prev) => ({ ...prev, ninea_number: e.target.value }))}
-                className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Numéro RCCM"
-                value={badgeRequestForm.rccm_number}
-                onChange={(e) => setBadgeRequestForm((prev) => ({ ...prev, rccm_number: e.target.value }))}
-                className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500"
-                required
-              />
-              <input
-                type="file"
-                accept="application/pdf,image/png,image/jpeg"
-                onChange={(e) => setBadgeDocumentFile(e.target.files?.[0] || null)}
-                className="text-xs font-medium file:mr-3 file:px-3.5 file:py-2 file:rounded-xl file:border-0 file:bg-emerald-50 file:text-emerald-700 file:font-extrabold file:cursor-pointer"
-              />
-              {badgeRequestError && (
-                <p className="sm:col-span-2 text-xs font-medium text-red-600">{badgeRequestError}</p>
-              )}
-              <button
-                type="submit"
-                disabled={submittingBadgeRequest}
-                className="sm:col-span-2 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
-              >
-                {submittingBadgeRequest ? "Envoi..." : "Envoyer ma demande"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {activeTab === "cvtheque" && recruiterVerified && (
+        {activeTab === "cvtheque" && (
           <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
             <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -1646,6 +1821,92 @@ export default function RecruteurDashboardPage() {
                 )}
               </button>
             </form>
+          </div>
+        )}
+          </>
+        ) : (
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-xl p-8 sm:p-12 max-w-2xl mx-auto text-center">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mx-auto mb-6">
+              <i className="fa-solid fa-building-shield"></i>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight mb-2">
+              Accréditation entreprise requise
+            </h1>
+            <p className="text-sm text-gray-500 font-medium max-w-md mx-auto mb-8">
+              Pour protéger les données de nos candidats, tout l&apos;espace recruteur (offres, candidatures,
+              répertoire CVthèque) nécessite une accréditation d&apos;entreprise vérifiée. Cette démarche ne prend
+              que quelques minutes.
+            </p>
+
+            {pendingBadgeRequest?.status === "pending" ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-3 text-left">
+                <i className="fa-solid fa-hourglass-half text-amber-600 mt-0.5"></i>
+                <div>
+                  <h2 className="text-sm font-extrabold text-amber-900">Demande en cours de revue</h2>
+                  <p className="text-xs text-amber-800 font-medium mt-1">
+                    Votre demande d&apos;accréditation « Recruteur vérifié » est en cours de traitement par notre
+                    équipe. Vous serez notifié dès qu&apos;elle sera validée.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-left">
+                {pendingBadgeRequest?.status === "rejected" && (
+                  <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                    Votre précédente demande a été rejetée
+                    {pendingBadgeRequest.rejection_reason ? ` : ${pendingBadgeRequest.rejection_reason}` : "."} Vous
+                    pouvez soumettre une nouvelle demande ci-dessous.
+                  </div>
+                )}
+                <form onSubmit={handleSubmitBadgeRequest} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Nom de l'entreprise"
+                    value={badgeRequestForm.company_name}
+                    onChange={(e) => setBadgeRequestForm((prev) => ({ ...prev, company_name: e.target.value }))}
+                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 sm:col-span-2"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Numéro NINEA"
+                    value={badgeRequestForm.ninea_number}
+                    onChange={(e) => setBadgeRequestForm((prev) => ({ ...prev, ninea_number: e.target.value }))}
+                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Numéro RCCM"
+                    value={badgeRequestForm.rccm_number}
+                    onChange={(e) => setBadgeRequestForm((prev) => ({ ...prev, rccm_number: e.target.value }))}
+                    className="px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500"
+                    required
+                  />
+                  <label className="sm:col-span-2 min-w-0 text-left">
+                    <span className="block text-[11px] font-bold text-gray-500 mb-1.5">
+                      Attestation officielle (registre de commerce, NINEA ou équivalent — PDF ou image)
+                    </span>
+                    <input
+                      type="file"
+                      accept="application/pdf,image/png,image/jpeg"
+                      onChange={(e) => setBadgeDocumentFile(e.target.files?.[0] || null)}
+                      className="w-full max-w-full text-xs font-medium file:mr-3 file:px-3.5 file:py-2 file:rounded-xl file:border-0 file:bg-emerald-50 file:text-emerald-700 file:font-extrabold file:cursor-pointer"
+                    />
+                  </label>
+                  {badgeRequestError && (
+                    <p className="sm:col-span-2 text-xs font-medium text-red-600">{badgeRequestError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={submittingBadgeRequest}
+                    className="sm:col-span-2 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingBadgeRequest ? "Envoi..." : "Envoyer ma demande d'accréditation"}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         )}
       </main>

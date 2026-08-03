@@ -106,6 +106,17 @@ export async function middleware(req) {
       url.pathname = roleHomePath(userRole);
       return NextResponse.redirect(url);
     }
+
+    // Étape D (2026-08-03) : verified_recruiter gate désormais tout l'espace
+    // /recruteur au niveau RLS (20260803110000_badge_gate_espace_recruteur.sql)
+    // et côté page (l'écran d'accréditation NINEA/RCCM remplace le tableau
+    // de bord tant que le badge n'est pas accordé). Volontairement PAS de
+    // redirection ici pour un 'user' non badgé : /recruteur est aussi le
+    // seul endroit où soumettre la demande d'accréditation — rediriger
+    // ailleurs empêcherait justement d'y accéder. Le rôle reste vérifié
+    // ci-dessus (user/admin, pas publisher) ; le badge est vérifié à la
+    // couche donnée (seule couche où la décision "encore, ou pas encore ?"
+    // change sans rechargement de page).
   }
 
   return res;
