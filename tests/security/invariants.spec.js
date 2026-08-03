@@ -363,4 +363,34 @@ test.describe("Invariants de sécurité", () => {
       "isCallerAdmin() (src/lib/rbac.js) doit vérifier role ET status, et se refermer sur une ligne absente/en erreur — c'est la seule barrière des routes admin qui écrivent en service_role, hors RLS."
     ).toBe(true);
   });
+
+  test("Invariant 10 — aucun objet en base absent des migrations ni déclencheur/fonction mort(e) obsolète", async () => {
+    // Vérifie qu'aucun déclencheur doublon ni fonction morte obsolète n'existe sur auth.users
+    const triggers = await runIntrospectionSql(`
+      SELECT t.tgname
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      WHERE c.relname = 'users' AND t.tgname IN ('on_auth_user_created_create_profile', 'on_auth_user_created_auto_confirm');
+    `);
+
+    const deadFuncs = await runIntrospectionSql(`
+      SELECT p.proname
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname IN ('auto_confirm_user', 'auto_confirm_user_on_signup');
+    `);
+
+    const violations = [
+      ...triggers.map((t) => `trigger auth.users:${t.tgname}`),
+      ...deadFuncs.map((f) => `fonction public.${f.proname}()`),
+    ];
+
+    if (violations.length > 0) {
+      console.log(`\n[INVARIANT 10] ${violations.length} objet(s) mort(s)/obsolète(s) détecté(s) en base :`);
+      for (const v of violations) console.log(`  - ${v}`);
+    }
+
+    expect(violations, "Objet en base mort ou obsolète détecté (trigger/fonction) — voir console").toEqual([]);
+  });
 });
+
