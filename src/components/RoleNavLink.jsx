@@ -40,27 +40,6 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
       const checkUserId = freshSession?.user?.id || session.user.id;
 
       supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", checkUserId)
-        .single()
-        .then(({ data, error }) => {
-          if (cancelled) return;
-          if (error) {
-            // PGRST116 attendu pour les comptes recruteurs/candidats simples
-            if (error.code !== "PGRST116") {
-              console.warn("[RoleNavLink] Erreur de rôle:", error.message);
-            }
-            setRole(null);
-          } else {
-            setRole(data?.role || null);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setRole(null);
-        });
-
-      supabase
         .rpc("is_admin", { check_user_id: checkUserId })
         .then(({ data: isAdmin, error }) => {
           if (cancelled) return;
@@ -71,6 +50,8 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
             setIsRpcAdmin(isAdmin === true);
             if (isAdmin === true) {
               setRole("admin");
+            } else {
+              setRole(null);
             }
           }
         })

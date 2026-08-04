@@ -37,19 +37,23 @@ export function useUnreadMessagesBadge(userId) {
     let cancelled = false;
 
     async function loadInitialCount() {
-      const { count, error } = await supabase
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("receiver_id", userId)
-        .eq("is_read", false);
+      try {
+        const { count, error } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("receiver_id", userId)
+          .eq("is_read", false);
 
-      if (cancelled) return;
-      if (error) {
-        console.error("Erreur chargement du compteur de messages non lus:", error.message);
-        return;
+        if (cancelled) return;
+        if (error) {
+          console.warn("Erreur silencieuse chargement du compteur de messages non lus:", error.message);
+          return;
+        }
+        setUnreadCount(count || 0);
+        readyForAlertsRef.current = true;
+      } catch (err) {
+        console.warn("Erreur silencieuse exception messages non lus:", err);
       }
-      setUnreadCount(count || 0);
-      readyForAlertsRef.current = true;
     }
 
     loadInitialCount();

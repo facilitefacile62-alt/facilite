@@ -427,25 +427,18 @@ export default function ProfilPage() {
         console.error("[loadUserProfile] Exception profil:", err);
       }
 
-      // 3. Récupérer le rôle depuis la table user_roles
-      let userRoleRow = null;
+      // 3. Récupérer si recruteur vérifié via RPC has_badge
+      let isRecruiterRpc = false;
       try {
-        const { data, error } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .single();
+        const { data: isRecruiter, error } = await supabase
+          .rpc("has_badge", { check_user_id: session.user.id, badge_name: "verified_recruiter" });
         if (error) {
-          setRoleQueryError(error.message || `Code: ${error.code}`);
-          if (error.code !== "PGRST116") {
-            console.warn("[loadUserProfile] Erreur de chargement du rôle:", error.message);
-          }
+          console.warn("[loadUserProfile] Erreur RPC has_badge:", error.message);
         } else {
-          userRoleRow = data;
+          isRecruiterRpc = isRecruiter === true;
         }
       } catch (err) {
-        setRoleQueryError(err.message || "Exception user_roles");
-        console.error("[loadUserProfile] Exception user_roles:", err);
+        console.error("[loadUserProfile] Exception RPC has_badge:", err);
       }
 
       // 4. Appel direct à la fonction RPC is_admin (SECURITY DEFINER)
@@ -469,10 +462,13 @@ export default function ProfilPage() {
       }
 
       // Déterminer le rôle final et les badges indépendamment du profil
-      let finalRole = userRoleRow?.role || "user";
+      let finalRole = "user";
       if (isAdminRpc === true) {
         finalRole = "admin";
         setIsNavAdmin(true);
+      } else if (isRecruiterRpc === true) {
+        finalRole = "recruiter";
+        setIsNavRecruiter(true);
       }
       setProfileRole(finalRole);
 
