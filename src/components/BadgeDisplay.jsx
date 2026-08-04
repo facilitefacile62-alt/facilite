@@ -1,8 +1,6 @@
 "use client";
 
-// Affichage cosmétique de public.profiles.badges — jamais une source
-// d'autorisation (voir docs/audit-securite-2026-08.md et les migrations
-// RBAC : aucune policy RLS ne lit cette colonne pour décider d'un droit).
+import Link from "next/link";
 
 const BADGE_INFO = {
   verified_recruiter: {
@@ -17,7 +15,7 @@ const BADGE_INFO = {
   },
 };
 
-export default function BadgeDisplay({ badges, size = "sm", className = "" }) {
+export default function BadgeDisplay({ badges, size = "sm", className = "", clickable = false }) {
   if (!Array.isArray(badges) || badges.length === 0) return null;
 
   const sizeClass = size === "sm" ? "text-[10px] px-2 py-0.5" : "text-xs px-2.5 py-1";
@@ -27,6 +25,25 @@ export default function BadgeDisplay({ badges, size = "sm", className = "" }) {
       {badges.map((badge) => {
         const info = BADGE_INFO[badge];
         if (!info) return null; // badge inconnu : affichage silencieusement ignoré plutôt que planter
+
+        if (badge === "verified_recruiter" && clickable) {
+          return (
+            <Link
+              key={badge}
+              href="/recruteur"
+              className="cursor-pointer inline-flex"
+              title="Accéder au tableau de bord recruteur"
+            >
+              <span
+                className={`inline-flex items-center gap-1 rounded-full font-extrabold border ${info.className} ${sizeClass} transition hover:opacity-90 hover:scale-105 active:scale-95`}
+              >
+                <span aria-hidden="true">{info.emoji}</span>
+                <span>{info.label}</span>
+              </span>
+            </Link>
+          );
+        }
+
         return (
           <span
             key={badge}

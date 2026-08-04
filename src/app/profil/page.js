@@ -2143,7 +2143,7 @@ export default function ProfilPage() {
                         {profileName}
                       </h1>
                       <RoleBadge role={profileRole} />
-                      <BadgeDisplay badges={profileBadges} />
+                      <BadgeDisplay badges={profileBadges} clickable={true} />
                       <span className="bg-emerald-100 text-[#047857] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">
                         Profil Vérifié
                       </span>
