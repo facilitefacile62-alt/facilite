@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 export default function RoleNavLink({ session, className, variant = "desktop" }) {
   const [role, setRole] = useState(null);
   const [isVerifiedRecruiter, setIsVerifiedRecruiter] = useState(false);
+  const [isRpcAdmin, setIsRpcAdmin] = useState(false);
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -26,6 +27,8 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
       setRole(null);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsVerifiedRecruiter(false);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsRpcAdmin(false);
       return;
     }
     let cancelled = false;
@@ -55,6 +58,21 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
       });
 
     supabase
+      .rpc("is_admin", { check_user_id: session.user.id })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.warn("[RoleNavLink] Erreur RPC is_admin:", error.message);
+          setIsRpcAdmin(false);
+        } else {
+          setIsRpcAdmin(data === true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsRpcAdmin(false);
+      });
+
+    supabase
       .rpc("has_badge", {
         check_user_id: session.user.id,
         badge_name: "verified_recruiter",
@@ -77,7 +95,7 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
     };
   }, [session?.user?.id]);
 
-  const isAdmin = role === "admin" || role === "publisher";
+  const isAdmin = role === "admin" || role === "publisher" || isRpcAdmin;
 
   // Aucun lien à afficher
   if (!isAdmin && !isVerifiedRecruiter) return null;

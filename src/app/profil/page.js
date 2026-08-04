@@ -286,6 +286,8 @@ export default function ProfilPage() {
   // Synchroniser les données depuis Supabase et protéger la route
   useEffect(() => {
     async function loadUserProfile() {
+      // Invalidation du cache client de session : rafraîchissement forcé
+      await supabase.auth.refreshSession().catch(() => {});
       const { data: { session } } = await supabase.auth.getSession();
       setUserSession(session);
 
@@ -315,14 +317,26 @@ export default function ProfilPage() {
         .eq("user_id", session.user.id)
         .single();
 
+      // Appel direct à la fonction RPC is_admin (SECURITY DEFINER)
+      const { data: isAdminRpc } = await supabase
+        .rpc("is_admin", { check_user_id: session.user.id });
+
       if (profile) {
         setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
-        // 'recruteur' n'existe plus comme rôle (chantier RBAC, fusionné dans
-        // 'user') — l'onglet raccourci "Recruteur" plus bas ne s'affichera
-        // donc plus jamais ; /recruteur reste accessible à tout 'user' via
-        // la navigation normale, ce raccourci n'est plus qu'une redondance.
-        setProfileRole(userRoleRow?.role || "user");
-        setProfileBadges(profile.badges || []);
+        
+        // Déterminer le rôle final avec priorité à l'RPC is_admin
+        let finalRole = userRoleRow?.role || "user";
+        if (isAdminRpc === true) {
+          finalRole = "admin";
+        }
+        setProfileRole(finalRole);
+
+        // Déterminer les badges et injecter le badge ADMINISTRATEUR si admin
+        let finalBadges = profile.badges || [];
+        if (isAdminRpc === true && !finalBadges.includes("administrateur")) {
+          finalBadges = [...finalBadges, "administrateur"];
+        }
+        setProfileBadges(finalBadges);
         setEducationLevel(profile.education_level || "Aucun");
         setProfileSubtitle(profile.headline || "");
         setProfileLocation(profile.location || "");
