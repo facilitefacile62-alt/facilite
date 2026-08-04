@@ -1572,6 +1572,15 @@ export default function ProfilPage() {
 
   return (
     <>
+      {/* BANNER DEBUG POUR CORRECTIF ACCES ADMIN */}
+      <div className="bg-red-950 text-white p-3.5 text-xs text-center z-[1000] sticky top-0 font-mono flex flex-wrap gap-4 justify-center border-b border-red-800">
+        <span><strong>DEBUG PROFIL:</strong></span>
+        <span>Email: {userSession?.user?.email || "null"}</span>
+        <span>ID: {userSession?.user?.id || "null"}</span>
+        <span>profileRole: {profileRole || "null"}</span>
+        <span>isNavAdmin: {isNavAdmin ? "true" : "false"}</span>
+        <span>isNavRecruiter: {isNavRecruiter ? "true" : "false"}</span>
+      </div>
       {/* Toast Notification Floating */}
       <div
         className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
