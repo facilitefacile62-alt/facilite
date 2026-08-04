@@ -439,10 +439,10 @@ test.describe("Invariants de sécurité", () => {
 
     const OBSOLETE_ROLE_LITERALS = ["recruteur", "candidat", "agent"];
 
-    // Pattern : quelque chose === "recruteur" ou "recruteur" === quelque chose
-    // ou !== variantes — la forme standard d'un gate conditionnel.
+    // Pattern : quelque chose ==/=== "recruteur" ou "recruteur" ==/=== quelque chose
+    // ou !=/!== variantes — la forme standard d'un gate conditionnel.
     const GATE_PATTERNS = OBSOLETE_ROLE_LITERALS.map(
-      (role) => new RegExp(`(?:===|!==)\\s*["']${role}["']|["']${role}["']\\s*(?:===|!==)`, "g")
+      (role) => new RegExp(`(?:===|!==|==|!=)\\s*["']${role}["']|["']${role}["']\\s*(?:===|!==|==|!=)`, "g")
     );
 
     // Fichiers/lignes explicitement justifiés (faux positifs connus)
