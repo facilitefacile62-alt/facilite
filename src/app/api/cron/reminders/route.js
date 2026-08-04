@@ -11,7 +11,7 @@ export const maxDuration = 60;
 const PENDING_CANDIDATURE_REMINDER_DAYS = 3;
 const ABANDONED_CV_DRAFT_REMINDER_DAYS = 2;
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://ffacilite.com";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 /**
  * Relances automatiques quotidiennes (Vercel Cron, voir vercel.json) :

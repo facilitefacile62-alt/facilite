@@ -1864,6 +1864,14 @@ export default function MessagerieClient() {
                     <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
                     <span>{t.navRecruitment}</span>
                   </Link>
+                  <Link
+                    href="/recrutement-journalier"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-solid fa-person-digging text-lg text-gray-600 w-5 text-center"></i>
+                    <span>{selectedLang === "FR" ? "Travail journalier (Dépôt)" : "Daily Worker Jobs (In-person)"}</span>
+                  </Link>
                   <a
                     href="#"
                     onClick={(e) => {
@@ -2092,6 +2100,16 @@ export default function MessagerieClient() {
               >
                 <i className="fa-solid fa-user-tie text-gray-400 text-lg"></i>
                 <span>{t.navRecruitment}</span>
+              </Link>
+
+              {/* Recrutement Journalier Mobile */}
+              <Link
+                href="/recrutement-journalier"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer border-t border-gray-100"
+              >
+                <i className="fa-solid fa-person-digging text-gray-400 text-lg"></i>
+                <span>{selectedLang === "FR" ? "Travail journalier" : "Daily Worker Jobs"}</span>
               </Link>
 
               {/* Contact (même modale que le dropdown "Plus" desktop) */}

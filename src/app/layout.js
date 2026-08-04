@@ -9,7 +9,7 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://ffacilite.com";
+const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 const DEFAULT_DESCRIPTION =
   "Facilite est votre allié de confiance pour concevoir des CV percutants, trouver des offres d'emploi et être accompagné par des recruteurs au Sénégal et en Afrique de l'Ouest.";
 

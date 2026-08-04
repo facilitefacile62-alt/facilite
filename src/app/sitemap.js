@@ -1,6 +1,6 @@
 import { getSupabasePublicClient } from "@/lib/supabase";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://ffacilite.com";
+const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const STATIC_ROUTES = [
   { path: "/", changeFrequency: "daily", priority: 1 },

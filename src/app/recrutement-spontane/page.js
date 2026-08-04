@@ -104,6 +104,27 @@ export default function RecrutementSpontanePage() {
           </p>
         </div>
 
+        {/* Info Banner for Daily Workers / Physical Drop-off */}
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center flex-shrink-0">
+              <i className="fa-solid fa-person-digging"></i>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">Vous recherchez plutôt des emplois de journalier ?</p>
+              <p className="text-xs font-semibold text-gray-500">
+                Découvrez notre répertoire d'entreprises acceptant les candidatures physiques en personne à Dakar.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/recrutement-journalier"
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-xl transition shadow-xs text-center whitespace-nowrap"
+          >
+            <i className="fa-solid fa-map-location-dot mr-1.5"></i> Voir les dépôts physiques
+          </Link>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {spontaneousOffers.map((offer) => (
             <div 
