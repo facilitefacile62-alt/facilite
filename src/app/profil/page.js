@@ -72,39 +72,50 @@ export default function ProfilPage() {
       return;
     }
     let cancelled = false;
-    supabase
-      .rpc("is_admin", { check_user_id: userSession.user.id })
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          console.warn("[Profil Nav] Erreur RPC is_admin:", error.message);
-          setAdminRpcError(error.message);
-          setIsNavAdmin(false);
-        } else {
-          setIsNavAdmin(data === true);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setAdminRpcError(err.message || "Catch error");
-      });
 
-    supabase
-      .rpc("has_badge", {
-        check_user_id: userSession.user.id,
-        badge_name: "verified_recruiter",
-      })
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          console.warn("[Profil Nav] Erreur RPC has_badge:", error.message);
-          setIsNavRecruiter(false);
-        } else {
-          setIsNavRecruiter(data === true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setIsNavRecruiter(false);
-      });
+    // Invalidation du cache session
+    supabase.auth.refreshSession().catch(() => {}).then(async () => {
+      if (cancelled) return;
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const checkUserId = freshSession?.user?.id || userSession.user.id;
+
+      supabase
+        .rpc("is_admin", { check_user_id: checkUserId })
+        .then(({ data: isAdmin, error }) => {
+          if (cancelled) return;
+          if (error) {
+            console.warn("[Profil Nav] Erreur RPC is_admin:", error.message);
+            setAdminRpcError(error.message);
+            setIsNavAdmin(false);
+          } else {
+            setIsNavAdmin(isAdmin === true);
+            if (isAdmin === true) {
+              setProfileRole("admin");
+            }
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) setAdminRpcError(err.message || "Catch error");
+        });
+
+      supabase
+        .rpc("has_badge", {
+          check_user_id: checkUserId,
+          badge_name: "verified_recruiter",
+        })
+        .then(({ data, error }) => {
+          if (cancelled) return;
+          if (error) {
+            console.warn("[Profil Nav] Erreur RPC has_badge:", error.message);
+            setIsNavRecruiter(false);
+          } else {
+            setIsNavRecruiter(data === true);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setIsNavRecruiter(false);
+        });
+    });
 
     return () => {
       cancelled = true;
@@ -406,13 +417,17 @@ export default function ProfilPage() {
       // 4. Appel direct à la fonction RPC is_admin (SECURITY DEFINER)
       let isAdminRpc = false;
       try {
-        const { data, error } = await supabase
-          .rpc("is_admin", { check_user_id: session.user.id });
+        await supabase.auth.refreshSession().catch(() => {});
+        const { data: { session: freshSession } } = await supabase.auth.getSession();
+        const checkUserId = freshSession?.user?.id || session.user.id;
+
+        const { data: isAdmin, error } = await supabase
+          .rpc("is_admin", { check_user_id: checkUserId });
         if (error) {
           setAdminRpcError(error.message);
           console.warn("[loadUserProfile] Erreur RPC is_admin:", error.message);
         } else {
-          isAdminRpc = data === true;
+          isAdminRpc = isAdmin === true;
         }
       } catch (err) {
         setAdminRpcError(err.message || "Exception RPC is_admin");
@@ -423,6 +438,7 @@ export default function ProfilPage() {
       let finalRole = userRoleRow?.role || "user";
       if (isAdminRpc === true) {
         finalRole = "admin";
+        setIsNavAdmin(true);
       }
       setProfileRole(finalRole);
 
@@ -1579,20 +1595,6 @@ export default function ProfilPage() {
 
   return (
     <>
-      {/* BANNER DEBUG POUR CORRECTIF ACCES ADMIN */}
-      <div className="bg-red-950 text-white p-3.5 text-xs text-center z-[1000] sticky top-0 font-mono flex flex-col gap-1 items-center border-b border-red-800">
-        <div className="flex flex-wrap gap-4 justify-center">
-          <span><strong>DEBUG PROFIL:</strong></span>
-          <span>Email: {userSession?.user?.email || "null"}</span>
-          <span>ID: {userSession?.user?.id || "null"}</span>
-          <span>profileRole: {profileRole || "null"}</span>
-          <span>isNavAdmin: {isNavAdmin ? "true" : "false"}</span>
-          <span>isNavRecruiter: {isNavRecruiter ? "true" : "false"}</span>
-        </div>
-        <div className="text-[10px] text-red-300">
-          <span>Err Rôle: {roleQueryError || "None"} | Err RPC is_admin: {adminRpcError || "None"}</span>
-        </div>
-      </div>
       {/* Toast Notification Floating */}
       <div
         className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
