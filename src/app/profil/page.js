@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import AIAssistantModal from "@/components/AIAssistantModal";
 import RoleBadge from "@/components/RoleBadge";
+import RoleNavLink from "@/components/RoleNavLink";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import ThemeSettings from "@/components/ThemeSettings";
 import DiagnosticModal from "@/components/DiagnosticModal";
@@ -40,6 +41,8 @@ export default function ProfilPage() {
   const [profileName, setProfileName] = useState("");
   const [profileRole, setProfileRole] = useState("user");
   const [profileBadges, setProfileBadges] = useState([]);
+  const [isNavAdmin, setIsNavAdmin] = useState(false);
+  const [isNavRecruiter, setIsNavRecruiter] = useState(false);
   const [profileSubtitle, setProfileSubtitle] = useState("");
   const [profileLocation, setProfileLocation] = useState("");
   const [profileBio, setProfileBio] = useState("");
@@ -59,6 +62,51 @@ export default function ProfilPage() {
     if (typeof window === "undefined") return "info_perso";
     return new URLSearchParams(window.location.search).get("tab") || "info_perso";
   });
+
+  useEffect(() => {
+    if (!userSession?.user?.id) {
+      setIsNavAdmin(false);
+      setIsNavRecruiter(false);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .rpc("is_admin", { check_user_id: userSession.user.id })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.warn("[Profil Nav] Erreur RPC is_admin:", error.message);
+          setIsNavAdmin(false);
+        } else {
+          setIsNavAdmin(data === true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsNavAdmin(false);
+      });
+
+    supabase
+      .rpc("has_badge", {
+        check_user_id: userSession.user.id,
+        badge_name: "verified_recruiter",
+      })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.warn("[Profil Nav] Erreur RPC has_badge:", error.message);
+          setIsNavRecruiter(false);
+        } else {
+          setIsNavRecruiter(data === true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsNavRecruiter(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userSession?.user?.id]);
 
   // Accordéon mobile de la liste d'onglets "À propos" : replié par défaut
   // pour économiser l'espace d'écran (sans effet en desktop, où la liste
@@ -298,45 +346,87 @@ export default function ProfilPage() {
       }
 
       // 1. Récupérer l'ensemble des documents de l'utilisateur depuis la table resumes
-      const { data: resumesList } = await supabase
-        .from("resumes")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
+      let resumesList = [];
+      try {
+        const { data, error } = await supabase
+          .from("resumes")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
+        if (error) {
+          console.warn("[loadUserProfile] Erreur de chargement des resumes:", error.message);
+        } else {
+          resumesList = data || [];
+        }
+      } catch (err) {
+        console.error("[loadUserProfile] Exception resumes:", err);
+      }
 
       // 2. Récupérer le profil depuis la table profiles
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
+      let profile = null;
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+        if (error) {
+          console.warn("[loadUserProfile] Erreur de chargement du profil:", error.message);
+        } else {
+          profile = data;
+        }
+      } catch (err) {
+        console.error("[loadUserProfile] Exception profil:", err);
+      }
 
-      const { data: userRoleRow } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .single();
+      // 3. Récupérer le rôle depuis la table user_roles
+      let userRoleRow = null;
+      try {
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+        if (error) {
+          if (error.code !== "PGRST116") {
+            console.warn("[loadUserProfile] Erreur de chargement du rôle:", error.message);
+          }
+        } else {
+          userRoleRow = data;
+        }
+      } catch (err) {
+        console.error("[loadUserProfile] Exception user_roles:", err);
+      }
 
-      // Appel direct à la fonction RPC is_admin (SECURITY DEFINER)
-      const { data: isAdminRpc } = await supabase
-        .rpc("is_admin", { check_user_id: session.user.id });
+      // 4. Appel direct à la fonction RPC is_admin (SECURITY DEFINER)
+      let isAdminRpc = false;
+      try {
+        const { data, error } = await supabase
+          .rpc("is_admin", { check_user_id: session.user.id });
+        if (error) {
+          console.warn("[loadUserProfile] Erreur RPC is_admin:", error.message);
+        } else {
+          isAdminRpc = data === true;
+        }
+      } catch (err) {
+        console.error("[loadUserProfile] Exception RPC is_admin:", err);
+      }
+
+      // Déterminer le rôle final et les badges indépendamment du profil
+      let finalRole = userRoleRow?.role || "user";
+      if (isAdminRpc === true) {
+        finalRole = "admin";
+      }
+      setProfileRole(finalRole);
+
+      let finalBadges = profile?.badges || [];
+      if (isAdminRpc === true && !finalBadges.includes("administrateur")) {
+        finalBadges = [...finalBadges, "administrateur"];
+      }
+      setProfileBadges(finalBadges);
 
       if (profile) {
         setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
-        
-        // Déterminer le rôle final avec priorité à l'RPC is_admin
-        let finalRole = userRoleRow?.role || "user";
-        if (isAdminRpc === true) {
-          finalRole = "admin";
-        }
-        setProfileRole(finalRole);
-
-        // Déterminer les badges et injecter le badge ADMINISTRATEUR si admin
-        let finalBadges = profile.badges || [];
-        if (isAdminRpc === true && !finalBadges.includes("administrateur")) {
-          finalBadges = [...finalBadges, "administrateur"];
-        }
-        setProfileBadges(finalBadges);
         setEducationLevel(profile.education_level || "Aucun");
         setProfileSubtitle(profile.headline || "");
         setProfileLocation(profile.location || "");
@@ -360,8 +450,6 @@ export default function ProfilPage() {
         setUserSkills(profile.skills || []);
         setUserInterests(profile.interests || []);
         setContactEmail(profile.contact_email || session.user.email || "");
-        // Consentement de publication : false par défaut, personne n'est
-        // publié sans l'avoir explicitement demandé.
         setIsPublic(profile.is_public === true);
         setShowContact(profile.show_contact === true);
         setCvVisibleRecruteurs(profile.cv_visible_recruteurs === true);
@@ -369,13 +457,15 @@ export default function ProfilPage() {
         let profileCvUrl = profile?.cv_url;
         let profileCvName = profile?.cv_name;
 
-        // Incrémenter dynamiquement le compteur de vues du profil
-        const updatedProfileViews = (profile.profile_views || 0) + 1;
-        supabase
-          .from("profiles")
-          .update({ profile_views: updatedProfileViews })
-          .eq("id", session.user.id)
-          .then();
+        // Incrémenter dynamiquement le compteur de vues du profil (optionnel, silencieux)
+        try {
+          const updatedProfileViews = (profile.profile_views || 0) + 1;
+          supabase
+            .from("profiles")
+            .update({ profile_views: updatedProfileViews })
+            .eq("id", session.user.id)
+            .then();
+        } catch (err) {}
 
         if (resumesList && resumesList.length > 0) {
           setUserDocuments(resumesList);
@@ -1564,33 +1654,8 @@ export default function ProfilPage() {
               </button>
             )}
 
-            {/* Onglet Admin si l'utilisateur est admin ou publisher */}
-            {(profileRole === "admin" || profileRole === "publisher") && (
-              <Link
-                href="/admin"
-                className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
-                  pathname === "/admin" ? "text-amber-500 font-extrabold" : "text-amber-600 hover:text-amber-700"
-                }`}
-                title="Accéder au panneau d'administration"
-              >
-                <i className="fa-solid fa-shield-halved text-xl text-amber-500"></i>
-                <span className="text-[11px] font-extrabold tracking-tight text-amber-600">Admin</span>
-              </Link>
-            )}
-
-            {/* Onglet Recruteur si l'utilisateur a le badge verified_recruiter */}
-            {profileBadges?.includes("verified_recruiter") && (
-              <Link
-                href="/recruteur"
-                className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
-                  pathname === "/recruteur" ? "text-emerald-600 font-extrabold" : "text-emerald-700 hover:text-emerald-800"
-                }`}
-                title="Accéder à l'espace recruteur"
-              >
-                <i className="fa-solid fa-briefcase text-xl text-emerald-600"></i>
-                <span className="text-[11px] font-extrabold tracking-tight text-emerald-700">Recruteur</span>
-              </Link>
-            )}
+            {/* Rendu dynamique des liens Admin et Recruteur via le composant RoleNavLink */}
+            <RoleNavLink session={userSession} />
 
             {/* L'Extracteur 1-Click pour Candidat */}
             <Link
@@ -1711,7 +1776,7 @@ export default function ProfilPage() {
                     <span>Voir mon profil & CV</span>
                   </button>
 
-                  {(profileRole === "admin" || profileRole === "publisher") && (
+                  {isNavAdmin && (
                     <Link
                       href="/admin"
                       onClick={() => setUserMenuOpen(false)}
@@ -1722,7 +1787,7 @@ export default function ProfilPage() {
                     </Link>
                   )}
 
-                  {profileBadges?.includes("verified_recruiter") && (
+                  {isNavRecruiter && (
                     <Link
                       href="/recruteur"
                       onClick={() => setUserMenuOpen(false)}
