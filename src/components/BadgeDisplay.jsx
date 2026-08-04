@@ -31,13 +31,15 @@ export default function BadgeDisplay({ badges, size = "sm", className = "", clic
         const info = BADGE_INFO[badge];
         if (!info) return null; // badge inconnu : affichage silencieusement ignoré plutôt que planter
 
-        if (badge === "verified_recruiter" && clickable) {
+        if ((badge === "verified_recruiter" || badge === "administrateur") && clickable) {
+          const href = badge === "verified_recruiter" ? "/recruteur" : "/admin";
+          const title = badge === "verified_recruiter" ? "Accéder au tableau de bord recruteur" : "Accéder au tableau de bord d'administration";
           return (
             <Link
               key={badge}
-              href="/recruteur"
+              href={href}
               className="cursor-pointer inline-flex"
-              title="Accéder au tableau de bord recruteur"
+              title={title}
             >
               <span
                 className={`inline-flex items-center gap-1 rounded-full font-extrabold border ${info.className} ${sizeClass} transition hover:opacity-90 hover:scale-105 active:scale-95`}
