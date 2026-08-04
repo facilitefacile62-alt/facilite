@@ -79,6 +79,12 @@ export default function ProfilPage() {
   const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
   const aboutDropdownRef = useRef(null);
 
+  const [selectedSection, setSelectedSection] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const tabParam = new URLSearchParams(window.location.search).get("tab");
+    return tabParam === "personal_info" ? "info_perso" : (tabParam || null);
+  });
+
   useEffect(() => {
     const target = activeSection === "personal_info" ? "info_perso" : activeSection;
     if (activeAboutTab !== target) {
@@ -2119,6 +2125,7 @@ export default function ProfilPage() {
                   onClick={() => {
                     setActiveTab("about");
                     setActiveAboutTab("securite");
+                    setSelectedSection("securite");
                     setTimeout(() => {
                       const el = document.getElementById("section-about-profile");
                       if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -2578,14 +2585,8 @@ export default function ProfilPage() {
 
               <div className="flex flex-col md:flex-row items-start gap-6 pt-1">
                 
-                {/* BARRE LATÉRALE GAUCHE (ONGLETS À PROPOS) — repliable sur
-                    mobile (accordéon piloté par aboutTabsOpen), toujours
-                    visible en rail latéral à partir de md: */}
-                <div
-                  className={`w-full md:w-64 flex-shrink-0 border-r-0 md:border-r border-gray-200/80 pr-0 md:pr-4 space-y-1 overflow-hidden transition-all duration-200 ${
-                    aboutTabsOpen ? "flex flex-col" : "hidden"
-                  } md:flex md:flex-col`}
-                >
+                {/* DESKTOP SIDEBAR : BARRE LATÉRALE GAUCHE (ONGLETS À PROPOS) */}
+                <div className="hidden md:flex md:flex-col w-64 flex-shrink-0 border-r border-gray-200 pr-4 space-y-1">
                   {[
                     { id: "intro", label: "Intro", icon: "fa-solid fa-hand" },
                     { id: "info_perso", label: "Informations personnelles", icon: "fa-regular fa-id-card" },
@@ -2606,7 +2607,6 @@ export default function ProfilPage() {
                         type="button"
                         onClick={() => {
                           setActiveSection(tab.id);
-                          setAboutTabsOpen(false);
                         }}
                         className={`w-full text-left px-4 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center space-x-2.5 ${
                           isActive
@@ -2619,20 +2619,75 @@ export default function ProfilPage() {
                       </button>
                     );
                   })}
-
-                  {/* Repli manuel, mobile uniquement */}
-                  <button
-                    type="button"
-                    onClick={() => setAboutTabsOpen(false)}
-                    className="w-full md:hidden text-center px-4 py-2.5 rounded-xl text-xs font-extrabold text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition cursor-pointer flex items-center justify-center space-x-1.5"
-                  >
-                    <i className="fa-solid fa-chevron-up text-[10px]"></i>
-                    <span>Replier le menu</span>
-                  </button>
                 </div>
 
-                {/* ZONE DE CONTENU DÉTAILLÉE À DROITE */}
-                <div className="flex-1 w-full min-w-0 pl-0 md:pl-2 space-y-6">
+                {/* MOBILE VIEW LEVEL 1 : LIST OF SECTIONS (TikTok style) */}
+                {selectedSection === null && (
+                  <div className="flex flex-col md:hidden w-full space-y-2">
+                    {[
+                      { id: "intro", label: "Intro", icon: "fa-solid fa-hand" },
+                      { id: "info_perso", label: "Informations personnelles", icon: "fa-regular fa-id-card" },
+                      { id: "langues", label: "Langues", icon: "fa-solid fa-language" },
+                      { id: "experiences", label: "Expériences professionnelles", icon: "fa-solid fa-user-tie" },
+                      { id: "formation", label: "Formation", icon: "fa-solid fa-graduation-cap" },
+                      { id: "competences", label: "Compétences", icon: "fa-solid fa-lightbulb" },
+                      { id: "interets", label: "Centres d'intérêt", icon: "fa-solid fa-heart" },
+                      { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
+                      { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
+                      { id: "securite", label: "Sécurité & Connexion", icon: "fa-solid fa-lock" },
+                      { id: "noms", label: "Noms", icon: "fa-regular fa-user" },
+                    ].map((section) => (
+                      <button
+                        key={section.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSection(section.id);
+                          setActiveSection(section.id);
+                        }}
+                        className="w-full bg-white border border-gray-250 rounded-2xl p-4 flex items-center justify-between transition cursor-pointer hover:bg-gray-100/70 shadow-xs"
+                      >
+                        <div className="flex items-center space-x-3.5 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-gray-50 text-gray-500 flex items-center justify-center flex-shrink-0">
+                            <i className={`${section.icon} text-sm`}></i>
+                          </div>
+                          <span className="text-xs font-bold text-gray-800 truncate">{section.label}</span>
+                        </div>
+                        <i className="fa-solid fa-chevron-right text-gray-400 text-[10px]"></i>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* ZONE DE CONTENU DÉTAILLÉE À DROITE / MOBILE LEVEL 2 */}
+                <div className={`flex-1 w-full min-w-0 pl-0 md:pl-2 space-y-6 ${selectedSection === null ? "hidden md:block" : "block"}`}>
+                  
+                  {/* Fixed en-tête de retour sur mobile uniquement */}
+                  {selectedSection !== null && (
+                    <div className="flex items-center space-x-3.5 pb-4 border-b border-gray-150 md:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSection(null)}
+                        className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center cursor-pointer transition"
+                      >
+                        <i className="fa-solid fa-arrow-left text-sm"></i>
+                      </button>
+                      <span className="text-sm font-black text-gray-900">
+                        {[
+                          { id: "intro", label: "Intro" },
+                          { id: "info_perso", label: "Informations personnelles" },
+                          { id: "langues", label: "Langues" },
+                          { id: "experiences", label: "Expériences professionnelles" },
+                          { id: "formation", label: "Formation" },
+                          { id: "competences", label: "Compétences" },
+                          { id: "interets", label: "Centres d'intérêt" },
+                          { id: "coordonnees", label: "Coordonnées" },
+                          { id: "confidentialite", label: "Confidentialité et informations juridiques" },
+                          { id: "securite", label: "Sécurité & Connexion" },
+                          { id: "noms", label: "Noms" },
+                        ].find((s) => s.id === selectedSection)?.label || "Retour"}
+                      </span>
+                    </div>
+                  )}
                   
                   {/* ONGLET: INFORMATIONS PERSONNELLES */}
                   {activeAboutTab === "info_perso" && (
