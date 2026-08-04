@@ -478,6 +478,9 @@ export default function ProfilPage() {
       }
       setProfileBadges(finalBadges);
 
+      let profileCvUrl = profile?.cv_url || null;
+      let profileCvName = profile?.cv_name || null;
+
       if (profile) {
         setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
         setEducationLevel(profile.education_level || "Aucun");
@@ -507,9 +510,6 @@ export default function ProfilPage() {
         setShowContact(profile.show_contact === true);
         setCvVisibleRecruteurs(profile.cv_visible_recruteurs === true);
 
-        let profileCvUrl = profile?.cv_url;
-        let profileCvName = profile?.cv_name;
-
         // Incrémenter dynamiquement le compteur de vues du profil (optionnel, silencieux)
         try {
           const updatedProfileViews = (profile.profile_views || 0) + 1;
@@ -519,76 +519,90 @@ export default function ProfilPage() {
             .eq("id", session.user.id)
             .then();
         } catch (err) {}
+      } else {
+        // En cas d'erreur 500 ou d'échec de chargement, bascule sur des valeurs par défaut à partir de la session
+        setProfileName(session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "");
+        setContactEmail(session.user.email || "");
+        setAvatarUrl(session.user.user_metadata?.avatar_url || "/logo.jpeg");
+        setCoverUrl("/stellar-cover.png");
+        setEducationLevel("Aucun");
+        setProfileSubtitle("");
+        setProfileLocation("");
+        setProfileBio("");
+        setTempBio("");
+        setExperiences([]);
+        setEducations([]);
+        setUserLanguages([]);
+        setUserSkills([]);
+        setUserInterests([]);
+        setPinnedDetails([]);
+        setTempPinnedDetails([]);
+        setPhone(typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : "");
+        setMaritalStatus(typeof window !== "undefined" ? localStorage.getItem("user_marital_status") || "" : "");
+        setDriverLicense(typeof window !== "undefined" ? localStorage.getItem("user_driver_license") || "" : "");
+        setWebsiteUrl(typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : "");
+        setBirthDate(typeof window !== "undefined" ? localStorage.getItem("user_birth_date") || "" : "");
+        setGender(typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : "");
+        setCompany(typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : "");
+        setIsPublic(false);
+        setShowContact(true);
+        setCvVisibleRecruteurs(true);
+      }
 
-        if (resumesList && resumesList.length > 0) {
-          setUserDocuments(resumesList);
-          if (!profileCvUrl) {
-            profileCvUrl = resumesList[0].file_url;
-            profileCvName = resumesList[0]?.title;
-          }
-        } else if (profileCvUrl) {
+      if (resumesList && resumesList.length > 0) {
+        setUserDocuments(resumesList);
+        if (!profileCvUrl) {
+          profileCvUrl = resumesList[0].file_url;
+          profileCvName = resumesList[0]?.title;
+        }
+      } else if (profileCvUrl) {
+        setUserDocuments([{
+          id: "primary-profile-cv",
+          title: profileCvName || "Mon_CV_Professionnel",
+          file_url: profileCvUrl,
+          type: "CV",
+          created_at: new Date().toISOString()
+        }]);
+      } else if (typeof window !== "undefined") {
+        const localUrl = localStorage.getItem("user_cv_url");
+        const localName = localStorage.getItem("user_cv_name");
+        if (localUrl) {
+          profileCvUrl = localUrl;
+          profileCvName = localName;
           setUserDocuments([{
-            id: "primary-profile-cv",
-            title: profileCvName || "Mon_CV_Professionnel",
-            file_url: profileCvUrl,
+            id: "local-cv-doc",
+            title: localName || "Mon_CV_Professionnel",
+            file_url: localUrl,
             type: "CV",
             created_at: new Date().toISOString()
           }]);
-        } else if (typeof window !== "undefined") {
-          const localUrl = localStorage.getItem("user_cv_url");
-          const localName = localStorage.getItem("user_cv_name");
-          if (localUrl) {
-            profileCvUrl = localUrl;
-            profileCvName = localName;
-            setUserDocuments([{
-              id: "local-cv-doc",
-              title: localName || "Mon_CV_Professionnel",
-              file_url: localUrl,
-              type: "CV",
-              created_at: new Date().toISOString()
-            }]);
-          }
         }
-
-        if (profileCvUrl) {
-          setCvUrl(profileCvUrl);
-          setUploadedCvFileName(profileCvName || "Mon_CV_Professionnel");
-          if (profileCvUrl.includes("pdf") || profileCvUrl.startsWith("data:application/pdf")) {
-            setCvFileType("pdf");
-          } else if (profileCvUrl.includes("doc") || profileCvUrl.includes("word")) {
-            setCvFileType("doc");
-          } else {
-            setCvFileType("pdf");
-          }
-        }
-
-        if (profile?.full_name) {
-          const parts = profile.full_name.trim().split(" ");
-          setFirstName(parts[0] || "");
-          setLastName(parts.slice(1).join(" ") || "");
-        } else if (typeof window !== "undefined") {
-          setFirstName(localStorage.getItem("user_first_name") || "");
-          setLastName(localStorage.getItem("user_last_name") || "");
-        }
-
-        setJobTitle(profile?.headline || (typeof window !== "undefined" ? localStorage.getItem("user_job_title") || "" : ""));
-        setCity(profile?.city || (profile?.location ? profile.location.split(",")[0]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_city") || "" : "")));
-        setCountry(profile?.country || (profile?.location ? profile.location.split(",")[1]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_country") || "" : "")));
-      } else {
-        if (resumesList && resumesList.length > 0) {
-          setUserDocuments(resumesList);
-          setCvUrl(resumesList[0].file_url);
-          setUploadedCvFileName(resumesList[0].title);
-        }
-        if (typeof window !== "undefined") {
-          setFirstName(localStorage.getItem("user_first_name") || "");
-          setLastName(localStorage.getItem("user_last_name") || "");
-          setJobTitle(localStorage.getItem("user_job_title") || "");
-          setCity(localStorage.getItem("user_city") || "");
-          setCountry(localStorage.getItem("user_country") || "");
-        }
-        setProfileName(session.user.email?.split("@")[0] || "");
       }
+
+      if (profileCvUrl) {
+        setCvUrl(profileCvUrl);
+        setUploadedCvFileName(profileCvName || "Mon_CV_Professionnel");
+        if (profileCvUrl.includes("pdf") || profileCvUrl.startsWith("data:application/pdf")) {
+          setCvFileType("pdf");
+        } else if (profileCvUrl.includes("doc") || profileCvUrl.includes("word")) {
+          setCvFileType("doc");
+        } else {
+          setCvFileType("pdf");
+        }
+      }
+
+      if (profile?.full_name) {
+        const parts = profile.full_name.trim().split(" ");
+        setFirstName(parts[0] || "");
+        setLastName(parts.slice(1).join(" ") || "");
+      } else if (typeof window !== "undefined") {
+        setFirstName(localStorage.getItem("user_first_name") || "");
+        setLastName(localStorage.getItem("user_last_name") || "");
+      }
+
+      setJobTitle(profile?.headline || (typeof window !== "undefined" ? localStorage.getItem("user_job_title") || "" : ""));
+      setCity(profile?.city || (profile?.location ? profile.location.split(",")[0]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_city") || "" : "")));
+      setCountry(profile?.country || (profile?.location ? profile.location.split(",")[1]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_country") || "" : "")));
     }
 
     loadUserProfile();
