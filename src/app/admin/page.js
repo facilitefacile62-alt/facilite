@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import BadgeDisplay from "@/components/BadgeDisplay";
@@ -55,6 +56,7 @@ function growthPercent(current, previous) {
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [selectedLang, setSelectedLang] = useState("FR");
@@ -101,26 +103,48 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    async function loadAdminData() {
+    let active = true;
+    
+    // Sécurité de délai (Timeout de secours de 4 secondes)
+    const timeoutId = setTimeout(() => {
+      if (active) {
+        console.warn("[Admin Access] Sécurité timeout de 4s déclenchée.");
+        setLoading(false);
+      }
+    }, 4000);
+
+    async function verifyAdminAccessAndLoad() {
       try {
+        // Invalidation/Refresh forcé du cache session
+        await supabase.auth.refreshSession().catch(() => {});
         const { data: { session } } = await supabase.auth.getSession();
+        
         if (!session) {
-          window.location.replace("/login");
+          if (active) {
+            router.push("/login");
+          }
           return;
         }
-        setUserSession(session);
 
-        // Rôle du modérateur connecté : purement pour l'UX (masquer les
-        // actions Approuver/Rejeter à un publisher plutôt que d'offrir un
-        // bouton qui échouera systématiquement) — la vraie autorisation est
-        // vérifiée à l'intérieur de approve_badge_request()/
-        // reject_badge_request() (admin uniquement), pas ici.
-        const { data: myRoleRow } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .single();
-        setMyRole(myRoleRow?.role || null);
+        if (active) {
+          setUserSession(session);
+        }
+
+        // Appel direct à la fonction RPC is_admin
+        const { data: isAdmin, error: rpcError } = await supabase
+          .rpc("is_admin", { check_user_id: session.user.id });
+
+        if (rpcError || isAdmin !== true) {
+          console.warn("[Admin Access] Refus d'accès: non admin ou erreur RPC.", rpcError);
+          if (active) {
+            router.push("/profil");
+          }
+          return;
+        }
+
+        if (active) {
+          setMyRole("admin");
+        }
 
         const [profilesRes, rolesRes, offersRes, applicationsRes, resumesRes, badgeRequestsRes, pendingOffersRes, pendingReportsRes] = await Promise.all([
           supabase.from("profiles").select("*").order("created_at", { ascending: false }),
@@ -145,47 +169,55 @@ export default function AdminDashboardPage() {
             .order("created_at", { ascending: true }),
         ]);
 
-        if (pendingOffersRes.error) console.error("Erreur chargement file de modération:", pendingOffersRes.error);
-        else setPendingOffers(pendingOffersRes.data || []);
+        if (active) {
+          if (pendingOffersRes.error) console.error("Erreur chargement file de modération:", pendingOffersRes.error);
+          else setPendingOffers(pendingOffersRes.data || []);
 
-        if (pendingReportsRes.error) console.error("Erreur chargement signalements:", pendingReportsRes.error);
-        else setPendingReports(pendingReportsRes.data || []);
+          if (pendingReportsRes.error) console.error("Erreur chargement signalements:", pendingReportsRes.error);
+          else setPendingReports(pendingReportsRes.data || []);
 
-        if (profilesRes.error || rolesRes.error) {
-          console.error("Erreur chargement profils/rôles:", profilesRes.error || rolesRes.error);
-        } else {
-          // profiles et user_roles n'ont pas de relation FK directe entre
-          // elles (toutes deux référencent séparément auth.users) : pas
-          // d'embedding PostgREST possible, fusion faite ici côté client.
-          const roleByUserId = new Map((rolesRes.data || []).map((r) => [r.user_id, r]));
-          const merged = (profilesRes.data || []).map((p) => ({
-            ...p,
-            role: roleByUserId.get(p.id)?.role || "user",
-            status: roleByUserId.get(p.id)?.status || "active",
-          }));
-          setUsers(merged);
+          if (profilesRes.error || rolesRes.error) {
+            console.error("Erreur chargement profils/rôles:", profilesRes.error || rolesRes.error);
+          } else {
+            const roleByUserId = new Map((rolesRes.data || []).map((r) => [r.user_id, r]));
+            const merged = (profilesRes.data || []).map((p) => ({
+              ...p,
+              role: roleByUserId.get(p.id)?.role || "user",
+              status: roleByUserId.get(p.id)?.status || "active",
+            }));
+            setUsers(merged);
+          }
+
+          if (offersRes.error) console.error("Erreur chargement offres:", offersRes.error);
+          else setOffers(offersRes.data || []);
+
+          if (applicationsRes.error) console.error("Erreur chargement candidatures:", applicationsRes.error);
+          else setApplications(applicationsRes.data || []);
+
+          if (resumesRes.error) console.error("Erreur chargement CV:", resumesRes.error);
+          else setResumes(resumesRes.data || []);
+
+          if (badgeRequestsRes.error) console.error("Erreur chargement demandes de badge:", badgeRequestsRes.error);
+          else setBadgeRequests(badgeRequestsRes.data || []);
         }
 
-        if (offersRes.error) console.error("Erreur chargement offres:", offersRes.error);
-        else setOffers(offersRes.data || []);
-
-        if (applicationsRes.error) console.error("Erreur chargement candidatures:", applicationsRes.error);
-        else setApplications(applicationsRes.data || []);
-
-        if (resumesRes.error) console.error("Erreur chargement CV:", resumesRes.error);
-        else setResumes(resumesRes.data || []);
-
-        if (badgeRequestsRes.error) console.error("Erreur chargement demandes de badge:", badgeRequestsRes.error);
-        else setBadgeRequests(badgeRequestsRes.data || []);
       } catch (err) {
-        console.error("Exception chargement dashboard admin:", err);
+        console.error("Exception vérification/chargement admin:", err);
       } finally {
-        setLoading(false);
+        clearTimeout(timeoutId);
+        if (active) {
+          setLoading(false);
+        }
       }
     }
 
-    loadAdminData();
-  }, []);
+    verifyAdminAccessAndLoad();
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
+  }, [router]);
 
   const handleRoleChange = async (userId, newRole) => {
     const previousUsers = users;
