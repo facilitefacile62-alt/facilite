@@ -2623,7 +2623,7 @@ export default function ProfilPage() {
 
                 {/* MOBILE VIEW LEVEL 1 : LIST OF SECTIONS (TikTok style) */}
                 {selectedSection === null && (
-                  <div className="flex flex-col md:hidden w-full space-y-2">
+                  <div className="flex flex-col md:hidden w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
                     {[
                       { id: "intro", label: "Intro", icon: "fa-solid fa-hand" },
                       { id: "info_perso", label: "Informations personnelles", icon: "fa-regular fa-id-card" },
@@ -2644,7 +2644,7 @@ export default function ProfilPage() {
                           setSelectedSection(section.id);
                           setActiveSection(section.id);
                         }}
-                        className="w-full bg-white border border-gray-250 rounded-2xl p-4 flex items-center justify-between transition cursor-pointer hover:bg-gray-100/70 shadow-xs"
+                        className="w-full px-4 py-3.5 flex items-center justify-between bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer text-left"
                       >
                         <div className="flex items-center space-x-3.5 min-w-0">
                           <div className="w-9 h-9 rounded-xl bg-gray-50 text-gray-500 flex items-center justify-center flex-shrink-0">
