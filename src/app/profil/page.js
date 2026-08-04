@@ -43,6 +43,8 @@ export default function ProfilPage() {
   const [profileBadges, setProfileBadges] = useState([]);
   const [isNavAdmin, setIsNavAdmin] = useState(false);
   const [isNavRecruiter, setIsNavRecruiter] = useState(false);
+  const [roleQueryError, setRoleQueryError] = useState(null);
+  const [adminRpcError, setAdminRpcError] = useState(null);
   const [profileSubtitle, setProfileSubtitle] = useState("");
   const [profileLocation, setProfileLocation] = useState("");
   const [profileBio, setProfileBio] = useState("");
@@ -76,13 +78,14 @@ export default function ProfilPage() {
         if (cancelled) return;
         if (error) {
           console.warn("[Profil Nav] Erreur RPC is_admin:", error.message);
+          setAdminRpcError(error.message);
           setIsNavAdmin(false);
         } else {
           setIsNavAdmin(data === true);
         }
       })
-      .catch(() => {
-        if (!cancelled) setIsNavAdmin(false);
+      .catch((err) => {
+        if (!cancelled) setAdminRpcError(err.message || "Catch error");
       });
 
     supabase
@@ -388,6 +391,7 @@ export default function ProfilPage() {
           .eq("user_id", session.user.id)
           .single();
         if (error) {
+          setRoleQueryError(error.message || `Code: ${error.code}`);
           if (error.code !== "PGRST116") {
             console.warn("[loadUserProfile] Erreur de chargement du rôle:", error.message);
           }
@@ -395,6 +399,7 @@ export default function ProfilPage() {
           userRoleRow = data;
         }
       } catch (err) {
+        setRoleQueryError(err.message || "Exception user_roles");
         console.error("[loadUserProfile] Exception user_roles:", err);
       }
 
@@ -404,11 +409,13 @@ export default function ProfilPage() {
         const { data, error } = await supabase
           .rpc("is_admin", { check_user_id: session.user.id });
         if (error) {
+          setAdminRpcError(error.message);
           console.warn("[loadUserProfile] Erreur RPC is_admin:", error.message);
         } else {
           isAdminRpc = data === true;
         }
       } catch (err) {
+        setAdminRpcError(err.message || "Exception RPC is_admin");
         console.error("[loadUserProfile] Exception RPC is_admin:", err);
       }
 
@@ -1573,13 +1580,18 @@ export default function ProfilPage() {
   return (
     <>
       {/* BANNER DEBUG POUR CORRECTIF ACCES ADMIN */}
-      <div className="bg-red-950 text-white p-3.5 text-xs text-center z-[1000] sticky top-0 font-mono flex flex-wrap gap-4 justify-center border-b border-red-800">
-        <span><strong>DEBUG PROFIL:</strong></span>
-        <span>Email: {userSession?.user?.email || "null"}</span>
-        <span>ID: {userSession?.user?.id || "null"}</span>
-        <span>profileRole: {profileRole || "null"}</span>
-        <span>isNavAdmin: {isNavAdmin ? "true" : "false"}</span>
-        <span>isNavRecruiter: {isNavRecruiter ? "true" : "false"}</span>
+      <div className="bg-red-950 text-white p-3.5 text-xs text-center z-[1000] sticky top-0 font-mono flex flex-col gap-1 items-center border-b border-red-800">
+        <div className="flex flex-wrap gap-4 justify-center">
+          <span><strong>DEBUG PROFIL:</strong></span>
+          <span>Email: {userSession?.user?.email || "null"}</span>
+          <span>ID: {userSession?.user?.id || "null"}</span>
+          <span>profileRole: {profileRole || "null"}</span>
+          <span>isNavAdmin: {isNavAdmin ? "true" : "false"}</span>
+          <span>isNavRecruiter: {isNavRecruiter ? "true" : "false"}</span>
+        </div>
+        <div className="text-[10px] text-red-300">
+          <span>Err Rôle: {roleQueryError || "None"} | Err RPC is_admin: {adminRpcError || "None"}</span>
+        </div>
       </div>
       {/* Toast Notification Floating */}
       <div
