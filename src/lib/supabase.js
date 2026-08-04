@@ -40,15 +40,30 @@ export async function getSignedCvUrl(pathOrUrl, expiresInSeconds = 3600) {
     return pathOrUrl;
   }
 
-  const { data, error } = await supabase.storage
-    .from("resumes")
-    .createSignedUrl(pathOrUrl, expiresInSeconds);
+  try {
+    const { data, error } = await supabase.storage
+      .from("resumes")
+      .createSignedUrl(pathOrUrl, expiresInSeconds);
 
-  if (error) {
-    console.error("Impossible de générer l'URL signée du document:", error.message);
-    return null;
+    if (error) {
+      console.warn("Impossible de générer l'URL signée du document via createSignedUrl (bascule vers public URL):", error.message);
+      const { data: pubData } = supabase.storage
+        .from("resumes")
+        .getPublicUrl(pathOrUrl);
+      return pubData?.publicUrl || null;
+    }
+    return data?.signedUrl || null;
+  } catch (err) {
+    console.warn("Exception lors de la génération de l'URL signée (bascule vers public URL):", err);
+    try {
+      const { data: pubData } = supabase.storage
+        .from("resumes")
+        .getPublicUrl(pathOrUrl);
+      return pubData?.publicUrl || null;
+    } catch (e) {
+      return null;
+    }
   }
-  return data?.signedUrl || null;
 }
 
 /**

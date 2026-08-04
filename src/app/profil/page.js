@@ -320,26 +320,30 @@ export default function ProfilPage() {
         ? valeur
         : showContact;
 
-    const { error } = await supabase.from("profiles").upsert({
-      id: userSession.user.id,
-      is_public: majIsPublic,
-      show_contact: majShowContact,
-      updated_at: new Date().toISOString(),
-    });
+    try {
+      const { error } = await supabase.from("profiles").update({
+        is_public: majIsPublic,
+        show_contact: majShowContact,
+        updated_at: new Date().toISOString(),
+      }).eq("id", userSession.user.id);
 
-    setSavingVisibility(false);
+      if (error) {
+        triggerToast("Impossible d'enregistrer ce réglage.", "fa-triangle-exclamation");
+        return;
+      }
 
-    if (error) {
-      triggerToast("Impossible d'enregistrer ce réglage.", "fa-triangle-exclamation");
-      return;
+      setIsPublic(majIsPublic);
+      setShowContact(majShowContact);
+      triggerToast(
+        majIsPublic ? "Profil public activé." : "Profil repassé en privé.",
+        majIsPublic ? "fa-globe" : "fa-lock"
+      );
+    } catch (err) {
+      console.error("Exception visibility update:", err);
+      triggerToast("Erreur lors de la sauvegarde", "fa-triangle-exclamation");
+    } finally {
+      setSavingVisibility(false);
     }
-
-    setIsPublic(majIsPublic);
-    setShowContact(majShowContact);
-    triggerToast(
-      majIsPublic ? "Profil public activé." : "Profil repassé en privé.",
-      majIsPublic ? "fa-globe" : "fa-lock"
-    );
   };
 
   /**
@@ -354,24 +358,29 @@ export default function ProfilPage() {
     if (!userSession?.user) return;
     setSavingCvVisibility(true);
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({ cv_visible_recruteurs: valeur })
-      .eq("id", userSession.user.id);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ cv_visible_recruteurs: valeur })
+        .eq("id", userSession.user.id);
 
-    setSavingCvVisibility(false);
+      if (error) {
+        triggerToast("Impossible d'enregistrer ce réglage.", "fa-triangle-exclamation");
+        return;
+      }
 
-    if (error) {
-      triggerToast("Impossible d'enregistrer ce réglage.", "fa-triangle-exclamation");
-      return;
+      setCvVisibleRecruteurs(valeur);
+      if (valeur) setShowCvVisibilityInvite(false);
+      triggerToast(
+        valeur ? "Votre CV est désormais visible par les recruteurs vérifiés." : "Votre CV n'est plus visible par les recruteurs.",
+        valeur ? "fa-eye" : "fa-eye-slash"
+      );
+    } catch (err) {
+      console.error("Exception cv visibility update:", err);
+      triggerToast("Erreur lors de l'enregistrement", "fa-triangle-exclamation");
+    } finally {
+      setSavingCvVisibility(false);
     }
-
-    setCvVisibleRecruteurs(valeur);
-    if (valeur) setShowCvVisibilityInvite(false);
-    triggerToast(
-      valeur ? "Votre CV est désormais visible par les recruteurs vérifiés." : "Votre CV n'est plus visible par les recruteurs.",
-      valeur ? "fa-eye" : "fa-eye-slash"
-    );
   };
 
   const triggerToast = (msg, icon = "fa-check") => {
@@ -781,15 +790,24 @@ export default function ProfilPage() {
   // Sauvegarder la biographie dans Supabase
   const handleSaveBio = async () => {
     if (userSession?.user) {
-      await supabase.from("profiles").upsert({
-        id: userSession.user.id,
-        email: userSession.user.email,
-        bio: profileBio,
-        updated_at: new Date().toISOString(),
-      });
+      try {
+        const { error } = await supabase.from("profiles").update({
+          bio: profileBio,
+          updated_at: new Date().toISOString(),
+        }).eq("id", userSession.user.id);
+
+        if (error) {
+          console.error("Error bio update:", error);
+          triggerToast("Erreur lors de la mise à jour", "fa-triangle-exclamation");
+          return;
+        }
+        triggerToast("Résumé du profil mis à jour !", "fa-pen-to-square");
+      } catch (err) {
+        console.error("Exception bio update:", err);
+        triggerToast("Erreur lors de la mise à jour", "fa-triangle-exclamation");
+      }
     }
     setIsEditingBio(false);
-    triggerToast("Résumé du profil mis à jour !", "fa-pen-to-square");
   };
 
   // Sauvegarder les informations personnelles dans Supabase
@@ -800,15 +818,24 @@ export default function ProfilPage() {
     setProfileLocation(city && country ? `${city}, ${country}` : city || country);
 
     if (userSession?.user) {
-      await supabase.from("profiles").upsert({
-        id: userSession.user.id,
-        email: userSession.user.email,
-        full_name: fullName,
-        headline: jobTitle,
-        location: city && country ? `${city}, ${country}` : city || country,
-        updated_at: new Date().toISOString(),
-      });
-      triggerToast("Profil sauvegardé avec succès dans Supabase !", "fa-circle-check");
+      try {
+        const { error } = await supabase.from("profiles").update({
+          full_name: fullName,
+          headline: jobTitle,
+          location: city && country ? `${city}, ${country}` : city || country,
+          updated_at: new Date().toISOString(),
+        }).eq("id", userSession.user.id);
+
+        if (error) {
+          console.error("Error profile info update:", error);
+          triggerToast("Erreur lors de la sauvegarde", "fa-triangle-exclamation");
+        } else {
+          triggerToast("Profil sauvegardé avec succès !", "fa-circle-check");
+        }
+      } catch (err) {
+        console.error("Exception profile info update:", err);
+        triggerToast("Erreur lors de la sauvegarde", "fa-triangle-exclamation");
+      }
     }
   };
 
@@ -1626,13 +1653,14 @@ export default function ProfilPage() {
 
     try {
       const payload = {
-        id: userSession.user.id,
-        email: userSession.user.email,
         [fieldKey]: fieldValue,
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from("profiles").upsert(payload);
+      const { error } = await supabase
+        .from("profiles")
+        .update(payload)
+        .eq("id", userSession.user.id);
 
       if (error) {
         console.error(`Erreur lors de la mise à jour de ${fieldKey}:`, error);
