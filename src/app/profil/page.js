@@ -1550,8 +1550,8 @@ export default function ProfilPage() {
               </button>
             )}
 
-            {/* Onglet Admin si l'utilisateur est admin */}
-            {profileRole === "admin" && (
+            {/* Onglet Admin si l'utilisateur est admin ou publisher */}
+            {(profileRole === "admin" || profileRole === "publisher") && (
               <Link
                 href="/admin"
                 className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
@@ -1697,7 +1697,7 @@ export default function ProfilPage() {
                     <span>Voir mon profil & CV</span>
                   </button>
 
-                  {profileRole === "admin" && (
+                  {(profileRole === "admin" || profileRole === "publisher") && (
                     <Link
                       href="/admin"
                       onClick={() => setUserMenuOpen(false)}

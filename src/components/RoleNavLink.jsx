@@ -30,22 +30,47 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
     }
     let cancelled = false;
 
-    // Requêtes parallèles : rôle + badge recruteur
-    Promise.all([
-      supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .single(),
-      supabase.rpc("has_badge", {
+    // Requêtes indépendantes pour le rôle et le badge recruteur
+    // L'absence de rôle (ex: recruteur sans rôle spécifique) ou une erreur PGRST116
+    // ne doit pas bloquer la vérification de son badge recruteur.
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id)
+      .single()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          // PGRST116 attendu pour les comptes recruteurs/candidats simples
+          if (error.code !== "PGRST116") {
+            console.warn("[RoleNavLink] Erreur de rôle:", error.message);
+          }
+          setRole(null);
+        } else {
+          setRole(data?.role || null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setRole(null);
+      });
+
+    supabase
+      .rpc("has_badge", {
         check_user_id: session.user.id,
         badge_name: "verified_recruiter",
-      }),
-    ]).then(([roleResult, badgeResult]) => {
-      if (cancelled) return;
-      setRole(roleResult.data?.role || null);
-      setIsVerifiedRecruiter(badgeResult.data === true);
-    });
+      })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.warn("[RoleNavLink] Erreur has_badge:", error.message);
+          setIsVerifiedRecruiter(false);
+        } else {
+          setIsVerifiedRecruiter(data === true);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setIsVerifiedRecruiter(false);
+      });
 
     return () => {
       cancelled = true;
