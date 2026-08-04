@@ -43,6 +43,11 @@ export default function ProfilPage() {
   const [profileBadges, setProfileBadges] = useState([]);
   const [isNavAdmin, setIsNavAdmin] = useState(false);
   const [isNavRecruiter, setIsNavRecruiter] = useState(false);
+  const [activeTab, setActiveTab] = useState("about"); // "about" | "documents" | "settings"
+  const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const plusMenuRef = useRef(null);
+  const [sectionTitleMenuOpen, setSectionTitleMenuOpen] = useState(false);
+  const sectionTitleMenuRef = useRef(null);
   const [roleQueryError, setRoleQueryError] = useState(null);
   const [adminRpcError, setAdminRpcError] = useState(null);
   const [profileSubtitle, setProfileSubtitle] = useState("");
@@ -615,6 +620,8 @@ export default function ProfilPage() {
       if (e.key === "Escape") {
         if (contactModalOpen) handleCloseModal();
         if (plusDropdownOpen) setPlusDropdownOpen(false);
+        if (plusMenuOpen) setPlusMenuOpen(false);
+        if (sectionTitleMenuOpen) setSectionTitleMenuOpen(false);
         if (notificationsModalOpen) setNotificationsModalOpen(false);
         if (userMenuOpen) setUserMenuOpen(false);
       }
@@ -622,6 +629,12 @@ export default function ProfilPage() {
     const handleClickOutside = (e) => {
       if (plusDropdownRef.current && !plusDropdownRef.current.contains(e.target)) {
         setPlusDropdownOpen(false);
+      }
+      if (plusMenuRef.current && !plusMenuRef.current.contains(e.target)) {
+        setPlusMenuOpen(false);
+      }
+      if (sectionTitleMenuRef.current && !sectionTitleMenuRef.current.contains(e.target)) {
+        setSectionTitleMenuOpen(false);
       }
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setUserMenuOpen(false);
@@ -633,7 +646,7 @@ export default function ProfilPage() {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [contactModalOpen, plusDropdownOpen, notificationsModalOpen, userMenuOpen]);
+  }, [contactModalOpen, plusDropdownOpen, plusMenuOpen, sectionTitleMenuOpen, notificationsModalOpen, userMenuOpen]);
 
   // Sélection d'une image pour ouverture de la modale de recadrage/zoom
   const handleSelectImageForCrop = (e, type) => {
@@ -1790,8 +1803,10 @@ export default function ProfilPage() {
                     type="button"
                     onClick={() => {
                       setUserMenuOpen(false);
-                      const el = document.getElementById("section-mon-profil-cv");
-                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                      setActiveTab("about");
+                      setTimeout(() => {
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }, 50);
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition flex items-center space-x-2.5 cursor-pointer"
                   >
@@ -2075,9 +2090,12 @@ export default function ProfilPage() {
                 </div>
                 <button
                   onClick={() => {
-                    const el = document.getElementById("section-mon-profil-cv");
-                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                    setActiveTab("about");
                     setActiveAboutTab("securite");
+                    setTimeout(() => {
+                      const el = document.getElementById("section-about-profile");
+                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                    }, 50);
                   }}
                   className="px-4 py-2 w-full sm:w-auto text-center bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition shadow-sm cursor-pointer whitespace-nowrap shrink-0"
                 >
@@ -2284,28 +2302,194 @@ export default function ProfilPage() {
                   </div>
                 </div>
               </div>
+              {/* BARRE D'ONGLETS HORIZONTALE STYLE FACEBOOK/LINKEDIN */}
+              <div className="border-t border-gray-150 px-6 md:px-8 bg-gray-50/70 flex items-center justify-between">
+                <div className="flex space-x-6 overflow-x-auto scrollbar-none py-3 w-full">
+                  <button
+                    onClick={() => setActiveTab("about")}
+                    className={`text-sm font-extrabold pb-2.5 pt-1 transition-all relative whitespace-nowrap cursor-pointer ${
+                      activeTab === "about" ? "text-blue-600 font-black border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    <span>À propos</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("documents")}
+                    className={`text-sm font-extrabold pb-2.5 pt-1 transition-all relative whitespace-nowrap cursor-pointer ${
+                      activeTab === "documents" ? "text-blue-600 font-black border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    <span>Mes documents</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("settings")}
+                    className={`text-sm font-extrabold pb-2.5 pt-1 transition-all relative whitespace-nowrap cursor-pointer ${
+                      activeTab === "settings" ? "text-blue-600 font-black border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    <span>Paramètres</span>
+                  </button>
+
+                  {/* Dropdown "Plus" */}
+                  <div className="relative inline-block text-left" ref={plusMenuRef}>
+                    <button
+                      onClick={() => setPlusMenuOpen(!plusMenuOpen)}
+                      className="text-sm font-extrabold pb-2.5 pt-1 text-gray-500 hover:text-gray-800 transition-all flex items-center space-x-1 cursor-pointer"
+                    >
+                      <span>Plus</span>
+                      <i className={`fa-solid fa-caret-down text-[10px] transition-transform duration-200 ${plusMenuOpen ? "rotate-180" : ""}`}></i>
+                    </button>
+                    {plusMenuOpen && (
+                      <div className="absolute right-0 md:left-0 mt-2 w-48 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm">
+                        <button
+                          onClick={() => {
+                            setActiveTab("about");
+                            setPlusMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-regular fa-user text-gray-400"></i>
+                          <span>À propos</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("documents");
+                            setPlusMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-regular fa-file-lines text-gray-400"></i>
+                          <span>Mes documents</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("settings");
+                            setPlusMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-solid fa-gear text-gray-400"></i>
+                          <span>Paramètres</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
             {/* NOUVELLE SECTION PARAMÈTRES (THEME) */}
-            <ThemeSettings />
+            {activeTab === "settings" && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6 animate-fade-in">
+                <div>
+                  <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setSectionTitleMenuOpen(!sectionTitleMenuOpen)}
+                      className="flex items-center space-x-2 text-xl md:text-2xl font-black text-gray-900 tracking-tight cursor-pointer hover:text-blue-600 transition"
+                    >
+                      <span>Paramètres</span>
+                      <i className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 ${sectionTitleMenuOpen ? "rotate-180" : ""}`}></i>
+                    </button>
+                    {sectionTitleMenuOpen && (
+                      <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm">
+                        <button
+                          onClick={() => {
+                            setActiveTab("about");
+                            setSectionTitleMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-regular fa-user text-gray-400"></i>
+                          <span>À propos</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("documents");
+                            setSectionTitleMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-regular fa-file-lines text-gray-400"></i>
+                          <span>Mes documents</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("settings");
+                            setSectionTitleMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-solid fa-gear text-gray-400"></i>
+                          <span>Paramètres</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs md:text-sm text-gray-500 font-medium mt-1">Personnalisez votre expérience visuelle et vos préférences.</p>
+                </div>
+                <ThemeSettings />
+              </div>
+            )}
 
             {/* SECTION À PROPOS MULTI-ONGLETS (CENTRALISÉE & UNIFIÉE) */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
-              <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight pb-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => setAboutTabsOpen((v) => !v)}
-                  aria-expanded={aboutTabsOpen}
-                  className="flex items-center space-x-2 md:cursor-default md:pointer-events-none cursor-pointer"
-                >
-                  <span>À propos</span>
-                  <i
-                    className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 md:hidden ${
-                      aboutTabsOpen ? "rotate-180" : ""
-                    }`}
-                  ></i>
-                </button>
+            {activeTab === "about" && (
+              <div id="section-about-profile" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4 animate-fade-in">
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight pb-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                  <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setSectionTitleMenuOpen(!sectionTitleMenuOpen)}
+                      className="flex items-center space-x-2 cursor-pointer text-gray-900 hover:text-blue-600 transition"
+                    >
+                      <span>À propos</span>
+                      <i className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 ${sectionTitleMenuOpen ? "rotate-180" : ""}`}></i>
+                    </button>
+                    {sectionTitleMenuOpen && (
+                      <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm">
+                        <button
+                          onClick={() => {
+                            setActiveTab("about");
+                            setSectionTitleMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-regular fa-user text-gray-400"></i>
+                          <span>À propos</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("documents");
+                            setSectionTitleMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-regular fa-file-lines text-gray-400"></i>
+                          <span>Mes documents</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("settings");
+                            setSectionTitleMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-solid fa-gear text-gray-400"></i>
+                          <span>Paramètres</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
-                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3">
+                    {/* Rubriques d'informations sur mobile */}
+                    <button
+                      type="button"
+                      onClick={() => setAboutTabsOpen((v) => !v)}
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1 transition cursor-pointer md:hidden"
+                    >
+                      <span>Rubriques</span>
+                      <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${aboutTabsOpen ? "rotate-180" : ""}`}></i>
+                    </button>
                   <input
                     type="file"
                     ref={aiCvFileInputRef}
@@ -3333,13 +3517,58 @@ export default function ProfilPage() {
 
               </div>
             </div>
+            )}
 
             {/* SECTION MES DOCUMENTS */}
-            <div id="section-mon-profil-cv" className="space-y-3 pt-2 scroll-mt-24">
-              <div>
-                <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Mes documents</h2>
-                <p className="text-xs md:text-sm text-gray-500 font-medium">Gérez vos fichiers réutilisables, CVs et lettres de motivation.</p>
-              </div>
+            {activeTab === "documents" && (
+              <div id="section-mon-profil-cv" className="space-y-3 pt-2 scroll-mt-24 animate-fade-in">
+                <div>
+                  <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setSectionTitleMenuOpen(!sectionTitleMenuOpen)}
+                      className="flex items-center space-x-2 text-xl md:text-2xl font-black text-gray-900 tracking-tight cursor-pointer hover:text-blue-600 transition"
+                    >
+                      <span>Mes documents</span>
+                      <i className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 ${sectionTitleMenuOpen ? "rotate-180" : ""}`}></i>
+                    </button>
+                    {sectionTitleMenuOpen && (
+                      <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm font-sans">
+                        <button
+                          onClick={() => {
+                            setActiveTab("about");
+                            setSectionTitleMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-regular fa-user text-gray-400"></i>
+                          <span>À propos</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("documents");
+                            setSectionTitleMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-regular fa-file-lines text-gray-400"></i>
+                          <span>Mes documents</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("settings");
+                            setSectionTitleMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                        >
+                          <i className="fa-solid fa-gear text-gray-400"></i>
+                          <span>Paramètres</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs md:text-sm text-gray-500 font-medium mt-1">Gérez vos fichiers réutilisables, CVs et lettres de motivation.</p>
+                </div>
 
               {/* Carte Principale Formulaire */}
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
@@ -3520,6 +3749,7 @@ export default function ProfilPage() {
                 </div>
               </div>
             </div>
+            )}
 
           </div>
 
