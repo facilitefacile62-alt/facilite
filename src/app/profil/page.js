@@ -70,6 +70,29 @@ export default function ProfilPage() {
     return new URLSearchParams(window.location.search).get("tab") || "info_perso";
   });
 
+  const [activeSection, setActiveSection] = useState(() => {
+    if (typeof window === "undefined") return "info_perso";
+    const tabParam = new URLSearchParams(window.location.search).get("tab");
+    return tabParam === "personal_info" ? "info_perso" : (tabParam || "info_perso");
+  });
+
+  const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
+  const aboutDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const target = activeSection === "personal_info" ? "info_perso" : activeSection;
+    if (activeAboutTab !== target) {
+      setActiveAboutTab(target);
+    }
+  }, [activeSection, activeAboutTab]);
+
+  useEffect(() => {
+    const target = activeAboutTab === "info_perso" ? "info_perso" : activeAboutTab;
+    if (activeSection !== target) {
+      setActiveSection(target);
+    }
+  }, [activeAboutTab, activeSection]);
+
   useEffect(() => {
     if (!userSession?.user?.id) {
       setIsNavAdmin(false);
@@ -621,6 +644,7 @@ export default function ProfilPage() {
         if (contactModalOpen) handleCloseModal();
         if (plusDropdownOpen) setPlusDropdownOpen(false);
         if (plusMenuOpen) setPlusMenuOpen(false);
+        if (aboutDropdownOpen) setAboutDropdownOpen(false);
         if (sectionTitleMenuOpen) setSectionTitleMenuOpen(false);
         if (notificationsModalOpen) setNotificationsModalOpen(false);
         if (userMenuOpen) setUserMenuOpen(false);
@@ -632,6 +656,9 @@ export default function ProfilPage() {
       }
       if (plusMenuRef.current && !plusMenuRef.current.contains(e.target)) {
         setPlusMenuOpen(false);
+      }
+      if (aboutDropdownRef.current && !aboutDropdownRef.current.contains(e.target)) {
+        setAboutDropdownOpen(false);
       }
       if (sectionTitleMenuRef.current && !sectionTitleMenuRef.current.contains(e.target)) {
         setSectionTitleMenuOpen(false);
@@ -646,7 +673,7 @@ export default function ProfilPage() {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [contactModalOpen, plusDropdownOpen, plusMenuOpen, sectionTitleMenuOpen, notificationsModalOpen, userMenuOpen]);
+  }, [contactModalOpen, plusDropdownOpen, plusMenuOpen, aboutDropdownOpen, sectionTitleMenuOpen, notificationsModalOpen, userMenuOpen]);
 
   // Sélection d'une image pour ouverture de la modale de recadrage/zoom
   const handleSelectImageForCrop = (e, type) => {
@@ -2482,14 +2509,52 @@ export default function ProfilPage() {
 
                   <div className="flex items-center space-x-3">
                     {/* Rubriques d'informations sur mobile */}
-                    <button
-                      type="button"
-                      onClick={() => setAboutTabsOpen((v) => !v)}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1 transition cursor-pointer md:hidden"
-                    >
-                      <span>Rubriques</span>
-                      <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${aboutTabsOpen ? "rotate-180" : ""}`}></i>
-                    </button>
+                    <div className="relative inline-block text-left md:hidden" ref={aboutDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setAboutDropdownOpen(!aboutDropdownOpen)}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                      >
+                        <span>Rubriques</span>
+                        <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${aboutDropdownOpen ? "rotate-180" : ""}`}></i>
+                      </button>
+                      {aboutDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm max-h-80 overflow-y-auto">
+                          {[
+                            { id: "intro", label: "Intro", icon: "fa-solid fa-hand" },
+                            { id: "info_perso", label: "Informations personnelles", icon: "fa-regular fa-id-card" },
+                            { id: "langues", label: "Langues", icon: "fa-solid fa-language" },
+                            { id: "experiences", label: "Expériences professionnelles", icon: "fa-solid fa-user-tie" },
+                            { id: "formation", label: "Formation", icon: "fa-solid fa-graduation-cap" },
+                            { id: "competences", label: "Compétences", icon: "fa-solid fa-lightbulb" },
+                            { id: "interets", label: "Centres d'intérêt", icon: "fa-solid fa-heart" },
+                            { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
+                            { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
+                            { id: "securite", label: "Sécurité & Connexion", icon: "fa-solid fa-lock" },
+                            { id: "noms", label: "Noms", icon: "fa-regular fa-user" },
+                          ].map((section) => {
+                            const isSectionActive = activeSection === section.id;
+                            return (
+                              <button
+                                key={section.id}
+                                onClick={() => {
+                                  setActiveSection(section.id);
+                                  setAboutDropdownOpen(false);
+                                }}
+                                className={`w-full px-4 py-2.5 text-left text-xs transition cursor-pointer flex items-center space-x-2.5 ${
+                                  isSectionActive
+                                    ? "bg-[#E8F0FE] text-[#1D4ED8] font-extrabold"
+                                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-bold"
+                                }`}
+                              >
+                                <i className={`${section.icon} text-xs w-4 text-center ${isSectionActive ? "text-[#1D4ED8]" : "text-gray-400"}`}></i>
+                                <span className="truncate">{section.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   <input
                     type="file"
                     ref={aiCvFileInputRef}
@@ -2534,13 +2599,13 @@ export default function ProfilPage() {
                     { id: "securite", label: "Sécurité & Connexion", icon: "fa-solid fa-lock" },
                     { id: "noms", label: "Noms", icon: "fa-regular fa-user" },
                   ].map((tab) => {
-                    const isActive = activeAboutTab === tab.id;
+                    const isActive = activeSection === tab.id;
                     return (
                       <button
                         key={tab.id}
                         type="button"
                         onClick={() => {
-                          setActiveAboutTab(tab.id);
+                          setActiveSection(tab.id);
                           setAboutTabsOpen(false);
                         }}
                         className={`w-full text-left px-4 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center space-x-2.5 ${
