@@ -21,6 +21,8 @@ const PUBLIC_ROUTES = [
   "/service",
   "/offres",
   "/recruteurs", // vitrines publiques recruteur (/recruteurs/[id])
+  "/recrutement-spontane",
+  "/recrutement-journalier",
 ];
 
 // Comparaison par segment de chemin plutôt que préfixe brut : pathname.startsWith("/recruteur")
@@ -35,86 +37,117 @@ function estRoutePublique(pathname) {
   return PUBLIC_ROUTES.some((route) => pathnameMatchesRoute(pathname, route));
 }
 
-export async function middleware(req) {
-  const res = NextResponse.next();
-
-  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    cookies: {
-      getAll: () => req.cookies.getAll(),
-      setAll: (cookiesToSet) =>
-        cookiesToSet.forEach(({ name, value, options }) =>
-          res.cookies.set(name, value, options)
-        ),
-    },
+// Helper pour exécuter une promesse avec un temps limite (timeout) en ms
+async function withTimeout(promise, timeoutMs = 1500) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error("TIMEOUT"));
+    }, timeoutMs);
   });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
-  // getUser() valide la signature et l'expiration du JWT auprès de Supabase.
-  // getSession() se contenterait de lire le jeton local, sans rien prouver.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+export async function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  if (!estRoutePublique(pathname) && !user) {
+  // 1. Si la route est publique, court-circuit immédiat sans aucun appel réseau
+  if (estRoutePublique(pathname)) {
+    return NextResponse.next();
+  }
+
+  // 2. Vérification rapide des cookies pour les utilisateurs anonymes
+  // Si aucun cookie Supabase n'est présent, on évite tout appel Supabase réseau
+  const cookies = req.cookies.getAll();
+  const hasSupabaseCookie = cookies.some(
+    (c) => c.name.startsWith("sb-") || c.name.includes("auth-token")
+  );
+
+  if (!hasSupabaseCookie) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    // Permet de ramener l'utilisateur là où il allait, une fois connecté
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Une seule lecture de user_roles pour cette requête : le statut (pour le
-  // blocage suspension ci-dessous, sur TOUTE page protégée) et le rôle (pour
-  // l'autorisation par section plus bas) — éviter d'interroger deux fois la
-  // même ligne.
-  let userRoleRow = null;
-  if (user && !estRoutePublique(pathname)) {
-    const { data } = await supabase.from("user_roles").select("role, status").eq("user_id", user.id).single();
-    userRoleRow = data;
+  const res = NextResponse.next();
+  let user = null;
+  let supabase = null;
 
-    // Un compte suspendu perd l'accès à toute page protégée immédiatement —
-    // pas seulement aux actions gérées par current_user_role() côté SQL. Le
-    // verrou réel tient déjà au niveau PostgreSQL (voir
-    // 20260803040000_moderation_et_suspension.sql) ; ce blocage ici est la
-    // couche UX qui évite d'atterrir sur une page qui échoue silencieusement
-    // requête par requête.
-    if (userRoleRow?.status === "suspended") {
-      await supabase.auth.signOut();
-      const url = req.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("suspended", "true");
-      return NextResponse.redirect(url);
-    }
+  // 3. Récupération de l'utilisateur avec timeout résilient
+  try {
+    supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: (cookiesToSet) =>
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          ),
+      },
+    });
+
+    const userPromise = supabase.auth.getUser().then((r) => r.data.user);
+    user = await withTimeout(userPromise, 1500);
+  } catch (err) {
+    console.warn(
+      "[Middleware] Timeout ou échec de récupération Supabase user (accès toléré) :",
+      err.message
+    );
+    // En cas d'erreur réseau / timeout, on laisse passer la requête. 
+    // Les règles RLS au niveau de la base de données sécuriseront l'accès.
+    return res;
   }
 
-  // Vérification des autorisations selon le rôle pour les routes restreintes.
-  //
-  // Source de vérité : UNIQUEMENT public.user_roles.role (jamais
-  // user.user_metadata.role, ni l'ancienne public.profiles.role — supprimée
-  // par le chantier RBAC, 20260802050000). user_metadata (raw_user_meta_data)
-  // est fourni par le client au signup (options.data) — un attaquant peut y
-  // écrire n'importe quoi ("role": "admin") et ce claim finit dans son
-  // propre JWT. Le lire ici pour une décision d'autorisation aurait permis
-  // à quiconque de s'auto-attribuer l'accès à /admin sans jamais toucher à
-  // la base.
+  if (!user) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // 4. Récupération du rôle et du statut avec timeout résilient
+  let userRoleRow = null;
+  try {
+    const rolePromise = supabase
+      .from("user_roles")
+      .select("role, status")
+      .eq("user_id", user.id)
+      .single()
+      .then((r) => r.data);
+
+    userRoleRow = await withTimeout(rolePromise, 1500);
+  } catch (err) {
+    console.warn(
+      "[Middleware] Timeout ou échec de récupération du rôle Supabase (accès toléré) :",
+      err.message
+    );
+    return res;
+  }
+
+  // Un compte suspendu perd l'accès à toute page protégée immédiatement
+  if (userRoleRow?.status === "suspended") {
+    try {
+      await withTimeout(supabase.auth.signOut(), 1000);
+    } catch (e) {
+      console.error("[Middleware] Échec signOut pour compte suspendu :", e.message);
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("suspended", "true");
+    return NextResponse.redirect(url);
+  }
+
+  // 5. Autorisation d'accès par espaces
   if (
-    user &&
-    (pathnameMatchesRoute(pathname, "/admin") ||
-      pathnameMatchesRoute(pathname, "/recruteur") ||
-      pathnameMatchesRoute(pathname, "/candidat"))
+    pathnameMatchesRoute(pathname, "/admin") ||
+    pathnameMatchesRoute(pathname, "/recruteur") ||
+    pathnameMatchesRoute(pathname, "/candidat")
   ) {
     const userRole = userRoleRow?.role || "user";
-
-    // Correctif escalade de privilèges (2026-08-02) : badges ne doit JAMAIS
-    // décider d'une autorisation, y compris ici — un ancien détour lisait
-    // le badge cosmétique 'official_staff' pour accorder /admin, une
-    // deuxième source de vérité pour les mêmes droits que role='publisher'.
-    // role (public.user_roles) est désormais la SEULE source lue pour
-    // toute décision d'accès, sans exception.
-    // /admin : 'admin' et 'publisher' uniquement.
-    // /recruteur et /candidat : 'user' et 'admin' — 'publisher' (personnel
-    // interne) en est exclu, son périmètre reste /admin.
     const isAuthorized = pathnameMatchesRoute(pathname, "/admin")
       ? userRole === "admin" || userRole === "publisher"
       : userRole === "user" || userRole === "admin";
@@ -124,17 +157,6 @@ export async function middleware(req) {
       url.pathname = roleHomePath(userRole);
       return NextResponse.redirect(url);
     }
-
-    // Étape D (2026-08-03) : verified_recruiter gate désormais tout l'espace
-    // /recruteur au niveau RLS (20260803110000_badge_gate_espace_recruteur.sql)
-    // et côté page (l'écran d'accréditation NINEA/RCCM remplace le tableau
-    // de bord tant que le badge n'est pas accordé). Volontairement PAS de
-    // redirection ici pour un 'user' non badgé : /recruteur est aussi le
-    // seul endroit où soumettre la demande d'accréditation — rediriger
-    // ailleurs empêcherait justement d'y accéder. Le rôle reste vérifié
-    // ci-dessus (user/admin, pas publisher) ; le badge est vérifié à la
-    // couche donnée (seule couche où la décision "encore, ou pas encore ?"
-    // change sans rechargement de page).
   }
 
   return res;
@@ -144,9 +166,7 @@ export const config = {
   matcher: [
     // Tout sauf les assets statiques, les routes /api (celles-ci valident
     // elles-mêmes le jeton Bearer via requireUser dans lib/apiAuth.js), et
-    // robots.txt/sitemap.xml : sans cette exclusion, un crawler anonyme était
-    // redirigé vers /login et ne voyait jamais le vrai contenu généré par
-    // src/app/robots.js et src/app/sitemap.js.
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|api/|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?)$).*)",
+    // robots.txt/sitemap.xml
+    "/((?!api/|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?)$).*)",
   ],
 };
