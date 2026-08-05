@@ -11,51 +11,42 @@ const SITE_SERVICES = [
   {
     id: "creer-cv",
     title: "Création & Modèles de CV",
-    category: "Services & Outils",
-    description: "Concevez un CV professionnel optimisé pour les recruteurs et le format ATS.",
+    category: "Service",
+    description: "Concevez un CV professionnel optimisé ATS",
     icon: "fa-file-signature",
     path: "/service",
   },
   {
     id: "importer-cv",
-    title: "Analyseur IA & Diagnostic CV",
-    category: "Services & Outils",
-    description: "Importez votre CV (PDF/DOCX) et obtenez un score ATS et des conseils IA.",
+    title: "Diagnostic CV IA & Score ATS",
+    category: "Service",
+    description: "Importez votre CV pour analyse IA",
     icon: "fa-wand-magic-sparkles",
     path: "/importer-cv",
   },
   {
     id: "recrutement-spontane",
-    slug: "recrutement-spontane",
-    title: "Répertoire Candidatures Spontanées (77 Entreprises)",
-    category: "Services & Outils",
-    description: "Postulez directement aux entreprises et réseaux pétroliers au Sénégal.",
+    title: "Candidatures Spontanées (77 Entreprises)",
+    category: "Service",
+    description: "Postulez en direct aux entreprises au Sénégal",
     icon: "fa-paper-plane",
     path: "/recrutement-spontane",
   },
   {
     id: "recrutement-journalier",
     title: "Dépôts Physiques & Stations-Services",
-    category: "Services & Outils",
-    description: "Consultez les adresses de dépôt physique à Dakar (Total, Shell, EDK...).",
+    category: "Service",
+    description: "Adresses de dépôt physique à Dakar (Total, Shell, EDK...)",
     icon: "fa-gas-pump",
     path: "/recrutement-journalier",
   },
   {
     id: "messagerie-candidat",
     title: "Messagerie Recruteur & Candidat",
-    category: "Services & Outils",
-    description: "Échangez en temps réel avec des recruteurs et suivez vos échanges.",
+    category: "Service",
+    description: "Échangez en temps réel avec des recruteurs",
     icon: "fa-comments",
     path: "/messagerie",
-  },
-  {
-    id: "boite-a-idees",
-    title: "Boîte à idées & Suggestions",
-    category: "Services & Outils",
-    description: "Partagez vos retours et idées pour améliorer la plateforme Facilite.",
-    icon: "fa-lightbulb",
-    path: "/boite-a-idees",
   },
 ];
 
@@ -66,17 +57,15 @@ export default function Header() {
   const [userSession, setUserSession] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // États de recherche
+  // États de la recherche style YouTube
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState({
-    offers: [],
-    companies: [],
-    services: [],
-  });
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [predictions, setPredictions] = useState([]);
 
+  const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
 
   // 1. Exclusion des routes Dashboard (admin et recruteur)
@@ -96,27 +85,29 @@ export default function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Debounce de la recherche (300ms)
+  // 2. Debounce de 250ms de la recherche style YouTube
   useEffect(() => {
     if (!searchQuery.trim()) {
       setDebouncedQuery("");
+      setPredictions([]);
       setIsOpen(false);
       setIsLoading(false);
+      setSelectedIndex(-1);
       return;
     }
 
     setIsLoading(true);
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery.trim());
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // 3. Exécution de la recherche dès que debouncedQuery change
+  // 3. Extraction dynamique des prédictions (Titres, Entreprises, Lieux, Contrats, Services)
   useEffect(() => {
-    if (!debouncedQuery || debouncedQuery.length < 2) {
-      setSearchResults({ offers: [], companies: [], services: [] });
+    if (!debouncedQuery) {
+      setPredictions([]);
       setIsLoading(false);
       setIsOpen(false);
       return;
@@ -124,54 +115,112 @@ export default function Header() {
 
     let isMounted = true;
 
-    async function fetchResults() {
+    async function generatePredictions() {
       const q = debouncedQuery.toLowerCase();
+      const resultsMap = new Map();
 
-      // a) Filtrage des services du site
-      const matchedServices = SITE_SERVICES.filter(
-        (s) =>
-          s.title.toLowerCase().includes(q) ||
-          s.description.toLowerCase().includes(q)
-      ).slice(0, 3);
-
-      // b) Filtrage des entreprises de candidatures spontanées
-      const matchedCompanies = SPONTANEOUS_COMPANIES.filter(
-        (c) =>
-          c.company.toLowerCase().includes(q) ||
-          c.domains.toLowerCase().includes(q) ||
-          (c.poles || []).some((p) => p.toLowerCase().includes(q))
-      ).slice(0, 4);
-
-      // c) Requête Supabase pour les offres d'emploi réelles
-      let matchedOffers = [];
+      // a) Titres & Entreprises dans la base de données Supabase `job_offers`
       try {
-        const { data, error } = await supabase
+        const { data: jobData } = await supabase
           .from("job_offers")
-          .select("id, title, company, location, contract_type, category")
+          .select("id, title, company, location, contract_type")
           .or(
             `title.ilike.%${debouncedQuery}%,company.ilike.%${debouncedQuery}%,location.ilike.%${debouncedQuery}%`
           )
-          .limit(4);
+          .limit(8);
 
-        if (!error && data) {
-          matchedOffers = data;
+        if (jobData && jobData.length > 0) {
+          jobData.forEach((item) => {
+            if (item.title && item.title.toLowerCase().includes(q)) {
+              resultsMap.set(`offer_${item.id}`, {
+                id: `offer_${item.id}`,
+                text: item.title,
+                type: "Offre",
+                subtitle: `${item.company || "Recruteur"} • ${item.location || "Dakar"}`,
+                targetUrl: `/offres?id=${item.id}`,
+                icon: "fa-briefcase",
+              });
+            }
+            if (item.company && item.company.toLowerCase().includes(q)) {
+              resultsMap.set(`company_${item.company}`, {
+                id: `company_${item.company}`,
+                text: item.company,
+                type: "Entreprise",
+                subtitle: `Entreprise partenaire à ${item.location || "Sénégal"}`,
+                targetUrl: `/offres?q=${encodeURIComponent(item.company)}`,
+                icon: "fa-building",
+              });
+            }
+          });
         }
       } catch (err) {
-        console.error("Erreur de recherche Supabase:", err);
+        console.error("Erreur de requête des prédictions:", err);
       }
 
+      // b) Entreprises de la liste Spontanée / Réseaux Pétroliers (77 Entreprises)
+      SPONTANEOUS_COMPANIES.forEach((comp) => {
+        if (
+          comp.company.toLowerCase().includes(q) ||
+          comp.domains.toLowerCase().includes(q) ||
+          (comp.poles || []).some((p) => p.toLowerCase().includes(q))
+        ) {
+          resultsMap.set(`spont_${comp.id}`, {
+            id: `spont_${comp.id}`,
+            text: comp.company,
+            type: "Entreprise",
+            subtitle: comp.domains,
+            targetUrl: `/recrutement-spontane/${comp.slug}`,
+            icon: "fa-gas-pump",
+          });
+        }
+      });
+
+      // c) Services statiques du site
+      SITE_SERVICES.forEach((srv) => {
+        if (
+          srv.title.toLowerCase().includes(q) ||
+          srv.description.toLowerCase().includes(q)
+        ) {
+          resultsMap.set(`srv_${srv.id}`, {
+            id: `srv_${srv.id}`,
+            text: srv.title,
+            type: "Service",
+            subtitle: srv.description,
+            targetUrl: srv.path,
+            icon: srv.icon,
+          });
+        }
+      });
+
+      // d) Prédictions génériques basées sur le mot-clé saisi (style YouTube)
+      const commonSuffixes = ["dakar", "cdi", "stage", "sénégal", "droit privé", "support it", "commercial", "pompiste"];
+      commonSuffixes.forEach((suf) => {
+        if (!q.includes(suf) && (suf.startsWith(q) || q.length >= 3)) {
+          const predText = `${debouncedQuery} ${suf}`;
+          if (!resultsMap.has(`pred_${predText}`)) {
+            resultsMap.set(`pred_${predText}`, {
+              id: `pred_${predText}`,
+              text: predText,
+              type: "Saisie",
+              subtitle: `Rechercher "${predText}" dans les emplois`,
+              targetUrl: `/offres?q=${encodeURIComponent(predText)}`,
+              icon: "fa-magnifying-glass",
+            });
+          }
+        }
+      });
+
+      const list = Array.from(resultsMap.values()).slice(0, 8);
+
       if (isMounted) {
-        setSearchResults({
-          offers: matchedOffers,
-          companies: matchedCompanies,
-          services: matchedServices,
-        });
+        setPredictions(list);
         setIsLoading(false);
         setIsOpen(true);
+        setSelectedIndex(-1);
       }
     }
 
-    fetchResults();
+    generatePredictions();
 
     return () => {
       isMounted = false;
@@ -195,27 +244,82 @@ export default function Header() {
     };
   }, []);
 
-  // Soumission via touche Entrée ou clic
-  const handleSearchSubmit = (e) => {
-    if (e) e.preventDefault();
-    if (!searchQuery.trim()) return;
-    setIsOpen(false);
-    router.push(`/offres?q=${encodeURIComponent(searchQuery.trim())}`);
+  // 5. Navigation au clavier (Flèche Haut, Flèche Bas, Entrée, Échap)
+  const handleKeyDown = (e) => {
+    if (!isOpen || predictions.length === 0) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        executeSearch(searchQuery);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < predictions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : predictions.length - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selectedIndex >= 0 && predictions[selectedIndex]) {
+        const item = predictions[selectedIndex];
+        setSearchQuery(item.text);
+        executeSearch(item.text, item.targetUrl);
+      } else {
+        executeSearch(searchQuery);
+      }
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+    }
   };
 
-  const handleResultClick = (targetUrl) => {
+  const executeSearch = (queryText, targetUrl = null) => {
     setIsOpen(false);
+    if (targetUrl) {
+      router.push(targetUrl);
+    } else if (queryText.trim()) {
+      router.push(`/offres?q=${encodeURIComponent(queryText.trim())}`);
+    }
+  };
+
+  const handleClearInput = () => {
     setSearchQuery("");
-    router.push(targetUrl);
+    setDebouncedQuery("");
+    setPredictions([]);
+    setIsOpen(false);
+    setSelectedIndex(-1);
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
   };
 
-  // Ne rien afficher sur les dashboards admin/recruteur
-  if (isDashboard) return null;
+  // Helper pour afficher le texte prédit style YouTube : terme saisi en normal, suite suggérée en GRAS
+  const renderBoldPrediction = (fullText, query) => {
+    if (!query || !fullText) return <span className="font-normal">{fullText}</span>;
 
-  const totalResultsCount =
-    searchResults.offers.length +
-    searchResults.companies.length +
-    searchResults.services.length;
+    const lowerText = fullText.toLowerCase();
+    const lowerQ = query.toLowerCase().trim();
+    const matchIndex = lowerText.indexOf(lowerQ);
+
+    if (matchIndex === -1) {
+      return <span className="font-bold">{fullText}</span>;
+    }
+
+    const prefix = fullText.substring(0, matchIndex);
+    const matched = fullText.substring(matchIndex, matchIndex + lowerQ.length);
+    const suffix = fullText.substring(matchIndex + lowerQ.length);
+
+    return (
+      <span className="text-gray-800 dark:text-gray-200">
+        {prefix}
+        <span className="font-normal text-gray-600 dark:text-gray-400">{matched}</span>
+        <strong className="font-extrabold text-gray-900 dark:text-white">{suffix}</strong>
+      </span>
+    );
+  };
+
+  if (isDashboard) return null;
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-xs transition-colors">
@@ -233,196 +337,126 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* 🔍 BARRE DE RECHERCHE PRINCIPALE AVEC AUTOCOMPLÉTION & DROPDOWN DYNAMIQUE */}
+        {/* 🔍 BARRE DE RECHERCHE STYLE YOUTUBE AVEC PRÉDICTIONS DYNAMIQUES & NATIVE KEYBOARD NAV */}
         <div className="relative flex-1 max-w-lg mx-2" ref={searchContainerRef}>
-          <form onSubmit={handleSearchSubmit} className="relative w-full">
-            <div className="relative flex items-center">
-              <i className="fa-solid fa-magnifying-glass absolute left-3.5 text-gray-400 text-sm pointer-events-none"></i>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (!isOpen && e.target.value.trim().length >= 2) {
-                    setIsOpen(true);
-                  }
-                }}
-                onFocus={() => {
-                  if (debouncedQuery.length >= 2) setIsOpen(true);
-                }}
-                placeholder="Rechercher une offre, entreprise, service..."
-                className="w-full pl-10 pr-9 py-2 bg-gray-100 dark:bg-gray-800/90 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-full text-xs sm:text-sm font-medium border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-gray-800 transition-all shadow-xs"
-              />
+          <div className="relative flex items-center">
+            {/* Input avec bordure verte lors du focus style YouTube / Facilite */}
+            <i className="fa-solid fa-magnifying-glass absolute left-3.5 text-gray-400 text-sm pointer-events-none"></i>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (!isOpen && e.target.value.trim().length >= 2) {
+                  setIsOpen(true);
+                }
+              }}
+              onFocus={() => {
+                if (debouncedQuery.length >= 2 || predictions.length > 0) setIsOpen(true);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Rechercher une offre d'emploi..."
+              className={`w-full pl-10 pr-10 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-full text-xs sm:text-sm font-medium border transition-all shadow-xs ${
+                isOpen
+                  ? "rounded-b-none border-emerald-500 ring-2 ring-emerald-500/20 bg-white dark:bg-gray-800"
+                  : "border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+              }`}
+            />
+
+            {/* Spinner ou Bouton X d'effacement rapide */}
+            <div className="absolute right-3.5 flex items-center gap-1.5">
               {isLoading ? (
-                <div className="absolute right-3">
-                  <i className="fa-solid fa-circle-notch fa-spin text-emerald-600 text-xs"></i>
-                </div>
+                <i className="fa-solid fa-circle-notch fa-spin text-emerald-600 text-xs"></i>
               ) : searchQuery ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setIsOpen(false);
-                  }}
-                  className="absolute right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  onClick={handleClearInput}
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                  title="Effacer la recherche"
                 >
                   <i className="fa-solid fa-xmark text-xs"></i>
                 </button>
               ) : null}
             </div>
-          </form>
+          </div>
 
-          {/* 🔽 MENU DÉROULANT DE RÉSULTATS (DROPDOWN) */}
+          {/* 🔽 MENU OVERLAY DÉROULANT DE PRÉDICTIONS (DROPDOWN STYLE YOUTUBE) */}
           {isOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-[100] max-h-[80vh] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-900 rounded-b-2xl shadow-2xl border-x border-b border-gray-200 dark:border-gray-800 overflow-hidden z-[100] transition-all animate-in fade-in duration-150">
               
               {/* Statut si chargement */}
               {isLoading && (
-                <div className="p-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-2">
-                  <i className="fa-solid fa-spinner fa-spin text-emerald-600"></i>
-                  Recherche instantanée en cours...
+                <div className="p-3.5 text-xs font-bold text-gray-400 dark:text-gray-500 flex items-center justify-center gap-2">
+                  <i className="fa-solid fa-circle-notch fa-spin text-emerald-600"></i>
+                  Recherche des suggestions en cours...
                 </div>
               )}
 
-              {/* Si aucun résultat trouvé */}
-              {!isLoading && totalResultsCount === 0 && debouncedQuery.length >= 2 && (
-                <div className="p-6 text-center">
-                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-3 text-lg">
-                    <i className="fa-solid fa-magnifying-glass"></i>
-                  </div>
-                  <p className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">
+              {/* Si aucune prédiction */}
+              {!isLoading && predictions.length === 0 && debouncedQuery.length >= 2 && (
+                <div className="p-4 text-center">
+                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
                     Aucun résultat trouvé pour "{debouncedQuery}"
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                    Essayez d'autres mots-clés comme "Comptable", "TotalEnergies", "Pompiste" ou "CV".
-                  </p>
                   <button
-                    onClick={() => handleResultClick(`/offres?q=${encodeURIComponent(debouncedQuery)}`)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition"
+                    onClick={() => executeSearch(debouncedQuery)}
+                    className="mt-2 text-xs font-extrabold text-emerald-600 dark:text-emerald-400 underline hover:text-emerald-700"
                   >
-                    Voir toutes les offres répertoriées
+                    Lancer la recherche dans toutes les offres →
                   </button>
                 </div>
               )}
 
-              {/* Catégorie 1: OFFRES D'EMPLOI */}
-              {!isLoading && searchResults.offers.length > 0 && (
-                <div className="p-3 border-b border-gray-100 dark:border-gray-800">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2 px-2 flex items-center gap-1.5">
-                    <i className="fa-solid fa-briefcase text-xs"></i>
-                    Offres d'emploi correspondantes ({searchResults.offers.length})
-                  </div>
-                  <div className="space-y-1">
-                    {searchResults.offers.map((offer) => (
+              {/* LISTE DES LIGNES DE SUGGESTION STYLE YOUTUBE */}
+              {!isLoading && predictions.length > 0 && (
+                <div className="py-1">
+                  {predictions.map((item, index) => {
+                    const isSelected = selectedIndex === index;
+                    return (
                       <div
-                        key={offer.id}
-                        onClick={() => handleResultClick(`/offres?id=${offer.id}`)}
-                        className="p-2.5 hover:bg-emerald-50/70 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer flex items-center justify-between group"
+                        key={item.id}
+                        onClick={() => {
+                          setSearchQuery(item.text);
+                          executeSearch(item.text, item.targetUrl);
+                        }}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                        className={`px-4 py-2.5 flex items-center justify-between cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-gray-100 dark:bg-gray-800"
+                            : "hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                        }`}
                       >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center flex-shrink-0 text-xs group-hover:scale-110 transition-transform">
-                            <i className="fa-solid fa-building text-xs"></i>
-                          </div>
-                          <div className="truncate">
-                            <h4 className="text-xs font-extrabold text-gray-900 dark:text-white truncate group-hover:text-emerald-600 transition-colors">
-                              {offer.title}
-                            </h4>
-                            <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 truncate">
-                              {offer.company} • {offer.location || "Dakar"}
-                            </p>
+                        <div className="flex items-center gap-3.5 overflow-hidden">
+                          {/* Icône de loupe 🔍 discrète style YouTube */}
+                          <i className={`fa-solid ${item.icon || "fa-magnifying-glass"} text-gray-400 dark:text-gray-500 text-xs flex-shrink-0`}></i>
+                          
+                          <div className="truncate text-xs sm:text-sm">
+                            {/* Formatage : terme saisi en normal, suite en BOLD */}
+                            {renderBoldPrediction(item.text, debouncedQuery)}
                           </div>
                         </div>
-                        {offer.contract_type && (
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 ml-2 flex-shrink-0">
-                            {offer.contract_type}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {/* Catégorie 2: ENTREPRISES & RECRUTEURS */}
-              {!isLoading && searchResults.companies.length > 0 && (
-                <div className="p-3 border-b border-gray-100 dark:border-gray-800">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2 px-2 flex items-center gap-1.5">
-                    <i className="fa-solid fa-building text-xs"></i>
-                    Entreprises & Recruteurs ({searchResults.companies.length})
-                  </div>
-                  <div className="space-y-1">
-                    {searchResults.companies.map((company) => (
-                      <div
-                        key={company.id}
-                        onClick={() => handleResultClick(`/recrutement-spontane/${company.slug}`)}
-                        className="p-2.5 hover:bg-amber-50/70 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer flex items-center justify-between group"
-                      >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 flex items-center justify-center flex-shrink-0 text-xs group-hover:scale-110 transition-transform">
-                            <i className="fa-solid fa-gas-pump text-xs"></i>
-                          </div>
-                          <div className="truncate">
-                            <h4 className="text-xs font-extrabold text-gray-900 dark:text-white truncate group-hover:text-amber-600 transition-colors">
-                              {company.company}
-                            </h4>
-                            <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 truncate">
-                              {company.domains}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 dark:bg-amber-900/50 dark:text-amber-300 px-2 py-0.5 rounded-full flex-shrink-0 ml-2">
-                          Postuler
+                        {/* Tag explicatif à droite (ex: Offre, Entreprise, Service) */}
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
+                          {item.type}
                         </span>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* Catégorie 3: SERVICES & OUTILS DE LA PLATEFORME */}
-              {!isLoading && searchResults.services.length > 0 && (
-                <div className="p-3 border-b border-gray-100 dark:border-gray-800">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-2 px-2 flex items-center gap-1.5">
-                    <i className="fa-solid fa-toolbox text-xs"></i>
-                    Services & Outils du site
-                  </div>
-                  <div className="space-y-1">
-                    {searchResults.services.map((service) => (
-                      <div
-                        key={service.id}
-                        onClick={() => handleResultClick(service.path)}
-                        className="p-2.5 hover:bg-blue-50/70 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer flex items-center gap-3 group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center flex-shrink-0 text-xs group-hover:scale-110 transition-transform">
-                          <i className={`fa-solid ${service.icon}`}></i>
-                        </div>
-                        <div className="truncate">
-                          <h4 className="text-xs font-extrabold text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition-colors">
-                            {service.title}
-                          </h4>
-                          <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 truncate">
-                            {service.description}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 🦶 FOOTER OPTION : VOIR TOUS LES RÉSULTATS POUR '[MOT-CLÉ]' */}
-              {!isLoading && debouncedQuery && (
-                <div
-                  onClick={() => handleResultClick(`/offres?q=${encodeURIComponent(debouncedQuery)}`)}
-                  className="p-3.5 bg-gray-50 dark:bg-gray-800/80 hover:bg-emerald-50 dark:hover:bg-gray-800 text-center cursor-pointer transition flex items-center justify-center gap-2 group"
+              {/* PIED DU MENU STYLE YOUTUBE */}
+              <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[11px] text-gray-400 dark:text-gray-500">
+                <span className="italic">Appuyez sur <kbd className="font-mono bg-white dark:bg-gray-700 px-1 py-0.5 rounded border text-[10px]">↑</kbd> <kbd className="font-mono bg-white dark:bg-gray-700 px-1 py-0.5 rounded border text-[10px]">↓</kbd> puis <kbd className="font-mono bg-white dark:bg-gray-700 px-1 py-0.5 rounded border text-[10px]">Entrée</kbd></span>
+                <span
+                  onClick={() => executeSearch(searchQuery)}
+                  className="font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer hover:underline"
                 >
-                  <span className="text-xs font-extrabold text-emerald-800 dark:text-emerald-400 group-hover:underline">
-                    Voir tous les résultats pour "{debouncedQuery}"
-                  </span>
-                  <i className="fa-solid fa-arrow-right text-xs text-emerald-700 dark:text-emerald-400 group-hover:translate-x-1 transition-transform"></i>
-                </div>
-              )}
-
+                  Voir tous les résultats →
+                </span>
+              </div>
             </div>
           )}
         </div>
