@@ -6,6 +6,173 @@ import { useRouter } from "next/navigation";
 
 // Liste des entreprises pour le recrutement journalier / dépôt physique
 const companiesList = [
+  // --- GRANDS RÉSEAUX PÉTROLIERS & STATIONS-SERVICES ---
+  {
+    id: "totalenergies-senegal-siege",
+    company_name: "TotalEnergies Sénégal (Siège Bel-Air)",
+    location: "Route des Hydrocarbures, Bel-Air, BP 355, Dakar",
+    phone: "+221338390139",
+    website: "https://totalenergies.sn",
+    category: "Stations & Énergie",
+    activityFR: "Réseau de stations-services, Carburants & Dépôt physique",
+    activityEN: "Gas stations network, Fuels & Physical drop-off",
+    icon: "fa-gas-pump",
+    logoColor: "bg-red-600"
+  },
+  {
+    id: "vivoenergy-shell-senegal",
+    company_name: "Vivo Energy Sénégal (Réseau Shell)",
+    location: "Route des Hydrocarbures, Bel-Air, BP 144, Dakar",
+    phone: "+221338293000",
+    website: "https://www.vivoenergy.com",
+    category: "Stations & Énergie",
+    activityFR: "Réseau Shell, Distribution carburants & Dépôt sur place",
+    activityEN: "Shell Network, Fuel distribution & On-site drop-off",
+    icon: "fa-gas-pump",
+    logoColor: "bg-amber-500"
+  },
+  {
+    id: "ola-energy-senegal-siege",
+    company_name: "OLA Energy Sénégal (Ex-Oilibya)",
+    location: "Route des Hydrocarbures, Bel-Air, Dakar",
+    phone: "+221338592929",
+    website: "https://olaenergy.com",
+    category: "Stations & Énergie",
+    activityFR: "Réseau de stations, Lubrifiants & Dépôt de dossier",
+    activityEN: "Gas stations network, Lubricants & Application drop-off",
+    icon: "fa-gas-pump",
+    logoColor: "bg-blue-600"
+  },
+  {
+    id: "puma-energy-senegal-siege",
+    company_name: "Puma Energy Sénégal",
+    location: "Route des Hydrocarbures, Bel-Air, Dakar",
+    phone: "+221338399999",
+    website: "https://pumaenergy.com",
+    category: "Stations & Énergie",
+    activityFR: "Stockage, Lubrifiants & Réseau de distribution",
+    activityEN: "Storage, Lubricants & Distribution network",
+    icon: "fa-gas-pump",
+    logoColor: "bg-emerald-600"
+  },
+  {
+    id: "oryx-energies-senegal-siege",
+    company_name: "Oryx Energies Sénégal",
+    location: "Route des Hydrocarbures, Bel-Air, BP 224, Dakar",
+    phone: "+221338398888",
+    website: "https://oryxenergies.com",
+    category: "Stations & Énergie",
+    activityFR: "Pétrole, Gaz de pétrole liquéfié & Réseau stations",
+    activityEN: "Oil, LPG & Gas station network",
+    icon: "fa-gas-pump",
+    logoColor: "bg-red-700"
+  },
+  {
+    id: "petrosen-trading",
+    company_name: "Petrosen (Trading & Services)",
+    location: "Route du Service Géographique, Hann, Dakar",
+    phone: "+221338399298",
+    website: "https://petrosen.sn",
+    category: "Stations & Énergie",
+    activityFR: "Société des Pétroles du Sénégal (Trading & Stations)",
+    activityEN: "Senegal Oil Company (Trading & Gas Stations)",
+    icon: "fa-building-flag",
+    logoColor: "bg-green-700"
+  },
+  {
+    id: "elton-oil-company-siege",
+    company_name: "ELTON Oil Company (Siège)",
+    location: "Route de l'Aéroport, Carrefour Ngor Virage, Dakar",
+    phone: "+221338690101",
+    website: "https://elton.sn",
+    category: "Stations & Énergie",
+    activityFR: "Réseau national de stations-services & Siège social",
+    activityEN: "National gas stations network & Headquarters",
+    icon: "fa-gas-pump",
+    logoColor: "bg-sky-600"
+  },
+  {
+    id: "edk-oil-mermoz",
+    company_name: "EDK Oil (Groupe EDK Siège)",
+    location: "Ancienne Piste, Mermoz / Ouakam, Dakar",
+    phone: "+221338606262",
+    category: "Stations & Énergie",
+    activityFR: "Stations-services, Supermarché Low Price & Restauration",
+    activityEN: "Gas stations, Low Price supermarket & Fast food",
+    icon: "fa-gas-pump",
+    logoColor: "bg-purple-600"
+  },
+  {
+    id: "star-oil-senegal-almadies",
+    company_name: "Star Oil Sénégal (Siège Almadies)",
+    location: "Route de Ngor, Les Almadies, Dakar",
+    phone: "+221338696969",
+    website: "https://staroilgroup.com",
+    category: "Stations & Énergie",
+    activityFR: "Exploitation pétrolière & Réseau stations-services",
+    activityEN: "Oil operations & Gas stations network",
+    icon: "fa-gas-pump",
+    logoColor: "bg-indigo-600"
+  },
+  {
+    id: "eydon-petroleum-almadies",
+    company_name: "Eydon Petroleum (Siège)",
+    location: "Les Almadies, Zone 14, Dakar",
+    phone: "+221338683333",
+    website: "https://eydonpetroleum.com",
+    category: "Stations & Énergie",
+    activityFR: "Distribution carburants & Stations-services",
+    activityEN: "Fuel distribution & Gas stations",
+    icon: "fa-gas-pump",
+    logoColor: "bg-teal-600"
+  },
+  {
+    id: "sgf-serigne-gueye",
+    company_name: "SGF (Sérigne Gueye et Fils)",
+    location: "Km 11, Route de Rufisque, Thiaroye / Dakar",
+    phone: "+221338340826",
+    category: "Stations & Énergie",
+    activityFR: "Réseau de stations-services & Pompistes",
+    activityEN: "Gas stations network & Pump attendants",
+    icon: "fa-gas-pump",
+    logoColor: "bg-slate-700"
+  },
+  {
+    id: "ciel-oil-dakar",
+    company_name: "Ciel Oil (Direction Générale)",
+    location: "Route de Rufisque / Hann Maristes, Dakar",
+    phone: "+221338329999",
+    category: "Stations & Énergie",
+    activityFR: "Distribution pétrolière & Dépôt de candidature",
+    activityEN: "Petroleum distribution & Physical application",
+    icon: "fa-gas-pump",
+    logoColor: "bg-cyan-600"
+  },
+  {
+    id: "maack-mka-excellence",
+    company_name: "Maack Petroleum / MKA Excellence",
+    location: "Yoff / Route de l'Aéroport, Dakar",
+    phone: "+221338688249",
+    website: "https://mkaexcellence.com",
+    category: "Stations & Énergie",
+    activityFR: "Stations-services, Lavage, Vidange & Restauration",
+    activityEN: "Gas stations, Car wash, Oil change & Restaurant",
+    icon: "fa-gas-pump",
+    logoColor: "bg-orange-600"
+  },
+  {
+    id: "touba-clean-delta-oil",
+    company_name: "Touba Oil, Clean Oil & Delta Oil",
+    location: "Sièges logistiques : Pikine, Guédiawaye, Route de Rufisque, Dakar",
+    phone: "+221338798716",
+    category: "Stations & Énergie",
+    activityFR: "Réseaux locaux de stations (Dépôts sur place & gérants)",
+    activityEN: "Local gas station networks (In-person drop-off)",
+    icon: "fa-gas-pump",
+    logoColor: "bg-yellow-600"
+  },
+
+  // --- ENTREPRISES INDUSTRIELLES & FABRICATION ---
   {
     id: "madar",
     company_name: "H&D INDUSTRIE S.A - Madar",
@@ -148,14 +315,14 @@ const translations = {
     navBack: "Retour",
     title: "Recrutement Journalier & Dépôts Physiques",
     tagline: "Trouvez un emploi de journalier à Dakar en postulant directement en personne.",
-    subtitle: "Ce répertoire liste les entreprises industrielles et de production recrutant des journaliers à Dakar. Les candidatures se font exclusivement par dépôt physique de dossier.",
-    searchPlaceholder: "Rechercher une entreprise ou une adresse...",
+    subtitle: "Ce répertoire liste les entreprises industrielles et réseaux de stations recrutant des journaliers et agents de piste à Dakar. Les candidatures se font par dépôt physique de dossier ou contact direct.",
+    searchPlaceholder: "Rechercher une entreprise, une station ou une adresse (Total, Shell, EDK, Bel-Air...)",
     noResults: "Aucune entreprise ne correspond à votre recherche.",
     locationLabel: "Adresse de dépôt",
     phoneLabel: "Téléphone",
     phoneNotListed: "Non répertorié",
     categoryLabel: "Secteur",
-    depositTypeLabel: "Dépôt Physique Uniquement",
+    depositTypeLabel: "Dépôt Physique & Contact Direct",
     callBtn: "Appeler",
     mapsBtn: "Itinéraire Google Maps",
     filterAll: "Tous les secteurs",
@@ -163,6 +330,7 @@ const translations = {
     viewOnlineSpontaneousBtn: "Voir le recrutement spontané en ligne",
     onlineRecruitmentTip: "Vous cherchez plutôt des candidatures spontanées en ligne (SETER, SOBOA, etc.) ?",
     sectors: {
+      "Stations & Énergie": "Stations & Énergie",
       Industrie: "Industrie",
       Cosmétique: "Cosmétique",
       Fabrication: "Fabrication",
@@ -174,15 +342,15 @@ const translations = {
     navHome: "Home",
     navBack: "Back",
     title: "Daily Workers & In-Person Applications",
-    tagline: "Find daily worker jobs in Dakar by applying in person directly.",
-    subtitle: "This directory lists manufacturing and production companies recruiting daily workers in Dakar. Applications must be dropped off physically.",
-    searchPlaceholder: "Search for a company or address...",
+    tagline: "Find daily worker and station jobs in Dakar by applying in person directly.",
+    subtitle: "This directory lists manufacturing companies and gas station networks recruiting in Dakar. Applications can be dropped off physically.",
+    searchPlaceholder: "Search for a company, station or address (Total, Shell, EDK, Bel-Air...)",
     noResults: "No companies match your search.",
     locationLabel: "Drop-off Address",
     phoneLabel: "Phone Number",
     phoneNotListed: "Not listed",
     categoryLabel: "Sector",
-    depositTypeLabel: "In-Person Drop-off Only",
+    depositTypeLabel: "In-Person Drop-off & Direct Contact",
     callBtn: "Call",
     mapsBtn: "Google Maps Directions",
     filterAll: "All Sectors",
@@ -190,6 +358,7 @@ const translations = {
     viewOnlineSpontaneousBtn: "See online spontaneous recruitment",
     onlineRecruitmentTip: "Looking for online spontaneous applications (SETER, SOBOA, etc.) instead?",
     sectors: {
+      "Stations & Énergie": "Gas Stations & Energy",
       Industry: "Industry",
       Cosmétique: "Cosmetics",
       Fabrication: "Manufacturing",
@@ -238,57 +407,34 @@ export default function RecrutementJournalierPage() {
   }, [searchTerm, selectedCategory, selectedLang]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF6F1] selection:bg-emerald-200 selection:text-emerald-900 font-sans">
-      
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-            <span className="text-xl font-extrabold text-gray-900 tracking-tight">Facilite</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition"
-            >
-              <i className="fa-solid fa-house mr-1.5"></i> {t.navHome}
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 flex-1 w-full">
-        
+    <div className="min-h-screen flex flex-col bg-[#FAF6F1] selection:bg-emerald-200 selection:text-emerald-900 font-sans pb-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 flex-1 w-full">
         {/* Banner Hero */}
-        <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-10 text-white mb-8 shadow-xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-amber-800 via-orange-900 to-amber-950 rounded-3xl p-6 sm:p-10 text-white mb-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-            <i className="fa-solid fa-person-digging text-9xl"></i>
+            <i className="fa-solid fa-gas-pump text-9xl"></i>
           </div>
-          <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-2 relative z-10">
-            {t.tagline}
+          <span className="text-xs font-extrabold text-amber-300 uppercase tracking-widest block mb-2 relative z-10">
+            Dépôts Physiques & Réseaux de Stations
           </span>
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 relative z-10">
             {t.title}
           </h1>
-          <p className="text-base text-emerald-100 font-medium leading-relaxed max-w-3xl relative z-10">
+          <p className="text-base text-amber-100 font-medium leading-relaxed max-w-2xl relative z-10">
             {t.subtitle}
           </p>
         </div>
 
-        {/* Tip / Sp spontaneous Recruitment Link */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Tip banner */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
-              <i className="fa-solid fa-circle-info"></i>
+            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
+              <i className="fa-solid fa-laptop-code"></i>
             </div>
             <div>
               <p className="text-sm font-bold text-gray-900">{t.onlineRecruitmentTip}</p>
               <p className="text-xs font-semibold text-gray-500">
-                {selectedLang === "FR" 
-                  ? "Envoyez plutôt vos fichiers en ligne pour les grandes entreprises." 
-                  : "Send your files online instead for large companies."}
+                Consultez notre répertoire de 77 entreprises proposant des formulaires et emails directs.
               </p>
             </div>
           </div>
@@ -296,167 +442,137 @@ export default function RecrutementJournalierPage() {
             href="/recrutement-spontane"
             className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow-xs text-center whitespace-nowrap"
           >
-            <i className="fa-solid fa-user-tie mr-1.5"></i> {t.viewOnlineSpontaneousBtn}
+            <i className="fa-solid fa-paper-plane mr-1.5"></i> {t.viewOnlineSpontaneousBtn}
           </Link>
         </div>
 
-        {/* Search & Filters Controls */}
-        <div className="bg-white rounded-3xl border border-gray-200 p-4 sm:p-6 mb-8 shadow-xs">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            
-            {/* Input Search */}
-            <div className="relative flex-1">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                <i className="fa-solid fa-magnifying-glass"></i>
-              </span>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={t.searchPlaceholder}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-              />
-            </div>
+        {/* Filters and Search */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+          <div className="relative w-full sm:w-96">
+            <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+            <input
+              type="text"
+              placeholder={t.searchPlaceholder}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition"
+            />
+          </div>
 
-            {/* Pill Filters */}
-            <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-              {categories.map((category) => {
-                const label = category === "All" ? t.filterAll : (t.sectors[category] || category);
-                const isActive = selectedCategory === category;
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-4 py-2 rounded-xl text-xs font-extrabold tracking-tight transition cursor-pointer select-none whitespace-nowrap border ${
-                      isActive 
-                        ? "bg-emerald-600 border-emerald-600 text-white shadow-xs" 
-                        : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-2 rounded-xl text-xs font-extrabold transition whitespace-nowrap ${
+                  selectedCategory === cat
+                    ? "bg-amber-600 text-white shadow-xs"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {cat === "All" ? t.filterAll : cat}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Directory Grid */}
-        {filteredCompanies.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center shadow-xs">
-            <div className="w-16 h-16 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-2xl mx-auto mb-4">
-              <i className="fa-solid fa-building-circle-exclamation"></i>
-            </div>
-            <p className="text-gray-600 font-extrabold text-base mb-1">{t.noResults}</p>
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedCategory("All");
-              }}
-              className="text-emerald-600 hover:underline text-sm font-bold mt-2"
+        {/* Company Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCompanies.map((company) => (
+            <div
+              key={company.id}
+              className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col p-6"
             >
-              {selectedLang === "FR" ? "Réinitialiser les filtres" : "Reset filters"}
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCompanies.map((company) => {
-              const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(company.company_name + " " + company.location)}`;
-              const activityLabel = selectedLang === "FR" ? company.activityFR : company.activityEN;
-              const sectorLabel = t.sectors[company.category] || company.category;
-              
-              return (
+              <div className="flex items-center justify-between gap-4 mb-4">
                 <div
-                  key={company.id}
-                  className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col group"
+                  className={`w-12 h-12 rounded-2xl ${company.logoColor} text-white flex items-center justify-center text-xl shadow-md`}
                 >
-                  {/* Top Bar with Icon & Badges */}
-                  <div className="p-6 pb-0 flex items-start justify-between gap-4">
-                    <div className={`w-12 h-12 rounded-2xl ${company.logoColor} text-white flex items-center justify-center text-xl shadow-xs`}>
-                      <i className={`fa-solid ${company.icon}`}></i>
-                    </div>
-                    
-                    <div className="flex flex-col items-end gap-1.5">
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-100">
-                        {sectorLabel}
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-100 flex items-center gap-1">
-                        <i className="fa-solid fa-walkie-talkie text-[8px]"></i>
-                        {t.depositTypeLabel}
-                      </span>
-                    </div>
-                  </div>
+                  <i className={`fa-solid ${company.icon}`}></i>
+                </div>
+                <span className="px-3 py-1 bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-black rounded-full uppercase tracking-wider">
+                  {company.category}
+                </span>
+              </div>
 
-                  {/* Body Content */}
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h2 className="font-extrabold text-gray-900 text-lg group-hover:text-emerald-700 transition duration-300 mb-1">
-                      {company.company_name}
-                    </h2>
-                    <p className="text-xs text-gray-500 font-semibold mb-4">
-                      {activityLabel}
-                    </p>
-                    
-                    {/* Location */}
-                    <div className="mb-4">
-                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">
-                        {t.locationLabel}
-                      </p>
-                      <p className="text-sm font-semibold text-gray-700 flex items-start gap-2">
-                        <i className="fa-solid fa-location-dot text-gray-400 mt-0.5"></i>
-                        <span>{company.location}</span>
-                      </p>
-                    </div>
+              <h2 className="text-xl font-extrabold text-gray-900 mb-2">
+                {company.company_name}
+              </h2>
 
-                    {/* Phone */}
-                    <div className="mb-6">
-                      <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">
-                        {t.phoneLabel}
-                      </p>
-                      <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                        <i className="fa-solid fa-phone text-gray-400"></i>
-                        <span>{company.phone || t.phoneNotListed}</span>
-                      </p>
-                    </div>
+              <p className="text-xs font-semibold text-gray-600 mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100 leading-relaxed">
+                {selectedLang === "FR" ? company.activityFR : company.activityEN}
+              </p>
 
-                    {/* Instructions Alert */}
-                    <div className="mt-auto bg-gray-50 border border-gray-100 rounded-2xl p-3.5 flex items-start gap-2.5">
-                      <i className="fa-solid fa-hand-holding-hand text-emerald-600 mt-0.5 text-sm"></i>
-                      <p className="text-[11px] leading-normal text-gray-600 font-semibold">
-                        {t.depositInstruction}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Footer Actions */}
-                  <div className="px-6 pb-6 pt-0 flex gap-3 border-t border-gray-50 mt-4">
-                    {company.phone && (
-                      <a
-                        href={`tel:${company.phone}`}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 font-extrabold text-xs rounded-xl transition cursor-pointer text-center flex items-center justify-center gap-1.5 border border-transparent hover:border-emerald-200"
-                      >
-                        <i className="fa-solid fa-phone-flip"></i>
-                        {t.callBtn}
-                      </a>
-                    )}
-                    <a
-                      href={mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-xs"
-                    >
-                      <i className="fa-solid fa-map-location-dot"></i>
-                      {t.mapsBtn}
-                    </a>
+              <div className="space-y-2 mb-6 text-xs">
+                <div className="flex items-start gap-2 text-gray-700">
+                  <i className="fa-solid fa-location-dot text-amber-600 mt-0.5"></i>
+                  <div>
+                    <span className="font-bold block text-gray-400 uppercase text-[10px]">
+                      {t.locationLabel} :
+                    </span>
+                    <span className="font-semibold">{company.location}</span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+
+                <div className="flex items-center gap-2 text-gray-700">
+                  <i className="fa-solid fa-phone text-amber-600"></i>
+                  <div>
+                    <span className="font-bold block text-gray-400 uppercase text-[10px]">
+                      {t.phoneLabel} :
+                    </span>
+                    <span className="font-mono font-bold text-gray-900">
+                      {company.phone || t.phoneNotListed}
+                    </span>
+                  </div>
+                </div>
+
+                {company.website && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <i className="fa-solid fa-globe text-amber-600"></i>
+                    <div>
+                      <span className="font-bold block text-gray-400 uppercase text-[10px]">
+                        Site officiel :
+                      </span>
+                      <a
+                        href={company.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-blue-600 hover:underline truncate block"
+                      >
+                        {company.website.replace("https://", "")}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-auto flex items-center gap-2 pt-4 border-t border-gray-100">
+                {company.phone ? (
+                  <a
+                    href={`tel:${company.phone}`}
+                    className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl transition text-center shadow-xs flex items-center justify-center gap-1.5"
+                  >
+                    <i className="fa-solid fa-phone"></i>
+                    {t.callBtn}
+                  </a>
+                ) : null}
+
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    `${company.company_name} ${company.location}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-extrabold text-xs rounded-xl transition text-center shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  <i className="fa-solid fa-map-location-dot"></i>
+                  {t.mapsBtn}
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
       </main>
 
-      {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-6 text-center text-sm font-medium text-gray-500">
         © 2026 Facilite. Tous droits réservés.
       </footer>
