@@ -4,13 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ApplyModal from "@/components/ApplyModal";
+import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 
 export default function RecrutementSpontanePage() {
   const router = useRouter();
   const [applyingOffer, setApplyingOffer] = useState(null);
   const [toast, setToast] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const triggerToast = (msg, icon = "fa-check-circle") => {
+  const triggerToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
@@ -19,54 +21,27 @@ export default function RecrutementSpontanePage() {
     setApplyingOffer(offer);
   };
 
-  // Liste des entreprises pour recrutement spontané
-  const spontaneousOffers = [
-    {
-      id: "seter-spontanee",
-      title: "Candidature Spontanée - SETER",
-      company: "SETER",
-      location: "Sénégal",
-      contract_type: "SPONTANÉ",
-      description: "Rejoignez la SETER et participez au développement du Train Express Régional !\nPôles & Domaines de recrutement : Ressources Humaines, Transport & Logistique, Achats, Communication, Marketing, Services Voyageurs, Maintenance, Finances & Comptabilité, Qualité, Hygiène, Sécurité, Environnement, Sûreté, Systèmes d'Information, Conducteur de trains, Relation clients, Juridique, Exploitation, Audit.\nDocuments requis : CV & Lettre de motivation.",
-      image_url: "/seterimage.avif",
-      min_education_level: "Aucun",
-      isSpontaneous: true,
-      allowSpontaneousModal: true,
-      externalLink: "https://seter.sn/recrutement/",
-      externalButtonLabel: "Postuler sur le site SETER",
-    },
-    {
-      id: "soboa-spontanee",
-      title: "Candidature Spontanée - SOBOA",
-      company: "SOBOA",
-      location: "Rte des Brasseries, Dakar, Sénégal",
-      contract_type: "Stage, Intérim, CDD, CDI",
-      description: "Rejoignez la Société des Brasseries de l'Ouest-Africain (SOBOA) et développez votre carrière dans un environnement dynamique.\nTypes de contrats : Stage Académique, Stage Professionnel, Intérim, CDD, CDI.\nDocuments requis : CV & Lettre de motivation.",
-      image_url: "/soboa.png",
-      min_education_level: "Aucun",
-      isSpontaneous: true,
-      allowSpontaneousModal: true,
-      externalLink: "https://soboa.sn/carriere/",
-      externalButtonLabel: "Postuler via le site SOBOA",
-    },
-    {
-      id: "dakardemdikk-spontanee",
-      title: "Candidature Spontanée - Dakar Dem Dikk",
-      company: "Dakar Dem Dikk",
-      location: "Sénégal",
-      contract_type: "SPONTANÉ",
-      description: "Dakar Dem Dikk vous offre l'opportunité de rejoindre ses équipes. Envoyez votre candidature spontanée pour les postes de : Conducteur, Receveur, Contrôleur, Informatique, RH, Finance, Marketing, Commercial, Téléconseiller, Communication, Maintenance, BTP, etc.\nDocuments requis : CV & Lettre de motivation.",
-      image_url: "/demdikk.jpeg",
-      min_education_level: "Aucun",
-      isSpontaneous: true,
-      allowSpontaneousModal: true,
-      externalLink: "https://jobs.demdikk.sn/offres/candidature-spontanee/",
-      externalButtonLabel: "Postuler via le site Dakar Dem Dikk",
-    },
-  ];
+  const handleCopyEmail = (email, e) => {
+    e.stopPropagation();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(email);
+      triggerToast(`Adresse e-mail copiée : ${email}`);
+    }
+  };
+
+  const filteredCompanies = SPONTANEOUS_COMPANIES.filter((item) => {
+    const q = searchTerm.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      item.company.toLowerCase().includes(q) ||
+      item.domains.toLowerCase().includes(q) ||
+      item.rawContact.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 selection:bg-emerald-200 selection:text-emerald-900 font-sans">
+      {/* Toast Notification */}
       <div
         className={`fixed top-20 right-4 z-[700] bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl transition-all duration-300 transform ${
           toast ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0 pointer-events-none"
@@ -75,6 +50,7 @@ export default function RecrutementSpontanePage() {
         <span className="text-sm font-semibold">{toast}</span>
       </div>
 
+      {/* Header */}
       <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
@@ -92,19 +68,25 @@ export default function RecrutementSpontanePage() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 flex-1 w-full">
-        <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-10 text-white mb-10 shadow-xl relative overflow-hidden">
+        {/* Banner Hero */}
+        <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-10 text-white mb-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
             <i className="fa-solid fa-paper-plane text-9xl"></i>
           </div>
-          <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-2 relative z-10">Candidatures</span>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 relative z-10">Recrutement Spontané</h1>
+          <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-2 relative z-10">
+            Candidatures Spontanées
+          </span>
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 relative z-10">
+            Répertoire Officiel des Entreprises
+          </h1>
           <p className="text-base text-emerald-100 font-medium leading-relaxed max-w-2xl relative z-10">
-            Envoyez votre profil directement aux entreprises partenaires pour de futures opportunités, même lorsqu'aucune offre n'est actuellement publiée.
+            Envoyez votre profil directement aux entreprises partenaires pour de futures opportunités. Retrouvez la liste complète des canaux et contacts de recrutement direct au Sénégal.
           </p>
         </div>
 
-        {/* Info Banner for Daily Workers / Physical Drop-off */}
+        {/* Info Banner for Daily Workers */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center flex-shrink-0">
@@ -125,69 +107,159 @@ export default function RecrutementSpontanePage() {
           </Link>
         </div>
 
+        {/* Search & Counter Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+          <div className="relative w-full sm:w-96">
+            <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+            <input
+              type="text"
+              placeholder="Rechercher une entreprise ou un domaine (Caisse, BTP, Hôtellerie...)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+            />
+          </div>
+          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            {filteredCompanies.length} / {SPONTANEOUS_COMPANIES.length} Entreprises répertoriées
+          </div>
+        </div>
+
+        {/* Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {spontaneousOffers.map((offer) => (
-            <div 
-              key={offer.id} 
-              onClick={() => router.push(`/recrutement-spontane/${offer.company.toLowerCase()}`)}
-              className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col group cursor-pointer"
+          {filteredCompanies.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => router.push(`/recrutement-spontane/${item.slug}`)}
+              className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group cursor-pointer"
             >
-              {offer.image_url && (
-                <div className="relative w-full h-48 sm:h-56 overflow-hidden bg-gray-100">
+              {/* Emplacement Carré pour Image (Square Image Container) */}
+              <div className="relative w-full aspect-square bg-gradient-to-br from-emerald-50 via-teal-50 to-gray-100 overflow-hidden border-b border-gray-100 flex flex-col items-center justify-center p-6 text-center group-hover:bg-emerald-100/40 transition-colors">
+                {item.image_url ? (
                   <img
-                    src={offer.image_url}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none"
-                  />
-                  <img
-                    src={offer.image_url}
-                    alt={offer.title}
-                    className="relative z-10 w-full h-full object-contain mx-auto block group-hover:scale-105 transition-transform duration-500"
+                    src={item.image_url}
+                    alt={item.company}
+                    className="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                   />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-4">
+                    <div className="w-20 h-20 rounded-2xl bg-white border border-emerald-200 shadow-md flex items-center justify-center mb-3 text-emerald-600 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                      <i className="fa-solid fa-building text-3xl"></i>
+                    </div>
+                    <span className="text-xs font-extrabold text-emerald-800 bg-emerald-100/80 px-3 py-1 rounded-full mb-1">
+                      {item.company}
+                    </span>
+                    <span className="text-[11px] font-medium text-gray-400">
+                      <i className="fa-solid fa-image mr-1 text-emerald-400"></i>
+                      Zone Image Carrée
+                    </span>
+                  </div>
+                )}
+                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-gray-200 text-[10px] font-extrabold text-gray-600 shadow-xs">
+                  {item.contactType === "email" ? (
+                    <span className="text-emerald-700 flex items-center gap-1">
+                      <i className="fa-solid fa-envelope"></i> Email Direct
+                    </span>
+                  ) : (
+                    <span className="text-blue-700 flex items-center gap-1">
+                      <i className="fa-solid fa-globe"></i> Lien Web
+                    </span>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Card Body */}
               <div className="p-6 flex flex-col flex-1">
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-700">
-                    {offer.contract_type}
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                    {item.contract_type}
                   </span>
                 </div>
-                <h2 className="font-extrabold text-gray-900 text-lg mb-1">{offer.title}</h2>
-                <p className="text-sm text-gray-500 font-semibold mb-2">{offer.company}</p>
-                <p className="text-xs text-gray-400 font-medium mb-4 flex items-center gap-1.5">
-                  <i className="fa-solid fa-location-dot"></i>
-                  {offer.location}
-                </p>
-                <p className="text-sm text-gray-600 leading-relaxed flex-1 mb-6 whitespace-pre-line line-clamp-3">
-                  {offer.description}
-                </p>
 
-                <div className="flex flex-col gap-3 w-full mt-auto">
-                  {offer.externalLink && (
+                <h2 className="font-extrabold text-gray-900 text-xl mb-1 group-hover:text-emerald-700 transition-colors">
+                  {item.company}
+                </h2>
+
+                <div className="mb-3">
+                  <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-1">
+                    Domaines & Postes :
+                  </p>
+                  <p className="text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-100 p-2.5 rounded-xl leading-snug">
+                    {item.domains}
+                  </p>
+                </div>
+
+                {item.documentsRequired && (
+                  <div className="mb-3">
+                    <span className="text-[10px] font-bold uppercase text-gray-400 tracking-wider block mb-0.5">
+                      <i className="fa-solid fa-file-lines mr-1 text-emerald-500"></i> Documents requis :
+                    </span>
+                    <span className="text-xs font-semibold text-gray-600">
+                      {item.documentsRequired}
+                    </span>
+                  </div>
+                )}
+
+                {/* Direct Contact Info */}
+                <div className="mb-4 bg-emerald-50/60 border border-emerald-100 rounded-xl p-3">
+                  <span className="text-[10px] font-bold uppercase text-emerald-800 tracking-wider block mb-0.5">
+                    Canal de Candidature Direct :
+                  </span>
+                  <div className="flex items-center justify-between gap-2 overflow-hidden">
+                    <span className="text-xs font-mono font-bold text-gray-800 truncate selection:bg-emerald-300">
+                      {item.rawContact}
+                    </span>
+                    {item.contactType === "email" && item.email && (
+                      <button
+                        onClick={(e) => handleCopyEmail(item.email, e)}
+                        title="Copier l'e-mail"
+                        className="p-1.5 text-emerald-700 hover:bg-emerald-200/60 rounded-lg transition"
+                      >
+                        <i className="fa-regular fa-copy text-xs"></i>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-2 w-full mt-auto">
+                  {item.contactType === "url" ? (
                     <a
-                      href={offer.externalLink}
+                      href={item.externalLink}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full text-center py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl transition cursor-pointer shadow-sm hover:shadow"
+                      className="w-full text-center py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer shadow-sm flex items-center justify-center gap-2"
                     >
-                      <i className="fa-solid fa-external-link-alt mr-2"></i>
-                      {offer.externalButtonLabel || "Lien externe"}
+                      <i className="fa-solid fa-external-link-alt"></i>
+                      Postuler sur le site officiel
                     </a>
-                  )}
-                  {offer.allowSpontaneousModal && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleApplyClick(offer);
-                      }}
-                      className="w-full py-3 bg-white hover:bg-emerald-50 text-emerald-600 border-2 border-emerald-500 font-extrabold text-sm rounded-xl transition cursor-pointer shadow-sm md:hidden"
-                    >
-                      <i className="fa-regular fa-paper-plane mr-2"></i>
-                      Candidature Rapide
-                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`mailto:${item.email}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 text-center py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                      >
+                        <i className="fa-solid fa-paper-plane"></i>
+                        Envoyer Email
+                      </a>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleApplyClick({
+                            id: item.id,
+                            title: `Candidature Spontanée - ${item.company}`,
+                            company: item.company,
+                            isSpontaneous: true,
+                          });
+                        }}
+                        className="px-3 py-3 bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 font-extrabold text-xs rounded-xl transition cursor-pointer"
+                        title="Formulaire rapide"
+                      >
+                        <i className="fa-solid fa-bolt"></i>
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -196,6 +268,7 @@ export default function RecrutementSpontanePage() {
         </div>
       </main>
 
+      {/* Apply Modal */}
       <ApplyModal
         isOpen={!!applyingOffer}
         onClose={() => setApplyingOffer(null)}
@@ -206,7 +279,7 @@ export default function RecrutementSpontanePage() {
                 titleFR: applyingOffer.title,
                 titleEN: applyingOffer.title,
                 company: applyingOffer.company,
-                isSpontaneous: applyingOffer.isSpontaneous,
+                isSpontaneous: true,
               }
             : null
         }
@@ -214,6 +287,7 @@ export default function RecrutementSpontanePage() {
         triggerToast={triggerToast}
       />
 
+      {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-6 text-center text-sm font-medium text-gray-500">
         © 2026 Facilite. Tous droits réservés.
       </footer>
