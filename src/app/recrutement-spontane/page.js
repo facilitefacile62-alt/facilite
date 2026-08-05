@@ -55,9 +55,26 @@ export default function RecrutementSpontanePage() {
     );
   };
 
+  const isHotelCompany = (item) => {
+    const text = `${item.company} ${item.domains} ${(item.poles || []).join(" ")} ${item.description}`.toLowerCase();
+    return (
+      text.includes("hotel") ||
+      text.includes("hôtel") ||
+      text.includes("resort") ||
+      text.includes("lodge") ||
+      text.includes("tourisme") ||
+      text.includes("hôtellerie") ||
+      text.includes("hébergement") ||
+      text.includes("palace") ||
+      text.includes("club med") ||
+      text.includes("spa")
+    );
+  };
+
   const filteredCompanies = SPONTANEOUS_COMPANIES.filter((item) => {
     // Filtrage par catégorie
     if (activeCategory === "stations" && !isStationCompany(item)) return false;
+    if (activeCategory === "hotels" && !isHotelCompany(item)) return false;
     if (activeCategory === "transport") {
       const text = `${item.company} ${item.domains}`.toLowerCase();
       if (!text.includes("transport") && !text.includes("brt") && !text.includes("seter") && !text.includes("dem dikk") && !text.includes("logistique") && !text.includes("pêche") && !text.includes("aéronautique") && !text.includes("air")) return false;
@@ -68,7 +85,7 @@ export default function RecrutementSpontanePage() {
     }
     if (activeCategory === "distribution") {
       const text = `${item.company} ${item.domains}`.toLowerCase();
-      if (!text.includes("auchan") && !text.includes("supeco") && !text.includes("mall") && !text.includes("bazar") && !text.includes("restauration") && !text.includes("hotel") && !text.includes("hôtellerie") && !text.includes("cuisine") && !text.includes("djolof")) return false;
+      if (!text.includes("auchan") && !text.includes("supeco") && !text.includes("mall") && !text.includes("bazar") && !text.includes("restauration") && !text.includes("cuisine") && !text.includes("djolof")) return false;
     }
 
     // Filtrage par terme de recherche
@@ -82,6 +99,7 @@ export default function RecrutementSpontanePage() {
   });
 
   const stationCount = SPONTANEOUS_COMPANIES.filter(isStationCompany).length;
+  const hotelCount = SPONTANEOUS_COMPANIES.filter(isHotelCompany).length;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 selection:bg-emerald-200 selection:text-emerald-900 font-sans">
@@ -150,18 +168,36 @@ export default function RecrutementSpontanePage() {
           {/* LA TOUCHE UNIQUE DÉDIÉE AUX STATIONS-SERVICES */}
           <button
             onClick={() => setActiveCategory("stations")}
-            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 whitespace-nowrap flex items-center gap-2 border ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 whitespace-nowrap flex items-center gap-2 border ${
               activeCategory === "stations"
                 ? "bg-amber-500 text-white border-amber-600 shadow-lg scale-105"
                 : "bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border-amber-300 hover:border-amber-500 hover:shadow-md"
             }`}
           >
             <span className="text-base">⛽</span>
-            <span>Stations-Services & Hydrocarbures</span>
+            <span>Stations-Services</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
               activeCategory === "stations" ? "bg-white text-amber-700" : "bg-amber-200 text-amber-900"
             }`}>
               {stationCount}
+            </span>
+          </button>
+
+          {/* LA TOUCHE DÉDIÉE AUX HÔTELS & RESORTS */}
+          <button
+            onClick={() => setActiveCategory("hotels")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 whitespace-nowrap flex items-center gap-2 border ${
+              activeCategory === "hotels"
+                ? "bg-purple-600 text-white border-purple-700 shadow-lg scale-105"
+                : "bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-900 border-purple-300 hover:border-purple-500 hover:shadow-md"
+            }`}
+          >
+            <span className="text-base">🏨</span>
+            <span>Hôtellerie & Tourisme</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              activeCategory === "hotels" ? "bg-white text-purple-700" : "bg-purple-200 text-purple-900"
+            }`}>
+              {hotelCount}
             </span>
           </button>
 
