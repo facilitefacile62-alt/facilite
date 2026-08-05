@@ -4,16 +4,21 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, Integer, String, Table, MetaData
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Load environment variables from .env (or .env.example if copied)
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+# Load environment variables from .env, .env.local or local directory
+root_path = Path(__file__).parent.parent
+load_dotenv(dotenv_path=root_path / ".env")
+load_dotenv(dotenv_path=root_path / ".env.local")
+load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 DATABASE_URL = os.getenv("SUPABASE_DATABASE_URL")
-if not DATABASE_URL:
-    raise ValueError("SUPABASE_DATABASE_URL is not set in environment variables")
+if not DATABASE_URL or "<username>" in DATABASE_URL:
+    print("⚠️ WARNING: SUPABASE_DATABASE_URL non configuré ou incomplet. Renseignez votre chaîne de connexion Postgres pour synchroniser avec le cloud Supabase.")
+    # Fallback SQLite temporaire pour éviter de faire crasher le serveur lors de tests locaux
+    DATABASE_URL = "sqlite:///./local_test.db"
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False}, echo=False, future=True)
+else:
+    engine = create_engine(DATABASE_URL, echo=False, future=True)
 
-# SQLAlchemy engine and session setup (synchronous for simplicity)
-engine = create_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

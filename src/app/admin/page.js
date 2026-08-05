@@ -485,6 +485,10 @@ export default function AdminDashboardPage() {
             <span>🧑‍💼</span>
             <span>Commandes Agent</span>
           </Link>
+          <Link href="/admin/scraping" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition">
+            <span>🤖</span>
+            <span>Agrégation & Scraping</span>
+          </Link>
           <button
             type="button"
             onClick={() => setActiveTab("dashboard")}

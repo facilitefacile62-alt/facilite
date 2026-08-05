@@ -67,3 +67,13 @@ next-env.d.ts
 # vers .env.local) — sûr à committer, contrairement aux autres .env*.
 !.env.example
 client_secret_*.json
+
+# Python & Backend SQLite DB
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+.pytest_cache/
+venv/
+env/

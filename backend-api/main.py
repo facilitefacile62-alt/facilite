@@ -7,8 +7,8 @@ from pydantic import BaseModel, HttpUrl, Field
 from sqlalchemy.orm import Session
 
 # Imports locaux
-from .database import init_db, get_db, Establishment
-from .scraper import scrape_real_data
+from database import init_db, get_db, Establishment
+from scraper import scrape_real_data
 
 # -------------------------------------------------------
 # Initialisation de l'application FastAPI

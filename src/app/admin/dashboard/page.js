@@ -144,6 +144,14 @@ export default function AdminDashboardKpiPage() {
               <i className="fa-solid fa-user-tie"></i>
               <span className="hidden md:inline">Commandes Agent</span>
             </Link>
+            <Link
+              href="/admin/scraping"
+              className="text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition flex items-center space-x-1.5"
+              title="Scraping & Données"
+            >
+              <i className="fa-solid fa-robot"></i>
+              <span className="hidden md:inline">Scraping & Données</span>
+            </Link>
             <button
               onClick={handleGlobalSignOut}
               className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition cursor-pointer flex items-center space-x-1"
