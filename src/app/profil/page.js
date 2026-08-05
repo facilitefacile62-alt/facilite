@@ -65,12 +65,7 @@ export default function ProfilPage() {
   // compte" ou redirection post-connexion OTP depuis /forgot-password).
   // Initialiseur paresseux plutôt qu'un effet : window.location.search est
   // lu une seule fois, sans setState supplémentaire ni Suspense boundary.
-  const [activeAboutTab, setActiveAboutTab] = useState(() => {
-    if (typeof window === "undefined") return "info_perso";
-    return new URLSearchParams(window.location.search).get("tab") || "info_perso";
-  });
-
-  const [activeSection, setActiveSection] = useState(() => {
+const [activeSection, setActiveSection] = useState(() => {
     if (typeof window === "undefined") return "info_perso";
     const tabParam = new URLSearchParams(window.location.search).get("tab");
     return tabParam === "personal_info" ? "info_perso" : (tabParam || "info_perso");
@@ -84,18 +79,7 @@ export default function ProfilPage() {
     const tabParam = new URLSearchParams(window.location.search).get("tab");
     return tabParam === "personal_info" ? "info_perso" : (tabParam || null);
   });
-
-  // Synchronisation unidirectionnelle : activeSection pilote activeAboutTab.
-  // L'inverse causàit une boucle de re-render infinie (chaque effet déclenchait l'autre).
-  useEffect(() => {
-    const target = activeSection === "personal_info" ? "info_perso" : activeSection;
-    if (activeAboutTab !== target) {
-      setActiveAboutTab(target);
-    }
-  }, [activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
-  useEffect(() => {
+useEffect(() => {
     if (!userSession?.user?.id) {
       setIsNavAdmin(false);
       setIsNavRecruiter(false);
@@ -2160,7 +2144,7 @@ export default function ProfilPage() {
                 <button
                   onClick={() => {
                     setActiveTab("about");
-                    setActiveAboutTab("securite");
+                    setActiveSection("securite");
                     setSelectedSection("securite");
                     setTimeout(() => {
                       const el = document.getElementById("section-about-profile");
@@ -2726,7 +2710,7 @@ export default function ProfilPage() {
                   )}
                   
                   {/* ONGLET: INFORMATIONS PERSONNELLES */}
-                  {activeAboutTab === "info_perso" && (
+                  {activeSection === "info_perso" && (
                     <div className="space-y-4">
                       {/* Lieu Actuel */}
                       <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60">
@@ -2961,7 +2945,7 @@ export default function ProfilPage() {
                   )}
 
                   {/* ONGLET: INTRO (CENTRALISÉ: BIO, INFOS PERSONNELLES & COORDONNÉES) */}
-                  {activeAboutTab === "intro" && (
+                  {activeSection === "intro" && (
                     <div className="space-y-4">
                       {/* Bio / Phrase d'accroche */}
                       <div className="p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 rounded-2xl border border-blue-100/90 space-y-2">
@@ -3142,7 +3126,7 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {activeAboutTab === "categorie" && (
+                  {activeSection === "categorie" && (
                     <div className="space-y-4">
                       <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-1">
                         <h4 className="text-xs font-black text-blue-600 uppercase tracking-wider">Catégorie Principale</h4>
@@ -3151,7 +3135,7 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {activeAboutTab === "liens" && (
+                  {activeSection === "liens" && (
                     <div className="space-y-4">
                       <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2">
                         <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Site Web Officiel</h4>
@@ -3160,7 +3144,7 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {activeAboutTab === "coordonnees" && (
+                  {activeSection === "coordonnees" && (
                     <div className="space-y-4">
                       <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex justify-between items-center">
                         <div>
@@ -3205,7 +3189,7 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {activeAboutTab === "langues" && (
+                  {activeSection === "langues" && (
                     <div className="space-y-4 animate-fade-in">
                       <div className="flex justify-between items-center pb-2 border-b border-gray-100">
                         <div className="flex items-center space-x-2">
@@ -3286,7 +3270,7 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {activeAboutTab === "experiences" && (
+                  {activeSection === "experiences" && (
                     <div className="space-y-4 animate-fade-in">
                       <div className="flex justify-between items-center pb-2 border-b border-gray-100">
                         <div className="flex items-center space-x-2">
@@ -3352,7 +3336,7 @@ export default function ProfilPage() {
                     </div>
                   )}
 
-                  {activeAboutTab === "formation" && (
+                  {activeSection === "formation" && (
                     <div className="space-y-4 animate-fade-in">
                       <div className="flex justify-between items-center pb-2 border-b border-gray-100">
                         <div className="flex items-center space-x-2">
@@ -3410,7 +3394,7 @@ export default function ProfilPage() {
                   )}
 
                   {/* ONGLET: COMPÉTENCES */}
-                  {activeAboutTab === "competences" && (
+                  {activeSection === "competences" && (
                     <div className="space-y-4 animate-fade-in">
                       <div className="flex justify-between items-center pb-2 border-b border-gray-100">
                         <div className="flex items-center space-x-2">
@@ -3478,7 +3462,7 @@ export default function ProfilPage() {
                   )}
 
                   {/* ONGLET: CENTRES D'INTÉRÊT */}
-                  {activeAboutTab === "interets" && (
+                  {activeSection === "interets" && (
                     <div className="space-y-4 animate-fade-in">
                       <div className="flex justify-between items-center pb-2 border-b border-gray-100">
                         <div className="flex items-center space-x-2">
@@ -3553,7 +3537,7 @@ export default function ProfilPage() {
                   )}
 
                   {/* ONGLET CONFIDENTIALITÉ : visibilité du profil public */}
-                  {activeAboutTab === "confidentialite" && (
+                  {activeSection === "confidentialite" && (
                     <div className="space-y-4">
                       <div className="flex items-start justify-between gap-4 p-4 bg-white rounded-2xl border border-gray-200">
                         <div className="min-w-0">
@@ -3676,11 +3660,11 @@ export default function ProfilPage() {
                   )}
 
                   {/* ONGLET SÉCURITÉ : Mot de passe et identifiants */}
-                  {activeAboutTab === "securite" && (
+                  {activeSection === "securite" && (
                     <SecurityTabContent userSession={userSession} />
                   )}
 
-                  {!["intro", "info_perso", "langues", "experiences", "formation", "competences", "interets", "coordonnees", "confidentialite", "securite", "noms"].includes(activeAboutTab) && (
+                  {!["intro", "info_perso", "langues", "experiences", "formation", "competences", "interets", "coordonnees", "confidentialite", "securite", "noms"].includes(activeSection) && (
                     <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 space-y-2">
                       <p className="text-xs font-bold text-gray-700">Aucune donnée spécifique enregistrée pour cet onglet.</p>
                       <p className="text-[11px] text-gray-500">Cliquez sur l'icône de crayon pour ajouter des informations.</p>

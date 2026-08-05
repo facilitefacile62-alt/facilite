@@ -18,9 +18,11 @@ import { withSentryConfig } from "@sentry/nextjs";
  *  - frame-src supabase.co : la visionneuse PDF du profil affiche le CV dans
  *    une iframe alimentée par une URL signée Supabase.
  */
+const isDev = process.env.NODE_ENV !== "production";
+
 const cspReportOnly = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
   "font-src 'self' data: https://cdnjs.cloudflare.com",
   // *.googleusercontent.com : photo de profil Google, copiée dans
@@ -84,7 +86,7 @@ const nextConfig = {
             value: "max-age=31536000; includeSubDomains; preload",
           },
           {
-            key: "Content-Security-Policy-Report-Only",
+            key: "Content-Security-Policy",
             value: cspReportOnly,
           },
         ],
