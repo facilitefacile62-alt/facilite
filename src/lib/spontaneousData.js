@@ -928,8 +928,6 @@ export const SPONTANEOUS_COMPANIES = [
     image_url: null,
     poles: ["Centre d'appels", "Téléconseillers"],
   },
-
-  // --- NOUVELLE ENTREPRISE (AIR SÉNÉGAL) ---
   {
     id: "air-senegal",
     slug: "air-senegal",
@@ -945,5 +943,21 @@ export const SPONTANEOUS_COMPANIES = [
     documentsRequired: "CV, Lettre de motivation",
     image_url: null,
     poles: ["Aéronautique", "Personnel navigant", "Logistique", "Commercial", "Fonctions support"],
+  },
+  {
+    id: "sivop-senegal",
+    slug: "sivop-senegal",
+    company: "SIVOP SÉNÉGAL (SOCIÉTÉ IVOIRIENNE DE PARFUMERIE DU SÉNÉGAL)",
+    title: "Candidature Spontanée & Dépôt Physique - SIVOP SÉNÉGAL",
+    domains: "Produits cosmétiques, Parfumerie, Soins du corps",
+    location: "Autoroute prolongée, en face de SDE Pikine, BP 3313, Dakar - Sénégal",
+    contract_type: "Dépôt physique & Spontané",
+    description: "SIVOP SÉNÉGAL (Société Ivoirienne de Parfumerie du Sénégal) recrute en candidature spontanée et dépôt de dossier sur place. Adresse : Autoroute prolongée, en face de SDE Pikine, BP 3313, Dakar. Tél: (+221) 33 879 85 85 / Fax: (+221) 33 854 64 00.",
+    rawContact: "www.sivop.com | Tél: (+221) 33 879 85 85",
+    contactType: "url",
+    externalLink: "https://www.sivop.com",
+    documentsRequired: "CV, Lettre de motivation",
+    image_url: null,
+    poles: ["Produits cosmétiques", "Parfumerie", "Soins du corps", "Recrutement sur place"],
   },
 ];

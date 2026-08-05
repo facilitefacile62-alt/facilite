@@ -30,12 +30,14 @@ const companiesList = [
   },
   {
     id: "sivop",
-    company_name: "SIVOP Parfums Cosmétique",
-    location: "Autoroute prolongée en face SDE, Pikine",
+    company_name: "SIVOP SENEGAL (SOCIETE IVOIRIENNE DE PARFUMERIE DU SENEGAL)",
+    location: "Autoroute prolongée, en face de SDE Pikine, BP 3313, Dakar - Sénégal",
     phone: "+221338798585",
+    fax: "+221338546400",
+    website: "https://www.sivop.com",
     category: "Cosmétique",
-    activityFR: "Cosmétique & Soins",
-    activityEN: "Cosmetics & Body Care",
+    activityFR: "Produits cosmétiques & Parfumerie (Recrutement sur place)",
+    activityEN: "Cosmetics & Perfumery (On-site Recruitment)",
     icon: "fa-bottle-droplet",
     logoColor: "bg-purple-600"
   },
