@@ -50,26 +50,8 @@ export default function RecrutementSpontanePage() {
         <span className="text-sm font-semibold">{toast}</span>
       </div>
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-            <span className="text-xl font-extrabold text-gray-900 tracking-tight">Facilite</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 transition"
-            >
-              Retour à l'accueil
-            </Link>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 flex-1 w-full">
         {/* Banner Hero */}
         <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-10 text-white mb-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">

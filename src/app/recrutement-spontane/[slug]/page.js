@@ -56,26 +56,8 @@ export default function RecrutementSpontaneDetailPage() {
         <span className="text-sm font-semibold">{toast}</span>
       </div>
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-            <span className="text-xl font-extrabold text-gray-900 tracking-tight">Facilite</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/recrutement-spontane"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 transition"
-            >
-              Retour au répertoire
-            </Link>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 w-full">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 w-full">
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden">
           {/* Square Image Container / Emplacement d'image carré */}
           <div className="relative w-full aspect-square max-h-96 bg-gradient-to-br from-emerald-50 via-teal-50 to-gray-100 overflow-hidden flex flex-col items-center justify-center p-8 text-center border-b border-gray-100">

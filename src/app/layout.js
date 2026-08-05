@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Header from "@/components/Header";
 import AIAssistantModal from "@/components/AIAssistantModal";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -46,6 +47,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${inter.className} bg-white dark:bg-gray-950 text-dark dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-300`} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <Header />
           {children}
           <AIAssistantModal />
         </ThemeProvider>
