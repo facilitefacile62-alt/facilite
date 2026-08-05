@@ -11,6 +11,7 @@ export default function RecrutementSpontanePage() {
   const [applyingOffer, setApplyingOffer] = useState(null);
   const [toast, setToast] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all"); // 'all', 'stations', 'transport', 'banque', 'distribution'
 
   const triggerToast = (msg) => {
     setToast(msg);
@@ -29,7 +30,48 @@ export default function RecrutementSpontanePage() {
     }
   };
 
+  // Helper pour vérifier si une entreprise appartient aux stations-services & hydrocarbures
+  const isStationCompany = (item) => {
+    const text = `${item.company} ${item.domains} ${(item.poles || []).join(" ")} ${item.description}`.toLowerCase();
+    return (
+      text.includes("station") ||
+      text.includes("pétrole") ||
+      text.includes("petroleum") ||
+      text.includes("hydrocarbure") ||
+      text.includes("pompiste") ||
+      text.includes("carburant") ||
+      text.includes("oil") ||
+      text.includes("shell") ||
+      text.includes("totalenergies") ||
+      text.includes("elton") ||
+      text.includes("star oil") ||
+      text.includes("ola energy") ||
+      text.includes("puma energy") ||
+      text.includes("touba oil") ||
+      text.includes("clean oil") ||
+      text.includes("eydon") ||
+      text.includes("mka excellence") ||
+      text.includes("sgfp")
+    );
+  };
+
   const filteredCompanies = SPONTANEOUS_COMPANIES.filter((item) => {
+    // Filtrage par catégorie
+    if (activeCategory === "stations" && !isStationCompany(item)) return false;
+    if (activeCategory === "transport") {
+      const text = `${item.company} ${item.domains}`.toLowerCase();
+      if (!text.includes("transport") && !text.includes("brt") && !text.includes("seter") && !text.includes("dem dikk") && !text.includes("logistique") && !text.includes("pêche") && !text.includes("aéronautique") && !text.includes("air")) return false;
+    }
+    if (activeCategory === "banque") {
+      const text = `${item.company} ${item.domains}`.toLowerCase();
+      if (!text.includes("banque") && !text.includes("bank") && !text.includes("finance") && !text.includes("assurances") && !text.includes("microfinance") && !text.includes("boad")) return false;
+    }
+    if (activeCategory === "distribution") {
+      const text = `${item.company} ${item.domains}`.toLowerCase();
+      if (!text.includes("auchan") && !text.includes("supeco") && !text.includes("mall") && !text.includes("bazar") && !text.includes("restauration") && !text.includes("hotel") && !text.includes("hôtellerie") && !text.includes("cuisine") && !text.includes("djolof")) return false;
+    }
+
+    // Filtrage par terme de recherche
     const q = searchTerm.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -38,6 +80,8 @@ export default function RecrutementSpontanePage() {
       item.rawContact.toLowerCase().includes(q)
     );
   });
+
+  const stationCount = SPONTANEOUS_COMPANIES.filter(isStationCompany).length;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 selection:bg-emerald-200 selection:text-emerald-900 font-sans">
@@ -89,13 +133,82 @@ export default function RecrutementSpontanePage() {
           </Link>
         </div>
 
+        {/* SINGLE TOUCH FILTER BUTTONS (Filtres Rapides par Catégorie) */}
+        <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          <button
+            onClick={() => setActiveCategory("all")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 whitespace-nowrap flex items-center gap-2 ${
+              activeCategory === "all"
+                ? "bg-gray-900 text-white shadow-md"
+                : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <i className="fa-solid fa-grid-2"></i>
+            Toutes les entreprises ({SPONTANEOUS_COMPANIES.length})
+          </button>
+
+          {/* LA TOUCHE UNIQUE DÉDIÉE AUX STATIONS-SERVICES */}
+          <button
+            onClick={() => setActiveCategory("stations")}
+            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 whitespace-nowrap flex items-center gap-2 border ${
+              activeCategory === "stations"
+                ? "bg-amber-500 text-white border-amber-600 shadow-lg scale-105"
+                : "bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border-amber-300 hover:border-amber-500 hover:shadow-md"
+            }`}
+          >
+            <span className="text-base">⛽</span>
+            <span>Stations-Services & Hydrocarbures</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              activeCategory === "stations" ? "bg-white text-amber-700" : "bg-amber-200 text-amber-900"
+            }`}>
+              {stationCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveCategory("transport")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 whitespace-nowrap flex items-center gap-2 ${
+              activeCategory === "transport"
+                ? "bg-emerald-600 text-white shadow-md"
+                : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <i className="fa-solid fa-bus"></i>
+            Transport & Logistique
+          </button>
+
+          <button
+            onClick={() => setActiveCategory("banque")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 whitespace-nowrap flex items-center gap-2 ${
+              activeCategory === "banque"
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <i className="fa-solid fa-building-columns"></i>
+            Banque & Finance
+          </button>
+
+          <button
+            onClick={() => setActiveCategory("distribution")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 whitespace-nowrap flex items-center gap-2 ${
+              activeCategory === "distribution"
+                ? "bg-purple-600 text-white shadow-md"
+                : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            <i className="fa-solid fa-cart-shopping"></i>
+            Distribution & Restauration
+          </button>
+        </div>
+
         {/* Search & Counter Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
           <div className="relative w-full sm:w-96">
             <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
             <input
               type="text"
-              placeholder="Rechercher une entreprise ou un domaine (Caisse, BTP, Hôtellerie...)"
+              placeholder="Rechercher une entreprise ou un domaine (Pompiste, Total, Shell, EDK...)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
@@ -126,7 +239,11 @@ export default function RecrutementSpontanePage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center p-4">
                     <div className="w-20 h-20 rounded-2xl bg-white border border-emerald-200 shadow-md flex items-center justify-center mb-3 text-emerald-600 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                      <i className="fa-solid fa-building text-3xl"></i>
+                      {isStationCompany(item) ? (
+                        <i className="fa-solid fa-gas-pump text-3xl text-amber-600"></i>
+                      ) : (
+                        <i className="fa-solid fa-building text-3xl"></i>
+                      )}
                     </div>
                     <span className="text-xs font-extrabold text-emerald-800 bg-emerald-100/80 px-3 py-1 rounded-full mb-1">
                       {item.company}
@@ -156,6 +273,11 @@ export default function RecrutementSpontanePage() {
                   <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800">
                     {item.contract_type}
                   </span>
+                  {isStationCompany(item) && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-200">
+                      ⛽ Station-Service
+                    </span>
+                  )}
                 </div>
 
                 <h2 className="font-extrabold text-gray-900 text-xl mb-1 group-hover:text-emerald-700 transition-colors">
