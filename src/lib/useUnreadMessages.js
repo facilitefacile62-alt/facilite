@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "./supabase";
+import { supabase, executeSupabaseWithRetry } from "./supabase";
 import { playNotificationSound } from "./notificationSound";
 
 /**
@@ -38,21 +38,25 @@ export function useUnreadMessagesBadge(userId) {
 
     async function loadInitialCount() {
       try {
-        const { count, error } = await supabase
-          .from("messages")
-          .select("id", { count: "exact", head: true })
-          .eq("receiver_id", userId)
-          .eq("is_read", false);
+        const { count, error } = await executeSupabaseWithRetry(() =>
+          supabase
+            .from("messages")
+            .select("id", { count: "exact", head: true })
+            .eq("receiver_id", userId)
+            .eq("is_read", false)
+        );
 
         if (cancelled) return;
         if (error) {
           console.warn("Erreur silencieuse chargement du compteur de messages non lus:", error.message);
+          setUnreadCount(0);
           return;
         }
         setUnreadCount(count || 0);
         readyForAlertsRef.current = true;
       } catch (err) {
         console.warn("Erreur silencieuse exception messages non lus:", err);
+        setUnreadCount(0);
       }
     }
 

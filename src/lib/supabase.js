@@ -84,3 +84,65 @@ export async function handleGlobalSignOut() {
     }
   }
 }
+
+/**
+ * Exécute une requête Supabase avec un mécanisme de retry (backoff exponentiel)
+ * en cas d'erreur 500 ou d'erreur réseau temporaire.
+ * 
+ * @param {Function} queryFn - Fonction renvoyant la promesse de la requête Supabase
+ * @param {number} maxRetries - Nombre maximum de tentatives (défaut : 3)
+ * @param {number} initialDelay - Délai initial en millisecondes (défaut : 1000)
+ */
+export async function executeSupabaseWithRetry(
+  queryFn,
+  maxRetries = 3,
+  initialDelay = 1000
+) {
+  let attempt = 0;
+  
+  while (true) {
+    try {
+      const result = await queryFn();
+      
+      // Si Supabase renvoie un objet d'erreur
+      if (result?.error) {
+        const errorMsg = result.error.message || "";
+        const statusCode = result.error.status || 500;
+
+        // Détection d'une erreur 500 ou de dépassement de limite de pile
+        const isTransientError =
+          statusCode === 500 || 
+          errorMsg.includes("54001") || 
+          errorMsg.toLowerCase().includes("stack depth") ||
+          errorMsg.toLowerCase().includes("complex");
+
+        if (isTransientError && attempt < maxRetries) {
+          attempt++;
+          const delay = initialDelay * Math.pow(2, attempt - 1);
+          console.warn(
+            `[Supabase Retry] Échec (code ${statusCode}). Tentative ${attempt}/${maxRetries} dans ${delay}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        throw result.error;
+      }
+      
+      return result; // Succès
+    } catch (err) {
+      if (attempt < maxRetries) {
+        attempt++;
+        const delay = initialDelay * Math.pow(2, attempt - 1);
+        console.warn(
+          `[Supabase Retry] Exception interceptée. Tentative ${attempt}/${maxRetries} dans ${delay}ms...`,
+          err
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+

@@ -85,19 +85,15 @@ export default function ProfilPage() {
     return tabParam === "personal_info" ? "info_perso" : (tabParam || null);
   });
 
+  // Synchronisation unidirectionnelle : activeSection pilote activeAboutTab.
+  // L'inverse causàit une boucle de re-render infinie (chaque effet déclenchait l'autre).
   useEffect(() => {
     const target = activeSection === "personal_info" ? "info_perso" : activeSection;
     if (activeAboutTab !== target) {
       setActiveAboutTab(target);
     }
-  }, [activeSection, activeAboutTab]);
+  }, [activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    const target = activeAboutTab === "info_perso" ? "info_perso" : activeAboutTab;
-    if (activeSection !== target) {
-      setActiveSection(target);
-    }
-  }, [activeAboutTab, activeSection]);
 
   useEffect(() => {
     if (!userSession?.user?.id) {
@@ -1704,7 +1700,9 @@ export default function ProfilPage() {
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
                   <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
                 </span>
-                <input
+                 <input
+                  id="profil-navbar-search"
+                  name="profil-navbar-search"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -2906,6 +2904,8 @@ export default function ProfilPage() {
                           <div className="flex-1 min-w-0">
                             <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Niveau d'études</h4>
                             <select
+                              id="profil-education-level"
+                              name="profil-education-level"
                               value={educationLevel}
                               onChange={(e) => {
                                 const newLevel = e.target.value;
@@ -3024,6 +3024,8 @@ export default function ProfilPage() {
                             <div>
                               <label className="block font-bold text-gray-700 mb-1">Phrase d'accroche Bio</label>
                               <textarea
+                                id="profil-bio"
+                                name="profil-bio"
                                 rows={2}
                                 value={tempBio}
                                 onChange={(e) => setTempBio(e.target.value)}
@@ -3035,6 +3037,8 @@ export default function ProfilPage() {
                               <div>
                                 <label className="block font-bold text-gray-700 mb-1">Prénom</label>
                                 <input
+                                  id="profil-first-name"
+                                  name="profil-first-name"
                                   type="text"
                                   value={firstName}
                                   onChange={(e) => setFirstName(e.target.value)}
@@ -3044,6 +3048,8 @@ export default function ProfilPage() {
                               <div>
                                 <label className="block font-bold text-gray-700 mb-1">Nom</label>
                                 <input
+                                  id="profil-last-name"
+                                  name="profil-last-name"
                                   type="text"
                                   value={lastName}
                                   onChange={(e) => setLastName(e.target.value)}
@@ -3053,6 +3059,8 @@ export default function ProfilPage() {
                               <div>
                                 <label className="block font-bold text-gray-700 mb-1">Titre professionnel</label>
                                 <input
+                                  id="profil-job-title"
+                                  name="profil-job-title"
                                   type="text"
                                   value={jobTitle}
                                   onChange={(e) => setJobTitle(e.target.value)}
@@ -3062,6 +3070,8 @@ export default function ProfilPage() {
                               <div>
                                 <label className="block font-bold text-gray-700 mb-1">Ville</label>
                                 <input
+                                  id="profil-city"
+                                  name="profil-city"
                                   type="text"
                                   value={city}
                                   onChange={(e) => setCity(e.target.value)}
@@ -3071,6 +3081,8 @@ export default function ProfilPage() {
                               <div>
                                 <label className="block font-bold text-gray-700 mb-1">Pays</label>
                                 <input
+                                  id="profil-country"
+                                  name="profil-country"
                                   type="text"
                                   value={country}
                                   onChange={(e) => setCountry(e.target.value)}
@@ -3080,6 +3092,8 @@ export default function ProfilPage() {
                               <div>
                                 <label className="block font-bold text-gray-700 mb-1">Téléphone</label>
                                 <input
+                                  id="profil-phone"
+                                  name="profil-phone"
                                   type="text"
                                   value={phone}
                                   onChange={(e) => setPhone(e.target.value)}
@@ -3408,6 +3422,8 @@ export default function ProfilPage() {
                       {/* Formulaire d'ajout de compétence */}
                       <div className="flex items-center space-x-2 pt-1">
                         <input
+                          id="profil-new-skill"
+                          name="profil-new-skill"
                           type="text"
                           value={newSkillInput}
                           onChange={(e) => setNewSkillInput(e.target.value)}
@@ -3750,6 +3766,8 @@ export default function ProfilPage() {
                     </div>
 
                     <input
+                      id="profil-cv-file-upload"
+                      name="profil-cv-file-upload"
                       type="file"
                       ref={cvFileInputRef}
                       onChange={handleCvFileChange}
@@ -4034,6 +4052,8 @@ export default function ProfilPage() {
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5">Intitulé du poste*</label>
                   <input
+                    id="exp-title"
+                    name="exp-title"
                     type="text"
                     required
                     value={expTitle}
@@ -4046,6 +4066,8 @@ export default function ProfilPage() {
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5">Nom de l'entreprise*</label>
                   <input
+                    id="exp-company"
+                    name="exp-company"
                     type="text"
                     required
                     value={expCompany}
@@ -4060,6 +4082,8 @@ export default function ProfilPage() {
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5">Lieu</label>
                   <input
+                    id="exp-location"
+                    name="exp-location"
                     type="text"
                     value={expLocation}
                     onChange={(e) => setExpLocation(e.target.value)}
@@ -4071,6 +4095,8 @@ export default function ProfilPage() {
                 <div className="relative">
                   <label className="block text-xs font-bold text-gray-600 mb-1.5">Type de lieu</label>
                   <select
+                    id="exp-location-type"
+                    name="exp-location-type"
                     value={expLocationType}
                     onChange={(e) => setExpLocationType(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 transition font-bold text-gray-700 cursor-pointer"
@@ -4086,6 +4112,8 @@ export default function ProfilPage() {
                 <div className="relative col-span-1 md:col-span-2">
                   <label className="block text-xs font-bold text-gray-600 mb-1.5">Type d'emploi</label>
                   <select
+                    id="exp-employment-type"
+                    name="exp-employment-type"
                     value={expEmploymentType}
                     onChange={(e) => setExpEmploymentType(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 transition font-bold text-gray-700 cursor-pointer"
@@ -4120,6 +4148,8 @@ export default function ProfilPage() {
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5">Mois de début*</label>
                   <select
+                    id="exp-start-month"
+                    name="exp-start-month"
                     value={expStartMonth}
                     onChange={(e) => setExpStartMonth(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 transition font-bold text-gray-700 cursor-pointer"
@@ -4142,6 +4172,8 @@ export default function ProfilPage() {
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5">Année de début*</label>
                   <select
+                    id="exp-start-year"
+                    name="exp-start-year"
                     value={expStartYear}
                     onChange={(e) => setExpStartYear(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 transition font-bold text-gray-700 cursor-pointer"
@@ -4160,6 +4192,8 @@ export default function ProfilPage() {
                 
                 <div className="flex space-x-2">
                   <input
+                    id="exp-skill-input"
+                    name="exp-skill-input"
                     type="text"
                     value={expSkillInput}
                     onChange={(e) => setExpSkillInput(e.target.value)}
@@ -4233,6 +4267,8 @@ export default function ProfilPage() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Établissement / École / Université *</label>
                 <input
+                  id="edu-school"
+                  name="edu-school"
                   type="text"
                   value={eduSchool}
                   onChange={(e) => setEduSchool(e.target.value)}
@@ -4245,6 +4281,8 @@ export default function ProfilPage() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Diplôme / Certificat *</label>
                 <input
+                  id="edu-degree"
+                  name="edu-degree"
                   type="text"
                   value={eduDegree}
                   onChange={(e) => setEduDegree(e.target.value)}
@@ -4257,6 +4295,8 @@ export default function ProfilPage() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Domaine d'études</label>
                 <input
+                  id="edu-field"
+                  name="edu-field"
                   type="text"
                   value={eduField}
                   onChange={(e) => setEduField(e.target.value)}
@@ -4269,6 +4309,8 @@ export default function ProfilPage() {
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Année de début</label>
                   <select
+                    id="edu-start-year"
+                    name="edu-start-year"
                     value={eduStartYear}
                     onChange={(e) => setEduStartYear(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-xs focus:outline-none focus:border-purple-600 transition font-bold text-gray-700 cursor-pointer"
@@ -4282,6 +4324,8 @@ export default function ProfilPage() {
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Année de fin</label>
                   <select
+                    id="edu-end-year"
+                    name="edu-end-year"
                     value={eduEndYear}
                     onChange={(e) => setEduEndYear(e.target.value)}
                     disabled={eduIsCurrent}
@@ -4531,6 +4575,8 @@ export default function ProfilPage() {
               <div className="flex items-center space-x-4 px-4 pt-2">
                 <span className="text-xs font-bold text-gray-500">-</span>
                 <input
+                  id="crop-zoom-slider"
+                  name="crop-zoom-slider"
                   type="range"
                   min="0.8"
                   max="3"
@@ -4790,6 +4836,8 @@ export default function ProfilPage() {
               <div>
                 <label className="block font-bold text-gray-700 mb-1">Nom de la langue</label>
                 <input
+                  id="lang-name"
+                  name="lang-name"
                   type="text"
                   value={newLangName}
                   onChange={(e) => setNewLangName(e.target.value)}
@@ -4801,6 +4849,8 @@ export default function ProfilPage() {
               <div>
                 <label className="block font-bold text-gray-700 mb-1">Niveau de maîtrise</label>
                 <select
+                  id="lang-level"
+                  name="lang-level"
                   value={newLangLevel}
                   onChange={(e) => setNewLangLevel(e.target.value)}
                   className="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
@@ -4915,6 +4965,8 @@ export default function ProfilPage() {
                     <div>
                       <label className="block font-bold text-gray-700 mb-1">Prénom</label>
                       <input
+                        id="scan-first-name"
+                        name="scan-first-name"
                         type="text"
                         value={scannedData.firstName}
                         onChange={(e) => setScannedData({ ...scannedData, firstName: e.target.value })}
@@ -4924,6 +4976,8 @@ export default function ProfilPage() {
                     <div>
                       <label className="block font-bold text-gray-700 mb-1">Nom de famille</label>
                       <input
+                        id="scan-last-name"
+                        name="scan-last-name"
                         type="text"
                         value={scannedData.lastName}
                         onChange={(e) => setScannedData({ ...scannedData, lastName: e.target.value })}
@@ -4933,6 +4987,8 @@ export default function ProfilPage() {
                     <div>
                       <label className="block font-bold text-gray-700 mb-1">Ville</label>
                       <input
+                        id="scan-city"
+                        name="scan-city"
                         type="text"
                         value={scannedData.city}
                         onChange={(e) => setScannedData({ ...scannedData, city: e.target.value })}
@@ -4942,6 +4998,8 @@ export default function ProfilPage() {
                     <div>
                       <label className="block font-bold text-gray-700 mb-1">Pays</label>
                       <input
+                        id="scan-country"
+                        name="scan-country"
                         type="text"
                         value={scannedData.country}
                         onChange={(e) => setScannedData({ ...scannedData, country: e.target.value })}
