@@ -202,8 +202,8 @@ export default function Header() {
               id: `pred_${predText}`,
               text: predText,
               type: "Saisie",
-              subtitle: `Rechercher "${predText}" dans les emplois`,
-              targetUrl: `/offres?q=${encodeURIComponent(predText)}`,
+              subtitle: `Rechercher "${predText}" sur tout le site`,
+              targetUrl: `/recherche?q=${encodeURIComponent(predText)}`,
               icon: "fa-magnifying-glass",
             });
           }
@@ -279,7 +279,7 @@ export default function Header() {
     if (targetUrl) {
       router.push(targetUrl);
     } else if (queryText.trim()) {
-      router.push(`/offres?q=${encodeURIComponent(queryText.trim())}`);
+      router.push(`/recherche?q=${encodeURIComponent(queryText.trim())}`);
     }
   };
 
