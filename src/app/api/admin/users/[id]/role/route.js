@@ -5,7 +5,7 @@ import { isCallerAdmin } from "@/lib/rbac";
 
 export const runtime = "nodejs";
 
-const ALLOWED_ROLES = ["user", "publisher", "admin"];
+import { z } from "zod";
 
 /**
  * Seul point d'entrée pour changer le rôle d'un utilisateur.
@@ -29,12 +29,17 @@ export async function POST(req, { params }) {
     const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
 
+    const RoleSchema = z.object({
+      role: z.enum(["user", "publisher", "admin"]),
+    });
+    
     const body = await req.json().catch(() => ({}));
-    const { role } = body;
-
-    if (!ALLOWED_ROLES.includes(role)) {
+    const parseResult = RoleSchema.safeParse(body);
+    
+    if (!parseResult.success) {
       return NextResponse.json({ error: "Rôle invalide." }, { status: 400 });
     }
+    const { role } = parseResult.data;
 
     const supabaseAdmin = getSupabaseAdmin();
 

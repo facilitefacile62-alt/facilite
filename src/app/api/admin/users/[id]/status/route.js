@@ -5,7 +5,7 @@ import { isCallerAdmin } from "@/lib/rbac";
 
 export const runtime = "nodejs";
 
-const ALLOWED_STATUSES = ["active", "pending_review", "suspended"];
+import { z } from "zod";
 
 /** Seul point d'entrée pour changer le statut d'un utilisateur — même
  * raisonnement que /api/admin/users/[id]/role (voir ce fichier). */
@@ -19,12 +19,17 @@ export async function POST(req, { params }) {
     const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
 
+    const StatusSchema = z.object({
+      status: z.enum(["active", "pending_review", "suspended"]),
+    });
+    
     const body = await req.json().catch(() => ({}));
-    const { status } = body;
-
-    if (!ALLOWED_STATUSES.includes(status)) {
+    const parseResult = StatusSchema.safeParse(body);
+    
+    if (!parseResult.success) {
       return NextResponse.json({ error: "Statut invalide." }, { status: 400 });
     }
+    const { status } = parseResult.data;
 
     const supabaseAdmin = getSupabaseAdmin();
 

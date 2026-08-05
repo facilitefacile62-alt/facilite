@@ -6,6 +6,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 
 export const runtime = "nodejs";
 
+import { z } from "zod";
+
+const CreateRoomSchema = z.object({
+  applicationId: z.string().uuid("applicationId doit être un UUID valide."),
+});
+
 // 2h, comme demandé dans la mission — au-delà, le salon Daily.co devient
 // inutilisable même si la ligne `interviews` correspondante existe toujours.
 const ROOM_LIFETIME_SECONDS = 2 * 60 * 60;
@@ -19,10 +25,12 @@ export async function POST(req) {
     if (!allowed) return rateError;
 
     const body = await req.json().catch(() => null);
-    const applicationId = body?.applicationId;
-    if (!applicationId) {
-      return NextResponse.json({ error: "applicationId requis." }, { status: 400 });
+    const parseResult = CreateRoomSchema.safeParse(body);
+    
+    if (!parseResult.success) {
+      return NextResponse.json({ error: "applicationId requis et doit être valide." }, { status: 400 });
     }
+    const { applicationId } = parseResult.data;
 
     // Client scellé au jeton de l'appelant : la RLS de candidatures/job_offers
     // fait déjà tout le travail d'autorisation ("Un recruteur lit les

@@ -7,6 +7,13 @@ import { sendCvReadyEmail } from "@/lib/notifications";
 
 export const runtime = "nodejs";
 
+import { z } from "zod";
+
+const CompleteAssignmentSchema = z.object({
+  assignmentId: z.string().min(1, "assignmentId est requis"),
+  completedCvPath: z.string().min(1, "completedCvPath est requis"),
+});
+
 /**
  * Finalise une affectation agent : bascule le statut à "completed" et
  * enregistre le chemin du CV livré (déjà téléversé côté client vers le
@@ -27,14 +34,15 @@ export async function POST(req) {
     if (!allowed) return rateError;
 
     const body = await req.json().catch(() => ({}));
-    const { assignmentId, completedCvPath } = body;
+    const parseResult = CompleteAssignmentSchema.safeParse(body);
 
-    if (!assignmentId || !completedCvPath) {
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "assignmentId et completedCvPath sont requis." },
+        { error: "assignmentId et completedCvPath sont requis et valides." },
         { status: 400 }
       );
     }
+    const { assignmentId, completedCvPath } = parseResult.data;
 
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;

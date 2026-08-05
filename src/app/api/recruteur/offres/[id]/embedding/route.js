@@ -5,6 +5,13 @@ import { SUPABASE_URL } from "@/lib/env";
 
 export const runtime = "nodejs";
 
+import { z } from "zod";
+
+const EmbeddingSchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+});
+
 const MAX_EMBEDDING_INPUT_CHARS = 8000;
 
 /**
@@ -26,7 +33,12 @@ export async function POST(req, { params }) {
     if (!allowed) return rateError;
 
     const body = await req.json().catch(() => ({}));
-    const { title, description } = body;
+    const parseResult = EmbeddingSchema.safeParse(body);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ error: "Données invalides." }, { status: 400 });
+    }
+    const { title, description } = parseResult.data;
     const text = [title, description].filter(Boolean).join("\n\n").trim();
     if (!text) {
       return NextResponse.json({ error: "title et/ou description requis." }, { status: 400 });

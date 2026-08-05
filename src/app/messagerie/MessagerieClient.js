@@ -1497,7 +1497,7 @@ export default function MessagerieClient() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const { valid, error: validationError } = validateChatFile(file);
+    const { valid, error: validationError } = await validateChatFile(file);
     if (!valid) {
       triggerToast(validationError, "fa-triangle-exclamation");
       e.target.value = "";

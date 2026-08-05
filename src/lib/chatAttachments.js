@@ -38,7 +38,7 @@ function classifyAttachment(mimeType) {
  * magic bytes comme pour les CV — acceptable ici, le risque est le même que
  * pour l'upload direct des photos d'offres déjà en place dans /recruteur.
  */
-export function validateChatFile(file) {
+export async function validateChatFile(file) {
   if (!file) return { valid: false, error: "Aucun fichier sélectionné." };
   if (!CHAT_FILE_TYPES.includes(file.type)) {
     return { valid: false, error: "Format non supporté (PDF, DOC/DOCX, PNG ou JPG uniquement)." };
@@ -46,6 +46,30 @@ export function validateChatFile(file) {
   if (file.size > MAX_CHAT_FILE_BYTES) {
     return { valid: false, error: "Fichier trop volumineux (15 Mo maximum)." };
   }
+  
+  try {
+    const buffer = await file.slice(0, 8).arrayBuffer();
+    const arr = new Uint8Array(buffer);
+    const hex = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+    let realType = null;
+    if (hex.startsWith("25504446")) realType = "application/pdf";
+    else if (hex.startsWith("504B0304")) realType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    else if (hex.startsWith("D0CF11E0")) realType = "application/msword";
+    else if (hex.startsWith("89504E47")) realType = "image/png";
+    else if (hex.startsWith("FFD8FF")) realType = "image/jpeg";
+    else if (hex.startsWith("52494646") && hex.substring(16, 24) === "57454250") realType = "image/webp";
+
+    const isImageOrAudio = file.type.startsWith("image/") || file.type.startsWith("audio/");
+    
+    if (realType && realType !== file.type && !isImageOrAudio) {
+        return { valid: false, error: "Le contenu réel du fichier ne correspond pas à son extension (sécurité)." };
+    }
+  } catch (err) {
+    console.error("Erreur de lecture Magic Bytes :", err);
+    return { valid: false, error: "Impossible d'analyser la sécurité du fichier." };
+  }
+
   return { valid: true, error: null };
 }
 
