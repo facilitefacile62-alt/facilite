@@ -64,6 +64,7 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [periodDays, setPeriodDays] = useState(7);
   const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
+  const [mobilePlusMenuOpen, setMobilePlusMenuOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState("all"); // 'all' | 'none' | 'verified_recruiter' (filtre par badge, plus par rôle depuis le chantier RBAC — candidat/recruteur ont fusionné en 'user')
 
   const [users, setUsers] = useState([]);
@@ -568,8 +569,8 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Onglets horizontaux */}
-          <div className="flex items-center gap-1 bg-gray-100 p-1.5 rounded-2xl mb-6 overflow-x-auto">
+          {/* Onglets horizontaux (Desktop) */}
+          <div className="hidden sm:flex items-center gap-1 bg-gray-100 p-1.5 rounded-2xl mb-6 overflow-x-auto">
             {TABS.map((tab) => (
               tab.href ? (
                 <Link
@@ -594,6 +595,82 @@ export default function AdminDashboardPage() {
                 </button>
               )
             ))}
+          </div>
+
+          {/* Onglets horizontaux (Mobile) avec bouton Plus */}
+          <div className="flex sm:hidden items-center justify-between bg-gray-100 p-1.5 rounded-2xl mb-6 relative">
+            <div className="flex items-center gap-1 overflow-hidden">
+              {TABS.slice(0, 2).map((tab) => (
+                tab.href ? (
+                  <Link
+                    key={tab.id}
+                    href={tab.href}
+                    className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 text-gray-500 hover:text-gray-800"
+                  >
+                    <span>{tab.icon}</span>
+                    <span className="truncate max-w-[90px]">{tab.label}</span>
+                  </Link>
+                ) : (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      activeTab === tab.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span className="truncate max-w-[90px]">{tab.label}</span>
+                  </button>
+                )
+              ))}
+            </div>
+
+            <div className="relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobilePlusMenuOpen(!mobilePlusMenuOpen)}
+                className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  mobilePlusMenuOpen ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <span>➕</span>
+                <span>Plus</span>
+              </button>
+
+              {mobilePlusMenuOpen && (
+                <div className="absolute top-full right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl z-[100] py-2 flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                  {TABS.slice(2).map((tab) => (
+                    tab.href ? (
+                      <Link
+                        key={tab.id}
+                        href={tab.href}
+                        onClick={() => setMobilePlusMenuOpen(false)}
+                        className="px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        <span>{tab.icon}</span>
+                        <span>{tab.label}</span>
+                      </Link>
+                    ) : (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setMobilePlusMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 transition-colors ${
+                          activeTab === tab.id ? "bg-orange-50 text-orange-700" : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        <span>{tab.icon}</span>
+                        <span>{tab.label}</span>
+                      </button>
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {activeTab === "dashboard" && (
