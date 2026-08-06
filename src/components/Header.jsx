@@ -700,17 +700,6 @@ export default function Header() {
             <i className="fa-solid fa-comments text-sm"></i>
             <span>Messagerie</span>
           </Link>
-          <Link
-            href="/importer-cv"
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
-              pathname === "/importer-cv"
-                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-            }`}
-          >
-            <i className="fa-solid fa-file-arrow-up text-sm"></i>
-            <span>Importer CV</span>
-          </Link>
 
           {/* Menu déroulant "Plus" pour regrouper les rubriques secondaires sans saturer */}
           <div className="relative" ref={plusDropdownRef}>
@@ -718,7 +707,7 @@ export default function Header() {
               type="button"
               onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
               className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                plusDropdownOpen || pathname === "/service" || pathname.startsWith("/recrutement-") || pathname === "/boite-a-idees"
+                plusDropdownOpen || pathname === "/service" || pathname === "/importer-cv" || pathname.startsWith("/recrutement-") || pathname === "/boite-a-idees"
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
@@ -730,6 +719,22 @@ export default function Header() {
 
             {plusDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+                <Link
+                  href="/importer-cv"
+                  onClick={() => setPlusDropdownOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
+                    pathname === "/importer-cv" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-file-arrow-up text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Importer CV</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Analyse IA et recommandations</div>
+                  </div>
+                </Link>
+
                 <Link
                   href="/service"
                   onClick={() => setPlusDropdownOpen(false)}
