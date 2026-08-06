@@ -224,6 +224,22 @@ export default function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Nettoyage des notifications cliquées (persistées)
+  useEffect(() => {
+    try {
+      const dismissed = JSON.parse(localStorage.getItem("dismissed_notifications") || "[]");
+      if (dismissed.length > 0) {
+        setNotificationsList(prev => {
+          const filtered = prev.filter(n => !dismissed.includes(n.id));
+          setUnreadNotifCount(filtered.filter(n => n.unread).length);
+          return filtered;
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   // 2. Debounce de 300ms pour éviter d'inonder le backend FastAPI
   useEffect(() => {
     if (!query.trim()) {
@@ -1023,7 +1039,12 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => {
-                      setNotificationsList(prev => prev.map(n => ({ ...n, unread: false })));
+                      try {
+                        const dismissed = JSON.parse(localStorage.getItem("dismissed_notifications") || "[]");
+                        const newDismissed = [...new Set([...dismissed, ...notificationsList.map(n => n.id)])];
+                        localStorage.setItem("dismissed_notifications", JSON.stringify(newDismissed));
+                      } catch(e) {}
+                      setNotificationsList([]);
                       setUnreadNotifCount(0);
                     }}
                     className="text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 transition mr-1 cursor-pointer"
@@ -1102,11 +1123,20 @@ export default function Header() {
                   <div
                     key={notif.id}
                     onClick={() => {
-                      if (notif.unread) {
-                        setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
-                        setUnreadNotifCount(prev => Math.max(0, prev - 1));
-                      }
                       if (notif.link) {
+                        try {
+                          const dismissed = JSON.parse(localStorage.getItem("dismissed_notifications") || "[]");
+                          if (!dismissed.includes(notif.id)) {
+                            localStorage.setItem("dismissed_notifications", JSON.stringify([...dismissed, notif.id]));
+                          }
+                        } catch(e) {}
+                        
+                        setNotificationsList(prev => {
+                          const newList = prev.filter(n => n.id !== notif.id);
+                          setUnreadNotifCount(newList.filter(n => n.unread).length);
+                          return newList;
+                        });
+                        
                         router.push(notif.link);
                         setNotificationsModalOpen(false);
                       }
