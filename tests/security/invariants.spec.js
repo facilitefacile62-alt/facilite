@@ -66,6 +66,10 @@ test.describe("Invariants de sécurité", () => {
   test("Invariant 2 — aucune table sans protection (RLS désactivé, ou RLS activé + 0 policy non justifié)", async () => {
     const JUSTIFIED_ZERO_POLICY = new Set([
       "ai_usage_daily", // service_role uniquement par design, aucune policy authenticated n'a jamais existé
+      // Lecture ET écriture exclusivement via record_cv_consultations()/
+      // get_cv_quota_today() (SECURITY DEFINER) — jamais un SELECT/INSERT
+      // direct, même pour un admin. Voir 20260806150000_cv_consultations_quota.sql.
+      "cv_consultations",
     ]);
 
     const rows = await runIntrospectionSql(`

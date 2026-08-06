@@ -80,9 +80,9 @@ BEGIN
       allowed := true;
       RETURN NEXT;
     ELSIF v_used_count < v_daily_limit THEN
-      INSERT INTO public.cv_consultations AS c (recruiter_id, candidate_id, viewed_date)
+      INSERT INTO public.cv_consultations (recruiter_id, candidate_id, viewed_date)
       VALUES (v_recruiter_id, v_cid, v_today)
-      ON CONFLICT (recruiter_id, candidate_id, viewed_date) DO NOTHING;
+      ON CONFLICT ON CONSTRAINT cv_consultations_recruiter_id_candidate_id_viewed_date_key DO NOTHING;
       v_used_count := v_used_count + 1;
       candidate_id := v_cid;
       allowed := true;
