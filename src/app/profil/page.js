@@ -4734,7 +4734,7 @@ useEffect(() => {
             </div>
 
             {/* Notification List */}
-            <div className="overflow-y-auto divide-y divide-gray-100 min-h-[300px] max-h-[50vh] sm:max-h-[400px]">
+            <div className="overflow-y-auto divide-y divide-gray-100 flex-1">
               {filteredNotifications.length === 0 ? (
                 <div className="py-12 text-center text-gray-400 font-medium text-sm">
                   Aucune notification dans cette catégorie.

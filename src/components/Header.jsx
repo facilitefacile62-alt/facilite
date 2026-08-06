@@ -1004,7 +1004,7 @@ export default function Header() {
       {/* Centre de Notifications (LinkedIn Style) - Globalisé et synchronisé */}
       {notificationsModalOpen && (
         <div className="fixed inset-0 z-[800] bg-black/50 backdrop-blur-xs flex justify-center md:items-start md:pt-16 p-2 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 flex flex-col max-h-[85vh]">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 flex flex-col min-h-[400px] max-h-[85vh]">
             {/* Header Modal Notifications */}
             <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-[#FAF6F1] dark:bg-gray-800/60">
               <div className="flex items-center space-x-2 sm:space-x-3">
@@ -1080,7 +1080,7 @@ export default function Header() {
             </div>
 
             {/* Notification List */}
-            <div className="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800/60 min-h-[300px] max-h-[50vh] sm:max-h-[400px]">
+            <div className="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800/60 flex-1">
               {notificationsList.filter(n => {
                 if (activeNotifFilter === "jobs") return n.type === "jobs";
                 if (activeNotifFilter === "posts") return n.type === "posts";

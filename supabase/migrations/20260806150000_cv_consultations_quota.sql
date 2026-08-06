@@ -65,14 +65,14 @@ BEGIN
   v_is_admin := public.current_user_role() = 'admin';
 
   SELECT count(*) INTO v_used_count
-  FROM public.cv_consultations
-  WHERE recruiter_id = v_recruiter_id AND viewed_date = v_today;
+  FROM public.cv_consultations c
+  WHERE c.recruiter_id = v_recruiter_id AND c.viewed_date = v_today;
 
   FOREACH v_cid IN ARRAY COALESCE(p_candidate_ids, ARRAY[]::UUID[])
   LOOP
     SELECT EXISTS(
-      SELECT 1 FROM public.cv_consultations
-      WHERE recruiter_id = v_recruiter_id AND candidate_id = v_cid AND viewed_date = v_today
+      SELECT 1 FROM public.cv_consultations c
+      WHERE c.recruiter_id = v_recruiter_id AND c.candidate_id = v_cid AND c.viewed_date = v_today
     ) INTO v_already_seen;
 
     IF v_already_seen OR v_is_admin THEN
@@ -80,7 +80,7 @@ BEGIN
       allowed := true;
       RETURN NEXT;
     ELSIF v_used_count < v_daily_limit THEN
-      INSERT INTO public.cv_consultations (recruiter_id, candidate_id, viewed_date)
+      INSERT INTO public.cv_consultations AS c (recruiter_id, candidate_id, viewed_date)
       VALUES (v_recruiter_id, v_cid, v_today)
       ON CONFLICT (recruiter_id, candidate_id, viewed_date) DO NOTHING;
       v_used_count := v_used_count + 1;
