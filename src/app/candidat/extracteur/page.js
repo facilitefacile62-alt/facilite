@@ -327,40 +327,8 @@ function ExtracteurContent() {
         <span className="text-sm font-semibold">{toast.message}</span>
       </div>
 
-      {/* Header Nav */}
-      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Link href="/" className="flex items-center space-x-2">
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold text-gray-900 tracking-tight">Facilite</span>
-            </Link>
-            <span className="text-xs font-extrabold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
-              ⚡ L'Extracteur 1-Click
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/messagerie"
-              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 relative"
-            >
-              <i className="fa-solid fa-comments"></i>
-              <span>Messagerie</span>
-              <UnreadBadge count={unreadMessagesCount} />
-            </Link>
-            <button
-              onClick={handleGlobalSignOut}
-              className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition cursor-pointer"
-            >
-              Déconnexion
-            </button>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8 flex-1 w-full">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8 flex-1 w-full">
         {/* Banner Section */}
         <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-8 text-white mb-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
