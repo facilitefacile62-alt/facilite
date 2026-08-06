@@ -1107,7 +1107,8 @@ export default function Header() {
                         setUnreadNotifCount(prev => Math.max(0, prev - 1));
                       }
                       if (notif.link) {
-                        window.location.href = notif.link;
+                        router.push(notif.link);
+                        setNotificationsModalOpen(false);
                       }
                     }}
                     className={`p-4 flex items-start space-x-3 sm:space-x-3.5 transition cursor-pointer ${

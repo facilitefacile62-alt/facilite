@@ -3360,7 +3360,8 @@ export default function MessagerieClient() {
                         setUnreadNotifCount(prev => Math.max(0, prev - 1));
                       }
                       if (notif.link) {
-                        window.location.href = notif.link;
+                        router.push(notif.link);
+                        if (typeof setNotificationsModalOpen !== "undefined") setNotificationsModalOpen(false);
                       }
                     }}
                     className={`p-4 flex items-start space-x-3.5 hover:bg-blue-50/50 transition cursor-pointer ${
