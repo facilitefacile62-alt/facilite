@@ -168,6 +168,75 @@ const translations = {
 
 const initialJobs = [
   {
+    id: 100,
+    titleFR: "RECRUTEMENT MASSIF – MINE D'OR UNDERGROUND (Sabodala)",
+    titleEN: "MASS RECRUITMENT – UNDERGROUND GOLD MINE (Sabodala)",
+    company: "C2K Staffing (Endeavour Mining)",
+    logoColor: "bg-blue-800",
+    initials: "C2K",
+    location: "Sabodala / Thiès",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Projet Minier",
+    descFR: `🚨 C2K STAFFING, leader du recrutement, de l'intérim et du placement de personnel hautement qualifié au Sénégal, recrute pour le compte d'une multinationale de renommée internationale exploitant le projet de la mine underground d'Endeavour Mining – Sabodala Gold Operations.
+📍 Démarrage du projet : Début juillet 2026
+
+📌 71 POSTES À POURVOIR :
+• 12x Sauveteur Minier (Équipe de sauvetage minier)
+• 2x Responsable Formation HSE
+• 2x Coordinateur Magasin / Acheteur
+• 3x Magasinier
+• 2x Administrateur de Site
+• 2x Traducteur / Interprète (Anglais – Français)
+• 6x Conducteur de Chargeuse
+• 7x Opérateur de Chargement d'Explosifs
+• 6x Conducteur de Camion
+• 3x Chauffeur Véhicules Légers (VL)
+• 3x Foreur Carottier (Forage Diamanté)
+• 6x Aide-Foreur Carottier (Forage Diamanté)
+• 9x Aide-Opérateur
+
+✅ PROFIL RECHERCHÉ :
+✔️ Expérience obligatoire sur site minier
+✔️ Disponibilité immédiate
+✔️ Bonne maîtrise du français et de l'anglais
+
+📩 COMMENT POSTULER ?
+Merci de transmettre vos DEUX versions de CV (Français et Anglais) à : recrutement@c2kstaffing.com
+⚠️ Objet du mail : Intitulé du poste souhaité
+(Seuls les candidats présélectionnés seront contactés pour les entretiens de validation. Siège : Thiès Ouest tableau Commune, Route Nationale N°1).`,
+    descEN: `🚨 C2K STAFFING, leading recruitment agency in Senegal, is recruiting on behalf of a world-renowned multinational operating the underground mine project of Endeavour Mining – Sabodala Gold Operations.
+📍 Project Start Date: Early July 2026
+
+📌 71 POSITIONS OPEN:
+• 12x Mine Rescue Specialists
+• 2x Safety Training Officers (HSE)
+• 2x Stores Coordinators / Purchasers
+• 3x Storepersons
+• 2x Site Administrators
+• 2x Translators / Interpreters (English – French)
+• 6x Loader Operators
+• 7x Charge Up Operators (Explosives)
+• 6x Truck Drivers
+• 3x Light Vehicle (LV) Drivers
+• 3x Diamond Drillers
+• 6x Diamond Drill Offsiders
+• 9x General Offsiders
+
+✅ REQUIRED PROFILE:
+✔️ Mandatory prior experience on mining sites
+✔️ Immediate availability
+✔️ Good command of both French and English
+
+📩 HOW TO APPLY:
+Please send BOTH versions of your CV (French and English) to: recrutement@c2kstaffing.com
+⚠️ Email Subject: Title of desired position`,
+    tags: ["Sabodala", "Mines", "HSE", "Logistique", "Intérim"],
+    salary: "Selon grille minière",
+    recruiterEmail: "recrutement@c2kstaffing.com",
+    image: null
+  },
+  {
     id: 99,
     titleFR: "Équipiers Polyvalents en Formation",
     titleEN: "Polyvalent Team Members in Training",
@@ -563,7 +632,7 @@ export default function Home() {
 
     // Filtre Localisation
     if (locationFilter) {
-      filtered = filtered.filter(job => job.location.toLowerCase() === locationFilter.toLowerCase());
+      filtered = filtered.filter(job => job.location.toLowerCase().includes(locationFilter.toLowerCase()));
     }
 
     // Filtre Contrat
