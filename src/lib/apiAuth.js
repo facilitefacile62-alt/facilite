@@ -5,23 +5,56 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./env";
 const supabaseServer = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
+ * Journalise un refus d'accès (401/403) via log_access_denial() — jamais
+ * bloquant : un échec de journalisation ne doit jamais faire échouer la
+ * réponse d'autorisation elle-même. Best-effort, silencieux, même schéma
+ * que les notifications WhatsApp (src/lib/notifications.js).
+ *
+ * Portée volontaire (4B du chantier du 2026-08-06,
+ * docs/incident-2026-08-06.md) : appelé uniquement par les routes qui
+ * passent explicitement `logDenials: true` à requireUser() — pas toutes les
+ * routes authentifiées d'un coup, seulement celles touchant à des données
+ * personnelles pour l'instant (CVthèque, candidatures).
+ */
+async function logAccessDenial(req, actorId, statusCode, reason) {
+  try {
+    const { getSupabaseAdmin } = await import("./supabaseAdmin");
+    const admin = getSupabaseAdmin();
+    const forwardedFor = req.headers.get("x-forwarded-for") || "";
+    const ip = forwardedFor.split(",")[0].trim() || null;
+    const route = new URL(req.url).pathname;
+    await admin.rpc("log_access_denial", {
+      p_actor_id: actorId,
+      p_ip_address: ip,
+      p_route: route,
+      p_status_code: statusCode,
+      p_reason: reason,
+    });
+  } catch (err) {
+    console.warn("[apiAuth] Échec journalisation du refus d'accès (non bloquant) :", err?.message);
+  }
+}
+
+/**
  * Valide le JWT porté par l'en-tête Authorization auprès des serveurs Supabase.
  *
  * getUser(token) effectue une vérification réelle de la signature et de
  * l'expiration du jeton — contrairement à getSession(), qui se contente de lire
  * le jeton local et ne prouve rien côté serveur.
  */
-export async function requireUser(req) {
+export async function requireUser(req, { logDenials = false } = {}) {
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
+    if (logDenials) await logAccessDenial(req, null, 401, "missing_token");
     return { user: null, error: NextResponse.json({ error: "Non autorisé." }, { status: 401 }) };
   }
 
   const { data, error } = await supabaseServer.auth.getUser(token);
 
   if (error || !data?.user) {
+    if (logDenials) await logAccessDenial(req, null, 401, "invalid_or_expired_session");
     return {
       user: null,
       error: NextResponse.json({ error: "Session invalide ou expirée." }, { status: 401 }),
@@ -31,8 +64,9 @@ export async function requireUser(req) {
   // Vérifier qu'au moins un identifiant (Email ou Téléphone) est confirmé (mesure de sécurité hybride)
   const isEmailConfirmed = !!data.user.email_confirmed_at;
   const isPhoneConfirmed = !!data.user.phone_confirmed_at;
-  
+
   if (!isEmailConfirmed && !isPhoneConfirmed) {
+    if (logDenials) await logAccessDenial(req, data.user.id, 403, "no_confirmed_identifier");
     return {
       user: null,
       error: NextResponse.json({ error: "Votre compte doit avoir au moins un identifiant (Email ou Téléphone) vérifié." }, { status: 403 }),

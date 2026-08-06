@@ -16,7 +16,7 @@ const MAX_PAGE_SIZE = 30;
 
 export async function GET(req) {
   try {
-    const { user, error: authError } = await requireUser(req);
+    const { user, error: authError } = await requireUser(req, { logDenials: true });
     if (authError) return authError;
 
     const { allowed, error: rateError } = await checkRateLimit(user.id);

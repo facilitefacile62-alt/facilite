@@ -9,6 +9,7 @@ import RoleBadge from "@/components/RoleBadge";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import SecurityAlertsWidget from "@/components/SecurityAlertsWidget";
 
 const TABS = [
   { id: "dashboard", label: "Tableau de bord", icon: "📊" },
@@ -675,6 +676,8 @@ export default function AdminDashboardPage() {
 
           {activeTab === "dashboard" && (
             <>
+              <SecurityAlertsWidget />
+
               {/* Barre de filtres */}
               <div className="flex flex-wrap items-center gap-3 mb-6">
                 <div className="relative">

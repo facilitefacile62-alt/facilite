@@ -12,7 +12,7 @@ const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 export async function POST(req) {
   try {
     // 1. Authentification & Rate Limiting
-    const { user, error: authError } = await requireUser(req);
+    const { user, error: authError } = await requireUser(req, { logDenials: true });
     if (authError) return authError;
 
     const { allowed, error: rateError } = await checkRateLimit(user.id);

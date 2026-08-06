@@ -194,7 +194,22 @@ test.describe("Invariants de sécurité", () => {
     // automatiquement corrigé.
     const SCOPE_MARKERS = ["user.id", "user_id", "userId", "auth.uid", "target_user_id", "actor_id"];
 
+    // Liste blanche pour les opérations SYSTÈME légitimement non scopées à
+    // un utilisateur (purge en masse, maintenance planifiée) — pas une
+    // lecture/écriture ciblée qui aurait dû être filtrée. Format : chemin
+    // relatif depuis la racine du dépôt.
+    const JUSTIFIED = new Set([
+      // Purge quotidienne (cron, CRON_SECRET) de l'IP de TOUTES les entrées
+      // security_logs de plus de 30 jours — 4B du chantier du 2026-08-06,
+      // docs/incident-2026-08-06.md. Opération système par nature, jamais
+      // ciblée sur un utilisateur précis ; ajouter un faux marqueur
+      // user_id juste pour passer ce test serait malhonnête.
+      "src/app/api/cron/purge-access-log-ips/route.js",
+    ]);
+
     const unscoped = files.filter((f) => {
+      const relPath = path.relative(path.resolve(__dirname, "../.."), f).replace(/\\/g, "/");
+      if (JUSTIFIED.has(relPath)) return false;
       const content = fs.readFileSync(f, "utf-8");
       return !SCOPE_MARKERS.some((marker) => content.includes(marker));
     });

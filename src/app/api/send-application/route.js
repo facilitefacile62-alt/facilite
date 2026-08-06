@@ -13,7 +13,7 @@ export async function POST(req) {
   try {
     // Authentification + limite de débit : un envoi d'e-mail est une action
     // ayant un coût (Resend) et un potentiel d'abus (spam) — jamais anonyme.
-    const { user, error: authError } = await requireUser(req);
+    const { user, error: authError } = await requireUser(req, { logDenials: true });
     if (authError) return authError;
 
     const { allowed, error: rateError } = await checkRateLimit(user.id);
