@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
+import RoleNavLink from "@/components/RoleNavLink";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
 const QUICK_SECTIONS_INDEX = [
@@ -159,6 +160,33 @@ export default function Header() {
   const [userSession, setUserSession] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
+  const plusDropdownRef = useRef(null);
+
+  // Système de Notifications au style LinkedIn
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
+  const [activeNotifFilter, setActiveNotifFilter] = useState("all");
+  const [unreadNotifCount, setUnreadNotifCount] = useState(2);
+  const [notificationsList, setNotificationsList] = useState([
+    {
+      id: "notif-1",
+      type: "jobs",
+      author: "C2K Staffing",
+      avatar: "/logo.jpeg",
+      text: "a publié une offre prioritaire en tête du fil : Recrutement Massif Sabodala.",
+      time: "Il y a 15 minutes",
+      unread: true,
+    },
+    {
+      id: "notif-2",
+      type: "posts",
+      author: "Équipe Facilite",
+      avatar: "/logo.jpeg",
+      text: "Votre profil permet désormais l'envoi de documents multiples lors d'une candidature.",
+      time: "Il y a 1 heure",
+      unread: true,
+    },
+  ]);
 
   // États de la recherche globale reliée à l'API FastAPI
   const [query, setQuery] = useState("");
@@ -366,6 +394,12 @@ export default function Header() {
       ) {
         setIsOpen(false);
         setIsMobileSearchOpen(false);
+      }
+      if (
+        plusDropdownRef.current &&
+        !plusDropdownRef.current.contains(event.target)
+      ) {
+        setPlusDropdownOpen(false);
       }
     }
 
@@ -619,7 +653,7 @@ export default function Header() {
         </div>
 
 
-        {/* Navigation Links (Desktop) */}
+        {/* Navigation Links (Desktop - Regroupement propre sans saturation de la barre) */}
         <nav className="hidden lg:flex items-center space-x-5 flex-shrink-0">
           <Link
             href="/"
@@ -630,16 +664,6 @@ export default function Header() {
             }`}
           >
             Accueil
-          </Link>
-          <Link
-            href="/service"
-            className={`text-xs font-bold transition-colors ${
-              pathname === "/service"
-                ? "text-emerald-600 dark:text-emerald-400"
-                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-            }`}
-          >
-            Services & Modèles
           </Link>
           <Link
             href="/offres"
@@ -664,14 +688,14 @@ export default function Header() {
             <span>Extracteur</span>
           </Link>
           <Link
-            href="/recrutement-spontane"
+            href="/messagerie"
             className={`text-xs font-bold transition-colors ${
-              pathname.startsWith("/recrutement-spontane")
+              pathname === "/messagerie"
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             }`}
           >
-            Recrutement Spontané
+            Messagerie
           </Link>
           <Link
             href="/importer-cv"
@@ -683,182 +707,492 @@ export default function Header() {
           >
             Importer CV
           </Link>
-          <Link
-            href="/messagerie"
-            className={`text-xs font-bold transition-colors ${
-              pathname === "/messagerie"
-                ? "text-emerald-600 dark:text-emerald-400"
-                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-            }`}
-          >
-            Messagerie
-          </Link>
+
+          {/* Menu déroulant "Plus" pour regrouper les rubriques secondaires sans saturer */}
+          <div className="relative" ref={plusDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
+              className={`text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                plusDropdownOpen || pathname === "/service" || pathname.startsWith("/recrutement-") || pathname === "/boite-a-idees"
+                  ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                  : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+              }`}
+            >
+              <span>Plus</span>
+              <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+            </button>
+
+            {plusDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+                <Link
+                  href="/service"
+                  onClick={() => setPlusDropdownOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
+                    pathname === "/service" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-briefcase text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Services & Modèles</div>
+                    <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada, Anglais & Lettres</div>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/recrutement-spontane"
+                  onClick={() => setPlusDropdownOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
+                    pathname.startsWith("/recrutement-spontane") ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-building-user text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Recrutement Spontané</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Répertoire des 77 entreprises</div>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/recrutement-journalier"
+                  onClick={() => setPlusDropdownOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
+                    pathname === "/recrutement-journalier" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-gas-pump text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Dépôts Physiques</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Stations-services & contacts</div>
+                  </div>
+                </Link>
+
+                <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
+
+                <Link
+                  href="/boite-a-idees"
+                  onClick={() => setPlusDropdownOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
+                    pathname === "/boite-a-idees" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-lightbulb text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Boîte à idées</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
+                  </div>
+                </Link>
+              </div>
+            )}
+          </div>
         </nav>
 
-        {/* Auth / Action */}
-        <div className={`items-center gap-2 flex-shrink-0 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
-          {pathname !== "/" && (
-            <Link
-              href="/"
-              className="hidden xl:inline-flex text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition items-center gap-1.5"
-            >
-              <i className="fa-solid fa-house text-xs"></i>
-              Accueil
-            </Link>
+        {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
+        <div className={`items-center gap-1.5 sm:gap-2 flex-shrink-0 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
+          {/* Liens Admin (si role='admin') et Recruteur (si has_badge='verified_recruiter') */}
+          {userSession && (
+            <div className="hidden sm:flex items-center">
+              <RoleNavLink session={userSession} variant="header-desktop" />
+            </div>
           )}
 
-          {userSession ? (
-            <Link
-              href="/profil"
-              className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition flex items-center gap-1.5"
+          {/* Centre de Notifications */}
+          {userSession && (
+            <button
+              type="button"
+              onClick={() => setNotificationsModalOpen(true)}
+              className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative flex items-center justify-center flex-shrink-0"
+              title="Notifications"
+              aria-label="Ouvrir les notifications"
             >
-              <i className="fa-solid fa-user-check"></i>
-              Mon Profil
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow-xs flex items-center gap-1.5"
-            >
-              <i className="fa-solid fa-right-to-bracket"></i>
-              Se connecter
-            </Link>
+              <i className="fa-regular fa-bell text-base sm:text-lg"></i>
+              {unreadNotifCount > 0 && (
+                <span className="absolute top-1 right-1 bg-red-600 text-white text-[9px] font-extrabold rounded-full h-4 w-4 flex items-center justify-center shadow-xs border border-white dark:border-gray-900 animate-pulse">
+                  {unreadNotifCount}
+                </span>
+              )}
+            </button>
           )}
 
           {/* Bouton Loupe pour ouvrir la recherche sur mobile */}
           <button
             type="button"
             onClick={() => setIsMobileSearchOpen(true)}
-            className="md:hidden p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none transition"
+            className="md:hidden p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none transition flex-shrink-0"
             title="Rechercher"
             aria-label="Ouvrir la recherche"
           >
-            <i className="fa-solid fa-magnifying-glass text-lg"></i>
+            <i className="fa-solid fa-magnifying-glass text-base sm:text-lg"></i>
           </button>
 
-          {/* Mobile Menu Toggle */}
+          {userSession ? (
+            <Link
+              href="/profil"
+              className="px-2 sm:px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition flex items-center gap-1 sm:gap-1.5 flex-shrink-0"
+            >
+              <i className="fa-solid fa-user-check text-xs sm:text-sm"></i>
+              <span>Profil</span>
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow-xs flex items-center gap-1 sm:gap-1.5 flex-shrink-0"
+            >
+              <i className="fa-solid fa-right-to-bracket text-xs"></i>
+              <span>Connexion</span>
+            </Link>
+          )}
+
+          {/* Mobile Menu Toggle (Hamburger) */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none"
+            className="lg:hidden p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none flex-shrink-0"
             aria-label="Toggle menu"
           >
-            <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-lg`}></i>
+            <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-base sm:text-lg`}></i>
           </button>
         </div>
       </div>
 
-      {/* Barre d'onglets horizontale sur mobile (sous-header synchronisé) */}
+      {/* Barre d'onglets horizontale sur mobile (sous-header calibré et garanti sans débordement à 320px) */}
       {!isMobileSearchOpen && (
-        <div className="flex lg:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1.5 bg-[#FAF6F1]/95 dark:bg-gray-900/95">
+        <div className="flex lg:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1 bg-[#FAF6F1]/95 dark:bg-gray-900/95 overflow-hidden px-0.5">
           <Link
             href="/"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 transition ${
+            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
               pathname === "/" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
             }`}
           >
-            <i className="fa-solid fa-house text-base"></i>
-            <span className="text-[10px] font-bold tracking-tight">Accueil</span>
+            <i className="fa-solid fa-house text-sm sm:text-base"></i>
+            <span className="text-[9px] font-bold tracking-tight truncate w-full">Accueil</span>
           </Link>
           <Link
             href="/candidat/extracteur"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 transition ${
+            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
               pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
             }`}
             title="L'Extracteur 1-Click"
           >
-            <i className="fa-solid fa-bolt text-base text-amber-500"></i>
-            <span className="text-[10px] font-bold tracking-tight truncate max-w-[56px]">Extracteur</span>
+            <i className="fa-solid fa-bolt text-sm sm:text-base text-amber-500"></i>
+            <span className="text-[9px] font-bold tracking-tight truncate w-full">Extracteur</span>
           </Link>
           <Link
             href="/offres"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 transition ${
+            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
               pathname.startsWith("/offres") ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
             }`}
           >
-            <i className="fa-solid fa-list-check text-base"></i>
-            <span className="text-[10px] font-bold tracking-tight">Offres</span>
+            <i className="fa-solid fa-list-check text-sm sm:text-base"></i>
+            <span className="text-[9px] font-bold tracking-tight truncate w-full">Offres</span>
           </Link>
           <Link
             href="/messagerie"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 transition ${
+            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
               pathname === "/messagerie" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
             }`}
           >
-            <i className="fa-regular fa-comments text-base"></i>
-            <span className="text-[10px] font-bold tracking-tight">Messagerie</span>
+            <i className="fa-regular fa-comments text-sm sm:text-base"></i>
+            <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
           </Link>
           <Link
             href="/importer-cv"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 transition ${
+            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
               pathname === "/importer-cv" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
             }`}
           >
-            <i className="fa-solid fa-file-arrow-up text-base"></i>
-            <span className="text-[10px] font-bold tracking-tight">Importer</span>
+            <i className="fa-solid fa-file-arrow-up text-sm sm:text-base"></i>
+            <span className="text-[9px] font-bold tracking-tight truncate w-full">Importer</span>
           </Link>
         </div>
       )}
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile Drawer Menu (Menu hamburger parfaitement utilisable sur 320px de large) */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 pt-3 pb-4 space-y-2 shadow-lg">
+        <div className="lg:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 pt-3 pb-6 space-y-1.5 shadow-xl max-h-[85vh] overflow-y-auto">
+          {/* Liens Admin & Recruteur en vedette au sommet du tiroir tactile */}
+          {userSession && (
+            <div className="space-y-2 pb-2 border-b border-gray-100 dark:border-gray-800">
+              <RoleNavLink session={userSession} variant="header-mobile" onClick={() => setMobileMenuOpen(false)} />
+            </div>
+          )}
+
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800"
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
+              pathname === "/" ? "bg-emerald-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
           >
-            Accueil
+            <i className="fa-solid fa-house w-5 text-center text-gray-400"></i>
+            <span>Accueil</span>
           </Link>
-          <Link
-            href="/service"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800"
-          >
-            Services & Modèles
-          </Link>
-          <Link
-            href="/candidat/extracteur"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-extrabold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-gray-800"
-          >
-            <i className="fa-solid fa-bolt text-amber-500"></i>
-            <span>L'Extracteur 1-Click</span>
-          </Link>
+          
           <Link
             href="/offres"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800"
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
+              pathname.startsWith("/offres") ? "bg-emerald-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
           >
-            Offres d'emploi
+            <i className="fa-solid fa-briefcase w-5 text-center text-blue-500"></i>
+            <span>Offres d'emploi</span>
           </Link>
+
           <Link
-            href="/recrutement-spontane"
+            href="/candidat/extracteur"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-gray-800/80 hover:bg-emerald-100 dark:hover:bg-gray-800 transition"
           >
-            Recrutement Spontané
+            <i className="fa-solid fa-bolt w-5 text-center text-amber-500 animate-pulse"></i>
+            <span>L'Extracteur 1-Click</span>
           </Link>
-          <Link
-            href="/importer-cv"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800"
-          >
-            Importer CV
-          </Link>
+
           <Link
             href="/messagerie"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800"
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
+              pathname === "/messagerie" ? "bg-emerald-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
           >
-            Messagerie
+            <i className="fa-solid fa-comments w-5 text-center text-purple-500"></i>
+            <span>Messagerie en direct</span>
           </Link>
+
           <Link
-            href="/profil"
+            href="/importer-cv"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800"
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
+              pathname === "/importer-cv" ? "bg-emerald-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
           >
-            Mon Profil
+            <i className="fa-solid fa-file-arrow-up w-5 text-center text-emerald-500"></i>
+            <span>Importer & Scanner CV</span>
           </Link>
+
+          <div className="py-1">
+            <div className="px-3 text-[11px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
+              Plus d'outils & services
+            </div>
+            <Link
+              href="/service"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <i className="fa-solid fa-file-lines w-5 text-center text-emerald-600"></i>
+              <span>Services & Modèles CV</span>
+            </Link>
+            <Link
+              href="/recrutement-spontane"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <i className="fa-solid fa-building-user w-5 text-center text-blue-600"></i>
+              <span>Recrutement Spontané (77 entr.)</span>
+            </Link>
+            <Link
+              href="/recrutement-journalier"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <i className="fa-solid fa-gas-pump w-5 text-center text-purple-600"></i>
+              <span>Dépôts Physiques & Stations</span>
+            </Link>
+            <Link
+              href="/boite-a-idees"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <i className="fa-solid fa-lightbulb w-5 text-center text-amber-500"></i>
+              <span>Boîte à idées & Suggestions</span>
+            </Link>
+          </div>
+
+          {userSession ? (
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+              <Link
+                href="/profil"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition justify-center"
+              >
+                <i className="fa-solid fa-user-check"></i>
+                <span>Mon Profil Candidat</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex gap-2">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex-1 text-center py-2.5 bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-xs"
+              >
+                Connexion
+              </Link>
+              <Link
+                href="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex-1 text-center py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-extrabold text-xs rounded-xl border border-gray-200 dark:border-gray-700"
+              >
+                Inscription
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Centre de Notifications (LinkedIn Style) - Globalisé et synchronisé */}
+      {notificationsModalOpen && (
+        <div className="fixed inset-0 z-[800] bg-black/50 backdrop-blur-xs flex justify-center md:items-start md:pt-16 p-2 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 flex flex-col max-h-[85vh]">
+            {/* Header Modal Notifications */}
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-[#FAF6F1] dark:bg-gray-800/60">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <i className="fa-solid fa-bell text-xl text-[#10E688]"></i>
+                <h3 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white">Notifications</h3>
+                {unreadNotifCount > 0 && (
+                  <span className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                    {unreadNotifCount} nouvelle{unreadNotifCount > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                {unreadNotifCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotificationsList(prev => prev.map(n => ({ ...n, unread: false })));
+                      setUnreadNotifCount(0);
+                    }}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 transition mr-1 cursor-pointer"
+                  >
+                    Tout lire
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setNotificationsModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-xmark text-base"></i>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Pills Bar */}
+            <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center space-x-2 overflow-x-auto bg-gray-50/70 dark:bg-gray-900 scrollbar-none">
+              <button
+                type="button"
+                onClick={() => setActiveNotifFilter("all")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex-shrink-0 ${
+                  activeNotifFilter === "all" ? "bg-[#10E688] text-gray-950 shadow-2xs" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700"
+                }`}
+              >
+                Toutes
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveNotifFilter("jobs")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex-shrink-0 ${
+                  activeNotifFilter === "jobs" ? "bg-[#10E688] text-gray-950 shadow-2xs" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700"
+                }`}
+              >
+                Offres d'emploi
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveNotifFilter("posts")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex-shrink-0 ${
+                  activeNotifFilter === "posts" ? "bg-[#10E688] text-gray-950 shadow-2xs" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700"
+                }`}
+              >
+                Mes posts
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveNotifFilter("mentions")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex-shrink-0 ${
+                  activeNotifFilter === "mentions" ? "bg-[#10E688] text-gray-950 shadow-2xs" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700"
+                }`}
+              >
+                Mentions
+              </button>
+            </div>
+
+            {/* Notification List */}
+            <div className="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800/60 flex-1">
+              {notificationsList.filter(n => {
+                if (activeNotifFilter === "jobs") return n.type === "jobs";
+                if (activeNotifFilter === "posts") return n.type === "posts";
+                if (activeNotifFilter === "mentions") return n.type === "mentions";
+                return true;
+              }).length === 0 ? (
+                <div className="py-12 text-center text-gray-400 font-medium text-sm">
+                  Aucune notification dans cette catégorie.
+                </div>
+              ) : (
+                notificationsList.filter(n => {
+                  if (activeNotifFilter === "jobs") return n.type === "jobs";
+                  if (activeNotifFilter === "posts") return n.type === "posts";
+                  if (activeNotifFilter === "mentions") return n.type === "mentions";
+                  return true;
+                }).map((notif) => (
+                  <div
+                    key={notif.id}
+                    onClick={() => {
+                      if (notif.unread) {
+                        setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+                        setUnreadNotifCount(prev => Math.max(0, prev - 1));
+                      }
+                    }}
+                    className={`p-4 flex items-start space-x-3 sm:space-x-3.5 transition cursor-pointer ${
+                      notif.unread ? "bg-blue-50/50 dark:bg-blue-950/20" : "bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    {/* Blue Unread Indicator Dot */}
+                    <div className="pt-1.5 w-2 flex-shrink-0">
+                      {notif.unread && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600 dark:bg-blue-500 block"></span>
+                      )}
+                    </div>
+
+                    {/* Avatar / Icon */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-bold text-xs sm:text-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        {notif.avatar ? (
+                          <img src={notif.avatar} alt={notif.author} className="w-full h-full object-cover" />
+                        ) : (
+                          notif.author.slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-800 dark:text-gray-200 font-normal leading-relaxed">
+                        <span className="font-bold text-gray-900 dark:text-white">{notif.author} </span>
+                        {notif.text}
+                      </p>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1 block">{notif.time}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/60 border-t border-gray-100 dark:border-gray-800 text-center">
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                Centre de notifications interactif En Direct
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </header>

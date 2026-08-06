@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase";
  * À utiliser dans la navbar principale de chaque page (pas de Navbar
  * partagée dans ce projet — chaque page a son propre markup dupliqué).
  */
-export default function RoleNavLink({ session, className, variant = "desktop" }) {
+export default function RoleNavLink({ session, className, variant = "desktop", onClick }) {
   const [role, setRole] = useState(null);
   const [isVerifiedRecruiter, setIsVerifiedRecruiter] = useState(false);
   const [isRpcAdmin, setIsRpcAdmin] = useState(false);
@@ -99,6 +99,56 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
     links.push({ href: "/recruteur", label: "Recruteur", icon: "fa-briefcase", color: "text-emerald-600 hover:text-emerald-700", emoji: "💼" });
   }
 
+  if (variant === "header-desktop") {
+    return (
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            onClick={onClick}
+            className={
+              className ||
+              `flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-extrabold transition shadow-2xs border ${
+                link.label === "Admin"
+                  ? "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-800 hover:bg-orange-100"
+                  : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100"
+              }`
+            }
+          >
+            <i className={`fa-solid ${link.icon} text-xs`}></i>
+            <span>{link.label}</span>
+          </Link>
+        ))}
+      </div>
+    );
+  }
+
+  if (variant === "header-mobile") {
+    return (
+      <>
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            onClick={onClick}
+            className={
+              className ||
+              `flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-extrabold transition ${
+                link.label === "Admin"
+                  ? "text-orange-600 dark:text-orange-400 bg-orange-50/60 dark:bg-gray-800 hover:bg-orange-100"
+                  : "text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-gray-800 hover:bg-emerald-100"
+              }`
+            }
+          >
+            <i className={`fa-solid ${link.icon} text-base`}></i>
+            <span>Espace {link.label}</span>
+          </Link>
+        ))}
+      </>
+    );
+  }
+
   if (variant === "mobile") {
     return (
       <>
@@ -106,6 +156,7 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
           <Link
             key={link.href}
             href={link.href}
+            onClick={onClick}
             className={className || `flex flex-col items-center justify-center ${link.color} space-y-1`}
           >
             <i className={`fa-solid ${link.icon} text-lg`}></i>
@@ -122,6 +173,7 @@ export default function RoleNavLink({ session, className, variant = "desktop" })
         <Link
           key={link.href}
           href={link.href}
+          onClick={onClick}
           className={
             className ||
             `flex flex-col items-center justify-center text-center ${link.color} transition space-y-1 cursor-pointer w-16`
