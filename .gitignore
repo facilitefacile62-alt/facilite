@@ -54,6 +54,10 @@ client_secret_*.json
 *credentials*.json
 *-service-account*.json
 
+# sauvegardes chiffrées (4D, docs/sauvegarde-restauration.md) — chiffrées
+# avant tout, mais aucune raison qu'elles transitent par git en plus
+*.enc
+
 # vercel
 .vercel
 

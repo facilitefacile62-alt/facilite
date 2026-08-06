@@ -1,0 +1,61 @@
+name: Sauvegarde chiffrée
+
+on:
+  schedule:
+    # Quotidien à 5h UTC (après le cron de purge des documents de badge à 3h
+    # et celui des IP de security_logs à 4h — évite toute contention sur la
+    # même base au même moment). Volume de nouvelles données faible à ce
+    # stade (voir docs/incident-2026-08-06.md) : quotidien reste peu coûteux
+    # (~30 sauvegardes conservées, purge automatique au-delà) et évite de
+    # perdre plus d'une journée de données en cas d'incident. À repasser en
+    # hebdomadaire si le volume de données croît au point de rendre le
+    # stockage 15 Go gratuit de Google Drive serré.
+    - cron: "0 5 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    name: Sauvegarde base de données + Storage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Vérifier que les secrets requis sont configurés
+        run: |
+          missing=""
+          [ -z "${{ secrets.SUPABASE_DB_URL }}" ] && missing="$missing SUPABASE_DB_URL"
+          [ -z "${{ secrets.BACKUP_PUBLIC_KEY_PEM }}" ] && missing="$missing BACKUP_PUBLIC_KEY_PEM"
+          [ -z "${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}" ] && missing="$missing GOOGLE_SERVICE_ACCOUNT_JSON"
+          [ -z "${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}" ] && missing="$missing GOOGLE_DRIVE_FOLDER_ID"
+          if [ -n "$missing" ]; then
+            echo "::error::Secrets manquants (Settings → Secrets and variables → Actions) :$missing — voir docs/sauvegarde-restauration.md"
+            exit 1
+          fi
+
+      - name: Créer la sauvegarde chiffrée
+        run: node scripts/backup/dump-database.js backup.enc
+        env:
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PUBLIC_KEY_PEM: ${{ secrets.BACKUP_PUBLIC_KEY_PEM }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL_PROD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_PROD }}
+
+      - name: Envoyer vers Google Drive
+        run: node scripts/backup/upload-to-drive.js backup.enc
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+
+      - name: Nettoyer le fichier local (ne jamais le laisser dans les artefacts du runner)
+        if: always()
+        run: rm -f backup.enc
