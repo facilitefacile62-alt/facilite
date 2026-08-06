@@ -2815,6 +2815,9 @@ export default function Home() {
                         setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
                         setUnreadNotifCount(prev => Math.max(0, prev - 1));
                       }
+                      if (notif.link) {
+                        window.location.href = notif.link;
+                      }
                     }}
                     className={`p-4 flex items-start space-x-3.5 hover:bg-blue-50/50 transition cursor-pointer ${
                       notif.unread ? "bg-blue-50/30" : "bg-white"

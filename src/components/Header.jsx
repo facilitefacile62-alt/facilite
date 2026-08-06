@@ -176,6 +176,7 @@ export default function Header() {
       text: "a publié une offre prioritaire en tête du fil : Recrutement Massif Sabodala.",
       time: "Il y a 15 minutes",
       unread: true,
+      link: "/offres"
     },
     {
       id: "notif-2",
@@ -185,6 +186,7 @@ export default function Header() {
       text: "Votre profil permet désormais l'envoi de documents multiples lors d'une candidature.",
       time: "Il y a 1 heure",
       unread: true,
+      link: "/profil"
     },
   ]);
 
@@ -1103,6 +1105,9 @@ export default function Header() {
                       if (notif.unread) {
                         setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
                         setUnreadNotifCount(prev => Math.max(0, prev - 1));
+                      }
+                      if (notif.link) {
+                        window.location.href = notif.link;
                       }
                     }}
                     className={`p-4 flex items-start space-x-3 sm:space-x-3.5 transition cursor-pointer ${
