@@ -3345,7 +3345,7 @@ export default function MessagerieClient() {
             </div>
 
             {/* Notification List */}
-            <div className="overflow-y-auto divide-y divide-gray-100 flex-1">
+            <div className="overflow-y-auto divide-y divide-gray-100 flex-1 min-h-[300px] sm:min-h-[400px]">
               {filteredNotifications.length === 0 ? (
                 <div className="py-12 text-center text-gray-400 font-medium text-sm">
                   Aucune notification dans cette catégorie.
