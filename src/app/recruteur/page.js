@@ -165,6 +165,10 @@ export default function RecruteurDashboardPage() {
   // --- Onglet CVthèque ---
   const [candidates, setCandidates] = useState([]);
   const [candidatesLoading, setCandidatesLoading] = useState(true);
+  // Quota quotidien de consultations (20260806150000_cv_consultations_quota.sql)
+  // — décidé et compté côté serveur dans /api/recruteur/candidats-recherche,
+  // ceci n'est qu'un affichage du dernier statut renvoyé.
+  const [cvQuota, setCvQuota] = useState(null);
   const [recruiterVerified, setRecruiterVerified] = useState(true);
   const [pendingBadgeRequest, setPendingBadgeRequest] = useState(null);
   const [badgeRequestForm, setBadgeRequestForm] = useState({ company_name: "", ninea_number: "", rccm_number: "" });
@@ -261,6 +265,7 @@ export default function RecruteurDashboardPage() {
           break;
         }
         all = all.concat(data.candidates || []);
+        if (data.quota) setCvQuota(data.quota);
         if (!data.hasMore) break;
         page += 1;
       }
@@ -1588,6 +1593,18 @@ export default function RecruteurDashboardPage() {
                 <p className="text-xs text-gray-500 font-medium">
                   {semanticResults ? "Résultats triés par compatibilité IA" : "Recherchez par nom, métier ou compétence"}
                 </p>
+                {cvQuota && (
+                  <p
+                    className={`text-[11px] font-bold mt-1 ${
+                      cvQuota.remaining === 0 ? "text-red-600" : cvQuota.remaining <= 10 ? "text-amber-600" : "text-gray-400"
+                    }`}
+                    title="Nombre de profils candidats distincts consultables aujourd'hui, réinitialisé chaque jour à minuit UTC"
+                  >
+                    {cvQuota.remaining === 0
+                      ? `Quota quotidien atteint (${cvQuota.used}/${cvQuota.limit}) — réinitialisation demain`
+                      : `${cvQuota.used}/${cvQuota.limit} consultations aujourd'hui (${cvQuota.remaining} restantes)`}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative max-w-xs w-full">

@@ -49,12 +49,42 @@ export async function GET(req) {
       return NextResponse.json({ error: "Impossible de charger le répertoire candidats." }, { status: 500 });
     }
 
+    // Quota quotidien de consultations distinctes (voir
+    // 20260806150000_cv_consultations_quota.sql) : chaque candidat renvoyé
+    // ici est compté côté serveur, jamais dans l'UI. record_cv_consultations
+    // décide seule qui est autorisé (déjà vu aujourd'hui, admin, ou sous le
+    // seuil) — un candidat marqué non autorisé est retiré de la réponse
+    // avant de repartir, ses données ne quittent jamais ce serveur.
+    const candidateIds = (data || []).map((c) => c.id).filter(Boolean);
+    let allowedIds = new Set(candidateIds);
+    let quotaExceeded = false;
+
+    if (candidateIds.length > 0) {
+      const { data: quotaResult, error: quotaError } = await supabase.rpc("record_cv_consultations", {
+        p_candidate_ids: candidateIds,
+      });
+      if (quotaError) {
+        console.error("[Candidats Recherche] Échec vérification quota :", quotaError.message);
+        return NextResponse.json({ error: "Impossible de vérifier le quota de consultations." }, { status: 500 });
+      }
+      allowedIds = new Set((quotaResult || []).filter((r) => r.allowed).map((r) => r.candidate_id));
+      quotaExceeded = (quotaResult || []).some((r) => !r.allowed);
+    }
+
+    const filteredData = (data || []).filter((c) => allowedIds.has(c.id));
+
+    const { data: quotaStatus } = await supabase.rpc("get_cv_quota_today").maybeSingle();
+
     return NextResponse.json({
-      candidates: data || [],
+      candidates: filteredData,
       page,
       pageSize,
       total: count ?? null,
-      hasMore: count != null ? to + 1 < count : (data || []).length === pageSize,
+      hasMore: quotaExceeded ? false : count != null ? to + 1 < count : (data || []).length === pageSize,
+      quota: quotaStatus
+        ? { used: quotaStatus.used_count, limit: quotaStatus.daily_limit, remaining: quotaStatus.remaining }
+        : null,
+      quotaExceeded,
     });
   } catch (err) {
     console.error("[Candidats Recherche API Error]", err);

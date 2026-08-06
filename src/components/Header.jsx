@@ -1080,7 +1080,7 @@ export default function Header() {
             </div>
 
             {/* Notification List */}
-            <div className="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800/60 flex-1 min-h-[300px] sm:min-h-[400px]">
+            <div className="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800/60 min-h-[300px] max-h-[50vh] sm:max-h-[400px]">
               {notificationsList.filter(n => {
                 if (activeNotifFilter === "jobs") return n.type === "jobs";
                 if (activeNotifFilter === "posts") return n.type === "posts";
