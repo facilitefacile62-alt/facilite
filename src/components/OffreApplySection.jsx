@@ -27,7 +27,7 @@ export default function OffreApplySection({ offer }) {
       if (session?.user?.id) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("education_level, degree")
+          .select("*")
           .eq("id", session.user.id)
           .single();
         setCandidateEducationLevel(profile?.degree || profile?.education_level || "Aucun");

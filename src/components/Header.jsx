@@ -296,8 +296,8 @@ export default function Header() {
         try {
           const { data: profData } = await supabase
             .from("profiles")
-            .select("id, full_name, role, headline, email")
-            .or(`full_name.ilike.%${q}%,headline.ilike.%${q}%`)
+            .select("id, full_name, email")
+            .ilike("full_name", `%${q}%`)
             .limit(5);
 
           if (profData && Array.isArray(profData)) {
@@ -306,11 +306,11 @@ export default function Header() {
               addResult({
                 id: `sb_prof_${prof.id}`,
                 title: displayName,
-                type: prof.role === "recruteur" ? "Recruteur" : "Candidat",
-                subtitle: prof.headline || `Membre ${prof.role || "actif"} Facilite`,
+                type: "Candidat",
+                subtitle: "Membre actif Facilite",
                 targetUrl: `/in/${prof.id}`,
                 icon: "fa-user-check",
-                badgeColor: prof.role === "recruteur" ? "purple" : "blue",
+                badgeColor: "blue",
               });
             });
           }
@@ -320,10 +320,10 @@ export default function Header() {
 
         // D. Appel sécurisé au moteur de recherche global FastAPI (/api/search) sans erreur CSP/Mixed Content
         try {
-          const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+          const isSiteOnLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
           const isLocalhostApi = API_URL.includes("localhost") || API_URL.includes("127.0.0.1");
 
-          if (!(isHttps && isLocalhostApi)) {
+          if (!isLocalhostApi || isSiteOnLocalhost) {
             const res = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(debouncedQuery)}&limit=8`);
             if (res.ok) {
               const data = await res.json();

@@ -188,9 +188,9 @@ function RechercheContent() {
       try {
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, role, headline")
-          .eq("role", "recruteur")
-          .or(`full_name.ilike.%${q}%,headline.ilike.%${q}%`);
+          .select("id, full_name, avatar_url, email")
+          .ilike("full_name", `%${q}%`)
+          .limit(20);
 
         if (profileData) {
           matchedRecruiters = profileData;
