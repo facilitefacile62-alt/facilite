@@ -291,7 +291,7 @@ export default function LoginPage() {
       {/* Conteneur Principal / Carte de Login OU Carte de Réinitialisation */}
       <main className="w-[92%] max-w-xs sm:max-w-sm mx-auto py-4 z-10">
         {isRecoveryMode ? (
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/60 transition-all duration-300 max-h-[85vh] overflow-y-auto animate-fade-in-up">
+          <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/60 transition-all duration-300 max-h-[85vh] overflow-y-auto scrollbar-hide animate-fade-in-up">
             <div className="flex justify-center mb-5">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
             </div>
@@ -381,7 +381,7 @@ export default function LoginPage() {
             )}
           </div>
         ) : (
-        <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/60 transition-all duration-300 max-h-[85vh] overflow-y-auto animate-fade-in-up">
+        <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/60 transition-all duration-300 max-h-[85vh] overflow-y-auto scrollbar-hide animate-fade-in-up">
 
           {/* Logo officiel du site au-dessus de la carte */}
           <div className="flex justify-center mb-3">
