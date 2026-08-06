@@ -652,6 +652,18 @@ export default function Header() {
             Offres d'emploi
           </Link>
           <Link
+            href="/candidat/extracteur"
+            className={`text-xs font-extrabold flex items-center gap-1 transition-colors ${
+              pathname === "/candidat/extracteur"
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+            }`}
+            title="L'Extracteur 1-Click"
+          >
+            <i className="fa-solid fa-bolt text-amber-500"></i>
+            <span>Extracteur</span>
+          </Link>
+          <Link
             href="/recrutement-spontane"
             className={`text-xs font-bold transition-colors ${
               pathname.startsWith("/recrutement-spontane")
@@ -748,13 +760,14 @@ export default function Header() {
             <span className="text-[10px] font-bold tracking-tight">Accueil</span>
           </Link>
           <Link
-            href="/service"
+            href="/candidat/extracteur"
             className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer w-14 transition ${
-              pathname === "/service" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+              pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
             }`}
+            title="L'Extracteur 1-Click"
           >
-            <i className="fa-solid fa-briefcase text-base"></i>
-            <span className="text-[10px] font-bold tracking-tight">Service</span>
+            <i className="fa-solid fa-bolt text-base text-amber-500"></i>
+            <span className="text-[10px] font-bold tracking-tight truncate max-w-[56px]">Extracteur</span>
           </Link>
           <Link
             href="/offres"
@@ -802,6 +815,14 @@ export default function Header() {
             className="block px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800"
           >
             Services & Modèles
+          </Link>
+          <Link
+            href="/candidat/extracteur"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-extrabold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-gray-800"
+          >
+            <i className="fa-solid fa-bolt text-amber-500"></i>
+            <span>L'Extracteur 1-Click</span>
           </Link>
           <Link
             href="/offres"
