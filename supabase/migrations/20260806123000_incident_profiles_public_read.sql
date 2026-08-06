@@ -33,3 +33,17 @@ DROP POLICY IF EXISTS "Profiles read access" ON public.profiles;
 -- auth.uid() — pour un appelant anonyme (auth.uid() = null), elle renvoie
 -- simplement null, sans rien exposer. Sûr à ouvrir à anon.
 GRANT EXECUTE ON FUNCTION public.current_user_role() TO anon;
+
+-- Deuxième effet de bord découvert en vérifiant le premier : même corrigé,
+-- get_profils_publics() refusait encore tout appel anonyme
+-- ("permission denied for function get_profils_publics"), alors que
+-- 20260802200000_security_advisor_fixes.sql accorde explicitement
+-- `GRANT EXECUTE ... TO anon, authenticated` et qu'aucune migration
+-- ultérieure ne touche cette fonction. Le GRANT anon a donc été retiré hors
+-- du processus de migration — troisième cas du même schéma que le bucket
+-- resumes et la policy "Profiles read access" dans cette seule Partie 5.
+-- Contrairement aux deux autres, celui-ci CASSAIT une fonctionnalité
+-- légitime (la page de profil public /in/[username] pour un visiteur non
+-- connecté) plutôt que d'exposer une donnée : on rétablit l'intention
+-- documentée d'origine, pas une permission nouvelle.
+GRANT EXECUTE ON FUNCTION public.get_profils_publics() TO anon;
