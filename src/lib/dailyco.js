@@ -2,13 +2,12 @@
  * Client Daily.co (https://daily.co) — visioconférence pour les entretiens
  * à distance recruteur/candidat.
  *
- * Contrairement à kpay.js, ce contrat d'API n'a PAS été vérifié contre une
- * documentation ou un compte réel fourni par l'utilisateur : DAILY_API_KEY
- * n'est renseigné nulle part (ni .env.local, ni Vercel) au moment où ce
- * fichier est écrit. Les endpoints/champs ci-dessous suivent l'API REST
- * publique de Daily.co (stable, documentée sur https://docs.daily.co/reference/rest-api),
- * mais n'ont pas pu être testés en conditions réelles faute de clé — à
- * vérifier empiriquement dès qu'une vraie clé est fournie.
+ * DAILY_API_KEY est configurée (.env.local + Vercel Production/Preview) et
+ * vérifiée empiriquement le 2026-08-06 : création réelle d'un salon sur
+ * ffacilite.daily.co, réponse HTTP 200 conforme au contrat ci-dessous,
+ * salon de test supprimé après vérification. L'intégration est fonctionnelle
+ * de bout en bout (bouton recruteur → /api/interviews/create-room → cette
+ * fonction → Daily.co).
  */
 
 const DAILY_API_BASE = "https://api.daily.co/v1";
