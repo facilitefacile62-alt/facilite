@@ -680,6 +680,18 @@ export default function Header() {
             <span>Offres d&apos;emploi</span>
           </Link>
           <Link
+            href="/candidat/extracteur"
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
+              pathname === "/candidat/extracteur"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+            }`}
+            title="L'Extracteur 1-Click"
+          >
+            <i className="fa-solid fa-bolt text-amber-500 text-sm"></i>
+            <span>Extracteur</span>
+          </Link>
+          <Link
             href="/messagerie"
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname === "/messagerie"
@@ -697,7 +709,7 @@ export default function Header() {
               type="button"
               onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
               className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                plusDropdownOpen || pathname === "/candidat/extracteur" || pathname === "/service" || pathname === "/importer-cv" || pathname.startsWith("/recrutement-") || pathname === "/boite-a-idees"
+                plusDropdownOpen || pathname === "/service" || pathname === "/importer-cv" || pathname.startsWith("/recrutement-") || pathname === "/boite-a-idees"
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
@@ -709,22 +721,6 @@ export default function Header() {
 
             {plusDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
-                <Link
-                  href="/candidat/extracteur"
-                  onClick={() => setPlusDropdownOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
-                    pathname === "/candidat/extracteur" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-500 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-bolt text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Extracteur IA</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Postulez en 1 clic</div>
-                  </div>
-                </Link>
-
                 <Link
                   href="/importer-cv"
                   onClick={() => setPlusDropdownOpen(false)}
@@ -891,6 +887,16 @@ export default function Header() {
             <span className="text-[9px] font-bold tracking-tight truncate w-full">Accueil</span>
           </Link>
           <Link
+            href="/candidat/extracteur"
+            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
+              pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+            }`}
+            title="L'Extracteur 1-Click"
+          >
+            <i className="fa-solid fa-bolt text-sm sm:text-base text-amber-500"></i>
+            <span className="text-[9px] font-bold tracking-tight truncate w-full">Extracteur</span>
+          </Link>
+          <Link
             href="/offres"
             className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
               pathname.startsWith("/offres") ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
@@ -931,14 +937,6 @@ export default function Header() {
             <div className="px-3 text-[11px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
               Plus d'outils & services
             </div>
-            <Link
-              href="/candidat/extracteur"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              <i className="fa-solid fa-bolt w-5 text-center text-amber-500"></i>
-              <span>Extracteur IA (1-Click)</span>
-            </Link>
             <Link
               href="/service"
               onClick={() => setMobileMenuOpen(false)}
