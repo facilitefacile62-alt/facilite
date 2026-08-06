@@ -31,8 +31,6 @@ function loadEnvLocal() {
   return env;
 }
 
-const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
-const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETest2026!";
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-test-admin@facilite-demo.local";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "FaciliteE2ETest2026!";
 const DAILY_LIMIT = 100;
@@ -52,22 +50,37 @@ test.describe("Quota quotidien de consultations CV (record_cv_consultations)", (
     anonClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     recruiterClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-    const { data: signInData, error: signInError } = await recruiterClient.auth.signInWithPassword({
-      email: CANDIDATE_EMAIL,
-      password: CANDIDATE_PASSWORD,
+    // Compte recruteur jetable auto-provisionné plutôt qu'un compte e2e-test-*
+    // partagé : découvert en construisant ce test, e2e-test-candidate porte
+    // en réalité role='admin' dans user_roles en base réelle aujourd'hui —
+    // ce qui aurait fait passer ce test pour une mauvaise raison (branche de
+    // contournement admin de record_cv_consultations) au lieu de tester le
+    // quota réel. Signalé séparément, pas corrigé ici — hors du périmètre
+    // de ce test. Un signUp() frais garantit role='user' par défaut.
+    const throwawayEmail = `quota-recruiter-${Date.now()}@facilite-demo.local`;
+    const throwawayPassword = "FaciliteQuotaFixture2026!";
+    const { data: signUpData, error: signUpError } = await recruiterClient.auth.signUp({
+      email: throwawayEmail,
+      password: throwawayPassword,
+      options: { data: { full_name: "Quota Test Recruiter" } },
     });
-    if (signInError) throw new Error(`Connexion e2e-test-candidate échouée : ${signInError.message}`);
-    recruiterId = signInData.user.id;
-    recruiterAccessToken = signInData.session.access_token;
+    if (signUpError) throw new Error(`Création du recruteur de test échouée : ${signUpError.message}`);
+    recruiterId = signUpData.user.id;
+    recruiterAccessToken = signUpData.session?.access_token;
+    if (!recruiterAccessToken) {
+      // Confirmation email requise selon la config — confirme directement en
+      // base (contexte de test uniquement) puis se connecte normalement.
+      await runPrivilegedSql(`UPDATE auth.users SET email_confirmed_at = now() WHERE id = '${recruiterId}';`);
+      const { data: signInData, error: signInError } = await recruiterClient.auth.signInWithPassword({
+        email: throwawayEmail,
+        password: throwawayPassword,
+      });
+      if (signInError) throw new Error(`Connexion du recruteur de test échouée : ${signInError.message}`);
+      recruiterAccessToken = signInData.session.access_token;
+    }
 
-    // Badge temporaire pour la durée du test — retiré en afterAll.
     await runPrivilegedSql(
-      `UPDATE public.profiles SET badges = CASE WHEN badges @> '["verified_recruiter"]'::jsonb THEN badges ELSE badges || '["verified_recruiter"]'::jsonb END WHERE id = '${recruiterId}';`
-    );
-    // Repart d'un compteur propre pour aujourd'hui, au cas où un run précédent
-    // aurait laissé des lignes (re-jeu du test le même jour UTC).
-    await runPrivilegedSql(
-      `DELETE FROM public.cv_consultations WHERE recruiter_id = '${recruiterId}' AND viewed_date = (now() AT TIME ZONE 'utc')::date;`
+      `UPDATE public.profiles SET is_test_account = true, badges = CASE WHEN badges @> '["verified_recruiter"]'::jsonb THEN badges ELSE badges || '["verified_recruiter"]'::jsonb END WHERE id = '${recruiterId}';`
     );
 
     hasServiceRole = !!env.SUPABASE_SERVICE_ROLE_KEY;
@@ -105,9 +118,13 @@ test.describe("Quota quotidien de consultations CV (record_cv_consultations)", (
   });
 
   test.afterAll(async () => {
-    await runPrivilegedSql(
-      `UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${recruiterId}';`
-    ).catch((e) => console.error("Nettoyage échoué (non bloquant) :", e.message));
+    if (hasServiceRole && recruiterId) {
+      await adminAuthClient.auth.admin.deleteUser(recruiterId).catch((e) => console.error("Nettoyage échoué (non bloquant) :", e.message));
+    } else {
+      await runPrivilegedSql(
+        `UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${recruiterId}';`
+      ).catch((e) => console.error("Nettoyage échoué (non bloquant) :", e.message));
+    }
 
     if (hasServiceRole && fixtureCandidateIds.length > 0) {
       for (let i = 0; i < fixtureCandidateIds.length; i += CHUNK_SIZE) {

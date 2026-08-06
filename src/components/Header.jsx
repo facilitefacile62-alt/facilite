@@ -176,7 +176,7 @@ export default function Header() {
       text: "a publié une offre prioritaire en tête du fil : Recrutement Massif Sabodala.",
       time: "Il y a 15 minutes",
       unread: true,
-      link: "/offres"
+      link: "/"
     },
     {
       id: "notif-2",
