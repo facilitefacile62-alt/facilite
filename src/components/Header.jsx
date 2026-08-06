@@ -657,55 +657,59 @@ export default function Header() {
         <nav className="hidden lg:flex items-center space-x-5 flex-shrink-0">
           <Link
             href="/"
-            className={`text-xs font-bold transition-colors ${
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname === "/"
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             }`}
           >
-            Accueil
+            <i className="fa-solid fa-house text-sm"></i>
+            <span>Accueil</span>
           </Link>
           <Link
             href="/offres"
-            className={`text-xs font-bold transition-colors ${
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname.startsWith("/offres")
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             }`}
           >
-            Offres d'emploi
+            <i className="fa-solid fa-briefcase text-sm"></i>
+            <span>Offres d&apos;emploi</span>
           </Link>
           <Link
             href="/candidat/extracteur"
-            className={`text-xs font-extrabold flex items-center gap-1 transition-colors ${
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname === "/candidat/extracteur"
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                 : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
             }`}
             title="L'Extracteur 1-Click"
           >
-            <i className="fa-solid fa-bolt text-amber-500"></i>
+            <i className="fa-solid fa-bolt text-amber-500 text-sm"></i>
             <span>Extracteur</span>
           </Link>
           <Link
             href="/messagerie"
-            className={`text-xs font-bold transition-colors ${
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname === "/messagerie"
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             }`}
           >
-            Messagerie
+            <i className="fa-solid fa-comments text-sm"></i>
+            <span>Messagerie</span>
           </Link>
           <Link
             href="/importer-cv"
-            className={`text-xs font-bold transition-colors ${
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname === "/importer-cv"
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             }`}
           >
-            Importer CV
+            <i className="fa-solid fa-file-arrow-up text-sm"></i>
+            <span>Importer CV</span>
           </Link>
 
           {/* Menu déroulant "Plus" pour regrouper les rubriques secondaires sans saturer */}
@@ -713,12 +717,13 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
-              className={`text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+              className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
                 plusDropdownOpen || pathname === "/service" || pathname.startsWith("/recrutement-") || pathname === "/boite-a-idees"
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
             >
+              <i className="fa-solid fa-layer-group text-sm"></i>
               <span>Plus</span>
               <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
             </button>
