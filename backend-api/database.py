@@ -32,6 +32,15 @@ class Establishment(Base):
     phone = Column(String, nullable=True)
     email = Column(String, nullable=True)
 
+# Table des offres d'emploi classiques (créée côté Supabase)
+class JobOffer(Base):
+    __tablename__ = "job_offers"
+    id = Column(String, primary_key=True, index=True) # UUID ou ID textuel
+    title = Column(String, nullable=True)
+    company = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    contract_type = Column(String, nullable=True)
+
 def init_db():
     """Create tables if they don't exist"""
     Base.metadata.create_all(bind=engine)

@@ -1754,7 +1754,7 @@ export default function MessagerieClient() {
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
-      <nav className="bg-[#FAF6F1] px-4 md:px-6 shadow-sm fixed top-0 left-0 w-full z-50 h-16">
+      <nav className="hidden">
         <div className="max-w-[1180px] mx-auto w-full h-full flex items-center justify-between">
           
           {/* Groupe Gauche : Logo + Barre de Recherche */}

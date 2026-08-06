@@ -1,13 +1,15 @@
 import os
 import logging
+import urllib.parse
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 # Imports locaux
-from database import init_db, get_db, Establishment
+from database import init_db, get_db, Establishment, JobOffer
 from scraper import scrape_real_data
 
 # -------------------------------------------------------
@@ -190,3 +192,77 @@ def trigger_scraping_from_url(payload: ScrapeRequest, db: Session = Depends(get_
         "duplicates_ignored": duplicate_count,
         "errors": errors
     }
+
+
+# -------------------------------------------------------
+# Moteur de Recherche Global en Temps Réel (Offres & Spontané)
+# -------------------------------------------------------
+@app.get("/api/search", tags=["Global Search Engine"])
+def search_global(q: str = "", limit: int = 10, db: Session = Depends(get_db)):
+    """
+    Recherche textuelle globale via ILIKE simultanément dans deux tables :
+    1. `job_offers` (Offres d'emploi classiques)
+    2. `establishments` (Entreprises issues du scraping pour candidatures spontanées)
+    Retourne une liste combinée prête pour le dropdown du frontend Next.js.
+    """
+    if not q or not q.strip():
+        return {"query": q, "total": 0, "results": []}
+
+    search_term = f"%{q.strip().lower()}%"
+    results = []
+
+    # 1. Recherche dans la table des offres d'emploi classiques
+    try:
+        offers = db.query(JobOffer).filter(
+            or_(
+                JobOffer.title.ilike(search_term),
+                JobOffer.company.ilike(search_term),
+                JobOffer.location.ilike(search_term)
+            )
+        ).limit(limit).all()
+
+        for off in offers:
+            results.append({
+                "id": f"offer_{off.id}",
+                "raw_id": str(off.id),
+                "title": off.title or "Offre d'emploi",
+                "type": "Offre d'emploi",
+                "subtitle": f"{off.company or 'Recruteur confidentiel'} • 📍 {off.location or 'Sénégal'} ({off.contract_type or 'CDI'})",
+                "targetUrl": f"/offres?id={off.id}",
+                "icon": "fa-briefcase",
+                "badgeColor": "emerald"
+            })
+    except Exception as e:
+        logger.error(f"Erreur lors de la recherche dans job_offers : {e}")
+
+    # 2. Recherche dans la table des établissements scrappés pour candidature spontanée
+    try:
+        establishments = db.query(Establishment).filter(
+            or_(
+                Establishment.name.ilike(search_term),
+                Establishment.address.ilike(search_term),
+                Establishment.email.ilike(search_term)
+            )
+        ).limit(limit).all()
+
+        for est in establishments:
+            encoded_name = urllib.parse.quote(est.name)
+            results.append({
+                "id": f"est_{est.id}",
+                "raw_id": str(est.id),
+                "title": est.name,
+                "type": "Entreprise (Candidature Spontanée)",
+                "subtitle": f"📍 {est.address or 'Sénégal'} • 📧 {est.email or 'Contact direct'}",
+                "targetUrl": f"/recrutement-spontane?entreprise={encoded_name}",
+                "icon": "fa-building-user",
+                "badgeColor": "blue"
+            })
+    except Exception as e:
+        logger.error(f"Erreur lors de la recherche dans establishments : {e}")
+
+    return {
+        "query": q.strip(),
+        "total": len(results),
+        "results": results
+    }
+
