@@ -10,6 +10,15 @@ jobs:
   build:
     name: Lint & Build
     runs-on: ubuntu-latest
+    # Attend que les invariants de sécurité passent avant de construire —
+    # voir docs/regle-migrations.md. Ça ne suffit PAS à bloquer un déploiement
+    # Vercel à lui seul (Vercel se déclenche sur le push lui-même, pas sur le
+    # résultat de ce workflow) : la vraie protection vient de la branch
+    # protection GitHub sur `main` (voir le même document), qui empêche tout
+    # commit non vérifié d'atteindre `main` — et donc de déclencher Vercel —
+    # en premier lieu. Cette dépendance sert à ce que le statut global de la
+    # CI reflète honnêtement l'échec, pas à elle seule à empêcher un déploiement.
+    needs: security-invariants
 
     steps:
       - name: Checkout
