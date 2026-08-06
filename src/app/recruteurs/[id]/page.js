@@ -212,7 +212,12 @@ export default function RecruiterShowcasePage() {
                 <div className="pb-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900">{companyName}</h1>
-                    {recruiterVerified && <BadgeDisplay badges={["verified_recruiter"]} />}
+                    {recruiterVerified && (
+                      <BadgeDisplay
+                        badges={["verified_recruiter"]}
+                        clickable={Boolean(userSession?.user?.id && (userSession.user.id === recruiterId || userSession.user.id === recruiterProfile?.user_id || userSession.user.id === recruiterProfile?.id))}
+                      />
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                     {recruiterProfile?.sector && (

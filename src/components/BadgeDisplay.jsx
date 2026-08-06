@@ -33,19 +33,20 @@ export default function BadgeDisplay({ badges, size = "sm", className = "", clic
 
         if ((badge === "verified_recruiter" || badge === "administrateur") && clickable) {
           const href = badge === "verified_recruiter" ? "/recruteur" : "/admin";
-          const title = badge === "verified_recruiter" ? "Accéder au tableau de bord recruteur" : "Accéder au tableau de bord d'administration";
+          const title = badge === "verified_recruiter" ? "Accéder à mon tableau de bord Recruteur" : "Accéder à mon tableau de bord Admin";
           return (
             <Link
               key={badge}
               href={href}
-              className="cursor-pointer inline-flex"
+              className="cursor-pointer inline-flex group"
               title={title}
             >
               <span
-                className={`inline-flex items-center gap-1 rounded-full font-extrabold border ${info.className} ${sizeClass} transition hover:opacity-90 hover:scale-105 active:scale-95`}
+                className={`inline-flex items-center gap-1.5 rounded-full font-extrabold border shadow-2xs ${info.className} ${sizeClass} transition duration-200 group-hover:opacity-95 group-hover:scale-105 active:scale-95`}
               >
                 <span aria-hidden="true">{info.emoji}</span>
                 <span>{info.label}</span>
+                <i className="fa-solid fa-up-right-from-square text-[9px] opacity-75 group-hover:opacity-100 transition-opacity ml-0.5" aria-hidden="true"></i>
               </span>
             </Link>
           );
