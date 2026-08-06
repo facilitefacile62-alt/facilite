@@ -534,9 +534,9 @@ export default function Header() {
                 </div>
               )}
 
-              {/* Liste des résultats stylisée */}
+              {/* Liste des résultats stylisée avec défilement interne (hauteur calibrée pour ~5 éléments visibles) */}
               {!isLoading && results.length > 0 && (
-                <div className="py-1 divide-y divide-gray-100 dark:divide-gray-800/60">
+                <div className="py-1 divide-y divide-gray-100 dark:divide-gray-800/60 max-h-[260px] sm:max-h-[320px] overflow-y-auto scroll-smooth overscroll-contain">
                   {results.map((item, index) => {
                     const isSelected = selectedIndex === index;
                     return (
