@@ -465,13 +465,26 @@ test.describe("Invariants de sécurité", () => {
     // - Filtres admin qui utilisent le badge pour classifier (effectiveRole)
     // - Littéraux dans des chaînes de texte UI (labels, placeholders)
 
-    const OBSOLETE_ROLE_LITERALS = ["recruteur", "candidat", "agent"];
+    // "entreprise" ajouté ici (Partie 9 du chantier du 2026-08-06,
+    // docs/incident-2026-08-06.md) : 4e littéral du modèle pré-RBAC (avec
+    // candidat/recruteur/agent, cf. Invariant 7 volet 2), absent de cette
+    // liste jusqu'ici — aucune violation active trouvée en le cherchant,
+    // mais un futur `=== "entreprise"` doit être détecté comme les 3 autres.
+    const OBSOLETE_ROLE_LITERALS = ["recruteur", "candidat", "agent", "entreprise"];
 
-    // Pattern : quelque chose ==/=== "recruteur" ou "recruteur" ==/=== quelque chose
-    // ou !=/!== variantes — la forme standard d'un gate conditionnel.
-    const GATE_PATTERNS = OBSOLETE_ROLE_LITERALS.map(
-      (role) => new RegExp(`(?:===|!==|==|!=)\\s*["']${role}["']|["']${role}["']\\s*(?:===|!==|==|!=)`, "g")
-    );
+    // Deux formes de gate à détecter, pas une seule (élargi le 2026-08-06
+    // après avoir constaté qu'aucune des deux formes suivantes n'était
+    // couverte alors qu'elles auraient laissé passer exactement la même
+    // classe de bug sous une syntaxe différente) :
+    //   1) comparaison directe : quelque chose ==/===/!=/!== "recruteur"
+    //   2) test d'appartenance : [...].includes("recruteur") ou
+    //      "recruteur" === (quelque chose).find(...) — en pratique on ne
+    //      cherche que .includes(...) ici, la forme réellement utilisée
+    //      dans ce dépôt pour les tableaux de badges/rôles.
+    const GATE_PATTERNS = OBSOLETE_ROLE_LITERALS.flatMap((role) => [
+      new RegExp(`(?:===|!==|==|!=)\\s*["']${role}["']|["']${role}["']\\s*(?:===|!==|==|!=)`, "g"),
+      new RegExp(`\\.includes\\(\\s*["']${role}["']\\s*\\)`, "g"),
+    ]);
 
     // Fichiers/lignes explicitement justifiés (faux positifs connus)
     const JUSTIFIED = new Set([
@@ -528,9 +541,9 @@ test.describe("Invariants de sécurité", () => {
 
     expect(
       violations,
-      "Gate conditionné à un rôle obsolète ('recruteur'/'candidat'/'agent') trouvé dans le frontend. " +
+      "Gate conditionné à un rôle obsolète ('recruteur'/'candidat'/'agent'/'entreprise') trouvé dans le frontend. " +
         "Depuis le chantier RBAC, ces littéraux n'existent plus dans user_roles — utiliser " +
-        "has_badge() ou profileBadges.includes() à la place. Voir console."
+        "has_badge() ou profileBadges.includes('verified_recruiter'/'official_staff') à la place. Voir console."
     ).toEqual([]);
   });
 });
