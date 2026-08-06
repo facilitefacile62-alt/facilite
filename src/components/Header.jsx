@@ -4,6 +4,151 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
+
+// Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
+const QUICK_SECTIONS_INDEX = [
+  {
+    id: "sec_scanner",
+    title: "Scanner Document IA (CV, CNI, Passeport)",
+    type: "Rubrique & Outil IA",
+    subtitle: "Numérisation et extraction automatique des données",
+    targetUrl: "/importer-cv",
+    icon: "fa-camera-retro",
+    badgeColor: "emerald",
+    keywords: "scanner scan document cni passeport ocr ia analyse numérisation rubriques photo",
+  },
+  {
+    id: "sec_score",
+    title: "Analyseur de Score ATS & Diagnostic CV",
+    type: "Service Diagnostic",
+    subtitle: "Évaluez votre CV et recevez des recommandations instantanées",
+    targetUrl: "/importer-cv",
+    icon: "fa-wand-magic-sparkles",
+    badgeColor: "purple",
+    keywords: "score ats diagnostic analyseur ia importer cv évaluation recommandation",
+  },
+  {
+    id: "sec_cv_pro",
+    title: "Modèle CV Professionnel",
+    type: "Modèle de CV",
+    subtitle: "Structure haute performance pour cadres et experts",
+    targetUrl: "/service",
+    icon: "fa-file-lines",
+    badgeColor: "blue",
+    keywords: "modèle cv professionnel template cadre expert canva service",
+  },
+  {
+    id: "sec_lettre",
+    title: "Modèle Lettre de Motivation",
+    type: "Modèle de Lettre",
+    subtitle: "Mise en page percutante et professionnelle",
+    targetUrl: "/service",
+    icon: "fa-envelope-open-text",
+    badgeColor: "blue",
+    keywords: "modèle lettre motivation canva rédaction candidature service",
+  },
+  {
+    id: "sec_cv_en",
+    title: "Modèle CV Version Anglaise / Resume",
+    type: "Modèle International",
+    subtitle: "Optimisé pour les recruteurs internationaux et anglophones",
+    targetUrl: "/service",
+    icon: "fa-earth-americas",
+    badgeColor: "blue",
+    keywords: "modèle cv anglais english resume international canva service",
+  },
+  {
+    id: "sec_cv_ca",
+    title: "Modèle CV Canadien (Sans Photo)",
+    type: "Modèle Nord-Américain",
+    subtitle: "Conforme aux normes canadiennes et nord-américaines",
+    targetUrl: "/service",
+    icon: "fa-map-pin",
+    badgeColor: "blue",
+    keywords: "modèle cv canadien canada québec sans photo nord américain canva service",
+  },
+  {
+    id: "sec_builder",
+    title: "Créer un CV en ligne (CV Builder Pro)",
+    type: "Outil de Création",
+    subtitle: "Assistant étape par étape pour construire votre CV d'excellence",
+    targetUrl: "/creer-cv",
+    icon: "fa-palette",
+    badgeColor: "emerald",
+    keywords: "créer cv en ligne builder pro constructeur création étape assistant",
+  },
+  {
+    id: "sec_offres",
+    title: "Offres d'emploi & Opportunités",
+    type: "Job Board",
+    subtitle: "Consultez les postes ouverts au Sénégal et en Afrique de l'Ouest",
+    targetUrl: "/offres",
+    icon: "fa-briefcase",
+    badgeColor: "blue",
+    keywords: "offres emploi travail poste recrutement job board opportunité dakar sénégal cdi cdd",
+  },
+  {
+    id: "sec_spontane",
+    title: "Répertoire 77 Entreprises (Candidature Spontanée)",
+    type: "Base de Données",
+    subtitle: "Accès direct à la banque d'entreprises du Sénégal",
+    targetUrl: "/recrutement-spontane",
+    icon: "fa-building-user",
+    badgeColor: "emerald",
+    keywords: "candidature spontanée entreprises 77 répertoire banque réseau pétrolier société dakar",
+  },
+  {
+    id: "sec_journalier",
+    title: "Dépôts Physiques & Stations-Services",
+    type: "Recrutement",
+    subtitle: "Adresses et contacts pour dépôts physiques de CV",
+    targetUrl: "/recrutement-journalier",
+    icon: "fa-gas-pump",
+    badgeColor: "purple",
+    keywords: "dépôts physiques stations services journalier recrutement présentiel dakar adresse téléphone",
+  },
+  {
+    id: "sec_messagerie",
+    title: "Messagerie & Conversations en Direct",
+    type: "Communication",
+    subtitle: "Échangez en temps réel avec recruteurs et candidats",
+    targetUrl: "/messagerie",
+    icon: "fa-comments",
+    badgeColor: "purple",
+    keywords: "messagerie chat conversation discussion message recruteur candidat direct",
+  },
+  {
+    id: "sec_profil",
+    title: "Mon Profil, Rubriques & Compétences",
+    type: "Espace Personnel",
+    subtitle: "Gérez votre parcours, vos documents et vos paramètres",
+    targetUrl: "/profil",
+    icon: "fa-user-tie",
+    badgeColor: "blue",
+    keywords: "mon profil rubriques compétences mes documents paramètres à propos compte utilisateur juriste",
+  },
+  {
+    id: "sec_boite",
+    title: "Boîte à idées & Suggestions",
+    type: "Communauté",
+    subtitle: "Contribuez à l'évolution de la plateforme Facilite",
+    targetUrl: "/boite-a-idees",
+    icon: "fa-lightbulb",
+    badgeColor: "emerald",
+    keywords: "boîte à idées suggestions avis proposition innovation amélioration communauté",
+  },
+  {
+    id: "sec_extracteur",
+    title: "Extracteur de Profils & Espace Recruteur",
+    type: "Outil Recruteur",
+    subtitle: "Outil de détection et de sourcing pour professionnels RH",
+    targetUrl: "/candidat/extracteur",
+    icon: "fa-filter-circle-dollar",
+    badgeColor: "purple",
+    keywords: "extracteur profils cv sourcing recruteur rh détection candidats admin",
+  },
+];
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -85,15 +230,114 @@ export default function Header() {
 
     async function fetchSearchResults() {
       try {
-        const res = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(debouncedQuery)}&limit=8`);
-        if (res.ok && isMounted) {
-          const data = await res.json();
-          setResults(data.results || []);
+        const q = debouncedQuery.toLowerCase().trim();
+        const combinedResults = [];
+        const seenTitles = new Set();
+
+        const addResult = (item) => {
+          const key = (item.title || "").toLowerCase().trim();
+          if (key && !seenTitles.has(key)) {
+            seenTitles.add(key);
+            combinedResults.push(item);
+          }
+        };
+
+        // A. Recherche instantanée dans les sections et rubriques de la plateforme
+        QUICK_SECTIONS_INDEX.forEach((sec) => {
+          const content = `${sec.title} ${sec.subtitle} ${sec.keywords}`.toLowerCase();
+          if (content.includes(q)) {
+            addResult(sec);
+          }
+        });
+
+        // B. Recherche locale dans la base des 77 Entreprises Spontanées
+        if (typeof SPONTANEOUS_COMPANIES !== "undefined" && Array.isArray(SPONTANEOUS_COMPANIES)) {
+          SPONTANEOUS_COMPANIES.forEach((comp, idx) => {
+            const content = `${comp.company} ${comp.domains || ""} ${(comp.poles || []).join(" ")} ${comp.rawContact || ""} ${comp.description || ""}`.toLowerCase();
+            if (content.includes(q)) {
+              addResult({
+                id: `spont_${idx}_${comp.company}`,
+                title: comp.company,
+                type: "Entreprise (Candidature Spontanée)",
+                subtitle: `📍 ${comp.rawContact || "Sénégal"} • ${comp.domains || "Secteur d'activité"}`,
+                targetUrl: `/recrutement-spontane?entreprise=${encodeURIComponent(comp.company)}`,
+                icon: "fa-building-user",
+                badgeColor: "emerald",
+              });
+            }
+          });
+        }
+
+        // C. Requête en direct vers Supabase (Tables job_offers et profiles)
+        try {
+          const { data: jobData } = await supabase
+            .from("job_offers")
+            .select("id, title, company, location, contract_type")
+            .or(`title.ilike.%${q}%,company.ilike.%${q}%,location.ilike.%${q}%,description.ilike.%${q}%`)
+            .limit(5);
+
+          if (jobData && Array.isArray(jobData)) {
+            jobData.forEach((off) => {
+              addResult({
+                id: `sb_off_${off.id}`,
+                title: off.title || "Offre d'emploi",
+                type: "Offre d'emploi",
+                subtitle: `${off.company || "Recruteur confidentiel"} • 📍 ${off.location || "Sénégal"} (${off.contract_type || "CDI"})`,
+                targetUrl: `/offres?id=${off.id}`,
+                icon: "fa-briefcase",
+                badgeColor: "blue",
+              });
+            });
+          }
+        } catch (err) {
+          console.warn("Recherche directe job_offers ignorée:", err.message);
+        }
+
+        try {
+          const { data: profData } = await supabase
+            .from("profiles")
+            .select("id, full_name, company_name, role, degree")
+            .or(`full_name.ilike.%${q}%,company_name.ilike.%${q}%,degree.ilike.%${q}%,role.ilike.%${q}%`)
+            .limit(5);
+
+          if (profData && Array.isArray(profData)) {
+            profData.forEach((prof) => {
+              const displayName = prof.full_name || prof.company_name || "Profil Membre";
+              addResult({
+                id: `sb_prof_${prof.id}`,
+                title: displayName,
+                type: prof.role === "recruteur" ? "Recruteur Vérifié" : "Candidat & Compétences",
+                subtitle: prof.degree ? `🎓 ${prof.degree}` : `Membre ${prof.role || "actif"} Facilite`,
+                targetUrl: `/in/${prof.id}`,
+                icon: "fa-user-check",
+                badgeColor: prof.role === "recruteur" ? "purple" : "blue",
+              });
+            });
+          }
+        } catch (err) {
+          console.warn("Recherche directe profiles ignorée:", err.message);
+        }
+
+        // D. Appel au moteur de recherche global FastAPI (/api/search)
+        try {
+          const res = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(debouncedQuery)}&limit=8`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.results)) {
+              data.results.forEach((item) => addResult(item));
+            }
+          }
+        } catch (err) {
+          // Si FastAPI n'est pas actif en dev, les résultats Supabase et index locaux assurent le service
+        }
+
+        if (isMounted) {
+          setResults(combinedResults.slice(0, 12));
           setIsOpen(true);
           setSelectedIndex(-1);
         }
       } catch (err) {
-        console.error("Erreur de communication avec l'API FastAPI de recherche:", err);
+        console.error("Erreur générale dans le moteur de recherche:", err);
       } finally {
         if (isMounted) {
           setIsLoading(false);
