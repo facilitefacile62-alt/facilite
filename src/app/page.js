@@ -234,7 +234,8 @@ Please send BOTH versions of your CV (French and English) to: recrutement@c2ksta
     tags: ["Sabodala", "Mines", "HSE", "Logistique", "Intérim"],
     salary: "Selon grille minière",
     recruiterEmail: "recrutement@c2kstaffing.com",
-    image: null
+    image: "/c2k_sabodala.jpg",
+    pinned: true
   },
   {
     id: 99,
@@ -453,7 +454,11 @@ export default function Home() {
   // Entièrement dérivé de dynamicJobs (fusion avec le fil statique) : calculé
   // directement au rendu plutôt que synchronisé via un effet séparé, qui
   // ajoutait un aller-retour de rendu superflu à chaque changement.
-  const allJobs = useMemo(() => [...dynamicJobs, ...initialJobs], [dynamicJobs]);
+  const allJobs = useMemo(() => [
+    ...initialJobs.filter((job) => job.pinned),
+    ...dynamicJobs,
+    ...initialJobs.filter((job) => !job.pinned),
+  ], [dynamicJobs]);
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
