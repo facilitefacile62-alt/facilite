@@ -188,9 +188,9 @@ function RechercheContent() {
       try {
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, full_name, company_name, avatar_url, role, degree")
+          .select("id, full_name, avatar_url, role, headline")
           .eq("role", "recruteur")
-          .or(`full_name.ilike.%${q}%,company_name.ilike.%${q}%`);
+          .or(`full_name.ilike.%${q}%,headline.ilike.%${q}%`);
 
         if (profileData) {
           matchedRecruiters = profileData;
@@ -531,10 +531,10 @@ function RechercheContent() {
                       className="bg-white rounded-3xl border border-gray-200 shadow-sm p-5 flex items-center gap-4"
                     >
                       <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-800 flex items-center justify-center font-bold text-lg">
-                        {recr.company_name ? recr.company_name.charAt(0) : "R"}
+                        {recr.full_name ? recr.full_name.charAt(0) : "R"}
                       </div>
                       <div>
-                        <h4 className="text-sm font-extrabold text-gray-900">{recr.company_name || recr.full_name}</h4>
+                        <h4 className="text-sm font-extrabold text-gray-900">{recr.full_name || recr.headline || "Recruteur vérifié"}</h4>
                         <p className="text-xs text-gray-500 font-medium">Recruteur vérifié Facilite</p>
                       </div>
                     </div>

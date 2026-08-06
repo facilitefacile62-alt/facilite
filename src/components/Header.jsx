@@ -258,7 +258,7 @@ export default function Header() {
               addResult({
                 id: `spont_${idx}_${comp.company}`,
                 title: comp.company,
-                type: "Entreprise (Candidature Spontanée)",
+                type: "Spontané",
                 subtitle: `📍 ${comp.rawContact || "Sénégal"} • ${comp.domains || "Secteur d'activité"}`,
                 targetUrl: `/recrutement-spontane?entreprise=${encodeURIComponent(comp.company)}`,
                 icon: "fa-building-user",
@@ -296,18 +296,18 @@ export default function Header() {
         try {
           const { data: profData } = await supabase
             .from("profiles")
-            .select("id, full_name, company_name, role, degree")
-            .or(`full_name.ilike.%${q}%,company_name.ilike.%${q}%,degree.ilike.%${q}%,role.ilike.%${q}%`)
+            .select("id, full_name, role, headline, email")
+            .or(`full_name.ilike.%${q}%,headline.ilike.%${q}%`)
             .limit(5);
 
           if (profData && Array.isArray(profData)) {
             profData.forEach((prof) => {
-              const displayName = prof.full_name || prof.company_name || "Profil Membre";
+              const displayName = prof.full_name || prof.email?.split("@")[0] || "Profil Membre";
               addResult({
                 id: `sb_prof_${prof.id}`,
                 title: displayName,
-                type: prof.role === "recruteur" ? "Recruteur Vérifié" : "Candidat & Compétences",
-                subtitle: prof.degree ? `🎓 ${prof.degree}` : `Membre ${prof.role || "actif"} Facilite`,
+                type: prof.role === "recruteur" ? "Recruteur" : "Candidat",
+                subtitle: prof.headline || `Membre ${prof.role || "actif"} Facilite`,
                 targetUrl: `/in/${prof.id}`,
                 icon: "fa-user-check",
                 badgeColor: prof.role === "recruteur" ? "purple" : "blue",
@@ -318,17 +318,22 @@ export default function Header() {
           console.warn("Recherche directe profiles ignorée:", err.message);
         }
 
-        // D. Appel au moteur de recherche global FastAPI (/api/search)
+        // D. Appel sécurisé au moteur de recherche global FastAPI (/api/search) sans erreur CSP/Mixed Content
         try {
-          const res = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(debouncedQuery)}&limit=8`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data && Array.isArray(data.results)) {
-              data.results.forEach((item) => addResult(item));
+          const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+          const isLocalhostApi = API_URL.includes("localhost") || API_URL.includes("127.0.0.1");
+
+          if (!(isHttps && isLocalhostApi)) {
+            const res = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(debouncedQuery)}&limit=8`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && Array.isArray(data.results)) {
+                data.results.forEach((item) => addResult(item));
+              }
             }
           }
         } catch (err) {
-          // Si FastAPI n'est pas actif en dev, les résultats Supabase et index locaux assurent le service
+          // Silence si l'API FastAPI n'est pas atteignable
         }
 
         if (isMounted) {
@@ -548,7 +553,7 @@ export default function Header() {
                             : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
                         }`}
                       >
-                        <div className="flex items-center gap-3 overflow-hidden flex-1">
+                        <div className="flex items-center gap-2.5 min-w-[60%] overflow-hidden flex-1">
                           {/* Icône de l'item fournie par l'API dans un macaron élégant */}
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                             isSelected ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
@@ -569,7 +574,7 @@ export default function Header() {
                         </div>
 
                         {/* Badge de catégorie avec couleur fournie par l'API */}
-                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md flex-shrink-0 shadow-2xs ${getBadgeStyles(item.badgeColor)}`}>
+                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md flex-shrink-0 max-w-[90px] sm:max-w-[130px] truncate text-center shadow-2xs ${getBadgeStyles(item.badgeColor)}`}>
                           {item.type}
                         </span>
                       </div>
