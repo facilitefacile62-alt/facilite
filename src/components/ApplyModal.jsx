@@ -6,11 +6,13 @@ import { supabase } from "@/lib/supabase";
 export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, triggerToast }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [subject, setSubject] = useState("");
   const [coverLetter, setCoverLetter] = useState("");
   const [resumes, setResumes] = useState([]);
-  const [cvChoice, setCvChoice] = useState("new"); // "existing" ou "new"
-  const [existingCvId, setExistingCvId] = useState("");
-  const [newCvFile, setNewCvFile] = useState(null);
+  
+  // Support multi-documents (CV FR + EN, lettres, diplômes...)
+  const [selectedExistingCvIds, setSelectedExistingCvIds] = useState([]);
+  const [newFiles, setNewFiles] = useState([]);
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -41,11 +43,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             setFullName(session.user.user_metadata?.full_name || session.user.email.split("@")[0] || "");
           }
 
-          // Charger la liste des CVs existants — uniquement ceux avec un
-          // vrai fichier (file_url) : un CV créé via /creer-cv n'en a
-          // jamais (son contenu est structuré en JSON, pas un fichier), le
-          // sélectionner ici ferait échouer la candidature (cv_url NOT NULL
-          // en base) avec un message d'erreur générique et déroutant.
+          // Charger la liste des CVs existants — uniquement ceux avec un vrai fichier
           const { data: resumesList } = await supabase
             .from("resumes")
             .select("*")
@@ -55,10 +53,9 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
 
           setResumes(resumesList || []);
           if (resumesList && resumesList.length > 0) {
-            setExistingCvId(resumesList[0].id);
-            setCvChoice("existing");
+            setSelectedExistingCvIds([resumesList[0].id]);
           } else {
-            setCvChoice("new");
+            setSelectedExistingCvIds([]);
           }
         }
       } catch (err) {
@@ -67,20 +64,21 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
     }
 
     loadData();
-    // Réinitialiser les états à chaque (ré)ouverture de la modale — une vraie
-    // remise à zéro déclenchée par isOpen, pas une valeur dérivable au rendu.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setNewCvFile(null);
+    // Réinitialiser les états à chaque ouverture de la modale
+    setNewFiles([]);
+    setSelectedExistingCvIds([]);
+    setSubject(job ? (selectedLang === "FR" ? job.titleFR : job.titleEN) : "");
     setCoverLetter("");
     setErrorMsg("");
     setSuccess(false);
-  }, [isOpen]);
+  }, [isOpen, job, selectedLang]);
 
   if (!isOpen || !job) return null;
 
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewCvFile(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      const added = Array.from(e.target.files);
+      setNewFiles((prev) => [...prev, ...added]);
       setErrorMsg("");
     }
   };
@@ -91,26 +89,32 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
 
   const handleDrop = (e) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setNewCvFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const added = Array.from(e.dataTransfer.files);
+      setNewFiles((prev) => [...prev, ...added]);
       setErrorMsg("");
     }
   };
 
+  const removeFile = (indexToRemove) => {
+    setNewFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const toggleExistingCv = (cvId) => {
+    setSelectedExistingCvIds((prev) =>
+      prev.includes(cvId) ? prev.filter((id) => id !== cvId) : [...prev, cvId]
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!fullName.trim() || !email.trim()) {
-      setErrorMsg("Le nom et l'adresse e-mail sont obligatoires.");
+    if (!fullName.trim() || !email.trim() || !subject.trim()) {
+      setErrorMsg("Le nom, l'adresse e-mail et l'objet de la candidature sont obligatoires.");
       return;
     }
 
-    if (cvChoice === "new" && !newCvFile) {
-      setErrorMsg("Veuillez sélectionner ou déposer un fichier de CV.");
-      return;
-    }
-
-    if (cvChoice === "existing" && !existingCvId) {
-      setErrorMsg("Veuillez choisir un CV existant.");
+    if (selectedExistingCvIds.length === 0 && newFiles.length === 0) {
+      setErrorMsg("Veuillez joindre au moins un document ou CV pour votre candidature.");
       return;
     }
 
@@ -127,6 +131,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       const formData = new FormData();
       formData.append("jobId", job.id);
       formData.append("jobTitle", selectedLang === "FR" ? job.titleFR : job.titleEN);
+      formData.append("subject", subject.trim());
       formData.append("company", job.company);
       formData.append("fullName", fullName.trim());
       formData.append("email", email.trim());
@@ -138,10 +143,19 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         formData.append("recruiterId", job.recruiterId);
       }
 
-      if (cvChoice === "existing") {
-        formData.append("existingCvId", existingCvId);
-      } else {
-        formData.append("cvFile", newCvFile);
+      // Ajout de tous les CVs existants cochés et des nouveaux fichiers
+      selectedExistingCvIds.forEach((id) => {
+        formData.append("existingCvIds", id);
+      });
+      newFiles.forEach((file) => {
+        formData.append("cvFiles", file);
+      });
+      // Compatibilité
+      if (selectedExistingCvIds.length > 0) {
+        formData.append("existingCvId", selectedExistingCvIds[0]);
+      }
+      if (newFiles.length > 0) {
+        formData.append("cvFile", newFiles[0]);
       }
 
       // Requête HTTP POST vers notre route API
@@ -198,23 +212,22 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         {success ? (
           <div className="text-center py-8 space-y-6">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center border border-emerald-100 shadow-sm mx-auto animate-bounce">
-              <i className="fa-solid fa-check-double text-3xl"></i>
+              <i className="fa-solid fa-circle-check text-4xl"></i>
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-extrabold text-gray-900">Candidature transmise !</h3>
-              <p className="text-xs text-gray-500 font-medium leading-relaxed max-w-sm mx-auto">
-                {job.isSpontaneous ? (
-                  <>Félicitations, votre candidature spontanée pour <strong>{job.company}</strong> a bien été enregistrée et envoyée au recruteur.</>
-                ) : (
-                  <>Félicitations, votre candidature pour le poste de <strong>{selectedLang === "FR" ? job.titleFR : job.titleEN}</strong> chez <strong>{job.company}</strong> a bien été enregistrée et envoyée au recruteur.</>
-                )}
+              <h4 className="text-xl font-black text-gray-900">Candidature Envoyée !</h4>
+              <p className="text-xs font-semibold text-gray-600 max-w-sm mx-auto">
+                Votre candidature pour <span className="text-gray-900 font-extrabold">{subject || (selectedLang === "FR" ? job.titleFR : job.titleEN)}</span> chez <span className="text-gray-900 font-extrabold">{job.company}</span> a bien été transmise avec toutes vos pièces jointes.
+              </p>
+              <p className="text-[11px] text-gray-400 font-medium pt-2">
+                Vous recevrez un e-mail de confirmation à l'adresse {email}.
               </p>
             </div>
             <button
               onClick={onClose}
-              className="mt-4 px-6 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
+              className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold py-3.5 px-6 rounded-2xl text-xs transition cursor-pointer shadow-[0_4px_12px_rgba(16,230,136,0.3)] block"
             >
-              Fermer la fenêtre
+              J'ai compris
             </button>
           </div>
         ) : (
@@ -269,88 +282,134 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               </div>
             </div>
 
-            {/* Section Choix du CV */}
-            <div className="space-y-3">
-              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">Sélectionnez votre CV *</label>
-              
-              {resumes.length > 0 ? (
-                <div className="flex gap-4 border-b border-gray-100 pb-2">
-                  <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="cvChoice"
-                      value="existing"
-                      checked={cvChoice === "existing"}
-                      onChange={() => setCvChoice("existing")}
-                      className="accent-emerald-500"
-                      disabled={loading}
-                    />
-                    <span>CV déjà enregistré</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="cvChoice"
-                      value="new"
-                      checked={cvChoice === "new"}
-                      onChange={() => setCvChoice("new")}
-                      className="accent-emerald-500"
-                      disabled={loading}
-                    />
-                    <span>Importer un nouveau CV</span>
-                  </label>
-                </div>
-              ) : null}
+            {/* Objet de la candidature / Poste souhaité */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
+                Objet de la candidature (ou Poste souhaité) *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Ex. Sauveteur Minier / Conducteur de Chargeuse..."
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition"
+                disabled={loading}
+              />
+              <p className="text-[10px] text-gray-400 font-medium">
+                Indiquez précisément l'intitulé du poste pour lequel vous postulez.
+              </p>
+            </div>
 
-              {cvChoice === "existing" && resumes.length > 0 ? (
-                <div className="space-y-1.5 animate-fade-in">
-                  <select
-                    value={existingCvId}
-                    onChange={(e) => setExistingCvId(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-extrabold text-gray-700 focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                    disabled={loading}
-                  >
-                    {resumes.map((cv) => (
-                      <option key={cv.id} value={cv.id}>
-                        {cv.title} ({new Date(cv.created_at).toLocaleDateString()})
-                      </option>
-                    ))}
-                  </select>
+            {/* Section Sélection des CVs & Documents multiples */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
+                  Pièces jointes (CV Français, CV Anglais, Lettre, etc.) *
+                </label>
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                  {selectedExistingCvIds.length + newFiles.length} sélectionné(s)
+                </span>
+              </div>
+
+              {resumes.length > 0 && (
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200/80 space-y-2">
+                  <p className="text-[11px] font-black text-gray-700 flex items-center gap-1.5">
+                    <i className="fa-solid fa-folder-open text-emerald-500"></i>
+                    Mes CVs enregistrés sur Facilité (Cochez pour joindre) :
+                  </p>
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                    {resumes.map((cv) => {
+                      const isChecked = selectedExistingCvIds.includes(cv.id);
+                      return (
+                        <label
+                          key={cv.id}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (!loading) toggleExistingCv(cv.id);
+                          }}
+                          className={`flex items-center gap-2 p-2 rounded-xl border transition cursor-pointer text-xs font-bold ${
+                            isChecked
+                              ? "bg-emerald-50 border-emerald-400 text-gray-900 shadow-xs"
+                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50/80"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}}
+                            className="accent-emerald-500 rounded"
+                            disabled={loading}
+                          />
+                          <i className="fa-solid fa-file-pdf text-emerald-600 text-sm"></i>
+                          <span className="truncate flex-1">{cv.title}</span>
+                          <span className="text-[9px] text-gray-400 font-normal">
+                            {new Date(cv.created_at).toLocaleDateString()}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
-              ) : (
-                <div
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 rounded-2xl p-5 text-center cursor-pointer hover:bg-gray-50 hover:border-emerald-400 transition animate-fade-in"
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept=".pdf,.docx,.doc"
-                    className="hidden"
-                    disabled={loading}
-                  />
-                  {newCvFile ? (
-                    <div className="space-y-1.5">
-                      <i className="fa-solid fa-file-pdf text-3xl text-emerald-500"></i>
-                      <p className="text-xs font-extrabold text-gray-800 truncate max-w-xs mx-auto">
-                        {newCvFile.name}
-                      </p>
-                      <p className="text-[10px] text-gray-400 font-bold">
-                        {(newCvFile.size / (1024 * 1024)).toFixed(2)} Mo - Cliquez pour remplacer
-                      </p>
+              )}
+
+              <div
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-300 rounded-2xl p-4 text-center cursor-pointer hover:bg-gray-50 hover:border-emerald-400 transition animate-fade-in relative"
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".pdf,.docx,.doc"
+                  multiple
+                  className="hidden"
+                  disabled={loading}
+                />
+                <div className="space-y-1 text-gray-500">
+                  <i className="fa-solid fa-cloud-arrow-up text-2xl text-emerald-500"></i>
+                  <p className="text-xs font-extrabold text-gray-700">
+                    Cliquez ici ou glissez pour joindre des documents
+                  </p>
+                  <p className="text-[10px] font-bold text-gray-400">
+                    Vous pouvez joindre plusieurs fichiers (CV Français + Anglais, Lettres, Diplômes...)
+                  </p>
+                </div>
+              </div>
+
+              {newFiles.length > 0 && (
+                <div className="space-y-1.5 pt-1 animate-fade-in">
+                  <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
+                    Fichiers à importer ({newFiles.length}) :
+                  </p>
+                  {newFiles.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2.5 bg-emerald-50/50 border border-emerald-200 rounded-xl text-xs font-extrabold text-gray-800 animate-fade-in"
+                    >
+                      <div className="flex items-center gap-2 truncate flex-1 pr-2">
+                        <i className="fa-solid fa-file-lines text-emerald-600 text-sm"></i>
+                        <span className="truncate">{file.name}</span>
+                        <span className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
+                          ({(file.size / (1024 * 1024)).toFixed(2)} Mo)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(idx);
+                        }}
+                        disabled={loading}
+                        className="w-6 h-6 rounded-lg bg-rose-100/80 text-rose-600 hover:bg-rose-200 transition flex items-center justify-center cursor-pointer"
+                        title="Retirer ce fichier"
+                      >
+                        <i className="fa-solid fa-xmark text-xs"></i>
+                      </button>
                     </div>
-                  ) : (
-                    <div className="space-y-1.5 text-gray-400">
-                      <i className="fa-solid fa-cloud-arrow-up text-3xl"></i>
-                      <p className="text-xs font-bold text-gray-600">
-                        Glissez-déposez votre CV ici ou <span className="text-emerald-500 underline">parcourez</span>
-                      </p>
-                      <p className="text-[9px] font-bold">Formats acceptés : PDF, DOCX (10 Mo max)</p>
-                    </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>

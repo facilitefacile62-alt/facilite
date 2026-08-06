@@ -22,14 +22,23 @@ export async function POST(req) {
     const formData = await req.formData();
     const jobId = formData.get("jobId");
     const jobTitle = formData.get("jobTitle");
+    const customSubject = formData.get("subject") || jobTitle;
     const company = formData.get("company");
     const fullName = formData.get("fullName");
     const email = formData.get("email");
     const coverLetter = formData.get("coverLetter") || "";
-    const existingCvId = formData.get("existingCvId");
-    const cvFile = formData.get("cvFile");
     const recruiterEmail = formData.get("recruiterEmail") || "contact@facilite.sn";
     const explicitRecruiterId = formData.get("recruiterId");
+
+    // Récupérer la liste des fichiers uploadés et/ou des CVs existants sélectionnés
+    const uploadedFiles = formData.getAll("cvFiles").filter(f => f && f.size > 0);
+    if (uploadedFiles.length === 0 && formData.get("cvFile") && formData.get("cvFile").size > 0) {
+      uploadedFiles.push(formData.get("cvFile"));
+    }
+    const existingIds = formData.getAll("existingCvIds").filter(Boolean);
+    if (existingIds.length === 0 && formData.get("existingCvId")) {
+      existingIds.push(formData.get("existingCvId"));
+    }
 
     // Validation des données requises
     if (!jobId || !jobTitle || !company || !fullName || !email) {
@@ -39,9 +48,9 @@ export async function POST(req) {
       );
     }
 
-    if (!existingCvId && !cvFile) {
+    if (existingIds.length === 0 && uploadedFiles.length === 0) {
       return NextResponse.json(
-        { error: "Veuillez fournir un CV (sélectionné ou importé)." },
+        { error: "Veuillez fournir au moins un CV ou document (sélectionné ou importé)." },
         { status: 400 }
       );
     }
@@ -120,21 +129,19 @@ export async function POST(req) {
       }
     }
 
-    let cvUrl = "";
-    let cvName = "";
+    const allAttachments = [];
+    const allCvUrls = [];
+    const allCvNames = [];
 
-    if (cvFile) {
-      // Cas A : L'utilisateur a uploadé un nouveau fichier CV
+    // Traitement des nouveaux fichiers importés
+    for (const cvFile of uploadedFiles) {
       const buffer = Buffer.from(await cvFile.arrayBuffer());
-
-      // Validation de la taille, type MIME déclaré, et sniffing binaire des magic bytes
       const check = validateUploadedFile(buffer, cvFile.type, cvFile.size);
       if (!check.valid) {
-        return NextResponse.json({ error: check.error }, { status: check.status });
+        return NextResponse.json({ error: `${cvFile.name} : ${check.error}` }, { status: check.status });
       }
 
-      // Upload dans le stockage privé (bucket 'resumes') sous {user_id}/cvs/{timestamp}_{name}
-      const timestamp = Date.now();
+      const timestamp = Date.now() + Math.floor(Math.random() * 1000);
       const storagePath = `${user.id}/cvs/${timestamp}_${cvFile.name}`;
       
       const { error: uploadError } = await supabase.storage
@@ -147,13 +154,12 @@ export async function POST(req) {
       if (uploadError) {
         console.error("Erreur upload CV:", uploadError.message);
         return NextResponse.json(
-          { error: "Échec de l'importation du CV dans le stockage." },
+          { error: `Échec de l'importation de ${cvFile.name} dans le stockage.` },
           { status: 500 }
         );
       }
 
-      // Enregistrement dans la table public.resumes pour que le CV soit disponible dans son profil
-      const { data: resumeRecord, error: resumeError } = await supabase
+      const { error: resumeError } = await supabase
         .from("resumes")
         .insert({
           user_id: user.id,
@@ -161,36 +167,49 @@ export async function POST(req) {
           type: "imported",
           file_url: storagePath,
           ats_score: 95,
-        })
-        .select()
-        .single();
+        });
 
       if (resumeError) {
         console.error("Erreur création entrée resume:", resumeError.message);
-        // On ne bloque pas si la ligne de la table échoue mais le stockage a réussi
       }
 
-      cvUrl = storagePath;
-      cvName = cvFile.name;
-    } else {
-      // Cas B : L'utilisateur a sélectionné un CV existant
+      allCvUrls.push(storagePath);
+      allCvNames.push(cvFile.name);
+      allAttachments.push({ filename: cvFile.name, content: buffer });
+    }
+
+    // Traitement des CVs existants sélectionnés
+    for (const id of existingIds) {
       const { data: resumeRecord, error: resumeFetchError } = await supabase
         .from("resumes")
         .select("*")
-        .eq("id", existingCvId)
+        .eq("id", id)
         .eq("user_id", user.id)
         .single();
 
-      if (resumeFetchError || !resumeRecord) {
-        return NextResponse.json(
-          { error: "Le CV sélectionné est introuvable ou vous n'avez pas l'autorisation d'y accéder." },
-          { status: 404 }
-        );
-      }
+      if (!resumeFetchError && resumeRecord && resumeRecord.file_url) {
+        const { data: fileData, error: fileDownloadError } = await supabase.storage
+          .from("resumes")
+          .download(resumeRecord.file_url);
 
-      cvUrl = resumeRecord.file_url;
-      cvName = resumeRecord.title;
+        if (!fileDownloadError && fileData) {
+          const buffer = Buffer.from(await fileData.arrayBuffer());
+          const filename = resumeRecord.title || "CV_Facilite.pdf";
+          allCvUrls.push(resumeRecord.file_url);
+          allCvNames.push(filename);
+          allAttachments.push({ filename, content: buffer });
+        }
+      }
     }
+
+    if (allAttachments.length === 0 && allCvUrls.length === 0) {
+      return NextResponse.json(
+        { error: "Le ou les fichiers joints n'ont pas pu être récupérés." },
+        { status: 404 }
+      );
+    }
+
+    const primaryCvUrl = allCvUrls[0] || "";
 
     // 4. Enregistrer la candidature en base dans la table public.candidatures
     // job_id (entier, flux historique) et job_offer_id (UUID, vraie offre
@@ -202,11 +221,11 @@ export async function POST(req) {
         job_id: jobOfferId ? null : (explicitRecruiterId ? null : parseInt(jobId, 10)),
         job_offer_id: jobOfferId,
         recruiter_id: explicitRecruiterId || null,
-        job_title: jobTitle,
+        job_title: customSubject || jobTitle,
         company: company,
         full_name: fullName,
         email: email,
-        cv_url: cvUrl,
+        cv_url: primaryCvUrl,
         cover_letter: coverLetter,
         cv_match_score: cvMatchScore,
         status: "pending",
@@ -229,24 +248,14 @@ export async function POST(req) {
       await supabase.from("messages").insert({
         sender_id: user.id,
         receiver_id: offerRecruiterId,
-        content: `Candidature envoyée pour le poste : ${jobTitle} (${company}) — Score de correspondance CV : ${cvMatchScore}%`,
+        content: `Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company}) — Score de correspondance CV : ${cvMatchScore}%`,
         type_discussion: "OFFRE",
         job_offer_id: jobOfferId,
         created_at: new Date().toISOString(),
       });
     }
 
-    // 5. Récupérer le fichier CV depuis le stockage privé pour le joindre à l'e-mail
-    const { data: fileData, error: fileDownloadError } = await supabase.storage
-      .from("resumes")
-      .download(cvUrl);
-
-    let fileBuffer = null;
-    if (!fileDownloadError && fileData) {
-      fileBuffer = Buffer.from(await fileData.arrayBuffer());
-    } else {
-      console.error("Erreur de récupération du CV pour l'email:", fileDownloadError?.message);
-    }
+    // 5. Les fichiers et buffers sont déjà chargés dans allAttachments pour l'envoi Resend
 
     // 6. Envoi des 2 e-mails via Resend
     const isProd = process.env.NODE_ENV === "production";
@@ -292,19 +301,19 @@ export async function POST(req) {
     // la disponibilité du service d'e-mail.
     let emailDelivered = true;
 
-    if (fileBuffer) {
+    if (allAttachments.length > 0) {
       const { error } = await resend.emails.send({
         from: recruiterSender,
         to: finalRecruiterEmail,
-        subject: `[Facilite] Nouvelle candidature : ${fullName} - ${jobTitle} chez ${company}`,
+        subject: `[Facilite] Candidature : ${customSubject || jobTitle} - ${fullName}`,
         html: `
           <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
             <h2 style="color: #10E688; border-bottom: 2px solid #eee; padding-bottom: 10px;">Nouvelle candidature reçue</h2>
             <p>Un candidat vient de postuler à une offre depuis la plateforme Facilite.</p>
             <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
               <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; width: 150px;">Poste :</td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${jobTitle} (${company})</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; width: 170px;">Objet / Poste :</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; color: #2563EB;">${customSubject || jobTitle} (${company})</td>
               </tr>
               <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Candidat :</td>
@@ -319,15 +328,14 @@ export async function POST(req) {
             <div style="background-color: #f9f9f9; border-left: 4px solid #10E688; padding: 15px; margin: 15px 0; font-style: italic;">
               ${coverLetter ? coverLetter.replace(/\n/g, "<br/>") : "Aucun message d'accompagnement fourni."}
             </div>
-            <p>Le CV du candidat est attaché en pièce jointe à cet e-mail.</p>
+            <p><strong>Pièces jointes transmises (${allAttachments.length}) :</strong></p>
+            <ul>
+              ${allCvNames.map(name => `<li>📄 ${name}</li>`).join("")}
+            </ul>
+            <p>Les fichiers sont attachés en pièce jointe à cet e-mail.</p>
           </div>
         `,
-        attachments: [
-          {
-            filename: cvName,
-            content: fileBuffer,
-          },
-        ],
+        attachments: allAttachments,
       });
 
       if (error) {
@@ -339,11 +347,11 @@ export async function POST(req) {
     const { error } = await resend.emails.send({
       from: candidateSender,
       to: finalCandidateEmail,
-      subject: `Confirmation de votre candidature : ${jobTitle} chez ${company}`,
+      subject: `Confirmation de votre candidature : ${customSubject || jobTitle} chez ${company}`,
       html: `
         <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
           <h2 style="color: #10E688;">Bonjour ${fullName},</h2>
-          <p>Nous vous confirmons que votre candidature pour le poste de <strong>${jobTitle}</strong> chez <strong>${company}</strong> a bien été transmise avec succès.</p>
+          <p>Nous vous confirmons que votre candidature pour le poste de <strong>${customSubject || jobTitle}</strong> chez <strong>${company}</strong> a bien été transmise avec succès (avec ${allAttachments.length} pièce(s) jointe(s)).</p>
           <p>Le recruteur étudiera votre profil avec la plus grande attention. Vous serez recontacté(e) directement par e-mail si votre candidature est retenue.</p>
           <br/>
           <p style="border-top: 1px solid #eee; padding-top: 15px; font-size: 12px; color: #777;">
