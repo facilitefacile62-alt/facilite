@@ -934,59 +934,6 @@ export default function Header() {
             </div>
           )}
 
-          <Link
-            href="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
-              pathname === "/" ? "bg-emerald-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-            }`}
-          >
-            <i className="fa-solid fa-house w-5 text-center text-gray-400"></i>
-            <span>Accueil</span>
-          </Link>
-          
-          <Link
-            href="/offres"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
-              pathname.startsWith("/offres") ? "bg-emerald-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-            }`}
-          >
-            <i className="fa-solid fa-briefcase w-5 text-center text-blue-500"></i>
-            <span>Offres d'emploi</span>
-          </Link>
-
-          <Link
-            href="/candidat/extracteur"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-gray-800/80 hover:bg-emerald-100 dark:hover:bg-gray-800 transition"
-          >
-            <i className="fa-solid fa-bolt w-5 text-center text-amber-500 animate-pulse"></i>
-            <span>L'Extracteur 1-Click</span>
-          </Link>
-
-          <Link
-            href="/messagerie"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
-              pathname === "/messagerie" ? "bg-emerald-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-            }`}
-          >
-            <i className="fa-solid fa-comments w-5 text-center text-purple-500"></i>
-            <span>Messagerie en direct</span>
-          </Link>
-
-          <Link
-            href="/importer-cv"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
-              pathname === "/importer-cv" ? "bg-emerald-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-            }`}
-          >
-            <i className="fa-solid fa-file-arrow-up w-5 text-center text-emerald-500"></i>
-            <span>Importer & Scanner CV</span>
-          </Link>
-
           <div className="py-1">
             <div className="px-3 text-[11px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
               Plus d'outils & services

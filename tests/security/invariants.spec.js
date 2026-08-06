@@ -213,6 +213,13 @@ test.describe("Invariants de sécurité", () => {
       // company_name/sector/location/logo_url/banner_url/description/website,
       // aucune colonne personnelle ou sensible. Décision écrite le 2026-08-03.
       "public.recruiter_profiles:Lecture publique des profils recruteurs",
+      // Annuaire public (pharmacies/hôpitaux/hôtels) : name/address/phone/
+      // email d'ÉTABLISSEMENTS (entreprises), aucune donnée personnelle
+      // d'individu — comparable à recruiter_profiles ci-dessus. GRANT
+      // UPDATE/DELETE anon/authenticated retiré séparément (incident
+      // 2026-08-06, docs/incident-2026-08-06.md) : seule la LECTURE reste
+      // ouverte, ce qui est le but d'un annuaire.
+      "public.establishments:Lecture publique de l'annuaire",
     ]);
 
     const rows = await runIntrospectionSql(`

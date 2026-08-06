@@ -110,6 +110,24 @@ brute fournie par le client). Heuristique par mots-clés également — relire
 
 ## Invariant 7 — Aucune policy RLS permissive tautologique, ni référence à un rôle obsolète
 
+**Liste blanche actuelle (volet tautologie), ligne par ligne :**
+- `public.recruiter_profiles:Lecture publique des profils recruteurs` — page
+  vitrine entreprise (`/recruteurs/[id]`), publique par nature :
+  company_name/sector/location/logo_url/banner_url/description/website,
+  aucune colonne personnelle. Décision écrite le 2026-08-03.
+- `public.establishments:Lecture publique de l'annuaire` — annuaire public
+  (pharmacies/hôpitaux/hôtels), name/address/phone/email d'ÉTABLISSEMENTS
+  (entreprises), aucune donnée personnelle d'individu. Ajoutée le 2026-08-06
+  suite à l'incident du même jour (`docs/incident-2026-08-06.md`) : la table,
+  créée hors migration par `backend-api/database.py`, avait aussi un GRANT
+  UPDATE/DELETE ouvert à `anon`/`authenticated` — retiré séparément, seule la
+  lecture reste ouverte.
+- `public.profiles:Profiles read access` — **retirée** le 2026-08-06, jamais
+  justifiée : lecture intégrale de la table (email, téléphone, date de
+  naissance, statut marital, permis de conduire...) sans authentification.
+  Voir `docs/incident-2026-08-06.md` pour le détail complet — c'est le fait
+  central de cet incident, pas une note en marge.
+
 **Ce qu'il protège (volet 1 — tautologie)** : les policies RLS permissives se
 combinent en OU — une seule policy dont le `USING`/`WITH CHECK` vaut `true`
 (ou un chemin trop large comme `bucket_id = 'x'` sans restriction de dossier)
