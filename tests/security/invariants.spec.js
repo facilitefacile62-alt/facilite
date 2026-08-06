@@ -115,11 +115,28 @@ test.describe("Invariants de sécurité", () => {
   });
 
   test("Invariant 4 — aucun bucket Storage public non justifié", async () => {
-    // job-offers : visuels marketing d'offres, intentionnellement publics.
-    // chat-attachments : PAS dans cette liste — risque déjà documenté
-    // (docs/audit-securite-2026-08.md, point 113, ÉLEVÉ), volontairement
-    // non ajouté ici pour que l'invariant continue de le signaler tant
-    // qu'il n'est pas corrigé.
+    // RÈGLE, pas une suggestion (incident 2026-08-06,
+    // docs/incident-2026-08-06.md) : un bucket qui contient — ou pourrait un
+    // jour contenir — une donnée personnelle (CV, pièce jointe de
+    // messagerie, document de badge, facture, photo de profil non publique
+    // par choix de l'utilisateur...) NE PEUT JAMAIS figurer dans cette
+    // liste blanche, quelle que soit la justification invoquée. `public`
+    // rend l'objet accessible par URL directe SANS PASSER PAR LA RLS, même
+    // si des policies "own-only" existent sur storage.objects — ces
+    // policies deviennent alors décoratives, exactement le piège qui a
+    // laissé 45 CV réels exposés une semaine (`resumes`, public depuis sa
+    // création le 2026-07-27, jamais ajouté ici, jamais corrigé). Seuls des
+    // buckets dont le contenu est déjà et délibérément public par nature
+    // (visuel marketing, logo, image de listing) peuvent y figurer.
+    //
+    // Liste blanche actuelle, ligne par ligne :
+    //   - "job-offers" : visuels/bannières d'offres d'emploi. Uploadés par
+    //     un recruteur badgé (policy INSERT dédiée), affichés publiquement
+    //     sur les pages d'offres pour tout visiteur anonyme — c'est leur
+    //     fonction. Aucune donnée personnelle de candidat n'y transite.
+    //
+    // "resumes" n'a PLUS vocation à jamais y figurer, même temporairement :
+    // s'il redevient public un jour, ce test doit rester rouge.
     const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers"]);
 
     const rows = await runIntrospectionSql(`SELECT id, public FROM storage.buckets ORDER BY id;`);

@@ -71,7 +71,7 @@ export default function AdminMessagesPage() {
       // Récupérer la cartographie de tous les profils (Candidats, Recruteurs, Admins)
       const { data: profilesData } = await supabase
         .from("profiles")
-        .select("id, full_name, email, phone, role, avatar_url");
+        .select("id, full_name, email, phone, badges, avatar_url");
 
       setAllProfiles(profilesData || []);
 

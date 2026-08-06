@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/check-invariants.mjs",
     "build": "next build",
+    "check:invariants": "node scripts/check-invariants.mjs",
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "playwright test"

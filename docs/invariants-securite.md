@@ -64,6 +64,24 @@ fichiers via `createSignedUrl()` (expiration courte), ou documenter et
 ajouter à `JUSTIFIED_PUBLIC_BUCKETS` si le contenu est authentiquement
 destiné à être public (ex: visuels marketing d'offres d'emploi).
 
+**Incident du 2026-08-06** (voir `docs/incident-2026-08-06.md`) : le bucket
+`resumes` était public **depuis sa création** (migration
+`20260727120000_cv_storage_bucket.sql`, 2026-07-27) — jamais un flip récent.
+Il n'a jamais figuré dans la liste blanche de ce test. L'Invariant 4
+lui-même, correctement écrit dès son introduction (commit `f0368c8`,
+2026-08-02), l'aurait détecté à chaque exécution — la question de savoir
+s'il a réellement tourné contre la production pendant les quatre jours
+séparant son introduction de sa découverte reste ❓ NON VÉRIFIÉ (pas d'accès
+à l'historique GitHub Actions depuis cet environnement). Un audit antérieur
+(`docs/audit-securite-2026-08.md`, points 113 et « Uploads directs… ») avait
+explicitement — et à tort — qualifié `resumes` de « déjà privé, own-only
+policies » : l'erreur venait d'avoir vérifié l'existence de policies RLS
+restrictives sans vérifier le drapeau `public` lui-même, qui rend ces
+policies inopérantes pour l'accès par URL directe. Retenu comme règle
+permanente (voir le commentaire du test) : aucun bucket contenant une donnée
+personnelle ne peut figurer dans la liste blanche, quelle que soit la
+justification.
+
 ## Invariant 5 — Aucun endpoint public sans contrôle d'autorisation
 
 **Ce qu'il protège** : toute Route Handler (`route.js`) ou Server Action
