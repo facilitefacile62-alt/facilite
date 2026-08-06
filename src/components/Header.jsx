@@ -224,15 +224,15 @@ export default function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Nettoyage des notifications cliquées (persistées)
+  // Restauration de l'état "lu" des notifications (persisté)
   useEffect(() => {
     try {
-      const dismissed = JSON.parse(localStorage.getItem("dismissed_notifications") || "[]");
-      if (dismissed.length > 0) {
+      const readNotifs = JSON.parse(localStorage.getItem("read_notifications") || "[]");
+      if (readNotifs.length > 0) {
         setNotificationsList(prev => {
-          const filtered = prev.filter(n => !dismissed.includes(n.id));
-          setUnreadNotifCount(filtered.filter(n => n.unread).length);
-          return filtered;
+          const updated = prev.map(n => readNotifs.includes(n.id) ? { ...n, unread: false } : n);
+          setUnreadNotifCount(updated.filter(n => n.unread).length);
+          return updated;
         });
       }
     } catch (e) {
@@ -1040,11 +1040,11 @@ export default function Header() {
                     type="button"
                     onClick={() => {
                       try {
-                        const dismissed = JSON.parse(localStorage.getItem("dismissed_notifications") || "[]");
-                        const newDismissed = [...new Set([...dismissed, ...notificationsList.map(n => n.id)])];
-                        localStorage.setItem("dismissed_notifications", JSON.stringify(newDismissed));
+                        const readNotifs = JSON.parse(localStorage.getItem("read_notifications") || "[]");
+                        const newReadNotifs = [...new Set([...readNotifs, ...notificationsList.map(n => n.id)])];
+                        localStorage.setItem("read_notifications", JSON.stringify(newReadNotifs));
                       } catch(e) {}
-                      setNotificationsList([]);
+                      setNotificationsList(prev => prev.map(n => ({ ...n, unread: false })));
                       setUnreadNotifCount(0);
                     }}
                     className="text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 transition mr-1 cursor-pointer"
@@ -1125,14 +1125,14 @@ export default function Header() {
                     onClick={() => {
                       if (notif.link) {
                         try {
-                          const dismissed = JSON.parse(localStorage.getItem("dismissed_notifications") || "[]");
-                          if (!dismissed.includes(notif.id)) {
-                            localStorage.setItem("dismissed_notifications", JSON.stringify([...dismissed, notif.id]));
+                          const readNotifs = JSON.parse(localStorage.getItem("read_notifications") || "[]");
+                          if (!readNotifs.includes(notif.id)) {
+                            localStorage.setItem("read_notifications", JSON.stringify([...readNotifs, notif.id]));
                           }
                         } catch(e) {}
                         
                         setNotificationsList(prev => {
-                          const newList = prev.filter(n => n.id !== notif.id);
+                          const newList = prev.map(n => n.id === notif.id ? { ...n, unread: false } : n);
                           setUnreadNotifCount(newList.filter(n => n.unread).length);
                           return newList;
                         });
