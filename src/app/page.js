@@ -168,6 +168,46 @@ const translations = {
 
 const initialJobs = [
   {
+    id: 7,
+    titleFR: "Téléconseiller(ère) (Appels Entrants/Sortants)",
+    titleEN: "Teleadvisor (Inbound/Outbound Calls)",
+    company: "Groupe Immobilier CPI",
+    logoColor: "bg-red-600",
+    initials: "CPI",
+    location: "Dakar",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Plein Temps",
+    descFR: `Nous recrutons notre équipe call ! 4 postes à pourvoir avec prise de poste immédiate.
+
+🎯 Vos missions :
+- Émission et réception d'appels (6 jours par semaine)
+- Assurer un échange téléphonique de qualité (critère éliminatoire)
+
+✅ Profil attendu :
+- Baccalauréat exigé, BTS apprécié
+- Français et wolof exigés à l'oral (écrit clair en français)
+- 1 an minimum d'expérience en centre d'appels ou en télévente
+- Aisance avec un outil de suivi
+- Expérience dans l'immobilier appréciée, non exigée`,
+    descEN: `We are recruiting our call team! 4 positions available with immediate start.
+
+🎯 Your missions:
+- Inbound and outbound calls (6 days a week)
+- Ensure high-quality phone exchanges (eliminatory if insufficient)
+
+✅ Expected profile:
+- Baccalaureate required, BTS appreciated
+- Fluent French and Wolof required (spoken), clear written French
+- Minimum 1 year experience in a call center or telesales
+- Comfortable with tracking tools
+- Real estate experience appreciated, not required`,
+    tags: ["Dakar", "Temps Plein", "Télévente"],
+    salary: "Selon profil",
+    recruiterEmail: "recrutement@cpi.sn",
+    image: "/cpi-call.jpg"
+  },
+  {
     id: 100,
     titleFR: "RECRUTEMENT MASSIF – MINE D'OR UNDERGROUND (Sabodala)",
     titleEN: "MASS RECRUITMENT – UNDERGROUND GOLD MINE (Sabodala)",
