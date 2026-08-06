@@ -912,27 +912,24 @@ export default function Header() {
             <i className="fa-regular fa-comments text-sm sm:text-base"></i>
             <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
           </Link>
-          <Link
-            href="/importer-cv"
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-              pathname === "/importer-cv" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-            }`}
-          >
-            <i className="fa-solid fa-file-arrow-up text-sm sm:text-base"></i>
-            <span className="text-[9px] font-bold tracking-tight truncate w-full">Importer</span>
-          </Link>
+          <RoleNavLink session={userSession} variant="bottom-bar" />
         </div>
       )}
 
       {/* Mobile Drawer Menu (Menu hamburger parfaitement utilisable sur 320px de large) */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 pt-3 pb-6 space-y-1.5 shadow-xl max-h-[85vh] overflow-y-auto">
-          {/* Liens Admin & Recruteur en vedette au sommet du tiroir tactile */}
-          {userSession && (
-            <div className="space-y-2 pb-2 border-b border-gray-100 dark:border-gray-800">
-              <RoleNavLink session={userSession} variant="header-mobile" onClick={() => setMobileMenuOpen(false)} />
-            </div>
-          )}
+          {/* Action principale en vedette au sommet du tiroir tactile */}
+          <div className="space-y-2 pb-2 border-b border-gray-100 dark:border-gray-800">
+            <Link
+              href="/importer-cv"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-extrabold transition text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-gray-800 hover:bg-emerald-100"
+            >
+              <i className="fa-solid fa-file-arrow-up text-base"></i>
+              <span>Importer CV (Scanner IA)</span>
+            </Link>
+          </div>
 
           <div className="py-1">
             <div className="px-3 text-[11px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
