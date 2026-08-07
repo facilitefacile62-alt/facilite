@@ -272,21 +272,7 @@ export default function LoginPage() {
         <div className="absolute -bottom-[20%] left-[10%] w-[70vw] h-[50vh] rounded-full bg-gradient-to-tl from-emerald-300/20 to-transparent blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      {/* Navigation En-tête */}
-      <header className="w-full max-w-[1180px] px-6 py-5 flex items-center justify-between z-10">
-        <Link href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
-          <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-          <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
-        </Link>
 
-        <Link
-          href="/"
-          className="text-xs font-bold text-gray-600 hover:text-gray-900 bg-white border border-gray-200 px-4 py-2 rounded-full shadow-xs hover:shadow-sm transition flex items-center space-x-1.5"
-        >
-          <i className="fa-solid fa-arrow-left text-[11px]"></i>
-          <span>Retour à l'accueil</span>
-        </Link>
-      </header>
 
       {/* Conteneur Principal / Carte de Login OU Carte de Réinitialisation */}
       <main className="w-[92%] max-w-xs sm:max-w-sm mx-auto py-4 z-10">
