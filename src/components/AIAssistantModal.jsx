@@ -27,7 +27,7 @@ export default function AIAssistantModal() {
       aria-label="Assistant IA"
     >
       <div className="relative">
-        <i className="fa-solid fa-comment-dots text-2xl transition-transform duration-300 group-hover:scale-110"></i>
+        <img src="/ouvrier.jpg" alt="Assistant Ouvrier" className="w-8 h-8 rounded-full object-cover transition-transform duration-300 group-hover:scale-110" />
         <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border border-white animate-pulse"></span>
       </div>
     </Link>

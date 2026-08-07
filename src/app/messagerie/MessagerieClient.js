@@ -200,9 +200,9 @@ const AI_PINNED_CHAT = {
   name: 'Assistance IA Facilite',
   title: 'IA & Orientation Pro',
   company: 'Facilite Bot',
-  avatar: '🤖',
-  avatarInitials: '🤖',
-  avatarColor: 'bg-emerald-600',
+  avatar: '/ouvrier.jpg',
+  avatarInitials: <img src="/ouvrier.jpg" alt="IA" className="w-full h-full object-cover rounded-full bg-white" />,
+  avatarColor: 'bg-transparent',
   lastMessage: 'Disponible 24/7 pour vos CV et démarches',
   time: "Disponible",
   unreadCount: 0,
@@ -991,7 +991,7 @@ export default function MessagerieClient() {
 
     // Marquage réel en base (is_read=true) : seule la conversation fusionnée
     // (id 1) correspond à des lignes persistées dans `messages` — le fil IA
-    // n'y est jamais stocké. Sans ce UPDATE, le badge global de la navbar ne
+    // n'est jamais stocké. Sans ce UPDATE, le badge global de la navbar ne
     // redescendait jamais après lecture, seul l'état local était réinitialisé.
     if (activeConvId === 1 && userSession?.user?.id) {
       supabase
@@ -2332,8 +2332,8 @@ export default function MessagerieClient() {
                 }`}
               >
                 <div className="relative flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-emerald-600 text-white text-xl shadow-sm">
-                    🤖
+                  <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm bg-white border border-emerald-200">
+                    <img src="/ouvrier.jpg" alt="IA" className="w-full h-full object-cover" />
                   </div>
                   <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-emerald-500 border-2 border-white"></span>
                 </div>
@@ -3033,7 +3033,7 @@ export default function MessagerieClient() {
             </button>
 
             <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center text-white font-extrabold text-2xl shadow-inner mb-3 ${activeConversation.avatarColor}`}>
-              {activeConversation.isAI ? "🤖" : activeConversation.avatarInitials}
+              {activeConversation.isAI ? <img src="/ouvrier.jpg" alt="IA" className="w-full h-full object-cover rounded-full shadow-sm" /> : activeConversation.avatarInitials}
             </div>
             <h3 className="text-base font-extrabold text-gray-900">{activeConversation.name}</h3>
             {activeConversation.online && !activeConversation.isAI && (
