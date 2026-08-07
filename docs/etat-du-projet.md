@@ -16,14 +16,14 @@ sa surface de données personnelles. Le SMTP fonctionne de bout en bout,
 confirmé par une vraie personne cliquant un vrai lien. Ce qui reste ouvert
 est connu et listé plus bas, pas oublié.
 
-## ⚠️ Action qui vous revient, non fermée
+## Clé privée de sauvegarde — confirmée sécurisée
 
-**La clé privée de sauvegarde** (`facilite-backup-PRIVATE-key-GARDER-EN-LIEU-SUR.pem`)
-était encore dans `Downloads`, non déplacée, au moment du dernier contrôle —
-malgré une confirmation de votre part qu'elle avait été sécurisée et
-supprimée. Vérifiez maintenant. Si elle est perdue avant d'être copiée en
-lieu sûr, aucune sauvegarde existante ne sera jamais récupérable — aucune
-régénération possible. Voir `docs/sauvegarde-restauration.md`.
+Après un premier faux départ (la clé était restée dans `Downloads` malgré
+une première confirmation), vérifié une seconde fois le 2026-08-07 : plus
+aucune copie sur le disque (Downloads, dossier de travail temporaire, dépôt
+git). Deux copies sûres confirmées ailleurs par l'utilisateur. Limite
+persistante : ni la Corbeille Windows (accès partiellement refusé) ni
+l'historique local de l'IDE n'ont pu être vérifiés avec certitude.
 
 ## Ce qui est fait et protégé
 
@@ -138,6 +138,31 @@ concernés, les autres étant des comptes de test/démo) — **à vérifier dans
   code plutôt que refait.
 - `/admin/messages` : bug de colonne morte (`profiles.role`) corrigé.
 
+### Comptes de test correctement rôlés (nouveau, 2026-08-07)
+
+Les 24 comptes `is_test_account=true` en base portaient TOUS `role='admin'`
+(100%), y compris des comptes explicitement nommés "candidat"
+(`demo-candidat-1..10`) sans aucune raison de l'être — trouvé en construisant
+le test du quota, confirmé systémique. Origine probable : `supabase/seed.sql`
+(prévu pour un usage local uniquement, avertissement explicite dans le
+fichier) exécuté au moins une fois contre production — sans certitude totale,
+aucun journal d'audit DDL disponible pour trancher. Corrigé : seul
+`e2e-test-admin` reste admin (seul compte réellement utilisé comme persona
+admin dans `tests/`, vérifié par lecture exhaustive), `e2e-test-agent` →
+`publisher` (confirmé via son usage réel dans les tests), les 22 autres →
+`user`. `seed.sql` corrigé pour ne plus dépendre de la colonne morte
+`profiles.role`. **Invariant 12** ajouté pour empêcher la récidive
+silencieuse. 31 tests (invariants + E2E affectés) repassés au vert après
+correction.
+
+En creusant cet incident, un second bug **sans rapport** a été trouvé et
+corrigé avec confirmation explicite : `approve_badge_request()` avait perdu
+son `GRANT EXECUTE` vers `authenticated` (ses fonctions sœurs
+`reject_badge_request`/`revoke_badge` l'avaient conservé) — plus aucun admin
+ne pouvait approuver de demande de badge en production. Même schéma
+récurrent que les autres incidents : changement hors migration, origine non
+tracée. Restauré.
+
 ## Ce qui reste ouvert (connu, pas oublié)
 
 1. **CI ne bloque pas le déploiement** — branch protection GitHub à
@@ -149,21 +174,18 @@ concernés, les autres étant des comptes de test/démo) — **à vérifier dans
    détection des échecs de connexion.
 5. **Détection limitée à 2 routes** (CVthèque, candidatures) — profils et
    messagerie n'ont pas d'équivalent, architecture directe-PostgREST.
-6. **Comptes `e2e-test-*` tous `role='admin'`** — découvert le 2026-08-06 en
-   construisant le test du quota (`e2e-test-admin`, `e2e-test-agent`,
-   `e2e-test-candidate`, `e2e-test-security` portent TOUS le rôle admin en
-   base réelle, pas les rôles distincts que leurs noms impliquent). Signalé
-   à plusieurs reprises, **jamais corrigé** — des dizaines de tests
-   existants qui affirment "un non-admin ne peut pas faire X" pourraient
-   passer pour la mauvaise raison. Mérite un audit dédié.
-7. **Badge de compte test (`is_test_account`) non gérable depuis l'admin** —
+6. **Badge de compte test (`is_test_account`) non gérable depuis l'admin** —
    l'approbation/révocation de `verified_recruiter` existe dans
    `/admin` (`approve_badge_request`/`revoke_badge`), mais aucun
    interrupteur `is_test_account` n'y figure — à faire manuellement en base
    aujourd'hui.
-8. **Registre de migrations et `supabase db push`** — désynchronisation
+7. **Registre de migrations et `supabase db push`** — désynchronisation
    historique jamais entièrement réconciliée ; la règle "jamais `db push`"
    reste la seule protection.
+8. **Schéma de cache PostgREST** — au moins deux fois cette session, une
+   modification de fonction/GRANT n'a été prise en compte qu'après un
+   `NOTIFY pgrst, 'reload schema'` manuel. Pas automatisé, à garder en tête
+   pour toute future modification urgente en direct.
 
 ## Ce qui n'est jamais commencé
 
@@ -180,9 +202,9 @@ concernés, les autres étant des comptes de test/démo) — **à vérifier dans
 
 ## Prochaine étape suggérée
 
-Dans l'ordre d'impact probable : (1) confirmer la clé privée de sauvegarde
-est réellement en lieu sûr — action déjà en attente en haut de ce document ;
-(2) l'audit des comptes `e2e-test-*` mal rôlés, qui touche la fiabilité de
-toute la suite de tests existante ; (3) terminer la configuration Google
-Cloud pour que la sauvegarde tourne réellement, pas seulement le jour où
-elle a été testée manuellement.
+Dans l'ordre d'impact probable : (1) terminer la configuration Google Cloud
+(6 secrets GitHub) pour que la sauvegarde tourne réellement chaque jour, pas
+seulement le jour où elle a été testée manuellement ; (2) confirmer la
+branch protection GitHub pour que la CI bloque vraiment un déploiement
+défaillant ; (3) vérifier le taux de clic de l'email de vérification des 7
+comptes (48h après le 2026-08-07).
