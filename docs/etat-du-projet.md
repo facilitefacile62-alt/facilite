@@ -216,3 +216,26 @@ l'automatisation de la sauvegarde.
 ## DETTE TECHNIQUE (Migrations)
 
 L'historique de migrations ne peut pas recréer la base de prod depuis zéro. 18 colonnes de la table `profiles` créées hors migrations. À résorber progressivement avec une migration de rattrapage.
+
+## DETTE TECHNIQUE (Dump de schéma pour le projet de test)
+
+`scripts/dump-schema-via-introspection.js` (remplace `pg_dump`, indisponible
+dans cet environnement — ni Docker ni binaire local) ne capture que les
+grants table/fonction/séquence via introspection SQL — **jamais le grant
+`GRANT USAGE ON SCHEMA public TO anon, authenticated`**, un grant au niveau
+du schéma lui-même que `pg_dump` inclut normalement. Sans lui, absolument
+rien n'est accessible dans `public` pour ces deux rôles, quels que soient
+les autres grants ou policies RLS en place — trouvé le 2026-08-07 en
+lançant la suite complète contre `facilite-e2e-test` fraîchement importé
+(77 échecs sur 150, la quasi-totalité causée par ce seul grant manquant).
+
+**À appliquer manuellement sur tout nouveau projet de test** créé à partir
+de ce script tant qu'il n'est pas corrigé à la source :
+```sql
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+```
+Déjà ajouté à `supabase/seed-test.sql` pour que tout reset de
+`facilite-e2e-test` via ce fichier l'inclue automatiquement — mais le
+générateur de dump lui-même n'a pas été corrigé (un futur projet de test
+recréé directement depuis le dump, sans repasser par le seed, aurait le
+même trou).

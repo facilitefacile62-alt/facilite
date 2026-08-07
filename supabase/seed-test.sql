@@ -1,6 +1,15 @@
 -- Seed minimal pour les tests E2E sur facilite-e2e-test
 -- Ces comptes correspondent à ceux attendus par la suite Playwright (tests/e2e/*, tests/security/*)
 
+-- 0. GRANT USAGE sur le schéma public — sans lui, absolument rien n'est
+-- accessible à anon/authenticated dans public, quels que soient les GRANTs
+-- table/fonction ou les policies RLS en place. dump-schema-via-introspection.js
+-- ne capture que les grants table/fonction/séquence, jamais ce grant au
+-- niveau du schéma lui-même (pg_dump l'inclut normalement) — trouvé en
+-- lançant la suite complète contre un schéma fraîchement importé (77/150
+-- tests en échec, la quasi-totalité à cause de ce seul grant manquant).
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+
 -- 1. Insertion dans auth.users
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -92,7 +101,7 @@ INSERT INTO public.job_offers (
   id, title, company, location, description, status, recruiter_id, is_test_account
 ) VALUES (
   '10000000-0000-4000-a000-000000000001',
-  'Ing�nieur Logiciel E2E',
+  'Ing�nieur Logiciel E2E',
   'Facilite E2E Corp',
   'Dakar',
   'Description de test',
@@ -101,14 +110,14 @@ INSERT INTO public.job_offers (
   true
 ) ON CONFLICT (id) DO NOTHING;
 
--- Candidature fictive li�e � l'offre
+-- Candidature fictive li�e � l'offre
 INSERT INTO public.candidatures (
   id, user_id, job_offer_id, job_title, company, full_name, email, cv_url, recruiter_id, status
 ) VALUES (
   '20000000-0000-4000-a000-000000000001',
   '30000000-0000-4000-a000-000000000001',
   '10000000-0000-4000-a000-000000000001',
-  'Ing�nieur Logiciel E2E',
+  'Ing�nieur Logiciel E2E',
   'Facilite E2E Corp',
   'E2E Candidate',
   'e2e-test-candidate@facilite-demo.local',
