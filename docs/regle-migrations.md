@@ -81,3 +81,7 @@ non faite à ce jour.
 GitHub** (requérir que `security-invariants` passe avant de fusionner, y
 compris pour les administrateurs) — voir la procédure donnée séparément à
 l'utilisateur pour ce réglage, hors du périmètre de ce document technique.
+
+## Règle Absolue (Mise à jour 2026-08-07)
+
+**Toute nouvelle colonne ou table créée en production doit avoir sa migration correspondante dans le même PR. Plus jamais de colonnes créées via le dashboard sans migration.**
