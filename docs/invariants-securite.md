@@ -228,6 +228,18 @@ jamais créé par nous) s'ajoute à `JUSTIFIED` avec le format
 
 **Quoi faire quand il échoue** : Remplacer l'utilisation du rôle obsolète par un contrôle sur les badges (`has_badge()` via RPC ou `profileBadges.includes()`). Si c'est un faux positif (ex: état local purement UI non transmis au serveur), ajouter le fichier à la liste `JUSTIFIED` dans le test.
 
+## Invariant 12 — Aucun compte de test avec role='admin' en base, hors liste blanche explicite
+
+**Ce qu'il protège** : trouvé le 2026-08-07 — les 24 comptes `is_test_account=true` en base portaient TOUS `role='admin'`, y compris des comptes explicitement nommés "candidat" (`demo-candidat-1..10`). Origine probable : `supabase/seed.sql` (prévu pour un usage local uniquement) exécuté au moins une fois contre production. Corrigé (`20260807090000_fix_test_account_roles.sql`) — cet invariant empêche la récidive silencieuse : un compte de test doit avoir le rôle minimal nécessaire à ce qu'il teste, jamais admin par défaut.
+
+**Quoi faire quand il échoue** : rétrograder le compte vers le rôle réellement nécessaire (vérifier dans `tests/` quel rôle le compte est censé jouer, ne pas deviner). Si un test a un besoin réel et documenté d'un persona admin, ajouter l'email à `JUSTIFIED` avec la justification écrite — pas en bloc, compte par compte.
+
+## Invariant 13 — Aucune fonction SECURITY DEFINER critique sans GRANT EXECUTE actif
+
+**Ce qu'il protège** : `approve_badge_request()` a perdu son `GRANT EXECUTE` vers `authenticated` sans qu'aucune alarme ne se déclenche avant qu'un admin essaie réellement de l'utiliser en production (2026-08-07) — ses fonctions sœurs (`reject_badge_request`, `revoke_badge`) avaient conservé le même grant. Une fonction `SECURITY DEFINER` sans aucun grant vers `authenticated`/`anon` est totalement inappelable via PostgREST, quelle que soit la justesse de son code interne. Couvre les fonctions listées explicitement (`CRITICAL_FUNCTIONS`, vérifiées à la main) et toute fonction dont le nom matche un mot-clé lié aux badges/modération/suspension/rôles (filet pour une future fonction jamais ajoutée à la liste). Exclut les fonctions déclencheurs (trigger) : invoquées directement par PostgreSQL, elles n'ont jamais besoin d'un GRANT `authenticated`/`anon`.
+
+**Quoi faire quand il échoue** : ne jamais rétablir le grant de sa propre initiative sans validation — signaler la trouvaille, vérifier que le grant retiré n'était pas une décision de sécurité délibérée (chercher une trace dans les migrations), puis le restaurer par une migration tracée une fois confirmé.
+
 ## Exécution
 
 ```bash
