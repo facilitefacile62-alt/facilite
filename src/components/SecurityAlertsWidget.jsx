@@ -77,32 +77,43 @@ export default function SecurityAlertsWidget({ onVoirTout }) {
 
   return (
     <div className={`mb-6 p-4 rounded-2xl border ${critical.length > 0 ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}>
-      <div className="flex items-center gap-2 mb-3">
-        <i className={`fa-solid fa-triangle-exclamation ${critical.length > 0 ? "text-red-600" : "text-amber-600"}`}></i>
-        <h3 className={`text-sm font-extrabold ${critical.length > 0 ? "text-red-900" : "text-amber-900"}`}>
-          {critical.length > 0
-            ? `${critical.length} alerte(s) critique(s) — dernières 24h`
-            : `${informational.length} événement(s) surveillé(s) — dernières 24h`}
-        </h3>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <i className={`fa-solid fa-triangle-exclamation ${critical.length > 0 ? "text-red-600" : "text-amber-600"}`}></i>
+          <h3 className={`text-sm font-extrabold ${critical.length > 0 ? "text-red-900" : "text-amber-900"}`}>
+            {critical.length > 0
+              ? `${critical.length} alerte(s) critique(s) — dernières 24h`
+              : `${informational.length} événement(s) surveillé(s) — dernières 24h`}
+          </h3>
+        </div>
+        {onVoirTout && (
+          <button
+            type="button"
+            onClick={onVoirTout}
+            className="text-[11px] font-extrabold text-gray-500 hover:text-gray-800 flex items-center gap-1 cursor-pointer flex-shrink-0"
+          >
+            Voir tout
+            <i className="fa-solid fa-arrow-right text-[9px]"></i>
+          </button>
+        )}
       </div>
       <div className="space-y-1.5 max-h-64 overflow-y-auto">
-        {alerts.slice(0, 50).map((a) => (
-          <div
-            key={a.id}
-            className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center justify-between gap-3 ${
-              a.severity === "critical" ? "bg-red-100 text-red-800" : "bg-white text-gray-700 border border-gray-100"
-            }`}
-          >
-            <span className="truncate">
-              <span className="font-bold">{a.event_type}</span>
-              {" — "}
-              {a.actor_email || "compte non identifié"}
-              {a.ip_address ? ` — ${a.ip_address}` : ""}
-              {a.details?.route ? ` — ${a.details.route}` : ""}
-            </span>
-            <span className="text-[10px] text-gray-400 flex-shrink-0">{new Date(a.created_at).toLocaleString("fr-FR")}</span>
-          </div>
-        ))}
+        {alerts.slice(0, 50).map((a) => {
+          const style = securityEventStyle(a.event_type);
+          return (
+            <div key={a.id} className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center justify-between gap-3 ${style.row}`}>
+              <span className="truncate flex items-center gap-2">
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${style.dot}`}></span>
+                <span className="font-bold">{a.event_type}</span>
+                {" — "}
+                {a.actor_email || "compte non identifié"}
+                {a.ip_address ? ` — ${a.ip_address}` : ""}
+                {a.details?.route ? ` — ${a.details.route}` : ""}
+              </span>
+              <span className="text-[10px] opacity-60 flex-shrink-0">{new Date(a.created_at).toLocaleString("fr-FR")}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

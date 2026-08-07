@@ -778,10 +778,14 @@ export default function AdminDashboardPage() {
 
           {activeTab === "dashboard" && (
             <>
-              <SecurityAlertsWidget />
+              <SecurityAlertsWidget onVoirTout={() => setActiveTab("securite")} />
 
-              {/* Barre de filtres */}
-              <div className="flex flex-wrap items-center gap-3 mb-6">
+              {/* Barre de filtres — mise en évidence dans son propre bandeau, au-dessus des métriques */}
+              <div className="flex flex-wrap items-center gap-3 mb-6 p-3 bg-orange-50/60 border border-orange-100 rounded-2xl">
+                <span className="text-[11px] font-extrabold text-orange-800 uppercase tracking-wider pl-1 flex items-center gap-1.5">
+                  <i className="fa-solid fa-filter text-[10px]"></i>
+                  Filtres
+                </span>
                 <div className="relative">
                   <button
                     type="button"
@@ -845,9 +849,9 @@ export default function AdminDashboardPage() {
                           {kpi.onlineCount} en ligne
                         </span>
                       </div>
-                      <span className="text-3xl font-extrabold text-gray-900 block">{kpi.totalUsers}</span>
+                      <span className="text-4xl font-extrabold text-gray-900 block tracking-tight">{kpi.totalUsers}</span>
                     </div>
-                    <div className="w-11 h-11 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-lg flex-shrink-0">
+                    <div className="w-14 h-14 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
                       <i className="fa-solid fa-users"></i>
                     </div>
                   </div>
@@ -862,9 +866,9 @@ export default function AdminDashboardPage() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Offres & Activité</span>
-                      <span className="text-3xl font-extrabold text-gray-900 block">{kpi.totalOffers}</span>
+                      <span className="text-4xl font-extrabold text-gray-900 block tracking-tight">{kpi.totalOffers}</span>
                     </div>
-                    <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-lg flex-shrink-0">
+                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
                       <i className="fa-solid fa-briefcase"></i>
                     </div>
                   </div>
@@ -881,9 +885,9 @@ export default function AdminDashboardPage() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Assistant IA & CV</span>
-                      <span className="text-3xl font-extrabold text-gray-900 block">{kpi.totalResumes}</span>
+                      <span className="text-4xl font-extrabold text-gray-900 block tracking-tight">{kpi.totalResumes}</span>
                     </div>
-                    <div className="w-11 h-11 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-lg flex-shrink-0">
+                    <div className="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
                       <i className="fa-solid fa-robot"></i>
                     </div>
                   </div>

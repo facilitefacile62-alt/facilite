@@ -2,6 +2,13 @@
 
 import { useState } from 'react';
 
+// Même convention que Header.jsx (API_URL) : NEXT_PUBLIC_API_URL n'est
+// configurée nulle part sur Vercel à ce jour (voir `vercel env ls`) — sans
+// elle, ce bouton pointait en dur sur localhost:8000 et échouait
+// systématiquement en production (trouvé lors de l'audit B0 du 2026-08-07).
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const BACKEND_CONFIGURED = Boolean(process.env.NEXT_PUBLIC_API_URL);
+
 export default function ScraperDashboard() {
   const [targetUrl, setTargetUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,8 +24,7 @@ export default function ScraperDashboard() {
     setResult(null);
 
     try {
-      // Connexion au backend FastAPI en local sur le port 8000
-      const response = await fetch('http://localhost:8000/scrape-and-save', {
+      const response = await fetch(`${API_URL}/scrape-and-save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,7 +39,7 @@ export default function ScraperDashboard() {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(err.message || 'Impossible de joindre le backend FastAPI sur http://localhost:8000.');
+      setError(err.message || `Impossible de joindre le backend FastAPI sur ${API_URL}.`);
     } finally {
       setLoading(false);
     }
@@ -47,6 +53,16 @@ export default function ScraperDashboard() {
       <p className="text-gray-600 dark:text-gray-400 mb-6">
         Saisissez l&apos;URL de la source cible pour lancer l&apos;extraction automatique et alimenter votre base de données Supabase.
       </p>
+
+      {!BACKEND_CONFIGURED && (
+        <div className="mb-6 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-start gap-2">
+          <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+          <span>
+            Backend d&apos;agrégation non configuré (variable <code>NEXT_PUBLIC_API_URL</code> absente) — ce bouton ne
+            fonctionnera qu&apos;en local tant qu&apos;elle n&apos;est pas renseignée sur Vercel.
+          </span>
+        </div>
+      )}
 
       <form onSubmit={handleScrape} className="flex flex-col sm:flex-row gap-4 mb-6">
         <input
