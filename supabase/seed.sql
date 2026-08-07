@@ -3,14 +3,28 @@
 -- sans dupliquer quoi que ce soit.
 --
 -- ⚠️ Ce fichier crée de vrais comptes auth.users (déclenchant le trigger
--- handle_new_user() -> profiles avec role='recruteur'). Adresses e-mail sous
--- @facilite-demo.local (TLD invalide, ne peut jamais entrer en collision
--- avec un vrai utilisateur) pour rester facilement identifiables/purgeables.
+-- handle_new_user() -> user_roles avec role='user' par défaut, voir
+-- 20260802050000_rbac_user_roles.sql — le commentaire "role='recruteur'"
+-- qui figurait ici décrivait un modèle de rôles retiré depuis). Adresses
+-- e-mail sous @facilite-demo.local (TLD invalide, ne peut jamais entrer en
+-- collision avec un vrai utilisateur) pour rester facilement
+-- identifiables/purgeables.
 -- Prévu pour un environnement local (`supabase db reset` / `supabase start`,
 -- qui l'exécute automatiquement) — À NE PAS lancer contre le projet lié en
 -- production sans le vouloir explicitement (ex.
 -- `supabase db execute --linked -f supabase/seed.sql`), sous peine
 -- d'injecter ces comptes et offres factices dans la vraie base.
+--
+-- ⚠️ CONSTAT DU 2026-08-07 : les comptes créés par ce fichier existent bel
+-- et bien en production avec ces UUID exacts — ce fichier (ou un
+-- équivalent) a donc été exécuté contre le projet lié au moins une fois,
+-- malgré l'avertissement ci-dessus. Tous ces comptes portaient role='admin'
+-- en base, sans que ce fichier (dans sa forme actuelle) puisse à lui seul
+-- l'expliquer — seuls e2e-test-admin/e2e-test-agent ont un rôle
+-- explicitement assigné plus bas. Origine exacte non déterminée. Corrigé
+-- par 20260807090000_fix_test_account_roles.sql ; voir
+-- docs/etat-du-projet.md et Invariant 12
+-- (tests/security/invariants.spec.js) pour empêcher la récidive.
 
 -- =============================================================================
 -- 1. Comptes recruteurs de démonstration (auth.users -> profiles via trigger)
@@ -291,8 +305,18 @@ FROM auth.users u
 WHERE u.email IN ('e2e-test-admin@facilite-demo.local', 'e2e-test-agent@facilite-demo.local')
 ON CONFLICT DO NOTHING;
 
-UPDATE public.profiles SET role = 'admin' WHERE id = '40000000-0000-4000-a000-000000000001';
-UPDATE public.profiles SET role = 'agent' WHERE id = '40000000-0000-4000-a000-000000000002';
+-- profiles.role n'existe plus depuis le chantier RBAC (20260802050000) —
+-- ces deux lignes UPDATE public.profiles SET role = ... ont été retrouvées
+-- ici en 2026-08-07 en enquêtant sur des comptes de test massivement
+-- role='admin' en production (docs/etat-du-projet.md,
+-- 20260807090000_fix_test_account_roles.sql). Remplacées par un INSERT
+-- direct dans user_roles, la vraie table depuis la migration RBAC — et
+-- SEULEMENT ces deux comptes, jamais un rôle privilégié par défaut pour le
+-- reste du seed (voir Invariant 12, tests/security/invariants.spec.js).
+INSERT INTO public.user_roles (user_id, role, status) VALUES
+  ('40000000-0000-4000-a000-000000000001', 'admin', 'active'),
+  ('40000000-0000-4000-a000-000000000002', 'publisher', 'active')
+ON CONFLICT (user_id) DO UPDATE SET role = EXCLUDED.role;
 
 -- =============================================================================
 -- 5. Commande accompagnée "payée" de démonstration, pour que le workflow

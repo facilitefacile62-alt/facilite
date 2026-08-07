@@ -561,5 +561,45 @@ test.describe("Invariants de sécurité", () => {
         "has_badge() ou profileBadges.includes('verified_recruiter'/'official_staff') à la place. Voir console."
     ).toEqual([]);
   });
+
+  test("Invariant 12 — aucun compte de test avec role='admin' en base, hors liste blanche explicite", async () => {
+    // Trouvé le 2026-08-06/07 (docs/etat-du-projet.md) : les 24 comptes
+    // is_test_account=true en base étaient TOUS role='admin', y compris des
+    // comptes explicitement nommés "candidat" (demo-candidat-1..10) sans
+    // aucune raison d'avoir un accès administrateur complet. Origine
+    // probable : supabase/seed.sql exécuté au moins une fois contre
+    // production malgré son propre avertissement contraire. Corrigé par
+    // 20260807090000_fix_test_account_roles.sql — cet invariant empêche que
+    // ça se reproduise silencieusement.
+    const JUSTIFIED = new Set([
+      // Seul compte réellement utilisé comme persona admin dans tests/
+      // (grep exhaustif sur ADMIN_EMAIL) — voir la migration ci-dessus pour
+      // le détail de la vérification.
+      "e2e-test-admin@facilite-demo.local",
+    ]);
+
+    const rows = await runIntrospectionSql(`
+      SELECT u.email
+      FROM auth.users u
+      JOIN public.profiles p ON p.id = u.id
+      JOIN public.user_roles ur ON ur.user_id = u.id
+      WHERE (u.email ILIKE '%test%' OR p.is_test_account = true)
+        AND ur.role = 'admin';
+    `);
+
+    const violations = rows.filter((r) => !JUSTIFIED.has(r.email));
+
+    if (violations.length > 0) {
+      console.log(`\n[INVARIANT 12] ${violations.length} compte(s) de test avec role='admin' non justifié :`);
+      for (const r of violations) console.log(`  - ${r.email}`);
+    }
+
+    expect(
+      violations,
+      "Compte de test avec role='admin' non justifié — voir la liste ci-dessus (console). " +
+        "Un compte de test doit avoir le rôle minimal nécessaire à ce qu'il teste ; si un test a " +
+        "réellement besoin d'un persona admin, ajouter l'email à JUSTIFIED avec la justification écrite."
+    ).toEqual([]);
+  });
 });
 
