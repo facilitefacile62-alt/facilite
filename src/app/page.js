@@ -428,6 +428,11 @@ export default function Home() {
   const router = useRouter();
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  
+  // État pour les descriptions longues (Voir plus / Voir moins)
+  const [expandedJobs, setExpandedJobs] = useState({});
+  const toggleJobExpand = (jobId) => setExpandedJobs(prev => ({ ...prev, [jobId]: !prev[jobId] }));
+
   // --- ÉTATS GÉNÉRAUX ---
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Bloc "Fil d'attente des offres d'emploi" (recherche + filtres ville/contrat) :
@@ -1871,9 +1876,29 @@ export default function Home() {
                     </div>
 
                     {/* Description */}
-                    <p className="text-xs text-gray-600 font-semibold leading-relaxed whitespace-pre-line">
-                      {selectedLang === "FR" ? job.descFR : job.descEN}
-                    </p>
+                    <div className="text-xs text-gray-600 font-semibold leading-relaxed whitespace-pre-line">
+                      {(() => {
+                        const descText = selectedLang === "FR" ? job.descFR : job.descEN;
+                        const isExpanded = expandedJobs[job.loopId || job.id];
+                        const shouldTruncate = descText.length > 250;
+                        const displayText = shouldTruncate && !isExpanded ? descText.substring(0, 250) + "..." : descText;
+                        
+                        return (
+                          <>
+                            {displayText}
+                            {shouldTruncate && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); toggleJobExpand(job.loopId || job.id); }}
+                                className="text-gray-900 font-extrabold ml-1 hover:underline cursor-pointer bg-transparent border-none p-0 inline"
+                              >
+                                {isExpanded ? (selectedLang === "FR" ? " Voir moins" : " See less") : (selectedLang === "FR" ? " En voir plus" : " See more")}
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
 
                     {/* Visuel de l'offre — double couche façon Facebook : le
                         recruteur peut envoyer une affiche dans n'importe quel
