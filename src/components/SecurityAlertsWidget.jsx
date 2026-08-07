@@ -17,7 +17,22 @@ import { supabase } from "@/lib/supabase";
  * admin suffit pour l'instant") — quelqu'un doit donc consulter ce tableau
  * pour voir l'alerte, elle ne pousse rien activement.
  */
-export default function SecurityAlertsWidget() {
+// Couleur par type d'événement (pas juste critique/non-critique) : demande
+// explicite du client — rouge pour les refus d'accès (isolés ou répétés),
+// orange pour les dépassements de quota, jaune pour tout le reste
+// d'inhabituel. Garde le code couleur cohérent avec l'onglet Sécurité dédié
+// (voir SECURITY_EVENT_STYLES dans admin/page.js).
+export function securityEventStyle(eventType) {
+  if (eventType === "access_denied" || eventType === "repeated_access_denial") {
+    return { row: "bg-red-100 text-red-800", dot: "bg-red-500" };
+  }
+  if (eventType === "cv_quota_exceeded") {
+    return { row: "bg-orange-100 text-orange-800", dot: "bg-orange-500" };
+  }
+  return { row: "bg-amber-100 text-amber-800", dot: "bg-amber-500" };
+}
+
+export default function SecurityAlertsWidget({ onVoirTout }) {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

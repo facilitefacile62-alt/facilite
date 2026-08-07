@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import BadgeDisplay from "@/components/BadgeDisplay";
@@ -11,14 +11,56 @@ import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityAlertsWidget from "@/components/SecurityAlertsWidget";
 
+// "Utilisateurs", "Tarification" et "Messagerie Support" ont migré dans
+// NAV_SECTIONS (sidebar catégorisée) — les garder ici aurait recréé le
+// doublon d'accès trouvé en B0 (deux chemins vers /admin/messages).
 const TABS = [
   { id: "dashboard", label: "Tableau de bord", icon: "📊" },
-  { id: "messages", label: "Messagerie Support", icon: "💬", href: "/admin/messages" },
-  { id: "utilisateurs", label: "Utilisateurs", icon: "👥" },
   { id: "badges", label: "Demandes de badge", icon: "🎖️" },
   { id: "offres", label: "Offres d'emploi", icon: "💼" },
   { id: "ia", label: "Assistant IA & CV", icon: "🤖" },
-  { id: "tarification", label: "Tarification", icon: "💳" },
+];
+
+// Sidebar catégorisée (B1) : chaque entrée est soit un vrai lien (type
+// "link", navigue vers une autre page — actif si l'URL courante correspond),
+// soit un onglet interne à cette page (type "tab", actif si activeTab
+// correspond — bascule juste le contenu affiché plus bas sans navigation).
+const NAV_SECTIONS = [
+  {
+    label: "Contenu",
+    items: [
+      { type: "link", href: "/service", icon: "🔍", label: "Explorer / Offres" },
+      { type: "link", href: "/creer-cv", icon: "➕", label: "Créer", accent: true },
+    ],
+  },
+  {
+    label: "Communication",
+    items: [
+      { type: "link", href: "/messagerie", icon: "💬", label: "Messagerie Échanges", unread: true },
+      { type: "link", href: "/admin/messages", icon: "💬", label: "Messagerie Support Admin" },
+      { type: "link", href: "/admin/support", icon: "🎧", label: "Support" },
+    ],
+  },
+  {
+    label: "Gestion",
+    items: [
+      { type: "tab", id: "utilisateurs", icon: "👥", label: "Utilisateurs" },
+      { type: "tab", id: "tarification", icon: "💳", label: "Tarification" },
+      { type: "link", href: "/admin/dashboard", icon: "💰", label: "Facturation & Transactions" },
+      { type: "link", href: "/admin/commandes-agent", icon: "🧑‍💼", label: "Commandes Agent" },
+    ],
+  },
+  {
+    label: "Données",
+    items: [
+      { type: "link", href: "/admin/scraping", icon: "🤖", label: "Agrégation & Scraping" },
+      { type: "tab", id: "dashboard", icon: "📊", label: "Statistiques" },
+    ],
+  },
+  {
+    label: "Administration",
+    items: [{ type: "static", icon: "🛡️", label: "Admin" }],
+  },
 ];
 
 const PERIODS = [
@@ -58,6 +100,7 @@ function growthPercent(current, previous) {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [selectedLang, setSelectedLang] = useState("FR");
@@ -66,6 +109,7 @@ export default function AdminDashboardPage() {
   const [periodDays, setPeriodDays] = useState(7);
   const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
   const [mobilePlusMenuOpen, setMobilePlusMenuOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState("all"); // 'all' | 'none' | 'verified_recruiter' (filtre par badge, plus par rôle depuis le chantier RBAC — candidat/recruteur ont fusionné en 'user')
 
   const [users, setUsers] = useState([]);
@@ -416,6 +460,118 @@ export default function AdminDashboardPage() {
     return matchesSearch && matchesRole;
   });
 
+  // Rendu partagé desktop (sidebar fixe) / mobile (tiroir hamburger) — un
+  // seul endroit à faire évoluer pour les deux, plutôt que deux JSX qui
+  // dérivent (voir le doublon Messagerie Support trouvé en B0).
+  const renderNavItem = (item, onNavigate) => {
+    if (item.type === "static") {
+      return (
+        <div
+          key={item.label}
+          className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-extrabold text-orange-700 bg-orange-50"
+        >
+          <span>{item.icon}</span>
+          <span>{item.label}</span>
+        </div>
+      );
+    }
+
+    if (item.accent) {
+      return (
+        <Link
+          key={item.label}
+          href={item.href}
+          onClick={onNavigate}
+          className="flex items-center gap-3 px-3.5 py-2.5 rounded-full text-sm font-bold text-orange-600 border border-orange-300 hover:bg-orange-50 transition"
+        >
+          <span>{item.icon}</span>
+          <span>{item.label}</span>
+        </Link>
+      );
+    }
+
+    const isActive = item.type === "link" ? pathname === item.href : activeTab === item.id;
+    const baseClass = `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition relative ${
+      isActive ? "bg-orange-50 text-orange-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+    }`;
+
+    if (item.type === "link") {
+      return (
+        <Link key={item.label} href={item.href} onClick={onNavigate} className={baseClass}>
+          <span>{item.icon}</span>
+          <span>{item.label}</span>
+          {item.unread && <UnreadBadge count={unreadMessagesCount} />}
+        </Link>
+      );
+    }
+
+    return (
+      <button
+        key={item.label}
+        type="button"
+        onClick={() => {
+          setActiveTab(item.id);
+          onNavigate?.();
+        }}
+        className={`${baseClass} w-full text-left cursor-pointer`}
+      >
+        <span>{item.icon}</span>
+        <span>{item.label}</span>
+      </button>
+    );
+  };
+
+  const renderNavSections = (onNavigate) => (
+    <>
+      {NAV_SECTIONS.map((section) => (
+        <div key={section.label} className="pt-3 first:pt-0">
+          <div className="px-3.5 pb-1.5 text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">
+            {section.label}
+          </div>
+          <div className="space-y-1">{section.items.map((item) => renderNavItem(item, onNavigate))}</div>
+        </div>
+      ))}
+    </>
+  );
+
+  const renderAccountFooter = () => (
+    <div className="px-3 py-4 border-t border-gray-100 space-y-3">
+      <div className="flex items-center gap-2 px-2">
+        <div className="w-9 h-9 rounded-full bg-orange-600 text-white font-extrabold flex items-center justify-center text-xs shadow-inner flex-shrink-0">
+          {(userSession?.user?.email || "A").charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-extrabold text-gray-900 truncate">Administrateur</p>
+          <p className="text-[10px] text-gray-500 truncate">{userSession?.user?.email}</p>
+        </div>
+      </div>
+
+      <div className="flex bg-gray-100 p-1 rounded-lg">
+        <button
+          type="button"
+          onClick={() => handleLangChange("FR")}
+          className={`flex-1 py-1 text-[10px] font-extrabold rounded-md transition ${selectedLang === "FR" ? "bg-white shadow-xs text-gray-900" : "text-gray-500"}`}
+        >
+          FR
+        </button>
+        <button
+          type="button"
+          onClick={() => handleLangChange("GB")}
+          className={`flex-1 py-1 text-[10px] font-extrabold rounded-md transition ${selectedLang === "GB" ? "bg-white shadow-xs text-gray-900" : "text-gray-500"}`}
+        >
+          EN
+        </button>
+      </div>
+
+      <button
+        onClick={handleGlobalSignOut}
+        className="w-full text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition cursor-pointer"
+      >
+        Déconnexion
+      </button>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF6F1] flex items-center justify-center">
@@ -439,7 +595,7 @@ export default function AdminDashboardPage() {
         </div>
       )}
       {/* ------------------------------------------------------------- */}
-      {/* SIDEBAR LATÉRALE */}
+      {/* SIDEBAR LATÉRALE (desktop) */}
       {/* ------------------------------------------------------------- */}
       <aside className="hidden md:flex w-60 flex-shrink-0 bg-white border-r border-gray-200 flex-col h-screen sticky top-0">
         <div className="flex items-center space-x-2 px-5 py-5 border-b border-gray-100">
@@ -450,100 +606,46 @@ export default function AdminDashboardPage() {
           <span className="text-base font-extrabold text-gray-900 tracking-tight">Facilite</span>
         </div>
 
-        <nav className="flex-1 px-3 py-5 space-y-1">
-          <Link href="/" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
-            <span>🏠</span>
-            <span>Accueil</span>
-          </Link>
-          <Link
-            href="/creer-cv"
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-full text-sm font-bold text-orange-600 border border-orange-300 hover:bg-orange-50 transition"
-          >
-            <span>➕</span>
-            <span>Créer</span>
-          </Link>
-          <Link href="/service" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
-            <span>🔍</span>
-            <span>Explorer / Offres</span>
-          </Link>
-          <Link href="/messagerie" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition relative">
-            <span>💬</span>
-            <span>Messagerie Échanges</span>
-            <UnreadBadge count={unreadMessagesCount} />
-          </Link>
-          <Link href="/admin/messages" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">
-            <span>💬</span>
-            <span>Messagerie Support Admin</span>
-          </Link>
-          <Link href="/admin/support" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
-            <span>🎧</span>
-            <span>Support</span>
-          </Link>
-          <Link href="/admin/dashboard" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
-            <span>💳</span>
-            <span>Facturation & Transactions</span>
-          </Link>
-          <Link href="/admin/commandes-agent" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition">
-            <span>🧑‍💼</span>
-            <span>Commandes Agent</span>
-          </Link>
-          <Link href="/admin/scraping" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition">
-            <span>🤖</span>
-            <span>Agrégation & Scraping</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => setActiveTab("dashboard")}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition cursor-pointer text-left"
-          >
-            <span>📊</span>
-            <span>Statistiques</span>
-          </button>
+        <nav className="flex-1 px-3 py-5 overflow-y-auto">{renderNavSections()}</nav>
 
-          <div className="pt-2">
-            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-extrabold text-orange-700 bg-orange-50">
-              <span>🛡️</span>
-              <span>Admin</span>
-            </div>
-          </div>
-        </nav>
-
-        <div className="px-3 py-4 border-t border-gray-100 space-y-3">
-          <div className="flex items-center gap-2 px-2">
-            <div className="w-9 h-9 rounded-full bg-orange-600 text-white font-extrabold flex items-center justify-center text-xs shadow-inner flex-shrink-0">
-              {(userSession?.user?.email || "A").charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-extrabold text-gray-900 truncate">Administrateur</p>
-              <p className="text-[10px] text-gray-500 truncate">{userSession?.user?.email}</p>
-            </div>
-          </div>
-
-          <div className="flex bg-gray-100 p-1 rounded-lg">
-            <button
-              type="button"
-              onClick={() => handleLangChange("FR")}
-              className={`flex-1 py-1 text-[10px] font-extrabold rounded-md transition ${selectedLang === "FR" ? "bg-white shadow-xs text-gray-900" : "text-gray-500"}`}
-            >
-              FR
-            </button>
-            <button
-              type="button"
-              onClick={() => handleLangChange("GB")}
-              className={`flex-1 py-1 text-[10px] font-extrabold rounded-md transition ${selectedLang === "GB" ? "bg-white shadow-xs text-gray-900" : "text-gray-500"}`}
-            >
-              EN
-            </button>
-          </div>
-
-          <button
-            onClick={handleGlobalSignOut}
-            className="w-full text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-xl transition cursor-pointer"
-          >
-            Déconnexion
-          </button>
-        </div>
+        {renderAccountFooter()}
       </aside>
+
+      {/* ------------------------------------------------------------- */}
+      {/* NAVIGATION MOBILE : déclencheur hamburger + tiroir plein écran */}
+      {/* ------------------------------------------------------------- */}
+      <button
+        type="button"
+        onClick={() => setMobileNavOpen(true)}
+        aria-label="Ouvrir le menu"
+        className="md:hidden fixed top-4 left-4 z-40 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-gray-700 cursor-pointer"
+      >
+        <i className="fa-solid fa-bars"></i>
+      </button>
+
+      {mobileNavOpen && (
+        <div className="md:hidden fixed inset-0 z-[200] flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileNavOpen(false)} />
+          <div className="relative w-72 max-w-[85vw] h-full bg-white flex flex-col shadow-2xl animate-in slide-in-from-left duration-200">
+            <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                <span className="text-base font-extrabold text-gray-900 tracking-tight">Facilite</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                aria-label="Fermer le menu"
+                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+            <nav className="flex-1 px-3 py-5 overflow-y-auto">{renderNavSections(() => setMobileNavOpen(false))}</nav>
+            {renderAccountFooter()}
+          </div>
+        </div>
+      )}
 
       {/* ------------------------------------------------------------- */}
       {/* CONTENU PRINCIPAL */}
