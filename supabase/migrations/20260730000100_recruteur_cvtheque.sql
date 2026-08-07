@@ -1,3 +1,5 @@
+-- CORRIGÉ POUR COMPATIBILITÉ PROJET DE TEST (2026-08-07)
+-- Version originale utilisait role='candidat', remplacé par modèle RBAC
 -- =====================================================================
 -- Espace Recruteur : CVthèque, offres d'emploi, et correctif RLS critique
 -- =====================================================================
@@ -53,10 +55,15 @@ SELECT
   cv_url,
   cv_name
 FROM public.profiles
-WHERE role = 'candidat'
-  AND EXISTS (
-    SELECT 1 FROM public.profiles viewer
-    WHERE viewer.id = auth.uid() AND viewer.role IN ('recruteur', 'admin')
+WHERE cv_visible_recruteurs = true
+  AND NOT public.has_badge(id, 'verified_recruiter')
+  AND is_test_account = COALESCE(
+    (SELECT is_test_account FROM public.profiles caller WHERE caller.id = auth.uid()),
+    false
+  )
+  AND (
+    public.current_user_role() = 'admin'
+    OR (public.current_user_role() = 'user' AND public.has_badge(auth.uid(), 'verified_recruiter'))
   );
 
 REVOKE ALL ON public.candidats_recherche FROM PUBLIC;

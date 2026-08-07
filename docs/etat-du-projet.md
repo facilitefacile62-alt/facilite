@@ -212,3 +212,7 @@ que la CI bloque vraiment un déploiement défaillant ; (2) confirmer un
 paiement KPay réellement réussi pour clore définitivement ce point ;
 (3) terminer la configuration Google Cloud (6 secrets GitHub) pour
 l'automatisation de la sauvegarde.
+
+## DETTE TECHNIQUE (Migrations)
+
+L'historique de migrations ne peut pas recréer la base de prod depuis zéro. 18 colonnes de la table `profiles` créées hors migrations. À résorber progressivement avec une migration de rattrapage.

@@ -27,6 +27,7 @@ const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@f
 const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETest2026!";
 
 test.describe("Parcours de récupération de mot de passe", () => {
+  test.skip(!!process.env.TEST_SUPABASE_URL, "Le SMTP n'est pas configuré sur le projet de test (facilite-e2e-test) — ce comportement est normal et attendu.");
   test("le message de confirmation est identique qu'un compte existe ou non (anti-énumération)", async ({ page }) => {
     await page.goto("/forgot-password");
     await page.getByPlaceholder("Enter your registered email").fill(CANDIDATE_EMAIL);

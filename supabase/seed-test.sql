@@ -85,3 +85,39 @@ WHERE id IN (
 UPDATE public.profiles
 SET recruiter_verified = true, badges = '["verified_recruiter"]'::jsonb
 WHERE id = '40000000-0000-4000-a000-000000000003';
+
+-- 4. Seed Incomplet: Offres d'emploi, Candidatures, et Profils candidats
+-- Offre d'emploi fictive en statut approved
+INSERT INTO public.job_offers (
+  id, title, company, location, description, status, recruiter_id, is_test_account
+) VALUES (
+  '10000000-0000-4000-a000-000000000001',
+  'Ingénieur Logiciel E2E',
+  'Facilite E2E Corp',
+  'Dakar',
+  'Description de test',
+  'approved',
+  '40000000-0000-4000-a000-000000000003',
+  true
+) ON CONFLICT (id) DO NOTHING;
+
+-- Candidature fictive liée à l'offre
+INSERT INTO public.candidatures (
+  id, user_id, job_offer_id, job_title, company, full_name, email, cv_url, recruiter_id, status
+) VALUES (
+  '20000000-0000-4000-a000-000000000001',
+  '30000000-0000-4000-a000-000000000001',
+  '10000000-0000-4000-a000-000000000001',
+  'Ingénieur Logiciel E2E',
+  'Facilite E2E Corp',
+  'E2E Candidate',
+  'e2e-test-candidate@facilite-demo.local',
+  'https://example.com/cv.pdf',
+  '40000000-0000-4000-a000-000000000003',
+  'pending'
+) ON CONFLICT (id) DO NOTHING;
+
+-- Profil candidat avec cv_visible_recruteurs=true ET is_test_account=true
+UPDATE public.profiles
+SET cv_visible_recruteurs = true, is_test_account = true
+WHERE id = '30000000-0000-4000-a000-000000000001';
