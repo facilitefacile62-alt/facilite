@@ -1705,14 +1705,6 @@ export default function Home() {
             <div className="hidden md:flex bg-white rounded-xl border border-gray-200 p-4 shadow-xs md:flex-col space-y-3.5">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <h3 className="text-sm font-extrabold text-gray-900">{t.jobBoardTitle}</h3>
-                <Link
-                  href="/offres"
-                  className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap"
-                >
-                  <i className="fa-solid fa-briefcase"></i>
-                  Voir les offres publiées par nos recruteurs
-                  <i className="fa-solid fa-arrow-right text-[9px]"></i>
-                </Link>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
