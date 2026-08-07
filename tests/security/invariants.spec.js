@@ -107,6 +107,88 @@ test.describe("Invariants de sécurité", () => {
     }
 
     expect(unjustified, "GRANT de table UPDATE/DELETE non justifié — voir la liste ci-dessus (console)").toEqual([]);
+
+    // Volet DEFAULT PRIVILEGES (2026-08-07) : la faille structurelle qui a
+    // rendu ce genre de GRANT possible SANS qu'aucune ligne n'apparaisse
+    // dans une migration — chaque nouvelle table/fonction/séquence créée
+    // par le rôle postgres héritait silencieusement de droits complets
+    // pour anon/authenticated (corrigé par
+    // 20260807130000_fix_default_privileges_public_schema.sql). Vérifié
+    // ici pour que toute régression future (quelqu'un qui re-largit ces
+    // défauts) fasse échouer CE test, pas seulement les tables déjà
+    // créées.
+    //
+    // Scope volontairement limité au rôle `postgres` : c'est le seul par
+    // lequel ce projet crée des objets (règle "jamais db push, toujours
+    // via migration CLI", docs/regle-migrations.md — la connexion CLI
+    // authentifie toujours en tant que postgres). `supabase_admin` a le
+    // même défaut trop large mais reste hors de portée : la connexion
+    // postgres n'a pas la permission de modifier les default privileges
+    // d'un autre rôle (testé, "permission denied to change default
+    // privileges") — seul un accès Supabase Dashboard/support pourrait le
+    // faire, et le Dashboard n'est de toute façon jamais utilisé pour créer
+    // du schéma dans ce projet. Documenté, pas ignoré : si ça change un
+    // jour, il faudra revisiter ce scope.
+    const defaultAclRows = await runIntrospectionSql(`
+      SELECT
+        pg_get_userbyid(d.defaclrole) AS owner_role,
+        CASE d.defaclobjtype WHEN 'r' THEN 'TABLES' WHEN 'f' THEN 'FUNCTIONS' WHEN 'S' THEN 'SEQUENCES' ELSE d.defaclobjtype::text END AS object_type,
+        d.defaclacl::text AS raw_acl
+      FROM pg_default_acl d
+      JOIN pg_namespace n ON n.oid = d.defaclnamespace
+      WHERE n.nspname = 'public' AND pg_get_userbyid(d.defaclrole) = 'postgres';
+    `);
+
+    const defaultAclViolations = defaultAclRows.filter((r) => {
+      // FUNCTIONS : authenticated=X est volontairement préservé (voir la
+      // migration de correction) — seul anon=X (ou plus) est une violation.
+      if (r.object_type === "FUNCTIONS") return /anon=/.test(r.raw_acl);
+      // TABLES / SEQUENCES : ni anon ni authenticated ne doivent apparaître.
+      return /anon=/.test(r.raw_acl) || /authenticated=/.test(r.raw_acl);
+    });
+
+    if (defaultAclViolations.length > 0) {
+      console.log(`\n[INVARIANT 1] ${defaultAclViolations.length} DEFAULT PRIVILEGES trop large(s) sur le schéma public (rôle postgres) :`);
+      for (const r of defaultAclViolations) console.log(`  - ${r.object_type} : ${r.raw_acl}`);
+    }
+
+    expect(
+      defaultAclViolations,
+      "ALTER DEFAULT PRIVILEGES trop permissif détecté sur public (rôle postgres) — voir la liste ci-dessus (console)"
+    ).toEqual([]);
+  });
+
+  test("Correctif DEFAULT PRIVILEGES (2026-08-07) — une table nouvellement créée n'hérite plus de droits anon/authenticated", async () => {
+    // Preuve empirique, pas juste une lecture de config : crée une VRAIE
+    // table via la même connexion privilégiée (rôle postgres) que toute
+    // migration de ce projet, puis vérifie ses grants réels — c'est ce qui
+    // aurait échoué avant 20260807130000_fix_default_privileges_public_schema.sql
+    // (la table aurait hérité de arwdDxtm pour anon ET authenticated sans
+    // aucun GRANT explicite).
+    const tableName = `_test_default_privileges_probe_${Date.now()}`;
+
+    try {
+      await runIntrospectionSql(`CREATE TABLE public.${tableName} (id UUID PRIMARY KEY DEFAULT gen_random_uuid());`);
+
+      const rows = await runIntrospectionSql(`
+        SELECT grantee, privilege_type
+        FROM information_schema.role_table_grants
+        WHERE table_schema = 'public' AND table_name = '${tableName}' AND grantee IN ('anon', 'authenticated')
+        ORDER BY grantee, privilege_type;
+      `);
+
+      if (rows.length > 0) {
+        console.log(`\n[DEFAULT PRIVILEGES] Table de test ${tableName} a hérité de droits non voulus :`);
+        for (const r of rows) console.log(`  - ${r.grantee} : ${r.privilege_type}`);
+      }
+
+      expect(
+        rows,
+        "Une table nouvellement créée hérite encore de droits anon/authenticated — le correctif DEFAULT PRIVILEGES n'est pas (ou plus) actif."
+      ).toEqual([]);
+    } finally {
+      await runIntrospectionSql(`DROP TABLE IF EXISTS public.${tableName};`);
+    }
   });
 
   test("Invariant 2 — aucune table sans protection (RLS désactivé, ou RLS activé + 0 policy non justifié)", async () => {
