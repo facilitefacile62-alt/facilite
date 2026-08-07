@@ -190,36 +190,6 @@ export default function RegisterPage() {
 
           {registerMethod === "phone" ? (
             <div className="space-y-4">
-              {/* Sélecteur de rôle (Candidat / Recruteur) */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Type de compte
-                </label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setRole("candidat")}
-                    className={`py-2 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
-                      role === "candidat"
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-500 hover:text-gray-900"
-                    }`}
-                  >
-                    <span>👨‍🎓 Candidat</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole("recruteur")}
-                    className={`py-2 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
-                      role === "recruteur"
-                        ? "bg-white text-emerald-800 shadow-sm"
-                        : "text-gray-500 hover:text-gray-900"
-                    }`}
-                  >
-                    <span>💼 Recruteur</span>
-                  </button>
-                </div>
-              </div>
 
               {/* Champ Nom Complet */}
               <div>
@@ -282,36 +252,6 @@ export default function RegisterPage() {
                 tabIndex={-1}
                 autoComplete="off"
               />
-              {/* Sélecteur de rôle (Candidat / Recruteur) */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Type de compte
-                </label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setRole("candidat")}
-                    className={`py-2 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
-                      role === "candidat"
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-500 hover:text-gray-900"
-                    }`}
-                  >
-                    <span>👨‍🎓 Candidat</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole("recruteur")}
-                    className={`py-2 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
-                      role === "recruteur"
-                        ? "bg-white text-emerald-800 shadow-sm"
-                        : "text-gray-500 hover:text-gray-900"
-                    }`}
-                  >
-                    <span>💼 Recruteur</span>
-                  </button>
-                </div>
-              </div>
 
               {/* Champ Nom Complet */}
               <div>

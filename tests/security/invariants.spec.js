@@ -601,5 +601,78 @@ test.describe("Invariants de sécurité", () => {
         "réellement besoin d'un persona admin, ajouter l'email à JUSTIFIED avec la justification écrite."
     ).toEqual([]);
   });
+
+  test("Invariant 13 — toute fonction SECURITY DEFINER critique (badges/modération/rôles) a un GRANT EXECUTE actif", async () => {
+    // Trouvé le 2026-08-07 : approve_badge_request() avait perdu son GRANT
+    // EXECUTE vers authenticated (ses fonctions sœurs reject_badge_request/
+    // revoke_badge l'avaient conservé) — plus aucun admin ne pouvait
+    // approuver de demande de badge en production, sans qu'aucune alarme ne
+    // se déclenche avant qu'un admin l'essaie réellement. Une fonction
+    // SECURITY DEFINER sans aucun GRANT vers authenticated/anon est
+    // totalement inappelable via PostgREST, quel que soit son code interne.
+    //
+    // Deux façons d'être couvert par ce test : le nom figure dans
+    // CRITICAL_FUNCTIONS (liste vérifiée à la main le 2026-08-07 — badges,
+    // modération, rôles/statut), ou il matche un des mots-clés ci-dessous
+    // (filet pour une future fonction de même nature jamais ajoutée à la
+    // liste). Les deux excluent les fonctions déclencheurs (trigger) — un
+    // trigger PostgreSQL invoque sa fonction directement, sans jamais
+    // passer par un GRANT authenticated/anon ; en exiger un pour elles
+    // serait une exigence qui ne correspond à rien de réel.
+    const CRITICAL_FUNCTIONS = new Set([
+      "approve_badge_request",
+      "reject_badge_request",
+      "revoke_badge",
+      "moderate_job_offer",
+      "current_user_role",
+      "current_user_status",
+      "is_admin",
+      "has_badge",
+      "is_authorized_recruiter",
+    ]);
+    const CRITICAL_NAME_PATTERNS = [/badge/i, /moderat/i, /suspend/i, /\brole\b/i, /revoke/i, /approve/i, /reject/i];
+
+    const TRIGGER_FUNCTIONS = new Set(
+      (
+        await runIntrospectionSql(`
+          SELECT DISTINCT p.proname
+          FROM pg_trigger t
+          JOIN pg_proc p ON p.oid = t.tgfoid
+          WHERE NOT t.tgisinternal;
+        `)
+      ).map((r) => r.proname)
+    );
+
+    const rows = await runIntrospectionSql(`
+      SELECT p.proname,
+        COALESCE(
+          (SELECT array_agg(DISTINCT grantee) FROM information_schema.role_routine_grants g
+           WHERE g.routine_schema = 'public' AND g.routine_name = p.proname
+             AND g.grantee IN ('authenticated', 'anon')),
+          ARRAY[]::text[]
+        ) AS app_grantees
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.prosecdef = true;
+    `);
+
+    const violations = rows.filter((r) => {
+      if (TRIGGER_FUNCTIONS.has(r.proname)) return false;
+      const isCritical = CRITICAL_FUNCTIONS.has(r.proname) || CRITICAL_NAME_PATTERNS.some((p) => p.test(r.proname));
+      if (!isCritical) return false;
+      return (r.app_grantees || []).length === 0;
+    });
+
+    if (violations.length > 0) {
+      console.log(`\n[INVARIANT 13] ${violations.length} fonction(s) critique(s) sans GRANT EXECUTE actif :`);
+      for (const v of violations) console.log(`  - ${v.proname}`);
+    }
+
+    expect(
+      violations,
+      "Fonction SECURITY DEFINER critique sans aucun GRANT EXECUTE vers authenticated/anon — inappelable via " +
+        "PostgREST malgré un code interne correct. Voir console."
+    ).toEqual([]);
+  });
 });
 
