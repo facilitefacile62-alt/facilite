@@ -1,5 +1,14 @@
 const { defineConfig, devices } = require("@playwright/test");
+require('dotenv').config({ path: '.env.test.local' });
 
+if (!process.env.TEST_SUPABASE_URL) {
+  console.error("REFUS : TEST_SUPABASE_URL manquante — configure .env.test.local");
+  process.exit(1);
+}
+if (process.env.TEST_SUPABASE_URL.includes("ocfhzwwjvljintabxxlg")) {
+  console.error("REFUS : tentative de connexion à la base de production");
+  process.exit(1);
+}
 /**
  * Config Playwright pour les tests E2E du parcours candidat.
  *
@@ -43,6 +52,11 @@ module.exports = defineConfig({
   // sur le port (utile en CI/local) ; réutilise un serveur déjà lancé sinon.
   webServer: {
     command: "npm run dev",
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.TEST_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.TEST_SUPABASE_ANON_KEY,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.TEST_SUPABASE_SERVICE_ROLE_KEY
+    },
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
