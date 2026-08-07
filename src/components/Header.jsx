@@ -162,6 +162,8 @@ export default function Header() {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const plusDropdownRef = useRef(null);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
 
   // Système de Notifications au style LinkedIn
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
@@ -403,6 +405,11 @@ export default function Header() {
     };
   }, [debouncedQuery]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   // 4. Gestion du clic extérieur pour fermer le menu déroulant
   useEffect(() => {
     function handleClickOutside(event) {
@@ -418,6 +425,12 @@ export default function Header() {
         !plusDropdownRef.current.contains(event.target)
       ) {
         setPlusDropdownOpen(false);
+      }
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target)
+      ) {
+        setProfileDropdownOpen(false);
       }
     }
 
@@ -862,13 +875,38 @@ export default function Header() {
           </button>
 
           {userSession ? (
-            <Link
-              href="/profil"
-              className="px-2 sm:px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition flex items-center gap-1 sm:gap-1.5 flex-shrink-0"
-            >
-              <i className="fa-solid fa-user-check text-xs sm:text-sm"></i>
-              <span>Profil</span>
-            </Link>
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                className="px-2 sm:px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition flex items-center gap-1 sm:gap-1.5 flex-shrink-0 cursor-pointer"
+              >
+                <i className="fa-solid fa-user-check text-xs sm:text-sm"></i>
+                <span>Profil</span>
+              </button>
+
+              {profileDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50 animate-fade-in-up">
+                  <Link
+                    href="/profil"
+                    onClick={() => setProfileDropdownOpen(false)}
+                    className="block px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition"
+                  >
+                    <i className="fa-solid fa-user-circle mr-2"></i> Mon Profil
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition"
+                  >
+                    <i className="fa-solid fa-arrow-right-from-bracket mr-2"></i> Se déconnecter
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <Link
               href="/login"
