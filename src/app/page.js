@@ -1433,10 +1433,10 @@ export default function Home() {
 
       {/* Main Job Board Feed (LinkedIn Style) */}
       <main className="min-h-screen bg-[#F4F2EE] pt-4 pb-8 md:pb-16 px-4 md:px-6">
-        <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
+        <div className="max-w-[1180px] mx-auto flex flex-col md:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
-          <aside className="hidden lg:flex lg:w-[215px] flex-shrink-0 flex-col gap-2 lg:pr-0.5 lg:sticky lg:top-[72px] lg:h-fit lg:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
+          <aside className="hidden md:flex md:w-[215px] flex-shrink-0 flex-col gap-2 md:pr-0.5 md:sticky md:top-[72px] md:h-fit md:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
 
             {/* Carte Profil (toujours visible, ne défile pas) */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs flex-shrink-0">
@@ -1646,7 +1646,7 @@ export default function Home() {
           </aside>
 
           {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
-          <section className="w-full lg:w-[555px] flex-shrink-0 flex flex-col space-y-4">
+          <section className="w-full md:w-[555px] flex-shrink-0 flex flex-col space-y-4">
 
             {/* Carrousel "Stories" des modèles de CV — tout en haut du fil,
                 juste sous la navbar. Le clic ouvre TemplatePreviewModal (même
@@ -1812,7 +1812,7 @@ export default function Home() {
           </section>
 
           {/* --- COLONNE DE DROITE : Offres recommandées & Publicité --- */}
-          <aside className="w-full lg:w-[260px] flex-shrink-0 flex flex-col space-y-3 lg:pr-0.5 lg:sticky lg:top-[72px] lg:h-fit lg:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
+          <aside className="w-full md:w-[260px] flex-shrink-0 flex flex-col space-y-3 md:pr-0.5 md:sticky md:top-[72px] md:h-fit md:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
             
             {/* Offres Recommandées */}
             <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
