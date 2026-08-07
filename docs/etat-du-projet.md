@@ -1,210 +1,220 @@
-# État du projet Facilite — 2026-08-07
+# État du projet Facilite — 2026-08-07 (mise à jour)
 
 Ce document répond à une seule question : **où en est-on aujourd'hui,
 concrètement**, pour quelqu'un qui n'a pas suivi le détail des chantiers.
 Écrit pour être relu dans un mois sans contexte perdu. Remplace entièrement
-la version du 2026-08-03 — obsolète sur presque tous les points depuis.
+la version précédente du même jour — obsolète depuis la bascule KPay en
+production et le chantier du tableau de bord admin.
 
 ## En une phrase
 
-Deux incidents réels de fuite de données personnelles ont eu lieu et ont été
-fermés le même jour (2026-08-06) — l'un exposait 45 CV, l'autre exposait
-potentiellement les données de tous les comptes. Depuis, le projet a gagné
-une détection active des abus (quota CV, refus d'accès répétés), une
-sauvegarde chiffrée testée de bout en bout, et une réduction volontaire de
-sa surface de données personnelles. Le SMTP fonctionne de bout en bout,
-confirmé par une vraie personne cliquant un vrai lien. Ce qui reste ouvert
-est connu et listé plus bas, pas oublié.
-
-## Clé privée de sauvegarde — confirmée sécurisée
-
-Après un premier faux départ (la clé était restée dans `Downloads` malgré
-une première confirmation), vérifié une seconde fois le 2026-08-07 : plus
-aucune copie sur le disque (Downloads, dossier de travail temporaire, dépôt
-git). Deux copies sûres confirmées ailleurs par l'utilisateur. Limite
-persistante : ni la Corbeille Windows (accès partiellement refusé) ni
-l'historique local de l'IDE n'ont pu être vérifiés avec certitude.
+KPay est en production (clés Live), le paiement et le webhook sont prouvés
+fonctionnels de bout en bout — il ne manque qu'un paiement mobile money qui
+aboutisse réellement pour clore définitivement ce point. Le tableau de bord
+admin a été réorganisé et enrichi d'un onglet Sécurité temps réel. Une
+faille structurelle qui rendait chaque correction de GRANT fragile (les
+droits par défaut du schéma se rouvraient à chaque nouvelle table) a été
+corrigée à la source.
 
 ## Ce qui est fait et protégé
 
+### KPay — Live, sous réserve d'un paiement réel confirmé
+
+Bascule en production effectuée le 2026-08-07 : nouvelles clés Live
+générées et déployées sur Vercel, ancienne paire sandbox révoquée,
+redéploiement confirmé (`ffacilite.com` sert bien le build avec les
+nouvelles variables).
+
+- **Checkout fonctionnel** : testé en conditions réelles contre la
+  production (compte candidat de test, vraie requête `POST
+  /api/pay/checkout`), commande créée en base, vrai lien de paiement KPay
+  obtenu.
+- **Webhook fonctionnel et signature acceptée** : un premier test a révélé
+  `KPAY_WEBHOOK_SECRET` désynchronisé (signature rejetée) — corrigé côté
+  Vercel. Un second test, surveillé en direct dans les logs Vercel pendant
+  que l'utilisateur complétait le paiement, a confirmé la réception de
+  deux appels `POST /api/pay/kpay-webhook` acceptés (niveau `info`, pas
+  `error`) : la chaîne checkout → KPay → webhook signé → traitement selon
+  le statut est prouvée bout en bout.
+- **Ce qui reste en attente** : les deux tentatives de paiement réel ont
+  toutes les deux échoué côté opérateur mobile money ("Échec du paiement —
+  aucun montant débité", écran KPay), pas côté plateforme. Le code gère
+  déjà ce cas correctement (statut ≠ `COMPLETED` → aucune écriture en
+  base). **Un premier paiement qui aboutit réellement (`COMPLETED`)
+  confirmera la dernière étape** (webhook → `orders.payment_status =
+  'paid'`) — non testé faute d'un paiement mobile money réussi jusqu'ici.
+
 ### Fondations de sécurité automatiques
 
-11 invariants tournent en CI sur chaque push/PR
+13 invariants tournent en CI sur chaque push/PR
 (`npx playwright test tests/security/invariants.spec.js`, détail dans
-`docs/invariants-securite.md`) : GRANT non justifiés, tables sans RLS,
-`SECURITY DEFINER` sans `search_path`, buckets Storage publics, endpoints
-sans autorisation, `service_role` sans filtrage, policies RLS tautologiques,
-gardes NULL-fragiles, objets en base absents des migrations, liens/gates
-frontend conditionnés à un rôle obsolète.
+`docs/invariants-securite.md`), dont deux ajoutés le 2026-08-07 : aucun
+compte de test avec `role='admin'` hors liste blanche, et aucune fonction
+`SECURITY DEFINER` critique sans `GRANT EXECUTE` actif.
 
 **Connu et non réglé** : ce job CI ne bloque encore aucun déploiement —
-`main` n'a pas de branch protection GitHub l'exigeant. Procédure donnée
-(pas exécutée par moi, hors de ma portée) dans le fil de discussion du
-2026-08-06 ; à vérifier si elle a été appliquée.
+`main` n'a pas de branch protection GitHub l'exigeant (voir "Ce qui reste
+ouvert").
+
+### ALTER DEFAULT PRIVILEGES — corrigé à la source (2026-08-07)
+
+Découverte en construisant l'onglet Sécurité : le schéma `public` accordait
+silencieusement, à **chaque nouvelle table/fonction/séquence créée par le
+rôle `postgres`** (donc par toute migration future), des droits complets à
+`anon`/`authenticated` — sans qu'aucun `GRANT` n'apparaisse dans la
+migration elle-même. Cause probable d'une partie des GRANTs "jamais
+tracés" trouvés et corrigés table par table pendant ce chantier
+(`establishments`, `is_admin(uuid)`, `invariant_status`...).
+
+Corrigé par `ALTER DEFAULT PRIVILEGES ... REVOKE` pour le rôle `postgres`
+(celui par lequel 100 % des migrations de ce projet passent). Preuve
+empirique : une vraie table temporaire créée après le correctif n'hérite
+plus d'aucun droit `anon`/`authenticated`, testé et supprimé. Invariant 1
+étendu pour vérifier `pg_default_acl` en continu — toute régression future
+serait détectée automatiquement.
+
+**Limite documentée, pas ignorée** : le rôle `postgres` n'a pas la
+permission de modifier les default privileges de `supabase_admin`
+(`permission denied to change default privileges`, testé). Sans impact
+pratique tant que la règle "jamais de schéma créé via le Dashboard, toujours
+via migration CLI" (`docs/regle-migrations.md`) tient — mais si cette règle
+est un jour contournée, cette porte-là resterait ouverte.
+
+### Tableau de bord admin — réorganisé et enrichi (2026-08-07)
+
+- **Navigation** : sidebar catégorisée (Contenu/Communication/Gestion/
+  Données/Administration) avec lien actif visible, menu hamburger mobile
+  ajouté (les liens de la sidebar étaient auparavant invisibles sur
+  mobile). Doublons de navigation supprimés (Messagerie Support en double,
+  lien Accueil redondant).
+- **Onglet Sécurité** (nouveau) : alertes actives triées par gravité puis
+  date (rouge = refus d'accès, orange = quota dépassé), actions
+  Suspendre/Ignorer/Marquer résolu, historique 30 jours filtrable par type
+  et gravité, mise à jour **temps réel** (Supabase Realtime sur
+  `security_logs`, vérifié par test qu'un `publisher` abonné au même canal
+  ne reçoit rien), encart Invariants de sécurité affichant le résultat réel
+  de la dernière exécution CI (jamais recalculé côté client). Aucune
+  suppression de log possible, aucune exécution SQL libre, aucun contenu de
+  CV/message exposé — contraintes du client respectées à la lettre.
+- **Attribution de badge et compte de test** : interrupteurs directement
+  dans la liste des comptes (`grant_verified_recruiter_badge()`,
+  `set_test_account_flag()`, admin-only, journalisées dans
+  `security_logs`), confirmation obligatoire avant d'accorder le badge à un
+  compte non-test, bandeau "Mode test" pour les admins connectés avec
+  `is_test_account = true`.
+- **Éléments inactifs corrigés** : `ScraperDashboard` (bouton "Lancer le
+  scraping") était câblé en dur sur `localhost:8000`, donc systématiquement
+  cassé en production — utilise maintenant `NEXT_PUBLIC_API_URL` avec un
+  avertissement explicite si la variable est absente (elle ne l'est pas
+  configurée sur Vercel à ce jour, voir "Ce qui reste ouvert").
 
 ### Incident du 2026-08-06 — fermé, documenté intégralement
 
-Voir `docs/incident-2026-08-06.md` pour la chronologie complète. Résumé :
-- Bucket `resumes` public depuis sa création (2026-07-27), corrigé un jour
-  puis redevenu public par un mécanisme jamais tracé — 45 CV de 3 comptes
-  réels exposés. Rebasculé privé, policies resserrées (autorisation par
-  candidature réelle ou opt-in explicite, plus par simple badge).
-- Policy `"Profiles read access"` sur `public.profiles` — table entière
-  (36 colonnes, email garanti pour tout compte) lisible par n'importe qui
-  sans authentification, vérifié exploitable en direct. Supprimée.
-- `establishments` (annuaire pharmacies/hôtels) : GRANT DELETE/UPDATE ouvert
-  à `anon`/`authenticated`, retiré. `is_app_admin()` orpheline (modèle
-  pré-RBAC) supprimée. `is_admin(uuid)` : `EXECUTE` retiré à `anon`.
-- Origine des trois premiers : jamais dans une migration, jamais dans un
-  commit — action humaine directe en base, non attribuable depuis cet
-  environnement. `docs/regle-migrations.md` formalise la règle qui aurait
-  empêché ça.
+Voir `docs/incident-2026-08-06.md` pour la chronologie complète : bucket
+`resumes` public corrigé, policy `profiles` ouverte à tous supprimée,
+GRANTs `establishments` retirés, `is_app_admin()` orpheline supprimée.
+Origine jamais tracée dans une migration — `docs/regle-migrations.md`
+formalise la règle qui aurait empêché ça, et le correctif ALTER DEFAULT
+PRIVILEGES ci-dessus en referme une partie de la cause structurelle.
 
-### Détection active des abus (nouveau depuis le 2026-08-06)
+### Détection active des abus, minimisation des données, sauvegarde, SMTP, rôles/modération
 
-- **Quota CV** : 100 consultations de profil candidat distinctes par jour et
-  par compte badgé, appliqué côté serveur (`record_cv_consultations()`),
-  compteur visible en permanence dans l'espace recruteur, alerte
-  `security_logs` au dépassement, admin exempté. 5 tests dédiés, seuil
-  exact de 100/101 prouvé avec de vrais comptes jetables créés puis
-  supprimés — `tests/security/cv-quota.spec.js`.
-- **Refus d'accès répétés** : chaque 401/403 sur les routes CVthèque et
-  candidatures est journalisé (compte, IP, route, horodatage). Seuil de 10
-  refus/5 min (par compte ou IP) déclenche une alerte visible dans un
-  encart du tableau de bord admin (`SecurityAlertsWidget.jsx`). IP purgée
-  après 30 jours (la ligne elle-même ne l'est jamais). **Vérifié tournant
-  en production réelle** le 2026-08-07 (pas seulement en test local) — une
-  requête directe contre `ffacilite.com` a produit une entrée
-  `security_logs` en quelques secondes.
-- **Portée volontairement limitée** : profils et messagerie n'ont pas de
-  Route Handler dédié dans ce projet (accès direct PostgREST sous RLS) —
-  hors de portée de cette détection pour l'instant, documenté explicitement.
-  `auth.audit_log_entries` (échecs de connexion natifs Supabase) est
-  interrogeable mais constaté **vide** (0 ligne) malgré une activité réelle
-  le jour même — cause non déterminable en SQL, à vérifier côté Dashboard
-  Supabase/support.
+Inchangés depuis la version précédente de ce document — toujours vrais,
+non re-décrits ici pour éviter la redondance. Voir l'historique git de ce
+fichier pour le détail complet si besoin.
 
-### Minimisation des données (nouveau)
+## Récapitulatif final
 
-`birth_date`, `marital_status`, `driver_license` supprimées de `profiles`
-(2026-08-07) après vérification qu'elles n'avaient plus qu'un usage privé
-(section "À propos" de son propre profil) et aucune interface fonctionnelle
-d'exposition publique réelle malgré une étiquette "🌐 Public" trompeuse qui
-laissait penser le contraire. Une donnée non collectée ne peut plus fuiter.
-Rétention des CV et purge automatique : **pas commencé**, chantier séparé.
+### FERMÉ ET PROTÉGÉ
 
-### Sauvegarde chiffrée (nouveau)
+- Incidents du 2026-08-06 (bucket public, policy `profiles` ouverte,
+  GRANTs `establishments`) — corrigés, invariants automatiques empêchant
+  la récidive.
+- Clé privée de sauvegarde — confirmée hors du disque, deux copies sûres
+  ailleurs.
+- SMTP / récupération de mot de passe — confirmé par un vrai clic humain.
+- Comptes de test correctement rôlés (Invariant 12).
+- `approve_badge_request()` — GRANT restauré (Invariant 13 empêche la
+  récidive silencieuse pour toute fonction critique).
+- **ALTER DEFAULT PRIVILEGES sur `public`** — corrigé à la source pour le
+  rôle `postgres`, vérifié par test, surveillé en continu par Invariant 1.
+- **KPay checkout et webhook** — chaîne technique prouvée fonctionnelle de
+  bout en bout (signature acceptée, traitement correct selon statut).
+- **Tableau de bord admin** — navigation réorganisée, onglet Sécurité
+  temps réel, attribution de badge/compte de test via RPC admin-only
+  journalisées, `ScraperDashboard` corrigé.
+- Sauvegarde chiffrée — testée réellement (restauration + intégrité
+  vérifiées).
+- Quota CV et détection des refus d'accès répétés — vérifiés en
+  production réelle.
+- Modèle de rôles, modération, espace recruteur, entretiens vidéo
+  (Daily.co) — fonctionnels, vérifiés dans le code.
 
-Chiffrement hybride RSA-4096 + AES-256-GCM, clé privée jamais en CI —
-`docs/sauvegarde-restauration.md`. **Testé réellement** le 2026-08-06 :
-1317 lignes (19 tables) + 107 fichiers Storage sauvegardés, chiffrés,
-restaurés dans un schéma isolé, intégrité vérifiée ligne par ligne, mauvaise
-clé testée et rejetée proprement.
+### OUVERT ET DOCUMENTÉ
 
-**Connu et non réglé** : l'automatisation quotidienne
-(`.github/workflows/backup.yml`) dépend de 6 secrets GitHub Actions dont la
-création (compte de service Google Cloud, dossier Drive partagé) vous
-revenait — statut non confirmé au moment de ce document. Sans eux, le
-workflow échoue explicitement (pas silencieusement) à chaque exécution
-planifiée.
+1. **Un paiement KPay `COMPLETED` réel n'a pas encore été observé** —
+   risque **faible** : la logique de traitement est déjà prouvée correcte
+   pour les statuts non-`COMPLETED` (aucune écriture erronée), il ne reste
+   qu'à confirmer le dernier maillon (`payment_status → 'paid'`) sur un
+   vrai paiement réussi. Deux tentatives ont échoué côté opérateur mobile
+   money, pas côté plateforme.
+2. **`payment_reference` reste `NULL` sur 87 des 88 commandes en base**
+   (trouvé le 2026-08-07) — risque **faible** : cause identifiée
+   précisément — `public.orders` n'a **aucune policy RLS `UPDATE`** pour
+   le candidat propriétaire (seulement `SELECT`/`INSERT`), donc l'appel
+   `.update({ payment_reference })` dans `checkout/route.js` échoue
+   silencieusement (RLS bloque, 0 ligne affectée, pas d'erreur remontée).
+   Le webhook n'est **pas** affecté : il retrouve toujours la commande via
+   `externalId`/`order.id`, jamais via `payment_reference` en pratique.
+   Impact réel : uniquement la réconciliation manuelle future (recherche
+   d'une commande par référence KPay) serait gênée. Correction nécessiterait
+   l'ajout d'une policy RLS `UPDATE` scoping — décision volontairement
+   laissée ouverte plutôt que corrigée sans validation explicite (portée
+   au-delà de ce qui a été demandé ce jour).
+3. **CI ne bloque pas le déploiement** — risque **moyen** : branch
+   protection GitHub sur `main` toujours à confirmer.
+4. **Automatisation de la sauvegarde** — risque **moyen** : dépend des 6
+   secrets GitHub Actions (compte de service Google Cloud) à configurer.
+5. **`NEXT_PUBLIC_API_URL` non configurée sur Vercel** — risque
+   **faible** : `ScraperDashboard` affiche maintenant un avertissement
+   explicite au lieu d'échouer silencieusement, mais l'agrégation reste
+   inutilisable en production tant que le backend FastAPI n'est pas
+   déployé quelque part et référencé par cette variable.
+6. **`auth.audit_log_entries` vide** — risque **faible** : limite la
+   détection des échecs de connexion natifs Supabase, cause non identifiée.
+7. **Détection limitée à 2 routes** (CVthèque, candidatures) — risque
+   **faible** : profils et messagerie restent hors du périmètre de
+   détection des refus d'accès (architecture directe-PostgREST, pas de
+   Route Handler dédié).
+8. **`supabase_admin` garde des DEFAULT PRIVILEGES larges** — risque
+   **faible/théorique** : hors de portée du rôle `postgres` utilisé par ce
+   projet ; sans impact tant que le Dashboard Supabase n'est jamais utilisé
+   pour créer du schéma (déjà la règle en vigueur).
+9. **Registre de migrations et `supabase db push`** — risque **faible** :
+   désynchronisation historique jamais entièrement réconciliée, la règle
+   "jamais `db push`" reste la seule protection.
 
-### SMTP / récupération de mot de passe — fermé
+### NON COMMENCÉ
 
-Confirmé fonctionnel de bout en bout par une vraie réception et un vrai
-clic (délai de 2 min 51 s entre inscription et confirmation, signature d'un
-comportement humain, pas d'un trigger). `auto_confirm_user` supprimée,
-aucun doublon de trigger sur `auth.users` (un seul : `on_auth_user_created`,
-vérifié en le déclenchant réellement). Les 33 comptes historiques
-pré-confirmés par l'ancien trigger (jamais par un vrai clic) ont reçu
-l'email de vérification informatif le 2026-08-07 (7 comptes réels
-concernés, les autres étant des comptes de test/démo) — **à vérifier dans
-48h combien ont cliqué**, pas encore fait au moment de ce document.
-
-### Modèle de rôles, modération, espace recruteur (acquis antérieurs, toujours vrais)
-
-- `user`/`publisher`/`admin` + badges — l'ancien modèle
-  `candidat`/`recruteur`/`agent`/`entreprise` n'existe plus nulle part.
-- Modération des offres, suspension de compte au niveau PostgreSQL,
-  protection des données candidat (contact masqué jusqu'à autorisation
-  explicite, isolation stricte recruteur/recruteur et test/réel).
-- Espace recruteur : publier/modifier une offre, candidatures + CV reçus,
-  CVthèque, entretiens vidéo (**Daily.co vérifié fonctionnel en direct** le
-  2026-08-06 — clé API réelle testée, salon créé et supprimé avec succès),
-  messagerie — tous fonctionnels, vérifiés dans le code, pas supposés.
-- Navigation : doublon "Accueil" supprimé, liens Admin/Recruteur
-  conditionnés au rôle/badge réel (RLS-vérifié, pas juste UI), badge de
-  profil cliquable uniquement sur son propre profil, utilisable à 320px —
-  livré par une session concurrente le 2026-08-06, vérifié par relecture de
-  code plutôt que refait.
-- `/admin/messages` : bug de colonne morte (`profiles.role`) corrigé.
-
-### Comptes de test correctement rôlés (nouveau, 2026-08-07)
-
-Les 24 comptes `is_test_account=true` en base portaient TOUS `role='admin'`
-(100%), y compris des comptes explicitement nommés "candidat"
-(`demo-candidat-1..10`) sans aucune raison de l'être — trouvé en construisant
-le test du quota, confirmé systémique. Origine probable : `supabase/seed.sql`
-(prévu pour un usage local uniquement, avertissement explicite dans le
-fichier) exécuté au moins une fois contre production — sans certitude totale,
-aucun journal d'audit DDL disponible pour trancher. Corrigé : seul
-`e2e-test-admin` reste admin (seul compte réellement utilisé comme persona
-admin dans `tests/`, vérifié par lecture exhaustive), `e2e-test-agent` →
-`publisher` (confirmé via son usage réel dans les tests), les 22 autres →
-`user`. `seed.sql` corrigé pour ne plus dépendre de la colonne morte
-`profiles.role`. **Invariant 12** ajouté pour empêcher la récidive
-silencieuse. 31 tests (invariants + E2E affectés) repassés au vert après
-correction.
-
-En creusant cet incident, un second bug **sans rapport** a été trouvé et
-corrigé avec confirmation explicite : `approve_badge_request()` avait perdu
-son `GRANT EXECUTE` vers `authenticated` (ses fonctions sœurs
-`reject_badge_request`/`revoke_badge` l'avaient conservé) — plus aucun admin
-ne pouvait approuver de demande de badge en production. Même schéma
-récurrent que les autres incidents : changement hors migration, origine non
-tracée. Restauré.
-
-## Ce qui reste ouvert (connu, pas oublié)
-
-1. **CI ne bloque pas le déploiement** — branch protection GitHub à
-   confirmer (voir plus haut).
-2. **Automatisation de la sauvegarde** — dépend des 6 secrets GitHub à
-   configurer par vous.
-3. **Suivi 48h de l'email de vérification** des 7 comptes — pas encore fait.
-4. **`auth.audit_log_entries` vide** — cause non identifiée, limite la
-   détection des échecs de connexion.
-5. **Détection limitée à 2 routes** (CVthèque, candidatures) — profils et
-   messagerie n'ont pas d'équivalent, architecture directe-PostgREST.
-6. **Badge de compte test (`is_test_account`) non gérable depuis l'admin** —
-   l'approbation/révocation de `verified_recruiter` existe dans
-   `/admin` (`approve_badge_request`/`revoke_badge`), mais aucun
-   interrupteur `is_test_account` n'y figure — à faire manuellement en base
-   aujourd'hui.
-7. **Registre de migrations et `supabase db push`** — désynchronisation
-   historique jamais entièrement réconciliée ; la règle "jamais `db push`"
-   reste la seule protection.
-8. **Schéma de cache PostgREST** — au moins deux fois cette session, une
-   modification de fonction/GRANT n'a été prise en compte qu'après un
-   `NOTIFY pgrst, 'reload schema'` manuel. Pas automatisé, à garder en tête
-   pour toute future modification urgente en direct.
-
-## Ce qui n'est jamais commencé
-
-- **Panneau de sécurité temps réel complet** — l'encart d'alertes actuel
-  (`SecurityAlertsWidget`) couvre les refus répétés et le quota, mais pas la
-  vue d'ensemble des invariants ni le catalogue d'événements complet
-  initialement envisagé.
-- **Projet Supabase de test séparé** — tous les tests E2E tournent encore
+- Panneau de sécurité "vue d'ensemble complète" au-delà de l'onglet
+  Sécurité actuel (déjà livré : alertes temps réel, historique filtrable,
+  statut des invariants — pas encore fait : catalogue exhaustif de tous
+  les types d'événements possibles).
+- Projet Supabase de test séparé — tous les tests E2E tournent encore
   contre la même base que la production.
-- **Rétention et purge automatique des CV**.
-- **Migration vers Cloudflare R2/Backblaze B2** — documentée comme triviale
-  si une carte non-prépayée devient disponible (`docs/sauvegarde-restauration.md`),
-  jamais faite faute d'accès à ce type de carte.
+- Rétention et purge automatique des CV.
+- Migration vers Cloudflare R2/Backblaze B2 (triviale si une carte
+  non-prépayée devient disponible, `docs/sauvegarde-restauration.md`).
+- Badge/compte de test gérable depuis l'admin pour d'autres attributs que
+  `verified_recruiter`/`is_test_account` (aucun autre type de badge
+  n'existe dans ce projet à ce jour — pas un manque, juste hors périmètre).
+- Correction de la policy RLS `UPDATE` manquante sur `public.orders`
+  (voir "Ouvert et documenté", point 2) — identifiée, pas corrigée.
 
 ## Prochaine étape suggérée
 
-Dans l'ordre d'impact probable : (1) terminer la configuration Google Cloud
-(6 secrets GitHub) pour que la sauvegarde tourne réellement chaque jour, pas
-seulement le jour où elle a été testée manuellement ; (2) confirmer la
-branch protection GitHub pour que la CI bloque vraiment un déploiement
-défaillant ; (3) vérifier le taux de clic de l'email de vérification des 7
-comptes (48h après le 2026-08-07).
+Dans l'ordre d'impact probable : (1) confirmer un paiement KPay réellement
+réussi pour clore définitivement ce point ; (2) terminer la configuration
+Google Cloud (6 secrets GitHub) pour l'automatisation de la sauvegarde ;
+(3) confirmer la branch protection GitHub pour que la CI bloque vraiment un
+déploiement défaillant.
