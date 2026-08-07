@@ -93,6 +93,32 @@ function formatAge(isoDate) {
   return `il y a ${days} j`;
 }
 
+// Interrupteur compact réutilisé pour "Recruteur vérifié" et "Compte de
+// test" dans la liste des comptes (partie C) — un bouton natif plutôt
+// qu'un <input type="checkbox"> stylé, pour garder le même pattern
+// cursor-pointer/disabled que le reste de cette page.
+function ToggleSwitch({ checked, onChange, disabled, title, activeColorClass }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      title={title}
+      onClick={onChange}
+      disabled={disabled}
+      className={`relative w-9 h-5 rounded-full transition-colors shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+        checked ? activeColorClass : "bg-gray-200"
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-xs transition-transform ${
+          checked ? "translate-x-4" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
+
 function growthPercent(current, previous) {
   if (previous === 0) return current > 0 ? 100 : 0;
   return Math.round(((current - previous) / previous) * 100);
@@ -339,6 +365,74 @@ export default function AdminDashboardPage() {
     triggerToast("Badge retiré.", "fa-circle-check");
   };
 
+  // Interrupteur "Recruteur vérifié" (partie C) : bascule via les deux RPC
+  // dédiées (grant_verified_recruiter_badge / revoke_badge existant), jamais
+  // un UPDATE direct sur profiles.badges depuis le client. Confirmation
+  // obligatoire à l'activation si la cible n'est pas déjà marquée compte de
+  // test — vérifiée côté client sur l'état chargé, la RPC elle-même n'a pas
+  // à connaître cette règle de confirmation (garde-fou UX, pas de sécurité).
+  const handleToggleVerifiedBadge = async (targetUser) => {
+    const hasBadge = (targetUser.badges || []).includes("verified_recruiter");
+
+    if (!hasBadge && !targetUser.is_test_account) {
+      const confirmed = window.confirm(
+        `Ce compte accédera au fil de CV des candidats réels. Confirmer l'attribution du badge "Recruteur vérifié" à ${targetUser.full_name || targetUser.email} ?`
+      );
+      if (!confirmed) return;
+    }
+
+    setUpdatingUserId(targetUser.id);
+    const { error } = hasBadge
+      ? await supabase.rpc("revoke_badge", {
+          target_user_id: targetUser.id,
+          badge_name: "verified_recruiter",
+          reason: "Retiré depuis l'interrupteur de la liste des comptes",
+        })
+      : await supabase.rpc("grant_verified_recruiter_badge", {
+          target_user_id: targetUser.id,
+          reason: "Attribué depuis l'interrupteur de la liste des comptes",
+        });
+    setUpdatingUserId(null);
+
+    if (error) {
+      triggerToast("Impossible de modifier ce badge : " + error.message, "fa-triangle-exclamation");
+      return;
+    }
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === targetUser.id
+          ? {
+              ...u,
+              badges: hasBadge
+                ? (u.badges || []).filter((b) => b !== "verified_recruiter")
+                : [...(u.badges || []), "verified_recruiter"],
+            }
+          : u
+      )
+    );
+    triggerToast(hasBadge ? "Badge retiré." : "Badge « Recruteur vérifié » attribué.", "fa-circle-check");
+  };
+
+  const handleToggleTestAccount = async (targetUser) => {
+    const nextValue = !targetUser.is_test_account;
+    setUpdatingUserId(targetUser.id);
+    const { error } = await supabase.rpc("set_test_account_flag", {
+      target_user_id: targetUser.id,
+      is_test: nextValue,
+      reason: "Basculé depuis l'interrupteur de la liste des comptes",
+    });
+    setUpdatingUserId(null);
+
+    if (error) {
+      triggerToast("Impossible de modifier ce statut : " + error.message, "fa-triangle-exclamation");
+      return;
+    }
+
+    setUsers((prev) => prev.map((u) => (u.id === targetUser.id ? { ...u, is_test_account: nextValue } : u)));
+    triggerToast(nextValue ? "Marqué comme compte de test." : "Retiré des comptes de test.", "fa-circle-check");
+  };
+
   const handleModerateOffer = async (offerId, decision) => {
     setModeratingId(offerId);
     const { data: ok, error } = await supabase.rpc("moderate_job_offer", { offer_id: offerId, decision });
@@ -451,6 +545,8 @@ export default function AdminDashboardPage() {
       conversionRate,
     };
   }, [users, offers, applications, resumes, roleFilter, periodMs]);
+
+  const isConnectedAccountTest = users.find((u) => u.id === userSession?.user?.id)?.is_test_account === true;
 
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
@@ -671,6 +767,13 @@ export default function AdminDashboardPage() {
               </span>
             </div>
           </div>
+
+          {isConnectedAccountTest && (
+            <div className="mb-6 p-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-800 text-xs font-bold flex items-center gap-2">
+              <i className="fa-solid fa-flask"></i>
+              <span>Mode test — données fictives. Ce compte administrateur est marqué comme compte de test.</span>
+            </div>
+          )}
 
           {/* Onglets horizontaux (Desktop) */}
           <div className="hidden sm:flex items-center gap-1 bg-gray-100 p-1.5 rounded-2xl mb-6 overflow-x-auto">
@@ -1011,7 +1114,27 @@ export default function AdminDashboardPage() {
                             {user.created_at ? new Date(user.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "Inconnue"}
                           </td>
                           <td className="py-4 px-6 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-3">
+                              <div className="flex items-center gap-1.5" title="Recruteur vérifié">
+                                <span className="text-[10px] font-bold text-gray-400 hidden lg:inline">🎖️</span>
+                                <ToggleSwitch
+                                  checked={(user.badges || []).includes("verified_recruiter")}
+                                  onChange={() => handleToggleVerifiedBadge(user)}
+                                  disabled={updatingUserId === user.id}
+                                  title="Recruteur vérifié"
+                                  activeColorClass="bg-emerald-500"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5" title="Compte de test">
+                                <span className="text-[10px] font-bold text-gray-400 hidden lg:inline">🧪</span>
+                                <ToggleSwitch
+                                  checked={Boolean(user.is_test_account)}
+                                  onChange={() => handleToggleTestAccount(user)}
+                                  disabled={updatingUserId === user.id}
+                                  title="Compte de test"
+                                  activeColorClass="bg-purple-500"
+                                />
+                              </div>
                               <select
                                 value={user.role || "user"}
                                 onChange={(e) => handleRoleChange(user.id, e.target.value)}
