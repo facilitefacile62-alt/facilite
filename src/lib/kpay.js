@@ -6,10 +6,12 @@
  * webhooks,authentification,erreurs} le 2026-07-31 : aucun champ ni endpoint
  * ci-dessous n'est deviné.
  *
- * Authentification : deux clés, toutes deux réservées au serveur. La
- * documentation KPay est explicite là-dessus ("elles ne voyagent que de
- * serveur à serveur") malgré le nom NEXT_PUBLIC_KPAY_PUBLIC_KEY — on ne
- * l'expose donc jamais côté client, uniquement lue ici (code serveur).
+ * Authentification : deux clés. KPAY_SECRET_KEY (X-Secret-Key) ne quitte
+ * jamais le serveur — lue uniquement ici et dans les routes API, absente de
+ * tout code client. NEXT_PUBLIC_KPAY_PUBLIC_KEY (X-API-Key) est en revanche
+ * légitimement exposée côté client (voir src/lib/kpayClientInfo.js) : c'est
+ * une clé publique au sens Stripe/publishable key, faite pour ça malgré le
+ * terme "clé API" — seule KPAY_SECRET_KEY doit rester secrète.
  */
 
 const KPAY_API_BASE = "https://admin.kpay.site/api/v1";
