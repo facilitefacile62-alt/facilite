@@ -1,8 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
-const path = require("path");
 const { runPrivilegedSql } = require("../helpers/privilegedSql");
+const { loadTestEnv } = require("../helpers/testEnv");
 
 /**
  * Étape 3 du chantier : modération des offres (draft/pending_review/
@@ -12,16 +11,6 @@ const { runPrivilegedSql } = require("../helpers/privilegedSql");
  * — testé contre l'API réelle (clé anon + JWT), pas une simulation.
  */
 
-function loadEnvLocal() {
-  const envPath = path.resolve(__dirname, "../../.env.local");
-  const content = fs.readFileSync(envPath, "utf-8");
-  const env = {};
-  for (const line of content.split("\n")) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2].trim();
-  }
-  return env;
-}
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
 const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETest2026!";
@@ -36,7 +25,7 @@ test.describe("Modération des offres d'emploi", () => {
   const createdOfferIds = [];
 
   test.beforeAll(async () => {
-    const env = loadEnvLocal();
+    const env = loadTestEnv();
     candidateClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     securityClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     adminClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -198,7 +187,7 @@ test.describe("Signalements (reports)", () => {
   const createdReportIds = [];
 
   test.beforeAll(async () => {
-    const env = loadEnvLocal();
+    const env = loadTestEnv();
     candidateClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     securityClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     adminClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);

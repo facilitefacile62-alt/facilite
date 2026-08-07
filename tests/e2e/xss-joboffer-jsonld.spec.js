@@ -1,8 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
-const path = require("path");
 const { runPrivilegedSql } = require("../helpers/privilegedSql");
+const { loadTestEnv } = require("../helpers/testEnv");
 
 /**
  * Régression pour le XSS stocké trouvé lors de l'audit sécurité (point 107
@@ -15,16 +14,6 @@ const { runPrivilegedSql } = require("../helpers/privilegedSql");
  * service_role), puis visite anonyme de la page publique.
  */
 
-function loadEnvLocal() {
-  const envPath = path.resolve(__dirname, "../../.env.local");
-  const content = fs.readFileSync(envPath, "utf-8");
-  const env = {};
-  for (const line of content.split("\n")) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2].trim();
-  }
-  return env;
-}
 
 const RECRUITER_EMAIL = process.env.E2E_RECRUITER_EMAIL || "demo.senetech@facilite-demo.local";
 const RECRUITER_PASSWORD = process.env.E2E_RECRUITER_PASSWORD || "FaciliteDemo2026!";
@@ -37,7 +26,7 @@ test.describe("Sécurité — XSS stocké via JSON-LD (offre d'emploi)", () => {
   let offerId;
 
   test.beforeAll(async () => {
-    const env = loadEnvLocal();
+    const env = loadTestEnv();
     supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     const adminClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 

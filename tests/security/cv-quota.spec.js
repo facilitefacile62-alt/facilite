@@ -1,8 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
-const path = require("path");
 const { runPrivilegedSql } = require("../helpers/privilegedSql");
+const { loadTestEnv } = require("../helpers/testEnv");
 
 /**
  * Quota quotidien de consultations de profil candidat (Point 1 du chantier
@@ -20,16 +19,6 @@ const { runPrivilegedSql } = require("../helpers/privilegedSql");
  * tournent alors.
  */
 
-function loadEnvLocal() {
-  const envPath = path.resolve(__dirname, "../../.env.local");
-  const content = fs.readFileSync(envPath, "utf-8");
-  const env = {};
-  for (const line of content.split("\n")) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2].trim().replace(/^"(.*)"$/, "$1");
-  }
-  return env;
-}
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-test-admin@facilite-demo.local";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "FaciliteE2ETest2026!";
@@ -46,7 +35,7 @@ test.describe("Quota quotidien de consultations CV (record_cv_consultations)", (
   let hasServiceRole = false;
 
   test.beforeAll(async () => {
-    env = loadEnvLocal();
+    env = loadTestEnv();
     anonClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     recruiterClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 

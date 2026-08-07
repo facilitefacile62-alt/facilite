@@ -1,8 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
-const path = require("path");
 const { runPrivilegedSql } = require("../helpers/privilegedSql");
+const { loadTestEnv } = require("../helpers/testEnv");
 
 /**
  * Étape F du chantier (2026-08-03) — get_recruiter_overview_stats(),
@@ -12,16 +11,6 @@ const { runPrivilegedSql } = require("../helpers/privilegedSql");
  * gate badge, isolation entre recruteurs, agrégats corrects.
  */
 
-function loadEnvLocal() {
-  const envPath = path.resolve(__dirname, "../../.env.local");
-  const content = fs.readFileSync(envPath, "utf-8");
-  const env = {};
-  for (const line of content.split("\n")) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2].trim();
-  }
-  return env;
-}
 
 const SECURITY_EMAIL = process.env.E2E_SECURITY_EMAIL || "e2e-test-security@facilite-demo.local";
 const SECURITY_PASSWORD = process.env.E2E_SECURITY_PASSWORD || "FaciliteE2ETest2026!";
@@ -31,7 +20,7 @@ test.describe("KPI recruteur — get_recruiter_overview_stats / daily_candidatur
   let securityClient, securityId;
 
   test.beforeAll(async () => {
-    const env = loadEnvLocal();
+    const env = loadTestEnv();
     securityClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     const { data } = await securityClient.auth.signInWithPassword({ email: SECURITY_EMAIL, password: SECURITY_PASSWORD });
     securityId = data.user.id;

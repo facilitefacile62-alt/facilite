@@ -1,7 +1,6 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
-const path = require("path");
+const { loadTestEnv } = require("../helpers/testEnv");
 
 /**
  * Vérifie le verrouillage deny-by-default de profiles (20260802060000) :
@@ -11,16 +10,6 @@ const path = require("path");
  * silence), et badges/role restent bloqués.
  */
 
-function loadEnvLocal() {
-  const envPath = path.resolve(__dirname, "../../.env.local");
-  const content = fs.readFileSync(envPath, "utf-8");
-  const env = {};
-  for (const line of content.split("\n")) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2].trim();
-  }
-  return env;
-}
 
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
 const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETest2026!";
@@ -31,7 +20,7 @@ test.describe("RBAC — profiles deny-by-default", () => {
   let originalBio;
 
   test.beforeAll(async () => {
-    const env = loadEnvLocal();
+    const env = loadTestEnv();
     supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     const { data, error } = await supabase.auth.signInWithPassword({
       email: CANDIDATE_EMAIL,

@@ -1,8 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
-const path = require("path");
 const { runPrivilegedSql } = require("../helpers/privilegedSql");
+const { loadTestEnv } = require("../helpers/testEnv");
 
 /**
  * Partie D du chantier admin (2026-08-07) — onglet Sécurité :
@@ -22,16 +21,6 @@ const { runPrivilegedSql } = require("../helpers/privilegedSql");
  * vraie erreur d'autorisation, testé aussi.
  */
 
-function loadEnvLocal() {
-  const envPath = path.resolve(__dirname, "../../.env.local");
-  const content = fs.readFileSync(envPath, "utf-8");
-  const env = {};
-  for (const line of content.split("\n")) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2].trim();
-  }
-  return env;
-}
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-test-admin@facilite-demo.local";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "FaciliteE2ETest2026!";
@@ -44,7 +33,7 @@ test.describe("Onglet Sécurité admin — accès et temps réel", () => {
   let publisherClient;
 
   test.beforeAll(async () => {
-    env = loadEnvLocal();
+    env = loadTestEnv();
     adminClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     publisherClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 

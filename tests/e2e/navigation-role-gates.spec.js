@@ -1,8 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
 const path = require("path");
 const { runPrivilegedSql } = require("../helpers/privilegedSql");
+const { loadTestEnv } = require("../helpers/testEnv");
 
 /**
  * Les 7 tests exigés par la Partie 9 du chantier du 2026-08-06
@@ -18,16 +18,6 @@ const { runPrivilegedSql } = require("../helpers/privilegedSql");
  * ici (hors périmètre de ce point).
  */
 
-function loadEnvLocal() {
-  const envPath = path.resolve(__dirname, "../../.env.local");
-  const content = fs.readFileSync(envPath, "utf-8");
-  const env = {};
-  for (const line of content.split("\n")) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2].trim().replace(/^"(.*)"$/, "$1");
-  }
-  return env;
-}
 
 async function createThrowawayUser(anonClient, label) {
   const email = `${label}-${Date.now()}@facilite-demo.local`;
@@ -53,7 +43,7 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
   let plainUser, badgedRecruiter, adminUser;
 
   test.beforeAll(async () => {
-    env = loadEnvLocal();
+    env = loadTestEnv();
     anonClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
     plainUser = await createThrowawayUser(anonClient, "gate-plain");

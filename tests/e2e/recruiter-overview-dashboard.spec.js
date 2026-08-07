@@ -1,19 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
-const path = require("path");
 const { runPrivilegedSql } = require("../helpers/privilegedSql");
+const { loadTestEnv } = require("../helpers/testEnv");
 
-function loadEnvLocal() {
-  const envPath = path.resolve(__dirname, "../../.env.local");
-  const content = fs.readFileSync(envPath, "utf-8");
-  const env = {};
-  for (const line of content.split("\n")) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2].trim();
-  }
-  return env;
-}
 
 /**
  * Étape F du chantier (2026-08-03) — onglet "Vue d'ensemble" du tableau de
@@ -59,7 +48,7 @@ test.describe("Tableau de bord recruteur — Vue d'ensemble (KPI + entonnoir)", 
     // voir un état vide explicite plutôt qu'un tableau de bord cassé —
     // vérifié en isolation, sans dépendre de l'état laissé par d'autres
     // fichiers (badge accordé/révoqué localement à ce test).
-    const env = loadEnvLocal();
+    const env = loadTestEnv();
     const client = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     const { data } = await client.auth.signInWithPassword({ email: "e2e-test-security@facilite-demo.local", password: "FaciliteE2ETest2026!" });
     const securityId = data.user.id;

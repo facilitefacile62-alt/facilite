@@ -1,8 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
-const path = require("path");
 const { runPrivilegedSql } = require("../helpers/privilegedSql");
+const { loadTestEnv } = require("../helpers/testEnv");
 
 /**
  * Étape E du chantier (2026-08-03) — mode démo : le compte
@@ -12,16 +11,6 @@ const { runPrivilegedSql } = require("../helpers/privilegedSql");
  * directement contre l'API avec la clé anon, pas une simulation.
  */
 
-function loadEnvLocal() {
-  const envPath = path.resolve(__dirname, "../../.env.local");
-  const content = fs.readFileSync(envPath, "utf-8");
-  const env = {};
-  for (const line of content.split("\n")) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2].trim();
-  }
-  return env;
-}
 
 const DEMO_RECRUITER_ID = "90000000-0000-4000-a000-000000000099";
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
@@ -35,7 +24,7 @@ test.describe("Mode démo — isolation vis-à-vis du site public", () => {
   let anonClient, candidateClient, securityClient, securityId;
 
   test.beforeAll(async () => {
-    const env = loadEnvLocal();
+    const env = loadTestEnv();
     anonClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     candidateClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     securityClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -76,7 +65,7 @@ test.describe("Mode démo — isolation vis-à-vis du site public", () => {
   });
 
   test("le compte démo voit bien ses propres offres et candidatures (tableau de bord fonctionnel)", async () => {
-    const env = loadEnvLocal();
+    const env = loadTestEnv();
     const demoClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     const { error: authErr } = await demoClient.auth.signInWithPassword({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
     expect(authErr, `Connexion compte démo échouée : ${authErr?.message}`).toBeNull();
