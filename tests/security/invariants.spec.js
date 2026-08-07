@@ -3,6 +3,52 @@ const fs = require("fs");
 const path = require("path");
 const { runIntrospectionSql } = require("../helpers/privilegedSql");
 
+// Alimente l'encart "Invariants de sécurité" de l'onglet Sécurité admin
+// (partie D, 2026-08-07) : après CHAQUE invariant, écrit son résultat réel
+// dans public.invariant_status via la même connexion privilégiée que le
+// reste de ce fichier (jamais via PostgREST/RPC — cette table n'est pas
+// censée être écrivable depuis l'app). "Fail" inclut aussi bien un
+// assertion échouée qu'un crash du test lui-même (timeout, erreur CLI) :
+// dans les deux cas, l'invariant n'est PAS prouvé tenir, donc rouge.
+// Best-effort : un échec d'écriture ici ne doit jamais faire échouer le
+// test lui-même (ce serait un invariant qui casse à cause de son propre
+// reporting), juste un avertissement console.
+function escapeSqlLiteral(value) {
+  return String(value).replace(/'/g, "''");
+}
+
+test.afterEach(async ({}, testInfo) => {
+  const match = testInfo.title.match(/Invariant (\d+)/);
+  if (!match) return;
+
+  const key = `invariant_${match[1]}`;
+  const status = testInfo.status === "passed" ? "pass" : "fail";
+  const errorSummary =
+    status === "fail" ? (testInfo.errors[0]?.message || "Échec sans message d'erreur capturé").slice(0, 500) : null;
+
+  const sql = `
+    INSERT INTO public.invariant_status (invariant_key, label, status, last_run_at, error_summary)
+    VALUES (
+      '${escapeSqlLiteral(key)}',
+      '${escapeSqlLiteral(testInfo.title)}',
+      '${status}',
+      now(),
+      ${errorSummary ? `'${escapeSqlLiteral(errorSummary)}'` : "NULL"}
+    )
+    ON CONFLICT (invariant_key) DO UPDATE SET
+      label = EXCLUDED.label,
+      status = EXCLUDED.status,
+      last_run_at = EXCLUDED.last_run_at,
+      error_summary = EXCLUDED.error_summary;
+  `;
+
+  try {
+    await runIntrospectionSql(sql);
+  } catch (err) {
+    console.warn(`[invariant_status] Échec d'écriture pour ${key} (n'affecte pas le résultat du test) : ${err.message}`);
+  }
+});
+
 /**
  * Les 6 invariants de sécurité — voir docs/invariants-securite.md pour
  * l'explication en français simple de chacun, et quoi faire quand il

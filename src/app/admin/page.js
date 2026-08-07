@@ -9,17 +9,28 @@ import RoleBadge from "@/components/RoleBadge";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
-import SecurityAlertsWidget from "@/components/SecurityAlertsWidget";
+import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityAlertsWidget";
 
 // "Utilisateurs", "Tarification" et "Messagerie Support" ont migré dans
 // NAV_SECTIONS (sidebar catégorisée) — les garder ici aurait recréé le
 // doublon d'accès trouvé en B0 (deux chemins vers /admin/messages).
 const TABS = [
   { id: "dashboard", label: "Tableau de bord", icon: "📊" },
+  { id: "securite", label: "Sécurité", icon: "🛡️" },
   { id: "badges", label: "Demandes de badge", icon: "🎖️" },
   { id: "offres", label: "Offres d'emploi", icon: "💼" },
   { id: "ia", label: "Assistant IA & CV", icon: "🤖" },
 ];
+
+// Rang de gravité pour le tri "gravité puis date" de l'onglet Sécurité —
+// mêmes 3 couleurs que securityEventStyle (SecurityAlertsWidget.jsx),
+// dérivées de event_type plutôt que de la colonne severity brute pour
+// rester cohérent avec la demande explicite (rouge access_denied, orange
+// quota).
+const SECURITY_EVENT_SEVERITY_RANK = { access_denied: 2, repeated_access_denial: 2, cv_quota_exceeded: 1 };
+function securityEventSeverityRank(eventType) {
+  return SECURITY_EVENT_SEVERITY_RANK[eventType] ?? 0;
+}
 
 // Sidebar catégorisée (B1) : chaque entrée est soit un vrai lien (type
 // "link", navigue vers une autre page — actif si l'URL courante correspond),
@@ -152,6 +163,14 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [tableRoleFilter, setTableRoleFilter] = useState("all");
   const [updatingUserId, setUpdatingUserId] = useState(null);
+
+  // --- Onglet Sécurité (partie D) ---
+  const [securityAlerts, setSecurityAlerts] = useState([]);
+  const [securityLoading, setSecurityLoading] = useState(true);
+  const [securityFilterType, setSecurityFilterType] = useState("all");
+  const [securityFilterSeverity, setSecurityFilterSeverity] = useState("all");
+  const [invariantStatuses, setInvariantStatuses] = useState([]);
+  const [resolvingAlertId, setResolvingAlertId] = useState(null);
 
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-check" });
   const triggerToast = (message, icon = "fa-circle-check") => {
@@ -463,6 +482,103 @@ export default function AdminDashboardPage() {
     setPendingReports((prev) => prev.filter((r) => r.id !== reportId));
     triggerToast("Signalement marqué comme résolu.", "fa-circle-check");
   };
+
+  // --- Onglet Sécurité (partie D) ---
+  const loadSecurityData = async () => {
+    setSecurityLoading(true);
+    const [alertsRes, invariantsRes] = await Promise.all([
+      supabase.rpc("get_security_alert_history", {
+        p_days: 30,
+        p_event_type: securityFilterType === "all" ? null : securityFilterType,
+        p_severity: securityFilterSeverity === "all" ? null : securityFilterSeverity,
+      }),
+      supabase.from("invariant_status").select("*").order("invariant_key"),
+    ]);
+    setSecurityLoading(false);
+
+    if (alertsRes.error) {
+      console.error("Erreur chargement alertes sécurité:", alertsRes.error);
+    } else {
+      setSecurityAlerts(alertsRes.data || []);
+    }
+    if (invariantsRes.error) {
+      console.error("Erreur chargement statut des invariants:", invariantsRes.error);
+    } else {
+      setInvariantStatuses(invariantsRes.data || []);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== "securite" || !myRole) return;
+    loadSecurityData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, myRole, securityFilterType, securityFilterSeverity]);
+
+  // Temps réel : un canal par utilisateur connecté, jamais partagé. RLS
+  // ("Seuls les admins lisent les logs", is_admin(auth.uid())) s'applique
+  // à l'abonnement postgres_changes lui-même — un publisher/candidat abonné
+  // au même canal ne recevrait rien, vérifié dans
+  // tests/e2e/security-tab-realtime-and-access.spec.js. On se contente de
+  // recharger la liste au lieu de fusionner l'événement brut à la main :
+  // le payload Realtime ne porte pas actor_email (jointure faite dans la
+  // RPC), une fusion partielle afficherait "compte non identifié" à tort.
+  useEffect(() => {
+    if (activeTab !== "securite" || !myRole) return;
+    const channel = supabase
+      .channel("admin-security-logs")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "security_logs" }, () => {
+        loadSecurityData();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, myRole]);
+
+  const handleResolveAlert = async (alertId, action) => {
+    setResolvingAlertId(alertId);
+    const { data: ok, error } = await supabase.rpc("resolve_security_alert", { p_log_id: alertId, p_action: action });
+    setResolvingAlertId(null);
+
+    if (error || !ok) {
+      triggerToast("Impossible de mettre à jour cette alerte : " + (error?.message || "introuvable"), "fa-triangle-exclamation");
+      return;
+    }
+
+    setSecurityAlerts((prev) =>
+      prev.map((a) =>
+        a.id === alertId
+          ? { ...a, resolved_status: action, resolved_at: new Date().toISOString(), resolved_by_email: userSession?.user?.email }
+          : a
+      )
+    );
+    triggerToast(action === "resolved" ? "Alerte marquée comme résolue." : "Alerte ignorée.", "fa-circle-check");
+  };
+
+  const handleSuspendFromAlert = async (alert) => {
+    if (!alert.actor_id) return;
+    setResolvingAlertId(alert.id);
+    const res = await fetch(`/api/admin/users/${alert.actor_id}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${userSession.access_token}` },
+      body: JSON.stringify({ status: "suspended" }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setResolvingAlertId(null);
+
+    if (!res.ok) {
+      triggerToast("Impossible de suspendre ce compte : " + (body.error || "erreur inconnue"), "fa-triangle-exclamation");
+      return;
+    }
+
+    setUsers((prev) => prev.map((u) => (u.id === alert.actor_id ? { ...u, status: "suspended" } : u)));
+    triggerToast(`${alert.actor_email || "Compte"} suspendu depuis l'alerte.`, "fa-user-slash");
+  };
+
+  const openSecurityAlerts = securityAlerts
+    .filter((a) => a.resolved_status === "open")
+    .sort((a, b) => securityEventSeverityRank(b.event_type) - securityEventSeverityRank(a.event_type) || new Date(b.created_at) - new Date(a.created_at));
 
   const handleApproveBadgeRequest = async (requestId) => {
     setUpdatingUserId(requestId);
@@ -1003,6 +1119,191 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </>
+          )}
+
+          {activeTab === "securite" && (
+            <div className="space-y-6">
+              {/* Encart Invariants de sécurité */}
+              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-extrabold text-gray-900">Invariants de sécurité</h2>
+                    <p className="text-xs text-gray-500 font-medium">
+                      Résultat réel de la dernière exécution (CI ou manuelle) — jamais recalculé depuis cette page.
+                    </p>
+                  </div>
+                  <span className="text-xs font-extrabold text-gray-500">
+                    {invariantStatuses.filter((i) => i.status === "pass").length} / {invariantStatuses.length} au vert
+                  </span>
+                </div>
+                {invariantStatuses.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">Aucune exécution enregistrée pour l'instant.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {invariantStatuses.map((inv) => (
+                      <div
+                        key={inv.invariant_key}
+                        title={inv.error_summary || inv.label}
+                        className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold ${
+                          inv.status === "pass" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
+                        }`}
+                      >
+                        <i className={`fa-solid ${inv.status === "pass" ? "fa-circle-check" : "fa-circle-xmark"}`}></i>
+                        <div className="min-w-0">
+                          <div className="truncate">{inv.label}</div>
+                          <div className="text-[10px] opacity-60 font-medium">
+                            {new Date(inv.last_run_at).toLocaleString("fr-FR")}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Alertes actives non résolues */}
+              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-extrabold text-gray-900">Alertes actives ({openSecurityAlerts.length})</h2>
+                  <p className="text-xs text-gray-500 font-medium">Triées par gravité puis par date, temps réel</p>
+                </div>
+                {securityLoading ? (
+                  <div className="p-8 text-center text-gray-400 text-xs">Chargement...</div>
+                ) : openSecurityAlerts.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400 italic text-xs">Aucune alerte active.</div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {openSecurityAlerts.map((a) => {
+                      const style = securityEventStyle(a.event_type);
+                      return (
+                        <div key={a.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="min-w-0 flex items-start gap-3">
+                            <span className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${style.dot}`}></span>
+                            <div className="min-w-0">
+                              <span className="text-sm font-extrabold text-gray-900 block">{a.event_type}</span>
+                              <span className="text-xs text-gray-500 font-medium">
+                                {a.actor_email || "compte non identifié"}
+                                {a.ip_address ? ` — ${a.ip_address}` : ""}
+                                {a.details?.route ? ` — ${a.details.route}` : ""}
+                              </span>
+                              <p className="text-[10px] text-gray-400 mt-1">{new Date(a.created_at).toLocaleString("fr-FR")}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                            {a.actor_id && (
+                              <button
+                                type="button"
+                                onClick={() => handleSuspendFromAlert(a)}
+                                disabled={resolvingAlertId === a.id}
+                                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                              >
+                                Suspendre le compte
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleResolveAlert(a.id, "ignored")}
+                              disabled={resolvingAlertId === a.id}
+                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                            >
+                              Ignorer
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResolveAlert(a.id, "resolved")}
+                              disabled={resolvingAlertId === a.id}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                            >
+                              Marquer comme résolu
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Historique 30 jours + filtres */}
+              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+                <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-extrabold text-gray-900">Historique (30 derniers jours)</h2>
+                    <p className="text-xs text-gray-500 font-medium">{securityAlerts.length} événement(s)</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <select
+                      value={securityFilterType}
+                      onChange={(e) => setSecurityFilterType(e.target.value)}
+                      className="px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-orange-500"
+                    >
+                      <option value="all">Tous les types</option>
+                      <option value="access_denied">access_denied</option>
+                      <option value="repeated_access_denial">repeated_access_denial</option>
+                      <option value="cv_quota_exceeded">cv_quota_exceeded</option>
+                    </select>
+                    <select
+                      value={securityFilterSeverity}
+                      onChange={(e) => setSecurityFilterSeverity(e.target.value)}
+                      className="px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-orange-500"
+                    >
+                      <option value="all">Toutes gravités</option>
+                      <option value="critical">critical</option>
+                      <option value="warning">warning</option>
+                      <option value="info">info</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-gray-50">
+                      <tr className="border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
+                        <th className="py-3 px-6">Type</th>
+                        <th className="py-3 px-6">Compte</th>
+                        <th className="py-3 px-6">IP</th>
+                        <th className="py-3 px-6">Date</th>
+                        <th className="py-3 px-6">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-xs font-medium">
+                      {securityAlerts.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="py-8 text-center text-gray-400 italic">
+                            Aucun événement sur cette période.
+                          </td>
+                        </tr>
+                      ) : (
+                        securityAlerts.map((a) => {
+                          const style = securityEventStyle(a.event_type);
+                          return (
+                            <tr key={a.id} className="hover:bg-gray-50/50 transition">
+                              <td className="py-3 px-6">
+                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${style.row}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`}></span>
+                                  {a.event_type}
+                                </span>
+                              </td>
+                              <td className="py-3 px-6 text-gray-600">{a.actor_email || "compte non identifié"}</td>
+                              <td className="py-3 px-6 text-gray-500 font-mono text-[11px]">{a.ip_address || "—"}</td>
+                              <td className="py-3 px-6 text-gray-500">{new Date(a.created_at).toLocaleString("fr-FR")}</td>
+                              <td className="py-3 px-6">
+                                {a.resolved_status === "open" ? (
+                                  <span className="text-amber-700 font-bold">Ouverte</span>
+                                ) : a.resolved_status === "resolved" ? (
+                                  <span className="text-emerald-700 font-bold">Résolue{a.resolved_by_email ? ` — ${a.resolved_by_email}` : ""}</span>
+                                ) : (
+                                  <span className="text-gray-400 font-bold">Ignorée</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           )}
 
           {activeTab === "utilisateurs" && (
