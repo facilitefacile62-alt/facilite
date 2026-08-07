@@ -1,0 +1,22 @@
+-- =====================================================================
+-- approve_badge_request() avait perdu son GRANT EXECUTE vers authenticated
+-- — trouvé le 2026-08-07 en faisant tourner tests/e2e/badge-privilege-escalation.spec.js
+-- après la correction des rôles des comptes de test (aucun compte
+-- authenticated, admin compris, ne pouvait plus appeler cette fonction :
+-- "permission denied for function approve_badge_request").
+--
+-- La migration d'origine (20260802080000_badge_requests.sql) accorde bien
+-- ce GRANT ; aucune migration ultérieure ne le révoque (seul
+-- 20260802200000_security_advisor_fixes.sql retire l'accès à `anon`,
+-- jamais à `authenticated`). Ses deux fonctions sœurs
+-- (reject_badge_request, revoke_badge) ont conservé leur GRANT intact,
+-- même mécanisme interne (SECURITY DEFINER + vérification
+-- current_user_role() IN ('admin','publisher')) — rien ne distingue
+-- approve_badge_request au point de justifier une exception. Origine du
+-- retrait non déterminée (même schéma récurrent que les autres incidents
+-- de ce chantier : changement hors migration, non tracé).
+--
+-- Restauré ici après confirmation explicite de l'utilisateur (pas de ma
+-- propre initiative — voir la règle : ne jamais rétablir un GRANT sans
+-- validation).
+GRANT EXECUTE ON FUNCTION public.approve_badge_request(UUID) TO authenticated;
