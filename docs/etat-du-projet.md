@@ -138,6 +138,12 @@ fichier pour le détail complet si besoin.
   récidive silencieuse pour toute fonction critique).
 - **ALTER DEFAULT PRIVILEGES sur `public`** — corrigé à la source pour le
   rôle `postgres`, vérifié par test, surveillé en continu par Invariant 1.
+- **`payment_reference` NULL sur les commandes** — policy RLS `UPDATE`
+  manquante ajoutée (scopée au propriétaire, colonne `payment_reference`
+  uniquement — le `GRANT` de la vague 3 restait déjà correctement limité,
+  seule la policy manquait). Vérifié : une commande fraîche obtient bien sa
+  référence, `payment_status` reste inaccessible au propriétaire, une
+  commande d'un autre compte reste inaccessible.
 - **KPay checkout et webhook** — chaîne technique prouvée fonctionnelle de
   bout en bout (signature acceptée, traitement correct selon statut).
 - **Tableau de bord admin** — navigation réorganisée, onglet Sécurité
@@ -158,39 +164,28 @@ fichier pour le détail complet si besoin.
    qu'à confirmer le dernier maillon (`payment_status → 'paid'`) sur un
    vrai paiement réussi. Deux tentatives ont échoué côté opérateur mobile
    money, pas côté plateforme.
-2. **`payment_reference` reste `NULL` sur 87 des 88 commandes en base**
-   (trouvé le 2026-08-07) — risque **faible** : cause identifiée
-   précisément — `public.orders` n'a **aucune policy RLS `UPDATE`** pour
-   le candidat propriétaire (seulement `SELECT`/`INSERT`), donc l'appel
-   `.update({ payment_reference })` dans `checkout/route.js` échoue
-   silencieusement (RLS bloque, 0 ligne affectée, pas d'erreur remontée).
-   Le webhook n'est **pas** affecté : il retrouve toujours la commande via
-   `externalId`/`order.id`, jamais via `payment_reference` en pratique.
-   Impact réel : uniquement la réconciliation manuelle future (recherche
-   d'une commande par référence KPay) serait gênée. Correction nécessiterait
-   l'ajout d'une policy RLS `UPDATE` scoping — décision volontairement
-   laissée ouverte plutôt que corrigée sans validation explicite (portée
-   au-delà de ce qui a été demandé ce jour).
-3. **CI ne bloque pas le déploiement** — risque **moyen** : branch
-   protection GitHub sur `main` toujours à confirmer.
-4. **Automatisation de la sauvegarde** — risque **moyen** : dépend des 6
+2. **CI ne bloque pas le déploiement** — risque **moyen** : branch
+   protection GitHub sur `main` toujours à confirmer (procédure exacte
+   redonnée à l'utilisateur le 2026-08-07, à appliquer manuellement — droits
+   admin GitHub requis).
+3. **Automatisation de la sauvegarde** — risque **moyen** : dépend des 6
    secrets GitHub Actions (compte de service Google Cloud) à configurer.
-5. **`NEXT_PUBLIC_API_URL` non configurée sur Vercel** — risque
+4. **`NEXT_PUBLIC_API_URL` non configurée sur Vercel** — risque
    **faible** : `ScraperDashboard` affiche maintenant un avertissement
    explicite au lieu d'échouer silencieusement, mais l'agrégation reste
    inutilisable en production tant que le backend FastAPI n'est pas
    déployé quelque part et référencé par cette variable.
-6. **`auth.audit_log_entries` vide** — risque **faible** : limite la
+5. **`auth.audit_log_entries` vide** — risque **faible** : limite la
    détection des échecs de connexion natifs Supabase, cause non identifiée.
-7. **Détection limitée à 2 routes** (CVthèque, candidatures) — risque
+6. **Détection limitée à 2 routes** (CVthèque, candidatures) — risque
    **faible** : profils et messagerie restent hors du périmètre de
    détection des refus d'accès (architecture directe-PostgREST, pas de
    Route Handler dédié).
-8. **`supabase_admin` garde des DEFAULT PRIVILEGES larges** — risque
+7. **`supabase_admin` garde des DEFAULT PRIVILEGES larges** — risque
    **faible/théorique** : hors de portée du rôle `postgres` utilisé par ce
    projet ; sans impact tant que le Dashboard Supabase n'est jamais utilisé
    pour créer du schéma (déjà la règle en vigueur).
-9. **Registre de migrations et `supabase db push`** — risque **faible** :
+8. **Registre de migrations et `supabase db push`** — risque **faible** :
    désynchronisation historique jamais entièrement réconciliée, la règle
    "jamais `db push`" reste la seule protection.
 
@@ -208,13 +203,12 @@ fichier pour le détail complet si besoin.
 - Badge/compte de test gérable depuis l'admin pour d'autres attributs que
   `verified_recruiter`/`is_test_account` (aucun autre type de badge
   n'existe dans ce projet à ce jour — pas un manque, juste hors périmètre).
-- Correction de la policy RLS `UPDATE` manquante sur `public.orders`
-  (voir "Ouvert et documenté", point 2) — identifiée, pas corrigée.
 
 ## Prochaine étape suggérée
 
-Dans l'ordre d'impact probable : (1) confirmer un paiement KPay réellement
-réussi pour clore définitivement ce point ; (2) terminer la configuration
-Google Cloud (6 secrets GitHub) pour l'automatisation de la sauvegarde ;
-(3) confirmer la branch protection GitHub pour que la CI bloque vraiment un
-déploiement défaillant.
+Dans l'ordre d'impact probable : (1) activer la branch protection GitHub
+sur `main` (procédure donnée le 2026-08-07, à appliquer manuellement) pour
+que la CI bloque vraiment un déploiement défaillant ; (2) confirmer un
+paiement KPay réellement réussi pour clore définitivement ce point ;
+(3) terminer la configuration Google Cloud (6 secrets GitHub) pour
+l'automatisation de la sauvegarde.
