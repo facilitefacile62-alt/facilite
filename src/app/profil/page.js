@@ -57,8 +57,6 @@ export default function ProfilPage() {
   const [pinnedDetails, setPinnedDetails] = useState([]);
   const [tempPinnedDetails, setTempPinnedDetails] = useState([]);
   const [phone, setPhone] = useState("");
-  const [maritalStatus, setMaritalStatus] = useState("");
-  const [driverLicense, setDriverLicense] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [educationLevel, setEducationLevel] = useState("Aucun");
   // Ouvre directement un onglet précis via ?tab=... (ex: lien "Sécurisez votre
@@ -140,7 +138,6 @@ useEffect(() => {
   // pour économiser l'espace d'écran (sans effet en desktop, où la liste
   // reste une barre latérale toujours visible via md:flex).
   const [aboutTabsOpen, setAboutTabsOpen] = useState(false);
-  const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("");
   const [company, setCompany] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
@@ -202,10 +199,7 @@ useEffect(() => {
     bio: "",
     city: "",
     country: "",
-    birthDate: "",
     gender: "",
-    maritalStatus: "",
-    driverLicense: "",
     email: "",
     phone: "",
     skills: [],
@@ -481,10 +475,7 @@ useEffect(() => {
         setPinnedDetails(initialPinned);
         setTempPinnedDetails(initialPinned);
         setPhone(profile.phone || (typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : ""));
-        setMaritalStatus(profile.marital_status || (typeof window !== "undefined" ? localStorage.getItem("user_marital_status") || "" : ""));
-        setDriverLicense(profile.driver_license || (typeof window !== "undefined" ? localStorage.getItem("user_driver_license") || "" : ""));
         setWebsiteUrl(profile.website_url || (typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : ""));
-        setBirthDate(profile.birth_date || (typeof window !== "undefined" ? localStorage.getItem("user_birth_date") || "" : ""));
         setGender(profile.gender || (typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : ""));
         setCompany(profile.company || (typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : ""));
         setAvatarUrl(profile.avatar_url || "/logo.jpeg");
@@ -527,10 +518,7 @@ useEffect(() => {
         setPinnedDetails([]);
         setTempPinnedDetails([]);
         setPhone(typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : "");
-        setMaritalStatus(typeof window !== "undefined" ? localStorage.getItem("user_marital_status") || "" : "");
-        setDriverLicense(typeof window !== "undefined" ? localStorage.getItem("user_driver_license") || "" : "");
         setWebsiteUrl(typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : "");
-        setBirthDate(typeof window !== "undefined" ? localStorage.getItem("user_birth_date") || "" : "");
         setGender(typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : "");
         setCompany(typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : "");
         setIsPublic(false);
@@ -1102,10 +1090,7 @@ useEffect(() => {
       bio: summaryVal || "",
       city: getValue(apiFields, ["city", "ville", "city_name", "adresse_ville", "adresseville"]),
       country: getValue(apiFields, ["country", "pays", "country_name", "pays_name"]),
-      birthDate: getValue(apiFields, ["birthDate", "birth_date", "dateDeNaissance", "date_de_naissance", "datenaissance", "date_naissance", "birthday", "dob"]),
       gender: getValue(apiFields, ["gender", "sexe", "genre"]),
-      maritalStatus: getValue(apiFields, ["maritalStatus", "marital_status", "statutMarital", "statut_marital", "situation_familiale", "situationfamiliale", "statut_matrimonial", "statutmatrimonial"]),
-      driverLicense: getValue(apiFields, ["driverLicense", "driver_license", "permis", "permisDeConduire", "permis_de_conduire"]),
       email: getValue(apiFields, ["email", "e-mail", "mail"]),
       phone: getValue(apiFields, ["phone", "telephone", "téléphone", "tel"]),
       skills: Array.isArray(rawSkills) ? rawSkills : [rawSkills].filter(Boolean),
@@ -1193,10 +1178,7 @@ useEffect(() => {
     setJobTitle(scannedData.jobTitle);
     setCity(scannedData.city);
     setCountry(scannedData.country);
-    setBirthDate(scannedData.birthDate);
     setGender(scannedData.gender);
-    setMaritalStatus(scannedData.maritalStatus);
-    setDriverLicense(scannedData.driverLicense);
     setProfileBio(scannedData.bio);
     setTempBio(scannedData.bio);
     setUserSkills(scannedData.skills);
@@ -1235,10 +1217,7 @@ useEffect(() => {
         bio: scannedData.bio,
         city: scannedData.city,
         country: scannedData.country,
-        birth_date: scannedData.birthDate,
         gender: scannedData.gender,
-        marital_status: scannedData.maritalStatus,
-        driver_license: scannedData.driverLicense,
         phone: scannedData.phone || phone,
         contact_email: scannedData.email || contactEmail,
         skills: scannedData.skills,
@@ -1601,8 +1580,6 @@ useEffect(() => {
         bio: tempBio,
         pinned_details: tempPinnedDetails,
         phone: phone.trim(),
-        marital_status: maritalStatus,
-        driver_license: driverLicense.trim(),
         website_url: websiteUrl.trim(),
         updated_at: new Date().toISOString(),
       });
@@ -1614,7 +1591,6 @@ useEffect(() => {
         if (typeof window !== "undefined") {
           localStorage.setItem("user_bio", tempBio);
           localStorage.setItem("user_pinned_details", JSON.stringify(tempPinnedDetails));
-          localStorage.setItem("user_driver_license", driverLicense.trim());
           localStorage.setItem("user_website_url", websiteUrl.trim());
         }
         triggerToast("Bio et détails épinglés mis à jour avec succès !", "fa-circle-check");
@@ -2337,8 +2313,6 @@ useEffect(() => {
                             etudes_sports: { label: educations[0]?.degree || "Etudes Sports", icon: "fa-solid fa-graduation-cap" },
                             association_jeunes: { label: "Association des jeunes", icon: "fa-solid fa-users" },
                             cem_thiolom_fall: { label: educations[0]?.school || "CEM Thiolom Fall", icon: "fa-solid fa-building" },
-                            celibataire: { label: maritalStatus || "Célibataire", icon: "fa-solid fa-heart" },
-                            permis_conduire: { label: driverLicense || "Permis B", icon: "fa-solid fa-id-card" },
                             telephone: { label: phone || "+221 77 000 00 00", icon: "fa-solid fa-phone" },
                             site_web: { label: websiteUrl || "facilite.sn", icon: "fa-solid fa-globe" }
                           };
@@ -2764,68 +2738,6 @@ useEffect(() => {
                               if (newCountry !== null) {
                                 setCountry(newCountry.trim());
                                 handleSaveAboutField("country", newCountry.trim());
-                              }
-                            }}
-                            className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
-                            title="Modifier"
-                          >
-                            <i className="fa-solid fa-pen text-xs"></i>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Date de naissance */}
-                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60 border-t border-gray-100">
-                        <div className="flex items-center space-x-4 min-w-0">
-                          <div className="w-11 h-11 rounded-2xl bg-pink-50 text-pink-600 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
-                            <i className="fa-solid fa-cake-candles"></i>
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Date de naissance</h4>
-                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{birthDate || "Non renseigné"}</p>
-                            <p className="text-[11px] text-gray-500 font-medium">Année de naissance</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-md border border-gray-200">🌐 Public</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newBirth = prompt("Modifier votre date de naissance :", birthDate || "");
-                              if (newBirth !== null) {
-                                setBirthDate(newBirth.trim());
-                                handleSaveAboutField("birth_date", newBirth.trim());
-                              }
-                            }}
-                            className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
-                            title="Modifier"
-                          >
-                            <i className="fa-solid fa-pen text-xs"></i>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Statut Marital */}
-                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60 border-t border-gray-100">
-                        <div className="flex items-center space-x-4 min-w-0">
-                          <div className="w-11 h-11 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
-                            <i className="fa-solid fa-heart"></i>
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Statut</h4>
-                            <p className="text-sm font-extrabold text-gray-900 mt-0.5">{maritalStatus || "Non renseigné"}</p>
-                            <p className="text-[11px] text-gray-500 font-medium">Situation maritale</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-md border border-gray-200">🌐 Public</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newStatus = prompt("Modifier votre statut (Célibataire, Marié(e), Divorcé(e)) :", maritalStatus || "");
-                              if (newStatus !== null) {
-                                setMaritalStatus(newStatus.trim());
-                                handleSaveAboutField("marital_status", newStatus.trim());
                               }
                             }}
                             className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
@@ -4995,15 +4907,6 @@ useEffect(() => {
                       />
                     </div>
                     <div>
-                      <label className="block font-bold text-gray-700 mb-1">Date de naissance</label>
-                      <input
-                        type="text"
-                        value={scannedData.birthDate}
-                        onChange={(e) => setScannedData({ ...scannedData, birthDate: e.target.value })}
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
-                      />
-                    </div>
-                    <div>
                       <label className="block font-bold text-gray-700 mb-1">Sexe</label>
                       <select
                         value={scannedData.gender}
@@ -5013,24 +4916,6 @@ useEffect(() => {
                         <option value="Homme">Homme</option>
                         <option value="Femme">Femme</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block font-bold text-gray-700 mb-1">Statut marital</label>
-                      <input
-                        type="text"
-                        value={scannedData.maritalStatus}
-                        onChange={(e) => setScannedData({ ...scannedData, maritalStatus: e.target.value })}
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-gray-700 mb-1">Permis de conduire</label>
-                      <input
-                        type="text"
-                        value={scannedData.driverLicense}
-                        onChange={(e) => setScannedData({ ...scannedData, driverLicense: e.target.value })}
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl font-medium focus:outline-none focus:border-emerald-600 text-gray-900"
-                      />
                     </div>
                   </div>
                 </div>
