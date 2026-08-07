@@ -646,10 +646,10 @@ test.describe("Invariants de sécurité", () => {
     const rows = await runIntrospectionSql(`
       SELECT p.proname,
         COALESCE(
-          (SELECT array_agg(DISTINCT grantee) FROM information_schema.role_routine_grants g
+          (SELECT jsonb_agg(DISTINCT grantee) FROM information_schema.role_routine_grants g
            WHERE g.routine_schema = 'public' AND g.routine_name = p.proname
              AND g.grantee IN ('authenticated', 'anon')),
-          ARRAY[]::text[]
+          '[]'::jsonb
         ) AS app_grantees
       FROM pg_proc p
       JOIN pg_namespace n ON n.oid = p.pronamespace

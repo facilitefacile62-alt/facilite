@@ -1431,7 +1431,7 @@ export default function Home() {
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
-          <aside className="hidden lg:flex lg:w-[215px] flex-shrink-0 flex-col gap-2 sticky top-[92px] lg:max-h-[calc(100vh-115px)] lg:pr-0.5">
+          <aside className="hidden lg:flex lg:w-[215px] flex-shrink-0 flex-col gap-2 lg:pr-0.5">
 
             {/* Carte Profil (toujours visible, ne défile pas) */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs flex-shrink-0">
@@ -1485,7 +1485,7 @@ export default function Home() {
             </div>
 
             {/* Zone défilante : tout le reste de la barre latérale */}
-            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col space-y-2 pr-0.5">
+            <div className="flex-1 min-h-0 flex flex-col space-y-2 pr-0.5">
 
             {/* Carte Expériences (Dynamique) */}
             {experiences.length > 0 && (
@@ -1957,7 +1957,7 @@ export default function Home() {
           </section>
 
           {/* --- COLONNE DE DROITE : Offres recommandées & Publicité --- */}
-          <aside className="w-full lg:w-[260px] flex-shrink-0 flex flex-col space-y-3 lg:sticky lg:top-[92px] lg:max-h-[calc(100vh-115px)] lg:overflow-y-auto no-scrollbar lg:pr-0.5">
+          <aside className="w-full lg:w-[260px] flex-shrink-0 flex flex-col space-y-3 lg:pr-0.5">
             
             {/* Offres Recommandées */}
             <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
