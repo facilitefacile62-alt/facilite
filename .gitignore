@@ -84,3 +84,5 @@ env/
 
 # Dump de schéma de prod (ne jamais commiter l'infrastructure réelle)
 supabase/test-schema-dump*
+scripts/prod-schema-dump.sql
+scripts/prod-schema-dump.functions.json
