@@ -23,12 +23,12 @@ export default function AIAssistantModal() {
   return (
     <Link
       href="/messagerie"
-      className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group focus:outline-none"
+      className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 rounded-full flex items-center justify-center bg-transparent transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none animate-bounce hover:animate-none shadow-2xl"
       aria-label="Assistant IA"
     >
-      <div className="relative">
-        <img src="/ouvrier.jpg" alt="Assistant Ouvrier" className="w-8 h-8 rounded-full object-cover transition-transform duration-300 group-hover:scale-110" />
-        <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border border-white animate-pulse"></span>
+      <div className="relative w-14 h-14 md:w-16 md:h-16">
+        <img src="/ouvrier.jpg" alt="Assistant Ouvrier" className="w-full h-full rounded-full object-cover transition-transform duration-300 border-4 border-white/80 group-hover:border-emerald-400 shadow-lg" />
+        <span className="absolute top-0 right-0 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse shadow-sm"></span>
       </div>
     </Link>
   );
