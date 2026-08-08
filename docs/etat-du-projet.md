@@ -195,8 +195,6 @@ fichier pour le détail complet si besoin.
   Sécurité actuel (déjà livré : alertes temps réel, historique filtrable,
   statut des invariants — pas encore fait : catalogue exhaustif de tous
   les types d'événements possibles).
-- Projet Supabase de test séparé — tous les tests E2E tournent encore
-  contre la même base que la production.
 - Rétention et purge automatique des CV.
 - Migration vers Cloudflare R2/Backblaze B2 (triviale si une carte
   non-prépayée devient disponible, `docs/sauvegarde-restauration.md`).
@@ -212,6 +210,69 @@ que la CI bloque vraiment un déploiement défaillant ; (2) confirmer un
 paiement KPay réellement réussi pour clore définitivement ce point ;
 (3) terminer la configuration Google Cloud (6 secrets GitHub) pour
 l'automatisation de la sauvegarde.
+
+## Projet Supabase de test séparé (facilite-e2e-test) — OPÉRATIONNEL
+
+Chantier clos le 2026-08-08. Déclenché par l'incident du 2 août (fausses
+offres publiées en production par un test) — objectif : que plus aucun
+test E2E/sécurité ne puisse jamais écrire en production. Tous les tests
+(`tests/e2e/*`, `tests/security/*`, à l'exception délibérée de
+`tests/security/invariants.spec.js`, qui doit continuer à vérifier la
+vraie prod) tournent désormais contre un second projet Supabase dédié
+(`facilite-e2e-test`, ref `xisjmeouaragjfhubcjl`, région eu-west-3), avec
+un garde-fou qui refuse de démarrer si `TEST_SUPABASE_URL` est absente ou
+pointe vers le ref de production.
+
+**Résultat final : 135/150 = 90,0%.** 14 skipped, 1 failed (flake de
+timing, `security-profile.spec.js`, absorbé par `retries:1` — voir
+`playwright.config.js`), 0 en situation de blocage.
+
+**Les 14 tests skippés, avec raison :**
+- `candidate-application.spec.js` (1) — bug applicatif réel dans
+  `ApplyModal.jsx`, voir "CONSTAT BUG APPLICATIF" ci-dessous.
+- `password-reset.spec.js` (3) — SMTP non configuré sur le projet de test
+  (comportement attendu, jamais eu vocation à l'être).
+- `payment-amount-tampering.spec.js` (1) et `payment-and-billing.spec.js`
+  (1) — clés KPay sandbox non configurées sur le projet de test.
+- `storage-role-literals-fix.spec.js` (3) — policy storage
+  `"Recruteurs et admins lisent les CV"` structurellement plus stricte que
+  ce que ce test suppose, voir constat 5 ci-dessous.
+- `access-denial-detection.spec.js` (3) — `TEST_SUPABASE_SERVICE_ROLE_KEY`
+  invalide (voir juste après).
+- `cv-quota.spec.js` (2) — sous-ensemble réduit, documenté dans le fichier
+  lui-même : sans `SUPABASE_SERVICE_ROLE_KEY` utilisable, les tests de
+  seuil exact (101 comptes fictifs) sont skippés plutôt que simulés.
+
+**`TEST_SUPABASE_SERVICE_ROLE_KEY` reste à corriger** : la vraie clé
+service_role fournie le 2026-08-08 a été rejetée par Supabase
+(`Invalid API key`) immédiatement après avoir été collée dans le chat —
+probable rotation automatique par la détection de fuite de Supabase, même
+comportement que les mots de passe DB plus tôt dans ce chantier. Il faudra
+récupérer une clé fraîche (Project Settings → API → service_role secret,
+sans la coller en clair dans une conversation) pour lever le skip
+d'`access-denial-detection.spec.js` et le sous-ensemble réduit de
+`cv-quota.spec.js`.
+
+**Dette technique restante :**
+- `candidate-application.spec.js` — bug `ApplyModal.jsx` (état de succès
+  écrasé par un `useEffect` mal scopé), détail dans "CONSTAT BUG
+  APPLICATIF" plus bas dans ce document.
+- `storage-role-literals-fix.spec.js` — policy storage
+  `"Recruteurs et admins lisent les CV"` non fonctionnelle pour un
+  `verified_recruiter` réel, détail dans le constat 5 de "CONSTATS
+  SÉCURITÉ EN PRODUCTION" plus bas.
+- Le générateur de dump de schéma (`scripts/dump-schema-via-introspection.js`)
+  ne capture ni les GRANTs (schéma, table, colonne INSERT/UPDATE, fonction),
+  ni les policies `storage.objects`, ni l'appartenance à la publication
+  `supabase_realtime` — détail dans "DETTE TECHNIQUE (Dump de schéma pour
+  le projet de test)" ci-dessous. Chaque futur projet de test recréé
+  directement depuis le dump (sans repasser par `supabase/seed-test.sql`)
+  aura le même trou.
+- `get_recruiter_candidatures()` et les 3 fonctions Vague 2
+  (`delete_own_resume`, `archive_own_job_offer`,
+  `clear_own_assistant_messages`) ont été passées en `SECURITY DEFINER` sur
+  le projet de test uniquement — la même correction est nécessaire en
+  production (voir le récapitulatif de fin de chantier).
 
 ## DETTE TECHNIQUE (Migrations)
 
