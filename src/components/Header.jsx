@@ -34,7 +34,7 @@ const QUICK_SECTIONS_INDEX = [
     title: "Modèle CV Professionnel",
     type: "Modèle de CV",
     subtitle: "Structure haute performance pour cadres et experts",
-    targetUrl: "/service",
+    targetUrl: "/modeles",
     icon: "fa-file-lines",
     badgeColor: "blue",
     keywords: "modèle cv professionnel template cadre expert canva service",
@@ -44,7 +44,7 @@ const QUICK_SECTIONS_INDEX = [
     title: "Modèle Lettre de Motivation",
     type: "Modèle de Lettre",
     subtitle: "Mise en page percutante et professionnelle",
-    targetUrl: "/service",
+    targetUrl: "/modeles",
     icon: "fa-envelope-open-text",
     badgeColor: "blue",
     keywords: "modèle lettre motivation canva rédaction candidature service",
@@ -54,7 +54,7 @@ const QUICK_SECTIONS_INDEX = [
     title: "Modèle CV Version Anglaise / Resume",
     type: "Modèle International",
     subtitle: "Optimisé pour les recruteurs internationaux et anglophones",
-    targetUrl: "/service",
+    targetUrl: "/modeles",
     icon: "fa-earth-americas",
     badgeColor: "blue",
     keywords: "modèle cv anglais english resume international canva service",
@@ -64,7 +64,7 @@ const QUICK_SECTIONS_INDEX = [
     title: "Modèle CV Canadien (Sans Photo)",
     type: "Modèle Nord-Américain",
     subtitle: "Conforme aux normes canadiennes et nord-américaines",
-    targetUrl: "/service",
+    targetUrl: "/modeles",
     icon: "fa-map-pin",
     badgeColor: "blue",
     keywords: "modèle cv canadien canada québec sans photo nord américain canva service",
@@ -731,6 +731,17 @@ export default function Header() {
             <i className="fa-solid fa-comments text-sm"></i>
             <span>Messagerie</span>
           </Link>
+          <Link
+            href="/modeles"
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
+              pathname === "/modeles"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+            }`}
+          >
+            <i className="fa-solid fa-file-lines text-sm"></i>
+            <span>Modèles CV</span>
+          </Link>
 
           {/* Menu déroulant "Plus" pour regrouper les rubriques secondaires sans saturer */}
           <div className="relative" ref={plusDropdownRef}>
@@ -738,7 +749,7 @@ export default function Header() {
               type="button"
               onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
               className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                plusDropdownOpen || pathname === "/service" || pathname === "/importer-cv" || pathname.startsWith("/recrutement-") || pathname === "/boite-a-idees"
+                plusDropdownOpen || pathname === "/modeles" || pathname === "/importer-cv" || pathname.startsWith("/recrutement-") || pathname === "/boite-a-idees"
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
@@ -767,10 +778,10 @@ export default function Header() {
                 </Link>
 
                 <Link
-                  href="/service"
+                  href="/modeles"
                   onClick={() => setPlusDropdownOpen(false)}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
-                    pathname === "/service" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    pathname === "/modeles" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
                 >
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
@@ -992,7 +1003,7 @@ export default function Header() {
               Plus d'outils & services
             </div>
             <Link
-              href="/service"
+              href="/modeles"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
