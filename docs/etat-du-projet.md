@@ -309,6 +309,16 @@ migration — mais c'est un changement de logique de sécurité en prod, hors
 périmètre de ce chantier d'isolation des tests, à valider explicitement
 avant toute migration.
 
+**DÉCISION PRISE le 2026-08-08 :** appliquer `SECURITY DEFINER` +
+`SET search_path = ''` sur ces 3 fonctions. Fait sur `facilite-e2e-test`
+(section "0bis-suite-3" de `supabase/seed-test.sql`) — les 6 tests de
+`wave2-delete-replacements.spec.js` passent, y compris les 2 cas
+anti-usurpation qui échouaient en cascade (le `SELECT` initial de la
+fonction était bloqué par RLS avant même la vérification métier, causant un
+retour `NULL` silencieux au lieu de l'exception attendue — ce n'était donc
+pas un vrai trou de sécurité). **Correctif équivalent en prod proposé, en
+attente de validation** avant toute migration.
+
 **2. `log_security_event()` est appelable directement par `authenticated`
 en prod, sans aucune vérification de l'identité de l'appelant dans son
 corps.** C'est une fonction `SECURITY DEFINER`, et `authenticated` a bien
@@ -325,3 +335,32 @@ attendait que ce soit bloqué pour `authenticated`, ce qui a permis de
 découvrir l'écart. Aucune action prise en prod — à trancher : soit le GRANT
 EXECUTE à `authenticated` est une erreur historique à révoquer, soit la
 fonction doit valider `p_actor_id = auth.uid()` (sauf appel service_role).
+
+**DÉCISION PRISE le 2026-08-08 :** révoquer `EXECUTE` à `authenticated`/
+`anon` sur `log_security_event()` — seul `service_role` (et l'owner
+`postgres`) peut l'appeler désormais. Les utilisateurs authentifiés passent
+par des fonctions dédiées déjà existantes (`log_own_storage_deletion_failure()`,
+`SECURITY DEFINER`, force `auth.uid()` comme acteur) plutôt que par un
+`p_actor_id` fourni librement. Fait sur `facilite-e2e-test` (section
+"0bis-suite-2" de `supabase/seed-test.sql`) — les 3 tests de
+`storage-deletion-failure-log.spec.js` passent. **Correctif équivalent en
+prod proposé, en attente de validation** avant toute migration.
+
+**3. `get_candidats_recherche()` ne peut renvoyer aucun candidat à un
+recruteur, ni en prod ni en test — trouvé le 2026-08-08, même famille que
+le constat 1.** GRANTs `EXECUTE` vérifiés identiques entre prod et test
+(diff exhaustif de `routine_privileges`, zéro écart). La fonction est
+`LANGUAGE sql`, `prosecdef = false` : elle s'exécute avec les droits de
+l'appelant, donc soumise à RLS sur `public.profiles`. Or `profiles` n'a que
+3 policies `SELECT` en prod : lecture de son propre profil, lecture par un
+admin, lecture par un agent pour ses candidats assignés — **aucune ne
+permet à un recruteur badgé `verified_recruiter` de lire le profil d'un
+autre candidat**, même avec `cv_visible_recruteurs = true`. Le filtrage
+métier interne à la fonction (badge, `is_test_account`, rôle) ne sert donc
+à rien : RLS bloque tout accès à des lignes hors profil propre avant même
+que ce filtrage s'applique. Résultat observé : `get_candidats_recherche()`
+renvoie toujours 0 lignes pour un recruteur réel, aussi bien en prod qu'en
+test. Aucune action prise — à trancher, probablement la même direction que
+le constat 1 (passer la fonction en `SECURITY DEFINER`, puisqu'elle fait
+déjà elle-même tout le filtrage de sécurité nécessaire dans son corps) ou
+ajouter une policy RLS dédiée sur `profiles`.
