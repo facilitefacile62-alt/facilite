@@ -514,6 +514,21 @@ export default function AdminDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, myRole, securityFilterType, securityFilterSeverity]);
 
+  // Journalise chaque consultation du panneau Sécurité (quel admin, quelle
+  // section, quand) — via une route API dédiée : log_security_event() est
+  // restreinte à service_role depuis le 2026-08-08, un client ne peut plus
+  // l'appeler directement. Dépendances volontairement limitées à
+  // [activeTab, myRole] (pas les filtres) : une seule entrée par ouverture
+  // d'onglet, pas une par changement de filtre.
+  useEffect(() => {
+    if (activeTab !== "securite" || !myRole || !userSession?.access_token) return;
+    fetch("/api/admin/security-panel-viewed", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${userSession.access_token}` },
+    }).catch((err) => console.warn("[Sécurité] Journalisation de la consultation échouée (non bloquant):", err.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, myRole]);
+
   // Temps réel : un canal par utilisateur connecté, jamais partagé. RLS
   // ("Seuls les admins lisent les logs", is_admin(auth.uid())) s'applique
   // à l'abonnement postgres_changes lui-même — un publisher/candidat abonné
