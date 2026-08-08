@@ -128,6 +128,38 @@ ALTER FUNCTION public.delete_own_resume(uuid) SECURITY DEFINER SET search_path =
 ALTER FUNCTION public.archive_own_job_offer(uuid) SECURITY DEFINER SET search_path = '';
 ALTER FUNCTION public.clear_own_assistant_messages(uuid) SECURITY DEFINER SET search_path = '';
 
+-- 0bis-suite-4. Diff complet des GRANTs EXECUTE (role_table_grants,
+-- role_column_grants et routine_privileges) entre prod et facilite-e2e-test
+-- effectué le 2026-08-08 après les correctifs ci-dessus — trouvé 2 écarts
+-- de plus, tous deux dans routine_privileges (jamais couverts par
+-- export-table-grants.js, qui ne touche qu'aux tables) :
+-- 1) 3 fonctions manquaient EXECUTE pour anon (présent en prod) :
+--    get_profils_publics(), is_admin() [uniquement la surcharge sans
+--    argument — is_admin(check_user_id uuid) reste authenticated
+--    seulement, comme en prod], match_job_offers(vector, double precision,
+--    integer).
+-- 2) 5 fonctions avaient EXECUTE pour authenticated sur le projet de test
+--    SANS l'avoir en prod — le projet de test était plus permissif que la
+--    prod, seul cas de ce genre trouvé sur write ce chantier. Confirmé par
+--    les migrations prod elles-mêmes : deduct_credit et log_access_denial
+--    ont un `REVOKE ALL ... FROM PUBLIC, anon, authenticated` explicite
+--    dans leur migration d'origine ("seul le code serveur doit pouvoir" —
+--    20260801210000_deduct_credit_function.sql,
+--    20260806160000_access_denial_detection.sql) ; les 3 autres
+--    (purge_old_access_log_ips, set_recruiter_profiles_updated_at,
+--    update_updated_at_column) sont des fonctions de trigger/tâche interne
+--    jamais censées être appelées directement par un rôle applicatif.
+-- Probable sur-octroi accidentel lors du correctif GRANT EXECUTE initial
+-- (49/50 fonctions, trop large) plus tôt dans ce chantier.
+GRANT EXECUTE ON FUNCTION public.get_profils_publics() TO anon;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon;
+GRANT EXECUTE ON FUNCTION public.match_job_offers(vector, double precision, integer) TO anon;
+REVOKE EXECUTE ON FUNCTION public.deduct_credit(uuid) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.log_access_denial(uuid, text, text, integer, text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.purge_old_access_log_ips() FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.set_recruiter_profiles_updated_at() FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_updated_at_column() FROM authenticated;
+
 -- 0ter. Policies RLS storage.objects — même trou de nouveau,
 -- dump-schema-via-introspection.js scope tout à nspname='public', jamais
 -- storage. Exportées depuis la production (scripts/export-storage-policies.js)
