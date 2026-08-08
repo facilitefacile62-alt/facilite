@@ -1,6 +1,23 @@
 -- Seed minimal pour les tests E2E sur facilite-e2e-test
 -- Ces comptes correspondent à ceux attendus par la suite Playwright (tests/e2e/*, tests/security/*)
 
+-- PRÉREQUIS avant de rejouer ce fichier sur un projet de test fraîchement
+-- créé : exécuter `node scripts/setup-test-buckets.js` (nécessite un
+-- TEST_SUPABASE_SERVICE_ROLE_KEY valide dans .env.test.local). Crée les 6
+-- buckets Storage de la production (resumes, chat-attachments,
+-- badge-documents, completed_cvs, invoices privés ; job-offers public,
+-- seul bucket public de la prod) — trouvés absents (4 sur 6) le
+-- 2026-08-08 sur facilite-e2e-test, cause de l'échec de
+-- storage-role-literals-fix.spec.js (upload vers "job-offers" impossible,
+-- bucket inexistant). Volontairement PAS un `INSERT INTO storage.buckets`
+-- direct ici : la création de bucket passe par l'API Admin Storage
+-- (`supabase.storage.createBucket()`), jamais par une écriture SQL brute
+-- dans cette table — un fichier .sql pur ne peut pas l'invoquer, d'où ce
+-- script séparé plutôt qu'une section supplémentaire ci-dessous. Les 18
+-- policies RLS de storage.objects (section "0ter." plus bas), elles,
+-- fonctionnent normalement même si le bucket qu'elles référencent
+-- n'existe pas encore — c'est sans risque de les appliquer avant.
+
 -- 0. GRANT USAGE sur le schéma public — sans lui, absolument rien n'est
 -- accessible à anon/authenticated dans public, quels que soient les GRANTs
 -- table/fonction ou les policies RLS en place. dump-schema-via-introspection.js

@@ -258,20 +258,22 @@ d'`access-denial-detection.spec.js` et le sous-ensemble réduit de
   écrasé par un `useEffect` mal scopé), détail dans "CONSTAT BUG
   APPLICATIF" plus bas dans ce document. Toujours en skip, pas encore
   corrigé.
-- `storage-role-literals-fix.spec.js:74` — le 3e test échoue désormais
-  pour une raison différente et sans rapport : le bucket `job-offers`
-  n'existe pas sur `facilite-e2e-test` (voir juste en dessous). La policy
-  storage elle-même a été corrigée le 2026-08-08 (`can_recruiter_read_cv()`,
-  appliquée en test ET en production, voir "CONSTATS SÉCURITÉ EN
-  PRODUCTION" plus bas) — laissé en échec non skippé volontairement,
-  commenté dans le fichier de test, plutôt que masqué par un skip.
-- **4 buckets Storage manquants sur `facilite-e2e-test`** — seuls
-  `chat-attachments` et `resumes` existent (2 sur 6). Manquent :
-  `job-offers` (public en prod, cause l'échec ci-dessus),
-  `badge-documents`, `completed_cvs`, `invoices`. Jamais créés lors de la
-  mise en place initiale du projet de test. À régler lors d'une prochaine
-  session de maintenance dédiée (créer les 4 buckets + leurs policies,
-  déjà exportables via `scripts/export-storage-policies.js`).
+- `storage-role-literals-fix.spec.js` — les 3 tests passent (`can_recruiter_read_cv()`
+  corrigée le 2026-08-08, appliquée en test ET en production ; les 4
+  buckets manquants créés le même jour, voir juste en dessous).
+- **CORRIGÉ le 2026-08-08 — 4 buckets Storage manquants sur
+  `facilite-e2e-test`** — `job-offers` (public), `badge-documents`,
+  `completed_cvs`, `invoices` (privés) créés via l'API Admin Storage
+  (`scripts/setup-test-buckets.js`, jamais un `INSERT` SQL direct dans
+  `storage.buckets`), avec les mêmes paramètres exacts que la prod (aucun
+  bucket n'a de `file_size_limit`/`allowed_mime_types` configuré). Les 18
+  policies RLS correspondantes étaient déjà en place depuis un correctif
+  antérieur (elles s'appliquent indépendamment de l'existence du bucket).
+  `scripts/setup-test-buckets.js` doit être relancé (avec un
+  `TEST_SUPABASE_SERVICE_ROLE_KEY` valide) avant tout reset complet de
+  `supabase/seed-test.sql` sur un projet de test fraîchement créé — la
+  création de bucket ne peut pas être exprimée en SQL pur, voir le
+  commentaire en tête de `seed-test.sql`.
 - Le générateur de dump de schéma (`scripts/dump-schema-via-introspection.js`)
   ne capture ni les GRANTs (schéma, table, colonne INSERT/UPDATE, fonction),
   ni les policies `storage.objects`, ni l'appartenance à la publication
