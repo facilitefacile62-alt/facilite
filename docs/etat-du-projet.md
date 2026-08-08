@@ -364,3 +364,11 @@ test. Aucune action prise — à trancher, probablement la même direction que
 le constat 1 (passer la fonction en `SECURITY DEFINER`, puisqu'elle fait
 déjà elle-même tout le filtrage de sécurité nécessaire dans son corps) ou
 ajouter une policy RLS dédiée sur `profiles`.
+
+**DÉCISION PRISE le 2026-08-08 (Décision 3, même direction que la Décision
+1) :** appliquer `SECURITY DEFINER` + `SET search_path = ''` sur
+`get_candidats_recherche()`. Fait sur `facilite-e2e-test` (section
+"0bis-suite-5" de `supabase/seed-test.sql`) — les 4 tests de
+`recruiter-search-views.spec.js` et `recruiter-verification.spec.js`
+passent. **Correctif équivalent en prod proposé, en attente de
+validation** avant toute migration.

@@ -160,6 +160,22 @@ REVOKE EXECUTE ON FUNCTION public.purge_old_access_log_ips() FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.set_recruiter_profiles_updated_at() FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.update_updated_at_column() FROM authenticated;
 
+-- 0bis-suite-5. Décision utilisateur du 2026-08-08 (Décision 3, même
+-- direction que la Décision 1) : get_candidats_recherche() est LANGUAGE sql,
+-- prosecdef=false en prod — s'exécute avec les droits de l'appelant, donc
+-- soumise à RLS sur public.profiles. Or profiles n'a que 3 policies SELECT
+-- (profil propre, admin, agent sur ses candidats assignés) — aucune ne
+-- permet à un recruteur badgé verified_recruiter de lire le profil d'un
+-- autre candidat. Le filtrage métier interne à la fonction (badge,
+-- is_test_account, rôle) n'était donc jamais atteint : RLS bloquait tout
+-- accès avant. Passée en SECURITY DEFINER + SET search_path = '' — le
+-- corps de la fonction n'utilise que des noms pleinement qualifiés
+-- (public.profiles, public.has_badge, public.current_user_role, auth.uid()),
+-- donc search_path = '' ne casse rien. Appliqué pour l'instant UNIQUEMENT
+-- sur facilite-e2e-test — même correctif proposé pour la production, en
+-- attente de validation utilisateur.
+ALTER FUNCTION public.get_candidats_recherche() SECURITY DEFINER SET search_path = '';
+
 -- 0ter. Policies RLS storage.objects — même trou de nouveau,
 -- dump-schema-via-introspection.js scope tout à nspname='public', jamais
 -- storage. Exportées depuis la production (scripts/export-storage-policies.js)
