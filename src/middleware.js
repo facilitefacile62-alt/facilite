@@ -23,6 +23,9 @@ const PUBLIC_ROUTES = [
   "/recruteurs", // vitrines publiques recruteur (/recruteurs/[id])
   "/recrutement-spontane",
   "/recrutement-journalier",
+  "/modeles", // vitrine publique des modèles de CV — l'action "Créer avec
+              // Canva" reste protégée séparément (session requise avant
+              // /api/canva/auth, voir src/app/modeles/page.jsx)
 ];
 
 // Comparaison par segment de chemin plutôt que préfixe brut : pathname.startsWith("/recruteur")
