@@ -274,19 +274,55 @@ d'`access-denial-detection.spec.js` et le sous-ensemble réduit de
   `supabase/seed-test.sql` sur un projet de test fraîchement créé — la
   création de bucket ne peut pas être exprimée en SQL pur, voir le
   commentaire en tête de `seed-test.sql`.
-- Le générateur de dump de schéma (`scripts/dump-schema-via-introspection.js`)
-  ne capture ni les GRANTs (schéma, table, colonne INSERT/UPDATE, fonction),
-  ni les policies `storage.objects`, ni l'appartenance à la publication
-  `supabase_realtime`, ni la liste des buckets Storage — détail dans
-  "DETTE TECHNIQUE (Dump de schéma pour le projet de test)" ci-dessous.
-  Chaque futur projet de test recréé directement depuis le dump (sans
-  repasser par `supabase/seed-test.sql`) aura le même trou.
+- **RÉSOLU le 2026-08-08** — le générateur de dump de schéma
+  (`scripts/dump-schema-via-introspection.js`) capture désormais les
+  GRANTs (schéma, table, colonne, fonction), les policies
+  `storage.objects` et l'appartenance à la publication
+  `supabase_realtime` ; détail dans "DETTE TECHNIQUE (Dump de schéma pour
+  le projet de test)" ci-dessous. Reste hors périmètre : la liste des
+  buckets Storage eux-mêmes (la création d'un bucket exige l'API Admin
+  Storage, pas exprimable en SQL — `scripts/setup-test-buckets.js` reste
+  un prérequis séparé, voir juste au-dessus).
 
 ## DETTE TECHNIQUE (Migrations)
 
 L'historique de migrations ne peut pas recréer la base de prod depuis zéro. 18 colonnes de la table `profiles` créées hors migrations. À résorber progressivement avec une migration de rattrapage.
 
-## DETTE TECHNIQUE (Dump de schéma pour le projet de test)
+## DETTE TECHNIQUE (Dump de schéma pour le projet de test) — RÉSOLUE le 2026-08-08
+
+**`scripts/dump-schema-via-introspection.js` capture maintenant les 3
+catégories qui manquaient** (détaillées ci-dessous à titre d'historique) :
+GRANTs (schéma, table, colonne, fonction), policies `storage.objects`,
+appartenance à la publication `supabase_realtime`. Un nouveau projet de
+test recréé directement depuis le dump n'a plus besoin des correctifs
+manuels documentés plus bas — tout est désormais généré automatiquement.
+
+Chiffres du dump complet, lancé contre la production le 2026-08-08 :
+**92 policies RLS** (74 `public` + 18 `storage.objects`), **42 GRANTs de
+table**, **13 GRANTs de colonne**, **49 GRANTs `EXECUTE`** sur fonctions,
+**7 tables** dans la publication `supabase_realtime`.
+
+Les GRANTs de fonction reflètent l'état réel et actuel des GRANTs (une
+jointure par `oid` via `specific_name`, pas par nom seul — indispensable
+pour les fonctions surchargées comme `is_admin()` vs `is_admin(uuid)`, qui
+n'ont pas les mêmes GRANTs) : une fonction dont l'`EXECUTE` a été
+explicitement révoqué (`log_security_event()`) n'apparaît simplement plus
+dans `information_schema.role_routine_grants`, donc jamais dans le dump —
+aucun filtrage supplémentaire nécessaire.
+
+**Vérifié le 2026-08-08** : le dump complet (1914 lignes) s'applique sans
+aucune erreur SQL sur un schéma `public` entièrement vierge, en 3 étapes
+(tables/contraintes/index, puis les 51 fonctions rejouées individuellement
+en boucle jusqu'à point fixe pour résoudre leurs dépendances mutuelles —
+mécanisme déjà en place dans `scripts/import-schema-dump-to-test.js`, puis
+RLS/policies/GRANTs/vues/triggers/Realtime en bloc). Méthode : transaction
+sur `facilite-e2e-test` annulée à la fin (`ROLLBACK`), jamais appliquée de
+façon permanente — le schéma `public` existant est renommé le temps du
+test, un `public` vierge est créé à la place, puis tout est restauré à
+l'identique par l'annulation. Confirmé après coup : 23 tables, trigger
+`on_auth_user_created` toujours présent, aucun schéma résiduel.
+
+### Historique (le trou d'origine, avant le correctif du 2026-08-08)
 
 `scripts/dump-schema-via-introspection.js` (remplace `pg_dump`, indisponible
 dans cet environnement — ni Docker ni binaire local) ne capture que les

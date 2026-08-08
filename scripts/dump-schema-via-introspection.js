@@ -9,12 +9,18 @@
  * extensions dont dépendent ses objets + le trigger auth.users ->
  * handle_new_user() (hors public au sens strict, mais indispensable au
  * fonctionnement réel de l'app — sans lui, aucun profil ne se crée à
- * l'inscription sur le projet de test).
+ * l'inscription sur le projet de test) + les policies storage.objects +
+ * les GRANTs (schéma/table/colonne/fonction) + l'appartenance à la
+ * publication supabase_realtime — ces 3 dernières catégories manquaient
+ * jusqu'au 2026-08-08, cause de 4 vagues de correctifs manuels distinctes
+ * sur chaque projet de test recréé depuis ce dump.
  *
  * Ordre généré (comme pg_dump) : extensions -> enums -> tables (colonnes
  * seules) -> contraintes PK/UNIQUE/CHECK -> contraintes FK (différées,
  * pour ignorer l'ordre des dépendances entre tables) -> index autonomes ->
- * RLS (activation + policies) -> vues -> fonctions -> triggers.
+ * RLS (activation + policies public+storage.objects) -> GRANTs (schéma,
+ * table, colonne, fonction) -> vues -> fonctions -> triggers -> publication
+ * supabase_realtime.
  */
 
 const { exec } = require("child_process");
@@ -169,9 +175,12 @@ async function main() {
   `);
   sections.push("-- RLS activé\n" + joinDdl("RLS activé", rlsEnable));
 
-  // Policies
+  // Policies — public ET storage.objects (schéma qualifié dynamiquement :
+  // trouvé le 2026-08-08 que cette section, historiquement scopée à
+  // nspname='public', laissait storage.objects entièrement hors du dump,
+  // cause de 2 vagues de correctifs manuels sur le projet de test).
   const policies = await runIntrospectionSql(`
-    SELECT 'CREATE POLICY "' || polname || '" ON public."' || c.relname || '" AS ' ||
+    SELECT 'CREATE POLICY "' || polname || '" ON ' || n.nspname || '."' || c.relname || '" AS ' ||
       CASE WHEN pol.polpermissive THEN 'PERMISSIVE' ELSE 'RESTRICTIVE' END ||
       ' FOR ' || CASE pol.polcmd WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT' WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' ELSE 'ALL' END ||
       ' TO ' || (
@@ -184,10 +193,105 @@ async function main() {
     FROM pg_policy pol
     JOIN pg_class c ON c.oid = pol.polrelid
     JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname = 'public'
-    ORDER BY c.relname, polname;
+    WHERE n.nspname = 'public' OR (n.nspname = 'storage' AND c.relname = 'objects')
+    ORDER BY n.nspname, c.relname, polname;
   `);
-  sections.push("-- Policies RLS\n" + joinDdl("Policies RLS", policies));
+  sections.push("-- Policies RLS (public + storage.objects)\n" + joinDdl("Policies RLS", policies));
+
+  // GRANTs — schéma, table, colonne, fonction : aucune de ces 4 catégories
+  // n'était capturée avant le 2026-08-08, cause de 4 vagues de correctifs
+  // manuels distinctes sur le projet de test (GRANT USAGE sur schéma,
+  // GRANTs de table, GRANTs de colonne, GRANT EXECUTE sur fonction).
+  //
+  // 1. GRANT USAGE ON SCHEMA — fixe, non introspecté (stable, jamais
+  // changé dans ce projet).
+  sections.push("-- GRANT USAGE ON SCHEMA\nGRANT USAGE ON SCHEMA public TO anon, authenticated;");
+
+  // 2. GRANTs de table (privilèges non column-scopés — UPDATE traité à
+  // part au point 3 pour distinguer whole-table de column-scoped, même
+  // logique que scripts/export-table-grants.js).
+  const tableGrantsRaw = await runIntrospectionSql(`
+    SELECT table_name, grantee, privilege_type
+    FROM information_schema.role_table_grants
+    WHERE table_schema = 'public' AND grantee IN ('anon', 'authenticated')
+    ORDER BY table_name, grantee, privilege_type;
+  `);
+  const columnGrantsRaw = await runIntrospectionSql(`
+    SELECT table_name, grantee, column_name, privilege_type
+    FROM information_schema.role_column_grants
+    WHERE table_schema = 'public' AND grantee IN ('anon', 'authenticated')
+      AND privilege_type IN ('UPDATE', 'INSERT')
+    ORDER BY table_name, grantee, privilege_type, column_name;
+  `);
+  const wholeTableUpdate = new Set(
+    tableGrantsRaw.filter((r) => r.privilege_type === "UPDATE").map((r) => `${r.table_name}:${r.grantee}`)
+  );
+  const wholeTableInsert = new Set(
+    tableGrantsRaw.filter((r) => r.privilege_type === "INSERT").map((r) => `${r.table_name}:${r.grantee}`)
+  );
+  const tableGrantStatements = [];
+  const nonUpdateByTableGrantee = new Map();
+  for (const r of tableGrantsRaw) {
+    if (r.privilege_type === "UPDATE") continue;
+    const key = `${r.table_name}:${r.grantee}`;
+    if (!nonUpdateByTableGrantee.has(key)) nonUpdateByTableGrantee.set(key, []);
+    nonUpdateByTableGrantee.get(key).push(r.privilege_type);
+  }
+  for (const [key, privileges] of nonUpdateByTableGrantee) {
+    const [table, grantee] = key.split(":");
+    tableGrantStatements.push(`GRANT ${privileges.join(", ")} ON TABLE public."${table}" TO ${grantee};`);
+  }
+  for (const key of wholeTableUpdate) {
+    const [table, grantee] = key.split(":");
+    tableGrantStatements.push(`GRANT UPDATE ON TABLE public."${table}" TO ${grantee};`);
+  }
+  sections.push("-- GRANTs de table\n" + tableGrantStatements.sort().join("\n"));
+
+  // 3. GRANTs de colonne (UPDATE et INSERT restreints à des colonnes
+  // précises — jamais dans role_table_grants pour ces cas, seul
+  // role_column_grants les révèle). Ignore les couples (table, grantee)
+  // déjà couverts par un GRANT whole-table équivalent au point 2, pour ne
+  // pas générer une restriction de colonne redondante après un GRANT déjà
+  // total sur la même table.
+  const colsByTableGranteePriv = new Map();
+  for (const r of columnGrantsRaw) {
+    const wholeSet = r.privilege_type === "UPDATE" ? wholeTableUpdate : wholeTableInsert;
+    const key = `${r.table_name}:${r.grantee}:${r.privilege_type}`;
+    if (wholeSet.has(`${r.table_name}:${r.grantee}`)) continue;
+    if (!colsByTableGranteePriv.has(key)) colsByTableGranteePriv.set(key, []);
+    colsByTableGranteePriv.get(key).push(r.column_name);
+  }
+  const columnGrantStatements = [];
+  for (const [key, cols] of colsByTableGranteePriv) {
+    const [table, grantee, privilege] = key.split(":");
+    columnGrantStatements.push(`GRANT ${privilege} (${cols.map((c) => `"${c}"`).join(", ")}) ON TABLE public."${table}" TO ${grantee};`);
+  }
+  sections.push("-- GRANTs de colonne\n" + columnGrantStatements.sort().join("\n"));
+
+  // 4. GRANT EXECUTE sur fonctions — jointure par oid (via specific_name)
+  // plutôt que par nom seul : indispensable pour les fonctions surchargées
+  // (ex. is_admin() vs is_admin(uuid), qui n'ont pas les mêmes GRANTs —
+  // anon a EXECUTE sur la première, pas la seconde). Interroge pg_proc en
+  // direct plutôt que de faire confiance à information_schema seul, pour
+  // la même raison : disposer de la signature exacte
+  // (pg_get_function_identity_arguments) sans ambiguïté entre surcharges.
+  // Reflète l'état RÉEL et ACTUEL des GRANTs — une fonction dont le GRANT
+  // a été explicitement révoqué (ex. log_security_event() le 2026-08-08)
+  // n'a alors plus de ligne dans role_routine_grants et n'apparaît donc
+  // jamais ici, sans filtrage supplémentaire nécessaire.
+  const functionGrants = await runIntrospectionSql(`
+    SELECT p.proname, pg_get_function_identity_arguments(p.oid) AS args, g.grantee
+    FROM information_schema.routine_privileges g
+    JOIN pg_proc p ON g.specific_name = p.proname || '_' || p.oid
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND g.routine_schema = 'public'
+      AND g.grantee IN ('anon', 'authenticated') AND g.privilege_type = 'EXECUTE'
+    ORDER BY p.proname, args, g.grantee;
+  `);
+  const functionGrantStatements = functionGrants.map(
+    (r) => `GRANT EXECUTE ON FUNCTION public."${r.proname}"(${r.args}) TO ${r.grantee};`
+  );
+  sections.push("-- GRANTs EXECUTE sur fonctions\n" + functionGrantStatements.join("\n"));
 
   // Views
   const views = await runIntrospectionSql(`
@@ -228,6 +332,19 @@ async function main() {
     );
   }
 
+  // Publication supabase_realtime — jamais interrogée avant le
+  // 2026-08-08, cause d'un projet de test avec une publication vide (0
+  // table temps réel) tant que ce n'est pas rejoué manuellement.
+  const realtimeTables = await runIntrospectionSql(`
+    SELECT tablename FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public'
+    ORDER BY tablename;
+  `);
+  const realtimeStatements = realtimeTables.map(
+    (r) => `ALTER PUBLICATION supabase_realtime ADD TABLE public."${r.tablename}";`
+  );
+  sections.push("-- Publication supabase_realtime\n" + realtimeStatements.join("\n"));
+
   const output = sections.join("\n\n");
   const outPath = path.join(REPO_ROOT, "scripts", "prod-schema-dump.sql");
   fs.writeFileSync(outPath, output);
@@ -244,7 +361,7 @@ async function main() {
 
   console.log(`Écrit : ${outPath} (${output.split("\n").length} lignes)`);
   console.log(
-    `Sections : ${enums.length} enum(s), ${sequences.length} sequence(s), ${tables.length} table(s), ${nonFkConstraints.length} contrainte(s) non-FK, ${fkConstraints.length} FK, ${indexes.length} index, ${rlsEnable.length} table(s) RLS, ${policies.length} policy(ies), ${views.length} vue(s), ${functions.length} fonction(s), ${triggersPublic.length} trigger(s) public, ${triggersAuth.length} trigger(s) auth.users.`
+    `Sections : ${enums.length} enum(s), ${sequences.length} sequence(s), ${tables.length} table(s), ${nonFkConstraints.length} contrainte(s) non-FK, ${fkConstraints.length} FK, ${indexes.length} index, ${rlsEnable.length} table(s) RLS, ${policies.length} policy(ies) (public+storage), ${views.length} vue(s), ${functions.length} fonction(s), ${triggersPublic.length} trigger(s) public, ${triggersAuth.length} trigger(s) auth.users, ${tableGrantStatements.length} GRANT(s) de table, ${columnGrantStatements.length} GRANT(s) de colonne, ${functionGrantStatements.length} GRANT(s) EXECUTE, ${realtimeStatements.length} table(s) Realtime.`
   );
 }
 
