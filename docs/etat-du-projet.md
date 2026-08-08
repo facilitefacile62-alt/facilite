@@ -239,3 +239,30 @@ Déjà ajouté à `supabase/seed-test.sql` pour que tout reset de
 générateur de dump lui-même n'a pas été corrigé (un futur projet de test
 recréé directement depuis le dump, sans repasser par le seed, aurait le
 même trou).
+
+Même trou, deux autres cas trouvés le 2026-08-08 en lançant la suite
+complète après correction du grant ci-dessus (33 échecs restants sur 150) :
+
+- **Policies RLS de `storage.objects`** — le script scope toute son
+  introspection à `nspname = 'public'`, jamais au schéma `storage`. Le
+  projet de test avait 2 policies fabriquées à la main (jamais présentes en
+  prod, dont une rendant les pièces jointes de chat lisibles sans
+  authentification) au lieu des 18 vraies policies de production.
+- **Appartenance à la publication `supabase_realtime`** — également hors
+  du périmètre du script ; la publication était entièrement vide sur le
+  projet de test fraîchement importé (`agent_assignments`, `candidatures`,
+  `conversations`, `messages`, `orders`, `resumes`, `security_logs` sont
+  publiées en prod).
+
+**À exporter et appliquer manuellement sur tout nouveau projet de test**
+tant que le générateur n'est pas corrigé à la source :
+- `scripts/export-storage-policies.js` (lecture seule sur la prod, imprime
+  les `CREATE POLICY` à appliquer sur `storage.objects`).
+- Pas de script dédié pour la publication Realtime — requête de contrôle :
+  `SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';`
+  puis un `ALTER PUBLICATION supabase_realtime ADD TABLE ...` par table
+  listée.
+
+Les deux sont déjà ajoutés à `supabase/seed-test.sql` (sections "0ter." et
+"0quater.") pour que tout reset de `facilite-e2e-test` les inclue
+automatiquement.
