@@ -266,3 +266,62 @@ tant que le générateur n'est pas corrigé à la source :
 Les deux sont déjà ajoutés à `supabase/seed-test.sql` (sections "0ter." et
 "0quater.") pour que tout reset de `facilite-e2e-test` les inclue
 automatiquement.
+
+Deux écarts supplémentaires trouvés le 2026-08-08 en creusant les échecs
+restants (72,7% de réussite) — corrigés et ajoutés à `supabase/seed-test.sql`
+(section "0bis-suite") :
+- `current_user_role()` n'avait `EXECUTE` que pour `authenticated` sur le
+  projet de test ; la prod l'accorde aussi à `anon`.
+- `GRANT INSERT` sur `reports` pour `authenticated` est **column-scoped** en
+  prod (`target_type`, `target_id`, `reason`, `reporter_id` —
+  `20260803040000_moderation_et_suspension.sql`), jamais un GRANT table
+  entière. `scripts/export-table-grants.js` ne capture que les colonnes
+  **UPDATE** restreintes (`role_column_grants` filtré à
+  `privilege_type='UPDATE'`), jamais INSERT — troisième variante du même
+  trou de méthode, à corriger dans le script à l'occasion.
+
+## CONSTATS SÉCURITÉ EN PRODUCTION (trouvés le 2026-08-08, PAS des écarts de projet de test — décision à prendre)
+
+En creusant pourquoi certains tests échouaient encore après les correctifs
+GRANT/policies ci-dessus, deux constats concernent la **production
+elle-même**, vérifiés directement par introspection sur `ocfhzwwjvljintabxxlg` :
+rien n'a été modifié en prod, ceci est un rapport, pas une action.
+
+**1. Trois fonctions "Vague 2" ne fonctionnent probablement pas pour un
+vrai utilisateur en prod aujourd'hui** — `delete_own_resume()`,
+`archive_own_job_offer()`, `clear_own_assistant_messages()` (créées par
+`20260802220000_wave2_delete_replacements.sql` pour remplacer un DELETE
+client direct). Ce sont des fonctions PL/pgSQL normales
+(`prosecdef = false`, confirmé identique en prod et en test), donc elles
+s'exécutent avec les droits de l'appelant (`authenticated`) — mais la prod
+n'accorde **aucun** GRANT DELETE sur `resumes`/`assistant_messages` à
+`authenticated`, et le GRANT UPDATE column-scoped sur `job_offers` exclut
+explicitement `archived_at` (commentaire de
+`20260802250000_wave3_update_columns.sql` ligne 31 : "archived_at
+explicitement EXCLU (uniquement via archive_own_job_offer())" — ce qui
+suppose que cette fonction ait des droits élevés, ce qu'elle n'a pas).
+Conséquence : un appel à ces 3 fonctions par un utilisateur normal échoue
+avec `permission denied for table ...`, aussi bien en prod qu'en test — ce
+n'est pas un trou du projet de test, le projet de test reproduit fidèlement
+ce comportement de prod. Correctif probable : ajouter `SECURITY DEFINER` à
+ces 3 fonctions (avec le `SET search_path` déjà présent) via une nouvelle
+migration — mais c'est un changement de logique de sécurité en prod, hors
+périmètre de ce chantier d'isolation des tests, à valider explicitement
+avant toute migration.
+
+**2. `log_security_event()` est appelable directement par `authenticated`
+en prod, sans aucune vérification de l'identité de l'appelant dans son
+corps.** C'est une fonction `SECURITY DEFINER`, et `authenticated` a bien
+`EXECUTE` dessus en prod (confirmé par introspection, pas une supposition).
+Son corps se contente d'un `INSERT INTO security_logs (...) VALUES
+(p_event_type, p_severity, p_actor_id, p_target_user_id, p_details)` — les
+paramètres `p_actor_id`/`p_target_user_id`/`p_event_type`/`p_severity` sont
+fournis tels quels par l'appelant, sans comparaison à `auth.uid()`.
+Concrètement, n'importe quel compte authentifié peut aujourd'hui insérer
+une entrée dans `security_logs` en se faisant passer pour n'importe quel
+autre acteur, avec n'importe quelle sévérité — un vecteur de forgerie de
+journal de sécurité. Le test `storage-deletion-failure-log.spec.js:43`
+attendait que ce soit bloqué pour `authenticated`, ce qui a permis de
+découvrir l'écart. Aucune action prise en prod — à trancher : soit le GRANT
+EXECUTE à `authenticated` est une erreur historique à révoquer, soit la
+fonction doit valider `p_actor_id = auth.uid()` (sauf appel service_role).
