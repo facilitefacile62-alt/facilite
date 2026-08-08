@@ -134,6 +134,18 @@ CREATE POLICY "Upload de sa propre piece jointe de discussion" ON storage.object
 CREATE POLICY "Upload de ses propres documents de badge" ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'badge-documents'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 CREATE POLICY "Upload de son propre CV" ON storage.objects AS PERMISSIVE FOR INSERT TO PUBLIC WITH CHECK (((bucket_id = 'resumes'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 
+-- 0quater. Publication Realtime — même trou de nouveau : dump-schema-via-introspection.js
+-- ne capture pas l'appartenance à supabase_realtime. Vérifié sur la production le
+-- 2026-08-08 (SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime') :
+-- exactement ces 7 tables sont publiées, aucune autre.
+ALTER PUBLICATION supabase_realtime ADD TABLE public."agent_assignments";
+ALTER PUBLICATION supabase_realtime ADD TABLE public."candidatures";
+ALTER PUBLICATION supabase_realtime ADD TABLE public."conversations";
+ALTER PUBLICATION supabase_realtime ADD TABLE public."messages";
+ALTER PUBLICATION supabase_realtime ADD TABLE public."orders";
+ALTER PUBLICATION supabase_realtime ADD TABLE public."resumes";
+ALTER PUBLICATION supabase_realtime ADD TABLE public."security_logs";
+
 -- 1. Insertion dans auth.users
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
