@@ -92,6 +92,14 @@ test.describe("Correctif littéraux de rôle obsolètes — Storage CV et visuel
     expect(dlErr, `Lecture CV échouée après badge : ${dlErr?.message}`).toBeNull();
     expect(dl).toBeTruthy();
 
+    // ÉCHEC CONNU, hors périmètre — le bucket "job-offers" (public en
+    // prod) n'a jamais été créé sur facilite-e2e-test : seuls
+    // chat-attachments et resumes existent (2 buckets sur 6), voir
+    // docs/etat-du-projet.md ("Dette technique restante"). Sans rapport
+    // avec la policy CV ci-dessus (celle-ci passe désormais — corrigée le
+    // 2026-08-08 par can_recruiter_read_cv(), voir migration
+    // 20260808010000). Laissé rouge volontairement plutôt que skippé, pour
+    // ne pas masquer ce trou tant qu'il n'est pas comblé.
     const visualPath = `${recruiterId}/storage-role-fix-visual-${Date.now()}.png`;
     const { error: upErr } = await recruiterClient.storage
       .from("job-offers")

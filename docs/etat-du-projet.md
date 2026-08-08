@@ -256,23 +256,29 @@ d'`access-denial-detection.spec.js` et le sous-ensemble réduit de
 **Dette technique restante :**
 - `candidate-application.spec.js` — bug `ApplyModal.jsx` (état de succès
   écrasé par un `useEffect` mal scopé), détail dans "CONSTAT BUG
-  APPLICATIF" plus bas dans ce document.
-- `storage-role-literals-fix.spec.js` — policy storage
-  `"Recruteurs et admins lisent les CV"` non fonctionnelle pour un
-  `verified_recruiter` réel, détail dans le constat 5 de "CONSTATS
-  SÉCURITÉ EN PRODUCTION" plus bas.
+  APPLICATIF" plus bas dans ce document. Toujours en skip, pas encore
+  corrigé.
+- `storage-role-literals-fix.spec.js:74` — le 3e test échoue désormais
+  pour une raison différente et sans rapport : le bucket `job-offers`
+  n'existe pas sur `facilite-e2e-test` (voir juste en dessous). La policy
+  storage elle-même a été corrigée le 2026-08-08 (`can_recruiter_read_cv()`,
+  appliquée en test ET en production, voir "CONSTATS SÉCURITÉ EN
+  PRODUCTION" plus bas) — laissé en échec non skippé volontairement,
+  commenté dans le fichier de test, plutôt que masqué par un skip.
+- **4 buckets Storage manquants sur `facilite-e2e-test`** — seuls
+  `chat-attachments` et `resumes` existent (2 sur 6). Manquent :
+  `job-offers` (public en prod, cause l'échec ci-dessus),
+  `badge-documents`, `completed_cvs`, `invoices`. Jamais créés lors de la
+  mise en place initiale du projet de test. À régler lors d'une prochaine
+  session de maintenance dédiée (créer les 4 buckets + leurs policies,
+  déjà exportables via `scripts/export-storage-policies.js`).
 - Le générateur de dump de schéma (`scripts/dump-schema-via-introspection.js`)
   ne capture ni les GRANTs (schéma, table, colonne INSERT/UPDATE, fonction),
   ni les policies `storage.objects`, ni l'appartenance à la publication
-  `supabase_realtime` — détail dans "DETTE TECHNIQUE (Dump de schéma pour
-  le projet de test)" ci-dessous. Chaque futur projet de test recréé
-  directement depuis le dump (sans repasser par `supabase/seed-test.sql`)
-  aura le même trou.
-- `get_recruiter_candidatures()` et les 3 fonctions Vague 2
-  (`delete_own_resume`, `archive_own_job_offer`,
-  `clear_own_assistant_messages`) ont été passées en `SECURITY DEFINER` sur
-  le projet de test uniquement — la même correction est nécessaire en
-  production (voir le récapitulatif de fin de chantier).
+  `supabase_realtime`, ni la liste des buckets Storage — détail dans
+  "DETTE TECHNIQUE (Dump de schéma pour le projet de test)" ci-dessous.
+  Chaque futur projet de test recréé directement depuis le dump (sans
+  repasser par `supabase/seed-test.sql`) aura le même trou.
 
 ## DETTE TECHNIQUE (Migrations)
 
@@ -462,13 +468,23 @@ ne s'applique pas directement (ce n'est pas une fonction, c'est une
 policy) — le correctif probable est d'extraire ce test dans une fonction
 `SECURITY DEFINER` dédiée (même principe que `has_badge()`) et de
 l'appeler depuis la policy, au lieu d'y embarquer les `EXISTS` bruts.
-Aucune action prise — `test-account-isolation.spec.js` /
-`storage-role-literals-fix.spec.js:72` restent rouges tant que ce point
-n'est pas tranché. Une ligne `candidatures` de liaison a quand même été
-ajoutée à `supabase/seed-test.sql` (section "7.") — nécessaire mais pas
-suffisante, prête pour quand la policy sera corrigée.
-`storage-role-literals-fix.spec.js` a été mis en skip définitif sur le
-projet de test le 2026-08-08 (rate limit non lié).
+**CORRIGÉ le 2026-08-08 :** extrait dans `public.can_recruiter_read_cv(candidate_id
+uuid, recruiter_id uuid)`, `SECURITY DEFINER SET search_path = ''`, même
+principe que `has_badge()`. Reprend exactement la même logique métier
+(`cv_visible_recruteurs=true` OU `candidatures.recruiter_id` direct, sans
+jointure `job_offers`) sous un garde commun
+`has_badge(recruiter_id, 'verified_recruiter')` — sans ce garde, la
+branche `cv_visible_recruteurs=true` aurait été lisible par n'importe quel
+utilisateur authentifié, pas seulement un recruteur badgé. Migration
+`20260808010000_storage_cv_policy_security_definer.sql`, appliquée et
+vérifiée sur `facilite-e2e-test` PUIS en production (4 scénarios réels :
+recruteur badgé + candidature → succès ; recruteur badgé sans lien →
+refus ; candidat lit son propre CV → succès ; non authentifié → refus).
+13 invariants vérifiés verts après déploiement en production.
+`storage-role-literals-fix.spec.js:74` (le test qui avait permis de
+détecter ce bug) reste néanmoins rouge — mais pour une raison distincte et
+sans rapport : le bucket `job-offers` n'existe pas sur
+`facilite-e2e-test` (voir "Dette technique restante" plus haut).
 
 ## CONSTAT BUG APPLICATIF (trouvé le 2026-08-08, PAS un écart de projet de test)
 
