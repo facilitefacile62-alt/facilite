@@ -535,3 +535,60 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- 6. Les 3 profils fictifs originaux (migration 20260802150000_test_account_isolation.sql)
+-- — trouvés absents de facilite-e2e-test le 2026-08-08 (Groupe C), cause de
+-- test-account-isolation.spec.js:87 ("les 3 profils fictifs existent").
+-- Distincts des 10 candidats démo du Groupe A (section 5 ci-dessus) : ce
+-- sont les IDs ...001/002/003 attendus explicitement en dur par ce test.
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+) VALUES
+  ('00000000-0000-0000-0000-000000000000', '90000000-0000-4000-a000-000000000001',
+   'authenticated', 'authenticated', 'test-fictif-1@facilite-demo.local',
+   crypt('CompteFictifNonUtilisable2026!', gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '90000000-0000-4000-a000-000000000002',
+   'authenticated', 'authenticated', 'test-fictif-2@facilite-demo.local',
+   crypt('CompteFictifNonUtilisable2026!', gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '90000000-0000-4000-a000-000000000003',
+   'authenticated', 'authenticated', 'test-fictif-3@facilite-demo.local',
+   crypt('CompteFictifNonUtilisable2026!', gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (
+  id, provider_id, user_id, identity_data, provider, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(), u.id::text, u.id,
+  jsonb_build_object('sub', u.id::text, 'email', u.email),
+  'email', now(), now()
+FROM auth.users u
+WHERE u.email IN ('test-fictif-1@facilite-demo.local', 'test-fictif-2@facilite-demo.local', 'test-fictif-3@facilite-demo.local')
+ON CONFLICT DO NOTHING;
+
+UPDATE public.profiles SET
+  full_name = data.full_name,
+  headline = data.headline,
+  bio = data.bio,
+  city = data.city,
+  skills = data.skills,
+  is_test_account = true,
+  cv_visible_recruteurs = true
+FROM (VALUES
+  ('90000000-0000-4000-a000-000000000001'::uuid, 'Aïssatou Fictive (Test)', 'Développeuse Full-Stack (profil de simulation)',
+   'Profil 100% fictif, généré pour les simulations de recherche recruteur. Ne correspond à aucune personne réelle.',
+   'Dakar', '["React", "Node.js", "PostgreSQL"]'::jsonb),
+  ('90000000-0000-4000-a000-000000000002'::uuid, 'Moussa Fictif (Test)', 'Comptable (profil de simulation)',
+   'Profil 100% fictif, généré pour les simulations de recherche recruteur. Ne correspond à aucune personne réelle.',
+   'Thiès', '["Comptabilité", "Excel", "SAGE"]'::jsonb),
+  ('90000000-0000-4000-a000-000000000003'::uuid, 'Fatou Fictive (Test)', 'Chargée de communication (profil de simulation)',
+   'Profil 100% fictif, généré pour les simulations de recherche recruteur. Ne correspond à aucune personne réelle.',
+   'Saint-Louis', '["Communication", "Réseaux sociaux", "Canva"]'::jsonb)
+) AS data(id, full_name, headline, bio, city, skills)
+WHERE profiles.id = data.id;
