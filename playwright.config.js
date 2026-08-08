@@ -41,10 +41,23 @@ module.exports = defineConfig({
     screenshot: "only-on-failure",
   },
 
+  // navigation-role-gates.spec.js et cv-quota.spec.js créent des comptes
+  // jetables via signUp() à la volée — sujets au rate limit Auth du projet
+  // de test (quota bas, palier gratuit), pas un bug de ces tests. Projet
+  // séparé avec retries:2 uniquement pour ces deux fichiers, plutôt que
+  // d'élargir les retries à toute la suite (masquerait de vraies
+  // régressions ailleurs).
   projects: [
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      testIgnore: [/navigation-role-gates\.spec\.js/, /cv-quota\.spec\.js/],
+    },
+    {
+      name: "chromium-rate-limit-flaky",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: [/navigation-role-gates\.spec\.js/, /cv-quota\.spec\.js/],
+      retries: 2,
     },
   ],
 

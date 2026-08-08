@@ -46,8 +46,13 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
     env = loadTestEnv();
     anonClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
+    // Délai entre chaque signUp() : 3 créations à la suite dépassaient le
+    // rate limit Auth du projet de test (quota bas, palier gratuit).
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     plainUser = await createThrowawayUser(anonClient, "gate-plain");
+    await sleep(2000);
     badgedRecruiter = await createThrowawayUser(anonClient, "gate-recruiter");
+    await sleep(2000);
     adminUser = await createThrowawayUser(anonClient, "gate-admin");
 
     await runPrivilegedSql(`

@@ -662,3 +662,67 @@ VALUES (
 -- recruiter-candidate-data-protection.spec.js passent. Correctif
 -- équivalent proposé pour la production, en attente de validation.
 ALTER FUNCTION public.get_recruiter_candidatures(uuid, integer) SECURITY DEFINER SET search_path = '';
+
+-- 8. Corrections du 2026-08-08 (suite) sur les 6 derniers échecs.
+--
+-- #1 : education_level manquant sur e2e-test-candidate, requis par
+-- candidate-application.spec.js (offre "Développeur Full-Stack React /
+-- Node.js" exige min_education_level='Licence').
+UPDATE public.profiles SET education_level = 'Licence'
+WHERE id = '30000000-0000-4000-a000-000000000001';
+
+-- #2 : demo-mode-isolation.spec.js utilisait e2e-test-security comme "vrai
+-- recruteur" pour vérifier qu'aucun profil de test ne lui fuite — mais
+-- e2e-test-security est lui-même is_test_account=true (utilisé comme tel
+-- ailleurs, ex. test-account-isolation.spec.js). Compte dédié créé
+-- uniquement pour ce test, jamais is_test_account=true, jamais réutilisé
+-- ailleurs. Le badge verified_recruiter est accordé dynamiquement par le
+-- test lui-même (beforeAll), pas ici.
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at, confirmation_token, recovery_token, email_change_token_new, email_change
+) VALUES (
+  '00000000-0000-0000-0000-000000000000', '60000000-0000-4000-a000-000000000001',
+  'authenticated', 'authenticated', 'e2e-test-real-recruiter@facilite-demo.local',
+  crypt('FaciliteE2ETest2026!', gen_salt('bf')),
+  now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Real Recruiter E2E Test"}',
+  now(), now(), '', '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, created_at, updated_at)
+SELECT gen_random_uuid(), u.id::text, u.id,
+  jsonb_build_object('sub', u.id::text, 'email', u.email), 'email', now(), now()
+FROM auth.users u WHERE u.id = '60000000-0000-4000-a000-000000000001'
+ON CONFLICT DO NOTHING;
+
+-- #4 : recruiter-verification.spec.js badge e2e-test-candidate comme
+-- recruteur pour vérifier que la CVthèque renvoie des candidats réels —
+-- mais e2e-test-candidate a lui-même is_test_account qui varie selon
+-- l'ordre d'exécution (mis à true par le seed, remis à false par
+-- test-account-isolation.spec.js:afterAll). Un candidat séparé,
+-- exclusivement is_test_account=false + cv_visible_recruteurs=true,
+-- garantit qu'au moins un profil réel est toujours trouvable, quel que
+-- soit l'ordre d'exécution des fichiers.
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at, confirmation_token, recovery_token, email_change_token_new, email_change
+) VALUES (
+  '00000000-0000-0000-0000-000000000000', '60000000-0000-4000-a000-000000000002',
+  'authenticated', 'authenticated', 'e2e-test-real-candidate@facilite-demo.local',
+  crypt('FaciliteE2ETest2026!', gen_salt('bf')),
+  now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Real Candidate E2E Test"}',
+  now(), now(), '', '', '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, created_at, updated_at)
+SELECT gen_random_uuid(), u.id::text, u.id,
+  jsonb_build_object('sub', u.id::text, 'email', u.email), 'email', now(), now()
+FROM auth.users u WHERE u.id = '60000000-0000-4000-a000-000000000002'
+ON CONFLICT DO NOTHING;
+
+UPDATE public.profiles SET
+  is_test_account = false,
+  cv_visible_recruteurs = true
+WHERE id = '60000000-0000-4000-a000-000000000002';

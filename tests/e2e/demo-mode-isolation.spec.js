@@ -15,33 +15,37 @@ const { loadTestEnv } = require("../helpers/testEnv");
 const DEMO_RECRUITER_ID = "90000000-0000-4000-a000-000000000099";
 const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@facilite-demo.local";
 const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETest2026!";
-const SECURITY_EMAIL = process.env.E2E_SECURITY_EMAIL || "e2e-test-security@facilite-demo.local";
-const SECURITY_PASSWORD = process.env.E2E_SECURITY_PASSWORD || "FaciliteE2ETest2026!";
+// Compte dédié (jamais is_test_account=true, jamais réutilisé ailleurs) —
+// e2e-test-security ne convient pas ici : il est lui-même is_test_account=true
+// (utilisé comme tel par test-account-isolation.spec.js), ce qui invalidait
+// la vérification "aucune fuite vers un VRAI recruteur" ci-dessous.
+const REAL_RECRUITER_EMAIL = process.env.E2E_REAL_RECRUITER_EMAIL || "e2e-test-real-recruiter@facilite-demo.local";
+const REAL_RECRUITER_PASSWORD = process.env.E2E_REAL_RECRUITER_PASSWORD || "FaciliteE2ETest2026!";
 const DEMO_EMAIL = "demo.investisseur@facilite-demo.local";
 const DEMO_PASSWORD = "CompteDemoNonUtilisable2026!";
 
 test.describe("Mode démo — isolation vis-à-vis du site public", () => {
-  let anonClient, candidateClient, securityClient, securityId;
+  let anonClient, candidateClient, realRecruiterClient, realRecruiterId;
 
   test.beforeAll(async () => {
     const env = loadTestEnv();
     anonClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     candidateClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    securityClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    realRecruiterClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     await candidateClient.auth.signInWithPassword({ email: CANDIDATE_EMAIL, password: CANDIDATE_PASSWORD });
-    const { data: secAuth } = await securityClient.auth.signInWithPassword({ email: SECURITY_EMAIL, password: SECURITY_PASSWORD });
-    securityId = secAuth.user.id;
+    const { data: recAuth } = await realRecruiterClient.auth.signInWithPassword({ email: REAL_RECRUITER_EMAIL, password: REAL_RECRUITER_PASSWORD });
+    realRecruiterId = recAuth.user.id;
     // Un VRAI recruteur vérifié (pas is_test_account) est le seul cas où
     // une fuite serait détectable — un compte sans badge reçoit de toute
     // façon un résultat vide, ce qui ne prouverait rien.
     await runPrivilegedSql(`
       UPDATE public.profiles SET badges = badges || '["verified_recruiter"]'::jsonb
-      WHERE id = '${securityId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);
+      WHERE id = '${realRecruiterId}' AND NOT (badges @> '["verified_recruiter"]'::jsonb);
     `);
   });
 
   test.afterAll(async () => {
-    await runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${securityId}';`);
+    await runPrivilegedSql(`UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${realRecruiterId}';`);
   });
 
   test("aucune offre démo n'est lisible via la lecture publique (clé anon, sans session)", async () => {
@@ -84,7 +88,7 @@ test.describe("Mode démo — isolation vis-à-vis du site public", () => {
     // un appelant qui ne l'est pas lui-même (20260802120000) — ce test
     // vérifie spécifiquement les 10 nouveaux profils du funnel démo, pas
     // seulement les 3 déjà couverts par test-account-isolation.spec.js.
-    const { data, error } = await securityClient.rpc("get_candidats_recherche");
+    const { data, error } = await realRecruiterClient.rpc("get_candidats_recherche");
     expect(error).toBeNull();
     const demoCandidateIds = Array.from({ length: 10 }, (_, i) => `90000000-0000-4000-a000-00000000001${i}`);
     const leaked = (data || []).filter((row) => demoCandidateIds.includes(row.id));
