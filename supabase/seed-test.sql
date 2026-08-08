@@ -272,7 +272,7 @@ INSERT INTO auth.users (
     'authenticated', 'authenticated',
     'e2e-test-agent@facilite-demo.local',
     crypt('FaciliteE2ETest2026!', gen_salt('bf')),
-    now(), '{"provider":"email","providers":["email"]}', '{"full_name":"E2E Agent"}',
+    now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Agent E2E Test"}',
     now(), now(), '', '', '', ''
   ),
   -- Security / Recruiter
@@ -592,3 +592,73 @@ FROM (VALUES
    'Saint-Louis', '["Communication", "Réseaux sociaux", "Canva"]'::jsonb)
 ) AS data(id, full_name, headline, bio, city, skills)
 WHERE profiles.id = data.id;
+
+-- 7. Groupe D — corrections du 2026-08-08.
+--
+-- #2/#13 : demo.senetech@facilite-demo.local ("SeneTech Solutions",
+-- recruiter_id 00000000-...-001, utilisé par candidate-application.spec.js
+-- et xss-joboffer-jsonld.spec.js) avait ses offres en pending_review (donc
+-- invisibles publiquement, policy RLS "Anyone can view active job offers"
+-- exige status='approved') et aucun badge verified_recruiter (donc INSERT
+-- bloqué par la policy RLS "Un recruteur publie ses propres offres"). Le
+-- trigger trg_reset_job_offer_moderation force pending_review sur tout
+-- INSERT/UPDATE dont l'appelant n'est pas admin (current_user_role() lit
+-- auth.uid(), NULL sur cette connexion privilégiée) — désactivé le temps
+-- de la mise à jour, même motif que scripts/generate-demo-data.sql.
+ALTER TABLE public.job_offers DISABLE TRIGGER trg_reset_job_offer_moderation;
+UPDATE public.job_offers SET status = 'approved', status_updated_at = now()
+WHERE recruiter_id = '00000000-0000-4000-a000-000000000001';
+ALTER TABLE public.job_offers ENABLE TRIGGER trg_reset_job_offer_moderation;
+
+UPDATE public.profiles SET badges = CASE WHEN badges @> '["verified_recruiter"]'::jsonb THEN badges ELSE badges || '["verified_recruiter"]'::jsonb END
+WHERE id = '00000000-0000-4000-a000-000000000001';
+
+-- #10 : storage-role-literals-fix.spec.js suppose qu'un recruteur badgé
+-- (e2e-test-security jouant le recruteur) peut lire le CV d'un candidat
+-- (e2e-test-candidate) sans lien préalable. La policy storage.objects
+-- "Recruteurs et admins lisent les CV" (identique à la prod) exige soit
+-- cv_visible_recruteurs=true sur le profil du candidat, soit une ligne
+-- candidatures liant candidat et recruteur — cette candidature de liaison
+-- comble la seconde condition.
+--
+-- ATTENTION — insuffisant à lui seul, vérifié le 2026-08-08 : les DEUX
+-- conditions d'échappement de cette policy (cv_visible_recruteurs=true ET
+-- la présence de cette ligne candidatures) échouent quand même, testées
+-- en direct. Cause : les sous-requêtes de la policy vers profiles et
+-- candidatures sont elles-mêmes filtrées par le RLS de CES tables pour
+-- l'appelant (le recruteur ne peut voir ni le profil du candidat, ni sa
+-- propre ligne candidatures, via leurs policies SELECT respectives,
+-- limitées à "son propre profil"/"sa propre candidature"). Même famille
+-- que #7 et la Décision 3, mais dans une policy storage — pas de
+-- SECURITY DEFINER possible sur une policy elle-même ; corrigerait
+-- vraisemblablement via une fonction SECURITY DEFINER dédiée appelée
+-- depuis la policy (comme has_badge()/current_user_role() le sont déjà),
+-- hors périmètre de ce qui a été autorisé ce soir. La policy
+-- "Recruteurs et admins lisent les CV" est donc non fonctionnelle pour un
+-- verified_recruiter réel non-admin, en prod comme en test — signalé,
+-- non corrigé. test-account-isolation.spec.js reste rouge tant que ce
+-- point n'est pas tranché séparément.
+INSERT INTO public.candidatures (id, user_id, job_title, company, full_name, email, cv_url, recruiter_id, status)
+VALUES (
+  '20000000-0000-4000-a000-000000000099',
+  '30000000-0000-4000-a000-000000000001',
+  'Poste de test — storage-role-literals-fix',
+  'Storage Fix Test SARL',
+  'E2E Candidate',
+  'e2e-test-candidate@facilite-demo.local',
+  'resumes/placeholder.pdf',
+  '40000000-0000-4000-a000-000000000003',
+  'pending'
+) ON CONFLICT (id) DO NOTHING;
+
+-- #7 : get_recruiter_candidatures() — même famille que les Décisions 1 et
+-- 3 : LANGUAGE sql, prosecdef=false en prod, exécutée avec les droits de
+-- l'appelant. candidatures n'a que 2 policies SELECT (propre candidature,
+-- admin) — aucune ne permet à un recruteur de lire les candidatures liées
+-- à ses propres offres, identique en prod. Passée en SECURITY DEFINER +
+-- SET search_path = '' — corps déjà entièrement qualifié
+-- (public.candidatures, public.job_offers, public.current_user_role,
+-- public.has_badge, auth.uid()). Vérifié : les 5 tests de
+-- recruiter-candidate-data-protection.spec.js passent. Correctif
+-- équivalent proposé pour la production, en attente de validation.
+ALTER FUNCTION public.get_recruiter_candidatures(uuid, integer) SECURITY DEFINER SET search_path = '';

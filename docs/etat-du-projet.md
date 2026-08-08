@@ -372,3 +372,37 @@ ajouter une policy RLS dédiée sur `profiles`.
 `recruiter-search-views.spec.js` et `recruiter-verification.spec.js`
 passent. **Correctif équivalent en prod proposé, en attente de
 validation** avant toute migration.
+
+**4. `get_recruiter_candidatures()` — même famille, trouvé le 2026-08-08.**
+`LANGUAGE sql`, `prosecdef = false` en prod. `candidatures` n'a que 2
+policies SELECT (propre candidature, admin) — aucune ne permet à un
+recruteur de lire les candidatures liées à ses propres offres, identique
+en prod. **DÉCISION PRISE :** `SECURITY DEFINER` + `SET search_path = ''`.
+Fait sur `facilite-e2e-test` — les 5 tests de
+`recruiter-candidate-data-protection.spec.js` passent. **Correctif
+équivalent en prod proposé, en attente de validation.**
+
+**5. Policy storage `"Recruteurs et admins lisent les CV"` non
+fonctionnelle pour un `verified_recruiter` réel — trouvé le 2026-08-08,
+même famille mais PAS corrigeable par une simple donnée de seed.** Ses
+deux conditions d'échappement (`cv_visible_recruteurs=true` sur le profil
+du candidat, OU une ligne `candidatures` liant candidat et recruteur)
+échouent TOUTES LES DEUX en pratique, vérifié en direct par appel réel
+(`.storage.download()`) avec les deux conditions satisfaites une par une.
+Cause : la policy contient des sous-requêtes `EXISTS (SELECT 1 FROM
+profiles ...)` / `EXISTS (SELECT 1 FROM candidatures ...)` — ces
+sous-requêtes sont elles-mêmes filtrées par le RLS de `profiles`/
+`candidatures` pour l'appelant (un recruteur ne peut voir ni le profil
+d'un autre candidat, ni une ligne `candidatures` où il n'est pas
+`user_id`, via leurs policies SELECT respectives) — donc les deux `EXISTS`
+renvoient toujours faux pour un recruteur non-admin, quelle que soit la
+donnée réelle. Contrairement aux constats 1, 3 et 4, `SECURITY DEFINER`
+ne s'applique pas directement (ce n'est pas une fonction, c'est une
+policy) — le correctif probable est d'extraire ce test dans une fonction
+`SECURITY DEFINER` dédiée (même principe que `has_badge()`) et de
+l'appeler depuis la policy, au lieu d'y embarquer les `EXISTS` bruts.
+Aucune action prise — `test-account-isolation.spec.js` /
+`storage-role-literals-fix.spec.js:72` restent rouges tant que ce point
+n'est pas tranché. Une ligne `candidatures` de liaison a quand même été
+ajoutée à `supabase/seed-test.sql` (section "7.") — nécessaire mais pas
+suffisante, prête pour quand la policy sera corrigée.

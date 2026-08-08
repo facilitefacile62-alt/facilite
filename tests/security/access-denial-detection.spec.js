@@ -19,6 +19,10 @@ const { loadTestEnv } = require("../helpers/testEnv");
 
 
 test.describe("Détection des refus d'accès répétés (4B)", () => {
+  // SKIP — TEST_SUPABASE_SERVICE_ROLE_KEY non configurée correctement
+  // sur ce projet de test (identique à anon key)
+  test.skip(!!process.env.TEST_SUPABASE_URL, "SKIP — TEST_SUPABASE_SERVICE_ROLE_KEY non configurée correctement sur ce projet de test (identique à anon key)");
+
   let env, baseURL;
 
   test.beforeAll(async () => {
