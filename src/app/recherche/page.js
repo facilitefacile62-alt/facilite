@@ -117,6 +117,18 @@ function RechercheContent() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [applyingOffer, setApplyingOffer] = useState(null);
+  // Stabilise la référence de job passé à ApplyModal — voir
+  // OffreApplySection.jsx pour l'explication complète du bug.
+  const stableApplyingJob = useMemo(() => {
+    if (!applyingOffer) return null;
+    return {
+      id: applyingOffer.id,
+      titleFR: applyingOffer.title,
+      titleEN: applyingOffer.title,
+      company: applyingOffer.company,
+      isSpontaneous: applyingOffer.isSpontaneous,
+    };
+  }, [applyingOffer?.id, applyingOffer?.title, applyingOffer?.company, applyingOffer?.isSpontaneous]);
 
   // Résultats multi-sources
   const [results, setResults] = useState({
@@ -587,17 +599,7 @@ function RechercheContent() {
       <ApplyModal
         isOpen={!!applyingOffer}
         onClose={() => setApplyingOffer(null)}
-        job={
-          applyingOffer
-            ? {
-                id: applyingOffer.id,
-                titleFR: applyingOffer.title,
-                titleEN: applyingOffer.title,
-                company: applyingOffer.company,
-                isSpontaneous: applyingOffer.isSpontaneous,
-              }
-            : null
-        }
+        job={stableApplyingJob}
         selectedLang="FR"
         triggerToast={triggerToast}
       />

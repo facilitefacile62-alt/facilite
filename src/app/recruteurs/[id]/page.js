@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -124,6 +124,20 @@ export default function RecruiterShowcasePage() {
   };
 
   const companyName = recruiterProfile?.company_name || offers[0]?.company || "Recruteur";
+
+  // Stabilise la référence de job passé à ApplyModal — voir
+  // OffreApplySection.jsx pour l'explication complète du bug (useEffect de
+  // reset d'ApplyModal redéclenché par un nouvel objet à chaque rendu).
+  const stableJob = useMemo(() => {
+    if (!applyingOffer) return null;
+    if (applyingOffer.isSpontaneous) return applyingOffer;
+    return {
+      id: applyingOffer.id,
+      titleFR: applyingOffer.title,
+      titleEN: applyingOffer.title,
+      company: companyName,
+    };
+  }, [applyingOffer?.id, applyingOffer?.isSpontaneous, applyingOffer?.title, companyName]);
   const initials = companyName
     .split(" ")
     .filter(Boolean)
@@ -437,18 +451,7 @@ export default function RecruiterShowcasePage() {
       <ApplyModal
         isOpen={!!applyingOffer}
         onClose={() => setApplyingOffer(null)}
-        job={
-          applyingOffer
-            ? applyingOffer.isSpontaneous
-              ? applyingOffer
-              : {
-                  id: applyingOffer.id,
-                  titleFR: applyingOffer.title,
-                  titleEN: applyingOffer.title,
-                  company: companyName,
-                }
-            : null
-        }
+        job={stableJob}
         selectedLang="FR"
         triggerToast={triggerToast}
       />

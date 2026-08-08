@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import ApplyModal from "@/components/ApplyModal";
 
@@ -44,6 +44,22 @@ export default function OffreApplySection({ offer }) {
   const eligible = levelRank(candidateEducationLevel) >= levelRank(offer.min_education_level);
   const blocked = !!userSession && !eligible;
 
+  // Stabilise la référence de l'objet job passé à ApplyModal : reconstruit
+  // en ligne à chaque rendu, un nouvel objet (même contenu) déclenchait le
+  // useEffect de reset d'ApplyModal (dépendance [isOpen, job, ...]) à
+  // chaque re-rendu de ce composant — y compris juste après l'envoi
+  // réussi, quand triggerToast() programme un setTimeout qui provoque un
+  // re-rendu ~3.5s plus tard, effaçant le message de succès.
+  const stableJob = useMemo(
+    () => ({
+      id: offer.id,
+      titleFR: offer.title,
+      titleEN: offer.title,
+      company: offer.company,
+    }),
+    [offer.id, offer.title, offer.company]
+  );
+
   return (
     <>
       <div
@@ -73,12 +89,7 @@ export default function OffreApplySection({ offer }) {
       <ApplyModal
         isOpen={applyOpen}
         onClose={() => setApplyOpen(false)}
-        job={{
-          id: offer.id,
-          titleFR: offer.title,
-          titleEN: offer.title,
-          company: offer.company,
-        }}
+        job={stableJob}
         selectedLang="FR"
         triggerToast={triggerToast}
       />

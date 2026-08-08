@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -26,6 +26,18 @@ function OffresContent() {
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [locationFilter, setLocationFilter] = useState("");
   const [applyingOffer, setApplyingOffer] = useState(null);
+  // Stabilise la référence de job passé à ApplyModal — voir
+  // OffreApplySection.jsx pour l'explication complète du bug.
+  const stableApplyingJob = useMemo(() => {
+    if (!applyingOffer) return null;
+    return {
+      id: applyingOffer.id,
+      titleFR: applyingOffer.title,
+      titleEN: applyingOffer.title,
+      company: applyingOffer.company,
+      isSpontaneous: applyingOffer.isSpontaneous,
+    };
+  }, [applyingOffer?.id, applyingOffer?.title, applyingOffer?.company, applyingOffer?.isSpontaneous]);
   const [toast, setToast] = useState("");
 
   const [semanticResults, setSemanticResults] = useState(null);
@@ -379,17 +391,7 @@ function OffresContent() {
       <ApplyModal
         isOpen={!!applyingOffer}
         onClose={() => setApplyingOffer(null)}
-        job={
-          applyingOffer
-            ? {
-                id: applyingOffer.id,
-                titleFR: applyingOffer.title,
-                titleEN: applyingOffer.title,
-                company: applyingOffer.company,
-                isSpontaneous: applyingOffer.isSpontaneous,
-              }
-            : null
-        }
+        job={stableApplyingJob}
         selectedLang="FR"
         triggerToast={triggerToast}
       />

@@ -28,8 +28,6 @@ const RECRUITER_ID = process.env.E2E_RECRUITER_ID || "00000000-0000-4000-a000-00
 const TEST_CV_PATH = path.join(__dirname, "fixtures", "test-cv.pdf");
 
 test.describe("Parcours candidat : vitrine recruteur -> candidature", () => {
-  test.skip(!!process.env.TEST_SUPABASE_URL, "SKIP sur projet de test — bug ApplyModal.jsx hors périmètre, documenté dans etat-du-projet.md");
-
   test("connexion, consultation d'une offre, vérification d'éligibilité et candidature", async ({ page }) => {
     // 1. Connexion du candidat de test.
     await page.goto("/login");

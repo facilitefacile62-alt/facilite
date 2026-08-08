@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import ApplyModal from "@/components/ApplyModal";
@@ -12,6 +12,18 @@ export default function RecrutementSpontaneDetailPage() {
   const slug = params?.slug;
 
   const [applyingOffer, setApplyingOffer] = useState(null);
+  // Stabilise la référence de job passé à ApplyModal — voir
+  // OffreApplySection.jsx pour l'explication complète du bug.
+  const stableApplyingJob = useMemo(() => {
+    if (!applyingOffer) return null;
+    return {
+      id: applyingOffer.id,
+      titleFR: `Candidature Spontanée - ${applyingOffer.company}`,
+      titleEN: `Spontaneous Application - ${applyingOffer.company}`,
+      company: applyingOffer.company,
+      isSpontaneous: true,
+    };
+  }, [applyingOffer?.id, applyingOffer?.company]);
   const [toast, setToast] = useState(null);
 
   const triggerToast = (msg) => {
@@ -164,17 +176,7 @@ export default function RecrutementSpontaneDetailPage() {
       <ApplyModal
         isOpen={!!applyingOffer}
         onClose={() => setApplyingOffer(null)}
-        job={
-          applyingOffer
-            ? {
-                id: applyingOffer.id,
-                titleFR: `Candidature Spontanée - ${applyingOffer.company}`,
-                titleEN: `Spontaneous Application - ${applyingOffer.company}`,
-                company: applyingOffer.company,
-                isSpontaneous: true,
-              }
-            : null
-        }
+        job={stableApplyingJob}
         selectedLang="FR"
         triggerToast={triggerToast}
       />

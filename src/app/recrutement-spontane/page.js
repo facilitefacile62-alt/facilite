@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ApplyModal from "@/components/ApplyModal";
@@ -9,6 +9,18 @@ import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 export default function RecrutementSpontanePage() {
   const router = useRouter();
   const [applyingOffer, setApplyingOffer] = useState(null);
+  // Stabilise la référence de job passé à ApplyModal — voir
+  // OffreApplySection.jsx pour l'explication complète du bug.
+  const stableApplyingJob = useMemo(() => {
+    if (!applyingOffer) return null;
+    return {
+      id: applyingOffer.id,
+      titleFR: applyingOffer.title,
+      titleEN: applyingOffer.title,
+      company: applyingOffer.company,
+      isSpontaneous: true,
+    };
+  }, [applyingOffer?.id, applyingOffer?.title, applyingOffer?.company]);
   const [toast, setToast] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all"); // 'all', 'stations', 'transport', 'banque', 'distribution'
@@ -412,17 +424,7 @@ export default function RecrutementSpontanePage() {
       <ApplyModal
         isOpen={!!applyingOffer}
         onClose={() => setApplyingOffer(null)}
-        job={
-          applyingOffer
-            ? {
-                id: applyingOffer.id,
-                titleFR: applyingOffer.title,
-                titleEN: applyingOffer.title,
-                company: applyingOffer.company,
-                isSpontaneous: true,
-              }
-            : null
-        }
+        job={stableApplyingJob}
         selectedLang="FR"
         triggerToast={triggerToast}
       />
