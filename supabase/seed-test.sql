@@ -73,6 +73,67 @@ GRANT UPDATE ("resolved_at", "resolved_by", "status") ON TABLE public."reports" 
 GRANT UPDATE ("status") ON TABLE public."candidatures" TO authenticated;
 GRANT UPDATE ("status", "updated_at") ON TABLE public."support_threads" TO authenticated;
 
+-- 0ter. Policies RLS storage.objects — même trou de nouveau,
+-- dump-schema-via-introspection.js scope tout à nspname='public', jamais
+-- storage. Exportées depuis la production (scripts/export-storage-policies.js)
+-- le 2026-08-08. Le projet de test avait 6 policies avant ce correctif :
+-- 4 correspondaient à de vraies policies de prod (recréées ici à
+-- l'identique) et 2 étaient ad hoc, n'existant nulle part en production
+-- ("Authenticated upload chat-attachments", "Public select
+-- chat-attachments" — cette dernière rendait les pièces jointes de chat
+-- lisibles sans authentification) : supprimées avant d'appliquer les 18
+-- policies réelles ci-dessous. DROP POLICY IF EXISTS d'abord pour rester
+-- idempotent sur un reset répété.
+DROP POLICY IF EXISTS "Lecture de ses propres documents de badge" ON storage.objects;
+DROP POLICY IF EXISTS "Lecture de son propre CV" ON storage.objects;
+DROP POLICY IF EXISTS "Mise a jour de son propre CV" ON storage.objects;
+DROP POLICY IF EXISTS "Participants lisent les pieces jointes de leur conversation" ON storage.objects;
+DROP POLICY IF EXISTS "Recruteurs et admins lisent les CV" ON storage.objects;
+DROP POLICY IF EXISTS "Suppression de son propre CV" ON storage.objects;
+DROP POLICY IF EXISTS "Un admin gere tous les cv finalises" ON storage.objects;
+DROP POLICY IF EXISTS "Un agent met a jour le cv de son dossier assigne" ON storage.objects;
+DROP POLICY IF EXISTS "Un agent televerse le cv de son dossier assigne" ON storage.objects;
+DROP POLICY IF EXISTS "Un candidat lit sa propre facture" ON storage.objects;
+DROP POLICY IF EXISTS "Un candidat lit son cv finalise" ON storage.objects;
+DROP POLICY IF EXISTS "Un moderateur lit les documents de badge" ON storage.objects;
+DROP POLICY IF EXISTS "Un recruteur met a jour ses visuels d'offres" ON storage.objects;
+DROP POLICY IF EXISTS "Un recruteur supprime ses visuels d'offres" ON storage.objects;
+DROP POLICY IF EXISTS "Un recruteur televerse ses visuels d'offres" ON storage.objects;
+DROP POLICY IF EXISTS "Upload de sa propre piece jointe de discussion" ON storage.objects;
+DROP POLICY IF EXISTS "Upload de ses propres documents de badge" ON storage.objects;
+DROP POLICY IF EXISTS "Upload de son propre CV" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated upload chat-attachments" ON storage.objects;
+DROP POLICY IF EXISTS "Public select chat-attachments" ON storage.objects;
+
+CREATE POLICY "Lecture de ses propres documents de badge" ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'badge-documents'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Lecture de son propre CV" ON storage.objects AS PERMISSIVE FOR SELECT TO PUBLIC USING (((bucket_id = 'resumes'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Mise a jour de son propre CV" ON storage.objects AS PERMISSIVE FOR UPDATE TO PUBLIC USING (((bucket_id = 'resumes'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))) WITH CHECK (((bucket_id = 'resumes'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Participants lisent les pieces jointes de leur conversation" ON storage.objects AS PERMISSIVE FOR SELECT TO PUBLIC USING (((bucket_id = 'chat-attachments'::text) AND ((EXISTS ( SELECT 1
+   FROM messages m
+  WHERE ((m.attachment_url = objects.name) AND ((m.sender_id = auth.uid()) OR (m.receiver_id = auth.uid()))))) OR (current_user_role() = ANY (ARRAY['admin'::text, 'publisher'::text])))));
+CREATE POLICY "Recruteurs et admins lisent les CV" ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'resumes'::text) AND ((auth.uid() = owner) OR (current_user_role() = 'admin'::text) OR ((current_user_role() = 'user'::text) AND has_badge(auth.uid(), 'verified_recruiter'::text) AND ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE (((p.id)::text = (storage.foldername(objects.name))[1]) AND (p.cv_visible_recruteurs = true)))) OR (EXISTS ( SELECT 1
+   FROM candidatures c
+  WHERE (((c.user_id)::text = (storage.foldername(objects.name))[1]) AND (c.recruiter_id = auth.uid())))))))));
+CREATE POLICY "Suppression de son propre CV" ON storage.objects AS PERMISSIVE FOR DELETE TO PUBLIC USING (((bucket_id = 'resumes'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un admin gere tous les cv finalises" ON storage.objects AS PERMISSIVE FOR ALL TO PUBLIC USING (((bucket_id = 'completed_cvs'::text) AND (current_user_role() = 'admin'::text))) WITH CHECK (((bucket_id = 'completed_cvs'::text) AND (current_user_role() = 'admin'::text)));
+CREATE POLICY "Un agent met a jour le cv de son dossier assigne" ON storage.objects AS PERMISSIVE FOR UPDATE TO PUBLIC USING (((bucket_id = 'completed_cvs'::text) AND (EXISTS ( SELECT 1
+   FROM agent_assignments aa
+  WHERE ((aa.agent_id = auth.uid()) AND ((aa.candidate_id)::text = (storage.foldername(objects.name))[1]))))));
+CREATE POLICY "Un agent televerse le cv de son dossier assigne" ON storage.objects AS PERMISSIVE FOR INSERT TO PUBLIC WITH CHECK (((bucket_id = 'completed_cvs'::text) AND (EXISTS ( SELECT 1
+   FROM agent_assignments aa
+  WHERE ((aa.agent_id = auth.uid()) AND ((aa.candidate_id)::text = (storage.foldername(objects.name))[1]))))));
+CREATE POLICY "Un candidat lit sa propre facture" ON storage.objects AS PERMISSIVE FOR SELECT TO PUBLIC USING (((bucket_id = 'invoices'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un candidat lit son cv finalise" ON storage.objects AS PERMISSIVE FOR SELECT TO PUBLIC USING (((bucket_id = 'completed_cvs'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un moderateur lit les documents de badge" ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'badge-documents'::text) AND (current_user_role() = ANY (ARRAY['admin'::text, 'publisher'::text]))));
+CREATE POLICY "Un recruteur met a jour ses visuels d'offres" ON storage.objects AS PERMISSIVE FOR UPDATE TO PUBLIC USING (((bucket_id = 'job-offers'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))) WITH CHECK (((bucket_id = 'job-offers'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un recruteur supprime ses visuels d'offres" ON storage.objects AS PERMISSIVE FOR DELETE TO PUBLIC USING (((bucket_id = 'job-offers'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un recruteur televerse ses visuels d'offres" ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'job-offers'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND ((current_user_role() = 'admin'::text) OR ((current_user_role() = 'user'::text) AND has_badge(auth.uid(), 'verified_recruiter'::text)))));
+CREATE POLICY "Upload de sa propre piece jointe de discussion" ON storage.objects AS PERMISSIVE FOR INSERT TO PUBLIC WITH CHECK (((bucket_id = 'chat-attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Upload de ses propres documents de badge" ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'badge-documents'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Upload de son propre CV" ON storage.objects AS PERMISSIVE FOR INSERT TO PUBLIC WITH CHECK (((bucket_id = 'resumes'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+
 -- 1. Insertion dans auth.users
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
