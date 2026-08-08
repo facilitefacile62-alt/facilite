@@ -10,6 +10,69 @@
 -- tests en échec, la quasi-totalité à cause de ce seul grant manquant).
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 
+-- 0bis. GRANTs de table — même trou que le GRANT USAGE ci-dessus,
+-- dump-schema-via-introspection.js ne capture pas non plus les grants au
+-- niveau table. Exportés depuis la production réelle (scripts/export-table-grants.js,
+-- information_schema.role_table_grants + role_column_grants pour les UPDATE
+-- restreints à des colonnes précises) le 2026-08-08 — reflète l'état APRÈS
+-- les corrections Vague 1/2/3 de ce chantier (colonnes UPDATE restreintes),
+-- pas l'état large d'avant. Ne pas élargir à la main : régénérer depuis la
+-- prod si ça doit changer.
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."agent_assignments" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."agent_assignments" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."ai_usage_daily" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."ai_usage_daily" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."assistant_messages" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."assistant_messages" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."badge_requests" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."badge_requests" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."candidatures" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."candidatures" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."contact_messages" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."contact_messages" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."conversations" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."conversations" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."establishments" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."establishments" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."interviews" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."interviews" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."job_offers" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."job_offers" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."messages" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."messages" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."orders" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."orders" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."profiles" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."profiles" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."recruiter_profiles" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."recruiter_profiles" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."resumes" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."resumes" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."subscriptions" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."subscriptions" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."support_threads" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."support_threads" TO authenticated;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."transactions" TO anon;
+GRANT INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."transactions" TO authenticated;
+GRANT REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."security_logs" TO anon;
+GRANT REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."security_logs" TO authenticated;
+GRANT REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."user_roles" TO anon;
+GRANT REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public."user_roles" TO authenticated;
+GRANT SELECT ON TABLE public."invariant_status" TO authenticated;
+GRANT SELECT ON TABLE public."reports" TO authenticated;
+GRANT UPDATE ("agent_id", "completed_cv_url", "status") ON TABLE public."agent_assignments" TO authenticated;
+GRANT UPDATE ("avatar_url", "bio", "city", "contact_email", "country", "cover_url", "cv_name", "cv_url", "cv_visible_recruteurs", "education_level", "educations", "email", "experiences", "full_name", "gender", "headline", "id", "interests", "is_public", "languages", "location", "phone", "pinned_details", "profile_views", "show_contact", "skills", "updated_at", "website_url") ON TABLE public."profiles" TO authenticated;
+GRANT UPDATE ("banner_url", "company_name", "description", "location", "logo_url", "sector", "website") ON TABLE public."recruiter_profiles" TO authenticated;
+GRANT UPDATE ("company", "contract_type", "deadline", "description", "image_url", "is_active", "location", "min_education_level", "salary_range", "title", "updated_at") ON TABLE public."job_offers" TO authenticated;
+GRANT UPDATE ("content", "embedding", "status", "updated_at") ON TABLE public."resumes" TO authenticated;
+GRANT UPDATE ("is_read") ON TABLE public."messages" TO authenticated;
+GRANT UPDATE ("last_message", "updated_at") ON TABLE public."conversations" TO authenticated;
+GRANT UPDATE ("payment_reference") ON TABLE public."orders" TO authenticated;
+GRANT UPDATE ("provider_reference") ON TABLE public."transactions" TO authenticated;
+GRANT UPDATE ("resolved_at", "resolved_by", "status") ON TABLE public."reports" TO authenticated;
+GRANT UPDATE ("status") ON TABLE public."candidatures" TO authenticated;
+GRANT UPDATE ("status", "updated_at") ON TABLE public."support_threads" TO authenticated;
+
 -- 1. Insertion dans auth.users
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
