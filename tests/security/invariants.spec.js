@@ -295,7 +295,7 @@ test.describe("Invariants de sécurité", () => {
 
     const routeHandlerFiles = listFilesRecursive(SRC_DIR, [".js"]).filter((f) => f.endsWith("route.js"));
 
-    const AUTH_MARKERS = ["requireUser", "CRON_SECRET", "signature", "Signature", "isCallerAdmin"];
+    const AUTH_MARKERS = ["requireUser", "getUserFromCookies", "CRON_SECRET", "signature", "Signature", "isCallerAdmin"];
 
     const unprotected = [...serverActionFiles, ...routeHandlerFiles].filter((f) => {
       const content = fs.readFileSync(f, "utf-8");

@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./env";
 
 const supabaseServer = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -158,4 +160,36 @@ export async function checkRateLimit(identifier) {
   timestamps.push(now);
   localFallbackLog.set(identifier, timestamps);
   return { allowed: true, error: null };
+}
+
+/**
+ * Variante de requireUser() pour les routes atteintes par NAVIGATION
+ * navigateur plutôt que par un fetch() avec en-tête Authorization (ex. un
+ * bouton "use client" qui fait router.push() vers une route API, ou une
+ * redirection OAuth tierce) — un en-tête Authorization: Bearer n'est jamais
+ * envoyé par le navigateur lors d'une navigation, seul le cookie de session
+ * Supabase l'est. Même mécanisme que middleware.js (createServerClient +
+ * cookies), adapté à l'API cookies() de next/headers disponible dans un
+ * Route Handler.
+ */
+export async function getUserFromCookies() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: (cookiesToSet) => {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+        } catch {
+          // set() peut échouer selon le contexte d'exécution du Route Handler
+          // (hors construction de la réponse) — sans conséquence pour la
+          // lecture de session ci-dessous.
+        }
+      },
+    },
+  });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
 }
