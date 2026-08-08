@@ -105,6 +105,29 @@ GRANT INSERT (reporter_id) ON public.reports TO authenticated;
 -- utilisateur avant toute migration prod.
 REVOKE EXECUTE ON FUNCTION public.log_security_event(text, text, uuid, uuid, jsonb) FROM authenticated, anon;
 
+-- 0bis-suite-3. Décision utilisateur du 2026-08-08 : delete_own_resume(),
+-- archive_own_job_offer(), clear_own_assistant_messages() sont des
+-- fonctions plpgsql normales en prod (prosecdef=false) qui s'exécutent avec
+-- les droits de l'appelant (authenticated) — or la prod n'accorde aucun
+-- GRANT DELETE sur resumes/assistant_messages, ni archived_at dans le GRANT
+-- UPDATE column-scoped de job_offers (voir docs/etat-du-projet.md, constat
+-- "Trois fonctions Vague 2 ne fonctionnent probablement pas en prod
+-- aujourd'hui"). Passées en SECURITY DEFINER + SET search_path = '' pour
+-- que ces fonctions s'exécutent avec les droits de leur owner (postgres) au
+-- lieu de ceux de l'appelant — chaque fonction fait déjà sa propre
+-- vérification manuelle de propriété (IF owner_id <> auth.uid() THEN RAISE
+-- EXCEPTION) avant toute écriture, donc SECURITY DEFINER ne réintroduit pas
+-- de trou : la protection ne dépendait plus des GRANTs mais de cette
+-- vérification explicite. Les corps de fonction n'utilisent que des noms
+-- pleinement qualifiés (public.xxx, auth.uid()), donc search_path = ''
+-- (défense en profondeur contre le search_path hijacking d'une fonction
+-- SECURITY DEFINER) ne casse rien. Appliqué pour l'instant UNIQUEMENT sur
+-- facilite-e2e-test — même correctif proposé pour la production dans le
+-- rapport de ce point, en attente de validation utilisateur.
+ALTER FUNCTION public.delete_own_resume(uuid) SECURITY DEFINER SET search_path = '';
+ALTER FUNCTION public.archive_own_job_offer(uuid) SECURITY DEFINER SET search_path = '';
+ALTER FUNCTION public.clear_own_assistant_messages(uuid) SECURITY DEFINER SET search_path = '';
+
 -- 0ter. Policies RLS storage.objects — même trou de nouveau,
 -- dump-schema-via-introspection.js scope tout à nspname='public', jamais
 -- storage. Exportées depuis la production (scripts/export-storage-policies.js)
