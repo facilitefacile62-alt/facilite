@@ -726,3 +726,67 @@ UPDATE public.profiles SET
   is_test_account = false,
   cv_visible_recruteurs = true
 WHERE id = '60000000-0000-4000-a000-000000000002';
+
+-- 9. #3/#4 (rate limit Auth) : navigation-role-gates.spec.js et
+-- cv-quota.spec.js créaient jusqu'à 6 comptes jetables via signUp() à
+-- chaque run (5 + 1) — largement au-dessus du rate limit Auth du projet de
+-- test (~4 inscriptions/heure, palier gratuit). Remplacés par 6 comptes
+-- fixes, permanents, jamais recréés à chaque run — les tests utilisent
+-- désormais signInWithPassword(). Les tests eux-mêmes remettent l'état
+-- attendu (badges, rôle, cv_visible_recruteurs) au début de chaque run.
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at, confirmation_token, recovery_token, email_change_token_new, email_change
+) VALUES
+  ('00000000-0000-0000-0000-000000000000', '60000000-0000-4000-a000-000000000010',
+   'authenticated', 'authenticated', 'e2e-test-gate-plain@facilite-demo.local',
+   crypt('FaciliteGateTest2026!', gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Gate Test Plain"}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '60000000-0000-4000-a000-000000000011',
+   'authenticated', 'authenticated', 'e2e-test-gate-recruiter@facilite-demo.local',
+   crypt('FaciliteGateTest2026!', gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Gate Test Recruiter"}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '60000000-0000-4000-a000-000000000012',
+   'authenticated', 'authenticated', 'e2e-test-gate-admin@facilite-demo.local',
+   crypt('FaciliteGateTest2026!', gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Gate Test Admin"}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '60000000-0000-4000-a000-000000000013',
+   'authenticated', 'authenticated', 'e2e-test-gate-candidate-noauth@facilite-demo.local',
+   crypt('FaciliteGateTest2026!', gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Gate Test Candidate NoAuth"}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '60000000-0000-4000-a000-000000000014',
+   'authenticated', 'authenticated', 'e2e-test-gate-candidate-auth@facilite-demo.local',
+   crypt('FaciliteGateTest2026!', gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Gate Test Candidate Auth"}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '60000000-0000-4000-a000-000000000015',
+   'authenticated', 'authenticated', 'e2e-test-quota-recruiter@facilite-demo.local',
+   crypt('FaciliteQuotaFixture2026!', gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Quota Test Recruiter"}', now(), now(), '', '', '', '')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, created_at, updated_at)
+SELECT gen_random_uuid(), u.id::text, u.id,
+  jsonb_build_object('sub', u.id::text, 'email', u.email), 'email', now(), now()
+FROM auth.users u
+WHERE u.id IN (
+  '60000000-0000-4000-a000-000000000010', '60000000-0000-4000-a000-000000000011',
+  '60000000-0000-4000-a000-000000000012', '60000000-0000-4000-a000-000000000013',
+  '60000000-0000-4000-a000-000000000014', '60000000-0000-4000-a000-000000000015'
+)
+ON CONFLICT DO NOTHING;
+
+UPDATE public.profiles SET is_test_account = true, full_name = 'Gate Test Plain'
+WHERE id = '60000000-0000-4000-a000-000000000010';
+UPDATE public.profiles SET is_test_account = true, full_name = 'Gate Test Recruiter',
+  badges = CASE WHEN badges @> '["verified_recruiter"]'::jsonb THEN badges ELSE badges || '["verified_recruiter"]'::jsonb END
+WHERE id = '60000000-0000-4000-a000-000000000011';
+UPDATE public.profiles SET is_test_account = true, full_name = 'Gate Test Admin'
+WHERE id = '60000000-0000-4000-a000-000000000012';
+UPDATE public.user_roles SET role = 'admin' WHERE user_id = '60000000-0000-4000-a000-000000000012';
+UPDATE public.profiles SET is_test_account = true, cv_visible_recruteurs = false
+WHERE id = '60000000-0000-4000-a000-000000000013';
+UPDATE public.profiles SET is_test_account = true, cv_visible_recruteurs = true
+WHERE id = '60000000-0000-4000-a000-000000000014';
+UPDATE public.profiles SET is_test_account = true
+WHERE id = '60000000-0000-4000-a000-000000000015';

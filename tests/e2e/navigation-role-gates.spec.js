@@ -9,34 +9,30 @@ const { loadTestEnv } = require("../helpers/testEnv");
  * (docs/incident-2026-08-06.md) : navigation, badges cliquables et
  * autorisation d'accès aux CV, chacun vérifié en conditions réelles.
  *
- * Comptes auto-provisionnés (signUp) plutôt que les comptes e2e-test-*
- * nommés : découvert en écrivant ces tests que e2e-test-admin,
- * e2e-test-agent, e2e-test-candidate ET e2e-test-security portent TOUS
- * role='admin' en base réelle actuellement — aucun n'est un vrai compte
- * non-admin en ce moment, ce qui aurait fait passer les tests "un non-admin
- * ne voit pas X" pour la mauvaise raison. Signalé séparément, non corrigé
- * ici (hors périmètre de ce point).
+ * Comptes dédiés e2e-test-gate-* (pré-créés dans supabase/seed-test.sql,
+ * section 9) plutôt que les comptes e2e-test-* partagés : découvert en
+ * écrivant ces tests que e2e-test-admin, e2e-test-agent, e2e-test-candidate
+ * ET e2e-test-security portent TOUS role='admin' en base réelle
+ * actuellement — aucun n'est un vrai compte non-admin en ce moment, ce qui
+ * aurait fait passer les tests "un non-admin ne voit pas X" pour la
+ * mauvaise raison. Signalé séparément, non corrigé ici (hors périmètre de
+ * ce point).
+ *
+ * Anciennement des comptes jetables via signUp() — remplacés le 2026-08-08
+ * : ce fichier crée à lui seul jusqu'à 5 comptes (3 en beforeAll + 2 dans
+ * le test 2), largement au-dessus du rate limit Auth du projet de test
+ * (~4 inscriptions/heure, palier gratuit). signInWithPassword() sur des
+ * comptes fixes ne consomme aucun quota de création.
  */
 
 
-async function createThrowawayUser(anonClient, label) {
-  const email = `${label}-${Date.now()}@facilite-demo.local`;
-  const password = "FaciliteGateTest2026!";
-  const { data, error } = await anonClient.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: label } },
-  });
-  if (error) throw new Error(`Création ${label} échouée : ${error.message}`);
-  let accessToken = data.session?.access_token;
-  if (!accessToken) {
-    await runPrivilegedSql(`UPDATE auth.users SET email_confirmed_at = now() WHERE id = '${data.user.id}';`);
-    const signIn = await anonClient.auth.signInWithPassword({ email, password });
-    if (signIn.error) throw new Error(`Connexion ${label} échouée : ${signIn.error.message}`);
-    accessToken = signIn.data.session.access_token;
-  }
-  return { id: data.user.id, email, password, accessToken };
+async function signInFixedUser(anonClient, email, password) {
+  const { data, error } = await anonClient.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(`Connexion ${email} échouée : ${error.message}`);
+  return { id: data.user.id, email, password, accessToken: data.session.access_token };
 }
+
+const GATE_PASSWORD = "FaciliteGateTest2026!";
 
 test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
   let env, anonClient;
@@ -46,15 +42,12 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
     env = loadTestEnv();
     anonClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-    // Délai entre chaque signUp() : 3 créations à la suite dépassaient le
-    // rate limit Auth du projet de test (quota bas, palier gratuit).
-    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    plainUser = await createThrowawayUser(anonClient, "gate-plain");
-    await sleep(2000);
-    badgedRecruiter = await createThrowawayUser(anonClient, "gate-recruiter");
-    await sleep(2000);
-    adminUser = await createThrowawayUser(anonClient, "gate-admin");
+    plainUser = await signInFixedUser(anonClient, "e2e-test-gate-plain@facilite-demo.local", GATE_PASSWORD);
+    badgedRecruiter = await signInFixedUser(anonClient, "e2e-test-gate-recruiter@facilite-demo.local", GATE_PASSWORD);
+    adminUser = await signInFixedUser(anonClient, "e2e-test-gate-admin@facilite-demo.local", GATE_PASSWORD);
 
+    // Remise à l'état attendu à chaque run (comptes permanents, partagés
+    // entre exécutions) — même discipline que admin-and-candidate.spec.js.
     await runPrivilegedSql(`
       UPDATE public.profiles SET is_test_account = true, full_name = 'Gate Test Plain' WHERE id = '${plainUser.id}';
       UPDATE public.profiles SET is_test_account = true, full_name = 'Gate Test Recruiter',
@@ -63,17 +56,6 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
       UPDATE public.profiles SET is_test_account = true, full_name = 'Gate Test Admin' WHERE id = '${adminUser.id}';
       UPDATE public.user_roles SET role = 'admin' WHERE user_id = '${adminUser.id}';
     `);
-  });
-
-  test.afterAll(async () => {
-    for (const u of [plainUser, badgedRecruiter, adminUser]) {
-      if (env.SUPABASE_SERVICE_ROLE_KEY && u) {
-        const adminAuthClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        });
-        await adminAuthClient.auth.admin.deleteUser(u.id).catch((e) => console.error("Nettoyage échoué (non bloquant) :", e.message));
-      }
-    }
   });
 
   test("1. un compte non authentifié ne peut télécharger aucun fichier du bucket resumes par URL directe", async () => {
@@ -85,11 +67,14 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
   });
 
   test("2. un recruteur badgé ne lit un CV que si le candidat a autorisé le contact", async () => {
-    const candidateNoAuth = await createThrowawayUser(anonClient, "gate-candidate-noauth");
-    const candidateAuth = await createThrowawayUser(anonClient, "gate-candidate-auth");
+    // Comptes dédiés fixes (id seulement, jamais connectés — voir seed-test.sql
+    // section 9) : remis à l'état attendu par ce test au début, pas de
+    // signUp() jetable.
+    const candidateNoAuthId = "60000000-0000-4000-a000-000000000013";
+    const candidateAuthId = "60000000-0000-4000-a000-000000000014";
     await runPrivilegedSql(`
-      UPDATE public.profiles SET is_test_account = true, cv_visible_recruteurs = false WHERE id = '${candidateNoAuth.id}';
-      UPDATE public.profiles SET is_test_account = true, cv_visible_recruteurs = true WHERE id = '${candidateAuth.id}';
+      UPDATE public.profiles SET is_test_account = true, cv_visible_recruteurs = false WHERE id = '${candidateNoAuthId}';
+      UPDATE public.profiles SET is_test_account = true, cv_visible_recruteurs = true WHERE id = '${candidateAuthId}';
     `);
 
     const recruiterClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
@@ -98,7 +83,7 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
 
     const { data: deniedUrl, error: deniedErr } = await recruiterClient.storage
       .from("resumes")
-      .createSignedUrl(`${candidateNoAuth.id}/cvs/test.pdf`, 60);
+      .createSignedUrl(`${candidateNoAuthId}/cvs/test.pdf`, 60);
     expect(deniedUrl, "candidat non-autorisé : la signature d'URL doit échouer").toBeFalsy();
     expect(deniedErr).toBeTruthy();
 
@@ -107,18 +92,10 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
     // de fichier, pas de policy). On le prouve autrement : record_cv_consultations
     // (même RLS effective que la policy Storage) autorise ce candidat.
     const { data: quotaCheck, error: quotaErr } = await recruiterClient.rpc("record_cv_consultations", {
-      p_candidate_ids: [candidateAuth.id],
+      p_candidate_ids: [candidateAuthId],
     });
     expect(quotaErr).toBeFalsy();
     expect(quotaCheck?.[0]?.allowed, "candidat avec cv_visible_recruteurs=true : doit être autorisé").toBe(true);
-
-    if (env.SUPABASE_SERVICE_ROLE_KEY) {
-      const adminAuthClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
-      await adminAuthClient.auth.admin.deleteUser(candidateNoAuth.id).catch(() => {});
-      await adminAuthClient.auth.admin.deleteUser(candidateAuth.id).catch(() => {});
-    }
   });
 
   test("3. un compte admin voit le lien Admin, un compte non-admin ne le voit pas", async ({ page }) => {

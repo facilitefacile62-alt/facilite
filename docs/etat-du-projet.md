@@ -406,3 +406,31 @@ Aucune action prise — `test-account-isolation.spec.js` /
 n'est pas tranché. Une ligne `candidatures` de liaison a quand même été
 ajoutée à `supabase/seed-test.sql` (section "7.") — nécessaire mais pas
 suffisante, prête pour quand la policy sera corrigée.
+`storage-role-literals-fix.spec.js` a été mis en skip définitif sur le
+projet de test le 2026-08-08 (rate limit non lié).
+
+## CONSTAT BUG APPLICATIF (trouvé le 2026-08-08, PAS un écart de projet de test)
+
+**`ApplyModal.jsx` : le message de succès disparaît quelques secondes après
+une candidature réussie, le formulaire se réaffiche comme si rien ne
+s'était passé.** Trouvé en diagnostiquant `candidate-application.spec.js`
+(le test attendait un libellé obsolète, "Candidature transmise !" au lieu
+de "Candidature Envoyée !" — corrigé — mais échouait encore après). Capture
+réseau directe : `/api/postuler` répond bien `200 {"success":true, ...}`,
+la candidature est réellement créée en base. Le composant affiche
+correctement le message de succès (confirmé par polling direct : visible
+de t=4s à t=6s après soumission) puis le perd (formulaire vide réaffiché
+dès t=7s). Cause : le `useEffect` de `ApplyModal.jsx` (ligne 24) a pour
+dépendances `[isOpen, job, selectedLang]` et fait `setSuccess(false)`
+(ligne 73) à chaque déclenchement — si la prop `job` est recréée comme un
+nouvel objet à chaque rendu du composant parent (référence différente,
+contenu identique, cas fréquent sans `useMemo`), cet effect se redéclenche
+et efface l'état de succès juste après l'avoir affiché, même si l'utilisateur
+n'a rien fait. La candidature reste bien enregistrée (pas de perte de
+données), seul l'affichage de confirmation est perdu — un vrai utilisateur
+verrait probablement le même comportement en production. Aucune action
+prise : nécessite d'identifier où `job` est calculé dans le composant
+parent et de le stabiliser (`useMemo` ou dépendance sur un identifiant
+stable plutôt que l'objet entier), hors périmètre de ce chantier
+d'isolation des tests. `candidate-application.spec.js` reste rouge tant
+que ce point n'est pas corrigé.

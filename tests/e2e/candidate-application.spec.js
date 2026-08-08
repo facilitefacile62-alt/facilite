@@ -92,7 +92,10 @@ test.describe("Parcours candidat : vitrine recruteur -> candidature", () => {
 
     await page.getByRole("button", { name: "Envoyer ma candidature" }).click();
 
-    // 6. Soumission réussie.
-    await expect(page.getByText("Candidature transmise !")).toBeVisible({ timeout: 30_000 });
+    // 6. Soumission réussie. Libellé exact de ApplyModal.jsx ("Candidature
+    // Envoyée !") — corrigé le 2026-08-08, le test attendait un texte
+    // obsolète ("Candidature transmise !") alors que l'API répondait déjà
+    // 200 avec succès (vérifié par capture réseau directe).
+    await expect(page.getByText("Candidature Envoyée !")).toBeVisible({ timeout: 30_000 });
   });
 });

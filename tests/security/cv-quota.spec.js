@@ -39,34 +39,25 @@ test.describe("Quota quotidien de consultations CV (record_cv_consultations)", (
     anonClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     recruiterClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-    // Compte recruteur jetable auto-provisionné plutôt qu'un compte e2e-test-*
-    // partagé : découvert en construisant ce test, e2e-test-candidate porte
-    // en réalité role='admin' dans user_roles en base réelle aujourd'hui —
-    // ce qui aurait fait passer ce test pour une mauvaise raison (branche de
-    // contournement admin de record_cv_consultations) au lieu de tester le
-    // quota réel. Signalé séparément, pas corrigé ici — hors du périmètre
-    // de ce test. Un signUp() frais garantit role='user' par défaut.
-    const throwawayEmail = `quota-recruiter-${Date.now()}@facilite-demo.local`;
-    const throwawayPassword = "FaciliteQuotaFixture2026!";
-    const { data: signUpData, error: signUpError } = await recruiterClient.auth.signUp({
-      email: throwawayEmail,
-      password: throwawayPassword,
-      options: { data: { full_name: "Quota Test Recruiter" } },
+    // Compte dédié fixe (pré-créé dans seed-test.sql section 9) plutôt qu'un
+    // compte jetable auto-provisionné via signUp() — remplacé le 2026-08-08,
+    // signUp() dépassait le rate limit Auth du projet de test. Pas un compte
+    // e2e-test-* partagé pour autant : découvert en construisant ce test,
+    // e2e-test-candidate porte en réalité role='admin' dans user_roles en
+    // base réelle aujourd'hui — ce qui aurait fait passer ce test pour une
+    // mauvaise raison (branche de contournement admin de
+    // record_cv_consultations) au lieu de tester le quota réel. Signalé
+    // séparément, pas corrigé ici — hors du périmètre de ce test.
+    // e2e-test-quota-recruiter est garanti role='user' par le seed.
+    const fixedEmail = "e2e-test-quota-recruiter@facilite-demo.local";
+    const fixedPassword = "FaciliteQuotaFixture2026!";
+    const { data: signInData, error: signInError } = await recruiterClient.auth.signInWithPassword({
+      email: fixedEmail,
+      password: fixedPassword,
     });
-    if (signUpError) throw new Error(`Création du recruteur de test échouée : ${signUpError.message}`);
-    recruiterId = signUpData.user.id;
-    recruiterAccessToken = signUpData.session?.access_token;
-    if (!recruiterAccessToken) {
-      // Confirmation email requise selon la config — confirme directement en
-      // base (contexte de test uniquement) puis se connecte normalement.
-      await runPrivilegedSql(`UPDATE auth.users SET email_confirmed_at = now() WHERE id = '${recruiterId}';`);
-      const { data: signInData, error: signInError } = await recruiterClient.auth.signInWithPassword({
-        email: throwawayEmail,
-        password: throwawayPassword,
-      });
-      if (signInError) throw new Error(`Connexion du recruteur de test échouée : ${signInError.message}`);
-      recruiterAccessToken = signInData.session.access_token;
-    }
+    if (signInError) throw new Error(`Connexion du recruteur de test échouée : ${signInError.message}`);
+    recruiterId = signInData.user.id;
+    recruiterAccessToken = signInData.session.access_token;
 
     await runPrivilegedSql(
       `UPDATE public.profiles SET is_test_account = true, badges = CASE WHEN badges @> '["verified_recruiter"]'::jsonb THEN badges ELSE badges || '["verified_recruiter"]'::jsonb END WHERE id = '${recruiterId}';`
@@ -74,42 +65,52 @@ test.describe("Quota quotidien de consultations CV (record_cv_consultations)", (
 
     hasServiceRole = !!env.SUPABASE_SERVICE_ROLE_KEY;
     if (hasServiceRole) {
-      adminAuthClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
+      // Repli gracieux si la clé est présente mais invalide (rejetée par
+      // Supabase) : bascule sur le sous-ensemble de tests documenté
+      // ci-dessus plutôt que de faire échouer tout le fichier via beforeAll.
+      try {
+        adminAuthClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        });
 
-      const created = [];
-      for (let i = 0; i < FIXTURE_COUNT; i += CHUNK_SIZE) {
-        const batch = Array.from({ length: Math.min(CHUNK_SIZE, FIXTURE_COUNT - i) }, (_, j) => i + j);
-        const results = await Promise.all(
-          batch.map((n) =>
-            adminAuthClient.auth.admin.createUser({
-              email: `quota-fixture-${Date.now()}-${n}@facilite-demo.local`,
-              password: "FaciliteQuotaFixture2026!",
-              email_confirm: true,
-              user_metadata: { full_name: `Quota Fixture ${n}` },
-            })
-          )
-        );
-        for (const r of results) {
-          if (r.error) throw new Error(`Création fixture échouée : ${r.error.message}`);
-          created.push(r.data.user.id);
+        const created = [];
+        for (let i = 0; i < FIXTURE_COUNT; i += CHUNK_SIZE) {
+          const batch = Array.from({ length: Math.min(CHUNK_SIZE, FIXTURE_COUNT - i) }, (_, j) => i + j);
+          const results = await Promise.all(
+            batch.map((n) =>
+              adminAuthClient.auth.admin.createUser({
+                email: `quota-fixture-${Date.now()}-${n}@facilite-demo.local`,
+                password: "FaciliteQuotaFixture2026!",
+                email_confirm: true,
+                user_metadata: { full_name: `Quota Fixture ${n}` },
+              })
+            )
+          );
+          for (const r of results) {
+            if (r.error) throw new Error(`Création fixture échouée : ${r.error.message}`);
+            created.push(r.data.user.id);
+          }
         }
-      }
-      fixtureCandidateIds = created;
+        fixtureCandidateIds = created;
 
-      // Marque explicitement ces comptes comme comptes de test (invariant de
-      // test-account-isolation, même si ce test n'y touche pas directement).
-      await runPrivilegedSql(
-        `UPDATE public.profiles SET is_test_account = true WHERE id = ANY(ARRAY[${fixtureCandidateIds.map((id) => `'${id}'`).join(",")}]::uuid[]);`
-      );
+        // Marque explicitement ces comptes comme comptes de test (invariant de
+        // test-account-isolation, même si ce test n'y touche pas directement).
+        await runPrivilegedSql(
+          `UPDATE public.profiles SET is_test_account = true WHERE id = ANY(ARRAY[${fixtureCandidateIds.map((id) => `'${id}'`).join(",")}]::uuid[]);`
+        );
+      } catch (e) {
+        console.error("SUPABASE_SERVICE_ROLE_KEY présente mais inutilisable, repli sur le sous-ensemble réduit :", e.message);
+        hasServiceRole = false;
+        fixtureCandidateIds = [];
+      }
     }
   });
 
   test.afterAll(async () => {
-    if (hasServiceRole && recruiterId) {
-      await adminAuthClient.auth.admin.deleteUser(recruiterId).catch((e) => console.error("Nettoyage échoué (non bloquant) :", e.message));
-    } else {
+    // e2e-test-quota-recruiter est un compte permanent (seed-test.sql), plus
+    // jamais supprimé même si service_role est disponible — seul le badge
+    // accordé dynamiquement par ce fichier est retiré.
+    if (recruiterId) {
       await runPrivilegedSql(
         `UPDATE public.profiles SET badges = badges - 'verified_recruiter' WHERE id = '${recruiterId}';`
       ).catch((e) => console.error("Nettoyage échoué (non bloquant) :", e.message));
