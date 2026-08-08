@@ -93,6 +93,18 @@ GRANT EXECUTE ON FUNCTION public.current_user_role() TO anon;
 GRANT INSERT (target_type, target_id, reason) ON public.reports TO authenticated;
 GRANT INSERT (reporter_id) ON public.reports TO authenticated;
 
+-- 0bis-suite-2. Décision utilisateur du 2026-08-08 (constat prod documenté
+-- dans docs/etat-du-projet.md) : log_security_event() ne doit être
+-- appelable que par service_role, jamais par authenticated/anon en direct
+-- — les utilisateurs authentifiés passent par des fonctions dédiées
+-- (ex. log_own_storage_deletion_failure(), déjà SECURITY DEFINER et déjà
+-- correcte) qui forcent auth.uid() comme acteur avant d'appeler
+-- log_security_event() en interne. Appliqué pour l'instant UNIQUEMENT sur
+-- facilite-e2e-test (validation) — même correctif proposé pour la
+-- production dans le rapport de ce point, en attente de validation
+-- utilisateur avant toute migration prod.
+REVOKE EXECUTE ON FUNCTION public.log_security_event(text, text, uuid, uuid, jsonb) FROM authenticated, anon;
+
 -- 0ter. Policies RLS storage.objects — même trou de nouveau,
 -- dump-schema-via-introspection.js scope tout à nspname='public', jamais
 -- storage. Exportées depuis la production (scripts/export-storage-policies.js)
