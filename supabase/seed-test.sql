@@ -73,6 +73,26 @@ GRANT UPDATE ("resolved_at", "resolved_by", "status") ON TABLE public."reports" 
 GRANT UPDATE ("status") ON TABLE public."candidatures" TO authenticated;
 GRANT UPDATE ("status", "updated_at") ON TABLE public."support_threads" TO authenticated;
 
+-- 0bis-suite. Deux écarts trouvés le 2026-08-08 en creusant les échecs
+-- restants après 0bis/0ter/0quater (33 échecs sur 150, taux 72,7%) :
+-- 1) current_user_role() n'avait EXECUTE que pour authenticated sur le
+--    projet de test — la prod l'accorde aussi à anon (lecture publique,
+--    ex. la page d'accueil non connectée). export-table-grants.js couvre
+--    les tables, pas les GRANTs de fonction par rôle un par un ; celui-ci
+--    avait été manqué lors du correctif GRANT EXECUTE initial (49/50
+--    fonctions).
+-- 2) GRANT INSERT sur reports pour authenticated est column-scoped en prod
+--    (migration 20260803040000_moderation_et_suspension.sql) — jamais un
+--    GRANT INSERT table entière. export-table-grants.js ne capture QUE les
+--    colonnes UPDATE restreintes (role_column_grants filtré à
+--    privilege_type='UPDATE'), jamais INSERT — d'où l'absence totale de
+--    GRANT INSERT sur reports pour le projet de test (0 colonne, alors que
+--    la ligne 62 ci-dessus montre bien un GRANT SELECT ON TABLE reports
+--    déjà présent, sans INSERT).
+GRANT EXECUTE ON FUNCTION public.current_user_role() TO anon;
+GRANT INSERT (target_type, target_id, reason) ON public.reports TO authenticated;
+GRANT INSERT (reporter_id) ON public.reports TO authenticated;
+
 -- 0ter. Policies RLS storage.objects — même trou de nouveau,
 -- dump-schema-via-introspection.js scope tout à nspname='public', jamais
 -- storage. Exportées depuis la production (scripts/export-storage-policies.js)
