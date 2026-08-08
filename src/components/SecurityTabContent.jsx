@@ -3,6 +3,26 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
+// Nettoie l'erreur d'un appel updateUser({ phone }) en message français
+// exploitable. Le message Supabase pour un numéro déjà pris varie selon le
+// point d'entrée ("A user with this phone number has already been
+// registered" ici, vu en conditions réelles — pas juste "already
+// registered") : le regex tolère un texte quelconque entre les deux mots.
+function extractSendPhoneErrorMessage(err) {
+  let msg = err?.message || "Impossible d'envoyer le code de vérification.";
+  if (/already.*registered|already exists/i.test(msg)) {
+    msg = "Ce numéro est déjà associé à un autre compte.";
+  } else if (/rate limit|too many/i.test(msg)) {
+    msg = "Trop de tentatives. Veuillez patienter avant de réessayer.";
+  } else if (!msg || msg === "{}" || msg === "[object Object]") {
+    // AuthRetryableFetchError renvoie parfois un message vide (objet
+    // sérialisé en "{}") — observé quand Twilio rejette le numéro en amont.
+    // Même garde-fou que PhoneAuthForm.jsx pour ce cas déjà connu.
+    msg = "Impossible d'envoyer le SMS. Vérifiez que le numéro est correct et joignable.";
+  }
+  return msg;
+}
+
 // Décode le payload d'un JWT Supabase pour lire la revendication `amr`
 // (Authentication Methods Reference) : la ou les méthodes ayant servi à
 // obtenir la session EN COURS. Sert à savoir si l'utilisateur vient de
@@ -58,6 +78,15 @@ export default function SecurityTabContent({ userSession }) {
   const [addPhoneStep, setAddPhoneStep] = useState("idle"); // idle | form | sent
   const [newPhoneNumber, setNewPhoneNumber] = useState("+221");
   const [newPhoneOtpToken, setNewPhoneOtpToken] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0); // secondes avant de pouvoir renvoyer un code
+
+  // Décompte visible du délai avant "Renvoyer le code" — s'arrête tout seul
+  // en quittant l'étape "sent" (Annuler/Changer le numéro/succès).
+  useEffect(() => {
+    if (addPhoneStep !== "sent" || resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [addPhoneStep, resendCooldown]);
 
   // Dissociation
   const [unlinkTarget, setUnlinkTarget] = useState(null); // null | "email" | "phone"
@@ -225,24 +254,41 @@ export default function SecurityTabContent({ userSession }) {
       if (updateError) throw updateError;
       setNewPhoneNumber(cleaned);
       setAddPhoneStep("sent");
+      setResendCooldown(60);
       setMessage(`Un code de vérification à 6 chiffres a été envoyé au ${cleaned}.`);
     } catch (err) {
       console.error(err);
-      let msg = err?.message || "Impossible d'envoyer le code de vérification.";
-      if (/already registered|already exists/i.test(msg)) {
-        msg = "Ce numéro est déjà associé à un autre compte.";
-      } else if (/rate limit|too many/i.test(msg)) {
-        msg = "Trop de tentatives. Veuillez patienter avant de réessayer.";
-      } else if (!msg || msg === "{}" || msg === "[object Object]") {
-        // AuthRetryableFetchError renvoie parfois un message vide (objet
-        // sérialisé en "{}") — observé quand Twilio rejette le numéro en
-        // amont. Même garde-fou que PhoneAuthForm.jsx pour ce cas déjà connu.
-        msg = "Impossible d'envoyer le SMS. Vérifiez que le numéro est correct et joignable.";
-      }
-      setError(msg);
+      setError(extractSendPhoneErrorMessage(err));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResendNewPhone = async () => {
+    if (resendCooldown > 0) return;
+    setError("");
+    setMessage("");
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ phone: newPhoneNumber });
+      if (updateError) throw updateError;
+      setNewPhoneOtpToken("");
+      setResendCooldown(60);
+      setMessage(`Un nouveau code a été envoyé au ${newPhoneNumber}.`);
+    } catch (err) {
+      console.error(err);
+      setError(extractSendPhoneErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangeNewPhoneNumber = () => {
+    setError("");
+    setMessage("");
+    setAddPhoneStep("form");
+    setNewPhoneOtpToken("");
+    setResendCooldown(0);
   };
 
   const handleVerifyNewPhone = async (e) => {
@@ -509,32 +555,51 @@ export default function SecurityTabContent({ userSession }) {
             )}
 
             {!hasPhone && addPhoneStep === "sent" && (
-              <form onSubmit={handleVerifyNewPhone} className="mt-3 flex items-center gap-2 flex-wrap">
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={newPhoneOtpToken}
-                  onChange={(e) => setNewPhoneOtpToken(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Code à 6 chiffres"
-                  className="flex-1 min-w-[140px] px-3 py-2 border border-gray-200 rounded-xl text-sm tracking-[0.3em] text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-                  required
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  disabled={loading || newPhoneOtpToken.length !== 6}
-                  className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
-                >
-                  {loading ? "..." : "Confirmer"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelAddPhone}
-                  className="px-3 py-2 text-gray-500 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
-                >
-                  Annuler
-                </button>
-              </form>
+              <div className="mt-3 space-y-2">
+                <form onSubmit={handleVerifyNewPhone} className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={newPhoneOtpToken}
+                    onChange={(e) => setNewPhoneOtpToken(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Code à 6 chiffres"
+                    className="flex-1 min-w-[140px] px-3 py-2 border border-gray-200 rounded-xl text-sm tracking-[0.3em] text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                    required
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading || newPhoneOtpToken.length !== 6}
+                    className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    {loading ? "..." : "Confirmer"}
+                  </button>
+                </form>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleChangeNewPhoneNumber}
+                    className="px-3 py-1.5 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                  >
+                    Changer le numéro
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResendNewPhone}
+                    disabled={loading || resendCooldown > 0}
+                    className="px-3 py-1.5 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-50 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                  >
+                    {resendCooldown > 0 ? `Renvoyer dans ${resendCooldown}s` : "Renvoyer le code"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelAddPhone}
+                    className="px-3 py-1.5 text-gray-500 text-xs font-bold rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
             )}
 
             {!phoneConfirmed && phoneConfirmStep === "sent" && (
