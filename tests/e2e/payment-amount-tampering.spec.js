@@ -16,6 +16,8 @@ const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@f
 const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETest2026!";
 
 test.describe("Sécurité — manipulation du montant de paiement", () => {
+  test.skip(!!process.env.TEST_SUPABASE_URL, "SKIP sur projet de test — clés KPay sandbox non configurées sur facilite-e2e-test");
+
   let supabase;
   let accessToken;
   let transactionId;

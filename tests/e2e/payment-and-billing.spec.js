@@ -21,6 +21,8 @@ const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@f
 const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETest2026!";
 
 test.describe("Tarification, paiement et facturation", () => {
+  test.skip(!!process.env.TEST_SUPABASE_URL, "SKIP sur projet de test — clés KPay sandbox non configurées sur facilite-e2e-test");
+
   test("choix d'une formule, redirection réelle vers KPay, et commande visible dans l'historique de facturation", async ({ page }) => {
     // 1. Connexion du candidat de test.
     await page.goto("/login");
