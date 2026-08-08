@@ -790,3 +790,54 @@ UPDATE public.profiles SET is_test_account = true, cv_visible_recruteurs = true
 WHERE id = '60000000-0000-4000-a000-000000000014';
 UPDATE public.profiles SET is_test_account = true
 WHERE id = '60000000-0000-4000-a000-000000000015';
+
+-- 10. Policy storage "Recruteurs et admins lisent les CV" — même famille
+-- que #7/Décisions 1/3, cette fois dans une policy plutôt qu'une fonction
+-- (2026-08-08). Ses sous-requêtes EXISTS (profiles/candidatures) sont
+-- elles-mêmes filtrées par le RLS de ces tables pour l'appelant : un
+-- recruteur badgé ne peut voir ni le profil du candidat, ni sa propre
+-- ligne candidatures, donc les deux EXISTS renvoient toujours faux.
+-- Vérifié en conditions réelles : les 4 tests requis passent (recruteur
+-- badgé + candidature → succès ; recruteur badgé sans lien → refus ;
+-- candidat lit son propre CV → succès ; non authentifié → refus).
+-- can_recruiter_read_cv() conserve la même logique métier que l'ancienne
+-- policy (cv_visible_recruteurs=true OU candidatures.recruiter_id direct,
+-- sans jointure job_offers — fidèle à l'EXISTS d'origine) et le même
+-- garde has_badge(..., 'verified_recruiter') qui gate les deux branches,
+-- sans lequel n'importe quel utilisateur authentifié (pas seulement un
+-- recruteur badgé) pourrait lire un CV via cv_visible_recruteurs=true.
+CREATE OR REPLACE FUNCTION public.can_recruiter_read_cv(
+  candidate_id uuid,
+  recruiter_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT public.has_badge(recruiter_id, 'verified_recruiter')
+  AND (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = candidate_id
+      AND p.cv_visible_recruteurs = true
+    )
+    OR EXISTS (
+      SELECT 1 FROM public.candidatures c
+      WHERE c.user_id = candidate_id
+      AND c.recruiter_id = recruiter_id
+    )
+  );
+$$;
+
+DROP POLICY IF EXISTS "Recruteurs et admins lisent les CV" ON storage.objects;
+CREATE POLICY "Recruteurs et admins lisent les CV" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'resumes'
+    AND (
+      auth.uid() = owner
+      OR public.can_recruiter_read_cv(owner, auth.uid())
+      OR public.is_admin(auth.uid())
+    )
+  );
