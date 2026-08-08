@@ -51,6 +51,14 @@ export default function SecurityTabContent({ userSession }) {
   const [phoneConfirmStep, setPhoneConfirmStep] = useState("idle"); // idle | sent
   const [phoneOtpToken, setPhoneOtpToken] = useState("");
 
+  // Ajout d'un premier numéro (hasPhone === false) — même flux à 2 étapes
+  // (updateUser -> verifyOtp type "phone_change") que la reconfirmation
+  // ci-dessus, seule différence : le numéro vient d'une saisie utilisateur
+  // au lieu de user.phone (qui n'existe pas encore).
+  const [addPhoneStep, setAddPhoneStep] = useState("idle"); // idle | form | sent
+  const [newPhoneNumber, setNewPhoneNumber] = useState("+221");
+  const [newPhoneOtpToken, setNewPhoneOtpToken] = useState("");
+
   // Dissociation
   const [unlinkTarget, setUnlinkTarget] = useState(null); // null | "email" | "phone"
   const [unlinkPassword, setUnlinkPassword] = useState("");
@@ -198,6 +206,86 @@ export default function SecurityTabContent({ userSession }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSendNewPhone = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+
+    const cleaned = newPhoneNumber.replace(/[\s\-\(\)]/g, "");
+    if (!/^\+\d{8,15}$/.test(cleaned)) {
+      setError("Numéro invalide. Utilisez le format international, ex : +221771234567.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ phone: cleaned });
+      if (updateError) throw updateError;
+      setNewPhoneNumber(cleaned);
+      setAddPhoneStep("sent");
+      setMessage(`Un code de vérification à 6 chiffres a été envoyé au ${cleaned}.`);
+    } catch (err) {
+      console.error(err);
+      let msg = err?.message || "Impossible d'envoyer le code de vérification.";
+      if (/already registered|already exists/i.test(msg)) {
+        msg = "Ce numéro est déjà associé à un autre compte.";
+      } else if (/rate limit|too many/i.test(msg)) {
+        msg = "Trop de tentatives. Veuillez patienter avant de réessayer.";
+      } else if (!msg || msg === "{}" || msg === "[object Object]") {
+        // AuthRetryableFetchError renvoie parfois un message vide (objet
+        // sérialisé en "{}") — observé quand Twilio rejette le numéro en
+        // amont. Même garde-fou que PhoneAuthForm.jsx pour ce cas déjà connu.
+        msg = "Impossible d'envoyer le SMS. Vérifiez que le numéro est correct et joignable.";
+      }
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyNewPhone = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    if (newPhoneOtpToken.trim().length !== 6) {
+      setError("Veuillez saisir un code valide à 6 chiffres.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        phone: newPhoneNumber,
+        token: newPhoneOtpToken.trim(),
+        type: "phone_change",
+      });
+      if (verifyError) throw verifyError;
+
+      await fetchFreshUser();
+      setAddPhoneStep("idle");
+      setNewPhoneNumber("+221");
+      setNewPhoneOtpToken("");
+      setMessage("Votre numéro de téléphone est lié et confirmé.");
+    } catch (err) {
+      console.error(err);
+      let msg = err?.message || "Code invalide ou expiré.";
+      if (/expired/i.test(msg)) msg = "Ce code a expiré. Demandez-en un nouveau.";
+      else if (/invalid/i.test(msg)) msg = "Code incorrect. Vérifiez et réessayez.";
+      else if (/rate limit|too many/i.test(msg)) msg = "Trop de tentatives. Veuillez patienter avant de réessayer.";
+      else if (!msg || msg === "{}" || msg === "[object Object]") msg = "Erreur lors de la vérification du code. Veuillez réessayer.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelAddPhone = () => {
+    setError("");
+    setMessage("");
+    setAddPhoneStep("idle");
+    setNewPhoneNumber("+221");
+    setNewPhoneOtpToken("");
   };
 
   const handleResendEmailConfirmation = async () => {
@@ -381,7 +469,73 @@ export default function SecurityTabContent({ userSession }) {
                   </button>
                 </div>
               )}
+              {!hasPhone && addPhoneStep === "idle" && (
+                <button
+                  type="button"
+                  onClick={() => setAddPhoneStep("form")}
+                  className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-100 transition cursor-pointer shrink-0"
+                >
+                  Ajouter un numéro
+                </button>
+              )}
             </div>
+
+            {!hasPhone && addPhoneStep === "form" && (
+              <form onSubmit={handleSendNewPhone} className="mt-3 flex items-center gap-2 flex-wrap">
+                <input
+                  type="tel"
+                  value={newPhoneNumber}
+                  onChange={(e) => setNewPhoneNumber(e.target.value)}
+                  placeholder="+221771234567"
+                  className="flex-1 min-w-[180px] px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                  required
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={loading || !newPhoneNumber.trim()}
+                  className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {loading ? "..." : "Envoyer le code"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelAddPhone}
+                  className="px-3 py-2 text-gray-500 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                >
+                  Annuler
+                </button>
+              </form>
+            )}
+
+            {!hasPhone && addPhoneStep === "sent" && (
+              <form onSubmit={handleVerifyNewPhone} className="mt-3 flex items-center gap-2 flex-wrap">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={newPhoneOtpToken}
+                  onChange={(e) => setNewPhoneOtpToken(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Code à 6 chiffres"
+                  className="flex-1 min-w-[140px] px-3 py-2 border border-gray-200 rounded-xl text-sm tracking-[0.3em] text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                  required
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={loading || newPhoneOtpToken.length !== 6}
+                  className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {loading ? "..." : "Confirmer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelAddPhone}
+                  className="px-3 py-2 text-gray-500 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                >
+                  Annuler
+                </button>
+              </form>
+            )}
 
             {!phoneConfirmed && phoneConfirmStep === "sent" && (
               <form onSubmit={handleVerifyPhoneConfirmation} className="mt-3 flex items-center gap-2 flex-wrap">
