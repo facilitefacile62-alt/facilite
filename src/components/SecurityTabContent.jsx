@@ -130,10 +130,14 @@ export default function SecurityTabContent({ userSession }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [skipCurrentPassword, setSkipCurrentPassword] = useState(false);
   // Un compte n'a jamais eu de mot de passe (créé via Google ou téléphone
-  // uniquement) tant qu'aucune identité 'email' n'est liée — même détection
-  // que src/app/login/page.js:70-72 (hasPasswordIdentity), déjà en
-  // production pour distinguer les comptes "Google uniquement".
-  const [hasPasswordIdentity, setHasPasswordIdentity] = useState(true);
+  // uniquement) tant qu'aucune identité 'email' n'est liée. Vérifié côté
+  // serveur (/api/auth/has-password, service_role), jamais en se fiant à
+  // user.identities côté client — un navigateur peut refléter un état
+  // périmé (session mise en cache) et faire passer un compte réellement
+  // sans mot de passe pour "en a un", lui présentant un champ "Mot de passe
+  // actuel" qu'il ne peut jamais remplir. null = résultat pas encore connu :
+  // n'affiche aucun des deux formulaires plutôt que de deviner.
+  const [hasPasswordIdentity, setHasPasswordIdentity] = useState(null);
 
   // Identifiants
   const [hasEmail, setHasEmail] = useState(false);
@@ -231,11 +235,6 @@ export default function SecurityTabContent({ userSession }) {
     setHasPhone(!!user?.phone);
     setEmailConfirmed(!!user?.email_confirmed_at);
     setPhoneConfirmed(!!user?.phone_confirmed_at);
-    // Même détection que src/app/login/page.js:70 — une identité 'email'
-    // n'existe dans ce projet que pour un compte email+mot de passe (jamais
-    // pour le téléphone ou Google), donc son absence signifie "aucun mot de
-    // passe n'a jamais été défini".
-    setHasPasswordIdentity((user?.identities || []).some((i) => i.provider === "email"));
   };
 
   useEffect(() => {
@@ -254,6 +253,29 @@ export default function SecurityTabContent({ userSession }) {
       setSkipCurrentPassword(getMostRecentAuthMethod(accessToken) === "otp");
     });
   }, [userSession]);
+
+  // "A un mot de passe ou non" décidé côté serveur (/api/auth/has-password,
+  // service_role) — jamais déduit de user.identities côté client, qui peut
+  // refléter un état périmé le temps qu'un changement d'identité se
+  // propage. Tant que ce n'est pas revenu (null), aucun des deux
+  // formulaires n'est affiché plutôt que de deviner.
+  useEffect(() => {
+    if (!userSession?.access_token) return;
+    let cancelled = false;
+    fetch("/api/auth/has-password", {
+      headers: { Authorization: `Bearer ${userSession.access_token}` },
+    })
+      .then((res) => res.json())
+      .then((body) => {
+        if (!cancelled && typeof body?.hasPassword === "boolean") {
+          setHasPasswordIdentity(body.hasPassword);
+        }
+      })
+      .catch((err) => console.warn("[Sécurité] Échec de la vérification du mot de passe :", err.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [userSession?.access_token]);
 
   // Relit l'utilisateur directement auprès du serveur Supabase (pas le
   // cache local de la session) : la seule source fiable pour compter les
@@ -1333,10 +1355,12 @@ export default function SecurityTabContent({ userSession }) {
       <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
         <h4 className="text-sm font-extrabold text-gray-900 mb-4 flex items-center gap-2">
           <i className="fa-solid fa-key text-blue-600"></i>
-          {hasPasswordIdentity ? "Changer le mot de passe" : "Créer un mot de passe"}
+          {hasPasswordIdentity === null ? "Mot de passe" : hasPasswordIdentity ? "Changer le mot de passe" : "Créer un mot de passe"}
         </h4>
 
-        {hasPasswordIdentity ? (
+        {hasPasswordIdentity === null ? (
+          <p className="text-xs text-gray-400 italic">Vérification en cours...</p>
+        ) : hasPasswordIdentity ? (
           <form onSubmit={handleChangePassword} className="space-y-4">
             {!skipCurrentPassword && (
               <div>
