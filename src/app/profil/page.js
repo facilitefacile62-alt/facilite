@@ -2358,50 +2358,6 @@ useEffect(() => {
                     <span>Paramètres</span>
                   </button>
 
-                  {/* Dropdown "Plus" */}
-                  <div className="relative inline-block text-left" ref={plusMenuRef}>
-                    <button
-                      onClick={() => setPlusMenuOpen(!plusMenuOpen)}
-                      className="text-sm font-extrabold pb-2.5 pt-1 text-gray-500 hover:text-gray-800 transition-all flex items-center space-x-1 cursor-pointer"
-                    >
-                      <span>Plus</span>
-                      <i className={`fa-solid fa-caret-down text-[10px] transition-transform duration-200 ${plusMenuOpen ? "rotate-180" : ""}`}></i>
-                    </button>
-                    {plusMenuOpen && (
-                      <div className="absolute right-0 md:left-0 mt-2 w-48 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm">
-                        <button
-                          onClick={() => {
-                            setActiveTab("about");
-                            setPlusMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
-                        >
-                          <i className="fa-regular fa-user text-gray-400"></i>
-                          <span>À propos</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveTab("documents");
-                            setPlusMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
-                        >
-                          <i className="fa-regular fa-file-lines text-gray-400"></i>
-                          <span>Mes documents</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveTab("settings");
-                            setPlusMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
-                        >
-                          <i className="fa-solid fa-gear text-gray-400"></i>
-                          <span>Paramètres</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>

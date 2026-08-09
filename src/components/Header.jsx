@@ -790,10 +790,10 @@ export default function Header() {
                 </Link>
 
                 <Link
-                  href="/modeles"
+                  href="/service"
                   onClick={() => setPlusDropdownOpen(false)}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
-                    pathname === "/modeles" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    pathname === "/service" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
                 >
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
@@ -1015,7 +1015,7 @@ export default function Header() {
               Plus d'outils & services
             </div>
             <Link
-              href="/modeles"
+              href="/service"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >

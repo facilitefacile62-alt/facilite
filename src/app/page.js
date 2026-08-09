@@ -500,8 +500,8 @@ export default function Home() {
   // directement au rendu plutôt que synchronisé via un effet séparé, qui
   // ajoutait un aller-retour de rendu superflu à chaque changement.
   const allJobs = useMemo(() => [
-    ...initialJobs.filter((job) => job.pinned),
     ...dynamicJobs,
+    ...initialJobs.filter((job) => job.pinned),
     ...initialJobs.filter((job) => !job.pinned),
   ], [dynamicJobs]);
   const [keyword, setKeyword] = useState("");
@@ -515,6 +515,8 @@ export default function Home() {
     subject: "",
     message: ""
   });
+  
+  const [viewImageModal, setViewImageModal] = useState({ isOpen: false, url: null });
 
   const t = translations[selectedLang] || translations.FR;
 
@@ -1746,17 +1748,22 @@ export default function Home() {
                         l'espace vide sans bandes noires, l'image au premier
                         plan reste intégralement visible via object-contain. */}
                     {job.image && (
-                      <div className="relative w-full h-[380px] sm:h-[480px] max-h-[550px] rounded-xl overflow-hidden bg-gray-100 mt-2 border border-gray-150">
+                      <div className="relative w-full h-[380px] sm:h-[480px] max-h-[550px] rounded-xl overflow-hidden bg-gray-100 mt-2 border border-gray-150 group cursor-pointer" onClick={() => setViewImageModal({ isOpen: true, url: job.image })}>
                         <img
                           src={job.image}
                           alt=""
                           aria-hidden="true"
-                          className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none"
+                          className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none transition-transform duration-300 group-hover:scale-125"
                         />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 z-10 flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 bg-white/90 text-gray-900 rounded-full p-3 shadow-lg transform scale-90 group-hover:scale-100 transition-all duration-300">
+                            <i className="fa-solid fa-expand text-xl"></i>
+                          </div>
+                        </div>
                         <img
                           src={job.image}
                           alt="Affiche de recrutement"
-                          className="relative z-10 w-full h-full object-contain mx-auto block animate-fade-in"
+                          className="relative z-10 w-full h-full object-contain mx-auto block animate-fade-in pointer-events-none"
                           loading="lazy"
                         />
                       </div>
@@ -2773,6 +2780,33 @@ export default function Home() {
         t={t}
         triggerToast={triggerToast}
       />
+
+      {/* MODAL LIGHTBOX POUR IMAGES (Style Facebook) */}
+      {viewImageModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm animate-fade-in">
+          {/* Bouton Fermer */}
+          <button
+            onClick={() => setViewImageModal({ isOpen: false, url: null })}
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors duration-200 z-50 cursor-pointer"
+            aria-label="Fermer l'aperçu"
+          >
+            <i className="fa-solid fa-xmark text-2xl"></i>
+          </button>
+          
+          {/* Conteneur image */}
+          <div 
+            className="relative w-full h-full flex items-center justify-center p-4 sm:p-12 cursor-zoom-out"
+            onClick={() => setViewImageModal({ isOpen: false, url: null })}
+          >
+            <img
+              src={viewImageModal.url}
+              alt="Aperçu plein écran"
+              className="max-w-full max-h-full object-contain shadow-2xl rounded-sm cursor-default"
+              onClick={(e) => e.stopPropagation()} // Prevent click from closing when clicking exactly on the image
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }
