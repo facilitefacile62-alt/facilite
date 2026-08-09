@@ -100,6 +100,13 @@ const COUNTRY_OPTIONS = [
   "Cameroun",
 ];
 
+const passwordRules = [
+  { label: "8 caractères minimum", test: (v) => v.length >= 8 },
+  { label: "1 lettre", test: (v) => /[a-zA-Z]/.test(v) },
+  { label: "1 chiffre", test: (v) => /\d/.test(v) },
+  { label: "1 caractère spécial (#?!@)", test: (v) => /[#?!@]/.test(v) },
+];
+
 const CURRENT_YEAR = new Date().getFullYear();
 const BIRTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const BIRTH_MONTHS = [
@@ -122,6 +129,11 @@ export default function SecurityTabContent({ userSession }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [skipCurrentPassword, setSkipCurrentPassword] = useState(false);
+  // Un compte n'a jamais eu de mot de passe (créé via Google ou téléphone
+  // uniquement) tant qu'aucune identité 'email' n'est liée — même détection
+  // que src/app/login/page.js:70-72 (hasPasswordIdentity), déjà en
+  // production pour distinguer les comptes "Google uniquement".
+  const [hasPasswordIdentity, setHasPasswordIdentity] = useState(true);
 
   // Identifiants
   const [hasEmail, setHasEmail] = useState(false);
@@ -203,18 +215,26 @@ export default function SecurityTabContent({ userSession }) {
     setHasPhone(!!user?.phone);
     setEmailConfirmed(!!user?.email_confirmed_at);
     setPhoneConfirmed(!!user?.phone_confirmed_at);
+    // Même détection que src/app/login/page.js:70 — une identité 'email'
+    // n'existe dans ce projet que pour un compte email+mot de passe (jamais
+    // pour le téléphone ou Google), donc son absence signifie "aucun mot de
+    // passe n'a jamais été défini".
+    setHasPasswordIdentity((user?.identities || []).some((i) => i.provider === "email"));
   };
 
   useEffect(() => {
     if (!userSession?.user) return;
-    const user = userSession.user;
     const accessToken = userSession.access_token;
+    // getUser() (pas le user de la session) : la seule source qui garantit
+    // le tableau `identities` à jour, même pattern que login/page.js:67.
+    supabase.auth.getUser().then(({ data }) => {
+      syncFromUser(data?.user || userSession.user);
+    });
     // Micro-tâche : l'analyse react-hooks/set-state-in-effect interdit un
     // setState synchrone dans le corps de l'effet (dérivation directe d'une
     // prop). userSession n'arrive qu'après un getSession() asynchrone côté
     // parent — il n'y a pas d'alternative sans effet ici.
     queueMicrotask(() => {
-      syncFromUser(user);
       setSkipCurrentPassword(getMostRecentAuthMethod(accessToken) === "otp");
     });
   }, [userSession]);
@@ -290,6 +310,42 @@ export default function SecurityTabContent({ userSession }) {
     } catch (err) {
       console.error(err);
       setError(err.message || "Erreur lors de la mise à jour du mot de passe.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Premier mot de passe (compte Google ou téléphone, aucune identité
+  // 'email' donc aucun mot de passe préexistant) — pas d'ancien mot de passe
+  // à redemander puisqu'il n'existe pas, et pas de déconnexion globale
+  // forcée après coup : aucun ancien mot de passe n'a pu fuiter puisqu'il
+  // n'a jamais existé, contrairement à un vrai changement.
+  const handleCreatePassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+
+    if (newPassword !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    if (!passwordRules.every((r) => r.test(newPassword))) {
+      setError("Le mot de passe ne respecte pas encore toutes les règles ci-dessous.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+
+      await fetchFreshUser();
+      setMessage("Mot de passe créé. Vous pouvez désormais aussi vous connecter avec.");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Erreur lors de la création du mot de passe.");
     } finally {
       setLoading(false);
     }
@@ -1126,58 +1182,107 @@ export default function SecurityTabContent({ userSession }) {
       <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
         <h4 className="text-sm font-extrabold text-gray-900 mb-4 flex items-center gap-2">
           <i className="fa-solid fa-key text-blue-600"></i>
-          {skipCurrentPassword ? "Définir un mot de passe" : "Changer le mot de passe"}
+          {hasPasswordIdentity ? "Changer le mot de passe" : "Créer un mot de passe"}
         </h4>
 
-        <form onSubmit={handleChangePassword} className="space-y-4">
-          {!skipCurrentPassword && (
+        {hasPasswordIdentity ? (
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            {!skipCurrentPassword && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Mot de passe actuel</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Requis pour confirmer que c'est bien vous"
+                  className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
+                  required
+                />
+              </div>
+            )}
+            {skipCurrentPassword && (
+              <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+                Vous venez de vous authentifier par code — pas besoin de ressaisir un ancien mot de passe.
+              </p>
+            )}
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Mot de passe actuel</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nouveau mot de passe</label>
               <input
                 type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Requis pour confirmer que c'est bien vous"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min. 6 caractères"
                 className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
                 required
               />
             </div>
-          )}
-          {skipCurrentPassword && (
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Confirmer le nouveau mot de passe</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirmez"
+                className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? "Mise à jour..." : "Mettre à jour le mot de passe"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleCreatePassword} className="space-y-4">
             <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
-              Vous venez de vous authentifier par code — pas besoin de ressaisir un ancien mot de passe.
+              Ce compte n'a pas encore de mot de passe (connexion Google ou téléphone). Vous pourrez ensuite
+              aussi vous connecter avec un mot de passe.
             </p>
-          )}
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Nouveau mot de passe</label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Min. 6 caractères"
-              className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Confirmer le nouveau mot de passe</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirmez"
-              className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? "Mise à jour..." : "Mettre à jour le mot de passe"}
-          </button>
-        </form>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nouveau mot de passe</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
+                required
+                autoFocus
+              />
+            </div>
+            <ul className="space-y-1">
+              {passwordRules.map((rule) => {
+                const ok = rule.test(newPassword);
+                return (
+                  <li key={rule.label} className={`text-[11px] font-semibold flex items-center gap-1.5 ${ok ? "text-emerald-600" : "text-gray-400"}`}>
+                    <i className={`fa-solid ${ok ? "fa-circle-check" : "fa-circle"} text-[10px]`}></i>
+                    {rule.label}
+                  </li>
+                );
+              })}
+            </ul>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Confirmer le mot de passe</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirmez"
+                className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !passwordRules.every((r) => r.test(newPassword))}
+              className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? "Création..." : "Créer le mot de passe"}
+            </button>
+          </form>
+        )}
       </div>
 
       {/* Modale de confirmation avant dissociation */}
