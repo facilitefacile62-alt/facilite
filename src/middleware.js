@@ -184,6 +184,6 @@ export const config = {
     // Tout sauf les assets statiques, les routes /api (celles-ci valident
     // elles-mêmes le jeton Bearer via requireUser dans lib/apiAuth.js), et
     // robots.txt/sitemap.xml
-    "/((?!api/|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?)$).*)",
+    "/((?!api/|_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?)$).*)",
   ],
 };
