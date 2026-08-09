@@ -14,8 +14,16 @@ const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP
 const DEFAULT_DESCRIPTION =
   "Facilite est votre allié de confiance pour concevoir des CV percutants, trouver des offres d'emploi et être accompagné par des recruteurs au Sénégal et en Afrique de l'Ouest.";
 
+export const viewport = {
+  themeColor: '#ffffff',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export const metadata = {
   metadataBase: new URL(SITE_URL),
+  manifest: "/manifest.json",
   title: {
     default: "Facilite - Création de CV & Offres d'emploi",
     template: "%s | Facilite",
