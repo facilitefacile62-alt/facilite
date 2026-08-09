@@ -9,14 +9,22 @@ export const runtime = "nodejs";
  * Section 3b "Supprimer le compte" du profil) et jamais annulée depuis
  * (annulation automatique à la reconnexion, voir /api/auth/confirm-after-login).
  *
- * auth.admin.deleteUser() suffit : resumes, candidatures, messages,
- * conversations, assistant_messages, badge_requests, interviews,
- * job_offers, cv_consultations, recruiter_profiles, ai_usage_daily,
- * support_threads, agent_assignments, subscriptions, profiles, user_roles
- * sont tous ON DELETE CASCADE depuis auth.users(id) (vérifié par
- * introspection, migration 20260809020000). orders/transactions sont
- * désormais ON DELETE SET NULL (même migration) — conservés pour la
- * comptabilité, détachés de l'identité de la personne.
+ * auth.admin.deleteUser() suffit pour la plupart des tables : resumes,
+ * candidatures, messages, conversations, assistant_messages,
+ * badge_requests, interviews, cv_consultations, recruiter_profiles,
+ * ai_usage_daily, support_threads, agent_assignments, subscriptions,
+ * profiles, user_roles sont tous ON DELETE CASCADE depuis auth.users(id)
+ * (vérifié par introspection, migration 20260809020000). orders/transactions
+ * sont ON DELETE SET NULL (même migration) — conservés pour la comptabilité,
+ * détachés de l'identité de la personne.
+ *
+ * job_offers fait exception (migration 20260809030000, revient sur le
+ * CASCADE initial) : les candidatures reçues sur ces offres appartiennent à
+ * de vrais candidats, les supprimer casserait leur historique. Dépubliées
+ * explicitement ci-dessous (archived_at + is_active=false, la même
+ * convention que archive_own_job_offer()) AVANT deleteUser() — le FK
+ * ON DELETE SET NULL n'est qu'un filet de sécurité si cette étape était un
+ * jour sautée, pas le mécanisme normal.
  */
 export async function GET(req) {
   const cronSecret = process.env.CRON_SECRET;
@@ -53,6 +61,17 @@ export async function GET(req) {
   let errors = 0;
 
   for (const account of dueAccounts || []) {
+    const { error: archiveError } = await admin
+      .from("job_offers")
+      .update({ is_active: false, archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("recruiter_id", account.id)
+      .is("archived_at", null);
+    if (archiveError) {
+      console.error(`[Cron Purge Comptes] Échec dépublication des offres (${account.id}) :`, archiveError.message);
+      errors += 1;
+      continue;
+    }
+
     // Journalisé AVANT la suppression : security_logs.target_user_id est
     // ON DELETE SET NULL, la ligne survit mais perd la référence une fois le
     // compte réellement supprimé — cohérent avec le reste des logs qui
