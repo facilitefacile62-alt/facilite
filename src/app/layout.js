@@ -23,6 +23,7 @@ export const viewport = {
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
+  manifest: "/manifest.json",
   title: {
     default: "Facilite - Création de CV & Offres d'emploi",
     template: "%s | Facilite",
