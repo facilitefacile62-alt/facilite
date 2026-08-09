@@ -86,3 +86,9 @@ env/
 supabase/test-schema-dump*
 scripts/prod-schema-dump.sql
 scripts/prod-schema-dump.functions.json
+
+# Scripts utilitaires ponctuels à la racine (connexion directe DB/service_role
+# via .env.local) — usage jetable local, jamais destinés à GitHub.
+/check_*.js
+/update_*.js
+/upload_*.js
