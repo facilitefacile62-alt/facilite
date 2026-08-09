@@ -237,7 +237,7 @@ export default function AdminDashboardPage() {
           setMyRole("admin");
         }
 
-        const [profilesRes, rolesRes, offersRes, applicationsRes, resumesRes, badgeRequestsRes, pendingOffersRes, pendingReportsRes] = await Promise.all([
+        const [profilesRes, rolesRes, offersRes, applicationsRes, resumesRes, badgeRequestsRes, pendingOffersRes, pendingReportsRes, phoneStatusRes] = await Promise.all([
           supabase.from("profiles").select("*").order("created_at", { ascending: false }),
           supabase.from("user_roles").select("*"),
           supabase.from("job_offers").select("id, created_at").order("created_at", { ascending: false }),
@@ -258,6 +258,9 @@ export default function AdminDashboardPage() {
             .select("id, reporter_id, target_type, target_id, reason, created_at")
             .eq("status", "pending")
             .order("created_at", { ascending: true }),
+          // Numéros déjà masqués côté SQL (mask_phone_number) — le numéro
+          // complet ne transite jamais jusqu'ici, voir 20260808020000.
+          supabase.rpc("get_users_phone_status"),
         ]);
 
         if (active) {
@@ -270,11 +273,14 @@ export default function AdminDashboardPage() {
           if (profilesRes.error || rolesRes.error) {
             console.error("Erreur chargement profils/rôles:", profilesRes.error || rolesRes.error);
           } else {
+            if (phoneStatusRes.error) console.error("Erreur chargement statut téléphone:", phoneStatusRes.error);
+            const phoneByUserId = new Map((phoneStatusRes.data || []).map((r) => [r.user_id, r.phone_masked]));
             const roleByUserId = new Map((rolesRes.data || []).map((r) => [r.user_id, r]));
             const merged = (profilesRes.data || []).map((p) => ({
               ...p,
               role: roleByUserId.get(p.id)?.role || "user",
               status: roleByUserId.get(p.id)?.status || "active",
+              phone_masked: phoneByUserId.get(p.id) || null,
             }));
             setUsers(merged);
           }
@@ -362,6 +368,31 @@ export default function AdminDashboardPage() {
         : `${targetUser.full_name || targetUser.email} réactivé.`,
       nextStatus === "suspended" ? "fa-user-slash" : "fa-user-check"
     );
+  };
+
+  // Dissocie le numéro de téléphone (connexion SMS) d'un compte. Le numéro
+  // complet n'est jamais connu du client — seule sa version déjà masquée
+  // (phone_masked) sert au message de confirmation, ce qui suffit à
+  // identifier le bon compte sans jamais l'exposer en clair dans l'UI.
+  const handleDisassociatePhone = async (targetUser) => {
+    const confirmed = window.confirm(`Dissocier le numéro ${targetUser.phone_masked} de ce compte ?`);
+    if (!confirmed) return;
+
+    setUpdatingUserId(targetUser.id);
+    const res = await fetch(`/api/admin/users/${targetUser.id}/phone`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${userSession.access_token}` },
+    });
+    const body = await res.json().catch(() => ({}));
+    setUpdatingUserId(null);
+
+    if (!res.ok) {
+      triggerToast("Impossible de dissocier ce numéro : " + (body.error || "erreur inconnue"), "fa-triangle-exclamation");
+      return;
+    }
+
+    setUsers((prev) => prev.map((u) => (u.id === targetUser.id ? { ...u, phone_masked: null } : u)));
+    triggerToast("Numéro de téléphone dissocié.", "fa-phone-slash");
   };
 
   const handleRevokeBadge = async (targetUser, badgeName) => {
@@ -1358,6 +1389,7 @@ export default function AdminDashboardPage() {
                     <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
                       <th className="py-4 px-6">Utilisateur</th>
                       <th className="py-4 px-6">Email</th>
+                      <th className="py-4 px-6">Téléphone</th>
                       <th className="py-4 px-6">Rôle Actuel</th>
                       <th className="py-4 px-6">Statut</th>
                       <th className="py-4 px-6">Badges</th>
@@ -1368,7 +1400,7 @@ export default function AdminDashboardPage() {
                   <tbody className="divide-y divide-gray-100 text-xs font-medium">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="py-8 text-center text-gray-400 italic">
+                        <td colSpan="8" className="py-8 text-center text-gray-400 italic">
                           Aucun utilisateur trouvé.
                         </td>
                       </tr>
@@ -1393,6 +1425,22 @@ export default function AdminDashboardPage() {
                             </div>
                           </td>
                           <td className="py-4 px-6 text-gray-600 font-mono text-[11px]">{user.email}</td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-600 font-mono text-[11px]">{user.phone_masked || "—"}</span>
+                              {user.phone_masked && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDisassociatePhone(user)}
+                                  disabled={updatingUserId === user.id}
+                                  title={`Dissocier ${user.phone_masked}`}
+                                  className="text-gray-300 hover:text-red-500 transition cursor-pointer disabled:opacity-50 shrink-0"
+                                >
+                                  <i className="fa-solid fa-phone-slash text-[11px]"></i>
+                                </button>
+                              )}
+                            </div>
+                          </td>
                           <td className="py-4 px-6">
                             <RoleBadge role={user.role || "user"} />
                           </td>
