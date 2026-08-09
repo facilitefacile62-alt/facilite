@@ -48,7 +48,7 @@ BEGIN
   RETURN QUERY
   SELECT u.id, public.mask_phone_number(u.phone)
   FROM auth.users u
-  WHERE u.phone IS NOT NULL AND u.phone <> '';
+  WHERE u.phone IS NOT NULL AND u.phone IS DISTINCT FROM '';
 END;
 $$;
 
