@@ -117,7 +117,7 @@ export async function middleware(req) {
   try {
     const rolePromise = supabase
       .from("user_roles")
-      .select("role, status")
+      .select("role, status, suspended_by")
       .eq("user_id", user.id)
       .single()
       .then((r) => r.data);
@@ -131,8 +131,22 @@ export async function middleware(req) {
     return res;
   }
 
-  // Un compte suspendu perd l'accès à toute page protégée immédiatement
+  // Un compte suspendu perd l'accès à toute page protégée immédiatement —
+  // sauf s'il s'agit d'une auto-désactivation (suspended_by NULL, section
+  // "Désactiver le compte" du profil) : dans ce cas la reconnexion elle-même
+  // réactive le compte au lieu de le déconnecter à nouveau. Une suspension
+  // admin (suspended_by rempli) garde le comportement existant, jamais levée
+  // automatiquement.
   if (userRoleRow?.status === "suspended") {
+    if (userRoleRow.suspended_by === null) {
+      try {
+        await withTimeout(supabase.rpc("reactivate_own_account_if_self_suspended"), 1500);
+      } catch (e) {
+        console.error("[Middleware] Échec réactivation auto-désactivation :", e.message);
+      }
+      return res;
+    }
+
     try {
       await withTimeout(supabase.auth.signOut(), 1000);
     } catch (e) {

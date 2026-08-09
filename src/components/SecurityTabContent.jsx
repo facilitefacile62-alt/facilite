@@ -210,6 +210,10 @@ export default function SecurityTabContent({ userSession }) {
   const [unlinkTarget, setUnlinkTarget] = useState(null); // null | "email" | "phone"
   const [unlinkPassword, setUnlinkPassword] = useState("");
 
+  // Désactivation du compte (self-service, réversible en se reconnectant —
+  // voir reactivate_own_account_if_self_suspended() et middleware.js).
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+
   const syncFromUser = (user) => {
     setHasEmail(!!user?.email);
     setHasPhone(!!user?.phone);
@@ -698,6 +702,25 @@ export default function SecurityTabContent({ userSession }) {
       console.error(err);
       setError(err.message || "Erreur lors de la dissociation.");
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    setError("");
+    setMessage("");
+    setLoading(true);
+    try {
+      const { data: ok, error: deactivateError } = await supabase.rpc("deactivate_own_account");
+      if (deactivateError) throw deactivateError;
+      if (!ok) throw new Error("Impossible de désactiver ce compte.");
+
+      setShowDeactivateModal(false);
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Erreur lors de la désactivation du compte.");
       setLoading(false);
     }
   };
@@ -1284,6 +1307,56 @@ export default function SecurityTabContent({ userSession }) {
           </form>
         )}
       </div>
+
+      {/* SECTION 3 — Désactiver le compte */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <h4 className="text-sm font-extrabold text-gray-900 mb-1 flex items-center gap-2">
+          <i className="fa-solid fa-power-off text-amber-600"></i>
+          Désactiver le compte
+        </h4>
+        <p className="text-xs text-gray-500 mb-4">
+          Ton profil sera masqué et la connexion bloquée. Réversible à tout moment en te reconnectant.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowDeactivateModal(true)}
+          className="px-4 py-3 min-h-[48px] bg-amber-50 text-amber-700 text-xs font-bold rounded-xl hover:bg-amber-100 transition cursor-pointer"
+        >
+          Désactiver mon compte
+        </button>
+      </div>
+
+      {/* Modale de confirmation avant désactivation */}
+      {showDeactivateModal && (
+        <div className="fixed inset-0 z-[950] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowDeactivateModal(false)}>
+          <div
+            className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 className="text-sm font-extrabold text-gray-900">Désactiver ton compte ?</h4>
+            <p className="text-xs text-gray-500">
+              Ton profil sera masqué. Tu pourras réactiver à tout moment en te reconnectant.
+            </p>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeactivateModal(false)}
+                className="px-4 py-3 min-h-[48px] text-gray-600 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleDeactivateAccount}
+                disabled={loading}
+                className="px-4 py-3 min-h-[48px] bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? "..." : "Désactiver"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modale de confirmation avant dissociation */}
       {unlinkTarget && (

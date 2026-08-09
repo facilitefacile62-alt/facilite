@@ -44,9 +44,16 @@ export async function POST(req, { params }) {
       );
     }
 
+    // suspended_by distingue une suspension admin (jamais réactivée toute
+    // seule) d'une auto-désactivation (suspended_by NULL, réactivée par
+    // middleware.js à la reconnexion) — voir 20260809010000_self_deactivation.sql.
     const { data: updated, error: updateError } = await supabaseAdmin
       .from("user_roles")
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({
+        status,
+        suspended_by: status === "suspended" ? user.id : null,
+        updated_at: new Date().toISOString(),
+      })
       .eq("user_id", targetUserId)
       .select()
       .single();
