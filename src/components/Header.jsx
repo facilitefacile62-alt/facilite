@@ -221,6 +221,18 @@ export default function Header() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserSession(session);
+      // Filet de sécurité pour les connexions OAuth (Google) et tout futur
+      // point d'entrée : login/page.js et PhoneAuthForm.jsx appellent déjà
+      // cette route explicitement pour leurs propres flux, mais l'OAuth
+      // atterrit directement sur /profil sans repasser par /login — Header
+      // étant monté partout, c'est le seul point commun à toutes les
+      // connexions. Idempotent (annule une suppression en attente, best-effort).
+      if (_event === "SIGNED_IN" && session?.access_token) {
+        fetch("/api/auth/confirm-after-login", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }).catch(() => {});
+      }
     });
 
     return () => subscription.unsubscribe();

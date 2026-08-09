@@ -137,6 +137,13 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil", signupMet
 
       if (data?.session) {
         setMessage("Connexion réussie ! Redirection en cours...");
+        // Best-effort, ne bloque jamais la redirection : annule une
+        // suppression de compte en attente si la personne se reconnecte
+        // (Section 3b "Supprimer le compte" du profil).
+        fetch("/api/auth/confirm-after-login", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        }).catch(() => {});
         setTimeout(() => {
           router.push(onSuccessRedirect);
           router.refresh();

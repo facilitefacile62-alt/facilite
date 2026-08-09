@@ -178,6 +178,7 @@ export default function SecurityTabContent({ userSession }) {
   // get_candidats_recherche/get_profils_publics n'y font pas référence).
   const [profileBirthDate, setProfileBirthDate] = useState("");
   const [profileCountry, setProfileCountry] = useState("");
+  const [profileDeletedAt, setProfileDeletedAt] = useState(null);
   const [birthDay, setBirthDay] = useState("");
   const [birthMonth, setBirthMonth] = useState("");
   const [birthYear, setBirthYear] = useState("");
@@ -187,13 +188,14 @@ export default function SecurityTabContent({ userSession }) {
     let cancelled = false;
     supabase
       .from("profiles")
-      .select("country, date_naissance")
+      .select("country, date_naissance, deleted_at")
       .eq("id", userSession.user.id)
       .single()
       .then(({ data }) => {
         if (cancelled || !data) return;
         setProfileCountry(data.country || "");
         setProfileBirthDate(data.date_naissance || "");
+        setProfileDeletedAt(data.deleted_at || null);
         if (data.date_naissance) {
           const [y, m, d] = data.date_naissance.split("-");
           setBirthYear(y);
@@ -213,6 +215,16 @@ export default function SecurityTabContent({ userSession }) {
   // Désactivation du compte (self-service, réversible en se reconnectant —
   // voir reactivate_own_account_if_self_suspended() et middleware.js).
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+
+  // Suppression du compte (30 jours, annulable en se reconnectant — voir
+  // request_own_account_deletion()/cancel_own_account_deletion() et
+  // /api/auth/confirm-after-login). Confirmation forte : mot de passe si le
+  // compte en a un, sinon code envoyé au téléphone/e-mail déjà confirmé.
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteOtpStep, setDeleteOtpStep] = useState("idle"); // idle | sent
+  const [deleteOtpToken, setDeleteOtpToken] = useState("");
+  const [deleteOtpChannel, setDeleteOtpChannel] = useState(null); // "phone" | "email"
 
   const syncFromUser = (user) => {
     setHasEmail(!!user?.email);
@@ -721,6 +733,122 @@ export default function SecurityTabContent({ userSession }) {
     } catch (err) {
       console.error(err);
       setError(err.message || "Erreur lors de la désactivation du compte.");
+      setLoading(false);
+    }
+  };
+
+  const handleOpenDeleteModal = () => {
+    setError("");
+    setMessage("");
+    setDeletePassword("");
+    setDeleteOtpStep("idle");
+    setDeleteOtpToken("");
+    setDeleteOtpChannel(null);
+    setShowDeleteModal(true);
+  };
+
+  // Confirmation forte pour un compte SANS mot de passe : renvoie un code au
+  // canal déjà confirmé (téléphone en priorité, sinon e-mail) — jamais un
+  // nouveau canal, uniquement pour prouver que c'est bien le titulaire.
+  const handleSendDeleteOtp = async () => {
+    setError("");
+    setMessage("");
+    setLoading(true);
+    try {
+      const user = await fetchFreshUser();
+      if (user.phone && user.phone_confirmed_at) {
+        const { error: otpError } = await supabase.auth.signInWithOtp({ phone: user.phone });
+        if (otpError) throw otpError;
+        setDeleteOtpChannel("phone");
+      } else if (user.email && user.email_confirmed_at) {
+        const { error: otpError } = await supabase.auth.signInWithOtp({ email: user.email });
+        if (otpError) throw otpError;
+        setDeleteOtpChannel("email");
+      } else {
+        throw new Error("Aucun moyen de contact confirmé pour vérifier votre identité.");
+      }
+      setDeleteOtpStep("sent");
+      setMessage("Un code de vérification a été envoyé.");
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Impossible d'envoyer le code de vérification.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestDeletion = async () => {
+    const { data: scheduledAt, error: requestError } = await supabase.rpc("request_own_account_deletion");
+    if (requestError) throw requestError;
+    if (!scheduledAt) throw new Error("Impossible de programmer la suppression.");
+    setProfileDeletedAt(scheduledAt);
+    setShowDeleteModal(false);
+    setMessage(`Suppression programmée pour le ${formatBirthDateDisplay(scheduledAt.slice(0, 10))}. Reconnecte-toi avant cette date pour annuler.`);
+  };
+
+  const handleConfirmDeleteWithPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    if (!deletePassword) {
+      setError("Veuillez saisir votre mot de passe.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const user = await fetchFreshUser();
+      await reverifyPassword(user, deletePassword);
+      await requestDeletion();
+      setDeletePassword("");
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Erreur lors de la suppression.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmDeleteWithOtp = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    if (deleteOtpToken.trim().length !== 6) {
+      setError("Veuillez saisir un code valide à 6 chiffres.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const user = await fetchFreshUser();
+      const { error: verifyError } = await supabase.auth.verifyOtp(
+        deleteOtpChannel === "phone"
+          ? { phone: user.phone, token: deleteOtpToken.trim(), type: "sms" }
+          : { email: user.email, token: deleteOtpToken.trim(), type: "email" }
+      );
+      if (verifyError) throw verifyError;
+      await requestDeletion();
+      setDeleteOtpToken("");
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Code invalide ou expiré.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelDeletion = async () => {
+    setError("");
+    setMessage("");
+    setLoading(true);
+    try {
+      const { data: ok, error: cancelError } = await supabase.rpc("cancel_own_account_deletion");
+      if (cancelError) throw cancelError;
+      if (!ok) throw new Error("Impossible d'annuler la suppression.");
+      setProfileDeletedAt(null);
+      setMessage("Suppression annulée. Votre compte reste actif.");
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Erreur lors de l'annulation.");
+    } finally {
       setLoading(false);
     }
   };
@@ -1325,6 +1453,143 @@ export default function SecurityTabContent({ userSession }) {
           Désactiver mon compte
         </button>
       </div>
+
+      {/* SECTION 3 — Supprimer le compte */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <h4 className="text-sm font-extrabold text-gray-900 mb-1 flex items-center gap-2">
+          <i className="fa-solid fa-trash text-red-600"></i>
+          Supprimer le compte définitivement
+        </h4>
+
+        {profileDeletedAt ? (
+          <div className="space-y-3">
+            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+              Ton compte et toutes tes données seront supprimés le{" "}
+              <strong>{formatBirthDateDisplay(profileDeletedAt.slice(0, 10))}</strong>. Tu peux annuler avant cette date.
+            </p>
+            <button
+              type="button"
+              onClick={handleCancelDeletion}
+              disabled={loading}
+              className="px-4 py-3 min-h-[48px] bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl hover:bg-emerald-100 transition disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? "..." : "Annuler la suppression"}
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-xs text-gray-500 mb-4">
+              Irréversible après 30 jours — annulable pendant ce délai en te reconnectant.
+            </p>
+            <button
+              type="button"
+              onClick={handleOpenDeleteModal}
+              className="px-4 py-3 min-h-[48px] bg-red-50 text-red-600 text-xs font-bold rounded-xl hover:bg-red-100 transition cursor-pointer"
+            >
+              Supprimer mon compte
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Modale de confirmation avant suppression */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[950] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowDeleteModal(false)}>
+          <div
+            className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 className="text-sm font-extrabold text-gray-900">Supprimer ton compte ?</h4>
+            <p className="text-xs text-gray-500">
+              Ton compte et toutes tes données seront supprimés dans 30 jours. Tu peux annuler avant cette date.
+            </p>
+
+            {hasPasswordIdentity ? (
+              <form onSubmit={handleConfirmDeleteWithPassword} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Mot de passe actuel</label>
+                  <input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="Confirmez avec votre mot de passe"
+                    className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-gray-50"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-4 py-3 min-h-[48px] text-gray-600 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-3 min-h-[48px] bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-700 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    {loading ? "..." : "Supprimer"}
+                  </button>
+                </div>
+              </form>
+            ) : deleteOtpStep === "idle" ? (
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-3 min-h-[48px] text-gray-600 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendDeleteOtp}
+                  disabled={loading}
+                  className="px-4 py-3 min-h-[48px] bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-700 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {loading ? "..." : "Envoyer un code de vérification"}
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleConfirmDeleteWithOtp} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Code reçu par {deleteOtpChannel === "phone" ? "SMS" : "e-mail"}
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={deleteOtpToken}
+                    onChange={(e) => setDeleteOtpToken(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Code à 6 chiffres"
+                    className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm tracking-[0.3em] text-center focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-gray-50"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-4 py-3 min-h-[48px] text-gray-600 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || deleteOtpToken.length !== 6}
+                    className="px-4 py-3 min-h-[48px] bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-700 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    {loading ? "..." : "Supprimer"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modale de confirmation avant désactivation */}
       {showDeactivateModal && (

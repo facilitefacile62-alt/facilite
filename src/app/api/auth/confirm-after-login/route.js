@@ -23,10 +23,6 @@ export async function POST(req) {
     if (user.email && !user.email_confirmed_at) updates.email_confirm = true;
     if (user.phone && !user.phone_confirmed_at) updates.phone_confirm = true;
 
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ confirmed: [] });
-    }
-
     let admin;
     try {
       admin = getSupabaseAdmin();
@@ -35,14 +31,41 @@ export async function POST(req) {
       return NextResponse.json({ error: configError.message }, { status: 502 });
     }
 
-    const { error: updateError } = await admin.auth.admin.updateUserById(user.id, updates);
-
-    if (updateError) {
-      console.error("[Auth] Échec de confirmation post-connexion :", updateError.message);
-      return NextResponse.json({ error: "Échec de la confirmation." }, { status: 500 });
+    if (Object.keys(updates).length > 0) {
+      const { error: updateError } = await admin.auth.admin.updateUserById(user.id, updates);
+      if (updateError) {
+        console.error("[Auth] Échec de confirmation post-connexion :", updateError.message);
+        return NextResponse.json({ error: "Échec de la confirmation." }, { status: 500 });
+      }
     }
 
-    return NextResponse.json({ confirmed: Object.keys(updates) });
+    // Se reconnecter annule une suppression de compte en attente (Section
+    // 3b "Supprimer le compte" du profil) — best-effort, ne bloque jamais
+    // la connexion.
+    let deletionCancelled = false;
+    try {
+      const { data: cancelled, error: cancelError } = await admin
+        .from("profiles")
+        .update({ deleted_at: null })
+        .eq("id", user.id)
+        .not("deleted_at", "is", null)
+        .select("id");
+      if (cancelError) throw cancelError;
+      if (cancelled && cancelled.length > 0) {
+        deletionCancelled = true;
+        await admin.rpc("log_security_event", {
+          p_event_type: "account_deletion_cancelled",
+          p_severity: "info",
+          p_actor_id: user.id,
+          p_target_user_id: null,
+          p_details: {},
+        });
+      }
+    } catch (err) {
+      console.warn("[Auth] Échec annulation suppression en attente (non bloquant) :", err.message);
+    }
+
+    return NextResponse.json({ confirmed: Object.keys(updates), deletionCancelled });
   } catch (err) {
     console.error("[Auth] Erreur interne confirm-after-login :", err);
     return NextResponse.json({ error: "Erreur interne du serveur." }, { status: 500 });
