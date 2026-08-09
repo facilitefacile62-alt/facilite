@@ -371,7 +371,7 @@ export default function Home() {
   const slides = useMemo(() => [
     {
       id: "s1",
-      img: "model1.png", 
+      img: "/model1.jpg", 
       titleFR: "Modèle 1 — Moderne et photographique", 
       titleEN: "Template 1 — Modern and photographic",
       descFR: "Parfait pour les profils créatifs et exécutifs exigeant une mise en avant visuelle élégante.",
@@ -380,7 +380,7 @@ export default function Home() {
     },
     { 
       id: "s2", 
-      img: "model2.png", 
+      img: "/model2.png", 
       titleFR: "Modèle 2 — Épuré et institutionnel", 
       titleEN: "Template 2 — Clean and professional",
       descFR: "Design minimaliste axé sur l'impact des réalisations et la clarté de lecture pour recruteurs.",
@@ -389,7 +389,7 @@ export default function Home() {
     },
     { 
       id: "s3", 
-      img: "model3.png", 
+      img: "/model3.png", 
       titleFR: "Modèle 3 — Classique et structuré", 
       titleEN: "Template 3 — Classic and structured",
       descFR: "Structure équilibrée idéale pour l'ingénierie, la finance et le management stratégique.",
@@ -398,7 +398,7 @@ export default function Home() {
     },
     { 
       id: "s4", 
-      img: "model4.png", 
+      img: "/model4.png", 
       titleFR: "Modèle 4 — Nouveau design international", 
       titleEN: "Template 4 — New international design",
       descFR: "Format optimisé pour les candidatures globales, normes anglo-saxonnes et compatibilité ATS.",
@@ -1279,15 +1279,24 @@ export default function Home() {
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-[1.15]">
                 {t.modelsTitle}
               </h2>
-              <button
-                onClick={() => {
-                  const pricingSection = document.getElementById("section-pricing");
-                  if (pricingSection) pricingSection.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="bg-[#10E688] text-gray-900 font-extrabold py-4 px-10 rounded-full text-lg shadow-[0_10px_20px_rgba(16,230,136,0.3)] hover:shadow-[0_15px_25px_rgba(16,230,136,0.5)] hover:-translate-y-1 transition-all transform duration-300 cursor-pointer"
-              >
-                {t.modelsCTA}
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <button
+                  onClick={() => {
+                    const pricingSection = document.getElementById("section-pricing");
+                    if (pricingSection) pricingSection.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="bg-[#10E688] text-gray-900 font-extrabold py-4 px-10 rounded-full text-lg shadow-[0_10px_20px_rgba(16,230,136,0.3)] hover:shadow-[0_15px_25px_rgba(16,230,136,0.5)] hover:-translate-y-1 transition-all transform duration-300 cursor-pointer"
+                >
+                  {t.modelsCTA}
+                </button>
+                <Link
+                  href="/modeles"
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold py-3.5 px-8 rounded-full text-base transition-all transform hover:-translate-y-1 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-file-lines"></i>
+                  Voir tous les modèles CV
+                </Link>
+              </div>
             </div>
 
             {/* Colonne Droite : Slider 360° */}

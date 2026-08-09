@@ -744,15 +744,15 @@ export default function Header() {
             <span>Messagerie</span>
           </Link>
           <Link
-            href="/modeles"
+            href="/service"
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
-              pathname === "/modeles"
+              pathname === "/service"
                 ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             }`}
           >
-            <i className="fa-solid fa-file-lines text-sm"></i>
-            <span>Modèles CV</span>
+            <i className="fa-solid fa-briefcase text-sm"></i>
+            <span>Service</span>
           </Link>
 
           {/* Menu déroulant "Plus" pour regrouper les rubriques secondaires sans saturer */}
@@ -790,17 +790,17 @@ export default function Header() {
                 </Link>
 
                 <Link
-                  href="/service"
+                  href="/modeles"
                   onClick={() => setPlusDropdownOpen(false)}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
-                    pathname === "/service" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    pathname === "/modeles" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
                 >
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-briefcase text-sm"></i>
+                    <i className="fa-solid fa-file-lines text-sm"></i>
                   </div>
                   <div>
-                    <div className="font-extrabold">Services & Modèles</div>
+                    <div className="font-extrabold">Modèles CV</div>
                     <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada, Anglais & Lettres</div>
                   </div>
                 </Link>
@@ -1019,8 +1019,16 @@ export default function Header() {
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
+              <i className="fa-solid fa-briefcase w-5 text-center text-emerald-600"></i>
+              <span>Services Profils</span>
+            </Link>
+            <Link
+              href="/modeles"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
               <i className="fa-solid fa-file-lines w-5 text-center text-emerald-600"></i>
-              <span>Services & Modèles CV</span>
+              <span>Modèles CV</span>
             </Link>
             <Link
               href="/recrutement-spontane"
