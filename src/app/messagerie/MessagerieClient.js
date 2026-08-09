@@ -847,43 +847,95 @@ export default function MessagerieClient() {
           triggerToast("Erreur de chargement de la discussion", "fa-triangle-exclamation");
         }
 
-        if (formattedMsgs.length > 0) {
-          const userConv = {
-            id: 1,
-            name: "Support RH Facilité",
-            title: "Assistance & Recrutement",
-            company: "Facilite Corporation",
-            avatarColor: "bg-[#10E688]",
-            avatarInitials: "FC",
-            logo: "/logo.jpeg",
-            lastMessage: formattedMsgs[formattedMsgs.length - 1].text,
-            time: formattedMsgs[formattedMsgs.length - 1].time,
-            unreadCount: 0,
-            online: true,
-            favorite: true,
-            messages: formattedMsgs
-          };
+        // Point 1.B : depuis /api/postuler, une nouvelle candidature crée une
+        // vraie conversation dédiée par recruteur (conversation_id non NULL)
+        // au lieu de laisser ces messages se fondre dans le fil générique
+        // "Support RH Facilité". On isole ici tout message dont le
+        // conversation_id est partagé par au moins un message de type OFFRE,
+        // pour lui donner sa propre carte sous le vrai nom du recruteur. Les
+        // anciens messages OFFRE historiques (conversation_id NULL, ~67
+        // lignes) restent volontairement dans le fil fusionné — décision
+        // explicite : pas de correctif rétroactif sur les données existantes.
+        const offreConversationIds = new Set(
+          formattedMsgs
+            .filter((m) => m.typeDiscussion === "OFFRE" && m.conversationId)
+            .map((m) => m.conversationId)
+        );
+        const distinctMsgs = formattedMsgs.filter((m) => m.conversationId && offreConversationIds.has(m.conversationId));
+        const mergedMsgs = formattedMsgs.filter((m) => !(m.conversationId && offreConversationIds.has(m.conversationId)));
 
-          // Fusion avec l'état déjà en place plutôt qu'un remplacement brut : le fil
-          // IA (useChat) peut déjà avoir synchronisé son message d'accueil ou les
-          // premiers échanges avant que cette promesse ne se résolve. Utiliser la
-          // constante statique AI_PINNED_CHAT ici écraserait ce contenu (course
-          // entre cet effet asynchrone et l'effet de synchronisation useChat).
-          setConversations(prev => {
-            const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
-            return [aiConv, userConv];
-          });
-          if (window.innerWidth >= 768) {
-            setActiveConvId("ai-assistant");
+        const groupsByConversation = new Map();
+        for (const msg of distinctMsgs) {
+          const otherPartyId = msg.senderId === session.user.id ? msg.receiverId : msg.senderId;
+          if (!groupsByConversation.has(msg.conversationId)) {
+            groupsByConversation.set(msg.conversationId, { otherPartyId, messages: [] });
           }
-        } else {
-          setConversations(prev => {
-            const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
-            return [aiConv];
-          });
-          if (window.innerWidth >= 768) {
-            setActiveConvId("ai-assistant");
+          groupsByConversation.get(msg.conversationId).messages.push(msg);
+        }
+
+        const recruiterCards = await Promise.all(
+          Array.from(groupsByConversation.values()).map(async ({ otherPartyId, messages: groupMessages }) => {
+            const [{ data: recruiterProfile }, { data: profileRow }] = await Promise.all([
+              supabase.from("recruiter_profiles").select("company_name, sector, logo_url").eq("user_id", otherPartyId).maybeSingle(),
+              supabase.from("profiles").select("full_name").eq("id", otherPartyId).maybeSingle(),
+            ]);
+            const displayName = recruiterProfile?.company_name || profileRow?.full_name || "Recruteur";
+            const lastMsg = groupMessages[groupMessages.length - 1];
+            return {
+              id: otherPartyId,
+              name: displayName,
+              title: recruiterProfile?.sector || "Recruteur",
+              company: displayName,
+              avatarColor: "bg-blue-600",
+              avatarInitials: displayName.slice(0, 2).toUpperCase(),
+              logo: recruiterProfile?.logo_url || null,
+              lastMessage: lastMsg.text,
+              time: lastMsg.time,
+              unreadCount: 0,
+              online: false,
+              favorite: false,
+              messages: groupMessages,
+            };
+          })
+        );
+
+        if (!isActive) return;
+
+        // Fusion avec l'état déjà en place plutôt qu'un remplacement brut : le fil
+        // IA (useChat) peut déjà avoir synchronisé son message d'accueil ou les
+        // premiers échanges avant que cette promesse ne se résolve. Utiliser la
+        // constante statique AI_PINNED_CHAT ici écraserait ce contenu (course
+        // entre cet effet asynchrone et l'effet de synchronisation useChat).
+        setConversations(prev => {
+          const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
+          const next = [aiConv];
+          if (mergedMsgs.length > 0) {
+            next.push({
+              id: 1,
+              name: "Support RH Facilité",
+              title: "Assistance & Recrutement",
+              company: "Facilite Corporation",
+              avatarColor: "bg-[#10E688]",
+              avatarInitials: "FC",
+              logo: "/logo.jpeg",
+              lastMessage: mergedMsgs[mergedMsgs.length - 1].text,
+              time: mergedMsgs[mergedMsgs.length - 1].time,
+              unreadCount: 0,
+              online: true,
+              favorite: true,
+              messages: mergedMsgs,
+            });
           }
+          for (const card of recruiterCards) {
+            // Ne pas dupliquer une carte déjà posée par le flux ?recipient=
+            // (résolu en parallèle, même id = id de l'autre utilisateur).
+            const alreadyPresent = prev.some((c) => c.id === card.id) || next.some((c) => c.id === card.id);
+            if (!alreadyPresent) next.push(card);
+          }
+          return next;
+        });
+        if (window.innerWidth >= 768) {
+          setActiveConvId("ai-assistant");
         }
       } catch (err) {
         console.error("Erreur de chargement des messages utilisateur:", err);

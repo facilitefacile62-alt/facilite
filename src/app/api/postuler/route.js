@@ -9,6 +9,67 @@ export const runtime = "nodejs";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 
+// --- Pièce jointe de la messagerie interne (bucket privé chat-attachments) ---
+// Même convention que src/lib/chatAttachments.js (uploadChatAttachment /
+// getChatAttachmentSignedUrl), réimplémentée ici côté serveur pour rester
+// indépendante du client Supabase navigateur importé par ce module.
+function sanitizeAttachmentName(rawName) {
+  return (rawName || "fichier").replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+function formatAttachmentSize(bytes) {
+  if (bytes === null || bytes === undefined || Number.isNaN(bytes)) return "";
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+function classifyCvAttachment(filename) {
+  const ext = (filename || "").toLowerCase().split(".").pop();
+  if (ext === "pdf") return { type: "pdf", contentType: "application/pdf" };
+  if (ext === "doc") return { type: "document", contentType: "application/msword" };
+  if (ext === "docx") {
+    return {
+      type: "document",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    };
+  }
+  return { type: "document", contentType: "application/octet-stream" };
+}
+
+/**
+ * Retrouve (ou crée) la conversation entre le candidat et le recruteur —
+ * équivalent server-side de findOrCreateConversation (src/lib/messages.js),
+ * réimplémenté ici car cette dernière importe le client Supabase navigateur
+ * (singleton "supabase" côté client) et n'est pas appelable depuis une route
+ * API server-side, qui utilise son propre client authentifié par Bearer token.
+ */
+async function findOrCreateConversationServer(supabaseClient, userId, otherUserId) {
+  const { data: existing, error: existingErr } = await supabaseClient
+    .from("conversations")
+    .select("id")
+    .or(`and(user_1_id.eq.${userId},user_2_id.eq.${otherUserId}),and(user_1_id.eq.${otherUserId},user_2_id.eq.${userId})`)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingErr) {
+    console.error("Erreur recherche conversation existante (candidature):", existingErr.message);
+  }
+  if (existing) return existing.id;
+
+  const { data: created, error: createErr } = await supabaseClient
+    .from("conversations")
+    .insert({ user_1_id: userId, user_2_id: otherUserId, last_message: "", updated_at: new Date().toISOString() })
+    .select("id")
+    .single();
+
+  if (createErr || !created) {
+    console.error("Erreur création conversation (candidature):", createErr?.message);
+    return null;
+  }
+  return created.id;
+}
+
 export async function POST(req) {
   try {
     // 1. Authentification & Rate Limiting
@@ -244,15 +305,66 @@ export async function POST(req) {
     // Auto-création d'une conversation séparée de type 'OFFRE' dans Supabase,
     // uniquement pour une vraie offre recruteur (le flux historique n'a pas
     // de destinataire interne connu — il repose uniquement sur l'e-mail).
+    // Cas sans recruteur identifié : aucun message n'est créé (décision
+    // explicite — pas d'auto-message ni de conversation de repli).
+    let conversationId = null;
+
     if (offerRecruiterId) {
-      await supabase.from("messages").insert({
+      conversationId = await findOrCreateConversationServer(supabase, user.id, offerRecruiterId);
+
+      // Pièce jointe : le CV principal est copié vers le bucket privé
+      // chat-attachments (même convention que la messagerie — voir
+      // src/lib/chatAttachments.js) pour que le lien signé résolu côté
+      // MessagerieClient (ChatAttachmentUrl) fonctionne identiquement, sans
+      // dépendre de la policy Storage du bucket "resumes" (différente,
+      // pensée pour le recruteur consultant la candidature, pas pour la
+      // messagerie). allAttachments[0] est garanti défini ici : la requête a
+      // déjà été rejetée plus haut si allAttachments/allCvUrls étaient vides.
+      const primaryAttachment = allAttachments[0];
+      const safeName = sanitizeAttachmentName(primaryAttachment.filename);
+      const chatAttachmentPath = `${user.id}/${Date.now()}_${safeName}`;
+      const { type: attachmentType, contentType } = classifyCvAttachment(primaryAttachment.filename);
+
+      const { error: chatUploadError } = await supabase.storage
+        .from("chat-attachments")
+        .upload(chatAttachmentPath, primaryAttachment.content, {
+          contentType,
+          upsert: false,
+        });
+
+      if (chatUploadError) {
+        console.error("Erreur upload CV vers chat-attachments (candidature):", chatUploadError.message);
+      }
+
+      let messageContent = `Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company}) — Score de correspondance CV : ${cvMatchScore}%`;
+      if (coverLetter && coverLetter.trim()) {
+        messageContent += `\n\n💬 Message du candidat :\n${coverLetter.trim()}`;
+      }
+
+      const { error: applyMsgError } = await supabase.from("messages").insert({
         sender_id: user.id,
         receiver_id: offerRecruiterId,
-        content: `Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company}) — Score de correspondance CV : ${cvMatchScore}%`,
+        conversation_id: conversationId,
+        content: messageContent,
         type_discussion: "OFFRE",
         job_offer_id: jobOfferId,
+        attachment_url: chatUploadError ? null : chatAttachmentPath,
+        attachment_type: chatUploadError ? null : attachmentType,
+        file_name: chatUploadError ? null : primaryAttachment.filename,
+        file_size: chatUploadError ? null : formatAttachmentSize(primaryAttachment.content.length),
         created_at: new Date().toISOString(),
       });
+
+      if (applyMsgError) {
+        console.error("Erreur création message de candidature:", applyMsgError.message);
+      }
+
+      if (conversationId) {
+        await supabase
+          .from("conversations")
+          .update({ last_message: messageContent.slice(0, 200), updated_at: new Date().toISOString() })
+          .eq("id", conversationId);
+      }
     }
 
     // 5. Les fichiers et buffers sont déjà chargés dans allAttachments pour l'envoi Resend
@@ -368,27 +480,28 @@ export async function POST(req) {
     }
 
     // 7. Enregistrement automatique de l'e-mail dans la messagerie interne Supabase (messages)
-    // sender_id référence auth.users(id) (NOT NULL) : "recruiter-support" n'est
-    // pas un UUID valide et viole systématiquement la contrainte de clé
-    // étrangère (l'insert échouait silencieusement, avalé par le catch
-    // ci-dessous). On utilise le recruteur propriétaire de l'offre quand il
-    // est connu (flux job_offers), sinon l'utilisateur connecté lui-même
-    // (flux historique sans recruteur identifié) pour garantir un UUID valide.
-    try {
-      const emailContentText = `📧 [E-mail de confirmation] Candidature transmise avec succès pour le poste de ${jobTitle} chez ${company}.\n\nLe recruteur (${finalRecruiterEmail}) étudiera votre profil avec attention.`;
-      const { error: confirmMsgError } = await supabase.from("messages").insert({
-        sender_id: offerRecruiterId || user.id,
-        receiver_id: user.id,
-        content: emailContentText,
-        type_discussion: "OFFRE",
-        job_offer_id: jobOfferId || null,
-        created_at: new Date().toISOString()
-      });
-      if (confirmMsgError) {
-        console.error("Erreur d'enregistrement du message de confirmation:", confirmMsgError.message);
+    // Décision explicite : sans recruteur identifié, aucun message n'est créé
+    // (ni ici ni au point 4 ci-dessus) — l'ancien fallback sender_id :
+    // offerRecruiterId || user.id envoyait un message du candidat à lui-même
+    // dans ce cas, un bug que ce garde corrige.
+    if (offerRecruiterId) {
+      try {
+        const emailContentText = `📧 [E-mail de confirmation] Candidature transmise avec succès pour le poste de ${jobTitle} chez ${company}.\n\nLe recruteur (${finalRecruiterEmail}) étudiera votre profil avec attention.`;
+        const { error: confirmMsgError } = await supabase.from("messages").insert({
+          sender_id: offerRecruiterId,
+          receiver_id: user.id,
+          conversation_id: conversationId,
+          content: emailContentText,
+          type_discussion: "OFFRE",
+          job_offer_id: jobOfferId || null,
+          created_at: new Date().toISOString()
+        });
+        if (confirmMsgError) {
+          console.error("Erreur d'enregistrement du message de confirmation:", confirmMsgError.message);
+        }
+      } catch (msgErr) {
+        console.error("Erreur de synchronisation de l'e-mail dans la messagerie Supabase:", msgErr?.message);
       }
-    } catch (msgErr) {
-      console.error("Erreur de synchronisation de l'e-mail dans la messagerie Supabase:", msgErr?.message);
     }
 
     return NextResponse.json({ success: true, candidature, emailDelivered });

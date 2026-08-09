@@ -24,6 +24,10 @@ export function formatMessageRow(row, currentUserId) {
     // impossible à partir de "them" seul, qui ne distingue pas les expéditeurs.
     senderId: row.sender_id,
     receiverId: row.receiver_id,
+    // Conservé (en plus de "me"/"them") pour que /messagerie puisse regrouper
+    // les messages d'une même conversation candidat<->recruteur dans leur
+    // propre carte plutôt que le fil fusionné "Support RH Facilité".
+    conversationId: row.conversation_id || null,
     text: row.content,
     time: formatTime(row.created_at),
     createdAt: row.created_at,
