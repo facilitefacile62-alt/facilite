@@ -23,6 +23,20 @@ function extractSendPhoneErrorMessage(err) {
   return msg;
 }
 
+// Même nettoyage que ci-dessus, pour updateUser({ email }) — même famille de
+// réponses Supabase (déjà pris, rate limit, objet vide sérialisé en "{}").
+function extractSendEmailErrorMessage(err) {
+  let msg = err?.message || "Impossible d'envoyer le code de vérification.";
+  if (/already.*registered|already exists/i.test(msg)) {
+    msg = "Cette adresse e-mail est déjà associée à un autre compte.";
+  } else if (/rate limit|too many/i.test(msg)) {
+    msg = "Trop de tentatives. Veuillez patienter avant de réessayer.";
+  } else if (!msg || msg === "{}" || msg === "[object Object]") {
+    msg = "Impossible d'envoyer l'e-mail de vérification. Vérifiez l'adresse saisie.";
+  }
+  return msg;
+}
+
 // Décode le payload d'un JWT Supabase pour lire la revendication `amr`
 // (Authentication Methods Reference) : la ou les méthodes ayant servi à
 // obtenir la session EN COURS. Sert à savoir si l'utilisateur vient de
@@ -50,10 +64,58 @@ function getMostRecentAuthMethod(accessToken) {
   }
 }
 
+// Masquage d'affichage (pas une garantie de sécurité serveur comme
+// mask_phone_number côté admin — ici c'est déjà la propre donnée de
+// l'utilisateur, juste pour éviter de l'afficher en clair au premier coup
+// d'œil, ex. partage d'écran). "+221 ** *** ** 32" : indicatif en clair,
+// tout le numéro local masqué sauf les 2 derniers chiffres.
+function maskPhoneOwn(phone) {
+  if (!phone || phone.length < 8) return phone || "";
+  return `${phone.slice(0, 4)} ** *** ** ${phone.slice(-2)}`;
+}
+
+// "m***@gmail.com" : premier caractère du nom + domaine en clair.
+function maskEmailOwn(email) {
+  if (!email || !email.includes("@")) return email || "";
+  const [local, domain] = email.split("@");
+  return `${local.charAt(0)}***@${domain}`;
+}
+
+function formatBirthDateDisplay(iso) {
+  if (!iso) return null;
+  const d = new Date(iso + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+const COUNTRY_OPTIONS = [
+  "Sénégal",
+  "Côte d'Ivoire",
+  "Maroc",
+  "France",
+  "Mali",
+  "Guinée",
+  "Bénin",
+  "Togo",
+  "Cameroun",
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const BIRTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+const BIRTH_MONTHS = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+];
+const BIRTH_YEARS = Array.from({ length: 88 }, (_, i) => CURRENT_YEAR - 13 - i);
+
 export default function SecurityTabContent({ userSession }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  // Accordéon : une seule ligne dépliée à la fois — "phone" | "email" |
+  // "birthdate" | "country" | null.
+  const [expandedRow, setExpandedRow] = useState(null);
 
   // Changement de mot de passe
   const [currentPassword, setCurrentPassword] = useState("");
@@ -71,22 +133,66 @@ export default function SecurityTabContent({ userSession }) {
   const [phoneConfirmStep, setPhoneConfirmStep] = useState("idle"); // idle | sent
   const [phoneOtpToken, setPhoneOtpToken] = useState("");
 
-  // Ajout d'un premier numéro (hasPhone === false) — même flux à 2 étapes
-  // (updateUser -> verifyOtp type "phone_change") que la reconfirmation
-  // ci-dessus, seule différence : le numéro vient d'une saisie utilisateur
-  // au lieu de user.phone (qui n'existe pas encore).
+  // Ajout / changement de numéro — même flux à 2 étapes (updateUser ->
+  // verifyOtp type "phone_change") pour les deux cas, seule différence :
+  // "Ajouter" part d'un champ vide, "Changer" le pré-remplit avec le numéro
+  // actuel.
   const [addPhoneStep, setAddPhoneStep] = useState("idle"); // idle | form | sent
   const [newPhoneNumber, setNewPhoneNumber] = useState("+221");
   const [newPhoneOtpToken, setNewPhoneOtpToken] = useState("");
-  const [resendCooldown, setResendCooldown] = useState(0); // secondes avant de pouvoir renvoyer un code
+  const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Décompte visible du délai avant "Renvoyer le code" — s'arrête tout seul
-  // en quittant l'étape "sent" (Annuler/Changer le numéro/succès).
   useEffect(() => {
     if (addPhoneStep !== "sent" || resendCooldown <= 0) return;
     const timer = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
     return () => clearTimeout(timer);
   }, [addPhoneStep, resendCooldown]);
+
+  // Ajout / changement d'e-mail — même flux à 2 étapes que le téléphone
+  // (updateUser({ email }) -> verifyOtp type "email_change").
+  const [addEmailStep, setAddEmailStep] = useState("idle"); // idle | form | sent
+  const [newEmailAddress, setNewEmailAddress] = useState("");
+  const [newEmailOtpToken, setNewEmailOtpToken] = useState("");
+  const [emailResendCooldown, setEmailResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (addEmailStep !== "sent" || emailResendCooldown <= 0) return;
+    const timer = setTimeout(() => setEmailResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [addEmailStep, emailResendCooldown]);
+
+  // Date de naissance / région — stockées dans public.profiles, jamais
+  // exposées à une vue ou fonction accessible aux recruteurs (vérifié :
+  // get_candidats_recherche/get_profils_publics n'y font pas référence).
+  const [profileBirthDate, setProfileBirthDate] = useState("");
+  const [profileCountry, setProfileCountry] = useState("");
+  const [birthDay, setBirthDay] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+
+  useEffect(() => {
+    if (!userSession?.user?.id) return;
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("country, date_naissance")
+      .eq("id", userSession.user.id)
+      .single()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setProfileCountry(data.country || "");
+        setProfileBirthDate(data.date_naissance || "");
+        if (data.date_naissance) {
+          const [y, m, d] = data.date_naissance.split("-");
+          setBirthYear(y);
+          setBirthMonth(String(Number(m)));
+          setBirthDay(String(Number(d)));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userSession?.user?.id]);
 
   // Dissociation
   const [unlinkTarget, setUnlinkTarget] = useState(null); // null | "email" | "phone"
@@ -237,6 +343,22 @@ export default function SecurityTabContent({ userSession }) {
     }
   };
 
+  const handleStartAddPhone = () => {
+    setError("");
+    setMessage("");
+    setNewPhoneNumber("+221");
+    setAddPhoneStep("form");
+    setExpandedRow("phone");
+  };
+
+  const handleStartChangePhone = () => {
+    setError("");
+    setMessage("");
+    setNewPhoneNumber(userSession?.user?.phone || "+221");
+    setAddPhoneStep("form");
+    setExpandedRow("phone");
+  };
+
   const handleSendNewPhone = async (e) => {
     e.preventDefault();
     setError("");
@@ -312,6 +434,7 @@ export default function SecurityTabContent({ userSession }) {
       setAddPhoneStep("idle");
       setNewPhoneNumber("+221");
       setNewPhoneOtpToken("");
+      setExpandedRow(null);
       setMessage("Votre numéro de téléphone est lié et confirmé.");
     } catch (err) {
       console.error(err);
@@ -349,6 +472,120 @@ export default function SecurityTabContent({ userSession }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStartAddEmail = () => {
+    setError("");
+    setMessage("");
+    setNewEmailAddress("");
+    setAddEmailStep("form");
+    setExpandedRow("email");
+  };
+
+  const handleStartChangeEmail = () => {
+    setError("");
+    setMessage("");
+    setNewEmailAddress(userSession?.user?.email || "");
+    setAddEmailStep("form");
+    setExpandedRow("email");
+  };
+
+  const handleSendNewEmail = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+
+    const trimmed = newEmailAddress.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setError("Adresse e-mail invalide.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ email: trimmed });
+      if (updateError) throw updateError;
+      setNewEmailAddress(trimmed);
+      setAddEmailStep("sent");
+      setEmailResendCooldown(60);
+      setMessage(`Un code de vérification a été envoyé à ${trimmed}.`);
+    } catch (err) {
+      console.error(err);
+      setError(extractSendEmailErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendNewEmail = async () => {
+    if (emailResendCooldown > 0) return;
+    setError("");
+    setMessage("");
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ email: newEmailAddress });
+      if (updateError) throw updateError;
+      setNewEmailOtpToken("");
+      setEmailResendCooldown(60);
+      setMessage(`Un nouveau code a été envoyé à ${newEmailAddress}.`);
+    } catch (err) {
+      console.error(err);
+      setError(extractSendEmailErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangeNewEmailAddress = () => {
+    setError("");
+    setMessage("");
+    setAddEmailStep("form");
+    setNewEmailOtpToken("");
+    setEmailResendCooldown(0);
+  };
+
+  const handleVerifyNewEmail = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    if (newEmailOtpToken.trim().length !== 6) {
+      setError("Veuillez saisir un code valide à 6 chiffres.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: newEmailAddress,
+        token: newEmailOtpToken.trim(),
+        type: "email_change",
+      });
+      if (verifyError) throw verifyError;
+
+      await fetchFreshUser();
+      setAddEmailStep("idle");
+      setNewEmailAddress("");
+      setNewEmailOtpToken("");
+      setExpandedRow(null);
+      setMessage("Votre adresse e-mail est mise à jour.");
+    } catch (err) {
+      console.error(err);
+      let msg = err?.message || "Code invalide ou expiré.";
+      if (/expired/i.test(msg)) msg = "Ce code a expiré. Demandez-en un nouveau.";
+      else if (/invalid/i.test(msg)) msg = "Code incorrect. Vérifiez et réessayez.";
+      else if (/rate limit|too many/i.test(msg)) msg = "Trop de tentatives. Veuillez patienter avant de réessayer.";
+      else if (!msg || msg === "{}" || msg === "[object Object]") msg = "Erreur lors de la vérification du code. Veuillez réessayer.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelAddEmail = () => {
+    setError("");
+    setMessage("");
+    setAddEmailStep("idle");
+    setNewEmailAddress("");
+    setNewEmailOtpToken("");
   };
 
   const handleRequestUnlink = async (provider) => {
@@ -400,6 +637,7 @@ export default function SecurityTabContent({ userSession }) {
       setMessage("Identifiant dissocié avec succès.");
       setUnlinkTarget(null);
       setUnlinkPassword("");
+      setExpandedRow(null);
     } catch (err) {
       console.error(err);
       setError(err.message || "Erreur lors de la dissociation.");
@@ -407,6 +645,49 @@ export default function SecurityTabContent({ userSession }) {
       setLoading(false);
     }
   };
+
+  const handleSaveBirthDate = async () => {
+    setError("");
+    setMessage("");
+    if (!birthDay || !birthMonth || !birthYear) {
+      setError("Veuillez sélectionner un jour, un mois et une année.");
+      return;
+    }
+    const iso = `${birthYear}-${String(birthMonth).padStart(2, "0")}-${String(birthDay).padStart(2, "0")}`;
+    setLoading(true);
+    try {
+      const { error: updErr } = await supabase.from("profiles").update({ date_naissance: iso }).eq("id", userSession.user.id);
+      if (updErr) throw updErr;
+      setProfileBirthDate(iso);
+      setExpandedRow(null);
+      setMessage("Date de naissance mise à jour.");
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Erreur lors de la mise à jour.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveCountry = async (value) => {
+    setError("");
+    setMessage("");
+    setLoading(true);
+    try {
+      const { error: updErr } = await supabase.from("profiles").update({ country: value }).eq("id", userSession.user.id);
+      if (updErr) throw updErr;
+      setProfileCountry(value);
+      setExpandedRow(null);
+      setMessage("Région/pays mis à jour.");
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Erreur lors de la mise à jour.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleRow = (row) => setExpandedRow((prev) => (prev === row ? null : row));
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -424,61 +705,22 @@ export default function SecurityTabContent({ userSession }) {
         </div>
       )}
 
-      {/* Mes Identifiants de Connexion */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-        <h4 className="text-sm font-extrabold text-gray-900 mb-4 flex items-center gap-2">
-          <i className="fa-solid fa-at text-indigo-600"></i>
-          Mes identifiants de connexion
+      {/* SECTION 1 — Informations du compte */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <h4 className="text-sm font-extrabold text-gray-900 px-5 pt-5 pb-3 flex items-center gap-2">
+          <i className="fa-solid fa-id-card text-indigo-600"></i>
+          Informations du compte
         </h4>
 
-        <div className="space-y-4">
-          {/* E-mail */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <p className="text-xs font-bold text-gray-700 flex items-center gap-2">
-                  E-mail
-                  {hasEmail && (
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${emailConfirmed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                      {emailConfirmed ? "Confirmé" : "Non confirmé"}
-                    </span>
-                  )}
-                </p>
-                {hasEmail ? (
-                  <p className="text-sm text-gray-900 font-medium break-all">{userSession?.user?.email}</p>
-                ) : (
-                  <p className="text-xs text-gray-400 italic">Aucun e-mail associé</p>
-                )}
-              </div>
-              {hasEmail && (
-                <div className="flex items-center gap-2 shrink-0">
-                  {!emailConfirmed && (
-                    <button
-                      type="button"
-                      onClick={handleResendEmailConfirmation}
-                      disabled={loading}
-                      className="px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-bold rounded-lg hover:bg-amber-100 transition cursor-pointer disabled:opacity-50"
-                    >
-                      Confirmer
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleRequestUnlink("email")}
-                    disabled={loading}
-                    className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition cursor-pointer disabled:opacity-50"
-                  >
-                    Dissocier
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Téléphone */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
+        <div className="divide-y divide-gray-100">
+          {/* --- Ligne Téléphone --- */}
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleRow("phone")}
+              className="w-full flex items-center justify-between gap-3 px-5 py-4 min-h-[48px] text-left hover:bg-gray-50 transition cursor-pointer"
+            >
+              <div className="min-w-0">
                 <p className="text-xs font-bold text-gray-700 flex items-center gap-2">
                   Téléphone (SMS)
                   {hasPhone && (
@@ -487,146 +729,400 @@ export default function SecurityTabContent({ userSession }) {
                     </span>
                   )}
                 </p>
-                {hasPhone ? (
-                  <p className="text-sm text-gray-900 font-medium">{userSession?.user?.phone}</p>
-                ) : (
-                  <p className="text-xs text-gray-400 italic">Aucun numéro de téléphone associé</p>
-                )}
+                <p className="text-sm text-gray-900 font-medium mt-0.5">
+                  {hasPhone ? maskPhoneOwn(userSession?.user?.phone) : <span className="text-gray-400 italic font-normal">Aucun numéro</span>}
+                </p>
               </div>
-              {hasPhone && (
-                <div className="flex items-center gap-2 shrink-0">
-                  {!phoneConfirmed && phoneConfirmStep === "idle" && (
+              <i className={`fa-solid fa-chevron-${expandedRow === "phone" ? "up" : "down"} text-gray-300 text-xs shrink-0`}></i>
+            </button>
+
+            {expandedRow === "phone" && (
+              <div className="px-5 pb-5 space-y-3">
+                {hasPhone && addPhoneStep === "idle" && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {!phoneConfirmed && phoneConfirmStep === "idle" && (
+                      <button
+                        type="button"
+                        onClick={handleSendPhoneConfirmation}
+                        disabled={loading}
+                        className="px-3 py-2 min-h-[48px] bg-amber-50 text-amber-700 text-xs font-bold rounded-lg hover:bg-amber-100 transition cursor-pointer disabled:opacity-50"
+                      >
+                        Envoyer le code SMS
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={handleSendPhoneConfirmation}
+                      onClick={handleStartChangePhone}
                       disabled={loading}
-                      className="px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-bold rounded-lg hover:bg-amber-100 transition cursor-pointer disabled:opacity-50"
+                      className="px-3 py-2 min-h-[48px] bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition cursor-pointer disabled:opacity-50"
                     >
-                      Envoyer le code SMS
+                      Changer
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleRequestUnlink("phone")}
-                    disabled={loading}
-                    className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition cursor-pointer disabled:opacity-50"
-                  >
-                    Dissocier
-                  </button>
-                </div>
-              )}
-              {!hasPhone && addPhoneStep === "idle" && (
-                <button
-                  type="button"
-                  onClick={() => setAddPhoneStep("form")}
-                  className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-100 transition cursor-pointer shrink-0"
-                >
-                  Ajouter un numéro
-                </button>
-              )}
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRequestUnlink("phone")}
+                      disabled={loading}
+                      className="px-3 py-2 min-h-[48px] bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition cursor-pointer disabled:opacity-50"
+                    >
+                      Dissocier
+                    </button>
+                  </div>
+                )}
 
-            {!hasPhone && addPhoneStep === "form" && (
-              <form onSubmit={handleSendNewPhone} className="mt-3 flex items-center gap-2 flex-wrap">
-                <input
-                  type="tel"
-                  value={newPhoneNumber}
-                  onChange={(e) => setNewPhoneNumber(e.target.value)}
-                  placeholder="+221771234567"
-                  className="flex-1 min-w-[180px] px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-                  required
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  disabled={loading || !newPhoneNumber.trim()}
-                  className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
-                >
-                  {loading ? "..." : "Envoyer le code"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelAddPhone}
-                  className="px-3 py-2 text-gray-500 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
-                >
-                  Annuler
-                </button>
-              </form>
-            )}
+                {!hasPhone && addPhoneStep === "idle" && (
+                  <button
+                    type="button"
+                    onClick={handleStartAddPhone}
+                    className="px-3 py-2 min-h-[48px] bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-100 transition cursor-pointer"
+                  >
+                    Ajouter un numéro
+                  </button>
+                )}
 
-            {!hasPhone && addPhoneStep === "sent" && (
-              <div className="mt-3 space-y-2">
-                <form onSubmit={handleVerifyNewPhone} className="flex items-center gap-2 flex-wrap">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={newPhoneOtpToken}
-                    onChange={(e) => setNewPhoneOtpToken(e.target.value.replace(/\D/g, ""))}
-                    placeholder="Code à 6 chiffres"
-                    className="flex-1 min-w-[140px] px-3 py-2 border border-gray-200 rounded-xl text-sm tracking-[0.3em] text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-                    required
-                    autoFocus
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading || newPhoneOtpToken.length !== 6}
-                    className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
-                  >
-                    {loading ? "..." : "Confirmer"}
-                  </button>
-                </form>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={handleChangeNewPhoneNumber}
-                    className="px-3 py-1.5 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-100 transition cursor-pointer"
-                  >
-                    Changer le numéro
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResendNewPhone}
-                    disabled={loading || resendCooldown > 0}
-                    className="px-3 py-1.5 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-50 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-                  >
-                    {resendCooldown > 0 ? `Renvoyer dans ${resendCooldown}s` : "Renvoyer le code"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancelAddPhone}
-                    className="px-3 py-1.5 text-gray-500 text-xs font-bold rounded-lg hover:bg-gray-100 transition cursor-pointer"
-                  >
-                    Annuler
-                  </button>
-                </div>
+                {addPhoneStep === "form" && (
+                  <form onSubmit={handleSendNewPhone} className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="tel"
+                      value={newPhoneNumber}
+                      onChange={(e) => setNewPhoneNumber(e.target.value)}
+                      placeholder="+221771234567"
+                      className="flex-1 min-w-[180px] px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                      required
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || !newPhoneNumber.trim()}
+                      className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+                    >
+                      {loading ? "..." : "Envoyer le code"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelAddPhone}
+                      className="px-3 py-3 min-h-[48px] text-gray-500 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                  </form>
+                )}
+
+                {addPhoneStep === "sent" && (
+                  <div className="space-y-2">
+                    <form onSubmit={handleVerifyNewPhone} className="flex items-center gap-2 flex-wrap">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={newPhoneOtpToken}
+                        onChange={(e) => setNewPhoneOtpToken(e.target.value.replace(/\D/g, ""))}
+                        placeholder="Code à 6 chiffres"
+                        className="flex-1 min-w-[140px] px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm tracking-[0.3em] text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                        required
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        disabled={loading || newPhoneOtpToken.length !== 6}
+                        className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+                      >
+                        {loading ? "..." : "Confirmer"}
+                      </button>
+                    </form>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleChangeNewPhoneNumber}
+                        className="px-3 py-2 min-h-[48px] text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                      >
+                        Changer le numéro
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResendNewPhone}
+                        disabled={loading || resendCooldown > 0}
+                        className="px-3 py-2 min-h-[48px] text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-50 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                      >
+                        {resendCooldown > 0 ? `Renvoyer dans ${resendCooldown}s` : "Renvoyer le code"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelAddPhone}
+                        className="px-3 py-2 min-h-[48px] text-gray-500 text-xs font-bold rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!phoneConfirmed && hasPhone && phoneConfirmStep === "sent" && (
+                  <form onSubmit={handleVerifyPhoneConfirmation} className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={phoneOtpToken}
+                      onChange={(e) => setPhoneOtpToken(e.target.value.replace(/\D/g, ""))}
+                      placeholder="Code à 6 chiffres"
+                      className="flex-1 min-w-[140px] px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm tracking-[0.3em] text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || phoneOtpToken.length !== 6}
+                      className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+                    >
+                      Valider
+                    </button>
+                  </form>
+                )}
               </div>
             )}
+          </div>
 
-            {!phoneConfirmed && phoneConfirmStep === "sent" && (
-              <form onSubmit={handleVerifyPhoneConfirmation} className="mt-3 flex items-center gap-2 flex-wrap">
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={phoneOtpToken}
-                  onChange={(e) => setPhoneOtpToken(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Code à 6 chiffres"
-                  className="flex-1 min-w-[140px] px-3 py-2 border border-gray-200 rounded-xl text-sm tracking-[0.3em] text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-                  required
-                />
+          {/* --- Ligne E-mail --- */}
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleRow("email")}
+              className="w-full flex items-center justify-between gap-3 px-5 py-4 min-h-[48px] text-left hover:bg-gray-50 transition cursor-pointer"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-gray-700 flex items-center gap-2">
+                  E-mail
+                  {hasEmail && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${emailConfirmed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {emailConfirmed ? "Confirmé" : "Non confirmé"}
+                    </span>
+                  )}
+                </p>
+                <p className="text-sm text-gray-900 font-medium mt-0.5 truncate">
+                  {hasEmail ? maskEmailOwn(userSession?.user?.email) : <span className="text-gray-400 italic font-normal">Aucune adresse</span>}
+                </p>
+              </div>
+              <i className={`fa-solid fa-chevron-${expandedRow === "email" ? "up" : "down"} text-gray-300 text-xs shrink-0`}></i>
+            </button>
+
+            {expandedRow === "email" && (
+              <div className="px-5 pb-5 space-y-3">
+                {hasEmail && addEmailStep === "idle" && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {!emailConfirmed && (
+                      <button
+                        type="button"
+                        onClick={handleResendEmailConfirmation}
+                        disabled={loading}
+                        className="px-3 py-2 min-h-[48px] bg-amber-50 text-amber-700 text-xs font-bold rounded-lg hover:bg-amber-100 transition cursor-pointer disabled:opacity-50"
+                      >
+                        Confirmer
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleStartChangeEmail}
+                      disabled={loading}
+                      className="px-3 py-2 min-h-[48px] bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition cursor-pointer disabled:opacity-50"
+                    >
+                      Changer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRequestUnlink("email")}
+                      disabled={loading}
+                      className="px-3 py-2 min-h-[48px] bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition cursor-pointer disabled:opacity-50"
+                    >
+                      Dissocier
+                    </button>
+                  </div>
+                )}
+
+                {!hasEmail && addEmailStep === "idle" && (
+                  <button
+                    type="button"
+                    onClick={handleStartAddEmail}
+                    className="px-3 py-2 min-h-[48px] bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-100 transition cursor-pointer"
+                  >
+                    Ajouter une adresse
+                  </button>
+                )}
+
+                {addEmailStep === "form" && (
+                  <form onSubmit={handleSendNewEmail} className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="email"
+                      inputMode="email"
+                      value={newEmailAddress}
+                      onChange={(e) => setNewEmailAddress(e.target.value)}
+                      placeholder="vous@exemple.com"
+                      className="flex-1 min-w-[180px] px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                      required
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || !newEmailAddress.trim()}
+                      className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+                    >
+                      {loading ? "..." : "Envoyer le code"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelAddEmail}
+                      className="px-3 py-3 min-h-[48px] text-gray-500 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                  </form>
+                )}
+
+                {addEmailStep === "sent" && (
+                  <div className="space-y-2">
+                    <form onSubmit={handleVerifyNewEmail} className="flex items-center gap-2 flex-wrap">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={newEmailOtpToken}
+                        onChange={(e) => setNewEmailOtpToken(e.target.value.replace(/\D/g, ""))}
+                        placeholder="Code à 6 chiffres"
+                        className="flex-1 min-w-[140px] px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm tracking-[0.3em] text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                        required
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        disabled={loading || newEmailOtpToken.length !== 6}
+                        className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+                      >
+                        {loading ? "..." : "Confirmer"}
+                      </button>
+                    </form>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleChangeNewEmailAddress}
+                        className="px-3 py-2 min-h-[48px] text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                      >
+                        Changer l'adresse
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResendNewEmail}
+                        disabled={loading || emailResendCooldown > 0}
+                        className="px-3 py-2 min-h-[48px] text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-50 transition cursor-pointer disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                      >
+                        {emailResendCooldown > 0 ? `Renvoyer dans ${emailResendCooldown}s` : "Renvoyer le code"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelAddEmail}
+                        className="px-3 py-2 min-h-[48px] text-gray-500 text-xs font-bold rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* --- Ligne Date de naissance --- */}
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleRow("birthdate")}
+              className="w-full flex items-center justify-between gap-3 px-5 py-4 min-h-[48px] text-left hover:bg-gray-50 transition cursor-pointer"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-gray-700">Date de naissance</p>
+                <p className="text-sm text-gray-900 font-medium mt-0.5">
+                  {formatBirthDateDisplay(profileBirthDate) || <span className="text-gray-400 italic font-normal">Non renseignée</span>}
+                </p>
+              </div>
+              <i className={`fa-solid fa-chevron-${expandedRow === "birthdate" ? "up" : "down"} text-gray-300 text-xs shrink-0`}></i>
+            </button>
+
+            {expandedRow === "birthdate" && (
+              <div className="px-5 pb-5 space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select
+                    value={birthDay}
+                    onChange={(e) => setBirthDay(e.target.value)}
+                    className="px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="">Jour</option>
+                    {BIRTH_DAYS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={birthMonth}
+                    onChange={(e) => setBirthMonth(e.target.value)}
+                    className="flex-1 min-w-[120px] px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="">Mois</option>
+                    {BIRTH_MONTHS.map((m, i) => (
+                      <option key={m} value={i + 1}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={birthYear}
+                    onChange={(e) => setBirthYear(e.target.value)}
+                    className="px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="">Année</option>
+                    {BIRTH_YEARS.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
                 <button
-                  type="submit"
-                  disabled={loading || phoneOtpToken.length !== 6}
-                  className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+                  type="button"
+                  onClick={handleSaveBirthDate}
+                  disabled={loading}
+                  className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
                 >
-                  Valider
+                  {loading ? "..." : "Enregistrer"}
                 </button>
-              </form>
+              </div>
+            )}
+          </div>
+
+          {/* --- Ligne Région / Pays --- */}
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleRow("country")}
+              className="w-full flex items-center justify-between gap-3 px-5 py-4 min-h-[48px] text-left hover:bg-gray-50 transition cursor-pointer"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-gray-700">Région / Pays</p>
+                <p className="text-sm text-gray-900 font-medium mt-0.5">
+                  {profileCountry || <span className="text-gray-400 italic font-normal">Non renseignée</span>}
+                </p>
+              </div>
+              <i className={`fa-solid fa-chevron-${expandedRow === "country" ? "up" : "down"} text-gray-300 text-xs shrink-0`}></i>
+            </button>
+
+            {expandedRow === "country" && (
+              <div className="px-5 pb-5">
+                <select
+                  value={profileCountry}
+                  onChange={(e) => handleSaveCountry(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 disabled:opacity-50"
+                >
+                  <option value="">Sélectionner...</option>
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Changer le mot de passe */}
+      {/* SECTION 2 — Mot de passe */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
         <h4 className="text-sm font-extrabold text-gray-900 mb-4 flex items-center gap-2">
           <i className="fa-solid fa-key text-blue-600"></i>
@@ -642,7 +1138,7 @@ export default function SecurityTabContent({ userSession }) {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Requis pour confirmer que c'est bien vous"
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
+                className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
                 required
               />
             </div>
@@ -659,7 +1155,7 @@ export default function SecurityTabContent({ userSession }) {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Min. 6 caractères"
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
+              className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
               required
             />
           </div>
@@ -670,14 +1166,14 @@ export default function SecurityTabContent({ userSession }) {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirmez"
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
+              className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-gray-50 hover:bg-white transition"
               required
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
+            className="px-4 py-3 min-h-[48px] bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Mise à jour..." : "Mettre à jour le mot de passe"}
           </button>
@@ -705,7 +1201,7 @@ export default function SecurityTabContent({ userSession }) {
                   value={unlinkPassword}
                   onChange={(e) => setUnlinkPassword(e.target.value)}
                   placeholder="Confirmez avec votre mot de passe"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-gray-50"
+                  className="w-full px-3 py-3 min-h-[48px] border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-gray-50"
                   autoFocus
                 />
               </div>
@@ -714,7 +1210,7 @@ export default function SecurityTabContent({ userSession }) {
               <button
                 type="button"
                 onClick={() => setUnlinkTarget(null)}
-                className="px-4 py-2 text-gray-600 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
+                className="px-4 py-3 min-h-[48px] text-gray-600 text-xs font-bold rounded-xl hover:bg-gray-100 transition cursor-pointer"
               >
                 Annuler
               </button>
@@ -722,7 +1218,7 @@ export default function SecurityTabContent({ userSession }) {
                 type="button"
                 onClick={handleConfirmUnlink}
                 disabled={loading}
-                className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-700 transition disabled:opacity-50 cursor-pointer"
+                className="px-4 py-3 min-h-[48px] bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-700 transition disabled:opacity-50 cursor-pointer"
               >
                 {loading ? "..." : "Dissocier"}
               </button>
