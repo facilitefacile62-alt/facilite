@@ -168,6 +168,77 @@ const translations = {
 
 const initialJobs = [
   {
+    id: 101,
+    titleFR: "Chargé(e) de Communication & d'Animation du Réseau France Alumni",
+    titleEN: "Communication & Alumni Network Animation Officer",
+    company: "Institut français du Sénégal",
+    logoColor: "bg-green-600",
+    initials: "IF",
+    location: "Dakar, Saint-Louis, Kaolack, Ziguinchor, Banjul",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDD, niveau 6",
+    descFR: `📣 L'Institut français du Sénégal recrute son ou sa Chargé(e) de Communication & d'Animation du Réseau France Alumni, au sein de l'espace Campus France Sénégal.
+
+Vous piloterez la stratégie de communication numérique de Campus France Sénégal (sites, réseaux sociaux), la création de supports visuels et l'animation du réseau France Alumni (plateformes, événements, Club des Présidents Alumni) sur Dakar, Saint-Louis, Kaolack, Ziguinchor et Banjul.
+
+📝 Profil recherché : Bac+4 en marketing digital, expérience confirmée en communication digitale, compétences en infographie (Canva, Adobe Suite).
+
+ℹ️ Contrat : CDD, niveau 6.
+
+📅 Candidature avant le 26 août 2026
+📩 CV et lettre de motivation : recrutement@ifs.sn
+🔗 Fiche de poste complète : https://lnkd.in/dp9s3CFt`,
+    descEN: `📣 The French Institute of Senegal is recruiting its Communication & France Alumni Network Animation Officer, within the Campus France Senegal space.
+
+You will pilot the digital communication strategy of Campus France Senegal (websites, social networks), the creation of visual materials, and the animation of the France Alumni network (platforms, events, Alumni Presidents Club) in Dakar, Saint-Louis, Kaolack, Ziguinchor, and Banjul.
+
+📝 Required profile: Master's degree in digital marketing, proven experience in digital communication, graphic design skills (Canva, Adobe Suite).
+
+ℹ️ Contract: Fixed-term (CDD), level 6.
+
+📅 Apply before August 26, 2026
+📩 CV and cover letter: recrutement@ifs.sn
+🔗 Full job description: https://lnkd.in/dp9s3CFt`,
+    tags: ["Communication", "Marketing Digital", "CDD"],
+    salary: "Niveau 6",
+    recruiterEmail: "recrutement@ifs.sn",
+    externalLink: "https://lnkd.in/dp9s3CFt",
+    image: "/institut_francais.jpg"
+  },
+  {
+    id: 102,
+    titleFR: "Bourses FAWE SENEGAL–Fondation Mastercard",
+    titleEN: "FAWE SENEGAL-Mastercard Foundation Scholarships",
+    company: "FAWE Sénégal & Fondation Mastercard",
+    logoColor: "bg-orange-500",
+    initials: "FAWE",
+    location: "Kédougou, Sédhiou, Tambacounda, Kolda, Ziguinchor, Matam, Louga",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Bourse d'études",
+    descFR: `Le FAWE Sénégal, en partenariat avec la Fondation Mastercard, offre des bourses entièrement financées aux jeunes de 15 à 25 ans résidant à Kédougou, Sédhiou, Tambacounda, Kolda, Ziguinchor, Matam ou Louga.
+
+Les candidats doivent être titulaires du Baccalauréat ou du Brevet Technique et souhaiter suivre une formation en STEM ou en formation professionnelle et technique.
+
+La bourse couvre les frais de scolarité, le logement, la restauration, le transport et la couverture maladie.
+
+Les jeunes filles, les personnes vivant avec un handicap et les réfugiés sont particulièrement encouragés à postuler.
+Date limite : 31 août 2026`,
+    descEN: `FAWE Senegal, in partnership with the Mastercard Foundation, offers fully funded scholarships to youth aged 15 to 25 residing in Kédougou, Sédhiou, Tambacounda, Kolda, Ziguinchor, Matam, or Louga.
+
+Candidates must hold a Baccalaureate or Technical Certificate and wish to pursue training in STEM or technical and vocational education.
+
+The scholarship covers tuition fees, accommodation, meals, transport, and health insurance.
+
+Young women, people living with disabilities, and refugees are strongly encouraged to apply.
+Deadline: August 31, 2026`,
+    tags: ["Bourse", "Études", "STEM"],
+    salary: "Entièrement financée",
+    recruiterEmail: "",
+    image: "/pub4.jpg"
+  },
+  {
     id: 7,
     titleFR: "Téléconseiller(ère) (Appels Entrants/Sortants)",
     titleEN: "Teleadvisor (Inbound/Outbound Calls)",
