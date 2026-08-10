@@ -204,7 +204,8 @@ You will pilot the digital communication strategy of Campus France Senegal (webs
     salary: "Niveau 6",
     recruiterEmail: "recrutement@ifs.sn",
     externalLink: "https://lnkd.in/dp9s3CFt",
-    image: "/institut_francais.jpg"
+    image: "/institut_francais.jpg",
+    pinned: true
   },
   {
     id: 102,
@@ -236,7 +237,8 @@ Deadline: August 31, 2026`,
     tags: ["Bourse", "Études", "STEM"],
     salary: "Entièrement financée",
     recruiterEmail: "",
-    image: "/pub4.jpg"
+    image: "/pub4.jpg",
+    pinned: true
   },
   {
     id: 7,
