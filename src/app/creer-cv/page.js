@@ -24,7 +24,8 @@ const translations = {
     step3: "Compétences",
     step4: "Profil",
     step5: "Langue",
-    step6: "Finalisation",
+    step6: "Compléments",
+    step7: "Finalisation",
     
     sidebarFooter1: "Conditions d'utilisation",
     sidebarFooter2: "Politique de confidentialité",
@@ -104,9 +105,19 @@ const translations = {
     labelLangName: "Langue (ex: Français, Wolof, Anglais)",
     labelLangLevel: "Niveau de maîtrise",
 
-    // Step 6 - Finalisation
-    step6Title: "Personnalisez et téléchargez votre CV",
-    step6Subtitle: "Choisissez le modèle et les couleurs qui vous correspondent le mieux, puis téléchargez votre document prêt à l'emploi.",
+    // Step 6 - Compléments
+    step6Title: "Ajoutez vos informations complémentaires",
+    step6Subtitle: "Qualités, compétences informatiques et centres d'intérêt pour enrichir votre profil.",
+    btnAddQuality: "+ Ajouter une qualité",
+    btnAddItSkill: "+ Ajouter un outil informatique",
+    btnAddHobby: "+ Ajouter un centre d'intérêt",
+    labelQuality: "Qualité (ex: Rigueur, Polyvalence)",
+    labelItSkill: "Informatique (ex: Pack Office, Réseaux Sociaux)",
+    labelHobby: "Centre d'intérêt (ex: Sport, Lecture)",
+
+    // Step 7 - Finalisation
+    step7Title: "Personnalisez et téléchargez votre CV",
+    step7Subtitle: "Choisissez le modèle et la couleur d'accent qui vous correspondent le mieux, puis téléchargez votre document prêt à l'emploi.",
     chooseTemplate: "1. Choisissez un modèle de CV",
     templateModern: "Moderne",
     templateMinimal: "Minimaliste",
@@ -114,6 +125,7 @@ const translations = {
     templateExecutif: "Exécutif",
     templateCreatif: "Créatif",
     templateTechnique: "Technique",
+    templateProfessionnel: "Professionnel",
     chooseColor: "2. Choisissez une couleur d'accentuation",
     previewNotice: "Vous pourrez toujours modifier les informations et le design ultérieurement.",
     
@@ -139,7 +151,8 @@ const translations = {
     step3: "Skills",
     step4: "Profile",
     step5: "Languages",
-    step6: "Finalization",
+    step6: "Complements",
+    step7: "Finalization",
     
     sidebarFooter1: "Terms of use",
     sidebarFooter2: "Privacy policy",
@@ -219,9 +232,19 @@ const translations = {
     labelLangName: "Language (e.g. English, French, Wolof)",
     labelLangLevel: "Proficiency level",
 
-    // Step 6 - Finalisation
-    step6Title: "Customize and download your CV",
-    step6Subtitle: "Choose the template and accent color that best suit you, then download your ready-to-use document.",
+    // Step 6 - Compléments
+    step6Title: "Add additional information",
+    step6Subtitle: "Qualities, IT skills, and interests to enrich your profile.",
+    btnAddQuality: "+ Add quality",
+    btnAddItSkill: "+ Add IT skill",
+    btnAddHobby: "+ Add interest",
+    labelQuality: "Quality (e.g. Rigorous, Versatile)",
+    labelItSkill: "IT (e.g. MS Office, Social Media)",
+    labelHobby: "Interest (e.g. Sport, Reading)",
+
+    // Step 7 - Finalisation
+    step7Title: "Customize and download your CV",
+    step7Subtitle: "Choose the template and accent color that best suit you, then download your ready-to-use document.",
     chooseTemplate: "1. Choose a CV template",
     templateModern: "Modern",
     templateMinimal: "Minimalist",
@@ -325,6 +348,19 @@ export default function CreerCv() {
       { id: 1, name: "Français", level: "Langue maternelle" },
       { id: 2, name: "Wolof", level: "Langue maternelle" },
       { id: 3, name: "Anglais", level: "Intermédiaire (B2)" }
+    ],
+    qualities: [
+      { id: 1, name: "Polyvalence" },
+      { id: 2, name: "Rigueur" },
+      { id: 3, name: "Autonomie" }
+    ],
+    itSkills: [
+      { id: 1, name: "Réseaux sociaux : Bon" },
+      { id: 2, name: "Internet/Web : Bon" }
+    ],
+    hobbies: [
+      { id: 1, name: "Sport collectif et Lecture" },
+      { id: 2, name: "Voyages et découvertes" }
     ]
   });
 
@@ -381,7 +417,7 @@ export default function CreerCv() {
       setSavedResumeId(resumeId);
       if (isDownload) {
         setDownloadMode(true);
-        setActiveStep(6);
+        setActiveStep(7);
       } else {
         triggerToast("CV chargé pour modification.", "fa-file-import");
       }
@@ -764,9 +800,69 @@ export default function CreerCv() {
     }));
   };
 
+  // Qualities handlers
+  const handleAddQuality = () => {
+    const newQuality = { id: Date.now(), name: "" };
+    setCvData(prev => ({ ...prev, qualities: [...(prev.qualities || []), newQuality] }));
+  };
+
+  const handleQualityChange = (id, val) => {
+    setCvData(prev => ({
+      ...prev,
+      qualities: (prev.qualities || []).map(q => q.id === id ? { ...q, name: val } : q)
+    }));
+  };
+
+  const handleDeleteQuality = (id) => {
+    setCvData(prev => ({
+      ...prev,
+      qualities: (prev.qualities || []).filter(q => q.id !== id)
+    }));
+  };
+
+  // IT Skills handlers
+  const handleAddItSkill = () => {
+    const newSkill = { id: Date.now(), name: "" };
+    setCvData(prev => ({ ...prev, itSkills: [...(prev.itSkills || []), newSkill] }));
+  };
+
+  const handleItSkillChange = (id, val) => {
+    setCvData(prev => ({
+      ...prev,
+      itSkills: (prev.itSkills || []).map(s => s.id === id ? { ...s, name: val } : s)
+    }));
+  };
+
+  const handleDeleteItSkill = (id) => {
+    setCvData(prev => ({
+      ...prev,
+      itSkills: (prev.itSkills || []).filter(s => s.id !== id)
+    }));
+  };
+
+  // Hobbies handlers
+  const handleAddHobby = () => {
+    const newHobby = { id: Date.now(), name: "" };
+    setCvData(prev => ({ ...prev, hobbies: [...(prev.hobbies || []), newHobby] }));
+  };
+
+  const handleHobbyChange = (id, val) => {
+    setCvData(prev => ({
+      ...prev,
+      hobbies: (prev.hobbies || []).map(h => h.id === id ? { ...h, name: val } : h)
+    }));
+  };
+
+  const handleDeleteHobby = (id) => {
+    setCvData(prev => ({
+      ...prev,
+      hobbies: (prev.hobbies || []).filter(h => h.id !== id)
+    }));
+  };
+
   // Next / Back buttons
   const handleNextStep = () => {
-    if (activeStep < 6) setActiveStep(activeStep + 1);
+    if (activeStep < 7) setActiveStep(activeStep + 1);
   };
 
   const handleBackStep = () => {
@@ -886,7 +982,8 @@ export default function CreerCv() {
     { num: 3, label: t.step3, icon: "fa-circle-nodes" },
     { num: 4, label: t.step4, icon: "fa-pen-to-square" },
     { num: 5, label: t.step5, icon: "fa-language" },
-    { num: 6, label: t.step6, icon: "fa-download" }
+    { num: 6, label: t.step6, icon: "fa-plus" },
+    { num: 7, label: t.step7, icon: "fa-download" }
   ];
 
   // Helper for Suggested Phrases
@@ -1070,7 +1167,7 @@ export default function CreerCv() {
             {/* Steps Headings */}
             <div className="mb-8">
               <span className="text-xs font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full">
-                Étape {activeStep + 1} sur 7
+                Étape {activeStep + 1} sur 8
               </span>
               <h2 className="text-2xl font-black text-gray-900 mt-3 leading-tight">
                 {activeStep === 0 && t.step0Title}
@@ -1080,6 +1177,7 @@ export default function CreerCv() {
                 {activeStep === 4 && t.step4Title}
                 {activeStep === 5 && t.step5Title}
                 {activeStep === 6 && t.step6Title}
+                {activeStep === 7 && t.step7Title}
               </h2>
               <p className="text-sm font-medium text-gray-500 mt-2.5">
                 {activeStep === 0 && t.step0Subtitle}
@@ -1089,6 +1187,7 @@ export default function CreerCv() {
                 {activeStep === 4 && t.step4Subtitle}
                 {activeStep === 5 && t.step5Subtitle}
                 {activeStep === 6 && t.step6Subtitle}
+                {activeStep === 7 && t.step7Subtitle}
               </p>
             </div>
 
@@ -1801,8 +1900,109 @@ export default function CreerCv() {
               </div>
             )}
 
-            {/* STEP 6 FORM: FINALISATION */}
+            {/* STEP 6 FORM: COMPLEMENTS */}
             {activeStep === 6 && (
+              <div className="space-y-8">
+                {/* Qualités */}
+                <div>
+                  <h3 className="text-sm font-black text-gray-900 uppercase mb-3">Qualités</h3>
+                  <div className="space-y-3">
+                    {(cvData.qualities || []).map((quality, idx) => (
+                      <div key={quality.id} className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          value={quality.name}
+                          onChange={(e) => handleQualityChange(quality.id, e.target.value)}
+                          className="w-full p-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-600"
+                          placeholder={t.labelQuality}
+                        />
+                        <button
+                          onClick={() => handleDeleteQuality(quality.id)}
+                          className="text-red-500 hover:text-red-700 p-2.5 bg-red-50 hover:bg-red-100/60 rounded-lg transition border border-red-200/20"
+                        >
+                          <i className="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handleAddQuality}
+                      className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-xs font-extrabold text-blue-600 hover:border-blue-500 hover:bg-blue-50/20 transition flex items-center justify-center space-x-1.5"
+                    >
+                      <i className="fa-solid fa-plus text-sm"></i>
+                      <span>{t.btnAddQuality}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Informatique */}
+                <div>
+                  <h3 className="text-sm font-black text-gray-900 uppercase mb-3">Informatique</h3>
+                  <div className="space-y-3">
+                    {(cvData.itSkills || []).map((skill, idx) => (
+                      <div key={skill.id} className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          value={skill.name}
+                          onChange={(e) => handleItSkillChange(skill.id, e.target.value)}
+                          className="w-full p-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-600"
+                          placeholder={t.labelItSkill}
+                        />
+                        <button
+                          onClick={() => handleDeleteItSkill(skill.id)}
+                          className="text-red-500 hover:text-red-700 p-2.5 bg-red-50 hover:bg-red-100/60 rounded-lg transition border border-red-200/20"
+                        >
+                          <i className="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handleAddItSkill}
+                      className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-xs font-extrabold text-blue-600 hover:border-blue-500 hover:bg-blue-50/20 transition flex items-center justify-center space-x-1.5"
+                    >
+                      <i className="fa-solid fa-plus text-sm"></i>
+                      <span>{t.btnAddItSkill}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Centres d'intérêt */}
+                <div>
+                  <h3 className="text-sm font-black text-gray-900 uppercase mb-3">Centres d'intérêt</h3>
+                  <div className="space-y-3">
+                    {(cvData.hobbies || []).map((hobby, idx) => (
+                      <div key={hobby.id} className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          value={hobby.name}
+                          onChange={(e) => handleHobbyChange(hobby.id, e.target.value)}
+                          className="w-full p-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-600"
+                          placeholder={t.labelHobby}
+                        />
+                        <button
+                          onClick={() => handleDeleteHobby(hobby.id)}
+                          className="text-red-500 hover:text-red-700 p-2.5 bg-red-50 hover:bg-red-100/60 rounded-lg transition border border-red-200/20"
+                        >
+                          <i className="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handleAddHobby}
+                      className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-xs font-extrabold text-blue-600 hover:border-blue-500 hover:bg-blue-50/20 transition flex items-center justify-center space-x-1.5"
+                    >
+                      <i className="fa-solid fa-plus text-sm"></i>
+                      <span>{t.btnAddHobby}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 7 FORM: FINALISATION */}
+            {activeStep === 7 && (
               <div className="space-y-8">
                 
                 {/* Template picker */}
@@ -1815,7 +2015,8 @@ export default function CreerCv() {
                       { id: "classic", name: t.templateClassic, desc: "Traditionnel & Chic", icon: "fa-newspaper", previewUrl: "/model3.png" },
                       { id: "executif", name: t.templateExecutif, desc: "Bandeau formel & dense", icon: "fa-briefcase", previewUrl: "/model5.png" },
                       { id: "creatif", name: t.templateCreatif, desc: "Coloré & asymétrique", icon: "fa-palette", previewUrl: "/model6.png" },
-                      { id: "technique", name: t.templateTechnique, desc: "Grille de compétences", icon: "fa-code", previewUrl: "/model7.png" }
+                      { id: "technique", name: t.templateTechnique, desc: "Grille de compétences", icon: "fa-code", previewUrl: "/model7.png" },
+                      { id: "professionnel", name: t.templateProfessionnel, desc: "2 Colonnes Pro", icon: "fa-user-tie", previewUrl: "/model8.png" }
                     ].map((tpl) => {
                       const active = selectedTemplate === tpl.id;
                       return (
@@ -1919,7 +2120,7 @@ export default function CreerCv() {
                 {t.btnBack}
               </button>
 
-              {activeStep < 6 ? (
+              {activeStep < 7 ? (
                 <button
                   type="button"
                   onClick={handleNextStep}
@@ -2918,6 +3119,241 @@ export default function CreerCv() {
                         <span>Dernière mise à jour : 2026</span>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                  </div>
+                )}
+
+                {/* --- TEMPLATE 7: PROFESSIONNEL (2 Colonnes Pro) --- */}
+                {selectedTemplate === "professionnel" && (
+                  <div className="flex w-full h-full text-xs flex-grow font-sans">
+                    
+                    {/* Left Column (Grey Background) */}
+                    <div className="w-[35%] bg-[#e6e6e6] p-5 flex flex-col flex-shrink-0 relative overflow-hidden">
+                      {/* Dark strip at top */}
+                      <div className="absolute top-0 left-0 w-full h-[120px] bg-[#20232a]"></div>
+                      
+                      {/* Profile Picture */}
+                      <div className="relative z-10 w-32 h-32 rounded-full border-4 border-white bg-[#20232a] flex items-center justify-center mx-auto mt-2 mb-6 shadow-md flex-shrink-0 select-none overflow-hidden">
+                        {photoPreview ? (
+                          <img
+                            src={photoPreview}
+                            alt="Profile"
+                            onMouseDown={handlePhotoDragStart}
+                            onMouseMove={handlePhotoDragMove}
+                            onMouseUp={handlePhotoDragEnd}
+                            onMouseLeave={handlePhotoDragEnd}
+                            onTouchStart={handlePhotoDragStart}
+                            onTouchMove={handlePhotoDragMove}
+                            onTouchEnd={handlePhotoDragEnd}
+                            style={{
+                              objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
+                              transform: `scale(${cvData.photoZoom || 1})`,
+                              transition: "none",
+                              cursor: "move"
+                            }}
+                            className="w-full h-full object-cover select-none bg-white"
+                          />
+                        ) : (
+                          <span className="text-white font-serif italic text-4xl">CV</span>
+                        )}
+                      </div>
+
+                      {/* Contact */}
+                      <h3 className="text-lg font-bold text-center mb-4 text-black border-b-2 border-slate-300 pb-1">Contact</h3>
+                      <ul className="space-y-3 mb-6 font-bold text-black border-l-2 border-[#10E688] pl-2 text-[10px]">
+                        {cvData.phone && (
+                          <li className="flex items-center space-x-2">
+                            <i className="fa-solid fa-mobile-screen text-[#10E688] w-4 text-center"></i>
+                            <span>{cvData.phone}</span>
+                          </li>
+                        )}
+                        {cvData.email && (
+                          <li className="flex items-center space-x-2">
+                            <i className="fa-solid fa-envelope text-[#10E688] w-4 text-center"></i>
+                            <span className="break-all">{cvData.email}</span>
+                          </li>
+                        )}
+                        {(cvData.address || cvData.city) && (
+                          <li className="flex items-center space-x-2">
+                            <i className="fa-solid fa-location-dot text-[#10E688] w-4 text-center"></i>
+                            <span>
+                              {cvData.address && `${cvData.address}, `}
+                              {cvData.city}
+                            </span>
+                          </li>
+                        )}
+                      </ul>
+
+                      {/* Qualités */}
+                      {(cvData.qualities?.length > 0) && (
+                        <div className="mb-5">
+                          <h3 className="text-sm font-bold text-black uppercase mb-2 flex items-center border-b-4 border-slate-500 pb-1 w-max">
+                            <i className="fa-solid fa-star text-yellow-400 mr-2"></i> QUALITÉS
+                          </h3>
+                          <ul className="list-disc list-inside space-y-1 font-bold text-black text-[10px] pl-2">
+                            {cvData.qualities.map(q => (
+                              <li key={q.id}>{q.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Informatique */}
+                      {(cvData.itSkills?.length > 0) && (
+                        <div className="mb-5">
+                          <h3 className="text-sm font-bold text-black uppercase mb-2 flex items-center border-b-4 border-slate-500 pb-1 w-max">
+                            <i className="fa-solid fa-screwdriver-wrench text-slate-500 mr-2"></i> INFORMATIQUE
+                          </h3>
+                          <ul className="list-disc list-inside space-y-1 font-bold text-black text-[10px] pl-2">
+                            {cvData.itSkills.map(s => (
+                              <li key={s.id}>{s.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Langues */}
+                      {(cvData.languages?.length > 0) && (
+                        <div className="mb-5">
+                          <h3 className="text-sm font-bold text-black uppercase mb-2 flex items-center border-b-4 border-slate-500 pb-1 w-max">
+                            <i className="fa-solid fa-globe text-blue-500 mr-2"></i> LANGUES
+                          </h3>
+                          <ul className="list-disc list-inside space-y-1 font-bold text-black text-[10px] pl-2">
+                            {cvData.languages.map(l => (
+                              <li key={l.id}>{l.name} : <span className="font-normal text-[9px]">{l.level}</span></li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Centres d'intérêt */}
+                      {(cvData.hobbies?.length > 0) && (
+                        <div className="mb-5">
+                          <h3 className="text-sm font-bold text-black uppercase mb-2 flex items-center border-b-4 border-slate-500 pb-1 w-max">
+                            <i className="fa-regular fa-lightbulb text-yellow-400 mr-2"></i> CENTRES D'INTÉRÊT
+                          </h3>
+                          <ul className="list-disc list-inside space-y-1 font-bold text-black text-[10px] pl-2">
+                            {cvData.hobbies.map(h => (
+                              <li key={h.id}>{h.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* Right Column (White Background) */}
+                    <div className="w-[65%] bg-white flex flex-col">
+                      
+                      {/* Header Title */}
+                      <div className="bg-[#20232a] text-white pt-10 pb-4 px-6 mb-4 h-[120px] flex flex-col justify-end">
+                        <h1 className="text-3xl font-black uppercase tracking-wide leading-none mb-1">
+                          {cvData.firstName} {cvData.lastName}
+                        </h1>
+                        <div className="h-0.5 w-full bg-white my-1.5 opacity-80"></div>
+                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-white mt-1">
+                          {cvData.experiences[0]?.title || "Titre Professionnel"}
+                        </h2>
+                      </div>
+
+                      <div className="px-6 pb-6 flex-grow flex flex-col space-y-4">
+                        
+                        {/* Profil */}
+                        {cvData.profile && (
+                          <div>
+                            <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-1.5 border-b border-gray-300 pb-0.5">
+                              <i className="fa-solid fa-bullseye text-red-500 mr-2"></i> Profil Professionnel
+                            </h3>
+                            <p className="text-[10px] text-gray-900 leading-relaxed font-bold text-justify">
+                              {cvData.profile}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Expériences */}
+                        {(cvData.experiences?.length > 0) && (
+                          <div>
+                            <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-3 border-b border-gray-300 pb-0.5">
+                              <i className="fa-solid fa-briefcase text-amber-800 mr-2"></i> Expériences Professionnelles
+                            </h3>
+                            <div className="relative border-l border-gray-400 ml-1.5 pl-4 space-y-3 pb-2">
+                              {cvData.experiences.map((exp, idx) => (
+                                <div key={exp.id} className="relative">
+                                  {/* Timeline dot */}
+                                  <div className="absolute -left-[20.5px] top-1 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
+                                  
+                                  <div className="font-bold text-gray-900 text-[11px] mb-0.5 flex items-center">
+                                    <span className="mr-1 mt-0.5">➤</span>
+                                    {exp.startDate ? `${exp.startDate} - ` : ""}
+                                    {exp.current ? "Présent" : exp.endDate || ""} : <span className="ml-1 font-black">{exp.employer}</span>
+                                  </div>
+                                  <div className="font-black text-[11px] text-gray-900 mb-1 pl-4">{exp.title}</div>
+                                  {exp.description && (
+                                    <ul className="text-[9px] text-gray-700 leading-tight space-y-0.5 pl-4 list-disc list-inside text-justify">
+                                      {exp.description.split("\n").filter(Boolean).map((line, i) => (
+                                        <li key={i}>{line.replace(/^[•\-\*]\s*/, "")}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              ))}
+                              {/* Bottom timeline circle */}
+                              <div className="absolute -left-[4.5px] bottom-0 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Formations */}
+                        {(cvData.educations?.length > 0) && (
+                          <div>
+                            <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-3 border-b border-gray-300 pb-0.5">
+                              <i className="fa-solid fa-graduation-cap text-slate-800 mr-2"></i> FORMATION ET DIPLÔMES
+                            </h3>
+                            <div className="relative border-l border-gray-400 ml-1.5 pl-4 space-y-3 pb-2">
+                              {cvData.educations.map((edu, idx) => (
+                                <div key={edu.id} className="relative">
+                                  <div className="absolute -left-[20.5px] top-1 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
+                                  
+                                  <div className="font-bold text-gray-900 text-[11px] mb-0.5 flex items-center">
+                                    <span className="mr-1 mt-0.5">➤</span>
+                                    {edu.startDate ? `${edu.startDate} - ` : ""}
+                                    {edu.current ? "Présent" : edu.endDate || ""} : <span className="ml-1 font-black">{edu.degree}</span>
+                                  </div>
+                                  <ul className="text-[10px] text-gray-900 leading-tight pl-4 list-disc list-inside font-bold">
+                                    <li>{edu.school}{edu.city ? `, ${edu.city}` : ""}</li>
+                                  </ul>
+                                </div>
+                              ))}
+                              <div className="absolute -left-[4.5px] bottom-0 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Compétences Clés */}
+                        {(cvData.skills?.length > 0) && (
+                          <div>
+                            <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-2 border-b border-gray-300 pb-0.5">
+                              <i className="fa-solid fa-star text-yellow-400 mr-2"></i> COMPÉTENCES CLÉS
+                            </h3>
+                            <div className="relative border-l border-gray-400 ml-1.5 pl-4 pb-2">
+                              <ul className="text-[10px] text-gray-900 leading-tight space-y-1.5 list-disc list-inside">
+                                {cvData.skills.map((skill, idx) => (
+                                  <li key={skill.id} className="relative">
+                                    {idx === 0 && <div className="absolute -left-[20.5px] top-1.5 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>}
+                                    <span className="font-bold">{skill.name}</span> : <span className="font-normal">{skill.level}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                              <div className="absolute -left-[4.5px] bottom-0 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
+                    </div>
+
                   </div>
                 )}
 
