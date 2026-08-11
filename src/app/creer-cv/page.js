@@ -2322,7 +2322,7 @@ export default function CreerCv() {
                         {/* Professional pitch */}
                         {cvData.profile && (
                           <div className="space-y-1">
-                            <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">Profil Professionnel</h3>
+                            <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">{cvData.sectionTitles?.profile || "Profil Professionnel"}</h3>
                             <p className="text-[10px] text-gray-600 leading-relaxed font-medium text-justify">{cvData.profile}</p>
                           </div>
                         )}
@@ -2330,7 +2330,7 @@ export default function CreerCv() {
                         {/* Expériences */}
                         {cvData.experiences.length > 0 && (
                           <div className="space-y-2">
-                            <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">Parcours Professionnel</h3>
+                            <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">{cvData.sectionTitles?.experience || "Parcours Professionnel"}</h3>
                             <div className="space-y-3">
                               {cvData.experiences.map((exp) => (
                                 <div key={exp.id} className="text-[10px]">
@@ -2432,7 +2432,7 @@ export default function CreerCv() {
                       {/* Experience list */}
                       {cvData.experiences.length > 0 && (
                         <div className="space-y-2.5">
-                          <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">Expérience Professionnelle</h3>
+                          <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">{cvData.sectionTitles?.experience || "Expérience Professionnelle"}</h3>
                           <div className="space-y-3">
                             {cvData.experiences.map((exp) => (
                               <div key={exp.id} className="grid grid-cols-4 gap-2 text-[10px]">
@@ -2568,7 +2568,7 @@ export default function CreerCv() {
                       {/* Summary */}
                       {cvData.profile && (
                         <div className="space-y-1">
-                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">Résumé Professionnel</h3>
+                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">{cvData.sectionTitles?.profile || "Résumé Professionnel"}</h3>
                           <p className="text-[10px] text-gray-600 leading-relaxed font-medium">{cvData.profile}</p>
                         </div>
                       )}
@@ -2576,7 +2576,7 @@ export default function CreerCv() {
                       {/* Expériences */}
                       {cvData.experiences.length > 0 && (
                         <div className="space-y-1">
-                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">Expérience Professionnelle</h3>
+                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">{cvData.sectionTitles?.experience || "Expérience Professionnelle"}</h3>
                           <div className="space-y-2.5 pt-1">
                             {cvData.experiences.map((exp) => (
                               <div key={exp.id} className="text-[10px]">
@@ -3219,8 +3219,7 @@ export default function CreerCv() {
                       {(cvData.languages?.length > 0) && (
                         <div className="mb-5">
                           <h3 className="text-sm font-bold text-black uppercase mb-2 flex items-center border-b-4 border-slate-500 pb-1 w-max">
-                            <i className="fa-solid fa-globe text-blue-500 mr-2"></i> LANGUES
-                          </h3>
+                            <i className="fa-solid fa-globe text-blue-500 mr-2"></i>{cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}</h3>
                           <ul className="list-disc list-inside space-y-1 font-bold text-black text-[10px] pl-2">
                             {cvData.languages.map(l => (
                               <li key={l.id}>{l.name} : <span className="font-normal text-[9px]">{l.level}</span></li>
@@ -3265,7 +3264,7 @@ export default function CreerCv() {
                         {cvData.profile && (
                           <div>
                             <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-1.5 border-b border-gray-300 pb-0.5">
-                              <i className="fa-solid fa-bullseye text-red-500 mr-2"></i> Profil Professionnel
+                              <i className="fa-solid fa-bullseye text-red-500 mr-2"></i> {cvData.sectionTitles?.profile || "Profil Professionnel"}
                             </h3>
                             <p className="text-[10px] text-gray-900 leading-relaxed font-bold text-justify">
                               {cvData.profile}
@@ -3277,7 +3276,7 @@ export default function CreerCv() {
                         {(cvData.experiences?.length > 0) && (
                           <div>
                             <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-3 border-b border-gray-300 pb-0.5">
-                              <i className="fa-solid fa-briefcase text-amber-800 mr-2"></i> Expériences Professionnelles
+                              <i className="fa-solid fa-briefcase text-amber-800 mr-2"></i> {cvData.sectionTitles?.experience || "Expériences Professionnelles"}
                             </h3>
                             <div className="relative border-l border-gray-400 ml-1.5 pl-4 space-y-3 pb-2">
                               {cvData.experiences.map((exp, idx) => (
@@ -3310,7 +3309,7 @@ export default function CreerCv() {
                         {(cvData.educations?.length > 0) && (
                           <div>
                             <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-3 border-b border-gray-300 pb-0.5">
-                              <i className="fa-solid fa-graduation-cap text-slate-800 mr-2"></i> FORMATION ET DIPLÔMES
+                              <i className="fa-solid fa-graduation-cap text-slate-800 mr-2"></i> {cvData.sectionTitles?.education || "Formation et Diplômes"}
                             </h3>
                             <div className="relative border-l border-gray-400 ml-1.5 pl-4 space-y-3 pb-2">
                               {cvData.educations.map((edu, idx) => (
@@ -3332,12 +3331,11 @@ export default function CreerCv() {
                           </div>
                         )}
 
-                        {/* Compétences Clés */}
+                        {/* {cvData.sectionTitles?.skills || "Compétences Clés"} */}
                         {(cvData.skills?.length > 0) && (
                           <div>
                             <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-2 border-b border-gray-300 pb-0.5">
-                              <i className="fa-solid fa-star text-yellow-400 mr-2"></i> COMPÉTENCES CLÉS
-                            </h3>
+                              <i className="fa-solid fa-star text-yellow-400 mr-2"></i>{cvData.sectionTitles?.skills?.toUpperCase() || "COMPÉTENCES CLÉS"}</h3>
                             <div className="relative border-l border-gray-400 ml-1.5 pl-4 pb-2">
                               <ul className="text-[10px] text-gray-900 leading-tight space-y-1.5 list-disc list-inside">
                                 {cvData.skills.map((skill, idx) => (
@@ -3433,8 +3431,7 @@ export default function CreerCv() {
                       {cvData.profile && (
                         <div className="mb-4 pb-4 border-b border-[#d1e2d7]">
                           <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-2">
-                            <span className="text-[#1b2b3a] mr-1">-</span> PROFIL
-                          </h3>
+                            <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.profile?.toUpperCase() || "PROFIL"}</h3>
                           <p className="text-[9px] text-gray-700 leading-relaxed font-medium text-justify">
                             {cvData.profile}
                           </p>
@@ -3449,8 +3446,7 @@ export default function CreerCv() {
                           {(cvData.experiences?.length > 0) && (
                             <div className="mb-5">
                               <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-3">
-                                <span className="text-[#1b2b3a] mr-1">-</span> EXPÉRIENCE
-                              </h3>
+                                <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.experience?.toUpperCase() || "EXPÉRIENCE"}</h3>
                               <div className="space-y-4">
                                 {cvData.experiences.map((exp, idx) => (
                                   <div key={exp.id}>
@@ -3481,8 +3477,7 @@ export default function CreerCv() {
                           {(cvData.educations?.length > 0) && (
                             <div className="mb-5">
                               <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-3">
-                                <span className="text-[#1b2b3a] mr-1">-</span> FORMATION
-                              </h3>
+                                <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.education?.toUpperCase() || "FORMATION"}</h3>
                               <div className="space-y-3">
                                 {cvData.educations.map((edu, idx) => (
                                   <div key={edu.id}>
@@ -3507,12 +3502,11 @@ export default function CreerCv() {
                         {/* Right Column (Skills & Extra) */}
                         <div className="w-[32%] flex flex-col space-y-4">
                           
-                          {/* Compétences Clés / Aptitudes */}
+                          {/* {cvData.sectionTitles?.skills || "Compétences Clés"} / Aptitudes */}
                           {(cvData.skills?.length > 0) && (
                             <div>
                               <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-2">
-                                <span className="text-[#1b2b3a] mr-1">-</span> APTITUDES
-                              </h3>
+                                <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.skills?.toUpperCase() || "APTITUDES"}</h3>
                               <ul className="text-[9px] text-gray-700 leading-snug space-y-1 font-bold pl-1">
                                 {cvData.skills.map((skill, idx) => (
                                   <li key={skill.id}>{skill.name}</li>
@@ -3539,8 +3533,7 @@ export default function CreerCv() {
                           {(cvData.languages?.length > 0) && (
                             <div>
                               <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-2">
-                                <span className="text-[#1b2b3a] mr-1">-</span> LANGUES
-                              </h3>
+                                <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}</h3>
                               <ul className="text-[9px] text-gray-700 leading-snug space-y-1 font-bold pl-1">
                                 {cvData.languages.map((lang, idx) => (
                                   <li key={lang.id}>
