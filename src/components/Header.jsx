@@ -743,17 +743,6 @@ export default function Header() {
             <i className="fa-solid fa-comments text-sm"></i>
             <span>Messagerie</span>
           </Link>
-          <Link
-            href="/modeles"
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
-              pathname === "/modeles"
-                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-            }`}
-          >
-            <i className="fa-solid fa-file-lines text-sm"></i>
-            <span>Modèles CV</span>
-          </Link>
 
           {/* Menu déroulant "Plus" pour regrouper les rubriques secondaires sans saturer */}
           <div className="relative" ref={plusDropdownRef}>
