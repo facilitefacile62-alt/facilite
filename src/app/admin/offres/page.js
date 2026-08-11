@@ -239,7 +239,7 @@ export default function AdminOffresPage() {
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
           {/* FORMULAIRE DE PUBLICATION */}
-          <div className="xl:col-span-5 bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 sticky top-24">
+          <div className="xl:col-span-5 bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
             <h2 className="text-lg font-extrabold text-gray-900 mb-6">Nouvelle Offre d'Emploi</h2>
             <form onSubmit={handleSubmitOffer} className="space-y-6">
               <div className="grid grid-cols-1 gap-6">
