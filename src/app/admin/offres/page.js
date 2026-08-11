@@ -110,10 +110,11 @@ export default function AdminOffresPage() {
 
         const { error: uploadError } = await supabase.storage
           .from("job-offers")
-          .upload(storagePath, offerImageFile, { upsert: true, contentType: offerImageFile.type });
+          .upload(storagePath, offerImageFile, { contentType: offerImageFile.type });
 
         if (uploadError) {
           triggerToast("Erreur lors du téléversement de l'image.");
+          console.error("Storage upload error:", uploadError);
           setSavingOffer(false);
           return;
         }
@@ -253,7 +254,7 @@ export default function AdminOffresPage() {
                   <label className="block text-xs font-bold text-gray-700 mb-1">Titre du poste *</label>
                   <input
                     type="text"
-                    required
+                    
                     value={offerForm.title}
                     onChange={(e) => setOfferForm({ ...offerForm, title: e.target.value })}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
@@ -264,7 +265,7 @@ export default function AdminOffresPage() {
                   <label className="block text-xs font-bold text-gray-700 mb-1">Entreprise *</label>
                   <input
                     type="text"
-                    required
+                    
                     value={offerForm.company}
                     onChange={(e) => setOfferForm({ ...offerForm, company: e.target.value })}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
@@ -274,7 +275,7 @@ export default function AdminOffresPage() {
                   <label className="block text-xs font-bold text-gray-700 mb-1">Lieu *</label>
                   <input
                     type="text"
-                    required
+                    
                     value={offerForm.location}
                     onChange={(e) => setOfferForm({ ...offerForm, location: e.target.value })}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
@@ -308,7 +309,7 @@ export default function AdminOffresPage() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Description *</label>
                 <textarea
-                  required
+                  
                   rows={4}
                   value={offerForm.description}
                   onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })}
