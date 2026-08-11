@@ -3122,9 +3122,6 @@ export default function CreerCv() {
                   </div>
                 )}
 
-                  </div>
-                )}
-
                 {/* --- TEMPLATE 7: PROFESSIONNEL (2 Colonnes Pro) --- */}
                 {selectedTemplate === "professionnel" && (
                   <div className="flex w-full h-full text-xs flex-grow font-sans">
