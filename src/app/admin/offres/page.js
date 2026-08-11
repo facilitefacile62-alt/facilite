@@ -33,7 +33,6 @@ export default function AdminOffresPage() {
   const [offerImageFile, setOfferImageFile] = useState(null);
   const [offerImagePreview, setOfferImagePreview] = useState(null);
   const [savingOffer, setSavingOffer] = useState(false);
-  const [isPosting, setIsPosting] = useState(false); // To show/hide the form
 
   const [toast, setToast] = useState("");
   const triggerToast = (msg) => {
@@ -142,7 +141,6 @@ export default function AdminOffresPage() {
         setOfferForm(EMPTY_OFFER);
         setOfferImageFile(null);
         setOfferImagePreview(null);
-        setIsPosting(false);
       }
     } catch (err) {
       triggerToast("Une erreur est survenue.");
@@ -230,28 +228,20 @@ export default function AdminOffresPage() {
       </header>
 
       {/* CONTENU PRINCIPAL */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8 flex-1 w-full">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              Gestion des Offres d'Emploi
-            </h1>
-            <p className="text-sm text-gray-500 font-medium mt-1">Gérez le fil d'actualité et ajoutez de nouvelles offres.</p>
-          </div>
-          <button
-            onClick={() => setIsPosting(!isPosting)}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm rounded-xl transition shadow-md"
-          >
-            {isPosting ? "Fermer le formulaire" : "+ Poster une offre"}
-          </button>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8 flex-1 w-full flex flex-col">
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            Gestion des Offres d'Emploi
+          </h1>
+          <p className="text-sm text-gray-500 font-medium mt-1">Gérez le fil d'actualité et ajoutez de nouvelles offres.</p>
         </div>
 
-        {/* FORMULAIRE DE PUBLICATION */}
-        {isPosting && (
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 mb-8 animate-fade-in-down">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+          {/* FORMULAIRE DE PUBLICATION */}
+          <div className="xl:col-span-5 bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 sticky top-24">
             <h2 className="text-lg font-extrabold text-gray-900 mb-6">Nouvelle Offre d'Emploi</h2>
             <form onSubmit={handleSubmitOffer} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Titre du poste *</label>
                   <input
@@ -384,11 +374,10 @@ export default function AdminOffresPage() {
               </div>
             </form>
           </div>
-        )}
 
-        {/* LISTE DES OFFRES */}
-        <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
-           <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+          {/* LISTE DES OFFRES */}
+          <div className="xl:col-span-7 bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
+             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
              <div>
                <h2 className="text-lg font-extrabold text-gray-900">Toutes les offres ({allOffers.length})</h2>
                <p className="text-xs text-gray-500 font-medium mt-0.5">Offres dynamiques provenant de la base de données</p>
@@ -446,6 +435,7 @@ export default function AdminOffresPage() {
                ))}
              </div>
            )}
+          </div>
         </div>
       </main>
     </div>
