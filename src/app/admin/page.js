@@ -40,7 +40,7 @@ const NAV_SECTIONS = [
   {
     label: "Contenu",
     items: [
-      { type: "link", href: "/service", icon: "🔍", label: "Explorer / Offres" },
+      { type: "link", href: "/admin/offres", icon: "🔍", label: "Explorer / Offres" },
       { type: "link", href: "/creer-cv", icon: "➕", label: "Créer", accent: true },
     ],
   },
