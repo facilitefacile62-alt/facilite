@@ -17,6 +17,8 @@ const EMPTY_OFFER = {
   description: "",
   image_url: "",
   deadline: "",
+  contact_email: "",
+  external_link: "",
 };
 
 export default function AdminOffresPage() {
@@ -302,6 +304,26 @@ export default function AdminOffresPage() {
                     value={offerForm.deadline}
                     onChange={(e) => setOfferForm({ ...offerForm, deadline: e.target.value })}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Email du recruteur (optionnel)</label>
+                  <input
+                    type="email"
+                    value={offerForm.contact_email}
+                    onChange={(e) => setOfferForm({ ...offerForm, contact_email: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
+                    placeholder="Ex: recrutement@entreprise.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Lien externe / Site web (optionnel)</label>
+                  <input
+                    type="url"
+                    value={offerForm.external_link}
+                    onChange={(e) => setOfferForm({ ...offerForm, external_link: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
+                    placeholder="Ex: https://entreprise.com/carrieres"
                   />
                 </div>
               </div>

@@ -623,6 +623,8 @@ export default function Home() {
             tags: [offer.location, offer.contract_type].filter(Boolean),
             salary: offer.salary_range || "Non spécifié",
             image: offer.image_url || null,
+            recruiterEmail: offer.contact_email || null,
+            externalLink: offer.external_link || null,
           }));
           setDynamicJobs(formatted);
         }
