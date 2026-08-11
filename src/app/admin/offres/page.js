@@ -230,7 +230,7 @@ export default function AdminOffresPage() {
 
       {/* CONTENU PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8 flex-1 w-full flex flex-col">
-        <div className="mb-8">
+        <div className="mb-6 sticky top-16 pt-6 pb-4 bg-[#FAF6F1] z-40 -mt-6">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
             Gestion des Offres d'Emploi
           </h1>
@@ -239,9 +239,11 @@ export default function AdminOffresPage() {
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
           {/* FORMULAIRE DE PUBLICATION */}
-          <div className="xl:col-span-5 bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
-            <h2 className="text-lg font-extrabold text-gray-900 mb-6">Nouvelle Offre d'Emploi</h2>
-            <form onSubmit={handleSubmitOffer} className="space-y-6">
+          <div className="xl:col-span-5 bg-white rounded-3xl border border-gray-200 shadow-sm relative xl:sticky xl:top-44 max-h-[calc(100vh-2rem)] xl:max-h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar">
+            <div className="sticky top-0 bg-white z-20 p-6 sm:p-8 border-b border-gray-100">
+              <h2 className="text-lg font-extrabold text-gray-900">Nouvelle Offre d'Emploi</h2>
+            </div>
+            <form onSubmit={handleSubmitOffer} className="p-6 sm:p-8 pt-6 space-y-6">
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Titre du poste *</label>
@@ -387,8 +389,8 @@ export default function AdminOffresPage() {
           </div>
 
           {/* LISTE DES OFFRES */}
-          <div className="xl:col-span-7 bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
-             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+          <div className="xl:col-span-7 bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden relative xl:sticky xl:top-44 max-h-[calc(100vh-2rem)] xl:max-h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar">
+             <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-20 shadow-sm">
              <div>
                <h2 className="text-lg font-extrabold text-gray-900">Toutes les offres ({allOffers.length})</h2>
                <p className="text-xs text-gray-500 font-medium mt-0.5">Offres dynamiques provenant de la base de données</p>
