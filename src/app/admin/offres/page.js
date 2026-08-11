@@ -18,6 +18,7 @@ const EMPTY_OFFER = {
   image_url: "",
   deadline: "",
   contact_email: "",
+  contact_phone: "",
   external_link: "",
 };
 
@@ -304,6 +305,16 @@ export default function AdminOffresPage() {
                     onChange={(e) => setOfferForm({ ...offerForm, contact_email: e.target.value })}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
                     placeholder="Ex: recrutement@entreprise.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Téléphone du recruteur (optionnel)</label>
+                  <input
+                    type="tel"
+                    value={offerForm.contact_phone}
+                    onChange={(e) => setOfferForm({ ...offerForm, contact_phone: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
+                    placeholder="Ex: 06 12 34 56 78"
                   />
                 </div>
                 <div>

@@ -217,7 +217,8 @@ def search_global(q: str = "", limit: int = 10, db: Session = Depends(get_db)):
             or_(
                 JobOffer.title.ilike(search_term),
                 JobOffer.company.ilike(search_term),
-                JobOffer.location.ilike(search_term)
+                JobOffer.location.ilike(search_term),
+                JobOffer.description.ilike(search_term)
             )
         ).limit(limit).all()
 
@@ -241,7 +242,8 @@ def search_global(q: str = "", limit: int = 10, db: Session = Depends(get_db)):
             or_(
                 Establishment.name.ilike(search_term),
                 Establishment.address.ilike(search_term),
-                Establishment.email.ilike(search_term)
+                Establishment.email.ilike(search_term),
+                Establishment.phone.ilike(search_term)
             )
         ).limit(limit).all()
 

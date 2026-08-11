@@ -40,6 +40,10 @@ class JobOffer(Base):
     company = Column(String, nullable=True)
     location = Column(String, nullable=True)
     contract_type = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    deadline = Column(String, nullable=True)
+    contact_email = Column(String, nullable=True)
+    external_link = Column(String, nullable=True)
 
 def init_db():
     """Create tables if they don't exist"""
