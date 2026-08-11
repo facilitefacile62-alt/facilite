@@ -1,6 +1,6 @@
-const https = require('https');
+const http = require('http');
 
-https.get('https://ffacilite.com/manifest.json', (res) => {
+http.get('http://localhost:3000/manifest.json', (res) => {
   let data = '';
   res.on('data', (chunk) => { data += chunk; });
   res.on('end', () => { 
@@ -12,7 +12,7 @@ https.get('https://ffacilite.com/manifest.json', (res) => {
   console.error("Error:", err.message); 
 });
 
-https.get('https://ffacilite.com/', (res) => {
+http.get('http://localhost:3000/', (res) => {
   let data = '';
   res.on('data', (chunk) => { data += chunk; });
   res.on('end', () => { 
