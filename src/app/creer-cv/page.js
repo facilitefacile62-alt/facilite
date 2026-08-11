@@ -2213,7 +2213,7 @@ export default function CreerCv() {
                         {/* Coordonnées */}
                         <div className="space-y-4">
                           <div>
-                            <h3 className="text-[10px] font-black uppercase tracking-wider text-[#10E688] mb-2 border-b border-white/10 pb-1">Coordonnées</h3>
+                            <h3 className="text-[10px] font-black uppercase tracking-wider text-[#10E688] mb-2 border-b border-white/10 pb-1">{cvData.sectionTitles?.contact?.toUpperCase() || "COORDONNÉES"}</h3>
                             <ul className="space-y-2 text-[10px] text-slate-200">
                               {cvData.email && (
                                 <li className="flex items-start space-x-1.5 min-w-0">
@@ -2845,7 +2845,7 @@ export default function CreerCv() {
 
                         <div className="space-y-4">
                           <div>
-                            <h3 className="text-[10px] font-black uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="fa-solid fa-circle-dot text-[8px]"></i>Contact</h3>
+                            <h3 className="text-[10px] font-black uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="fa-solid fa-circle-dot text-[8px]"></i>{cvData.sectionTitles?.contact?.toUpperCase() || "CONTACT"}</h3>
                             <ul className="space-y-1.5 text-[9px] text-white/90 font-semibold">
                               {cvData.email && <li className="break-all">{cvData.email}</li>}
                               {cvData.phone && <li>{cvData.phone}</li>}
@@ -3162,7 +3162,7 @@ export default function CreerCv() {
                       </div>
 
                       {/* Contact */}
-                      <h3 className="text-lg font-bold text-center mb-4 text-black border-b-2 border-slate-300 pb-1">Contact</h3>
+                      <h3 className="text-lg font-bold text-center mb-4 text-black border-b-2 border-slate-300 pb-1">{cvData.sectionTitles?.contact?.toUpperCase() || "CONTACT"}</h3>
                       <ul className="space-y-3 mb-6 font-bold text-black border-l-2 border-[#10E688] pl-2 text-[10px]">
                         {cvData.phone && (
                           <li className="flex items-center space-x-2">
