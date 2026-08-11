@@ -55,7 +55,7 @@ async function withTimeout(promise, timeoutMs = 1500) {
   }
 }
 
-export async function proxy(req) {
+export default async function proxy(req) {
   const { pathname } = req.nextUrl;
 
   // 1. Si la route est publique, court-circuit immédiat sans aucun appel réseau
