@@ -110,10 +110,10 @@ export default function ModelesPage() {
 
         {/* Grille de modèles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <TemplateCard isRecommended={true} image="/model7.png" onSelect={handleSelectTemplate} />
-          <TemplateCard isRecommended={true} image="/model1.jpg" onSelect={handleSelectTemplate} />
-          <TemplateCard isRecommended={true} image="/model2.png" onSelect={handleSelectTemplate} />
-          <TemplateCard isRecommended={true} image="/model3.png" onSelect={handleSelectTemplate} />
+          <TemplateCard isRecommended={true} onSelect={handleSelectTemplate} />
+          <TemplateCard isRecommended={true} onSelect={handleSelectTemplate} />
+          <TemplateCard isRecommended={true} onSelect={handleSelectTemplate} />
+          <TemplateCard isRecommended={true} onSelect={handleSelectTemplate} />
         </div>
         
       </div>
