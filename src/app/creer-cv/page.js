@@ -979,12 +979,12 @@ export default function CreerCv() {
 
   // Sidebar navigation mapping
   const stepsList = [
-    { num: 0, label: t.step0, icon: "fa-address-card" },
-    { num: 1, label: t.step1, icon: "fa-briefcase" },
-    { num: 2, label: t.step2, icon: "fa-graduation-cap" },
-    { num: 3, label: t.step3, icon: "fa-circle-nodes" },
-    { num: 4, label: t.step4, icon: "fa-pen-to-square" },
-    { num: 5, label: t.step5, icon: "fa-language" },
+    { num: 0, label: cvData.sectionTitles?.contact || t.step0, icon: "fa-address-card" },
+    { num: 1, label: cvData.sectionTitles?.experience || t.step1, icon: "fa-briefcase" },
+    { num: 2, label: cvData.sectionTitles?.education || t.step2, icon: "fa-graduation-cap" },
+    { num: 3, label: cvData.sectionTitles?.skills || t.step3, icon: "fa-circle-nodes" },
+    { num: 4, label: cvData.sectionTitles?.profile || t.step4, icon: "fa-pen-to-square" },
+    { num: 5, label: cvData.sectionTitles?.languages || t.step5, icon: "fa-language" },
     { num: 6, label: t.step6, icon: "fa-plus" },
     { num: 7, label: t.step7, icon: "fa-download" }
   ];
