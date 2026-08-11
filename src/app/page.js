@@ -19,7 +19,7 @@ const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP
 // mêmes 3 modèles réellement sélectionnables dans /creer-cv (voir son
 // urlTemplate côté client), pas de 4e modèle décoratif sans mapping clair.
 const CV_TEMPLATE_STORIES = [
-  { id: "modern", name: "Moderne", previewUrl: "/model1.png", description: "2 colonnes structuré" },
+  { id: "modern", name: "Moderne", previewUrl: "/model1.jpg", description: "2 colonnes structuré" },
   { id: "minimalist", name: "Minimaliste", previewUrl: "/model2.png", description: "Aéré & moderne" },
   { id: "classic", name: "Classique", previewUrl: "/model3.png", description: "Traditionnel & chic" },
 ];
@@ -204,7 +204,7 @@ You will pilot the digital communication strategy of Campus France Senegal (webs
     salary: "Niveau 6",
     recruiterEmail: "recrutement@ifs.sn",
     externalLink: "https://lnkd.in/dp9s3CFt",
-    image: "/institut_francais.jpg",
+    image: "",
     pinned: true
   },
   {
