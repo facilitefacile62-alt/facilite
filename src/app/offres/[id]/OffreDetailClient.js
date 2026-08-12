@@ -242,15 +242,47 @@ export default function OffreDetailClient({ initialOffer }) {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Lien de l'image / affiche (optionnel)</label>
-                  <input
-                    type="text"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
-                    placeholder="Ex. https://example.com/poster.jpg"
-                  />
+                <div className="border border-gray-100 bg-gray-50/50 rounded-2xl p-4 space-y-4">
+                  <label className="block text-xs font-bold text-gray-700">Affiche / Image de l'offre</label>
+                  
+                  {imageUrl ? (
+                    <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-100">
+                      <img
+                        src={imageUrl}
+                        alt="Affiche de l'offre"
+                        className="h-24 w-auto object-contain rounded-lg border bg-gray-50"
+                      />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-800">Une image est actuellement définie</p>
+                        <p className="text-[10px] text-gray-400 break-all max-w-md">{imageUrl}</p>
+                        <button
+                          type="button"
+                          onClick={() => setImageUrl("")}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 border border-rose-200/50"
+                        >
+                          <i className="fa-solid fa-trash text-sm"></i>
+                          Supprimer cette photo
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 border-dashed text-center text-gray-500 py-6">
+                      <i className="fa-regular fa-image text-3xl mb-2 text-gray-300 block"></i>
+                      <p className="text-xs font-bold">Aucune image définie</p>
+                      <p className="text-[10px] text-gray-400">Ajoutez-en une en collant son lien ci-dessous</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 mb-1">Lien de l'image / affiche (optionnel)</label>
+                    <input
+                      type="text"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                      placeholder="Collez ici l'URL de votre image (ex. https://...)"
+                    />
+                  </div>
                 </div>
 
                 <div>
