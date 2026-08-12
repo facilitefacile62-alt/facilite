@@ -55,7 +55,15 @@ export async function POST(req, { params }) {
     if (offerError || !offer) {
       return NextResponse.json({ error: "Offre introuvable." }, { status: 404 });
     }
-    if (offer.recruiter_id !== user.id) {
+
+    const { data: roleRow } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const isAdmin = roleRow?.role === "admin";
+
+    if (offer.recruiter_id !== user.id && !isAdmin) {
       return NextResponse.json({ error: "Vous ne pouvez modifier que vos propres offres." }, { status: 403 });
     }
 

@@ -20,8 +20,12 @@ function OffresContent() {
   const queryParam = searchParams?.get("q") || "";
 
   const [userSession, setUserSession] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const [candidateEducationLevel, setCandidateEducationLevel] = useState("Aucun");
   const [offers, setOffers] = useState([]);
+  const [editingDescriptionId, setEditingDescriptionId] = useState(null);
+  const [editDescriptionText, setEditDescriptionText] = useState("");
+  const [savingDescriptionId, setSavingDescriptionId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [locationFilter, setLocationFilter] = useState("");
@@ -62,12 +66,22 @@ function OffresContent() {
         setUserSession(session);
 
         if (session?.user?.id) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
+          const [profileRes, roleRes] = await Promise.all([
+            supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .single(),
+            supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", session.user.id)
+              .maybeSingle()
+          ]);
+
+          const profile = profileRes.data;
           setCandidateEducationLevel(profile?.degree || profile?.education_level || "Aucun");
+          setUserRole(roleRes.data?.role || "user");
         }
 
         const { data, error } = await supabase
@@ -89,6 +103,71 @@ function OffresContent() {
     }
     loadData();
   }, []);
+
+  const handleStartEdit = (offer) => {
+    setEditingDescriptionId(offer.id);
+    setEditDescriptionText(offer.description || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDescriptionId(null);
+    setEditDescriptionText("");
+  };
+
+  const handleSaveDescription = async (offer) => {
+    const trimmedDesc = editDescriptionText.trim();
+    if (!trimmedDesc) return;
+    setSavingDescriptionId(offer.id);
+
+    try {
+      const { error } = await supabase
+        .from("job_offers")
+        .update({ description: trimmedDesc, updated_at: new Date().toISOString() })
+        .eq("id", offer.id);
+
+      if (error) {
+        console.error("Erreur mise à jour description:", error);
+        triggerToast("Erreur lors de la modification de la description.");
+      } else {
+        // Recalcul de l'embedding (recherche sémantique)
+        await fetch(`/api/recruteur/offres/${offer.id}/embedding`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${userSession.access_token}` },
+          body: JSON.stringify({ title: offer.title, description: trimmedDesc }),
+        }).catch((err) => console.error("Erreur recalcul embedding:", err));
+
+        setOffers((prev) =>
+          prev.map((o) => (o.id === offer.id ? { ...o, description: trimmedDesc } : o))
+        );
+        triggerToast("Description mise à jour et indexée par l'IA !");
+        handleCancelEdit();
+      }
+    } catch (err) {
+      console.error("Exception save description:", err);
+      triggerToast("Une erreur est survenue.");
+    } finally {
+      setSavingDescriptionId(null);
+    }
+  };
+
+  const handleDeleteOffer = async (offerId) => {
+    if (!window.confirm("Retirer définitivement cette offre de la liste publique ?")) return;
+
+    try {
+      const { error } = await supabase.rpc("archive_own_job_offer", { offer_id: offerId });
+
+      if (error) {
+        console.error("Erreur archivage offre:", error);
+        triggerToast("Erreur lors de la suppression de l'offre.");
+      } else {
+        setOffers((prev) => prev.filter((o) => o.id !== offerId));
+        triggerToast("Offre retirée de la liste publique.");
+      }
+    } catch (err) {
+      console.error("Exception delete offer:", err);
+      triggerToast("Une erreur est survenue.");
+    }
+  };
 
   const handleSemanticSearch = async () => {
     const query = searchQuery.trim();
@@ -306,19 +385,43 @@ function OffresContent() {
               const candRank = levelRank(candidateEducationLevel);
               const eligible = candRank >= reqRank;
 
+              const isOwner = userSession?.user?.id && offer.recruiter_id === userSession.user.id;
+              const isAdmin = userRole === "admin";
+              const canManage = isOwner || isAdmin;
+
               return (
                 <div
                   key={offer.id}
                   className="bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col p-6 group"
                 >
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                      {offer.contract_type || "CDI"}
-                    </span>
-                    {semanticResults && offer.id in semanticResults && (
-                      <span className="px-2.5 py-1 bg-amber-100 text-amber-900 rounded-full text-[10px] font-black">
-                        ⚡ {Math.round(semanticResults[offer.id] * 100)}% pertinence
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                        {offer.contract_type || "CDI"}
                       </span>
+                      {semanticResults && offer.id in semanticResults && (
+                        <span className="px-2.5 py-1 bg-amber-100 text-amber-900 rounded-full text-[10px] font-black">
+                          ⚡ {Math.round(semanticResults[offer.id] * 100)}% pertinence
+                        </span>
+                      )}
+                    </div>
+                    {canManage && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleStartEdit(offer)}
+                          className="text-gray-400 hover:text-emerald-600 transition p-1"
+                          title="Modifier la description"
+                        >
+                          <i className="fa-solid fa-pen text-xs"></i>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteOffer(offer.id)}
+                          className="text-gray-400 hover:text-red-600 transition p-1"
+                          title="Supprimer l'offre"
+                        >
+                          <i className="fa-solid fa-trash text-xs"></i>
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -327,9 +430,42 @@ function OffresContent() {
                   </h2>
                   <p className="text-xs font-bold text-gray-500 mb-4">{offer.company || "Recruteur Confidentiel"}</p>
 
-                  <p className="text-xs text-gray-600 line-clamp-3 mb-4 leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    {offer.description}
-                  </p>
+                  {editingDescriptionId === offer.id ? (
+                    <div className="mb-4 flex flex-col">
+                      <textarea
+                        value={editDescriptionText}
+                        onChange={(e) => setEditDescriptionText(e.target.value)}
+                        className="w-full text-xs text-gray-700 bg-gray-50 p-3 rounded-xl border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 h-28 resize-y"
+                        placeholder="Description de l'offre..."
+                      />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button
+                          onClick={handleCancelEdit}
+                          className="px-2.5 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-extrabold text-[10px] rounded-lg transition"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          onClick={() => handleSaveDescription(offer)}
+                          disabled={savingDescriptionId === offer.id || !editDescriptionText.trim()}
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] rounded-lg transition disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {savingDescriptionId === offer.id ? (
+                            <>
+                              <i className="fa-solid fa-spinner fa-spin"></i>
+                              Enregistrement...
+                            </>
+                          ) : (
+                            "Enregistrer"
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-600 line-clamp-3 mb-4 leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      {offer.description}
+                    </p>
+                  )}
 
                   <div className="space-y-2 mb-6 text-xs text-gray-600">
                     {offer.location && (
