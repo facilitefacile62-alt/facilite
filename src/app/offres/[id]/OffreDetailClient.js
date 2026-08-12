@@ -50,6 +50,55 @@ export default function OffreDetailClient({ initialOffer }) {
   const isAdmin = userRole === "admin";
   const canManage = isOwner || isAdmin;
 
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Format d'image non supporté (seuls PNG, JPEG et WebP sont acceptés).");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("L'image est trop volumineuse (maximum 5 Mo).");
+      return;
+    }
+
+    if (!userId) {
+      alert("Session expirée. Veuillez vous reconnecter.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop().toLowerCase();
+      const storagePath = `${userId}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("job-offers")
+        .upload(storagePath, file, {
+          upsert: true,
+          contentType: file.type,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("job-offers")
+        .getPublicUrl(storagePath);
+
+      setImageUrl(publicUrlData?.publicUrl || "");
+    } catch (err) {
+      console.error("Erreur upload:", err);
+      alert("Erreur lors du téléversement de l'image : " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleCancel = () => {
     // Revert form states to match the current offer state
     setTitle(offer.title || "");
@@ -266,10 +315,30 @@ export default function OffreDetailClient({ initialOffer }) {
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-white p-4 rounded-xl border border-gray-100 border-dashed text-center text-gray-500 py-6">
-                      <i className="fa-regular fa-image text-3xl mb-2 text-gray-300 block"></i>
-                      <p className="text-xs font-bold">Aucune image définie</p>
-                      <p className="text-[10px] text-gray-400">Ajoutez-en une en collant son lien ci-dessous</p>
+                    <div className="bg-white p-6 rounded-xl border border-gray-100 border-dashed text-center text-gray-500 py-8 flex flex-col items-center justify-center">
+                      <i className="fa-regular fa-image text-4xl mb-3 text-gray-300"></i>
+                      <p className="text-xs font-bold mb-1">Aucune image définie</p>
+                      <p className="text-[10px] text-gray-400 mb-4">Ajoutez une image depuis votre ordinateur ou collez un lien ci-dessous</p>
+                      <label className="cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50">
+                        {uploading ? (
+                          <>
+                            <i className="fa-solid fa-spinner animate-spin"></i>
+                            Téléversement...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fa-solid fa-upload"></i>
+                            Téléverser une image
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/png, image/jpeg, image/webp"
+                          onChange={handleImageUpload}
+                          disabled={uploading}
+                          className="hidden"
+                        />
+                      </label>
                     </div>
                   )}
 
