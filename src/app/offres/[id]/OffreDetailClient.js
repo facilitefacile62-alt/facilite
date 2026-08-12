@@ -27,12 +27,17 @@ export default function OffreDetailClient({ initialOffer }) {
   const [salaryRange, setSalaryRange] = useState(initialOffer.salary_range || "");
   const [description, setDescription] = useState(initialOffer.description || "");
   const [imageUrl, setImageUrl] = useState(initialOffer.image_url || "");
+  const [contactEmail, setContactEmail] = useState(initialOffer.contact_email || "");
+  const [externalLink, setExternalLink] = useState(initialOffer.external_link || "");
+
+  const [accessToken, setAccessToken] = useState(null);
 
   useEffect(() => {
     async function loadSession() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setUserId(session.user.id);
+        setAccessToken(session.access_token);
         const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
@@ -109,6 +114,8 @@ export default function OffreDetailClient({ initialOffer }) {
     setSalaryRange(offer.salary_range || "");
     setDescription(offer.description || "");
     setImageUrl(offer.image_url || "");
+    setContactEmail(offer.contact_email || "");
+    setExternalLink(offer.external_link || "");
     setIsEditing(false);
   };
 
@@ -130,6 +137,8 @@ export default function OffreDetailClient({ initialOffer }) {
         salary_range: salaryRange.trim() || null,
         description: description.trim(),
         image_url: imageUrl.trim() || null,
+        contact_email: contactEmail.trim() || null,
+        external_link: externalLink.trim() || null,
       })
       .eq("id", offer.id)
       .select()
@@ -145,6 +154,16 @@ export default function OffreDetailClient({ initialOffer }) {
     try {
       await fetch(`/api/recruteur/offres/${offer.id}/embedding`, {
         method: "POST",
+        headers: accessToken ? {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        } : {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim()
+        })
       });
     } catch (err) {
       console.error("Erreur recalcul embedding:", err);
@@ -288,6 +307,28 @@ export default function OffreDetailClient({ initialOffer }) {
                       <option value="Master">Master</option>
                       <option value="Doctorat">Doctorat</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Email de contact (optionnel)</label>
+                    <input
+                      type="email"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                      placeholder="Ex. contact@entreprise.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Lien de candidature externe (optionnel)</label>
+                    <input
+                      type="url"
+                      value={externalLink}
+                      onChange={(e) => setExternalLink(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                      placeholder="Ex. https://entreprise.com/apply"
+                    />
                   </div>
                 </div>
 
@@ -454,11 +495,34 @@ export default function OffreDetailClient({ initialOffer }) {
                   {offer.recruiterVerified && <BadgeDisplay badges={["verified_recruiter"]} />}
                 </div>
 
-                <p className="text-sm text-gray-400 font-medium mb-6">
-                  <i className="fa-solid fa-location-dot mr-1"></i>
-                  {offer.location}
-                  {offer.salary_range && <span> · {offer.salary_range}</span>}
-                </p>
+                <div className="space-y-2 mb-6 text-sm text-gray-500 font-medium">
+                  <div className="flex items-center gap-2">
+                    <i className="fa-solid fa-location-dot text-emerald-600 w-4 text-center"></i>
+                    <span>{offer.location}</span>
+                  </div>
+                  {offer.salary_range && (
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-coins text-emerald-600 w-4 text-center"></i>
+                      <span>{offer.salary_range}</span>
+                    </div>
+                  )}
+                  {offer.contact_email && (
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-envelope text-emerald-600 w-4 text-center"></i>
+                      <span>
+                        Contact : <a href={`mailto:${offer.contact_email}`} className="text-emerald-700 hover:underline font-semibold">{offer.contact_email}</a>
+                      </span>
+                    </div>
+                  )}
+                  {offer.external_link && (
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-link text-emerald-600 w-4 text-center"></i>
+                      <span>
+                        Lien externe : <a href={offer.external_link} target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-semibold">{offer.external_link}</a>
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line leading-relaxed mb-8">
                   {offer.description}

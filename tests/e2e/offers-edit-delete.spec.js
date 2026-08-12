@@ -58,6 +58,10 @@ test.describe("Catalogue - Édition et suppression d'offres", () => {
   });
 
   test("un admin peut modifier et supprimer la description d'une offre", async ({ page }) => {
+    page.on('console', msg => {
+      console.log(`BROWSER_LOG [${msg.type()}]: ${msg.text()}`);
+    });
+
     // 1. Connexion en tant qu'admin
     await page.goto("/login");
     await page.getByPlaceholder("Enter your Email").fill(ADMIN_EMAIL);
@@ -100,11 +104,15 @@ test.describe("Catalogue - Édition et suppression d'offres", () => {
     const newCompany = "Test Company Modifiée Inc.";
     const newLocation = "Dakar-Fann";
     const newDescription = "Description modifiée de l'offre test E2E par l'admin.";
+    const newEmail = "test-contact@entreprise.com";
+    const newLink = "https://entreprise.com/test-apply";
 
     await titleInput.fill(newTitle);
     await companyInput.fill(newCompany);
     await locationInput.fill(newLocation);
     await descriptionTextarea.fill(newDescription);
+    await page.locator('input[placeholder="Ex. contact@entreprise.com"]').fill(newEmail);
+    await page.locator('input[placeholder="Ex. https://entreprise.com/apply"]').fill(newLink);
 
     // Enregistrer
     const saveBtn = page.locator('button:has-text("Enregistrer")');
@@ -114,8 +122,10 @@ test.describe("Catalogue - Édition et suppression d'offres", () => {
     await expect(titleInput).not.toBeVisible();
     await expect(page.locator(`h1:has-text("${newTitle}")`)).toBeVisible();
     await expect(page.locator(`p:has-text("${newCompany}")`).first()).toBeVisible();
-    await expect(page.locator(`p:has-text("${newLocation}")`).first()).toBeVisible();
+    await expect(page.locator(`span:has-text("${newLocation}")`).first()).toBeVisible();
     await expect(page.locator(`div:has-text("${newDescription}")`).first()).toBeVisible();
+    await expect(page.locator(`text=Contact : ${newEmail}`)).toBeVisible();
+    await expect(page.locator(`text=Lien externe : ${newLink}`)).toBeVisible();
 
     // 4. Supprimer (archiver) l'offre
     const deleteBtn = page.locator('button[title="Supprimer l\'offre"]');
