@@ -69,46 +69,75 @@ test.describe("Catalogue - Édition et suppression d'offres", () => {
     await page.goto("/offres");
     await page.waitForLoadState("networkidle");
 
-
     // Trouver le sélecteur ou la carte de notre offre
     const card = page.locator(`.group:has-text("Offre Test E2E Edition")`).first();
     await expect(card).toBeVisible();
 
-    // Cliquer sur le bouton modifier (le crayon)
-    const editBtn = card.locator('button[title="Modifier la description"]');
+    // Cliquer sur le bouton Détails
+    const detailsBtn = card.locator('a:has-text("Détails")');
+    await expect(detailsBtn).toBeVisible();
+    await detailsBtn.click();
+    await page.waitForURL(`**/offres/${testOfferId}`, { timeout: 15000 });
+
+    // 3. Modifier l'offre
+    const editBtn = page.locator('button[title="Modifier l\'offre"]');
     await expect(editBtn).toBeVisible();
     await editBtn.click();
 
-    // Le textarea doit apparaître
-    const textarea = card.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await expect(textarea).toHaveValue("Description initiale de l'offre test E2E.");
+    // Vérifier les champs du formulaire d'édition
+    const titleInput = page.locator('input[placeholder="Ex. Développeur Full-Stack"]');
+    const companyInput = page.locator('input[placeholder="Ex. Tech Solutions Inc."]');
+    const locationInput = page.locator('input[placeholder="Ex. Dakar, Sénégal"]');
+    const descriptionTextarea = page.locator('textarea');
 
-    // Modifier la description
-    const newDescription = "Description modifiee de l'offre test E2E par l'admin.";
-    await textarea.fill(newDescription);
+    await expect(titleInput).toHaveValue("Offre Test E2E Edition");
+    await expect(companyInput).toHaveValue("Test Company Inc.");
+    await expect(locationInput).toHaveValue("Dakar");
+    await expect(descriptionTextarea).toHaveValue("Description initiale de l'offre test E2E.");
 
-    // Cliquer sur enregistrer
-    const saveBtn = card.locator('button:has-text("Enregistrer")');
+    // Remplir avec les nouvelles valeurs
+    const newTitle = "Offre Test E2E Modifiée";
+    const newCompany = "Test Company Modifiée Inc.";
+    const newLocation = "Dakar-Fann";
+    const newDescription = "Description modifiée de l'offre test E2E par l'admin.";
+
+    await titleInput.fill(newTitle);
+    await companyInput.fill(newCompany);
+    await locationInput.fill(newLocation);
+    await descriptionTextarea.fill(newDescription);
+
+    // Enregistrer
+    const saveBtn = page.locator('button:has-text("Enregistrer")');
     await saveBtn.click();
 
-    // Le textarea doit disparaître et la nouvelle description s'afficher
-    await expect(textarea).not.toBeVisible();
-    await expect(card.locator(`text=${newDescription}`)).toBeVisible();
+    // Vérifier que le formulaire est fermé et que l'affichage est mis à jour
+    await expect(titleInput).not.toBeVisible();
+    await expect(page.locator(`h1:has-text("${newTitle}")`)).toBeVisible();
+    await expect(page.locator(`p:has-text("${newCompany}")`).first()).toBeVisible();
+    await expect(page.locator(`p:has-text("${newLocation}")`).first()).toBeVisible();
+    await expect(page.locator(`div:has-text("${newDescription}")`).first()).toBeVisible();
 
-    // 3. Supprimer (archiver) l'offre
-    const deleteBtn = card.locator('button[title="Supprimer l\'offre"]');
+    // 4. Supprimer (archiver) l'offre
+    const deleteBtn = page.locator('button[title="Supprimer l\'offre"]');
     await expect(deleteBtn).toBeVisible();
 
-    // Dialog handler pour accepter la confirmation
+    // Dialog handler pour accepter la confirmation et l'alerte de succès
     page.on('dialog', async (dialog) => {
-      expect(dialog.message()).toContain("Retirer définitivement cette offre");
-      await dialog.accept();
+      if (dialog.type() === 'confirm') {
+        expect(dialog.message()).toContain("supprimer / archiver cette offre d'emploi");
+        await dialog.accept();
+      } else if (dialog.type() === 'alert') {
+        expect(dialog.message()).toContain("supprimée avec succès");
+        await dialog.accept();
+      }
     });
 
     await deleteBtn.click();
 
-    // La carte de l'offre doit disparaître de la page
-    await expect(card).not.toBeVisible();
+    // Devrait être redirigé vers /offres et la carte ne doit plus exister
+    await page.waitForURL("**/offres", { timeout: 15000 });
+    await page.waitForLoadState("networkidle");
+    const deletedCard = page.locator(`.group:has-text("${newTitle}")`).first();
+    await expect(deletedCard).not.toBeVisible();
   });
 });
