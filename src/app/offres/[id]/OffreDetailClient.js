@@ -304,14 +304,36 @@ export default function OffreDetailClient({ initialOffer }) {
                       <div className="space-y-1">
                         <p className="text-xs font-bold text-gray-800">Une image est actuellement définie</p>
                         <p className="text-[10px] text-gray-400 break-all max-w-md">{imageUrl}</p>
-                        <button
-                          type="button"
-                          onClick={() => setImageUrl("")}
-                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 border border-rose-200/50"
-                        >
-                          <i className="fa-solid fa-trash text-sm"></i>
-                          Supprimer cette photo
-                        </button>
+                        <div className="flex items-center gap-2 pt-1 flex-wrap">
+                          <label className="cursor-pointer px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 text-xs font-bold rounded-lg transition inline-flex items-center gap-1.5 border border-emerald-200/50">
+                            {uploading ? (
+                              <>
+                                <i className="fa-solid fa-spinner animate-spin"></i>
+                                Téléversement...
+                              </>
+                            ) : (
+                              <>
+                                <i className="fa-solid fa-rotate"></i>
+                                Remplacer la photo
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/png, image/jpeg, image/webp"
+                              onChange={handleImageUpload}
+                              disabled={uploading}
+                              className="hidden"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setImageUrl("")}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-lg transition flex items-center gap-1.5 border border-rose-200/50"
+                          >
+                            <i className="fa-solid fa-trash text-sm"></i>
+                            Supprimer cette photo
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
