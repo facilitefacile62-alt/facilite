@@ -873,20 +873,27 @@ export default function MessagerieClient() {
           groupsByConversation.get(msg.conversationId).messages.push(msg);
         }
 
+        // Chargement des candidatures de l'utilisateur pour l'historique complet
+        const { data: userCandidatures } = await supabase
+          .from("candidatures")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
+
         const recruiterCards = await Promise.all(
-          Array.from(groupsByConversation.values()).map(async ({ otherPartyId, messages: groupMessages }) => {
+          Array.from(groupsByConversation.entries()).map(async ([convId, { otherPartyId, messages: groupMessages }]) => {
             const [{ data: recruiterProfile }, { data: profileRow }] = await Promise.all([
               supabase.from("recruiter_profiles").select("company_name, sector, logo_url").eq("user_id", otherPartyId).maybeSingle(),
               supabase.from("profiles").select("full_name").eq("id", otherPartyId).maybeSingle(),
             ]);
-            const displayName = recruiterProfile?.company_name || profileRow?.full_name || "Recruteur";
+            const displayName = recruiterProfile?.company_name || profileRow?.full_name || "Recruteur / Offre";
             const lastMsg = groupMessages[groupMessages.length - 1];
             return {
-              id: otherPartyId,
+              id: convId,
               name: displayName,
-              title: recruiterProfile?.sector || "Recruteur",
+              title: recruiterProfile?.sector || "Candidature Offre",
               company: displayName,
-              avatarColor: "bg-blue-600",
+              avatarColor: "bg-emerald-600",
               avatarInitials: displayName.slice(0, 2).toUpperCase(),
               logo: recruiterProfile?.logo_url || null,
               lastMessage: lastMsg.text,
@@ -894,18 +901,52 @@ export default function MessagerieClient() {
               unreadCount: 0,
               online: false,
               favorite: false,
+              typeDiscussion: "OFFRE",
               messages: groupMessages,
             };
           })
         );
 
+        // Intégrer également les candidatures de l'historique si elles n'ont pas encore de message
+        const existingCardOfferIds = new Set(formattedMsgs.filter(m => m.jobOfferId).map(m => m.jobOfferId));
+        const standaloneCandidatureCards = (userCandidatures || [])
+          .filter(cand => cand.job_offer_id && !existingCardOfferIds.has(cand.job_offer_id))
+          .map(cand => ({
+            id: `cand_${cand.id}`,
+            name: cand.company || "Entreprise",
+            title: cand.job_title || "Offre d'emploi",
+            company: cand.company || "Entreprise",
+            avatarColor: "bg-emerald-600",
+            avatarInitials: (cand.company || "CO").slice(0, 2).toUpperCase(),
+            logo: null,
+            lastMessage: `Candidature transmise pour : ${cand.job_title}`,
+            time: new Date(cand.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            unreadCount: 0,
+            online: false,
+            favorite: false,
+            typeDiscussion: "OFFRE",
+            messages: [
+              {
+                id: `cand_msg_${cand.id}`,
+                sender: "me",
+                senderId: session.user.id,
+                receiverId: cand.recruiter_id || null,
+                text: `💼 Candidature envoyée pour le poste : ${cand.job_title} chez ${cand.company}\n📊 Score CV : ${cand.cv_match_score || 0}%\n💬 Message d'accompagnement : ${cand.cover_letter || "Aucun message d'accompagnement"}`,
+                time: new Date(cand.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                createdAt: cand.created_at,
+                status: "sent",
+                isPinned: false,
+                persisted: true,
+                typeDiscussion: "OFFRE",
+                jobOfferId: cand.job_offer_id,
+                attachment_url: cand.cv_url,
+                file_name: "CV_Candidature.pdf",
+              }
+            ],
+          }));
+
         if (!isActive) return;
 
-        // Fusion avec l'état déjà en place plutôt qu'un remplacement brut : le fil
-        // IA (useChat) peut déjà avoir synchronisé son message d'accueil ou les
-        // premiers échanges avant que cette promesse ne se résolve. Utiliser la
-        // constante statique AI_PINNED_CHAT ici écraserait ce contenu (course
-        // entre cet effet asynchrone et l'effet de synchronisation useChat).
         setConversations(prev => {
           const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
           const next = [aiConv];
@@ -923,12 +964,11 @@ export default function MessagerieClient() {
               unreadCount: 0,
               online: true,
               favorite: true,
+              typeDiscussion: "SUPPORT",
               messages: mergedMsgs,
             });
           }
-          for (const card of recruiterCards) {
-            // Ne pas dupliquer une carte déjà posée par le flux ?recipient=
-            // (résolu en parallèle, même id = id de l'autre utilisateur).
+          for (const card of [...recruiterCards, ...standaloneCandidatureCards]) {
             const alreadyPresent = prev.some((c) => c.id === card.id) || next.some((c) => c.id === card.id);
             if (!alreadyPresent) next.push(card);
           }
@@ -1776,8 +1816,24 @@ export default function MessagerieClient() {
   const filteredConversations = conversations.filter(c => {
     if (filterTab === "unread" && c.unreadCount === 0) return false;
     if (filterTab === "favorites" && !c.favorite) return false;
-    return c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           c.company.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Filtre par catégorie de discussion (OFFRE / ECHANGE / SUPPORT)
+    if (discussionTypeFilter !== "all" && c.id !== AI_PINNED_CHAT.id) {
+      if (discussionTypeFilter === "OFFRE") {
+        const isOffre = c.typeDiscussion === "OFFRE" || (c.messages || []).some(m => m.typeDiscussion === "OFFRE");
+        if (!isOffre) return false;
+      } else if (discussionTypeFilter === "ECHANGE") {
+        const isEchange = c.typeDiscussion === "ECHANGE" || (c.messages || []).some(m => m.typeDiscussion === "ECHANGE");
+        if (!isEchange) return false;
+      } else if (discussionTypeFilter === "SUPPORT") {
+        const isSupport = c.id === 1 || c.typeDiscussion === "SUPPORT" || (c.messages || []).some(m => m.typeDiscussion === "SUPPORT");
+        if (!isSupport) return false;
+      }
+    }
+
+    return (c.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+           (c.company || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+           (c.title || "").toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const activeConversation = conversations.find(c => c.id === activeConvId) || null;

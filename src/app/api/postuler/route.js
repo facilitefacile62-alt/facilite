@@ -302,56 +302,59 @@ export async function POST(req) {
       );
     }
 
-    // Auto-création d'une conversation séparée de type 'OFFRE' dans Supabase,
-    // uniquement pour une vraie offre recruteur (le flux historique n'a pas
-    // de destinataire interne connu — il repose uniquement sur l'e-mail).
-    // Cas sans recruteur identifié : aucun message n'est créé (décision
-    // explicite — pas d'auto-message ni de conversation de repli).
+    // Auto-création d'une conversation et d'un message 'OFFRE' dans Supabase
+    let targetRecruiterId = offerRecruiterId;
+    if (!targetRecruiterId) {
+      const { data: adminId } = await supabase.rpc("resolve_admin_id");
+      if (adminId && adminId !== user.id) {
+        targetRecruiterId = adminId;
+      }
+    }
+
     let conversationId = null;
+    if (targetRecruiterId) {
+      conversationId = await findOrCreateConversationServer(supabase, user.id, targetRecruiterId);
 
-    if (offerRecruiterId) {
-      conversationId = await findOrCreateConversationServer(supabase, user.id, offerRecruiterId);
+      const primaryAttachment = allAttachments[0] || null;
+      let chatAttachmentPath = null;
+      let attachmentType = null;
 
-      // Pièce jointe : le CV principal est copié vers le bucket privé
-      // chat-attachments (même convention que la messagerie — voir
-      // src/lib/chatAttachments.js) pour que le lien signé résolu côté
-      // MessagerieClient (ChatAttachmentUrl) fonctionne identiquement, sans
-      // dépendre de la policy Storage du bucket "resumes" (différente,
-      // pensée pour le recruteur consultant la candidature, pas pour la
-      // messagerie). allAttachments[0] est garanti défini ici : la requête a
-      // déjà été rejetée plus haut si allAttachments/allCvUrls étaient vides.
-      const primaryAttachment = allAttachments[0];
-      const safeName = sanitizeAttachmentName(primaryAttachment.filename);
-      const chatAttachmentPath = `${user.id}/${Date.now()}_${safeName}`;
-      const { type: attachmentType, contentType } = classifyCvAttachment(primaryAttachment.filename);
+      if (primaryAttachment) {
+        const safeName = sanitizeAttachmentName(primaryAttachment.filename);
+        chatAttachmentPath = `${user.id}/${Date.now()}_${safeName}`;
+        const classification = classifyCvAttachment(primaryAttachment.filename);
+        attachmentType = classification.type;
 
-      const { error: chatUploadError } = await supabase.storage
-        .from("chat-attachments")
-        .upload(chatAttachmentPath, primaryAttachment.content, {
-          contentType,
-          upsert: false,
-        });
+        const { error: chatUploadError } = await supabase.storage
+          .from("chat-attachments")
+          .upload(chatAttachmentPath, primaryAttachment.content, {
+            contentType: classification.contentType,
+            upsert: false,
+          });
 
-      if (chatUploadError) {
-        console.error("Erreur upload CV vers chat-attachments (candidature):", chatUploadError.message);
+        if (chatUploadError) {
+          console.error("Erreur upload CV vers chat-attachments (candidature):", chatUploadError.message);
+          chatAttachmentPath = null;
+          attachmentType = null;
+        }
       }
 
-      let messageContent = `Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company}) — Score de correspondance CV : ${cvMatchScore}%`;
+      let messageContent = `💼 Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company})\n📧 Destinataire : ${finalRecruiterEmail || "Recruteur"}\n📊 Score CV : ${cvMatchScore}%`;
       if (coverLetter && coverLetter.trim()) {
         messageContent += `\n\n💬 Message du candidat :\n${coverLetter.trim()}`;
       }
 
       const { error: applyMsgError } = await supabase.from("messages").insert({
         sender_id: user.id,
-        receiver_id: offerRecruiterId,
+        receiver_id: targetRecruiterId,
         conversation_id: conversationId,
         content: messageContent,
         type_discussion: "OFFRE",
         job_offer_id: jobOfferId,
-        attachment_url: chatUploadError ? null : chatAttachmentPath,
-        attachment_type: chatUploadError ? null : attachmentType,
-        file_name: chatUploadError ? null : primaryAttachment.filename,
-        file_size: chatUploadError ? null : formatAttachmentSize(primaryAttachment.content.length),
+        attachment_url: chatAttachmentPath,
+        attachment_type: attachmentType,
+        file_name: primaryAttachment?.filename || null,
+        file_size: primaryAttachment ? formatAttachmentSize(primaryAttachment.content.length) : null,
         created_at: new Date().toISOString(),
       });
 
