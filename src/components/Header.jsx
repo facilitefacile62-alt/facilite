@@ -1077,168 +1077,27 @@ export default function Header() {
         </div>
       )}
 
-      {/* Centre de Notifications (LinkedIn Style) - Globalisé et synchronisé */}
+      {/* Centre de Notifications — version minimale en attendant la vraie
+          table de notifications côté backend (voir chantier Point 3) */}
       {notificationsModalOpen && (
         <div className="fixed inset-0 z-[800] bg-black/50 backdrop-blur-xs flex justify-center md:items-start md:pt-16 p-2 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 flex flex-col min-h-[400px] max-h-[85vh]">
-            {/* Header Modal Notifications */}
+          <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 flex flex-col">
             <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-[#FAF6F1] dark:bg-gray-800/60">
               <div className="flex items-center space-x-2 sm:space-x-3">
                 <i className="fa-solid fa-bell text-xl text-[#10E688]"></i>
                 <h3 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white">Notifications</h3>
-                {unreadNotifCount > 0 && (
-                  <span className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
-                    {unreadNotifCount} nouvelle{unreadNotifCount > 1 ? "s" : ""}
-                  </span>
-                )}
               </div>
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                {unreadNotifCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        const readNotifs = JSON.parse(localStorage.getItem("read_notifications") || "[]");
-                        const newReadNotifs = [...new Set([...readNotifs, ...notificationsList.map(n => n.id)])];
-                        localStorage.setItem("read_notifications", JSON.stringify(newReadNotifs));
-                      } catch(e) {}
-                      setNotificationsList(prev => prev.map(n => ({ ...n, unread: false })));
-                      setUnreadNotifCount(0);
-                    }}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 transition mr-1 cursor-pointer"
-                  >
-                    Tout lire
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setNotificationsModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transition cursor-pointer"
-                >
-                  <i className="fa-solid fa-xmark text-base"></i>
-                </button>
-              </div>
-            </div>
-
-            {/* Filter Pills Bar */}
-            <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center space-x-2 overflow-x-auto bg-gray-50/70 dark:bg-gray-900 scrollbar-none">
               <button
                 type="button"
-                onClick={() => setActiveNotifFilter("all")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex-shrink-0 ${
-                  activeNotifFilter === "all" ? "bg-[#10E688] text-gray-950 shadow-2xs" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700"
-                }`}
+                onClick={() => setNotificationsModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transition cursor-pointer"
               >
-                Toutes
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveNotifFilter("jobs")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex-shrink-0 ${
-                  activeNotifFilter === "jobs" ? "bg-[#10E688] text-gray-950 shadow-2xs" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700"
-                }`}
-              >
-                Offres d'emploi
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveNotifFilter("posts")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex-shrink-0 ${
-                  activeNotifFilter === "posts" ? "bg-[#10E688] text-gray-950 shadow-2xs" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700"
-                }`}
-              >
-                Mes posts
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveNotifFilter("mentions")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex-shrink-0 ${
-                  activeNotifFilter === "mentions" ? "bg-[#10E688] text-gray-950 shadow-2xs" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 border border-gray-200 dark:border-gray-700"
-                }`}
-              >
-                Mentions
+                <i className="fa-solid fa-xmark text-base"></i>
               </button>
             </div>
 
-            {/* Notification List */}
-            <div className="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800/60 flex-1">
-              {notificationsList.filter(n => {
-                if (activeNotifFilter === "jobs") return n.type === "jobs";
-                if (activeNotifFilter === "posts") return n.type === "posts";
-                if (activeNotifFilter === "mentions") return n.type === "mentions";
-                return true;
-              }).length === 0 ? (
-                <div className="py-12 text-center text-gray-400 font-medium text-sm">
-                  Aucune notification dans cette catégorie.
-                </div>
-              ) : (
-                notificationsList.filter(n => {
-                  if (activeNotifFilter === "jobs") return n.type === "jobs";
-                  if (activeNotifFilter === "posts") return n.type === "posts";
-                  if (activeNotifFilter === "mentions") return n.type === "mentions";
-                  return true;
-                }).map((notif) => (
-                  <div
-                    key={notif.id}
-                    onClick={() => {
-                      if (notif.link) {
-                        try {
-                          const readNotifs = JSON.parse(localStorage.getItem("read_notifications") || "[]");
-                          if (!readNotifs.includes(notif.id)) {
-                            localStorage.setItem("read_notifications", JSON.stringify([...readNotifs, notif.id]));
-                          }
-                        } catch(e) {}
-                        
-                        setNotificationsList(prev => {
-                          const newList = prev.map(n => n.id === notif.id ? { ...n, unread: false } : n);
-                          setUnreadNotifCount(newList.filter(n => n.unread).length);
-                          return newList;
-                        });
-                        
-                        router.push(notif.link);
-                        setNotificationsModalOpen(false);
-                      }
-                    }}
-                    className={`p-4 flex items-start space-x-3 sm:space-x-3.5 transition cursor-pointer ${
-                      notif.unread ? "bg-blue-50/50 dark:bg-blue-950/20" : "bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                    }`}
-                  >
-                    {/* Blue Unread Indicator Dot */}
-                    <div className="pt-1.5 w-2 flex-shrink-0">
-                      {notif.unread && (
-                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600 dark:bg-blue-500 block"></span>
-                      )}
-                    </div>
-
-                    {/* Avatar / Icon */}
-                    <div className="relative flex-shrink-0">
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-bold text-xs sm:text-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        {notif.avatar ? (
-                          <img src={notif.avatar} alt={notif.author} className="w-full h-full object-cover" />
-                        ) : (
-                          notif.author.slice(0, 2).toUpperCase()
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-800 dark:text-gray-200 font-normal leading-relaxed">
-                        <span className="font-bold text-gray-900 dark:text-white">{notif.author} </span>
-                        {notif.text}
-                      </p>
-                      <span className="text-[10px] text-gray-400 font-medium mt-1 block">{notif.time}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-3 bg-gray-50 dark:bg-gray-800/60 border-t border-gray-100 dark:border-gray-800 text-center">
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                Centre de notifications interactif En Direct
-              </span>
+            <div className="py-14 text-center text-gray-400 dark:text-gray-500 font-medium text-sm">
+              Aucune notification pour l'instant.
             </div>
           </div>
         </div>
