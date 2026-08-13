@@ -4608,7 +4608,7 @@ useEffect(() => {
             </div>
             <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-white shadow-xl mb-4 bg-gray-100">
               {viewImageModal.url && (
-                <Image src={viewImageModal.url} alt="Aperçu grand format" fill sizes="256px" className="object-cover" />
+                <NextImage src={viewImageModal.url} alt="Aperçu grand format" fill sizes="256px" className="object-cover" />
               )}
             </div>
             <button
