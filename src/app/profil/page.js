@@ -142,6 +142,11 @@ useEffect(() => {
   const [company, setCompany] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
   const [coverUrl, setCoverUrl] = useState("/stellar-cover.png");
+  // Tant que le profil n'a pas fini de charger, on affiche un skeleton à la
+  // place de la photo/couverture plutôt que le placeholder par défaut — sans
+  // ce garde, la vraie photo "remplaçait" visuellement le placeholder après
+  // coup, donnant l'impression qu'elle disparaissait puis revenait.
+  const [profileLoading, setProfileLoading] = useState(true);
   const [isEditingBio, setIsEditingBio] = useState(false);
   // Dropdowns & Menu Actions pour Couverture et Avatar
   const [coverMenuOpen, setCoverMenuOpen] = useState(false);
@@ -363,6 +368,17 @@ useEffect(() => {
   };
 
   // Synchroniser les données depuis Supabase et protéger la route
+  //
+  // Avant : 8 appels réseau strictement séquentiels (refreshSession,
+  // getSession, resumes, profiles, has_badge, refreshSession À NOUVEAU,
+  // getSession À NOUVEAU, is_admin) — chacun attendait le précédent.
+  // Après : 1 refreshSession + 1 getSession (le deuxième couple était une
+  // pure duplication, aucune raison de rafraîchir deux fois la même session
+  // à quelques lignes d'écart), puis les 4 lectures restantes (resumes,
+  // profiles, has_badge, is_admin) lancées en parallèle via Promise.all —
+  // 6 appels réseau au total au lieu de 8, et surtout seulement 3 étapes
+  // séquentielles au lieu de 8 (le batch parallèle ne coûte qu'un aller-
+  // retour, pas quatre).
   useEffect(() => {
     async function loadUserProfile() {
       // Invalidation du cache client de session : rafraîchissement forcé
@@ -376,72 +392,57 @@ useEffect(() => {
         return;
       }
 
-      // 1. Récupérer l'ensemble des documents de l'utilisateur depuis la table resumes
+      const userId = session.user.id;
+      // Chaque promesse est protégée individuellement (comme les try/catch
+      // qu'elle remplace) pour qu'une exception réseau sur l'une n'empêche
+      // pas les trois autres d'aboutir — Promise.all rejetterait globalement
+      // sinon dès la première erreur.
+      const safe = (promise) => Promise.resolve(promise).catch((err) => ({ data: null, error: err }));
+
+      const [resumesResult, profileResult, badgeResult, adminResult] = await Promise.all([
+        safe(
+          supabase
+            .from("resumes")
+            .select("*")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+        ),
+        safe(supabase.from("profiles").select("*").eq("id", userId).single()),
+        safe(supabase.rpc("has_badge", { check_user_id: userId, badge_name: "verified_recruiter" })),
+        safe(supabase.rpc("is_admin", { check_user_id: userId })),
+      ]);
+
+      // 1. Documents de l'utilisateur (table resumes)
       let resumesList = [];
-      try {
-        const { data, error } = await supabase
-          .from("resumes")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
-        if (error) {
-          console.warn("[loadUserProfile] Erreur de chargement des resumes:", error.message);
-        } else {
-          resumesList = data || [];
-        }
-      } catch (err) {
-        console.error("[loadUserProfile] Exception resumes:", err);
+      if (resumesResult.error) {
+        console.warn("[loadUserProfile] Erreur de chargement des resumes:", resumesResult.error.message);
+      } else {
+        resumesList = resumesResult.data || [];
       }
 
-      // 2. Récupérer le profil depuis la table profiles
+      // 2. Profil (table profiles)
       let profile = null;
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
-        if (error) {
-          console.warn("[loadUserProfile] Erreur de chargement du profil:", error.message);
-        } else {
-          profile = data;
-        }
-      } catch (err) {
-        console.error("[loadUserProfile] Exception profil:", err);
+      if (profileResult.error) {
+        console.warn("[loadUserProfile] Erreur de chargement du profil:", profileResult.error.message);
+      } else {
+        profile = profileResult.data;
       }
 
-      // 3. Récupérer si recruteur vérifié via RPC has_badge
+      // 3. Recruteur vérifié (RPC has_badge)
       let isRecruiterRpc = false;
-      try {
-        const { data: isRecruiter, error } = await supabase
-          .rpc("has_badge", { check_user_id: session.user.id, badge_name: "verified_recruiter" });
-        if (error) {
-          console.warn("[loadUserProfile] Erreur RPC has_badge:", error.message);
-        } else {
-          isRecruiterRpc = isRecruiter === true;
-        }
-      } catch (err) {
-        console.error("[loadUserProfile] Exception RPC has_badge:", err);
+      if (badgeResult.error) {
+        console.warn("[loadUserProfile] Erreur RPC has_badge:", badgeResult.error.message);
+      } else {
+        isRecruiterRpc = badgeResult.data === true;
       }
 
-      // 4. Appel direct à la fonction RPC is_admin (SECURITY DEFINER)
+      // 4. Admin (RPC is_admin, SECURITY DEFINER)
       let isAdminRpc = false;
-      try {
-        await supabase.auth.refreshSession().catch(() => {});
-        const { data: { session: freshSession } } = await supabase.auth.getSession();
-        const checkUserId = freshSession?.user?.id || session.user.id;
-
-        const { data: isAdmin, error } = await supabase
-          .rpc("is_admin", { check_user_id: checkUserId });
-        if (error) {
-          setAdminRpcError(error.message);
-          console.warn("[loadUserProfile] Erreur RPC is_admin:", error.message);
-        } else {
-          isAdminRpc = isAdmin === true;
-        }
-      } catch (err) {
-        setAdminRpcError(err.message || "Exception RPC is_admin");
-        console.error("[loadUserProfile] Exception RPC is_admin:", err);
+      if (adminResult.error) {
+        setAdminRpcError(adminResult.error.message);
+        console.warn("[loadUserProfile] Erreur RPC is_admin:", adminResult.error.message);
+      } else {
+        isAdminRpc = adminResult.data === true;
       }
 
       // Déterminer le rôle final et les badges indépendamment du profil
@@ -580,6 +581,8 @@ useEffect(() => {
       setJobTitle(profile?.headline || (typeof window !== "undefined" ? localStorage.getItem("user_job_title") || "" : ""));
       setCity(profile?.city || (profile?.location ? profile.location.split(",")[0]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_city") || "" : "")));
       setCountry(profile?.country || (profile?.location ? profile.location.split(",")[1]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_country") || "" : "")));
+
+      setProfileLoading(false);
     }
 
     loadUserProfile();
@@ -2152,15 +2155,17 @@ useEffect(() => {
                 className="hidden"
               />
 
-              {/* Image de couverture spatiale stellaire / personnalisée */}
+              {/* Image de couverture spatiale stellaire / personnalisée — un
+                  skeleton remplace le fond tant que le profil charge, pour
+                  ne jamais afficher le placeholder par défaut à sa place. */}
               <div
-                className="h-44 md:h-56 bg-cover bg-center bg-no-repeat relative group"
-                style={{ backgroundImage: `url('${coverUrl}')` }}
+                className={`h-44 md:h-56 bg-cover bg-center bg-no-repeat relative group ${profileLoading ? "bg-gray-200 dark:bg-gray-800 animate-pulse" : ""}`}
+                style={profileLoading ? undefined : { backgroundImage: `url('${coverUrl}')` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-900/30 to-indigo-950/50"></div>
-                
+
                 {/* Bouton Changer la photo de couverture avec menu déroulant */}
-                <div className="absolute top-4 right-4 z-30" ref={coverMenuRef}>
+                <div className={`absolute top-4 right-4 z-30 ${profileLoading ? "hidden" : ""}`} ref={coverMenuRef}>
                   <button
                     type="button"
                     onClick={() => setCoverMenuOpen(!coverMenuOpen)}
@@ -2243,14 +2248,18 @@ useEffect(() => {
                 {/* Photo de profil (Grand cercle avec menu interactif au clic) */}
                 <div className="-mt-16 md:-mt-20 mb-4 relative z-20 w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-white shadow-xl bg-white flex-shrink-0" ref={avatarMenuRef}>
                   <div className="w-full h-full rounded-full overflow-hidden relative group">
-                    <img
-                      src={avatarUrl}
-                      alt="Logo Profil Facilite"
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
+                    {profileLoading ? (
+                      <div className="w-full h-full bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                    ) : (
+                      <img
+                        src={avatarUrl}
+                        alt="Logo Profil Facilite"
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    )}
                     <div
                       onClick={() => setAvatarMenuOpen(!avatarMenuOpen)}
-                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer"
+                      className={`absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer ${profileLoading ? "hidden" : ""}`}
                     >
                       <i className="fa-solid fa-camera text-2xl mb-1"></i>
                       <span className="text-[10px] font-bold tracking-tight">Modifier</span>
