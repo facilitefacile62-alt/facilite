@@ -99,7 +99,7 @@ export default function ForgotPasswordPage() {
             </p>
           </div>
 
-          {isSuccess && method === "email" ? (
+          {isSuccess ? (
             <div className="text-center py-6 animate-fade-in">
               <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
                 ✉️
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
                 Retour à la connexion
               </Link>
             </div>
-          ) : method === "email" ? (
+          ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <input
                 type="text"
