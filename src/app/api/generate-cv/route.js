@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/apiAuth";
 
 // Fonction utilitaire pour faire une pause (polling)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -19,6 +20,9 @@ async function getCanvaAccessToken() {
 
 export async function POST(req) {
   try {
+    const { user, error: authError } = await requireUser(req, { logDenials: true });
+    if (authError) return authError;
+
     const body = await req.json();
     const { templateId, data } = body;
     
