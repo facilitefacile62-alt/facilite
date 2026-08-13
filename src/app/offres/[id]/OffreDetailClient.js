@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import OffreApplySection from "@/components/OffreApplySection";
 import BadgeDisplay from "@/components/BadgeDisplay";
+import SocialShareButtons from "@/components/SocialShareButtons";
 
 export default function OffreDetailClient({ initialOffer }) {
   const router = useRouter();
@@ -523,6 +524,9 @@ export default function OffreDetailClient({ initialOffer }) {
                     </div>
                   )}
                 </div>
+
+                {/* Boutons de Partage Universels sur les Réseaux Sociaux */}
+                <SocialShareButtons offer={offer} variant="banner" className="mb-8" />
 
                 <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line leading-relaxed mb-8">
                   {offer.description}

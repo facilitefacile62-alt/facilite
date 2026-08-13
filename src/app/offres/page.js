@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ApplyModal from "@/components/ApplyModal";
+import SocialShareButtons from "@/components/SocialShareButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -364,6 +365,8 @@ function OffresContent() {
                         <span>Niveau requis : <strong>{offer.required_education_level}</strong></span>
                       </div>
                     )}
+                  <div className="my-3 py-2.5 px-3 bg-gray-50/80 rounded-2xl border border-gray-100/80">
+                    <SocialShareButtons offer={offer} variant="compact" onToast={triggerToast} />
                   </div>
 
                   <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between gap-3">

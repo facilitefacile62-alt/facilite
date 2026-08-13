@@ -108,3 +108,4 @@ monprojetfacilite/
 3. **Composants Reutilisables** : La Navbar et la Bottom Bar mobile doivent être synchronisées entre les différentes routes (`/`, `/service`, `/importer-cv`, `/messagerie`).
 4. **Zéro suppression destructive** : Ne jamais supprimer le carrousel 360° ni le système de modal contact lors des refactorisations.
 5. **Vérification** : Toujours exécuter `npm run build` après modification pour s'assurer qu'aucune erreur SSR/JSX n'a été introduite.
+6. **Partage Social Universel Obligatoire sur chaque Offre d'Emploi** : Chaque offre d'emploi affichée (sur `/offres`, `/offres/[id]`, et le flux d'accueil) doit obligatoirement intégrer des boutons de partage en un clic clairs et visibles vers WhatsApp, LinkedIn, Facebook, TikTok, Instagram, Twitter/X et Telegram via `<SocialShareButtons />` pour garantir une viralité maximale.
