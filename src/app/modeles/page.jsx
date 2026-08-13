@@ -1,13 +1,36 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import TemplateCard from "@/components/TemplateCard";
 import { supabase } from "@/lib/supabase";
+import AdminPosterManagerModal from "@/components/AdminPosterManagerModal";
 
 export default function ModelesPage() {
   const router = useRouter();
   const [selectedColor, setSelectedColor] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminPosterModalOpen, setAdminPosterModalOpen] = useState(false);
+  const [posterRefreshKey, setPosterRefreshKey] = useState(Date.now());
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        if (session.user.email === "facilitefacile62@gmail.com") {
+          setIsAdmin(true);
+        } else {
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .maybeSingle()
+            .then(({ data }) => {
+              if (data?.role === "admin") setIsAdmin(true);
+            });
+        }
+      }
+    });
+  }, []);
 
   // Affichage des modèles : public, sans session (voir PUBLIC_ROUTES dans
   // middleware.js). L'action "Créer avec Canva" reste protégée : un
@@ -42,9 +65,21 @@ export default function ModelesPage() {
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
             Choisissez un modèle de CV
           </h1>
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-6">
             Commencez par choisir un CV parmi notre sélection. Vous pourrez en changer plus tard.
           </p>
+          {isAdmin && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => setAdminPosterModalOpen(true)}
+                className="bg-amber-500 hover:bg-amber-400 text-gray-950 font-black py-3 px-6 rounded-full text-xs sm:text-sm transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-2 shadow-lg animate-pulse"
+              >
+                <i className="fa-solid fa-camera"></i>
+                <span>Gérer et changer les affiches (Mode Admin)</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Barre de filtrage */}
@@ -113,30 +148,37 @@ export default function ModelesPage() {
           <TemplateCard
             isRecommended={true}
             title="CV Professionnel Moderne"
-            previewImage="/affiche_cv_pro.jpg"
+            previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
             onSelect={handleSelectTemplate}
           />
           <TemplateCard
             isRecommended={false}
             title="Lettre de Motivation Ciblée"
-            previewImage="/affiche_boostez_carriere.jpg"
+            previewImage={`/affiche_boostez_carriere.jpg?v=${posterRefreshKey}`}
             onSelect={handleSelectTemplate}
           />
           <TemplateCard
             isRecommended={true}
             title="Pack Complet (CV + Lettre)"
-            previewImage="/affiche_cv_pro.jpg"
+            previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
             onSelect={handleSelectTemplate}
           />
           <TemplateCard
             isRecommended={false}
             title="CV Exécutif & International"
-            previewImage="/affiche_cv_pro.jpg"
+            previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
             onSelect={handleSelectTemplate}
           />
         </div>
         
       </div>
+
+      {/* Modal Admin Gestionnaire d'Affiches */}
+      <AdminPosterManagerModal
+        isOpen={adminPosterModalOpen}
+        onClose={() => setAdminPosterModalOpen(false)}
+        onPosterUpdated={() => setPosterRefreshKey(Date.now())}
+      />
     </div>
   );
 }

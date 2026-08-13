@@ -8,6 +8,7 @@ import { supabase, handleGlobalSignOut, getSignedAvatarUrl } from "@/lib/supabas
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import AdminPosterManagerModal from "@/components/AdminPosterManagerModal";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -270,6 +271,30 @@ export default function Home() {
   // Search System
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+
+  // Admin Poster Manager
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminPosterModalOpen, setAdminPosterModalOpen] = useState(false);
+  const [posterRefreshKey, setPosterRefreshKey] = useState(Date.now());
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        if (session.user.email === "facilitefacile62@gmail.com") {
+          setIsAdmin(true);
+        } else {
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .maybeSingle()
+            .then(({ data }) => {
+              if (data?.role === "admin") setIsAdmin(true);
+            });
+        }
+      }
+    });
+  }, []);
 
   const triggerToast = (message, icon = "fa-circle-check") => {
     setToast({ show: true, message, icon });
@@ -1279,7 +1304,7 @@ export default function Home() {
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-[1.15]">
                 {t.modelsTitle}
               </h2>
-              <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-4 flex-wrap">
                 <button
                   onClick={() => {
                     const pricingSection = document.getElementById("section-pricing");
@@ -1296,6 +1321,16 @@ export default function Home() {
                   <i className="fa-solid fa-file-lines"></i>
                   Voir tous les modèles CV
                 </Link>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setAdminPosterModalOpen(true)}
+                    className="bg-amber-500 hover:bg-amber-400 text-gray-950 font-black py-3.5 px-6 rounded-full text-sm transition-all transform hover:-translate-y-1 cursor-pointer flex items-center gap-2 shadow-lg animate-pulse"
+                  >
+                    <i className="fa-solid fa-camera"></i>
+                    <span>Changer les images (Admin)</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1337,7 +1372,7 @@ export default function Home() {
                       >
                         <div className="bg-white rounded-xl overflow-hidden relative h-[450px]">
                           <img
-                            src={slide.img.startsWith('/') ? slide.img : `/${slide.img}`}
+                            src={`${slide.img.startsWith('/') ? slide.img : `/${slide.img}`}?v=${posterRefreshKey}`}
                             alt={selectedLang === "FR" ? slide.titleFR : slide.titleEN}
                             className="w-full h-full object-cover object-top pointer-events-none transition-transform duration-500 group-hover:scale-105"
                           />
@@ -1569,7 +1604,13 @@ export default function Home() {
             </div>
           </div>
         </section>
-      </main>
+        {/* Modal Admin Gestionnaire d'Affiches */}
+      <AdminPosterManagerModal
+        isOpen={adminPosterModalOpen}
+        onClose={() => setAdminPosterModalOpen(false)}
+        onPosterUpdated={() => setPosterRefreshKey(Date.now())}
+      />
+    </main>
 
       {/* Footer Éléments Sombre & Inforamations */}
       <footer className="bg-[#080E1E] text-gray-400 py-16 px-6 md:px-12 border-t border-gray-800">
