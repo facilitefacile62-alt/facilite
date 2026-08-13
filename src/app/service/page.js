@@ -1599,6 +1599,12 @@ export default function Home() {
               >
                 Boîte à idées
               </a>
+              <a
+                href="/faq"
+                className="hover:text-[#10E688] transition-colors"
+              >
+                Foire Aux Questions (FAQ)
+              </a>
             </div>
           </div>
 

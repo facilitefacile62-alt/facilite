@@ -841,6 +841,22 @@ export default function Header() {
                     <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
                   </div>
                 </Link>
+
+                <Link
+                  href="/faq"
+                  onClick={() => setPlusDropdownOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
+                    pathname === "/faq" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-circle-question text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">FAQ & Aide</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Questions fréquentes & réponses</div>
+                  </div>
+                </Link>
               </div>
             )}
           </div>
@@ -1042,6 +1058,14 @@ export default function Header() {
             >
               <i className="fa-solid fa-lightbulb w-5 text-center text-amber-500"></i>
               <span>Boîte à idées & Suggestions</span>
+            </Link>
+            <Link
+              href="/faq"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <i className="fa-solid fa-circle-question w-5 text-center text-teal-600"></i>
+              <span>FAQ & Questions Fréquentes</span>
             </Link>
           </div>
 
