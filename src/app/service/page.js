@@ -371,7 +371,7 @@ export default function Home() {
   const slides = useMemo(() => [
     {
       id: "s1",
-      img: "/icon.jpeg", 
+      img: "/affiche_cv_pro.jpg", 
       titleFR: "Modèle 1 — CV Professionnel Moderne", 
       titleEN: "Template 1 — Modern Professional CV",
       descFR: "Design percutant et élégant pour maximiser vos chances auprès des recruteurs.",
@@ -380,7 +380,7 @@ export default function Home() {
     },
     { 
       id: "s2", 
-      img: "/icon.jpeg", 
+      img: "/affiche_boostez_carriere.jpg", 
       titleFR: "Modèle 2 — Lettre de Motivation Ciblée", 
       titleEN: "Template 2 — Targeted Cover Letter",
       descFR: "Structure claire et percutante adaptée à tous types de postes et secteurs.",
@@ -389,7 +389,7 @@ export default function Home() {
     },
     { 
       id: "s3", 
-      img: "/icon.jpeg", 
+      img: "/affiche_cv_pro.jpg", 
       titleFR: "Modèle 3 — Pack Complet (CV + Lettre)", 
       titleEN: "Template 3 — Complete Pack (CV + Letter)",
       descFR: "Harmonie visuelle totale entre votre CV et votre lettre pour une candidature d'élite.",
@@ -398,7 +398,7 @@ export default function Home() {
     },
     { 
       id: "s4", 
-      img: "/icon.jpeg", 
+      img: "/affiche2.jpg", 
       titleFR: "Modèle 4 — CV Exécutif & International", 
       titleEN: "Template 4 — Executive & International CV",
       descFR: "Format optimisé pour les candidatures globales, normes anglo-saxonnes et compatibilité ATS.",
@@ -1250,9 +1250,9 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-tr from-[#10E688]/30 to-[#E4B8F9]/30 rounded-[2.5rem] transform rotate-3 scale-105 -z-10 transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110"></div>
               <div className="absolute inset-0 bg-gradient-to-bl from-[#E4B8F9]/20 to-[#10E688]/20 rounded-[2.5rem] transform -rotate-2 scale-105 -z-20"></div>
               <img
-                src="/icon.jpeg"
-                alt="Icone Services"
-                className="w-full h-full object-contain p-8 bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-[6px] border-white transition-transform duration-500 group-hover:-translate-y-2"
+                src="/affiche_cv_pro.jpg"
+                alt="Affiche Tarifs et Services"
+                className="w-full h-full object-cover rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-[6px] border-white transition-transform duration-500 group-hover:-translate-y-2"
               />
             </div>
           </div>
@@ -1339,7 +1339,7 @@ export default function Home() {
                           <img
                             src={slide.img.startsWith('/') ? slide.img : `/${slide.img}`}
                             alt={selectedLang === "FR" ? slide.titleFR : slide.titleEN}
-                            className="w-full h-full object-contain p-8 bg-white pointer-events-none transition-transform duration-500 group-hover:scale-105"
+                            className="w-full h-full object-cover object-top pointer-events-none transition-transform duration-500 group-hover:scale-105"
                           />
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center backdrop-blur-xs">
                             <span className="text-white font-extrabold text-lg bg-white/20 backdrop-blur-md px-6 py-2.5 rounded-full border border-white/40 shadow-lg transform group-hover:scale-105 transition-transform">

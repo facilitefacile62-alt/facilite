@@ -40,6 +40,17 @@ export const metadata = {
     type: "website",
     images: [{ url: "/logo.jpeg" }],
   },
+  icons: {
+    icon: [
+      { url: "/image.png" },
+      { url: "/icon.png" },
+      { url: "/favicon.ico" },
+    ],
+    apple: [
+      { url: "/image.png" },
+      { url: "/apple-icon.png" },
+    ],
+  },
   twitter: {
     card: "summary_large_image",
     title: "Facilite - Création de CV & Offres d'emploi",
