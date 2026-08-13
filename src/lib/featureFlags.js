@@ -45,48 +45,48 @@ export const DEFAULT_FEATURE_TREE = [
       },
       {
         id: "nav_plus_importer",
-        name: "Menu Plus > Importer CV",
+        name: "Importer CV (Analyse IA et recommandations)",
         path: "/importer-cv",
         icon: "📄",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
-        description: "Lien Importer CV dans le menu déroulant Plus",
+        description: "Bouton dans le menu Plus pour l'import et l'analyse IA de CV",
       },
       {
         id: "nav_plus_service",
-        name: "Menu Plus > Services & Modèles",
+        name: "Services & Modèles (CVs Pro, Canada, Anglais & Lettres)",
         path: "/service",
-        icon: "🎨",
+        icon: "💼",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
-        description: "Lien vers la grille de services et modèles de CV",
+        description: "Bouton dans le menu Plus menant aux modèles et services (/service)",
       },
       {
         id: "nav_plus_recrutement_spontane",
-        name: "Menu Plus > Recrutement Spontané",
+        name: "Recrutement Spontané (Répertoire des 77 entreprises)",
         path: "/recrutement-spontane",
         icon: "🏢",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
-        description: "Annuaire des 77 entreprises pour candidatures spontanées",
+        description: "Bouton dans le menu Plus vers l'annuaire des 77 entreprises",
       },
       {
         id: "nav_plus_depots",
-        name: "Menu Plus > Dépôts Physiques",
+        name: "Dépôts Physiques (Stations-services & contacts)",
         path: "/recrutement-journalier",
         icon: "⛽",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
-        description: "Points de dépôts physiques et stations-services partenaires",
+        description: "Bouton dans le menu Plus vers la liste des points de dépôt physiques",
       },
       {
         id: "nav_plus_boite_idees",
-        name: "Menu Plus > Boîte à idées",
+        name: "Boîte à idées (Suggestions & Innovation)",
         path: "/boite-a-idees",
         icon: "💡",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
-        description: "Formulaire d'idées et suggestions d'améliorations",
+        description: "Bouton dans le menu Plus vers la boîte à idées communautaire",
       },
     ],
   },
@@ -227,7 +227,7 @@ export function getFeatureFlagsTree() {
     if (!saved) return DEFAULT_FEATURE_TREE;
     const parsed = JSON.parse(saved);
 
-    // Fusion intelligente pour inclure toute nouvelle fonctionnalité ajoutée dans le code
+    // Fusion intelligente pour conserver les labels et icônes à jour tout en gardant les statuts activés/désactivés
     return DEFAULT_FEATURE_TREE.map((branch) => {
       const savedBranch = parsed.find((b) => b.id === branch.id);
       if (!savedBranch) return branch;
@@ -235,7 +235,12 @@ export function getFeatureFlagsTree() {
         ...branch,
         children: branch.children.map((feat) => {
           const savedFeat = savedBranch.children?.find((f) => f.id === feat.id);
-          return savedFeat ? { ...feat, ...savedFeat } : feat;
+          if (!savedFeat) return feat;
+          return {
+            ...feat,
+            enabled: typeof savedFeat.enabled === "boolean" ? savedFeat.enabled : feat.enabled,
+            roles: savedFeat.roles ? { ...feat.roles, ...savedFeat.roles } : feat.roles,
+          };
         }),
       };
     });
