@@ -16,6 +16,7 @@ import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityA
 // doublon d'accès trouvé en B0 (deux chemins vers /admin/messages).
 const TABS = [
   { id: "dashboard", label: "Tableau de bord", icon: "📊" },
+  { id: "fonctionnalites", label: "Fonctionnalités", icon: "✨" },
   { id: "securite", label: "Sécurité", icon: "🛡️" },
   { id: "badges", label: "Demandes de badge", icon: "🎖️" },
   { id: "offres", label: "Offres d'emploi", icon: "💼" },
@@ -55,6 +56,7 @@ const NAV_SECTIONS = [
   {
     label: "Gestion",
     items: [
+      { type: "tab", id: "fonctionnalites", icon: "✨", label: "Fonctionnalités" },
       { type: "tab", id: "utilisateurs", icon: "👥", label: "Utilisateurs" },
       { type: "tab", id: "tarification", icon: "💳", label: "Tarification" },
       { type: "link", href: "/admin/dashboard", icon: "💰", label: "Facturation & Transactions" },
@@ -1728,6 +1730,129 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-gray-500 font-medium max-w-md mx-auto">
                 Aucun système de facturation n'est encore branché sur la plateforme. Cet onglet accueillera la gestion des abonnements lorsque cette fonctionnalité sera développée.
               </p>
+            </div>
+          )}
+
+          {activeTab === "fonctionnalites" && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">✨</span>
+                    <h2 className="text-lg font-extrabold text-gray-900">Centre des Fonctionnalités</h2>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700">
+                      9 Modules Actifs
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Vue d'ensemble et accès direct à tous les services et modules intégrés de la plateforme Facilité.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[
+                  {
+                    title: "Créateur & Modèles de CV",
+                    desc: "Éditeur de CV interactif avec studio Canva et modèles 360° certifiés.",
+                    icon: "📄",
+                    href: "/creer-cv",
+                    color: "bg-blue-50 text-blue-700 border-blue-200",
+                    status: "Opérationnel",
+                  },
+                  {
+                    title: "Analyseur IA & Extraction",
+                    desc: "Analyse automatique et extraction structurée de CVs (PDF, Images) par IA.",
+                    icon: "🤖",
+                    href: "/importer-cv",
+                    color: "bg-purple-50 text-purple-700 border-purple-200",
+                    status: "Opérationnel",
+                  },
+                  {
+                    title: "Portail Recrutement & Offres",
+                    desc: "Publication, modération et suivi des candidatures et offres d'emploi.",
+                    icon: "💼",
+                    href: "/admin/offres",
+                    color: "bg-amber-50 text-amber-700 border-amber-200",
+                    status: "Opérationnel",
+                  },
+                  {
+                    title: "Messagerie en Temps Réel",
+                    desc: "Échanges directs entre candidats et recruteurs vérifiés avec alertes.",
+                    icon: "💬",
+                    href: "/messagerie",
+                    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                    status: "Opérationnel",
+                  },
+                  {
+                    title: "Simulation d'Entretien IA",
+                    desc: "Entraînement immersif aux entretiens avec feedback d'évaluation vocal et écrit.",
+                    icon: "🎙️",
+                    href: "/simulation-entretien",
+                    color: "bg-rose-50 text-rose-700 border-rose-200",
+                    status: "Opérationnel",
+                  },
+                  {
+                    title: "Agrégation & Scraping d'Offres",
+                    desc: "Collecte et normalisation automatique des offres d'emploi externes.",
+                    icon: "🕷️",
+                    href: "/admin/scraping",
+                    color: "bg-indigo-50 text-indigo-700 border-indigo-200",
+                    status: "Opérationnel",
+                  },
+                  {
+                    title: "Commandes & Accompagnement",
+                    desc: "Gestion des commandes de rédaction de CV sur-mesure par les agents.",
+                    icon: "🧑‍💼",
+                    href: "/admin/commandes-agent",
+                    color: "bg-orange-50 text-orange-700 border-orange-200",
+                    status: "Opérationnel",
+                  },
+                  {
+                    title: "Accréditation & Badges",
+                    desc: "Système de vérification d'entreprise et d'attribution du badge Recruteur vérifié.",
+                    icon: "🎖️",
+                    href: "/demande-badge",
+                    color: "bg-teal-50 text-teal-700 border-teal-200",
+                    status: "Opérationnel",
+                  },
+                  {
+                    title: "Boîte à Idées & Feedback",
+                    desc: "Collecte des suggestions d'amélioration et avis de la communauté.",
+                    icon: "💡",
+                    href: "/boite-a-idees",
+                    color: "bg-yellow-50 text-yellow-700 border-yellow-200",
+                    status: "Opérationnel",
+                  },
+                ].map((feat) => (
+                  <div
+                    key={feat.title}
+                    className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-3xl">{feat.icon}</span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          {feat.status}
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-extrabold text-gray-900 mb-1">{feat.title}</h3>
+                      <p className="text-xs text-gray-500 font-medium leading-relaxed">{feat.desc}</p>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                      <Link
+                        href={feat.href}
+                        className="inline-flex items-center gap-1.5 text-xs font-extrabold text-orange-600 hover:text-orange-700 transition"
+                      >
+                        <span>Accéder au module</span>
+                        <i className="fa-solid fa-arrow-right text-[10px]"></i>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </main>
