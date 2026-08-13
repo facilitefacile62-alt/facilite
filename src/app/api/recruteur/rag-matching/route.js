@@ -166,7 +166,7 @@ export async function POST(req) {
     if (matchedCandidates.length === 0) {
       const { data: fallbackCandidates } = await admin
         .from("profiles")
-        .select("id, full_name, headline, skills, city, avatar_url")
+        .select("id, full_name, skills, city, avatar_url")
         .eq("cv_visible_recruteurs", true)
         .is("deleted_at", null)
         .limit(matchCount);
@@ -193,7 +193,7 @@ export async function POST(req) {
     const userIds = matchedCandidates.map((m) => m.user_id).filter(Boolean);
     const { data: fullProfiles } = await admin
       .from("profiles")
-      .select("id, full_name, headline, bio, skills, city, avatar_url, cv_url")
+      .select("id, full_name, bio, skills, city, avatar_url, cv_url")
       .in("id", userIds);
 
     const { data: fullResumes } = await admin
@@ -214,10 +214,9 @@ export async function POST(req) {
 
       return `--- CANDIDAT #${idx + 1} (ID: ${m.user_id}) ---
 Nom: ${p.full_name || m.candidate_name || "Candidat"}
-Titre / Headline: ${p.headline || "Non renseigné"}
 Ville / Localisation: ${p.city || "Sénégal"}
 Compétences déclarées: ${skillsStr}
-Extrait du CV:
+Extrait du CV / Bio:
 ${cvExtract || p.bio || "Pas de texte extrait."}
 Score de similarité sémantique brut: ${Math.round((m.similarity || 0.5) * 100)}%`;
     }).join("\n\n");
@@ -311,7 +310,7 @@ Pour CHAQUE candidat listé ci-dessus, analyse rigoureusement la correspondance 
       return {
         id: m.user_id,
         fullName: p.full_name || m.candidate_name || "Candidat Facilité",
-        headline: p.headline || "Professionnel qualifié",
+        headline: p.bio ? p.bio.slice(0, 100) : "Professionnel qualifié",
         city: p.city || "Sénégal",
         avatarUrl: p.avatar_url || null,
         skills: Array.isArray(p.skills) ? p.skills : [],
