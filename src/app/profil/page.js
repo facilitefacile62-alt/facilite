@@ -3,7 +3,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
+// Renommé (pas "Image") : handleSaveCroppedImage utilise `new Image()`, le
+// constructeur DOM natif — un import nommé "Image" l'aurait masqué dans tout
+// le fichier (piège rencontré en testant : "Image is not a constructor").
+import NextImage from "next/image";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 import AIAssistantModal from "@/components/AIAssistantModal";
@@ -1874,7 +1877,7 @@ useEffect(() => {
             >
               {avatarUrl && avatarUrl !== "/logo.jpeg" ? (
                 <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-200">
-                  <Image src={avatarUrl} alt="Profil" fill sizes="32px" className="object-cover" onError={handleAvatarImgError} />
+                  <NextImage src={avatarUrl} alt="Profil" fill sizes="32px" className="object-cover" onError={handleAvatarImgError} />
                 </div>
               ) : (
                 <i className="fa-solid fa-circle-user text-xl"></i>
@@ -2230,7 +2233,7 @@ useEffect(() => {
                 {profileLoading ? (
                   <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse" />
                 ) : (
-                  <Image
+                  <NextImage
                     src={coverUrl}
                     alt="Couverture de profil"
                     fill
