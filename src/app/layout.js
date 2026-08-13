@@ -42,12 +42,12 @@ export const metadata = {
   },
   icons: {
     icon: [
-      { url: "/image.png" },
+      { url: "/icon.jpeg" },
       { url: "/icon.png" },
       { url: "/favicon.ico" },
     ],
     apple: [
-      { url: "/image.png" },
+      { url: "/icon.jpeg" },
       { url: "/apple-icon.png" },
     ],
   },
