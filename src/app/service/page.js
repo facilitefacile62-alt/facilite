@@ -371,38 +371,38 @@ export default function Home() {
   const slides = useMemo(() => [
     {
       id: "s1",
-      img: "/model1.jpg", 
-      titleFR: "Modèle 1 — Moderne et photographique", 
-      titleEN: "Template 1 — Modern and photographic",
-      descFR: "Parfait pour les profils créatifs et exécutifs exigeant une mise en avant visuelle élégante.",
-      descEN: "Perfect for creative and executive profiles seeking elegant visual presentation.",
+      img: "/affiche_cv_pro.jpg", 
+      titleFR: "Modèle 1 — CV Professionnel Moderne", 
+      titleEN: "Template 1 — Modern Professional CV",
+      descFR: "Design percutant et élégant pour maximiser vos chances auprès des recruteurs.",
+      descEN: "Impactful and elegant layout to maximize recruiter attention.",
       preview: "https://canva.link/g1nh60hb6ddtx96" 
     },
     { 
       id: "s2", 
-      img: "/model2.png", 
-      titleFR: "Modèle 2 — Épuré et institutionnel", 
-      titleEN: "Template 2 — Clean and professional",
-      descFR: "Design minimaliste axé sur l'impact des réalisations et la clarté de lecture pour recruteurs.",
-      descEN: "Minimalist design focused on achievement impact and recruiter readability.",
+      img: "/affiche_boostez_carriere.jpg", 
+      titleFR: "Modèle 2 — Lettre de Motivation Ciblée", 
+      titleEN: "Template 2 — Targeted Cover Letter",
+      descFR: "Structure claire et percutante adaptée à tous types de postes et secteurs.",
+      descEN: "Clean and persuasive structure suited for all job positions.",
       preview: "https://canva.link/g1nh60hb6ddtx96" 
     },
     { 
       id: "s3", 
-      img: "/model3.png", 
-      titleFR: "Modèle 3 — Classique et structuré", 
-      titleEN: "Template 3 — Classic and structured",
-      descFR: "Structure équilibrée idéale pour l'ingénierie, la finance et le management stratégique.",
-      descEN: "Balanced layout ideal for engineering, finance, and strategic management.",
+      img: "/affiche_cv_pro.jpg", 
+      titleFR: "Modèle 3 — Pack Complet (CV + Lettre)", 
+      titleEN: "Template 3 — Complete Pack (CV + Letter)",
+      descFR: "Harmonie visuelle totale entre votre CV et votre lettre pour une candidature d'élite.",
+      descEN: "Total visual consistency between your CV and cover letter for elite applications.",
       preview: "https://canva.link/g1nh60hb6ddtx96" 
     },
     { 
       id: "s4", 
-      img: "/model4.png", 
-      titleFR: "Modèle 4 — Nouveau design international", 
-      titleEN: "Template 4 — New international design",
+      img: "/affiche2.jpg", 
+      titleFR: "Modèle 4 — CV Exécutif & International", 
+      titleEN: "Template 4 — Executive & International CV",
       descFR: "Format optimisé pour les candidatures globales, normes anglo-saxonnes et compatibilité ATS.",
-      descEN: "Optimized format for global applications, western standards and ATS compatibility.",
+      descEN: "Optimized format for global applications, international standards and ATS compatibility.",
       preview: "https://canva.link/g1nh60hb6ddtx96"
     },
   ], []);
@@ -1250,7 +1250,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-tr from-[#10E688]/30 to-[#E4B8F9]/30 rounded-[2.5rem] transform rotate-3 scale-105 -z-10 transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110"></div>
               <div className="absolute inset-0 bg-gradient-to-bl from-[#E4B8F9]/20 to-[#10E688]/20 rounded-[2.5rem] transform -rotate-2 scale-105 -z-20"></div>
               <img
-                src="/photo1.jpg"
+                src="/affiche_cv_pro.jpg"
                 alt="Affiche Tarifs et Services"
                 className="w-full h-full object-cover rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-[6px] border-white transition-transform duration-500 group-hover:-translate-y-2"
               />
