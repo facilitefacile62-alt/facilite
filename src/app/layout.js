@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import AIAssistantModal from "@/components/AIAssistantModal";
 import FeatureDisabledModal from "@/components/FeatureDisabledModal";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AuthProvider } from "@/context/AuthContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -148,10 +149,12 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${inter.className} bg-white dark:bg-gray-950 text-dark dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-300`} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Header />
-          {children}
-          <AIAssistantModal />
-          <FeatureDisabledModal />
+          <AuthProvider>
+            <Header />
+            {children}
+            <AIAssistantModal />
+            <FeatureDisabledModal />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
