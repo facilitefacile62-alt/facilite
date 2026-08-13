@@ -1383,49 +1383,54 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-                <table className="w-full text-left border-collapse relative whitespace-nowrap">
-                  <thead className="sticky top-0 z-10">
-                    <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
-                      <th className="py-4 px-6">Utilisateur</th>
-                      <th className="py-4 px-6">Email</th>
-                      <th className="py-4 px-6">Téléphone</th>
-                      <th className="py-4 px-6">Rôle Actuel</th>
-                      <th className="py-4 px-6">Statut</th>
-                      <th className="py-4 px-6">Badges</th>
-                      <th className="py-4 px-6">Inscription</th>
-                      <th className="py-4 px-6 text-right">Actions</th>
+              <div className="overflow-x-auto overflow-y-auto custom-scrollbar border-t border-gray-100" style={{ maxHeight: '520px', minHeight: '350px' }}>
+                <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
+                  <thead className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-xs shadow-xs">
+                    <tr className="border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
+                      <th className="py-3.5 px-4 sticky left-0 z-30 bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)] min-w-[200px]">Utilisateur</th>
+                      <th className="py-3.5 px-4 min-w-[180px]">Email</th>
+                      <th className="py-3.5 px-4 min-w-[130px]">Téléphone</th>
+                      <th className="py-3.5 px-4 min-w-[140px]">Rôle</th>
+                      <th className="py-3.5 px-4 min-w-[90px]">Statut</th>
+                      <th className="py-3.5 px-4 min-w-[200px]">Badges & Accréditations</th>
+                      <th className="py-3.5 px-4 min-w-[110px]">Inscription</th>
+                      <th className="py-3.5 px-4 text-right sticky right-0 z-30 bg-gray-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.08)] min-w-[120px]">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs font-medium">
+                  <tbody className="divide-y divide-gray-100 font-medium">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan="8" className="py-8 text-center text-gray-400 italic">
+                        <td colSpan="8" className="py-12 text-center text-gray-400 italic">
                           Aucun utilisateur trouvé.
                         </td>
                       </tr>
                     ) : (
                       filteredUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-orange-50/30 transition">
-                          <td className="py-4 px-6 flex items-center space-x-3">
+                        <tr key={user.id} className="group hover:bg-orange-50/30 transition">
+                          {/* Colonne Utilisateur FIXE à gauche */}
+                          <td className="py-3.5 px-4 sticky left-0 z-10 bg-white group-hover:bg-[#FFFBF7] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)] flex items-center space-x-3">
                             {user.avatar_url ? (
                               <img
                                 src={user.avatar_url}
                                 alt={user.full_name || "Avatar"}
-                                className="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-xs"
+                                className="w-8 h-8 rounded-full object-cover border border-gray-200 shadow-xs shrink-0"
                               />
                             ) : (
-                              <div className="w-9 h-9 rounded-full bg-gray-900 text-white font-extrabold flex items-center justify-center text-xs shadow-inner">
+                              <div className="w-8 h-8 rounded-full bg-gray-900 text-white font-extrabold flex items-center justify-center text-xs shadow-inner shrink-0">
                                 {(user.full_name || user.email || "U").charAt(0).toUpperCase()}
                               </div>
                             )}
-                            <div>
-                              <span className="font-bold text-gray-900 block">{user.full_name || "Sans nom"}</span>
-                              <span className="text-[10px] text-gray-400 font-normal">ID: {user.id.slice(0, 8)}...</span>
+                            <div className="min-w-0">
+                              <span className="font-bold text-gray-900 block truncate max-w-[130px]">{user.full_name || "Sans nom"}</span>
+                              <span className="text-[10px] text-gray-400 font-normal block font-mono">ID: {user.id.slice(0, 8)}...</span>
                             </div>
                           </td>
-                          <td className="py-4 px-6 text-gray-600 font-mono text-[11px]">{user.email}</td>
-                          <td className="py-4 px-6">
+
+                          {/* Email */}
+                          <td className="py-3.5 px-4 text-gray-600 font-mono text-[11px]">{user.email}</td>
+
+                          {/* Téléphone */}
+                          <td className="py-3.5 px-4">
                             <div className="flex items-center gap-2">
                               <span className="text-gray-600 font-mono text-[11px]">{user.phone_masked || "—"}</span>
                               {user.phone_masked && (
@@ -1441,10 +1446,23 @@ export default function AdminDashboardPage() {
                               )}
                             </div>
                           </td>
-                          <td className="py-4 px-6">
-                            <RoleBadge role={user.role || "user"} />
+
+                          {/* Rôle avec sélecteur direct */}
+                          <td className="py-3.5 px-4">
+                            <select
+                              value={user.role || "user"}
+                              onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                              disabled={updatingUserId === user.id}
+                              className="px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:border-orange-500 cursor-pointer shadow-xs disabled:opacity-50"
+                            >
+                              <option value="user">🟢 Utilisateur</option>
+                              <option value="publisher">🎧 Éditeur</option>
+                              <option value="admin">🛡️ Admin</option>
+                            </select>
                           </td>
-                          <td className="py-4 px-6">
+
+                          {/* Statut */}
+                          <td className="py-3.5 px-4">
                             {user.status === "suspended" ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-700">
                                 🔒 Suspendu
@@ -1455,8 +1473,10 @@ export default function AdminDashboardPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-4 px-6">
-                            <div className="flex flex-wrap items-center gap-1.5">
+
+                          {/* Badges & Accréditations */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2 flex-wrap">
                               {(user.badges || []).map((badge) => (
                                 <span key={badge} className="inline-flex items-center gap-1">
                                   <BadgeDisplay badges={[badge]} />
@@ -1471,16 +1491,10 @@ export default function AdminDashboardPage() {
                                   </button>
                                 </span>
                               ))}
-                              {(!user.badges || user.badges.length === 0) && <span className="text-gray-300">—</span>}
-                            </div>
-                          </td>
-                          <td className="py-4 px-6 text-gray-500 font-medium">
-                            {user.created_at ? new Date(user.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "Inconnue"}
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            <div className="flex items-center justify-end gap-3">
-                              <div className="flex items-center gap-1.5" title="Recruteur vérifié">
-                                <span className="text-[10px] font-bold text-gray-400 hidden lg:inline">🎖️</span>
+
+                              {/* Interrupteur Recruteur Vérifié */}
+                              <div className="flex items-center gap-1 pl-1" title="Recruteur vérifié">
+                                <span className="text-[10px]">🎖️</span>
                                 <ToggleSwitch
                                   checked={(user.badges || []).includes("verified_recruiter")}
                                   onChange={() => handleToggleVerifiedBadge(user)}
@@ -1489,8 +1503,10 @@ export default function AdminDashboardPage() {
                                   activeColorClass="bg-emerald-500"
                                 />
                               </div>
-                              <div className="flex items-center gap-1.5" title="Compte de test">
-                                <span className="text-[10px] font-bold text-gray-400 hidden lg:inline">🧪</span>
+
+                              {/* Interrupteur Compte de test */}
+                              <div className="flex items-center gap-1 pl-1" title="Compte de test">
+                                <span className="text-[10px]">🧪</span>
                                 <ToggleSwitch
                                   checked={Boolean(user.is_test_account)}
                                   onChange={() => handleToggleTestAccount(user)}
@@ -1499,29 +1515,28 @@ export default function AdminDashboardPage() {
                                   activeColorClass="bg-purple-500"
                                 />
                               </div>
-                              <select
-                                value={user.role || "user"}
-                                onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                disabled={updatingUserId === user.id}
-                                className="px-3 py-1.5 bg-white border border-gray-300 rounded-xl text-xs font-extrabold focus:outline-none focus:border-orange-500 cursor-pointer shadow-xs disabled:opacity-50"
-                              >
-                                <option value="user">🟢 Utilisateur</option>
-                                <option value="publisher">🎧 Éditeur</option>
-                                <option value="admin">🛡️ Administrateur</option>
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => handleSuspendToggle(user)}
-                                disabled={updatingUserId === user.id}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer shadow-xs disabled:opacity-50 ${
-                                  user.status === "suspended"
-                                    ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
-                                    : "bg-red-50 hover:bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {user.status === "suspended" ? "Réactiver" : "Suspendre"}
-                              </button>
                             </div>
+                          </td>
+
+                          {/* Inscription */}
+                          <td className="py-3.5 px-4 text-gray-500 font-medium">
+                            {user.created_at ? new Date(user.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                          </td>
+
+                          {/* Actions FIXE à droite */}
+                          <td className="py-3.5 px-4 text-right sticky right-0 z-10 bg-white group-hover:bg-[#FFFBF7] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.08)]">
+                            <button
+                              type="button"
+                              onClick={() => handleSuspendToggle(user)}
+                              disabled={updatingUserId === user.id}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer shadow-xs disabled:opacity-50 ${
+                                user.status === "suspended"
+                                  ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
+                                  : "bg-red-50 hover:bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {user.status === "suspended" ? "Réactiver" : "Suspendre"}
+                            </button>
                           </td>
                         </tr>
                       ))
