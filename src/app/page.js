@@ -4,7 +4,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { supabase, handleGlobalSignOut, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 import DiagnosticModal from "@/components/DiagnosticModal";
 import ApplyModal from "@/components/ApplyModal";
 import RoleNavLink from "@/components/RoleNavLink";
@@ -594,10 +595,16 @@ export default function Home() {
 
   const t = translations[selectedLang] || translations.FR;
 
-  // Sync session and profile with Supabase
-  const [userSession, setUserSession] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
+  // Session et profil désormais chargés UNE SEULE FOIS pour toute l'app par
+  // AuthContext (Point F1) — plus de getSession()/onAuthStateChange propre à
+  // cette page. Alias conservés (userSession/userProfile) pour ne pas
+  // toucher aux ~15 conditionnels JSX existants plus bas dans ce fichier.
+  const { session: userSession, profile: userProfile, loading: authLoading } = useAuth();
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
+
+  useEffect(() => {
+    setExperiences(userProfile?.experiences || []);
+  }, [userProfile]);
 
   useEffect(() => {
     async function loadDynamicJobs() {
@@ -652,72 +659,6 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    async function loadSessionAndProfile(session) {
-      setUserSession(session);
-
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
-
-        if (profile) {
-          const [resolvedAvatarUrl, resolvedCoverUrl] = await Promise.all([
-            getSignedAvatarUrl(profile.avatar_url),
-            getSignedCoverUrl(profile.cover_url),
-          ]);
-          setUserProfile({
-            ...profile,
-            avatar_url: resolvedAvatarUrl || profile.avatar_url,
-            cover_url: resolvedCoverUrl || profile.cover_url,
-          });
-          setExperiences(profile.experiences || []);
-        } else {
-          setUserProfile({
-            full_name: session.user.email?.split("@")[0],
-            headline: "",
-            location: "",
-            profile_views: 0,
-            post_impressions: 0
-          });
-        }
-      } else {
-        setUserProfile(null);
-        setExperiences([]);
-      }
-    }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      loadSessionAndProfile(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      loadSessionAndProfile(session);
-    });
-
-    let profileChannel = null;
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.id) {
-        profileChannel = supabase
-          .channel(`profile-sync-${session.user.id}`)
-          .on(
-            "postgres_changes",
-            { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${session.user.id}` },
-            () => {
-              loadSessionAndProfile(session);
-            }
-          )
-          .subscribe();
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-      if (profileChannel) supabase.removeChannel(profileChannel);
-    };
-  }, []);
 
   const handleAddExperience = (e) => {
     e.preventDefault();
@@ -1160,9 +1101,15 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Groupe Droit : Rendu conditionnel selon la session Supabase */}
+          {/* Groupe Droit : Rendu conditionnel selon la session Supabase.
+              Gate sur authLoading pour ne jamais flasher "Connexion /
+              S'inscrire" avant que la session (déjà connue) ne s'affiche —
+              seul endroit de la page où ce basculement est directement
+              visible au premier écran. */}
           <div className="hidden md:flex items-center space-x-3">
-            {userSession ? (
+            {authLoading ? (
+              <div className="w-24 h-8" aria-hidden="true" />
+            ) : userSession ? (
               <div className="relative" ref={userMenuRef}>
                 <button
                   type="button"

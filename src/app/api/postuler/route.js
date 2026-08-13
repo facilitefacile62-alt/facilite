@@ -295,77 +295,7 @@ export async function POST(req) {
       );
     }
 
-    // Auto-création d'une conversation et d'un message 'OFFRE' dans Supabase
-    let targetRecruiterId = offerRecruiterId;
-    if (!targetRecruiterId) {
-      const { data: adminId } = await supabase.rpc("resolve_admin_id");
-      if (adminId && adminId !== user.id) {
-        targetRecruiterId = adminId;
-      }
-    }
-
-    let conversationId = null;
-    if (targetRecruiterId) {
-      conversationId = await findOrCreateConversationServer(supabase, user.id, targetRecruiterId);
-
-      const primaryAttachment = allAttachments[0] || null;
-      let chatAttachmentPath = null;
-      let attachmentType = null;
-
-      if (primaryAttachment) {
-        const safeName = sanitizeAttachmentName(primaryAttachment.filename);
-        chatAttachmentPath = `${user.id}/${Date.now()}_${safeName}`;
-        const classification = classifyCvAttachment(primaryAttachment.filename);
-        attachmentType = classification.type;
-
-        const { error: chatUploadError } = await supabase.storage
-          .from("chat-attachments")
-          .upload(chatAttachmentPath, primaryAttachment.content, {
-            contentType: classification.contentType,
-            upsert: false,
-          });
-
-        if (chatUploadError) {
-          console.error("Erreur upload CV vers chat-attachments (candidature):", chatUploadError.message);
-          chatAttachmentPath = null;
-          attachmentType = null;
-        }
-      }
-
-      let messageContent = `💼 Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company})\n📧 Destinataire : ${finalRecruiterEmail || "Recruteur"}\n📊 Score CV : ${cvMatchScore}%`;
-      if (coverLetter && coverLetter.trim()) {
-        messageContent += `\n\n💬 Message du candidat :\n${coverLetter.trim()}`;
-      }
-
-      const { error: applyMsgError } = await supabase.from("messages").insert({
-        sender_id: user.id,
-        receiver_id: targetRecruiterId,
-        conversation_id: conversationId,
-        content: messageContent,
-        type_discussion: "OFFRE",
-        job_offer_id: jobOfferId,
-        attachment_url: chatAttachmentPath,
-        attachment_type: attachmentType,
-        file_name: primaryAttachment?.filename || null,
-        file_size: primaryAttachment ? formatAttachmentSize(primaryAttachment.content.length) : null,
-        created_at: new Date().toISOString(),
-      });
-
-      if (applyMsgError) {
-        console.error("Erreur création message de candidature:", applyMsgError.message);
-      }
-
-      if (conversationId) {
-        await supabase
-          .from("conversations")
-          .update({ last_message: messageContent.slice(0, 200), updated_at: new Date().toISOString() })
-          .eq("id", conversationId);
-      }
-    }
-
-    // 5. Les fichiers et buffers sont déjà chargés dans allAttachments pour l'envoi Resend
-
-    // 6. Envoi des 2 e-mails via Resend
+    // Configuration et adresses e-mail
     const isProd = process.env.NODE_ENV === "production";
     const recruiterSender = process.env.RESEND_FROM_RECRUITER || (isProd ? "Facilite Recrutement <recrutement@ffacilite.com>" : "Facilite Recrutement <onboarding@resend.dev>");
     const candidateSender = process.env.RESEND_FROM_CANDIDATE || (isProd ? "Facilite <noreply@ffacilite.com>" : "Facilite <onboarding@resend.dev>");
@@ -376,6 +306,78 @@ export async function POST(req) {
     const testRecipient = isResendOnboarding ? (process.env.RESEND_TEST_RECIPIENT || process.env.RESEND_VERIFIED_EMAIL || null) : null;
     const finalRecruiterEmail = testRecipient || recruiterEmail;
     const finalCandidateEmail = testRecipient || email;
+
+    // Auto-création d'une conversation et d'un message 'OFFRE' dans Supabase
+    try {
+      let targetRecruiterId = offerRecruiterId;
+      if (!targetRecruiterId) {
+        const { data: adminId } = await supabase.rpc("resolve_admin_id");
+        if (adminId && adminId !== user.id) {
+          targetRecruiterId = adminId;
+        }
+      }
+
+      let conversationId = null;
+      if (targetRecruiterId) {
+        conversationId = await findOrCreateConversationServer(supabase, user.id, targetRecruiterId);
+
+        const primaryAttachment = allAttachments[0] || null;
+        let chatAttachmentPath = null;
+        let attachmentType = null;
+
+        if (primaryAttachment) {
+          const safeName = sanitizeAttachmentName(primaryAttachment.filename);
+          chatAttachmentPath = `${user.id}/${Date.now()}_${safeName}`;
+          const classification = classifyCvAttachment(primaryAttachment.filename);
+          attachmentType = classification.type;
+
+          const { error: chatUploadError } = await supabase.storage
+            .from("chat-attachments")
+            .upload(chatAttachmentPath, primaryAttachment.content, {
+              contentType: classification.contentType,
+              upsert: false,
+            });
+
+          if (chatUploadError) {
+            console.error("Erreur upload CV vers chat-attachments (candidature):", chatUploadError.message);
+            chatAttachmentPath = null;
+            attachmentType = null;
+          }
+        }
+
+        let messageContent = `💼 Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company})\n📧 Destinataire : ${finalRecruiterEmail || "Recruteur"}\n📊 Score CV : ${cvMatchScore || 0}%`;
+        if (coverLetter && coverLetter.trim()) {
+          messageContent += `\n\n💬 Message du candidat :\n${coverLetter.trim()}`;
+        }
+
+        const { error: applyMsgError } = await supabase.from("messages").insert({
+          sender_id: user.id,
+          receiver_id: targetRecruiterId,
+          conversation_id: conversationId,
+          content: messageContent,
+          type_discussion: "OFFRE",
+          job_offer_id: jobOfferId,
+          attachment_url: chatAttachmentPath,
+          attachment_type: attachmentType,
+          file_name: primaryAttachment?.filename || null,
+          file_size: primaryAttachment ? formatAttachmentSize(primaryAttachment.content.length) : null,
+          created_at: new Date().toISOString(),
+        });
+
+        if (applyMsgError) {
+          console.error("Erreur création message de candidature:", applyMsgError.message);
+        }
+
+        if (conversationId) {
+          await supabase
+            .from("conversations")
+            .update({ last_message: messageContent.slice(0, 200), updated_at: new Date().toISOString() })
+            .eq("id", conversationId);
+        }
+      }
+    } catch (msgSyncErr) {
+      console.error("Erreur non-bloquante création message / conversation:", msgSyncErr?.message);
+    }
 
     const handleResendError = (err) => {
       if (err) {
