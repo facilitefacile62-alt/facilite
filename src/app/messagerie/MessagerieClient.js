@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut, getSignedAvatarUrl } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, resolveConversationWith, touchConversation } from "@/lib/messages";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
@@ -762,12 +762,12 @@ export default function MessagerieClient() {
         supabase.from("profiles").select("avatar_url").eq("id", session.user.id).single(),
         supabase.from("user_roles").select("role").eq("user_id", session.user.id).single(),
         supabase.from("job_offers").select("id", { count: "exact", head: true }).eq("recruiter_id", session.user.id),
-      ]).then(([{ data: profile }, { data: userRoleRow }, { count: ownedOfferCount }]) => {
+      ]).then(async ([{ data: profile }, { data: userRoleRow }, { count: ownedOfferCount }]) => {
           if (!isActive) return;
           const role = userRoleRow?.role || null;
           setCurrentUserRole(role);
           setIsRecruiterAccount((ownedOfferCount || 0) > 0);
-          setUserAvatarUrl(profile?.avatar_url || null);
+          setUserAvatarUrl((await getSignedAvatarUrl(profile?.avatar_url)) || profile?.avatar_url || null);
           if (role !== "admin") {
             resolveSupportConversation(session.user.id).then((result) => {
               if (result && isActive) {

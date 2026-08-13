@@ -15,6 +15,23 @@ import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityTabContent from "@/components/SecurityTabContent";
 
+/**
+ * Convertit une data URI base64 (sortie de canvas.toDataURL) en Blob, sans
+ * passer par fetch(dataUri) — bloqué par le connect-src de la CSP du site
+ * (n'autorise que 'self'/Supabase/Sentry/Daily, pas le schéma data:).
+ */
+function dataUriToBlob(dataUri) {
+  const [header, base64] = dataUri.split(",");
+  const mimeMatch = /data:([^;]+);base64/.exec(header);
+  const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType });
+}
+
 export default function ProfilPage() {
   const pathname = usePathname();
   const [selectedLang, setSelectedLang] = useState("FR");
@@ -773,7 +790,7 @@ useEffect(() => {
       const isAvatar = cropType === "avatar";
       const bucket = isAvatar ? "avatars" : "covers";
       const storagePath = `${userSession.user.id}/${isAvatar ? "avatar" : "cover"}.jpg`;
-      const blob = await (await fetch(finalBase64)).blob();
+      const blob = dataUriToBlob(finalBase64);
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)

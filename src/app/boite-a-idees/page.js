@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut, getSignedAvatarUrl } from "@/lib/supabase";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
@@ -307,7 +307,7 @@ export default function BoiteAIdees() {
           .eq("id", session.user.id)
           .single();
         if (profile) {
-          setUserAvatarUrl(profile.avatar_url || null);
+          setUserAvatarUrl((await getSignedAvatarUrl(profile.avatar_url)) || profile.avatar_url || null);
         }
       } else {
         setUserAvatarUrl(null);
