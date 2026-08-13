@@ -2333,7 +2333,7 @@ useEffect(() => {
                     {profileLoading ? (
                       <div className="w-full h-full bg-gray-200 dark:bg-gray-800 animate-pulse" />
                     ) : (
-                      <Image
+                      <NextImage
                         src={avatarUrl}
                         alt="Logo Profil Facilite"
                         fill
