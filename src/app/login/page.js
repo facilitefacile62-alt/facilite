@@ -374,41 +374,13 @@ export default function LoginPage() {
             <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
           </div>
 
-          {/* Sélecteur d'onglets Connexion (E-mail / Téléphone) */}
-          <div className="flex bg-white/50 backdrop-blur-sm p-1 rounded-xl mb-4 border border-white/40">
-            <button
-              type="button"
-              onClick={() => setLoginMethod("email")}
-              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 ${
-                loginMethod === "email"
-                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
-                  : "text-gray-500 hover:text-gray-900 hover:bg-white/40"
-              }`}
-            >
-              📧 E-mail
-            </button>
-            <button
-              type="button"
-              onClick={() => setLoginMethod("phone")}
-              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 ${
-                loginMethod === "phone"
-                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
-                  : "text-gray-500 hover:text-gray-900 hover:bg-white/40"
-              }`}
-            >
-              📱 Téléphone
-            </button>
-          </div>
-
           {/* Titre & Sous-titre */}
-          <div className="text-center mb-4">
+          <div className="text-center mb-5">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
               Login
             </h1>
             <p className="text-sm font-medium text-gray-500">
-              {loginMethod === "email"
-                ? "Saisissez vos identifiants pour vous connecter."
-                : "Choisissez votre pays et saisissez votre numéro."}
+              Saisissez vos identifiants pour vous connecter.
             </p>
           </div>
 
@@ -428,7 +400,7 @@ export default function LoginPage() {
                 Accéder à mon espace
               </Link>
             </div>
-          ) : loginMethod === "email" ? (
+          ) : (
             <>
             {showSuspendedNotice && (
               <p className="mb-3 text-xs font-semibold text-red-700 bg-red-50 p-3 rounded-xl border border-red-200">
@@ -582,10 +554,6 @@ export default function LoginPage() {
               </div>
             </form>
             </>
-          ) : (
-            <div className="mt-4">
-              <PhoneAuthForm onSuccessRedirect="/profil" />
-            </div>
           )}
         </div>
         )}

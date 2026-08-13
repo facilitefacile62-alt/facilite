@@ -89,41 +89,13 @@ export default function ForgotPasswordPage() {
             <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
           </div>
 
-          {/* Sélecteur d'onglets (E-mail / Téléphone) */}
-          <div className="flex bg-white/50 backdrop-blur-sm p-1 rounded-xl mb-4 border border-white/40">
-            <button
-              type="button"
-              onClick={() => setMethod("email")}
-              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 cursor-pointer ${
-                method === "email"
-                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
-                  : "text-gray-500 hover:text-gray-900 hover:bg-white/40"
-              }`}
-            >
-              📧 E-mail
-            </button>
-            <button
-              type="button"
-              onClick={() => setMethod("phone")}
-              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 cursor-pointer ${
-                method === "phone"
-                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
-                  : "text-gray-500 hover:text-gray-900 hover:bg-white/40"
-              }`}
-            >
-              📱 Téléphone
-            </button>
-          </div>
-
           {/* Titre & Sous-titre */}
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
               Reset Password
             </h1>
             <p className="text-sm font-medium text-gray-500">
-              {method === "email" 
-                ? "Entrez votre email pour recevoir un lien de réinitialisation."
-                : "Connectez-vous via SMS pour pouvoir changer votre mot de passe depuis votre profil."}
+              Entrez votre email pour recevoir un lien de réinitialisation.
             </p>
           </div>
 
@@ -201,20 +173,6 @@ export default function ForgotPasswordPage() {
                 </Link>
               </div>
             </form>
-          ) : (
-             <div className="mt-4">
-               <PhoneAuthForm onSuccessRedirect="/profil?tab=securite" />
-               {/* Redirection Log in */}
-              <div className="text-center pt-4 mt-4 border-t border-gray-100">
-                <Link
-                  href="/login"
-                  className="text-xs font-extrabold text-gray-700 hover:text-gray-900 hover:underline cursor-pointer flex items-center justify-center space-x-1.5"
-                >
-                  <i className="fa-solid fa-arrow-left text-[11px]"></i>
-                  <span>Back to Login</span>
-                </Link>
-              </div>
-             </div>
           )}
         </div>
       </main>

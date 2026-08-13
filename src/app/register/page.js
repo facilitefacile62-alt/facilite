@@ -150,82 +150,17 @@ export default function RegisterPage() {
             <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
           </div>
 
-          {/* Sélecteur d'onglets Inscription (E-mail / Téléphone) */}
-          <div className="flex bg-gray-100 p-1 rounded-xl mb-5">
-            <button
-              type="button"
-              onClick={() => setRegisterMethod("email")}
-              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 cursor-pointer ${
-                registerMethod === "email"
-                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
-                  : "text-gray-500 hover:text-gray-900 hover:bg-white/60"
-              }`}
-            >
-              📧 E-mail
-            </button>
-            <button
-              type="button"
-              onClick={() => setRegisterMethod("phone")}
-              className={`flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-200 cursor-pointer ${
-                registerMethod === "phone"
-                  ? "bg-[#10E688] text-gray-900 shadow-md scale-[1.02]"
-                  : "text-gray-500 hover:text-gray-900 hover:bg-white/60"
-              }`}
-            >
-              📱 Téléphone
-            </button>
-          </div>
-
           {/* Titre & Sous-titre */}
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
               Sign Up
             </h1>
             <p className="text-sm font-medium text-gray-500">
-              {registerMethod === "email"
-                ? "Create your account to get started."
-                : "Choisissez votre pays et saisissez votre numéro."}
+              Create your account to get started.
             </p>
           </div>
 
-          {registerMethod === "phone" ? (
-            <div className="space-y-4">
-
-              {/* Champ Nom Complet */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  placeholder="Enter your full name"
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
-                />
-              </div>
-
-              {/* shouldCreateUser: true dans PhoneAuthForm crée le compte au
-                  premier OTP vérifié ; signupMetadata attache le nom à ce
-                  moment précis (ignoré si le numéro correspond à un compte
-                  déjà existant). role retiré : handle_new_user() attribue
-                  'user' sans exception depuis le chantier RBAC. */}
-              <PhoneAuthForm
-                signupMetadata={{ full_name: fullName.trim() }}
-                onSuccessRedirect="/profil"
-              />
-
-              <div className="text-center pt-2">
-                <p className="text-xs text-gray-500 font-medium">
-                  Already have an account?{" "}
-                  <Link href="/login" className="font-extrabold text-gray-900 hover:underline cursor-pointer">
-                    Log In
-                  </Link>
-                </p>
-              </div>
-            </div>
-          ) : isSuccess ? (
+          {isSuccess ? (
             <div className="text-center py-6 animate-fade-in">
               <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
                 ✓
