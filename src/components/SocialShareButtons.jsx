@@ -3,13 +3,23 @@
 
 import { useState, useRef, useEffect } from "react";
 
+const REACTIONS = [
+  { id: "like", emoji: "👍", label: "J'aime", color: "text-blue-600", bg: "bg-blue-50" },
+  { id: "love", emoji: "❤️", label: "J'adore", color: "text-rose-600", bg: "bg-rose-50" },
+  { id: "care", emoji: "🥰", label: "Solidaire", color: "text-amber-500", bg: "bg-amber-50" },
+  { id: "clap", emoji: "👏", label: "Bravo", color: "text-emerald-600", bg: "bg-emerald-50" },
+  { id: "insightful", emoji: "💡", label: "Instructif", color: "text-amber-600", bg: "bg-amber-50" },
+  { id: "boost", emoji: "🚀", label: "Boost", color: "text-purple-600", bg: "bg-purple-50" },
+];
+
 /**
- * Barre d'Engagement & Partage Réseau Social Épurée (Gain d'espace maximum)
- * 4 Actions horizontales compactes :
- * 1. 👍 J'aime
- * 2. 💰 Non renseigné (ou salaire)
- * 3. ↪️ Partager (Bouton avec menu déroulant de tous les réseaux sociaux)
- * 4. ✈️ Envoyer (Postuler directement)
+ * Barre d'Engagement & Partage Réseau Social avec Barre de Réactions (Style Facebook/LinkedIn)
+ * - Survol / Clic sur "J'aime" : Barre flottante de réactions animées (👍 ❤️ 🥰 👏 💡 🚀)
+ * - 4 Actions horizontales compactes :
+ *   1. 👍 J'aime (avec réactions dynamiques)
+ *   2. 💰 Non renseigné (ou salaire)
+ *   3. ↪️ Partager (avec menu déroulant de tous les réseaux sociaux)
+ *   4. ✈️ Envoyer (Postuler directement)
  */
 export default function SocialShareButtons({
   offer,
@@ -21,9 +31,11 @@ export default function SocialShareButtons({
   onToast,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [reactionsOpen, setReactionsOpen] = useState(false);
+  const [activeReaction, setActiveReaction] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [hasLiked, setHasLiked] = useState(false);
   const dropdownRef = useRef(null);
+  const reactionsTimeoutRef = useRef(null);
 
   const offerId = offer?.id || "";
   const title = offer?.title || offer?.titleFR || "Offre d'emploi";
@@ -42,20 +54,21 @@ export default function SocialShareButtons({
   const shareUrl = offerId ? `${getBaseUrl()}/offres/${offerId}` : getBaseUrl();
   const shareText = `🚀 Recrutement : ${title} chez ${company} (${contract} - ${location}) sur Facilite.\nDécouvrez l'offre et postulez ici :`;
 
-  // Fermer le menu lors d'un clic extérieur
+  // Fermer les menus lors d'un clic extérieur
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
+        setReactionsOpen(false);
       }
     }
-    if (dropdownOpen) {
+    if (dropdownOpen || reactionsOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [dropdownOpen]);
+  }, [dropdownOpen, reactionsOpen]);
 
   const handleCopyLink = (platformName = "") => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -90,9 +103,37 @@ export default function SocialShareButtons({
     }
   };
 
-  const toggleLike = (e) => {
+  const handleReactionClick = (reaction, e) => {
+    if (e) e.stopPropagation();
+    if (activeReaction?.id === reaction.id) {
+      setActiveReaction(null);
+    } else {
+      setActiveReaction(reaction);
+    }
+    setReactionsOpen(false);
+  };
+
+  const handleLikeButtonClick = (e) => {
     e.stopPropagation();
-    setHasLiked((prev) => !prev);
+    if (activeReaction) {
+      setActiveReaction(null);
+    } else {
+      setActiveReaction(REACTIONS[0]); // Défaut : 👍 J'aime
+    }
+  };
+
+  const handleMouseEnterLike = () => {
+    if (reactionsTimeoutRef.current) clearTimeout(reactionsTimeoutRef.current);
+    reactionsTimeoutRef.current = setTimeout(() => {
+      setReactionsOpen(true);
+    }, 250);
+  };
+
+  const handleMouseLeaveLike = () => {
+    if (reactionsTimeoutRef.current) clearTimeout(reactionsTimeoutRef.current);
+    reactionsTimeoutRef.current = setTimeout(() => {
+      setReactionsOpen(false);
+    }, 350);
   };
 
   const shareLinks = {
@@ -109,19 +150,52 @@ export default function SocialShareButtons({
       <div className={`relative w-full pt-2 border-t border-gray-100 ${className}`} ref={dropdownRef}>
         {/* Rangée des 4 Actions Horizontales Épurées */}
         <div className="flex items-center justify-between gap-1 sm:gap-2">
-          {/* Action 1 : J'aime */}
-          <button
-            type="button"
-            onClick={toggleLike}
-            className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-              hasLiked
-                ? "text-blue-600 bg-blue-50/80"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-            }`}
+          {/* Action 1 : J'aime avec Barre de Réactions Flottante (Style Facebook/LinkedIn) */}
+          <div
+            className="relative flex-1"
+            onMouseEnter={handleMouseEnterLike}
+            onMouseLeave={handleMouseLeaveLike}
           >
-            <i className={`fa-regular fa-thumbs-up text-xs sm:text-sm ${hasLiked ? "text-blue-600 font-bold" : ""}`}></i>
-            <span className="hidden xs:inline">{hasLiked ? "Aimé" : "J'aime"}</span>
-          </button>
+            {/* Barre flottante des réactions emojis au survol (👍 ❤️ 🥰 👏 💡 🚀) */}
+            {reactionsOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-full mb-2 left-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full shadow-2xl px-2.5 py-1.5 flex items-center gap-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+              >
+                {REACTIONS.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={(e) => handleReactionClick(r, e)}
+                    title={r.label}
+                    className="text-xl sm:text-2xl transform hover:scale-135 hover:-translate-y-1 transition-all duration-150 cursor-pointer active:scale-110 select-none"
+                  >
+                    {r.emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Bouton J'aime Principal */}
+            <button
+              type="button"
+              onClick={handleLikeButtonClick}
+              className={`w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                activeReaction
+                  ? `${activeReaction.color} ${activeReaction.bg}`
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              }`}
+            >
+              {activeReaction ? (
+                <span className="text-sm select-none">{activeReaction.emoji}</span>
+              ) : (
+                <i className="fa-regular fa-thumbs-up text-xs sm:text-sm"></i>
+              )}
+              <span className="hidden xs:inline">
+                {activeReaction ? activeReaction.label : "J'aime"}
+              </span>
+            </button>
+          </div>
 
           {/* Action 2 : Salaire / Statut (Format badge "Non renseigné" ou montant) */}
           <div
