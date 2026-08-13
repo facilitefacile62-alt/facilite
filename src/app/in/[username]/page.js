@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 
 export default function PublicProfilePage() {
   const params = useParams();
@@ -63,7 +63,18 @@ export default function PublicProfilePage() {
         }
 
         if (data) {
-          setProfile(data);
+          // Résolution AVANT setLoading(false) : la garde "loading" plus bas
+          // empêche déjà tout flash, autant en profiter pour ne jamais
+          // afficher un chemin Storage brut ni relancer un second rendu.
+          const [resolvedAvatarUrl, resolvedCoverUrl] = await Promise.all([
+            getSignedAvatarUrl(data.avatar_url),
+            getSignedCoverUrl(data.cover_url),
+          ]);
+          setProfile({
+            ...data,
+            avatar_url: resolvedAvatarUrl || data.avatar_url,
+            cover_url: resolvedCoverUrl || data.cover_url,
+          });
         }
       } catch (err) {
         console.error("Erreur chargement profil public:", err);

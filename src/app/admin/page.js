@@ -11,6 +11,7 @@ import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityAlertsWidget";
 import { getFeatureFlagsTree, saveFeatureFlagsTree, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import AvatarImage from "@/components/AvatarImage";
 
 // "Utilisateurs", "Tarification" et "Messagerie Support" ont migré dans
 // NAV_SECTIONS (sidebar catégorisée) — les garder ici aurait recréé le
@@ -1493,17 +1494,16 @@ export default function AdminDashboardPage() {
                         <tr key={user.id} className="group hover:bg-orange-50/30 transition">
                           {/* Colonne Utilisateur FIXE à gauche */}
                           <td className="py-3.5 px-4 sticky left-0 z-10 bg-white group-hover:bg-[#FFFBF7] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)] flex items-center space-x-3">
-                            {user.avatar_url ? (
-                              <img
-                                src={user.avatar_url}
-                                alt={user.full_name || "Avatar"}
-                                className="w-8 h-8 rounded-full object-cover border border-gray-200 shadow-xs shrink-0"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-gray-900 text-white font-extrabold flex items-center justify-center text-xs shadow-inner shrink-0">
-                                {(user.full_name || user.email || "U").charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                            <AvatarImage
+                              path={user.avatar_url}
+                              alt={user.full_name || "Avatar"}
+                              className="w-8 h-8 rounded-full object-cover border border-gray-200 shadow-xs shrink-0"
+                              fallback={
+                                <div className="w-8 h-8 rounded-full bg-gray-900 text-white font-extrabold flex items-center justify-center text-xs shadow-inner shrink-0">
+                                  {(user.full_name || user.email || "U").charAt(0).toUpperCase()}
+                                </div>
+                              }
+                            />
                             <div className="min-w-0">
                               <span className="font-bold text-gray-900 block truncate max-w-[130px]">{user.full_name || "Sans nom"}</span>
                               <span className="text-[10px] text-gray-400 font-normal block font-mono">ID: {user.id.slice(0, 8)}...</span>

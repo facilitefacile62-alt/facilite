@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
+import AvatarImage from "@/components/AvatarImage";
 import RoleBadge from "@/components/RoleBadge";
 
 // Trie les conversations par activité la plus récente — utilisé après chaque
@@ -748,17 +749,16 @@ export default function AdminMessagesPage() {
                   >
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
-                      {profile.avatar_url ? (
-                        <img
-                          src={profile.avatar_url}
-                          alt={profile.full_name}
-                          className="w-11 h-11 rounded-full object-cover border border-gray-200 shadow-2xs group-hover:scale-105 transition"
-                        />
-                      ) : (
-                        <div className="w-11 h-11 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-extrabold text-sm shadow-2xs group-hover:scale-105 transition">
-                          <i className="fa-solid fa-user text-base"></i>
-                        </div>
-                      )}
+                      <AvatarImage
+                        path={profile.avatar_url}
+                        alt={profile.full_name}
+                        className="w-11 h-11 rounded-full object-cover border border-gray-200 shadow-2xs group-hover:scale-105 transition"
+                        fallback={
+                          <div className="w-11 h-11 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-extrabold text-sm shadow-2xs group-hover:scale-105 transition">
+                            <i className="fa-solid fa-user text-base"></i>
+                          </div>
+                        }
+                      />
                     </div>
 
                     {/* Informations du membre */}
@@ -922,13 +922,16 @@ export default function AdminMessagesPage() {
                     >
                       {/* Avatar */}
                       <div className="relative flex-shrink-0">
-                        {profile.avatar_url ? (
-                          <img src={profile.avatar_url} alt={profile.full_name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center font-extrabold text-sm shadow-xs">
-                            {(profile.full_name || profile.email || "U")[0].toUpperCase()}
-                          </div>
-                        )}
+                        <AvatarImage
+                          path={profile.avatar_url}
+                          alt={profile.full_name}
+                          className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                          fallback={
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center font-extrabold text-sm shadow-xs">
+                              {(profile.full_name || profile.email || "U")[0].toUpperCase()}
+                            </div>
+                          }
+                        />
                       </div>
 
                       {/* Info Profil & Dernier message */}
@@ -957,13 +960,16 @@ export default function AdminMessagesPage() {
                 {/* Entête du Tchat Actif */}
                 <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white shadow-2xs">
                   <div className="flex items-center space-x-3">
-                    {activeProfile.avatar_url ? (
-                      <img src={activeProfile.avatar_url} alt={activeProfile.full_name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center font-extrabold text-sm">
-                        {(activeProfile.full_name || activeProfile.email || "U")[0].toUpperCase()}
-                      </div>
-                    )}
+                    <AvatarImage
+                      path={activeProfile.avatar_url}
+                      alt={activeProfile.full_name}
+                      className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                      fallback={
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center font-extrabold text-sm">
+                          {(activeProfile.full_name || activeProfile.email || "U")[0].toUpperCase()}
+                        </div>
+                      }
+                    />
                     <div>
                       <h2 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
                         <span>{activeProfile.full_name || activeProfile.email}</span>
