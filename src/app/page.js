@@ -12,6 +12,7 @@ import UnreadBadge from "@/components/UnreadBadge";
 import TemplatePreviewModal from "@/components/TemplatePreviewModal";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { safeJsonLdString } from "@/lib/jsonLd";
+import SocialShareButtons from "@/components/SocialShareButtons";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
@@ -1852,8 +1853,22 @@ export default function Home() {
                       </div>
                     )}
 
+                    {/* Barre de Partage Réseaux Sociaux & Flèche de Partage */}
+                    <div className="mt-3 pt-2.5 pb-2 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap bg-gray-50/80 px-3 py-2 rounded-xl">
+                      <SocialShareButtons
+                        offer={{
+                          id: job.id,
+                          title: selectedLang === "FR" ? job.titleFR : job.titleEN,
+                          company: job.company,
+                          location: job.location,
+                          contract: job.contract,
+                        }}
+                        variant="compact"
+                      />
+                    </div>
+
                     {/* Footer Offre */}
-                    <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-2">
+                    <div className="flex items-center justify-between pt-3 mt-1">
                       <span className="text-xs font-black text-gray-800 bg-gray-50 border border-gray-150 px-3 py-1.5 rounded-lg">
                         💰 {job.salary}
                       </span>
