@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, triggerToast }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [destinationEmail, setDestinationEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [coverLetter, setCoverLetter] = useState("");
   const [resumes, setResumes] = useState([]);
@@ -68,6 +69,8 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
     setNewFiles([]);
     setSelectedExistingCvIds([]);
     setSubject(job ? (selectedLang === "FR" ? job.titleFR : job.titleEN) : "");
+    const defaultRecruiterEmail = job?.recruiterEmail || job?.contact_email || job?.email || "";
+    setDestinationEmail(defaultRecruiterEmail || (job?.company ? `${job.company.toLowerCase().replace(/[^a-z0-9]/g, "")}@gmail.com` : "recrutement@ffacilite.com"));
     setCoverLetter("");
     setErrorMsg("");
     setSuccess(false);
@@ -136,7 +139,9 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       formData.append("fullName", fullName.trim());
       formData.append("email", email.trim());
       formData.append("coverLetter", coverLetter.trim());
-      if (job.recruiterEmail) {
+      if (destinationEmail && destinationEmail.trim()) {
+        formData.append("recruiterEmail", destinationEmail.trim());
+      } else if (job.recruiterEmail) {
         formData.append("recruiterEmail", job.recruiterEmail);
       }
       if (job.recruiterId) {
@@ -269,7 +274,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">Adresse e-mail *</label>
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">Votre adresse e-mail *</label>
                 <input
                   type="email"
                   required
@@ -280,6 +285,31 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
                   disabled={loading}
                 />
               </div>
+            </div>
+
+            {/* Case E-mail de réception de l'offre */}
+            <div className="space-y-1.5 bg-emerald-50/50 border border-emerald-200/90 p-3 rounded-2xl">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <i className="fa-solid fa-envelope-open-text text-emerald-600"></i>
+                  <span>E-mail de l'offre (Destinataire) *</span>
+                </label>
+                <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  Réception Candidature
+                </span>
+              </div>
+              <input
+                type="email"
+                required
+                placeholder="Ex. recrutement@entreprise.com"
+                value={destinationEmail}
+                onChange={(e) => setDestinationEmail(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-2xs"
+                disabled={loading}
+              />
+              <p className="text-[10px] text-gray-500 font-medium">
+                Votre candidature et vos pièces jointes seront transmises directement à cette adresse.
+              </p>
             </div>
 
             {/* Objet de la candidature / Poste souhaité */}
