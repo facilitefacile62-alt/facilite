@@ -318,27 +318,27 @@ export default function ImporterCvPage() {
         return "";
       };
 
-      const rawExperiences = getValue(fields, ["experiences", "experience"]) || [];
+      const rawExperiences = getValue(fields, ["experiences", "experience", "experiences_professionnelles"]) || [];
       const rawFormations = getValue(fields, ["formations", "formation", "educations", "education"]) || [];
-      const rawSkills = getValue(fields, ["skills", "competences", "compétences"]) || [];
+      const rawSkills = getValue(fields, ["skills", "competences", "compétences", "competences_cles_hard_skills"]) || [];
 
       setParsedData({
-        firstName: getValue(fields, ["firstName", "prenom", "prénom"]) || "",
-        lastName: getValue(fields, ["lastName", "nom"]) || "",
-        email: getValue(fields, ["email"]) || "",
-        phone: getValue(fields, ["phone", "telephone", "téléphone"]) || "",
-        title: getValue(fields, ["title", "jobTitle", "titre", "poste"]) || "",
-        summary: getValue(fields, ["summary", "resume", "résumé"]) || "",
+        firstName: getValue(fields, ["firstName", "prenom", "prénom"]) || (fields.etat_civil?.nom ? fields.etat_civil.nom.split(" ")[0] : ""),
+        lastName: getValue(fields, ["lastName", "nom"]) || (fields.etat_civil?.nom ? fields.etat_civil.nom.split(" ").slice(1).join(" ") : ""),
+        email: getValue(fields, ["email"]) || (fields.contacts?.email || ""),
+        phone: getValue(fields, ["phone", "telephone", "téléphone"]) || (fields.contacts?.telephone || ""),
+        title: getValue(fields, ["title", "jobTitle", "titre", "poste"]) || (fields.etat_civil?.titre_professionnel || ""),
+        summary: getValue(fields, ["summary", "resume", "résumé"]) || (fields.profil_professionnel || ""),
         experiences: (Array.isArray(rawExperiences) ? rawExperiences : []).map((exp, idx) => ({
           id: idx + 1,
           title: getValue(exp, ["title", "role", "poste"]) || "",
           employer: getValue(exp, ["employer", "company", "entreprise"]) || "",
-          city: getValue(exp, ["city", "ville"]) || "",
-          periode: String(getValue(exp, ["periode", "période", "period"]) || ""),
+          city: getValue(exp, ["city", "ville", "localisation"]) || "",
+          periode: String(getValue(exp, ["periode", "période", "period", "dates"]) || ""),
           startDate: String(getValue(exp, ["startDate"]) || ""),
           endDate: String(getValue(exp, ["endDate"]) || ""),
           current: !!getValue(exp, ["current"]),
-          description: getValue(exp, ["description"]) || "",
+          description: getValue(exp, ["description", "missions"]) || "",
         })),
         formations: (Array.isArray(rawFormations) ? rawFormations : []).map((form, idx) => ({
           id: idx + 1,

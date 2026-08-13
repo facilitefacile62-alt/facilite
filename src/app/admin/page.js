@@ -1383,9 +1383,9 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
+              <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+                <table className="w-full text-left border-collapse relative whitespace-nowrap">
+                  <thead className="sticky top-0 z-10">
                     <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
                       <th className="py-4 px-6">Utilisateur</th>
                       <th className="py-4 px-6">Email</th>

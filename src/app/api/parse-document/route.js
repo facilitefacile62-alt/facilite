@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { extractTextFromFile, mapTextToProfileFields } from "@/lib/documentParser";
+import { extractTextFromFile, mapTextToProfileFields, extractCvWithGeminiVision } from "@/lib/documentParser";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
 import { ParseDocumentJsonSchema, validateUploadedFile } from "@/lib/validation";
@@ -39,48 +39,55 @@ function extractAndParseJSON(rawText) {
   return JSON.parse(cleaned);
 }
 
-const SYSTEM_PROMPT = `Tu es un moteur d'extraction de CV ultra-précis. Analyse le document et extrait OBLIGATOIREMENT les données au format JSON strict suivant :
+const SYSTEM_PROMPT = `Tu es un expert en analyse de données RH et en Traitement Automatique du Langage. Ta mission est d'extraire de manière exhaustive et structurée toutes les informations textuelles du CV.
+Utilise exactement la structure JSON suivante :
 {
-  "prenom": "Prénom du candidat",
-  "nom": "Nom de famille",
-  "email": "Adresse e-mail extraite obligatoirement du document (motif avec @), sinon null",
-  "telephone": "Numéro de téléphone extrait obligatoirement du document, sinon null",
-  "ville": "Ville ou quartier",
-  "pays": "Pays si indiqué, sinon null",
-  "sexe": "Ne devine JAMAIS. Renvoie null sauf si le terme Homme ou Femme est explicitement écrit dans le texte",
-  "titre": "Intitulé du poste",
-  "resume": "Résumé professionnel",
-  "competences": ["Compétence 1", "Compétence 2", "Informatique (ex: Réseaux sociaux, Web, Pack Office)"],
-  "centres_interet": ["Sport", "Lecture"],
-  "experiences": [
+  "etat_civil": {
+    "nom": "Prénom et Nom complet",
+    "titre_professionnel": "Intitulé du profil"
+  },
+  "contacts": {
+    "telephone": "string",
+    "email": "string",
+    "localisation": "string",
+    "permis": "string"
+  },
+  "profil_professionnel": "string (Le texte complet du profil / résumé)",
+  "qualites_personnelles": [
+    "string"
+  ],
+  "competences_informatiques": {
+    "detail": [
+      "string"
+    ]
+  },
+  "langues": {
+    "detail": [
+      "string"
+    ]
+  },
+  "centres_d_interet": [
+    "string"
+  ],
+  "experiences_professionnelles": [
     {
-      "poste": "Intitulé du poste",
-      "entreprise": "Nom de l'entreprise",
-      "periode": "Période d'activité obligatoire (ex: 'Février 2024 - Présent', '2021 - 2023'). Ne pas laisser vide si une date ou une période est présente.",
-      "description": "Missions"
+      "dates": "string (ex: Octobre 2025 - Juin 2026)",
+      "duree_mentionnee": "string (si applicable, sinon null)",
+      "poste": "string",
+      "entreprise": "string",
+      "localisation": "string (si spécifié, sinon null)",
+      "missions": [
+        "string"
+      ]
     }
   ],
-  "formations": [
-    {
-      "diplome": "Diplôme obtenu",
-      "ecole": "Établissement",
-      "annee": "Année ou période d'études obligatoire (ex: '2020-2022', '2018-2019', '2020'). Ne pas laisser vide si présente."
-    }
-  ],
-  "langues": [
-    {
-      "nom": "Nom de la langue (ex: Français)",
-      "niveau": "Niveau de maîtrise (ex: Excellent, Lu/parlé/écrit, Intermédiaire)"
-    }
+  "competences_cles_hard_skills": [
+    "string"
   ]
 }
-
 Règles impératives d'extraction :
-- Extraction obligatoire de 'telephone' et 'email' à partir de n'importe quel endroit du document.
-- Extraction obligatoire de 'centres_interet' sous forme d'un tableau de chaînes de caractères (ex: ["Sport", "Lecture"]).
-- Pour chaque expérience professionnelle, la 'periode' est obligatoire (ex: 'Février 2024 - Présent').
-- Pour chaque formation, l''annee' ou la 'periode' est obligatoire (ex: '2020-2022').
-- Intègre obligatoirement la rubrique informatique (ex: 'Réseaux sociaux', 'Web', 'Pack Office') comme entrées distinctes dans le tableau 'competences'.`;
+- Si une information est absente, utilise la valeur null ou un tableau vide [].
+- Extrais le texte verbatim.`;
 
 async function callGemini(documentText, systemPrompt) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -209,6 +216,17 @@ export async function POST(req) {
         const check = validateUploadedFile(buffer, mimeType, file.size);
         if (!check.valid) {
           return NextResponse.json({ error: check.error }, { status: check.status });
+        }
+
+        if (mimeType.startsWith("image/") || mimeType === "application/pdf") {
+          try {
+            const visionResult = await extractCvWithGeminiVision(buffer, mimeType, SYSTEM_PROMPT);
+            if (visionResult && !visionResult.error) {
+              return NextResponse.json({ success: true, data: visionResult, fields: visionResult, rawTextLength: 0 });
+            }
+          } catch (err) {
+            console.error("[Vision API Fallback]", err);
+          }
         }
 
         documentText = await extractTextFromFile(buffer, filename, mimeType);

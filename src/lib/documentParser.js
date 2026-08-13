@@ -158,10 +158,96 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
   };
 }
 
+export async function extractCvWithGeminiVision(buffer, mimeType = "image/jpeg", systemPrompt) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+
+  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") {
+    return { error: "Clé API Gemini introuvable." };
+  }
+
+  const cleanBase64 = buffer.toString("base64").replace(/^data:[^;]+;base64,/, "");
+
+  for (const model of CANDIDATE_MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: systemPrompt },
+                  { inline_data: { mime_type: mimeType, data: cleanBase64 } },
+                ],
+              },
+            ],
+            generationConfig: { temperature: 0.1 },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const resJson = await response.json();
+      const responseText = resJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      
+      let cleanedJson = responseText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      
+      const jsonMatch = cleanedJson.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanedJson = jsonMatch[0];
+      }
+      
+      return JSON.parse(cleanedJson);
+    } catch (err) {
+      console.warn(`[Gemini CV Vision Fallback] Model ${model} failed`, err.message);
+    }
+  }
+
+  return { error: "Impossible d'analyser l'image du CV pour le moment." };
+}
+
+export async function extractTextWithGemini(buffer, mimeType = "image/jpeg") {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") return "";
+  const cleanBase64 = buffer.toString("base64").replace(/^data:[^;]+;base64,/, "");
+  for (const model of CANDIDATE_MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              role: "user",
+              parts: [
+                { text: "Extrais l'intégralité du texte présent sur cette image. Conserve l'ordre logique de lecture. Ne renvoie que le texte brut, sans commentaires ni balises markdown." },
+                { inline_data: { mime_type: mimeType, data: cleanBase64 } },
+              ],
+            }],
+            generationConfig: { temperature: 0.1 },
+          }),
+        }
+      );
+      if (response.ok) {
+        const resJson = await response.json();
+        return resJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      }
+    } catch (err) {}
+  }
+  return "";
+}
+
 async function runImageOcr(buffer) {
   try {
-    const res = await extractJobAnnouncementWithGemini(buffer, "image/jpeg");
-    return res?.raw_text || res?.email || "";
+    const text = await extractTextWithGemini(buffer, "image/jpeg");
+    return text || "";
   } catch (err) {
     console.error("Gemini Flash OCR Error:", err.message);
     return "";
