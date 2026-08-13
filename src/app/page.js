@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 import DiagnosticModal from "@/components/DiagnosticModal";
 import ApplyModal from "@/components/ApplyModal";
 import RoleNavLink from "@/components/RoleNavLink";
@@ -647,7 +647,15 @@ export default function Home() {
           .single();
 
         if (profile) {
-          setUserProfile(profile);
+          const [resolvedAvatarUrl, resolvedCoverUrl] = await Promise.all([
+            getSignedAvatarUrl(profile.avatar_url),
+            getSignedCoverUrl(profile.cover_url),
+          ]);
+          setUserProfile({
+            ...profile,
+            avatar_url: resolvedAvatarUrl || profile.avatar_url,
+            cover_url: resolvedCoverUrl || profile.cover_url,
+          });
           setExperiences(profile.experiences || []);
         } else {
           setUserProfile({

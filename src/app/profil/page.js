@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut, getSignedCvUrl, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 import AIAssistantModal from "@/components/AIAssistantModal";
 import RoleBadge from "@/components/RoleBadge";
 import RoleNavLink from "@/components/RoleNavLink";
@@ -142,6 +142,11 @@ useEffect(() => {
   const [company, setCompany] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
   const [coverUrl, setCoverUrl] = useState("/stellar-cover.png");
+  // Chemin BRUT (celui stocké dans profiles), distinct de avatarUrl/coverUrl
+  // qui contiennent la valeur AFFICHABLE (URL signée) une fois résolue —
+  // nécessaire pour régénérer une URL signée fraîche si elle expire (onError).
+  const avatarPathRef = useRef("/logo.jpeg");
+  const coverPathRef = useRef("/stellar-cover.png");
   // Tant que le profil n'a pas fini de charger, on affiche un skeleton à la
   // place de la photo/couverture plutôt que le placeholder par défaut — sans
   // ce garde, la vraie photo "remplaçait" visuellement le placeholder après
@@ -479,8 +484,18 @@ useEffect(() => {
         setWebsiteUrl(profile.website_url || (typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : ""));
         setGender(profile.gender || (typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : ""));
         setCompany(profile.company || (typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : ""));
-        setAvatarUrl(profile.avatar_url || "/logo.jpeg");
-        setCoverUrl(profile.cover_url || "/stellar-cover.png");
+        avatarPathRef.current = profile.avatar_url || "/logo.jpeg";
+        coverPathRef.current = profile.cover_url || "/stellar-cover.png";
+        // getSignedAvatarUrl/getSignedCoverUrl renvoient la valeur telle
+        // quelle sans appel réseau pour un asset local ou un data:image —
+        // ne coûte donc rien pour l'immense majorité des comptes qui n'ont
+        // pas encore de photo migrée vers Storage.
+        const [resolvedAvatarUrl, resolvedCoverUrl] = await Promise.all([
+          getSignedAvatarUrl(avatarPathRef.current),
+          getSignedCoverUrl(coverPathRef.current),
+        ]);
+        setAvatarUrl(resolvedAvatarUrl || avatarPathRef.current);
+        setCoverUrl(resolvedCoverUrl || coverPathRef.current);
         setExperiences(profile.experiences || []);
         setEducations(profile.educations || []);
         setUserLanguages(profile.languages || []);
@@ -504,8 +519,10 @@ useEffect(() => {
         // En cas d'erreur 500 ou d'échec de chargement, bascule sur des valeurs par défaut à partir de la session
         setProfileName(session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "");
         setContactEmail(session.user.email || "");
-        setAvatarUrl(session.user.user_metadata?.avatar_url || "/logo.jpeg");
-        setCoverUrl("/stellar-cover.png");
+        avatarPathRef.current = session.user.user_metadata?.avatar_url || "/logo.jpeg";
+        coverPathRef.current = "/stellar-cover.png";
+        setAvatarUrl(avatarPathRef.current);
+        setCoverUrl(coverPathRef.current);
         setEducationLevel("Aucun");
         setProfileSubtitle("");
         setProfileLocation("");
@@ -690,16 +707,37 @@ useEffect(() => {
     e.target.value = "";
   };
 
+  // Régénère une URL signée fraîche si l'affichage échoue (URL expirée après
+  // 1h, ou révoquée) — se déclenche sur l'événement onError de l'<img>,
+  // jamais de façon proactive (pas de minuteur : la plupart des visites de
+  // /profil durent bien moins d'une heure).
+  const handleAvatarImgError = async () => {
+    const fresh = await getSignedAvatarUrl(avatarPathRef.current);
+    if (fresh && fresh !== avatarUrl) setAvatarUrl(fresh);
+  };
+  const handleCoverImgError = async () => {
+    const fresh = await getSignedCoverUrl(coverPathRef.current);
+    if (fresh && fresh !== coverUrl) setCoverUrl(fresh);
+  };
+
   // Traitement du Canvas et Enregistrement final sur Supabase
   const handleSaveCroppedImage = async () => {
     if (!rawImageSrc || !userSession?.user) return;
 
     triggerToast("Enregistrement de l'image...", "fa-spinner fa-spin");
 
-    // Génération du rendu final avec Canvas
+    // Génération du rendu final avec Canvas. crossOrigin est nécessaire pour
+    // le flux "Repositionner" (rawImageSrc = l'URL signée actuelle, une
+    // origine distincte) : sans lui, canvas.toDataURL() plus bas échoue
+    // (canvas "tainted") même si le stockage autorise le CORS en lecture.
+    // Sans effet sur le flux normal (rawImageSrc en data: URI, upload local).
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.src = rawImageSrc;
-    await new Promise((resolve) => { img.onload = resolve; });
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -732,23 +770,33 @@ useEffect(() => {
     const finalBase64 = canvas.toDataURL("image/jpeg", 0.9);
 
     try {
-      if (cropType === "avatar") {
-        setAvatarUrl(finalBase64);
-        await supabase.from("profiles").upsert({
-          id: userSession.user.id,
-          email: userSession.user.email,
-          avatar_url: finalBase64,
-          updated_at: new Date().toISOString(),
-        });
+      const isAvatar = cropType === "avatar";
+      const bucket = isAvatar ? "avatars" : "covers";
+      const storagePath = `${userSession.user.id}/${isAvatar ? "avatar" : "cover"}.jpg`;
+      const blob = await (await fetch(finalBase64)).blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(storagePath, blob, { contentType: "image/jpeg", upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { error: updateError } = await supabase.from("profiles").upsert({
+        id: userSession.user.id,
+        email: userSession.user.email,
+        [isAvatar ? "avatar_url" : "cover_url"]: storagePath,
+        updated_at: new Date().toISOString(),
+      });
+      if (updateError) throw updateError;
+
+      if (isAvatar) {
+        avatarPathRef.current = storagePath;
+        const signedUrl = await getSignedAvatarUrl(storagePath);
+        setAvatarUrl(signedUrl || finalBase64);
         triggerToast("Photo de profil mise à jour avec succès !", "fa-camera");
       } else {
-        setCoverUrl(finalBase64);
-        await supabase.from("profiles").upsert({
-          id: userSession.user.id,
-          email: userSession.user.email,
-          cover_url: finalBase64,
-          updated_at: new Date().toISOString(),
-        });
+        coverPathRef.current = storagePath;
+        const signedUrl = await getSignedCoverUrl(storagePath);
+        setCoverUrl(signedUrl || finalBase64);
         triggerToast("Photo de couverture mise à jour avec succès !", "fa-image");
       }
       setCropModalOpen(false);
@@ -1807,7 +1855,7 @@ useEffect(() => {
               }`}
             >
               {avatarUrl && avatarUrl !== "/logo.jpeg" ? (
-                <img src={avatarUrl} alt="Profil" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                <img src={avatarUrl} alt="Profil" onError={handleAvatarImgError} className="w-8 h-8 rounded-full object-cover border border-gray-200" />
               ) : (
                 <i className="fa-solid fa-circle-user text-xl"></i>
               )}
@@ -2157,11 +2205,20 @@ useEffect(() => {
 
               {/* Image de couverture spatiale stellaire / personnalisée — un
                   skeleton remplace le fond tant que le profil charge, pour
-                  ne jamais afficher le placeholder par défaut à sa place. */}
-              <div
-                className={`h-44 md:h-56 bg-cover bg-center bg-no-repeat relative group ${profileLoading ? "bg-gray-200 dark:bg-gray-800 animate-pulse" : ""}`}
-                style={profileLoading ? undefined : { backgroundImage: `url('${coverUrl}')` }}
-              >
+                  ne jamais afficher le placeholder par défaut à sa place.
+                  <img> plutôt qu'un fond CSS : nécessaire pour onError
+                  (renouvellement d'URL signée expirée) et pour next/image. */}
+              <div className="h-44 md:h-56 relative group overflow-hidden">
+                {profileLoading ? (
+                  <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                ) : (
+                  <img
+                    src={coverUrl}
+                    alt="Couverture de profil"
+                    onError={handleCoverImgError}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-900/30 to-indigo-950/50"></div>
 
                 {/* Bouton Changer la photo de couverture avec menu déroulant */}
@@ -2223,6 +2280,7 @@ useEffect(() => {
                         type="button"
                         onClick={async () => {
                           setCoverMenuOpen(false);
+                          coverPathRef.current = "/stellar-cover.png";
                           setCoverUrl("/stellar-cover.png");
                           if (userSession?.user) {
                             await supabase.from("profiles").upsert({
@@ -2254,6 +2312,7 @@ useEffect(() => {
                       <img
                         src={avatarUrl}
                         alt="Logo Profil Facilite"
+                        onError={handleAvatarImgError}
                         className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                       />
                     )}

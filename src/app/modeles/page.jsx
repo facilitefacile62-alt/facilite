@@ -110,10 +110,30 @@ export default function ModelesPage() {
 
         {/* Grille de modèles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <TemplateCard isRecommended={true} onSelect={handleSelectTemplate} />
-          <TemplateCard isRecommended={true} onSelect={handleSelectTemplate} />
-          <TemplateCard isRecommended={true} onSelect={handleSelectTemplate} />
-          <TemplateCard isRecommended={true} onSelect={handleSelectTemplate} />
+          <TemplateCard
+            isRecommended={true}
+            title="CV Professionnel Moderne"
+            previewImage="/affiche_cv_pro.jpg"
+            onSelect={handleSelectTemplate}
+          />
+          <TemplateCard
+            isRecommended={false}
+            title="Lettre de Motivation Ciblée"
+            previewImage="/affiche_boostez_carriere.jpg"
+            onSelect={handleSelectTemplate}
+          />
+          <TemplateCard
+            isRecommended={true}
+            title="Pack Complet (CV + Lettre)"
+            previewImage="/affiche_cv_pro.jpg"
+            onSelect={handleSelectTemplate}
+          />
+          <TemplateCard
+            isRecommended={false}
+            title="CV Exécutif & International"
+            previewImage="/affiche2.jpg"
+            onSelect={handleSelectTemplate}
+          />
         </div>
         
       </div>

@@ -67,6 +67,48 @@ export async function getSignedCvUrl(pathOrUrl, expiresInSeconds = 3600) {
 }
 
 /**
+ * Résout un avatar_url/cover_url de `profiles` en URL affichable.
+ *
+ * Trois cas, jamais de tentative de signature en dehors du troisième :
+ * - data:image/... (résidu base64 d'avant la migration Storage, ou photo
+ *   Google OAuth encodée) : renvoyé tel quel, cas de sécurité explicite.
+ * - chemin commençant par "/" (assets statiques par défaut /logo.jpeg,
+ *   /stellar-cover.png) ou URL http(s) déjà complète (valeur héritée) :
+ *   renvoyé tel quel.
+ * - chemin de bucket Storage ({user_id}/avatar.jpg ou .../cover.jpg) :
+ *   résolu en URL signée temporaire (RLS : propriétaire ou admin uniquement,
+ *   voir 20260813180000_avatars_covers_policies.sql).
+ */
+async function resolveProfilePhotoUrl(bucket, pathOrUrl, expiresInSeconds) {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith("data:image") || pathOrUrl.startsWith("http") || pathOrUrl.startsWith("/")) {
+    return pathOrUrl;
+  }
+
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(pathOrUrl, expiresInSeconds);
+    if (error) {
+      console.warn(`Impossible de générer l'URL signée (${bucket}):`, error.message);
+      return null;
+    }
+    return data?.signedUrl || null;
+  } catch (err) {
+    console.warn(`Exception lors de la génération de l'URL signée (${bucket}):`, err);
+    return null;
+  }
+}
+
+export async function getSignedAvatarUrl(pathOrUrl, expiresInSeconds = 3600) {
+  return resolveProfilePhotoUrl("avatars", pathOrUrl, expiresInSeconds);
+}
+
+export async function getSignedCoverUrl(pathOrUrl, expiresInSeconds = 3600) {
+  return resolveProfilePhotoUrl("covers", pathOrUrl, expiresInSeconds);
+}
+
+/**
  * Fonction universelle de déconnexion propre et sécurisée.
  * Purge la session Supabase, supprime le localStorage/sessionStorage, et redirige avec replacement d'historique.
  */
