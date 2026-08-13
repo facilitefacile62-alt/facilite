@@ -666,10 +666,29 @@ useEffect(() => {
         (payload) => {
           const updated = payload.new;
           if (!updated) return;
-          setFullName(updated.full_name || "");
-          setBio(updated.bio || "");
-          if (updated.avatar_url) setAvatarUrl(updated.avatar_url);
-          if (updated.cover_url) setCoverUrl(updated.cover_url);
+          setProfileName(updated.full_name || "");
+          setProfileBio(updated.bio || "");
+
+          // updated.avatar_url/cover_url sont les valeurs BRUTES de la
+          // colonne (chemin Storage) — jamais injectées telles quelles dans
+          // avatarUrl/coverUrl, qui doivent toujours contenir l'URL signée
+          // résolue (voir Point 3). Comparaison au ref pour ignorer les
+          // UPDATE qui ne touchent pas la photo (bio seule, etc.) et pour
+          // ne pas re-signer une valeur que ce même client vient de poser
+          // lui-même (handleSaveCroppedImage a déjà mis à jour le ref et
+          // l'URL affichée avant que cet événement Realtime n'arrive).
+          if (updated.avatar_url && updated.avatar_url !== avatarPathRef.current) {
+            avatarPathRef.current = updated.avatar_url;
+            getSignedAvatarUrl(updated.avatar_url).then((signedUrl) => {
+              if (signedUrl) setAvatarUrl(signedUrl);
+            });
+          }
+          if (updated.cover_url && updated.cover_url !== coverPathRef.current) {
+            coverPathRef.current = updated.cover_url;
+            getSignedCoverUrl(updated.cover_url).then((signedUrl) => {
+              if (signedUrl) setCoverUrl(signedUrl);
+            });
+          }
         }
       )
       .subscribe();

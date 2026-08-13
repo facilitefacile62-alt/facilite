@@ -1810,29 +1810,39 @@ export default function Home() {
                     className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs hover:shadow-md transition duration-300 flex flex-col space-y-4"
                   >
                     {/* Header Offre */}
-                    <div className="flex items-start space-x-3.5">
-                      {/* Logo Entreprise (Initiale dans un carré de couleur) */}
-                      <div className={`w-11 h-11 rounded-lg ${job.logoColor} flex items-center justify-center text-white font-extrabold text-sm shadow-xs flex-shrink-0`}>
-                        {job.initials}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start space-x-3.5 min-w-0 flex-1">
+                        {/* Logo Entreprise (Initiale dans un carré de couleur) */}
+                        <div className={`w-11 h-11 rounded-xl ${job.logoColor} flex items-center justify-center text-white font-extrabold text-sm shadow-xs flex-shrink-0`}>
+                          {job.initials}
+                        </div>
+                        
+                        <div className="flex-grow min-w-0">
+                          <h4 className="text-sm font-extrabold text-gray-900 leading-snug">
+                            {selectedLang === "FR" ? job.titleFR : job.titleEN}
+                          </h4>
+                          <p className="text-xs text-gray-700 font-bold mt-0.5">{job.company}</p>
+                          <p className="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5 flex-wrap">
+                            <span className="text-emerald-700 font-extrabold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                              <i className="fa-solid fa-location-dot text-[10px]"></i>
+                              {job.location}
+                            </span>
+                            <span>•</span>
+                            <span className="font-extrabold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
+                              {job.contract}
+                            </span>
+                            <span>•</span>
+                            <span className="text-gray-400 font-normal">{selectedLang === "FR" ? job.timeFR : job.timeEN}</span>
+                          </p>
+                        </div>
                       </div>
-                      
-                      <div className="flex-grow min-w-0">
-                        <h4 className="text-sm font-extrabold text-gray-900 leading-snug">
-                          {selectedLang === "FR" ? job.titleFR : job.titleEN}
-                        </h4>
-                        <p className="text-xs text-gray-700 font-bold mt-0.5">{job.company}</p>
-                        <p className="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5 flex-wrap">
-                          <span className="text-emerald-700 font-extrabold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
-                            <i className="fa-solid fa-location-dot text-[10px]"></i>
-                            {job.location}
-                          </span>
-                          <span>•</span>
-                          <span className="font-extrabold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
-                            {job.contract}
-                          </span>
-                          <span>•</span>
-                          <span className="text-gray-400 font-normal">{selectedLang === "FR" ? job.timeFR : job.timeEN}</span>
-                        </p>
+
+                      {/* Badge Rémunération en Haut à Droite (Design Raffiné & Lisible) */}
+                      <div className="flex-shrink-0">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-200/90 shadow-2xs">
+                          <span>💰</span>
+                          <span>{job.salary && job.salary !== "Non spécifié" && job.salary !== "Non renseigné" ? job.salary : "Non renseigné"}</span>
+                        </span>
                       </div>
                     </div>
 

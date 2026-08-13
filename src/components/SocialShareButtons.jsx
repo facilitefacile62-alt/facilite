@@ -13,13 +13,10 @@ const REACTIONS = [
 ];
 
 /**
- * Barre d'Engagement & Partage Réseau Social avec Barre de Réactions (Style Facebook/LinkedIn)
- * - Survol / Clic sur "J'aime" : Barre flottante de réactions animées (👍 ❤️ 🥰 👏 💡 🚀)
- * - 4 Actions horizontales compactes :
- *   1. 👍 J'aime (avec réactions dynamiques)
- *   2. 💰 Non renseigné (ou salaire)
- *   3. ↪️ Partager (avec menu déroulant de tous les réseaux sociaux)
- *   4. ✈️ Envoyer (Postuler directement)
+ * Barre d'Engagement & Partage Réseau Social (Design 3 Actions Ultra-Propre)
+ * 1. 👍 J'aime (avec barre de réactions animées au survol)
+ * 2. ↪️ Partager (Bouton avec menu déroulant de tous les réseaux sociaux)
+ * 3. ✈️ Envoyer (Postuler directement)
  */
 export default function SocialShareButtons({
   offer,
@@ -42,7 +39,6 @@ export default function SocialShareButtons({
   const company = offer?.company || "Facilite";
   const location = offer?.location || "Sénégal";
   const contract = offer?.contract || offer?.contract_type || "CDI";
-  const salary = offer?.salary || offer?.salary_range || "Non renseigné";
 
   const getBaseUrl = () => {
     if (typeof window !== "undefined") {
@@ -118,7 +114,7 @@ export default function SocialShareButtons({
     if (activeReaction) {
       setActiveReaction(null);
     } else {
-      setActiveReaction(REACTIONS[0]); // Défaut : 👍 J'aime
+      setActiveReaction(REACTIONS[0]); // Par défaut : 👍 J'aime
     }
   };
 
@@ -144,12 +140,11 @@ export default function SocialShareButtons({
     telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
   };
 
-  // 1. Rendu Compact pour le Flux d'Accueil et Listes (4 Actions horizontales, gain d'espace maximum)
+  // 1. Rendu Compact pour le Flux d'Accueil et Listes (3 Actions horizontales équilibrées)
   if (variant === "compact") {
     return (
       <div className={`relative w-full pt-2 border-t border-gray-100 ${className}`} ref={dropdownRef}>
-        {/* Rangée des 4 Actions Horizontales Épurées */}
-        <div className="flex items-center justify-between gap-1 sm:gap-2">
+        <div className="flex items-center justify-between gap-2">
           {/* Action 1 : J'aime avec Barre de Réactions Flottante (Style Facebook/LinkedIn) */}
           <div
             className="relative flex-1"
@@ -176,38 +171,26 @@ export default function SocialShareButtons({
               </div>
             )}
 
-            {/* Bouton J'aime Principal */}
+            {/* Bouton J'aime */}
             <button
               type="button"
               onClick={handleLikeButtonClick}
-              className={`w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer border ${
                 activeReaction
-                  ? `${activeReaction.color} ${activeReaction.bg}`
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  ? `${activeReaction.color} ${activeReaction.bg} border-transparent shadow-xs`
+                  : "text-gray-700 bg-gray-50/90 hover:bg-gray-100 border-gray-200/80 hover:border-gray-300"
               }`}
             >
               {activeReaction ? (
                 <span className="text-sm select-none">{activeReaction.emoji}</span>
               ) : (
-                <i className="fa-regular fa-thumbs-up text-xs sm:text-sm"></i>
+                <i className="fa-regular fa-thumbs-up text-sm"></i>
               )}
-              <span className="hidden xs:inline">
-                {activeReaction ? activeReaction.label : "J'aime"}
-              </span>
+              <span>{activeReaction ? activeReaction.label : "J'aime"}</span>
             </button>
           </div>
 
-          {/* Action 2 : Salaire / Statut (Format badge "Non renseigné" ou montant) */}
-          <div
-            className="flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2 rounded-xl text-xs font-extrabold text-gray-700 bg-gray-50 border border-gray-200/80 truncate text-center select-none"
-            title={`Rémunération : ${salary}`}
-          >
-            <span className="text-[11px] truncate font-bold text-gray-800">
-              {salary && salary !== "Non spécifié" && salary !== "Non renseigné" ? `💰 ${salary}` : "💰 Non renseigné"}
-            </span>
-          </div>
-
-          {/* Action 3 : Partager (Bouton Vert Pilule avec Menu Déroulant) */}
+          {/* Action 2 : Partager (Bouton Élégant avec Menu Déroulant) */}
           <div className="relative flex-1">
             <button
               type="button"
@@ -215,7 +198,7 @@ export default function SocialShareButtons({
                 e.stopPropagation();
                 setDropdownOpen((prev) => !prev);
               }}
-              className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black text-xs transition-all border border-emerald-200 shadow-2xs cursor-pointer active:scale-95"
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-50/80 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs transition-all border border-emerald-200/90 shadow-2xs cursor-pointer active:scale-95"
               title="Partager cette annonce"
             >
               {/* Flèche incurvée de partage */}
@@ -395,14 +378,14 @@ export default function SocialShareButtons({
             )}
           </div>
 
-          {/* Action 4 : Envoyer / Postuler */}
+          {/* Action 3 : Envoyer / Postuler (Bouton Principal Vert Fluo #10E688) */}
           <div className="flex-1">
             {externalLink ? (
               <a
                 href={externalLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2 rounded-xl bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black text-xs transition-all shadow-sm transform hover:-translate-y-0.5 cursor-pointer text-center"
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black text-xs transition-all shadow-[0_2px_8px_rgba(16,230,136,0.3)] transform hover:-translate-y-0.5 cursor-pointer text-center"
               >
                 <i className="fa-solid fa-paper-plane text-xs"></i>
                 <span>{externalButtonLabel || "Envoyer"}</span>
@@ -411,7 +394,7 @@ export default function SocialShareButtons({
               <button
                 type="button"
                 onClick={() => onApply && onApply(offer)}
-                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2 rounded-xl bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black text-xs transition-all shadow-sm transform hover:-translate-y-0.5 cursor-pointer text-center"
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black text-xs transition-all shadow-[0_2px_8px_rgba(16,230,136,0.3)] transform hover:-translate-y-0.5 cursor-pointer text-center"
               >
                 <i className="fa-solid fa-paper-plane text-xs"></i>
                 <span>Envoyer</span>
