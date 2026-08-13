@@ -20,8 +20,8 @@ const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP
 // urlTemplate côté client), pas de 4e modèle décoratif sans mapping clair.
 const CV_TEMPLATE_STORIES = [
   { id: "modern", name: "Moderne", previewUrl: "/affiche_cv_pro.jpg", description: "2 colonnes structuré" },
-  { id: "minimalist", name: "Minimaliste", previewUrl: "/affiche_boostez_carriere.jpg", description: "Aéré & moderne" },
-  { id: "classic", name: "Classique", previewUrl: "/affiche2.jpg", description: "Traditionnel & chic" },
+  { id: "minimalist", name: "Minimaliste", previewUrl: "/affiche_cv_pro.jpg", description: "Aéré & moderne" },
+  { id: "classic", name: "Classique", previewUrl: "/affiche_cv_pro.jpg", description: "Traditionnel & chic" },
 ];
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---

@@ -398,7 +398,7 @@ export default function Home() {
     },
     { 
       id: "s4", 
-      img: "/affiche2.jpg", 
+      img: "/affiche_cv_pro.jpg", 
       titleFR: "Modèle 4 — CV Exécutif & International", 
       titleEN: "Template 4 — Executive & International CV",
       descFR: "Format optimisé pour les candidatures globales, normes anglo-saxonnes et compatibilité ATS.",

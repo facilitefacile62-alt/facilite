@@ -187,10 +187,13 @@ export default function PublicProfilePage() {
           {/* BANNIÈRE DE COUVERTURE */}
           <div className="h-44 sm:h-60 w-full relative bg-gradient-to-r from-blue-700 via-indigo-800 to-purple-900">
             {coverUrl ? (
-              <img
+              <Image
                 src={coverUrl}
                 alt="Couverture de profil"
-                className="w-full h-full object-cover"
+                fill
+                sizes="100vw"
+                priority
+                className="object-cover"
               />
             ) : (
               <div className="w-full h-full opacity-30 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
@@ -207,12 +210,15 @@ export default function PublicProfilePage() {
               
               {/* AVATAR */}
               <div className="relative">
-                <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-3xl border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-3xl flex items-center justify-center uppercase">
+                <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-3xl border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-3xl flex items-center justify-center uppercase">
                   {avatarUrl ? (
-                    <img
+                    <Image
                       src={avatarUrl}
                       alt={fullName}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="144px"
+                      priority
+                      className="object-cover"
                     />
                   ) : (
                     fullName.slice(0, 2)

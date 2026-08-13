@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 import AIAssistantModal from "@/components/AIAssistantModal";
@@ -1872,7 +1873,9 @@ useEffect(() => {
               }`}
             >
               {avatarUrl && avatarUrl !== "/logo.jpeg" ? (
-                <img src={avatarUrl} alt="Profil" onError={handleAvatarImgError} className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-200">
+                  <Image src={avatarUrl} alt="Profil" fill sizes="32px" className="object-cover" onError={handleAvatarImgError} />
+                </div>
               ) : (
                 <i className="fa-solid fa-circle-user text-xl"></i>
               )}
@@ -2222,18 +2225,19 @@ useEffect(() => {
 
               {/* Image de couverture spatiale stellaire / personnalisée — un
                   skeleton remplace le fond tant que le profil charge, pour
-                  ne jamais afficher le placeholder par défaut à sa place.
-                  <img> plutôt qu'un fond CSS : nécessaire pour onError
-                  (renouvellement d'URL signée expirée) et pour next/image. */}
+                  ne jamais afficher le placeholder par défaut à sa place. */}
               <div className="h-44 md:h-56 relative group overflow-hidden">
                 {profileLoading ? (
                   <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse" />
                 ) : (
-                  <img
+                  <Image
                     src={coverUrl}
                     alt="Couverture de profil"
+                    fill
+                    sizes="100vw"
+                    priority
                     onError={handleCoverImgError}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="object-cover"
                   />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-900/30 to-indigo-950/50"></div>
@@ -2326,11 +2330,14 @@ useEffect(() => {
                     {profileLoading ? (
                       <div className="w-full h-full bg-gray-200 dark:bg-gray-800 animate-pulse" />
                     ) : (
-                      <img
+                      <Image
                         src={avatarUrl}
                         alt="Logo Profil Facilite"
+                        fill
+                        sizes="144px"
+                        priority
                         onError={handleAvatarImgError}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        className="object-cover group-hover:scale-105 transition duration-300"
                       />
                     )}
                     <div
@@ -4596,8 +4603,10 @@ useEffect(() => {
                 <i className="fa-solid fa-xmark text-base"></i>
               </button>
             </div>
-            <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-white shadow-xl mb-4 bg-gray-100">
-              <img src={viewImageModal.url} alt="Aperçu grand format" className="w-full h-full object-cover" />
+            <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-white shadow-xl mb-4 bg-gray-100">
+              {viewImageModal.url && (
+                <Image src={viewImageModal.url} alt="Aperçu grand format" fill sizes="256px" className="object-cover" />
+              )}
             </div>
             <button
               type="button"

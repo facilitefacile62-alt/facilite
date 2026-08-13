@@ -54,6 +54,19 @@ const cspReportOnly = [
 const nextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["unpdf", "mammoth", "tesseract.js", "@napi-rs/canvas", "canvas"],
+  // Domaines externes réellement chargés par <Image> de next/image — mêmes 4
+  // domaines déjà documentés dans img-src de la CSP ci-dessus (Storage
+  // Supabase pour les photos de profil/couverture migrées, avatars Google
+  // OAuth via profiles.avatar_url, offres de démo dans supabase/seed.sql,
+  // drapeaux pays dans PhoneAuthForm.jsx).
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "*.googleusercontent.com" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "flagcdn.com" },
+    ],
+  },
   async headers() {
     return [
       {

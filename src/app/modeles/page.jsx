@@ -131,7 +131,7 @@ export default function ModelesPage() {
           <TemplateCard
             isRecommended={false}
             title="CV Exécutif & International"
-            previewImage="/affiche2.jpg"
+            previewImage="/affiche_cv_pro.jpg"
             onSelect={handleSelectTemplate}
           />
         </div>
