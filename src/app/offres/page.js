@@ -365,6 +365,8 @@ function OffresContent() {
                         <span>Niveau requis : <strong>{offer.required_education_level}</strong></span>
                       </div>
                     )}
+                  </div>
+
                   <div className="my-3 py-2.5 px-3 bg-gray-50/80 rounded-2xl border border-gray-100/80">
                     <SocialShareButtons offer={offer} variant="compact" onToast={triggerToast} />
                   </div>
