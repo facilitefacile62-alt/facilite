@@ -100,6 +100,22 @@ function OffresContent() {
       }
     }
     loadData();
+
+    // Abonnement Realtime Supabase sur la table job_offers
+    const channel = supabase
+      .channel("public-job-offers-catalog")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_offers" },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
 

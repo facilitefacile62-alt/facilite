@@ -498,6 +498,32 @@ export default function RecruteurDashboardPage() {
     load();
   }, [activeTab, userSession?.user?.id]);
 
+  // Synchronisation Realtime sur les offres du recruteur
+  useEffect(() => {
+    const userId = userSession?.user?.id;
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`recruiter-job-offers-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_offers", filter: `recruiter_id=eq.${userId}` },
+        async () => {
+          const { data: offers } = await supabase
+            .from("job_offers")
+            .select("*")
+            .eq("recruiter_id", userId)
+            .order("created_at", { ascending: false });
+          if (offers) setMyOffers(offers);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userSession?.user?.id]);
+
   // --- Gestion des offres ---
   const handleOfferFieldChange = (field, value) => {
     setOfferForm((prev) => ({ ...prev, [field]: value }));

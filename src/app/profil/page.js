@@ -653,6 +653,32 @@ useEffect(() => {
     };
   }, [userSession?.user?.id]);
 
+  // Synchronisation Realtime sur les modifications de profil
+  useEffect(() => {
+    const userId = userSession?.user?.id;
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`profile-live-sync-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
+        (payload) => {
+          const updated = payload.new;
+          if (!updated) return;
+          setFullName(updated.full_name || "");
+          setBio(updated.bio || "");
+          if (updated.avatar_url) setAvatarUrl(updated.avatar_url);
+          if (updated.cover_url) setCoverUrl(updated.cover_url);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userSession?.user?.id]);
+
   // Filtered Notifications helper
   const filteredNotifications = notificationsList.filter(n => {
     if (activeNotifFilter === "jobs") return n.type === "jobs";

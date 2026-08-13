@@ -82,6 +82,22 @@ export default function AdminOffresPage() {
 
   useEffect(() => {
     loadAdminData();
+
+    // Abonnement Realtime Supabase sur la table job_offers
+    const channel = supabase
+      .channel("admin-job-offers-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_offers" },
+        () => {
+          loadAdminData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleOfferImageChange = (e) => {

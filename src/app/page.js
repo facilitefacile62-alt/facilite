@@ -634,6 +634,22 @@ export default function Home() {
       }
     }
     loadDynamicJobs();
+
+    // Abonnement Realtime Supabase sur la table job_offers
+    const jobsChannel = supabase
+      .channel("public-job-offers-feed")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_offers" },
+        () => {
+          loadDynamicJobs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(jobsChannel);
+    };
   }, []);
 
   useEffect(() => {
@@ -681,7 +697,26 @@ export default function Home() {
       loadSessionAndProfile(session);
     });
 
-    return () => subscription.unsubscribe();
+    let profileChannel = null;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        profileChannel = supabase
+          .channel(`profile-sync-${session.user.id}`)
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${session.user.id}` },
+            () => {
+              loadSessionAndProfile(session);
+            }
+          )
+          .subscribe();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      if (profileChannel) supabase.removeChannel(profileChannel);
+    };
   }, []);
 
   const handleAddExperience = (e) => {
