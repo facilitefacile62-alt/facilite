@@ -2488,7 +2488,6 @@ useEffect(() => {
                             { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
                             { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
                             { id: "securite", label: "Sécurité & Connexion", icon: "fa-solid fa-lock" },
-                            { id: "noms", label: "Noms", icon: "fa-regular fa-user" },
                           ].map((section) => {
                             const isSectionActive = activeSection === section.id;
                             return (
@@ -2548,7 +2547,6 @@ useEffect(() => {
                     { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
                     { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
                     { id: "securite", label: "Sécurité & Connexion", icon: "fa-solid fa-lock" },
-                    { id: "noms", label: "Noms", icon: "fa-regular fa-user" },
                   ].map((tab) => {
                     const isActive = activeSection === tab.id;
                     return (
@@ -2585,7 +2583,6 @@ useEffect(() => {
                       { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
                       { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
                       { id: "securite", label: "Sécurité & Connexion", icon: "fa-solid fa-lock" },
-                      { id: "noms", label: "Noms", icon: "fa-regular fa-user" },
                     ].map((section) => (
                       <button
                         key={section.id}
@@ -2633,7 +2630,6 @@ useEffect(() => {
                           { id: "coordonnees", label: "Coordonnées" },
                           { id: "confidentialite", label: "Confidentialité et informations juridiques" },
                           { id: "securite", label: "Sécurité & Connexion" },
-                          { id: "noms", label: "Noms" },
                         ].find((s) => s.id === selectedSection)?.label || "Retour"}
                       </span>
                     </div>
@@ -3532,7 +3528,7 @@ useEffect(() => {
                     <SecurityTabContent userSession={userSession} />
                   )}
 
-                  {!["intro", "info_perso", "langues", "experiences", "formation", "competences", "interets", "coordonnees", "confidentialite", "securite", "noms"].includes(activeSection) && (
+                  {!["intro", "info_perso", "langues", "experiences", "formation", "competences", "interets", "coordonnees", "confidentialite", "securite"].includes(activeSection) && (
                     <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 space-y-2">
                       <p className="text-xs font-bold text-gray-700">Aucune donnée spécifique enregistrée pour cet onglet.</p>
                       <p className="text-[11px] text-gray-500">Cliquez sur l'icône de crayon pour ajouter des informations.</p>
