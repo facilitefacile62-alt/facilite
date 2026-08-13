@@ -1853,57 +1853,22 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Barre de Partage Réseaux Sociaux & Flèche de Partage */}
-                    <div className="mt-3 pt-2.5 pb-2 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap bg-gray-50/80 px-3 py-2 rounded-xl">
-                      <SocialShareButtons
-                        offer={{
-                          id: job.id,
-                          title: selectedLang === "FR" ? job.titleFR : job.titleEN,
-                          company: job.company,
-                          location: job.location,
-                          contract: job.contract,
-                        }}
-                        variant="compact"
-                      />
-                    </div>
-
-                    {/* Footer Offre */}
-                    <div className="flex items-center justify-between pt-3 mt-1">
-                      <span className="text-xs font-black text-gray-800 bg-gray-50 border border-gray-150 px-3 py-1.5 rounded-lg">
-                        💰 {job.salary}
-                      </span>
-                      
-                      {job.externalLink ? (
-                        <div className="flex flex-wrap gap-2">
-                          <a
-                            href={job.externalLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
-                          >
-                            <i className="fa-solid fa-external-link-alt text-xs"></i>
-                            <span>{job.externalButtonLabel || t.applyNow}</span>
-                          </a>
-                          {job.allowSpontaneousModal && (
-                            <button
-                              onClick={() => handleApplyClick({ ...job, isSpontaneous: true })}
-                              className="bg-white hover:bg-emerald-50 text-emerald-600 border border-emerald-500 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
-                            >
-                              <i className="fa-regular fa-paper-plane text-xs"></i>
-                              <span>Candidature Rapide</span>
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleApplyClick(job)}
-                          className="bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 font-extrabold py-2 px-4 rounded-lg text-xs transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
-                        >
-                          <i className="fa-regular fa-paper-plane text-xs"></i>
-                          <span>{t.applyNow}</span>
-                        </button>
-                      )}
-                    </div>
+                    {/* Barre d'Actions Réseau Social (Style LinkedIn : J'aime, Non renseigné / Salaire, Partager, Envoyer) */}
+                    <SocialShareButtons
+                      offer={{
+                        id: job.id,
+                        title: selectedLang === "FR" ? job.titleFR : job.titleEN,
+                        company: job.company,
+                        location: job.location,
+                        contract: job.contract,
+                        salary: job.salary,
+                      }}
+                      variant="compact"
+                      onApply={() => handleApplyClick(job)}
+                      externalLink={job.externalLink}
+                      externalButtonLabel={job.externalButtonLabel}
+                      className="mt-3"
+                    />
                   </div>
                 ))
               ) : (
