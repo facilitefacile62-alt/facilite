@@ -207,6 +207,22 @@ export default function Header() {
     return true;
   };
 
+  const handleLogoOrHomeClick = (e) => {
+    if (!handleGuardedClick(e, "nav_home", "Accueil")) {
+      return;
+    }
+    if (pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      router.refresh();
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    setMobileMenuOpen(false);
+    setIsMobileSearchOpen(false);
+    setIsOpen(false);
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserSession(session);
@@ -505,7 +521,8 @@ export default function Header() {
         {/* Brand Logo & Name */}
         <Link
           href="/"
-          className={`items-center space-x-2 group flex-shrink-0 ${
+          onClick={handleLogoOrHomeClick}
+          className={`items-center space-x-2 group flex-shrink-0 cursor-pointer ${
             isMobileSearchOpen ? "hidden md:flex" : "flex"
           }`}
         >
@@ -679,8 +696,8 @@ export default function Header() {
         <nav className="hidden lg:flex items-center space-x-5 flex-shrink-0">
           <Link
             href="/"
-            onClick={(e) => handleGuardedClick(e, "nav_home", "Accueil")}
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
+            onClick={handleLogoOrHomeClick}
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
               pathname === "/"
                 ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
@@ -954,6 +971,7 @@ export default function Header() {
         <div className="flex lg:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1 bg-[#FAF6F1]/95 dark:bg-gray-900/95 overflow-hidden px-0.5">
           <Link
             href="/"
+            onClick={handleLogoOrHomeClick}
             className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
               pathname === "/" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
             }`}
