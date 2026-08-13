@@ -175,19 +175,12 @@ export async function POST(req) {
         );
       }
 
-      // 2. Vérification du Match Score CV (doit être >= 50%)
+      // Calcul du score indicatif d'adéquation CV (sans barrière bloquante)
       cvMatchScore = computeScore(
         candidateProfile?.skills || [],
         candidateProfile?.bio || "",
         offerData.description || ""
       );
-
-      if (cvMatchScore < 50) {
-        return NextResponse.json(
-          { error: "Votre CV n'est pas suffisamment adapté à cette offre." },
-          { status: 403 }
-        );
-      }
     }
 
     const allAttachments = [];
