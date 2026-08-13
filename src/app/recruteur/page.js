@@ -195,6 +195,70 @@ export default function RecruteurDashboardPage() {
     setTimeout(() => setToast(""), 3000);
   };
 
+  // --- Onglet Matching IA (RAG) ---
+  const [selectedOfferForRag, setSelectedOfferForRag] = useState("");
+  const [customQueryRag, setCustomQueryRag] = useState("");
+  const [ragLoading, setRagLoading] = useState(false);
+  const [ragResults, setRagResults] = useState(null);
+  const [ragError, setRagError] = useState("");
+  const [expandedCandidateId, setExpandedCandidateId] = useState(null);
+
+  const handleRunRagMatching = async (targetOfferId = null, targetQuery = null) => {
+    const offerToUse = targetOfferId !== null ? targetOfferId : selectedOfferForRag;
+    const queryToUse = targetQuery !== null ? targetQuery : customQueryRag;
+
+    if (!offerToUse && (!queryToUse || !queryToUse.trim())) {
+      setRagError("Veuillez sélectionner une offre d'emploi ou saisir vos critères.");
+      return;
+    }
+
+    setRagLoading(true);
+    setRagError("");
+    setRagResults(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        triggerToast("Session expirée, reconnectez-vous.");
+        return;
+      }
+
+      const payload = {};
+      if (offerToUse && offerToUse !== "custom") {
+        payload.offerId = offerToUse;
+      } else {
+        payload.customQuery = queryToUse;
+      }
+
+      const res = await fetch("/api/recruteur/rag-matching", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Échec de l'analyse RAG.");
+      }
+
+      setRagResults(data);
+      if (data.candidates && data.candidates.length > 0) {
+        setExpandedCandidateId(data.candidates[0].id);
+      }
+      triggerToast("Analyse RAG générée avec succès ! ✨");
+    } catch (err) {
+      console.error("Erreur RAG Matching:", err);
+      setRagError(err.message || "Une erreur est survenue lors de l'analyse RAG.");
+    } finally {
+      setRagLoading(false);
+    }
+  };
+
   // Dépôt d'une demande d'accréditation "Recruteur vérifié" (section 4 du
   // chantier RBAC) : NINEA/RCCM obligatoires, imposé par la contrainte SQL
   // verified_recruiter_requires_company_docs, pas seulement ce formulaire.
@@ -1015,6 +1079,15 @@ export default function RecruteurDashboardPage() {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab("rag-matching")}
+            className={`flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 whitespace-nowrap ${
+              activeTab === "rag-matching" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            <span>✨ Matching IA (RAG)</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab("profil")}
             className={`flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 whitespace-nowrap ${
               activeTab === "profil" ? "bg-emerald-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
@@ -1417,17 +1490,31 @@ export default function RecruteurDashboardPage() {
                         </div>
                         <div className="flex items-center space-x-2 flex-shrink-0">
                           <button
-                            onClick={() => handleEditOffer(offer)}
-                            className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                            type="button"
+                            onClick={() => {
+                              setSelectedOfferForRag(offer.id);
+                              setActiveTab("rag-matching");
+                              handleRunRagMatching(offer.id, null);
+                            }}
+                            className="px-3 py-2 text-xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-emerald-200"
+                            title="Lancer le matching IA RAG sur cette offre"
                           >
-                            Modifier
+                            <i className="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
+                            <span className="hidden sm:inline">Matching IA (RAG)</span>
+                          </button>
+                          <button
+                            onClick={() => handleEditOffer(offer)}
+                            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition cursor-pointer text-xs font-bold"
+                            title="Modifier"
+                          >
+                            <i className="fa-solid fa-pen-to-square"></i>
                           </button>
                           <button
                             onClick={() => handleToggleOfferActive(offer)}
                             disabled={togglingOfferId === offer.id}
                             className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-60"
                           >
-                            {offer.is_active ? "Mettre en pause" : "Réactiver"}
+                            {offer.is_active ? "Pause" : "Activer"}
                           </button>
                           <button
                             onClick={() => handleDeleteOffer(offer.id)}
@@ -1704,6 +1791,294 @@ export default function RecruteurDashboardPage() {
           </div>
         )}
 
+        {/* Onglet Matching IA (RAG) */}
+        {activeTab === "rag-matching" && (
+          <div className="space-y-6">
+            {/* Header & Contrôles RAG */}
+            <div className="bg-gradient-to-br from-emerald-900 via-teal-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-emerald-500/20">
+              <div className="relative z-10 max-w-3xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-black tracking-wide mb-3">
+                  <i className="fa-solid fa-wand-magic-sparkles animate-pulse"></i>
+                  <span>RAG (Retrieval-Augmented Generation)</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
+                  Matching Intelligent Offres & CVs
+                </h2>
+                <p className="text-xs sm:text-sm text-emerald-100/90 font-medium leading-relaxed mb-6">
+                  Le système RAG analyse sémantiquement les compétences dans la base vectorielle pgvector, puis génère une synthèse qualitative approfondie pour chaque candidat retenu.
+                </p>
+
+                {/* Formulaire de sélection */}
+                <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/15 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-200 mb-1.5">
+                      1. Choisissez une de vos offres ou saisissez une recherche :
+                    </label>
+                    <select
+                      value={selectedOfferForRag}
+                      onChange={(e) => {
+                        setSelectedOfferForRag(e.target.value);
+                        if (e.target.value !== "custom") setCustomQueryRag("");
+                      }}
+                      className="w-full px-4 py-3 bg-gray-900/90 border border-emerald-500/40 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 transition"
+                    >
+                      <option value="">-- Sélectionnez une offre d&apos;emploi existante --</option>
+                      {myOffers.map((off) => (
+                        <option key={off.id} value={off.id}>
+                          📢 {off.title} ({off.company || "Mon Entreprise"})
+                        </option>
+                      ))}
+                      <option value="custom">✏️ Recherche libre personnalisée</option>
+                    </select>
+                  </div>
+
+                  {selectedOfferForRag === "custom" && (
+                    <div className="animate-fade-in-up">
+                      <label className="block text-xs font-bold text-emerald-200 mb-1.5">
+                        2. Décrivez le profil recherché (titre, compétences, années d&apos;expérience) :
+                      </label>
+                      <textarea
+                        rows="3"
+                        value={customQueryRag}
+                        onChange={(e) => setCustomQueryRag(e.target.value)}
+                        placeholder="Ex. Développeur Frontend React / Next.js avec 3 ans d'expérience, maîtrisant TypeScript, TailwindCSS et ayant travaillé sur des architectures SaaS..."
+                        className="w-full px-4 py-2.5 bg-gray-900/90 border border-emerald-500/40 rounded-xl text-xs font-medium text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition resize-none"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 pt-1">
+                    <button
+                      type="button"
+                      disabled={ragLoading || (!selectedOfferForRag && !customQueryRag.trim())}
+                      onClick={() => handleRunRagMatching()}
+                      className="px-6 py-3 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black text-xs rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+                    >
+                      {ragLoading ? (
+                        <>
+                          <i className="fa-solid fa-circle-notch fa-spin text-sm"></i>
+                          <span>Analyse RAG en cours...</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="fa-solid fa-brain text-sm"></i>
+                          <span>Lancer le Matching IA RAG</span>
+                        </>
+                      )}
+                    </button>
+                    {ragResults && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRagResults(null);
+                          setRagError("");
+                        }}
+                        className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                      >
+                        Réinitialiser
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {ragError && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-xs font-bold text-red-700 flex items-center gap-2.5 animate-shake">
+                <i className="fa-solid fa-triangle-exclamation text-base text-red-500"></i>
+                <span>{ragError}</span>
+              </div>
+            )}
+
+            {/* État de chargement animé */}
+            {ragLoading && (
+              <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center shadow-xs">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-500 flex items-center justify-center mx-auto mb-4 animate-bounce">
+                  <i className="fa-solid fa-wand-magic-sparkles text-2xl text-emerald-600 animate-spin"></i>
+                </div>
+                <h3 className="text-base font-black text-gray-900 mb-1">
+                  Orchestration du RAG en cours
+                </h3>
+                <p className="text-xs text-gray-500 font-medium max-w-md mx-auto leading-relaxed">
+                  1. Extraction vectorielle dans la CVthèque via pgvector...<br />
+                  2. Analyse des expériences et compétences par le modèle IA...<br />
+                  3. Calcul des scores d&apos;adéquation et questions d&apos;entretien ciblées.
+                </p>
+              </div>
+            )}
+
+            {/* Affichage des Résultats RAG */}
+            {!ragLoading && ragResults && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between bg-white px-6 py-4 rounded-2xl border border-gray-200 shadow-xs">
+                  <div>
+                    <span className="text-[11px] font-black text-emerald-600 uppercase tracking-wider block">
+                      Résultats du Matching RAG
+                    </span>
+                    <h3 className="text-sm font-extrabold text-gray-900">
+                      {ragResults.jobOffer?.title || "Poste évalué"}
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-black rounded-full">
+                      {ragResults.totalCount || 0} candidat(s) qualifié(s)
+                    </span>
+                  </div>
+                </div>
+
+                {ragResults.candidates.length === 0 ? (
+                  <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center text-gray-400 italic text-xs">
+                    Aucun candidat correspondant trouvé dans la CVthèque pour ces critères.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {ragResults.candidates.map((cand, rank) => {
+                      const score = cand.ragAnalysis?.matchScore || cand.similarityScore || 70;
+                      const isExpanded = expandedCandidateId === cand.id;
+                      const scoreColor = score >= 80 ? "text-emerald-600 bg-emerald-50 border-emerald-200" : score >= 65 ? "text-blue-600 bg-blue-50 border-blue-200" : "text-amber-600 bg-amber-50 border-amber-200";
+                      const badgeBg = score >= 80 ? "bg-emerald-600" : score >= 65 ? "bg-blue-600" : "bg-amber-600";
+
+                      return (
+                        <div
+                          key={cand.id}
+                          className="bg-white rounded-3xl border border-gray-200 shadow-xs hover:shadow-md transition-all overflow-hidden"
+                        >
+                          {/* Top Row Card */}
+                          <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-start gap-4 min-w-0">
+                              <div className="relative flex-shrink-0">
+                                <div className="w-14 h-14 rounded-2xl bg-gray-900 text-white font-extrabold flex items-center justify-center text-base shadow-sm overflow-hidden border border-gray-200">
+                                  {cand.avatarUrl ? (
+                                    <img src={cand.avatarUrl} alt={cand.fullName} className="w-full h-full object-cover" />
+                                  ) : (
+                                    (cand.fullName || "C").charAt(0).toUpperCase()
+                                  )}
+                                </div>
+                                <span className={`absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full ${badgeBg} text-white font-black text-[11px] flex items-center justify-center shadow-xs border-2 border-white`}>
+                                  #{rank + 1}
+                                </span>
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="text-base font-extrabold text-gray-900 truncate">
+                                    {cand.fullName}
+                                  </h4>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black border ${scoreColor}`}>
+                                    {score}% Match IA
+                                  </span>
+                                  <span className="text-[11px] font-bold text-gray-500">
+                                    · {cand.ragAnalysis?.verdict || "Adéquation confirmée"}
+                                  </span>
+                                </div>
+                                <p className="text-xs font-bold text-gray-600 truncate mt-0.5">
+                                  {cand.headline || "Profil candidat"}
+                                </p>
+                                <p className="text-[11px] text-gray-400 font-medium">
+                                  <i className="fa-solid fa-location-dot mr-1"></i>
+                                  {cand.city || "Sénégal"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Actions rapides */}
+                            <div className="flex items-center gap-2 sm:self-center flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedCandidateId(isExpanded ? null : cand.id)}
+                                className="px-3.5 py-2 text-xs font-extrabold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                              >
+                                <span>{isExpanded ? "Masquer détails" : "Analyse IA"}</span>
+                                <i className={`fa-solid fa-chevron-down text-[10px] transition-transform ${isExpanded ? "rotate-180" : ""}`}></i>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDirectMessage(cand.id)}
+                                className="px-3.5 py-2 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                              >
+                                <i className="fa-solid fa-comment-dots"></i>
+                                <span>Contacter</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Accordéon Analyse IA Détaillée */}
+                          {isExpanded && (
+                            <div className="px-5 sm:px-6 pb-6 pt-2 border-t border-gray-100 bg-gray-50/50 space-y-4 animate-fade-in-up">
+                              {/* Résumé d'adéquation */}
+                              <div className="p-4 bg-white rounded-2xl border border-gray-200/80 shadow-2xs">
+                                <h5 className="text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                  <i className="fa-solid fa-circle-info text-blue-500"></i>
+                                  <span>Synthèse d&apos;adéquation du profil</span>
+                                </h5>
+                                <p className="text-xs text-gray-800 font-medium leading-relaxed">
+                                  {cand.ragAnalysis?.summary}
+                                </p>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Points forts */}
+                                <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200/80">
+                                  <h5 className="text-[11px] font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                    <i className="fa-solid fa-circle-check text-emerald-600"></i>
+                                    <span>Points forts pour ce poste</span>
+                                  </h5>
+                                  <ul className="space-y-1.5">
+                                    {(cand.ragAnalysis?.strengths || []).map((str, sIdx) => (
+                                      <li key={sIdx} className="text-xs text-emerald-950 font-medium flex items-start gap-2">
+                                        <span className="text-emerald-600 font-bold mt-0.5">•</span>
+                                        <span>{str}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                {/* Points d'attention */}
+                                <div className="p-4 bg-amber-50/60 rounded-2xl border border-amber-200/80">
+                                  <h5 className="text-[11px] font-black text-amber-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                    <i className="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                                    <span>Points à vérifier / approfondir</span>
+                                  </h5>
+                                  <ul className="space-y-1.5">
+                                    {(cand.ragAnalysis?.missingSkills || []).map((ms, mIdx) => (
+                                      <li key={mIdx} className="text-xs text-amber-950 font-medium flex items-start gap-2">
+                                        <span className="text-amber-600 font-bold mt-0.5">•</span>
+                                        <span>{ms}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+
+                              {/* Questions d'entretien recommandées */}
+                              {cand.ragAnalysis?.interviewQuestions && cand.ragAnalysis.interviewQuestions.length > 0 && (
+                                <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-200/80">
+                                  <h5 className="text-[11px] font-black text-indigo-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                    <i className="fa-solid fa-clipboard-question text-indigo-600"></i>
+                                    <span>Questions d&apos;entretien recommandées par l&apos;IA</span>
+                                  </h5>
+                                  <div className="space-y-2">
+                                    {cand.ragAnalysis.interviewQuestions.map((q, qIdx) => (
+                                      <div key={qIdx} className="bg-white/80 p-2.5 rounded-xl border border-indigo-100 text-xs font-medium text-indigo-950 flex items-start gap-2">
+                                        <span className="font-extrabold text-indigo-600">Q{qIdx + 1}:</span>
+                                        <span>{q}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === "profil" && (
           <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -1780,9 +2155,9 @@ export default function RecruteurDashboardPage() {
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">Secteur d'activité</label>
                   <input
                     type="text"
-                    value={recruiterProfileForm.sector}
-                    onChange={(e) => handleRecruiterProfileFieldChange("sector", e.target.value)}
-                    placeholder="Ex. Technologies, Restauration..."
+                    value={recruiterProfileForm.industry}
+                    onChange={(e) => handleRecruiterProfileFieldChange("industry", e.target.value)}
+                    placeholder="Ex. Technologies, BTP, Santé..."
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   />
                 </div>
