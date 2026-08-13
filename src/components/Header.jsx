@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import RoleNavLink from "@/components/RoleNavLink";
+import { isFeatureAllowed } from "@/lib/featureFlags";
+import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
 const QUICK_SECTIONS_INDEX = [
@@ -165,32 +167,10 @@ export default function Header() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
 
-  // Système de Notifications au style LinkedIn
+  // Centre de notifications : pas encore de vraies notifications côté
+  // backend (table à venir) — état minimal en attendant, pour ne jamais
+  // afficher un contenu inventé aux premiers visiteurs du site.
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
-  const [activeNotifFilter, setActiveNotifFilter] = useState("all");
-  const [unreadNotifCount, setUnreadNotifCount] = useState(2);
-  const [notificationsList, setNotificationsList] = useState([
-    {
-      id: "notif-1",
-      type: "jobs",
-      author: "C2K Staffing",
-      avatar: "/logo.jpeg",
-      text: "a publié une offre prioritaire en tête du fil : Recrutement Massif Sabodala.",
-      time: "Il y a 15 minutes",
-      unread: true,
-      link: "/"
-    },
-    {
-      id: "notif-2",
-      type: "posts",
-      author: "Équipe Facilite",
-      avatar: "/logo.jpeg",
-      text: "Votre profil permet désormais l'envoi de documents multiples lors d'une candidature.",
-      time: "Il y a 1 heure",
-      unread: true,
-      link: "/profil"
-    },
-  ]);
 
   // États de la recherche globale reliée à l'API FastAPI
   const [query, setQuery] = useState("");
@@ -211,6 +191,21 @@ export default function Header() {
 
   // 1. Exclusion des routes Dashboard (admin et recruteur)
   const isDashboard = pathname.startsWith("/admin") || pathname.startsWith("/recruteur");
+
+  const handleGuardedClick = (e, featureKey, featureName) => {
+    const role = userSession
+      ? (userSession.user?.email === "facilitefacile62@gmail.com" ? "admin" : "user")
+      : "visitor";
+    if (!isFeatureAllowed(featureKey, role)) {
+      e.preventDefault();
+      triggerFeatureDisabledModal(
+        `Module "${featureName}" temporairement indisponible`,
+        `Cette fonctionnalité (${featureName}) est temporairement désactivée le temps de finaliser les travaux et chantiers sur la plateforme. Merci pour votre patience !`
+      );
+      return false;
+    }
+    return true;
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -236,22 +231,6 @@ export default function Header() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  // Restauration de l'état "lu" des notifications (persisté)
-  useEffect(() => {
-    try {
-      const readNotifs = JSON.parse(localStorage.getItem("read_notifications") || "[]");
-      if (readNotifs.length > 0) {
-        setNotificationsList(prev => {
-          const updated = prev.map(n => readNotifs.includes(n.id) ? { ...n, unread: false } : n);
-          setUnreadNotifCount(updated.filter(n => n.unread).length);
-          return updated;
-        });
-      }
-    } catch (e) {
-      console.error(e);
-    }
   }, []);
 
   // 2. Debounce de 300ms pour éviter d'inonder le backend FastAPI
@@ -700,6 +679,7 @@ export default function Header() {
         <nav className="hidden lg:flex items-center space-x-5 flex-shrink-0">
           <Link
             href="/"
+            onClick={(e) => handleGuardedClick(e, "nav_home", "Accueil")}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname === "/"
                 ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
@@ -711,6 +691,7 @@ export default function Header() {
           </Link>
           <Link
             href="/offres"
+            onClick={(e) => handleGuardedClick(e, "nav_offres", "Offres d'emploi")}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname.startsWith("/offres")
                 ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
@@ -722,6 +703,7 @@ export default function Header() {
           </Link>
           <Link
             href="/candidat/extracteur"
+            onClick={(e) => handleGuardedClick(e, "nav_extracteur", "Extracteur")}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname === "/candidat/extracteur"
                 ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
@@ -734,6 +716,7 @@ export default function Header() {
           </Link>
           <Link
             href="/messagerie"
+            onClick={(e) => handleGuardedClick(e, "nav_messagerie", "Messagerie")}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors ${
               pathname === "/messagerie"
                 ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
@@ -764,7 +747,10 @@ export default function Header() {
               <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
                 <Link
                   href="/importer-cv"
-                  onClick={() => setPlusDropdownOpen(false)}
+                  onClick={(e) => {
+                    setPlusDropdownOpen(false);
+                    handleGuardedClick(e, "nav_plus_importer", "Importer CV");
+                  }}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
                     pathname === "/importer-cv" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
@@ -780,7 +766,10 @@ export default function Header() {
 
                 <Link
                   href="/service"
-                  onClick={() => setPlusDropdownOpen(false)}
+                  onClick={(e) => {
+                    setPlusDropdownOpen(false);
+                    handleGuardedClick(e, "nav_plus_service", "Services & Modèles");
+                  }}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
                     pathname === "/service" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
@@ -796,7 +785,10 @@ export default function Header() {
 
                 <Link
                   href="/recrutement-spontane"
-                  onClick={() => setPlusDropdownOpen(false)}
+                  onClick={(e) => {
+                    setPlusDropdownOpen(false);
+                    handleGuardedClick(e, "nav_plus_recrutement_spontane", "Recrutement Spontané");
+                  }}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
                     pathname.startsWith("/recrutement-spontane") ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
@@ -812,7 +804,10 @@ export default function Header() {
 
                 <Link
                   href="/recrutement-journalier"
-                  onClick={() => setPlusDropdownOpen(false)}
+                  onClick={(e) => {
+                    setPlusDropdownOpen(false);
+                    handleGuardedClick(e, "nav_plus_depots", "Dépôts Physiques");
+                  }}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
                     pathname === "/recrutement-journalier" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
@@ -830,7 +825,10 @@ export default function Header() {
 
                 <Link
                   href="/boite-a-idees"
-                  onClick={() => setPlusDropdownOpen(false)}
+                  onClick={(e) => {
+                    setPlusDropdownOpen(false);
+                    handleGuardedClick(e, "nav_plus_boite_idees", "Boîte à idées");
+                  }}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors ${
                     pathname === "/boite-a-idees" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
@@ -867,11 +865,6 @@ export default function Header() {
               aria-label="Ouvrir les notifications"
             >
               <i className="fa-regular fa-bell text-base sm:text-lg"></i>
-              {unreadNotifCount > 0 && (
-                <span className="absolute top-1 right-1 bg-red-600 text-white text-[9px] font-extrabold rounded-full h-4 w-4 flex items-center justify-center shadow-xs border border-white dark:border-gray-900 animate-pulse">
-                  {unreadNotifCount}
-                </span>
-              )}
             </button>
           )}
 
@@ -991,7 +984,10 @@ export default function Header() {
           <div className="space-y-2 pb-2 border-b border-gray-100 dark:border-gray-800">
             <Link
               href="/importer-cv"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                handleGuardedClick(e, "nav_plus_importer", "Importer CV");
+              }}
               className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-extrabold transition text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-gray-800 hover:bg-emerald-100"
             >
               <i className="fa-solid fa-file-arrow-up text-base"></i>
@@ -1005,7 +1001,10 @@ export default function Header() {
             </div>
             <Link
               href="/service"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                handleGuardedClick(e, "nav_plus_service", "Services & Modèles");
+              }}
               className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <i className="fa-solid fa-file-lines w-5 text-center text-emerald-600"></i>
@@ -1013,7 +1012,10 @@ export default function Header() {
             </Link>
             <Link
               href="/recrutement-spontane"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                handleGuardedClick(e, "nav_plus_recrutement_spontane", "Recrutement Spontané");
+              }}
               className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <i className="fa-solid fa-building-user w-5 text-center text-blue-600"></i>
@@ -1021,7 +1023,10 @@ export default function Header() {
             </Link>
             <Link
               href="/recrutement-journalier"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                handleGuardedClick(e, "nav_plus_depots", "Dépôts Physiques");
+              }}
               className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <i className="fa-solid fa-gas-pump w-5 text-center text-purple-600"></i>
@@ -1029,7 +1034,10 @@ export default function Header() {
             </Link>
             <Link
               href="/boite-a-idees"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                handleGuardedClick(e, "nav_plus_boite_idees", "Boîte à idées");
+              }}
               className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <i className="fa-solid fa-lightbulb w-5 text-center text-amber-500"></i>

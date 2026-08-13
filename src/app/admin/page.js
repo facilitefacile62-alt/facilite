@@ -10,6 +10,7 @@ import BadgeDisplay from "@/components/BadgeDisplay";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityAlertsWidget";
+import { getFeatureFlagsTree, saveFeatureFlagsTree, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 
 // "Utilisateurs", "Tarification" et "Messagerie Support" ont migré dans
 // NAV_SECTIONS (sidebar catégorisée) — les garder ici aurait recréé le
@@ -178,6 +179,87 @@ export default function AdminDashboardPage() {
   const triggerToast = (message, icon = "fa-circle-check") => {
     setToast({ show: true, message, icon });
     setTimeout(() => setToast((t) => ({ ...t, show: false })), 3000);
+  };
+
+  // --- Arbre des fonctionnalités & Contrôle d'accès ---
+  const [featureTree, setFeatureTree] = useState(DEFAULT_FEATURE_TREE);
+  const [featureSearch, setFeatureSearch] = useState("");
+  const [expandedBranches, setExpandedBranches] = useState({
+    branch_nav: true,
+    branch_candidat: true,
+    branch_recruteur: true,
+    branch_services: true,
+  });
+
+  useEffect(() => {
+    setFeatureTree(getFeatureFlagsTree());
+  }, []);
+
+  const toggleBranch = (branchId) => {
+    setExpandedBranches((prev) => ({ ...prev, [branchId]: !prev[branchId] }));
+  };
+
+  const handleToggleFeatureMaster = (branchId, featId) => {
+    const updated = featureTree.map((b) => {
+      if (b.id !== branchId) return b;
+      return {
+        ...b,
+        children: b.children.map((f) => {
+          if (f.id !== featId) return f;
+          return { ...f, enabled: !f.enabled };
+        }),
+      };
+    });
+    setFeatureTree(updated);
+    saveFeatureFlagsTree(updated);
+    const targetFeat = updated.find((b) => b.id === branchId)?.children.find((f) => f.id === featId);
+    triggerToast(
+      targetFeat?.enabled ? `Module "${targetFeat.name}" activé.` : `Module "${targetFeat.name}" désactivé.`,
+      targetFeat?.enabled ? "fa-circle-check" : "fa-circle-xmark"
+    );
+  };
+
+  const handleToggleFeatureRole = (branchId, featId, roleKey) => {
+    const updated = featureTree.map((b) => {
+      if (b.id !== branchId) return b;
+      return {
+        ...b,
+        children: b.children.map((f) => {
+          if (f.id !== featId) return f;
+          const currentVal = f.roles?.[roleKey] ?? true;
+          return {
+            ...f,
+            roles: { ...f.roles, [roleKey]: !currentVal },
+          };
+        }),
+      };
+    });
+    setFeatureTree(updated);
+    saveFeatureFlagsTree(updated);
+    triggerToast("Permissions du rôle mises à jour.", "fa-circle-check");
+  };
+
+  const handleToggleBranchAll = (branchId, enableVal) => {
+    const updated = featureTree.map((b) => {
+      if (b.id !== branchId) return b;
+      return {
+        ...b,
+        children: b.children.map((f) => ({ ...f, enabled: enableVal })),
+      };
+    });
+    setFeatureTree(updated);
+    saveFeatureFlagsTree(updated);
+    triggerToast(enableVal ? "Branche activée." : "Branche désactivée.", "fa-circle-check");
+  };
+
+  const handleToggleAllGlobal = (enableVal) => {
+    const updated = featureTree.map((b) => ({
+      ...b,
+      children: b.children.map((f) => ({ ...f, enabled: enableVal })),
+    }));
+    setFeatureTree(updated);
+    saveFeatureFlagsTree(updated);
+    triggerToast(enableVal ? "Toutes les fonctionnalités activées." : "Toutes les fonctionnalités désactivées.", "fa-circle-check");
   };
 
   useEffect(() => {
@@ -1735,123 +1817,242 @@ export default function AdminDashboardPage() {
 
           {activeTab === "fonctionnalites" && (
             <div className="space-y-6">
-              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* En-tête du gestionnaire de fonctionnalités */}
+              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xl">✨</span>
-                    <h2 className="text-lg font-extrabold text-gray-900">Centre des Fonctionnalités</h2>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700">
-                      9 Modules Actifs
+                    <span className="text-xl">🌳</span>
+                    <h2 className="text-lg font-extrabold text-gray-900">Arbre d'Autorisations des Fonctionnalités</h2>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-100 text-orange-800">
+                      Chantier & Contrôle d'Accès
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 font-medium">
-                    Vue d'ensemble et accès direct à tous les services et modules intégrés de la plateforme Facilité.
+                    Activez ou désactivez les boutons et modules pour chaque catégorie d'utilisateurs le temps de finaliser les travaux.
                   </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleAllGlobal(true)}
+                    className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-extrabold rounded-xl transition cursor-pointer border border-emerald-200"
+                  >
+                    ✓ Tout Activer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleAllGlobal(false)}
+                    className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-extrabold rounded-xl transition cursor-pointer border border-red-200"
+                  >
+                    ✕ Tout Désactiver
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {[
-                  {
-                    title: "Créateur & Modèles de CV",
-                    desc: "Éditeur de CV interactif avec studio Canva et modèles 360° certifiés.",
-                    icon: "📄",
-                    href: "/creer-cv",
-                    color: "bg-blue-50 text-blue-700 border-blue-200",
-                    status: "Opérationnel",
-                  },
-                  {
-                    title: "Analyseur IA & Extraction",
-                    desc: "Analyse automatique et extraction structurée de CVs (PDF, Images) par IA.",
-                    icon: "🤖",
-                    href: "/importer-cv",
-                    color: "bg-purple-50 text-purple-700 border-purple-200",
-                    status: "Opérationnel",
-                  },
-                  {
-                    title: "Portail Recrutement & Offres",
-                    desc: "Publication, modération et suivi des candidatures et offres d'emploi.",
-                    icon: "💼",
-                    href: "/admin/offres",
-                    color: "bg-amber-50 text-amber-700 border-amber-200",
-                    status: "Opérationnel",
-                  },
-                  {
-                    title: "Messagerie en Temps Réel",
-                    desc: "Échanges directs entre candidats et recruteurs vérifiés avec alertes.",
-                    icon: "💬",
-                    href: "/messagerie",
-                    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                    status: "Opérationnel",
-                  },
-                  {
-                    title: "Simulation d'Entretien IA",
-                    desc: "Entraînement immersif aux entretiens avec feedback d'évaluation vocal et écrit.",
-                    icon: "🎙️",
-                    href: "/simulation-entretien",
-                    color: "bg-rose-50 text-rose-700 border-rose-200",
-                    status: "Opérationnel",
-                  },
-                  {
-                    title: "Agrégation & Scraping d'Offres",
-                    desc: "Collecte et normalisation automatique des offres d'emploi externes.",
-                    icon: "🕷️",
-                    href: "/admin/scraping",
-                    color: "bg-indigo-50 text-indigo-700 border-indigo-200",
-                    status: "Opérationnel",
-                  },
-                  {
-                    title: "Commandes & Accompagnement",
-                    desc: "Gestion des commandes de rédaction de CV sur-mesure par les agents.",
-                    icon: "🧑‍💼",
-                    href: "/admin/commandes-agent",
-                    color: "bg-orange-50 text-orange-700 border-orange-200",
-                    status: "Opérationnel",
-                  },
-                  {
-                    title: "Accréditation & Badges",
-                    desc: "Système de vérification d'entreprise et d'attribution du badge Recruteur vérifié.",
-                    icon: "🎖️",
-                    href: "/demande-badge",
-                    color: "bg-teal-50 text-teal-700 border-teal-200",
-                    status: "Opérationnel",
-                  },
-                  {
-                    title: "Boîte à Idées & Feedback",
-                    desc: "Collecte des suggestions d'amélioration et avis de la communauté.",
-                    icon: "💡",
-                    href: "/boite-a-idees",
-                    color: "bg-yellow-50 text-yellow-700 border-yellow-200",
-                    status: "Opérationnel",
-                  },
-                ].map((feat) => (
-                  <div
-                    key={feat.title}
-                    className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-3xl">{feat.icon}</span>
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          {feat.status}
-                        </span>
-                      </div>
-                      <h3 className="text-sm font-extrabold text-gray-900 mb-1">{feat.title}</h3>
-                      <p className="text-xs text-gray-500 font-medium leading-relaxed">{feat.desc}</p>
-                    </div>
+              {/* Barre de recherche dans l'arbre */}
+              <div className="relative">
+                <i className="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-gray-400 text-xs"></i>
+                <input
+                  type="text"
+                  placeholder="Rechercher une fonctionnalité, un bouton ou une route (ex: Modèles, Importer, Offres)..."
+                  value={featureSearch}
+                  onChange={(e) => setFeatureSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-2xl text-xs font-medium focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 shadow-xs transition"
+                />
+              </div>
 
-                    <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-                      <Link
-                        href={feat.href}
-                        className="inline-flex items-center gap-1.5 text-xs font-extrabold text-orange-600 hover:text-orange-700 transition"
-                      >
-                        <span>Accéder au module</span>
-                        <i className="fa-solid fa-arrow-right text-[10px]"></i>
-                      </Link>
+              {/* Rendu sous forme d'Arbre (Tree Structure) */}
+              <div className="space-y-4">
+                {featureTree.map((branch) => {
+                  const filteredChildren = branch.children.filter((feat) => {
+                    if (!featureSearch.trim()) return true;
+                    const q = featureSearch.toLowerCase();
+                    return (
+                      feat.name.toLowerCase().includes(q) ||
+                      feat.description.toLowerCase().includes(q) ||
+                      (feat.path && feat.path.toLowerCase().includes(q))
+                    );
+                  });
+
+                  if (featureSearch.trim() && filteredChildren.length === 0) return null;
+
+                  const isExpanded = expandedBranches[branch.id] !== false;
+                  const activeCount = branch.children.filter((c) => c.enabled).length;
+
+                  return (
+                    <div
+                      key={branch.id}
+                      className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden transition"
+                    >
+                      {/* En-tête de la Branche Principale */}
+                      <div className="p-4 sm:p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleBranch(branch.id)}
+                          className="flex items-center gap-3 text-left flex-1 min-w-0 cursor-pointer"
+                        >
+                          <div className="w-9 h-9 rounded-xl bg-orange-100/70 text-orange-700 flex items-center justify-center text-base shrink-0 shadow-xs">
+                            {branch.icon}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-extrabold text-gray-900">{branch.name}</h3>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                                {activeCount} / {branch.children.length} activé{activeCount > 1 ? "s" : ""}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 font-medium truncate">{branch.description}</p>
+                          </div>
+                        </button>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBranchAll(branch.id, true)}
+                            title="Activer tous les modules de cette branche"
+                            className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 px-2 py-1 bg-emerald-50 rounded-lg transition"
+                          >
+                            Activer tout
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBranchAll(branch.id, false)}
+                            title="Désactiver tous les modules de cette branche"
+                            className="text-[11px] font-bold text-red-600 hover:text-red-700 px-2 py-1 bg-red-50 rounded-lg transition"
+                          >
+                            Désactiver tout
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleBranch(branch.id)}
+                            className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 transition cursor-pointer"
+                          >
+                            <i className={`fa-solid fa-chevron-down text-xs transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Feuilles / Nœuds de la branche (Arborescence) */}
+                      {isExpanded && (
+                        <div className="p-4 sm:p-5">
+                          <div className="border-l-2 border-orange-200/80 ml-3 sm:ml-4 pl-4 sm:pl-6 space-y-4">
+                            {filteredChildren.map((feat) => (
+                              <div
+                                key={feat.id}
+                                className={`rounded-2xl border p-4 transition-all relative ${
+                                  feat.enabled
+                                    ? "bg-white border-gray-200 shadow-2xs hover:border-orange-200"
+                                    : "bg-gray-50/60 border-dashed border-gray-300 opacity-80"
+                                }`}
+                              >
+                                {/* Petite ligne de branchement visuelle */}
+                                <div className="absolute -left-[18px] sm:-left-[26px] top-6 w-3 sm:w-5 h-0.5 bg-orange-200"></div>
+
+                                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                  {/* Infos Fonctionnalité */}
+                                  <div className="min-w-0 flex items-start gap-3">
+                                    <span className="text-2xl mt-0.5 shrink-0">{feat.icon}</span>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                                        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900">{feat.name}</h4>
+                                        {feat.path && (
+                                          <span className="text-[10px] font-mono bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+                                            {feat.path}
+                                          </span>
+                                        )}
+                                        <span
+                                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                            feat.enabled
+                                              ? "bg-emerald-100 text-emerald-800"
+                                              : "bg-red-100 text-red-800"
+                                          }`}
+                                        >
+                                          <span className={`w-1.5 h-1.5 rounded-full ${feat.enabled ? "bg-emerald-500" : "bg-red-500"}`}></span>
+                                          {feat.enabled ? "Actif" : "Désactivé"}
+                                        </span>
+                                      </div>
+                                      <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                        {feat.description}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Interrupteur Maître (Global Toggle) */}
+                                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 shrink-0">
+                                    <span className="text-xs font-extrabold text-gray-700">
+                                      {feat.enabled ? "Activé" : "Verrouillé"}
+                                    </span>
+                                    <ToggleSwitch
+                                      checked={feat.enabled}
+                                      onChange={() => handleToggleFeatureMaster(branch.id, feat.id)}
+                                      title={feat.enabled ? "Désactiver ce module" : "Activer ce module"}
+                                      activeColorClass="bg-emerald-500"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Matrice d'autorisations par Rôle (Arbre de permissions) */}
+                                {feat.enabled && (
+                                  <div className="mt-3 pt-3 border-t border-gray-100 bg-gray-50/50 rounded-xl p-3">
+                                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                                      <i className="fa-solid fa-users-gear text-orange-500"></i>
+                                      <span>Autorisations par profil d'utilisateur :</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                      {/* Candidats / Utilisateurs */}
+                                      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs">👤</span>
+                                          <span className="text-[11px] font-bold text-gray-800">Candidats</span>
+                                        </div>
+                                        <ToggleSwitch
+                                          checked={feat.roles?.user !== false}
+                                          onChange={() => handleToggleFeatureRole(branch.id, feat.id, "user")}
+                                          title="Autoriser pour les Candidats"
+                                          activeColorClass="bg-orange-500"
+                                        />
+                                      </div>
+
+                                      {/* Recruteurs */}
+                                      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs">💼</span>
+                                          <span className="text-[11px] font-bold text-gray-800">Recruteurs</span>
+                                        </div>
+                                        <ToggleSwitch
+                                          checked={feat.roles?.recruiter !== false}
+                                          onChange={() => handleToggleFeatureRole(branch.id, feat.id, "recruiter")}
+                                          title="Autoriser pour les Recruteurs"
+                                          activeColorClass="bg-blue-500"
+                                        />
+                                      </div>
+
+                                      {/* Visiteurs non connectés */}
+                                      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs">🌐</span>
+                                          <span className="text-[11px] font-bold text-gray-800">Visiteurs</span>
+                                        </div>
+                                        <ToggleSwitch
+                                          checked={feat.roles?.visitor !== false}
+                                          onChange={() => handleToggleFeatureRole(branch.id, feat.id, "visitor")}
+                                          title="Autoriser pour les Visiteurs"
+                                          activeColorClass="bg-purple-500"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

@@ -2,6 +2,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import AIAssistantModal from "@/components/AIAssistantModal";
+import FeatureDisabledModal from "@/components/FeatureDisabledModal";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 const inter = Inter({
@@ -58,6 +59,7 @@ export default function RootLayout({ children }) {
           <Header />
           {children}
           <AIAssistantModal />
+          <FeatureDisabledModal />
         </ThemeProvider>
       </body>
     </html>
