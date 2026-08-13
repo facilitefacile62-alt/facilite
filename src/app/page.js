@@ -1786,17 +1786,19 @@ export default function Home() {
                           {selectedLang === "FR" ? job.titleFR : job.titleEN}
                         </h4>
                         <p className="text-xs text-gray-700 font-bold mt-0.5">{job.company}</p>
-                        <p className="text-[10px] text-gray-400 font-medium mt-0.5 flex items-center space-x-1.5">
-                          <span>{job.location}</span>
+                        <p className="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-emerald-700 font-extrabold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                            <i className="fa-solid fa-location-dot text-[10px]"></i>
+                            {job.location}
+                          </span>
                           <span>•</span>
-                          <span>{selectedLang === "FR" ? job.timeFR : job.timeEN}</span>
+                          <span className="font-extrabold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
+                            {job.contract}
+                          </span>
+                          <span>•</span>
+                          <span className="text-gray-400 font-normal">{selectedLang === "FR" ? job.timeFR : job.timeEN}</span>
                         </p>
                       </div>
-
-                      {/* Badge Contrat */}
-                      <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase">
-                        {job.contract}
-                      </span>
                     </div>
 
                     {/* Description */}

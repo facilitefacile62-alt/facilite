@@ -4,13 +4,12 @@
 import { useState, useRef, useEffect } from "react";
 
 /**
- * Barre d'Engagement & Partage Réseau Social (Style LinkedIn / 4 Actions)
- * - Statuts sociaux : 👍 ❤️ 💡 (compteur) + Salaire / Contrat
- * - 4 Actions horizontales :
- *   1. 👍 J'aime
- *   2. 💰 Salaire / Info ("Non renseigné" ou montant)
- *   3. ↪️ Partager (Bouton vert avec menu déroulant de tous les réseaux sociaux)
- *   4. ✈️ Envoyer (Postuler directement)
+ * Barre d'Engagement & Partage Réseau Social Épurée (Gain d'espace maximum)
+ * 4 Actions horizontales compactes :
+ * 1. 👍 J'aime
+ * 2. 💰 Non renseigné (ou salaire)
+ * 3. ↪️ Partager (Bouton avec menu déroulant de tous les réseaux sociaux)
+ * 4. ✈️ Envoyer (Postuler directement)
  */
 export default function SocialShareButtons({
   offer,
@@ -23,7 +22,6 @@ export default function SocialShareButtons({
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [likes, setLikes] = useState(24 + Math.floor(((offer?.id || 1) * 7) % 85));
   const [hasLiked, setHasLiked] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -94,13 +92,7 @@ export default function SocialShareButtons({
 
   const toggleLike = (e) => {
     e.stopPropagation();
-    if (hasLiked) {
-      setLikes((prev) => prev - 1);
-      setHasLiked(false);
-    } else {
-      setLikes((prev) => prev + 1);
-      setHasLiked(true);
-    }
+    setHasLiked((prev) => !prev);
   };
 
   const shareLinks = {
@@ -111,37 +103,12 @@ export default function SocialShareButtons({
     telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
   };
 
-  // 1. Rendu Compact pour le Flux d'Accueil et Listes (Style LinkedIn 4 Actions)
+  // 1. Rendu Compact pour le Flux d'Accueil et Listes (4 Actions horizontales, gain d'espace maximum)
   if (variant === "compact") {
     return (
-      <div className={`w-full flex flex-col pt-2 border-t border-gray-100 ${className}`} ref={dropdownRef}>
-        {/* Ligne 1 : Compteurs Sociaux & Badge Salaire (Style LinkedIn) */}
-        <div className="flex items-center justify-between text-[11px] font-medium text-gray-500 pb-2 px-1 border-b border-gray-100/70 select-none">
-          {/* Réactions */}
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={toggleLike}>
-            <div className="flex -space-x-1 items-center">
-              <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] flex items-center justify-center shadow-xs">
-                👍
-              </span>
-              <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center shadow-xs">
-                💡
-              </span>
-              <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] flex items-center justify-center shadow-xs">
-                ❤️
-              </span>
-            </div>
-            <span className={`font-extrabold ${hasLiked ? "text-blue-600" : "text-gray-600"}`}>{likes}</span>
-          </div>
-
-          {/* Salaire / Info Statut */}
-          <div className="flex items-center gap-1 text-[11px] font-bold text-gray-600">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-            <span>{location} • {contract}</span>
-          </div>
-        </div>
-
-        {/* Ligne 2 : Les 4 Actions Horizontales (J'aime, Info Salaire, Partager avec Menu, Envoyer/Postuler) */}
-        <div className="flex items-center justify-between gap-1 sm:gap-2 pt-2">
+      <div className={`relative w-full pt-2 border-t border-gray-100 ${className}`} ref={dropdownRef}>
+        {/* Rangée des 4 Actions Horizontales Épurées */}
+        <div className="flex items-center justify-between gap-1 sm:gap-2">
           {/* Action 1 : J'aime */}
           <button
             type="button"
@@ -156,12 +123,12 @@ export default function SocialShareButtons({
             <span className="hidden xs:inline">{hasLiked ? "Aimé" : "J'aime"}</span>
           </button>
 
-          {/* Action 2 : Salaire / Statut (Non renseigné ou montant) */}
+          {/* Action 2 : Salaire / Statut (Format badge "Non renseigné" ou montant) */}
           <div
-            className="flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2 rounded-xl text-xs font-extrabold text-gray-700 bg-gray-50 border border-gray-200/80 truncate text-center"
-            title={`Salaire : ${salary}`}
+            className="flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2 rounded-xl text-xs font-extrabold text-gray-700 bg-gray-50 border border-gray-200/80 truncate text-center select-none"
+            title={`Rémunération : ${salary}`}
           >
-            <span className="text-[11px] truncate">
+            <span className="text-[11px] truncate font-bold text-gray-800">
               {salary && salary !== "Non spécifié" && salary !== "Non renseigné" ? `💰 ${salary}` : "💰 Non renseigné"}
             </span>
           </div>
@@ -418,16 +385,6 @@ export default function SocialShareButtons({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Reaction */}
-          <button
-            type="button"
-            onClick={toggleLike}
-            className="px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <span>👍 ❤️</span>
-            <span className={hasLiked ? "text-blue-600 font-black" : ""}>{likes}</span>
-          </button>
-
           {typeof navigator !== "undefined" && "share" in navigator && (
             <button
               type="button"
