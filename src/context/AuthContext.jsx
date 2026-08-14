@@ -25,24 +25,8 @@ const AuthContext = createContext({
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("FACILITE_CACHED_PROFILE_V1");
-        if (cached) return JSON.parse(cached);
-      } catch {}
-    }
-    return null;
-  });
-  const [role, setRole] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cachedRole = localStorage.getItem("FACILITE_CACHED_ROLE_V1");
-        if (cachedRole) return cachedRole;
-      } catch {}
-    }
-    return "visitor";
-  });
+  const [profile, setProfile] = useState(null);
+  const [role, setRole] = useState("visitor");
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async (currentSession) => {
@@ -126,6 +110,18 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let mounted = true;
+
+    // 0. Hydratation instantanée côté client après montage (élimine l'erreur 418)
+    try {
+      const cached = localStorage.getItem("FACILITE_CACHED_PROFILE_V1");
+      const cachedRole = localStorage.getItem("FACILITE_CACHED_ROLE_V1");
+      if (cached && mounted) {
+        setProfile(JSON.parse(cached));
+      }
+      if (cachedRole && mounted) {
+        setRole(cachedRole);
+      }
+    } catch {}
 
     // 1. Chargement initial unique au démarrage
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {

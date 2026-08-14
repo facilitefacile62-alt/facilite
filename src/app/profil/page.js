@@ -64,32 +64,11 @@ export default function ProfilPage() {
   const { session: userSession, profile: authProfile, isAdmin: authIsAdmin, isRecruiter: authIsRecruiter, loading: authLoading, refreshProfile } = useAuth();
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
 
-  const getCachedProfile = () => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("FACILITE_CACHED_PROFILE_V1");
-        if (cached) return JSON.parse(cached);
-      } catch {}
-    }
-    return null;
-  };
-  const cachedProfile = getCachedProfile();
-
-  const [profileName, setProfileName] = useState(() => authProfile?.full_name || cachedProfile?.full_name || "");
-  const [profileRole, setProfileRole] = useState(() => {
-    if (authIsAdmin || cachedProfile?.role === "admin" || (typeof window !== "undefined" && localStorage.getItem("FACILITE_CACHED_ROLE_V1") === "admin")) return "admin";
-    if (authIsRecruiter || cachedProfile?.role === "recruiter") return "recruiter";
-    return "user";
-  });
-  const [profileBadges, setProfileBadges] = useState(() => {
-    const b = authProfile?.badges || cachedProfile?.badges || [];
-    if ((authIsAdmin || (typeof window !== "undefined" && localStorage.getItem("FACILITE_CACHED_ROLE_V1") === "admin")) && !b.includes("administrateur")) {
-      return [...b, "administrateur"];
-    }
-    return b;
-  });
-  const [isNavAdmin, setIsNavAdmin] = useState(() => authIsAdmin || (typeof window !== "undefined" && localStorage.getItem("FACILITE_CACHED_ROLE_V1") === "admin"));
-  const [isNavRecruiter, setIsNavRecruiter] = useState(() => authIsRecruiter || (typeof window !== "undefined" && localStorage.getItem("FACILITE_CACHED_ROLE_V1") === "recruiter"));
+  const [profileName, setProfileName] = useState("");
+  const [profileRole, setProfileRole] = useState("user");
+  const [profileBadges, setProfileBadges] = useState([]);
+  const [isNavAdmin, setIsNavAdmin] = useState(false);
+  const [isNavRecruiter, setIsNavRecruiter] = useState(false);
   const [activeTab, setActiveTab] = useState("about"); // "about" | "documents" | "settings"
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const plusMenuRef = useRef(null);
@@ -97,44 +76,30 @@ export default function ProfilPage() {
   const sectionTitleMenuRef = useRef(null);
   const [roleQueryError, setRoleQueryError] = useState(null);
   const [adminRpcError, setAdminRpcError] = useState(null);
-  const [profileSubtitle, setProfileSubtitle] = useState(() => authProfile?.headline || cachedProfile?.headline || "");
-  const [profileLocation, setProfileLocation] = useState(() => authProfile?.location || cachedProfile?.location || "");
-  const [profileBio, setProfileBio] = useState(() => authProfile?.bio || cachedProfile?.bio || "");
-  const [tempBio, setTempBio] = useState(() => authProfile?.bio || cachedProfile?.bio || "");
-  const [pinnedDetails, setPinnedDetails] = useState(() => authProfile?.pinned_details || cachedProfile?.pinned_details || []);
-  const [tempPinnedDetails, setTempPinnedDetails] = useState(() => authProfile?.pinned_details || cachedProfile?.pinned_details || []);
-  const [phone, setPhone] = useState(() => authProfile?.phone || cachedProfile?.phone || (typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : ""));
-  const [websiteUrl, setWebsiteUrl] = useState(() => authProfile?.website_url || cachedProfile?.website_url || (typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : ""));
-  const [educationLevel, setEducationLevel] = useState(() => authProfile?.education_level || cachedProfile?.education_level || "Aucun");
-  // Ouvre directement un onglet précis via ?tab=... (ex: lien "Sécurisez votre
-  // compte" ou redirection post-connexion OTP depuis /forgot-password).
-  // Initialiseur paresseux plutôt qu'un effet : window.location.search est
-  // lu une seule fois, sans setState supplémentaire ni Suspense boundary.
-  const [activeSection, setActiveSection] = useState(() => {
-    if (typeof window === "undefined") return "info_perso";
-    const tabParam = new URLSearchParams(window.location.search).get("tab");
-    return tabParam === "personal_info" ? "info_perso" : (tabParam || "info_perso");
-  });
-
+  const [profileSubtitle, setProfileSubtitle] = useState("");
+  const [profileLocation, setProfileLocation] = useState("");
+  const [profileBio, setProfileBio] = useState("");
+  const [tempBio, setTempBio] = useState("");
+  const [pinnedDetails, setPinnedDetails] = useState([]);
+  const [tempPinnedDetails, setTempPinnedDetails] = useState([]);
+  const [phone, setPhone] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [educationLevel, setEducationLevel] = useState("Aucun");
+  const [activeSection, setActiveSection] = useState("info_perso");
   const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
   const aboutDropdownRef = useRef(null);
-
-  const [selectedSection, setSelectedSection] = useState(() => {
-    if (typeof window === "undefined") return null;
-    const tabParam = new URLSearchParams(window.location.search).get("tab");
-    return tabParam === "personal_info" ? "info_perso" : (tabParam || null);
-  });
+  const [selectedSection, setSelectedSection] = useState(null);
 
   // Accordéon mobile de la liste d'onglets "À propos" : replié par défaut
   // pour économiser l'espace d'écran (sans effet en desktop, où la liste
   // reste une barre latérale toujours visible via md:flex).
   const [aboutTabsOpen, setAboutTabsOpen] = useState(false);
-  const [gender, setGender] = useState(() => authProfile?.gender || cachedProfile?.gender || (typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : ""));
-  const [company, setCompany] = useState(() => authProfile?.company || cachedProfile?.company || (typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : ""));
-  const [avatarUrl, setAvatarUrl] = useState(() => authProfile?.avatar_url || cachedProfile?.avatar_url || "/logo.jpeg");
-  const [coverUrl, setCoverUrl] = useState(() => authProfile?.cover_url || cachedProfile?.cover_url || "/stellar-cover.png");
-  const [profileSynced, setProfileSynced] = useState(() => !!(authProfile || cachedProfile));
-  const profileLoading = (authLoading && !cachedProfile && !authProfile) || (!profileSynced && !cachedProfile);
+  const [gender, setGender] = useState("");
+  const [company, setCompany] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
+  const [coverUrl, setCoverUrl] = useState("/stellar-cover.png");
+  const [profileSynced, setProfileSynced] = useState(false);
+  const profileLoading = authLoading || !profileSynced;
   // Documents (table resumes) : fetch local séparé, découplé du skeleton
   // photo/profil (Point F1-C/D) — son propre état de chargement.
   const [resumesLoading, setResumesLoading] = useState(true);
@@ -211,24 +176,24 @@ export default function ProfilPage() {
   const [isCopiedLink, setIsCopiedLink] = useState(false);
 
   // Compétences dynamique (Supabase)
-  const [userSkills, setUserSkills] = useState(() => authProfile?.skills || cachedProfile?.skills || []);
+  const [userSkills, setUserSkills] = useState([]);
   const [newSkillInput, setNewSkillInput] = useState("");
 
   // Centres d'intérêt dynamique (Supabase)
-  const [userInterests, setUserInterests] = useState(() => authProfile?.interests || cachedProfile?.interests || []);
+  const [userInterests, setUserInterests] = useState([]);
   const [newInterestInput, setNewInterestInput] = useState("");
 
   // Coordonnées de contact extraites (Supabase)
-  const [contactEmail, setContactEmail] = useState(() => authProfile?.contact_email || cachedProfile?.contact_email || "");
+  const [contactEmail, setContactEmail] = useState("");
 
   // Langues dynamique (Supabase + localStorage)
-  const [userLanguages, setUserLanguages] = useState(() => authProfile?.languages || cachedProfile?.languages || []);
+  const [userLanguages, setUserLanguages] = useState([]);
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [newLangName, setNewLangName] = useState("");
   const [newLangLevel, setNewLangLevel] = useState("Intermédiaire");
 
   // Expériences dynamique (localStorage)
-  const [experiences, setExperiences] = useState(() => authProfile?.experiences || cachedProfile?.experiences || []);
+  const [experiences, setExperiences] = useState([]);
   const [experienceModalOpen, setExperienceModalOpen] = useState(false);
   const [expTitle, setExpTitle] = useState("");
   const [expCompany, setExpCompany] = useState("");
@@ -242,7 +207,7 @@ export default function ProfilPage() {
   const [expSkillInput, setExpSkillInput] = useState("");
 
   // Formations / Éducation dynamique (Supabase + localStorage)
-  const [educations, setEducations] = useState(() => authProfile?.educations || cachedProfile?.educations || []);
+  const [educations, setEducations] = useState([]);
   const [educationModalOpen, setEducationModalOpen] = useState(false);
   const [eduSchool, setEduSchool] = useState("");
   const [eduDegree, setEduDegree] = useState("");
