@@ -31,10 +31,12 @@ function cleanAndParseJSON(text) {
   return JSON.parse(cleaned);
 }
 
-const SYSTEM_PROMPT = `Tu es un consultant en recrutement senior et expert en audit de CV.
+function buildDiagnosticSystemPrompt(customRules) {
+  return `Tu es un consultant en recrutement senior et expert en audit de CV pour Facilité.
+${customRules ? `\nRÈGLES ET CRITÈRES OFFICIELS DU DIAGNOSTIC CV À APPLIQUER :\n${customRules}\n` : ""}
 Analyse le CV fourni et retourne impérativement un rapport d'audit détaillé sous format JSON strict respectant la structure suivante :
 {
-  "score_global": 75, // Note entière sur 100 basée sur la pertinence, la clarté et le design
+  "score_global": 75, // Note entière sur 100 basée sur la pertinence, la clarté, le design et le respect des critères
   "points_forts": [
     "Présentation claire du titre de poste",
     "Bonne mise en valeur des compétences clés"
@@ -49,6 +51,9 @@ Analyse le CV fourni et retourne impérativement un rapport d'audit détaillé s
     "Rendez le résumé professionnel plus percutant"
   ]
 }`;
+}
+
+const DEFAULT_SYSTEM_PROMPT = buildDiagnosticSystemPrompt();
 
 // Modèles vision essayés dans l'ordre. `gemini-flash-latest` est un alias qui
 // suit la version courante : les identifiants figés utilisés auparavant ne
@@ -56,17 +61,18 @@ Analyse le CV fourni et retourne impérativement un rapport d'audit détaillé s
 // nouveaux comptes), ce qui rendait tout le diagnostic par image inopérant.
 const GEMINI_VISION_MODELS = ["gemini-flash-latest", "gemini-2.0-flash"];
 
-async function callGeminiVision(base64Data, mimeType) {
+async function callGeminiVision(base64Data, mimeType, customRules = null) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey || geminiApiKey.includes("[") || geminiApiKey.trim() === "") return null;
 
   const pureBase64 = base64Data.replace(/^data:[a-zA-Z0-9/\-+.]+;base64,/, "");
+  const systemPrompt = customRules ? buildDiagnosticSystemPrompt(customRules) : DEFAULT_SYSTEM_PROMPT;
 
   const requestBody = JSON.stringify({
     contents: [
       {
         parts: [
-          { text: `${SYSTEM_PROMPT}\n\nAnalyse cette image de CV et renvoie le JSON d'audit.` },
+          { text: `${systemPrompt}\n\nAnalyse cette image de CV et renvoie le JSON d'audit.` },
           {
             inlineData: {
               mimeType: mimeType || "image/png",
@@ -120,7 +126,9 @@ async function callGeminiVision(base64Data, mimeType) {
   return null;
 }
 
-async function callAITextModel(extractedText) {
+async function callAITextModel(extractedText, customRules = null) {
+  const systemPrompt = customRules ? buildDiagnosticSystemPrompt(customRules) : DEFAULT_SYSTEM_PROMPT;
+
   // Essayons avec Groq en premier
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey && !groqKey.includes("[") && groqKey.trim() !== "") {
@@ -129,7 +137,7 @@ async function callAITextModel(extractedText) {
       const response = await groq.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: `Voici le texte brut du CV à analyser :\n\n${extractedText}` }
         ],
         temperature: 0.2,
@@ -150,7 +158,7 @@ async function callAITextModel(extractedText) {
       const response = await deepseek.chat.completions.create({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: `Voici le texte brut du CV à analyser :\n\n${extractedText}` }
         ],
         temperature: 0.2,
@@ -188,7 +196,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { fileData, fileName, mimeType } = parsed.data;
+    const { fileData, fileName, mimeType, customRules } = parsed.data;
 
     // Contrôle taille + type déclaré + magic bytes sur le binaire réel
     const base64Payload = fileData.replace(/^data:[a-zA-Z0-9/\-+.]+;base64,/, "");
@@ -203,7 +211,7 @@ export async function POST(req) {
 
     // 1. Analyse de l'image via Gemini Vision
     if (isImage) {
-      result = await callGeminiVision(fileData, mimeType);
+      result = await callGeminiVision(fileData, mimeType, customRules);
     }
 
     // 2. Si c'est un document (ou si l'analyse d'image a échoué)
@@ -219,8 +227,8 @@ export async function POST(req) {
         console.error("Diagnostic: Échec de l'extraction de texte:", err.message);
       }
 
-      if (extractedText) {
-        result = await callAITextModel(extractedText);
+      if (extractedText && extractedText.trim().length > 10) {
+        result = await callAITextModel(extractedText, customRules);
       }
     }
 

@@ -7,7 +7,8 @@ import { extractTextFromFile } from "@/lib/documentParser";
 export const runtime = "nodejs";
 
 /**
- * Assistant IA de la messagerie, spécialisé par rôle (CV, coaching, orientation).
+ * Assistant IA de la messagerie — une conversation directe couvrant CV,
+ * entretien et orientation sans que l'utilisateur ait à choisir un mode.
  *
  * Appel direct à l'API DeepSeek en `fetch`, sans Vercel AI SDK : les versions
  * installées sont incompatibles entre elles (`ai@7` côté serveur n'expose plus
@@ -16,17 +17,19 @@ export const runtime = "nodejs";
  * prix d'une réponse non streamée.
  */
 
+// Prompt unifié (fusion des 3 modes CV / Coach entretien / Orientation —
+// voir git history pour les 3 versions séparées) : couvre les trois volets
+// naturellement selon ce que la question demande, sans jamais faire choisir
+// un mode à l'utilisateur. Les 3 descriptions de spécialisation sont
+// reprises mot pour mot, seule leur présentation change (toujours actives
+// au lieu de conditionnées à un `activeAiRole`).
 const BASE_PROMPT = `Tu es l'assistant IA officiel de la plateforme Facilité (https://ffacilite.com/), fondée par Macoumba Samake.
-Ton rôle est d'accompagner les utilisateurs, candidats et recruteurs au Sénégal et à l'international.
+Ton rôle est d'accompagner les utilisateurs, candidats et recruteurs au Sénégal et à l'international, sur trois volets que tu couvres naturellement selon ce que la question demande, sans jamais faire choisir un mode à l'utilisateur :
+- Rédaction, correction et mise en valeur de CV et lettres de motivation.
+- Coaching pour entretiens d'embauche et conseils pour convaincre les recruteurs.
+- Orientation académique, démarches administratives et conseils de carrière.
 Tu es trilingue : réponds avec aisance en Français, en Wolof ou en Anglais selon la langue choisie par l'utilisateur.
 Sois clair, dynamique, courtois, hautement professionnel et structuré dans tes réponses.`;
-
-const ROLE_PROMPTS = {
-  cv: " Spécialisation : Rédaction, correction et mise en valeur de CV et lettres de motivation.",
-  coach: " Spécialisation : Coaching pour entretiens d'embauche et conseils pour convaincre les recruteurs.",
-  interview: " Spécialisation : Coaching pour entretiens d'embauche et conseils pour convaincre les recruteurs.",
-  orientation: " Spécialisation : Orientation académique, démarches administratives et conseils de carrière.",
-};
 
 const GEMINI_VISION_MODEL = "gemini-flash-latest";
 const BASE64_PREFIXE = /^data:[a-zA-Z0-9/\-+.]+;base64,/;
@@ -142,7 +145,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { messages, message, activeAiRole, model: requestedModel, customSystemPrompt, temperature, attachments } = parsed.data;
+    const { messages, message, model: requestedModel, customSystemPrompt, temperature, attachments } = parsed.data;
 
     // Normalisation des deux formes acceptées vers un historique unique.
     const historique =
@@ -150,9 +153,9 @@ export async function POST(req) {
         ? messages
         : [{ role: "user", content: message }];
 
-    const systemPrompt = customSystemPrompt?.trim() 
-      ? customSystemPrompt.trim() 
-      : (BASE_PROMPT + (ROLE_PROMPTS[activeAiRole] || ""));
+    const systemPrompt = customSystemPrompt?.trim()
+      ? customSystemPrompt.trim()
+      : BASE_PROMPT;
 
     // 3. Pièces jointes
     const images = (attachments || []).filter((a) => a.type === "image");

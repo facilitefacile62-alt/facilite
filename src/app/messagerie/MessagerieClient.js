@@ -150,38 +150,10 @@ const translations = {
   }
 };
 
-// 3 IA d'assistance spécialisées
-const AI_ROLES = [
-  {
-    id: "cv",
-    name: "Rédaction & Optimisation CV",
-    badge: "📄 CV & Lettre",
-    icon: "🤖",
-    description: "Rédaction de CV, lettres de motivation, mise en valeur des compétences.",
-    systemPrompt: "Tu es une IA experte en rédaction de CV et de lettres de motivation."
-  },
-  {
-    id: "coach",
-    name: "Coach Recrutement & Entretien",
-    badge: "💼 Coach Entretien",
-    icon: "💼",
-    description: "Simulation d'entretiens d'embauche, conseils recruteurs et négociation.",
-    systemPrompt: "Tu es un coach expert en entretien d'embauche et négociation salariale."
-  },
-  {
-    id: "orientation",
-    name: "Orientation & Assistance",
-    badge: "🧭 Orientation",
-    icon: "🧭",
-    description: "Démarches administratives, orientation académique et reconversion pro.",
-    systemPrompt: "Tu es un conseiller expert en orientation professionnelle et démarches."
-  }
-];
-
 const DEFAULT_AI_WELCOME = {
   id: 'welcome-msg',
   sender: 'bot',
-  text: "Bonjour ! 👋 Bienvenue sur l'Assistance IA Facilite.\n\nQuelle assistance souhaitez-vous aujourd'hui ?\n1️⃣ Rédaction & Correction de CV\n2️⃣ Coaching Entretien d'embauche\n3️⃣ Orientation & Démarches",
+  text: "Bonjour ! 👋 Bienvenue sur l'Assistance IA Facilite.\n\nPosez-moi votre question : rédaction de CV, préparation à un entretien, orientation professionnelle... je suis là pour vous aider.",
   time: "12:00",
   status: "read",
   isPinned: false,
@@ -329,9 +301,6 @@ export default function MessagerieClient() {
   const recipientParam = searchParams.get("recipient");
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // Rôle IA actif (par défaut : Rédaction & Optimisation CV)
-  const [activeAiRole, setActiveAiRole] = useState("cv");
   
   // Layout & Dropdown States
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
@@ -724,8 +693,7 @@ export default function MessagerieClient() {
         body: JSON.stringify({
           messages: historique
             .filter(m => m.id !== AI_WELCOME_MESSAGE.id)
-            .map(m => ({ role: m.role, content: m.content })),
-          activeAiRole
+            .map(m => ({ role: m.role, content: m.content }))
         })
       });
 
@@ -2755,33 +2723,6 @@ export default function MessagerieClient() {
                       </button>
                     </div>
                   </div>
-
-                  {/* Sélecteur de 3 IA d'assistance (Pills) si le canal actif est la discussion IA */}
-                  {activeConversation.isAI && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 scrollbar-none border-t border-gray-100">
-                      <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">
-                        Choisir une IA :
-                      </span>
-                      {AI_ROLES.map((role) => (
-                        <button
-                          key={role.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveAiRole(role.id);
-                            triggerToast(`IA sélectionnée : ${role.name}`, "fa-robot");
-                          }}
-                          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 ${
-                            activeAiRole === role.id
-                              ? "bg-emerald-500 text-white shadow-sm scale-[1.02]"
-                              : "bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-800"
-                          }`}
-                          title={role.description}
-                        >
-                          <span>{role.badge}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* BANNIÈRE MESSAGE ÉPINGLÉ (toujours visible en haut du fil) */}

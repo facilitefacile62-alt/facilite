@@ -105,9 +105,7 @@ export const AssistantPayloadSchema = z.object({
   attachments: z.array(AttachmentSchema).max(5).optional(),
 });
 
-// Payload de /api/ai-chat : historique de conversation + rôle d'assistance.
-// `activeAiRole` est contraint à la liste connue plutôt que laissé libre, pour
-// qu'aucune valeur inattendue ne puisse influencer le prompt système.
+// Payload de /api/ai-chat : historique de conversation.
 // Deux formes de payload coexistent volontairement :
 //   - `messages` : historique complet (messagerie), l'assistant garde le contexte
 //   - `message`  : tour unique (bulle flottante)
@@ -125,7 +123,6 @@ export const AiChatPayloadSchema = z
       .max(30)
       .optional(),
     message: z.string().min(1).max(20_000).optional(),
-    activeAiRole: z.enum(["cv", "coach", "interview", "orientation", "custom"]).optional(),
     model: z.string().max(100).optional(),
     customSystemPrompt: z.string().max(25_000).optional(),
     temperature: z.number().min(0).max(2).optional(),
@@ -139,6 +136,7 @@ export const DiagnosticPayloadSchema = z.object({
   fileData: z.string().min(1).max(14_000_000),
   fileName: z.string().max(255).optional(),
   mimeType: z.string().max(100).optional(),
+  customRules: z.string().max(25_000).optional(),
 });
 
 export const ParseDocumentJsonSchema = z.object({

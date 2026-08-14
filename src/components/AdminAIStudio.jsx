@@ -136,6 +136,14 @@ export default function AdminAIStudio() {
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 
+  // État du Testeur de Diagnostic CV en direct
+  const [diagTestFile, setDiagTestFile] = useState(null); // { name, type, mimeType, size, data }
+  const [diagIsAnalyzing, setDiagIsAnalyzing] = useState(false);
+  const [diagResult, setDiagResult] = useState(null);
+  const [diagError, setDiagError] = useState(null);
+  const diagFileInputRef = useRef(null);
+  const diagPhotoInputRef = useRef(null);
+
   // Calcul du score de prompt en direct (sur 10)
   const promptScore = (() => {
     let score = 5.0;
@@ -185,10 +193,77 @@ export default function AdminAIStudio() {
         updatedAt: new Date().toISOString(),
       };
       localStorage.setItem("FACILITE_AI_STUDIO_V2", JSON.stringify(config));
+      localStorage.setItem("FACILITE_DIAGNOSTIC_RULES", diagnosticRulesText);
       setSavedToast(true);
       setTimeout(() => setSavedToast(false), 3000);
     } catch (e) {
       console.error("Erreur sauvegarde studio IA:", e);
+    }
+  };
+
+  // Gestion du fichier de test de diagnostic CV
+  const handleDiagFileChange = (e, forcedType = null) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Le fichier ne doit pas dépasser 10 Mo.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      const isImage = file.type.startsWith("image/") || forcedType === "image";
+      setDiagTestFile({
+        name: file.name,
+        type: isImage ? "image" : "document",
+        mimeType: file.type || (isImage ? "image/jpeg" : "application/pdf"),
+        size: file.size,
+        data: dataUrl,
+      });
+      setDiagResult(null);
+      setDiagError(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  // Exécution du test de diagnostic avec les règles configurées
+  const handleRunDiagnosticTest = async () => {
+    if (!diagTestFile || diagIsAnalyzing) return;
+    setDiagIsAnalyzing(true);
+    setDiagError(null);
+    setDiagResult(null);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const res = await fetch("/api/diagnostic-cv", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          fileData: diagTestFile.data,
+          fileName: diagTestFile.name,
+          mimeType: diagTestFile.mimeType,
+          customRules: diagnosticRulesText.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Erreur lors du diagnostic (${res.status})`);
+      }
+      setDiagResult(data.result);
+    } catch (err) {
+      console.error("Erreur test diagnostic:", err);
+      setDiagError(err.message || "Échec de l'analyse du CV.");
+    } finally {
+      setDiagIsAnalyzing(false);
     }
   };
 
@@ -862,274 +937,511 @@ ${productsContext}
 
         </div>
 
-        {/* ================= COLONNE DROITE (5/12) : PLAYGROUND TEST EN DIRECT (Comme la capture) ================= */}
+        {/* ================= COLONNE DROITE (5/12) : PLAYGROUND TEST OU LABO DE DIAGNOSTIC ================= */}
         <div className="lg:col-span-5">
-          <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[720px] overflow-hidden">
-            
-            {/* Header du Playground */}
-            <div className="p-4 border-b border-[#2A2F3A] bg-[#1F232B] flex items-center justify-between gap-2 flex-none">
-              <div className="flex items-center space-x-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-gray-950 font-black text-xs flex items-center justify-center shadow-xs flex-shrink-0">
-                  N
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-black text-white truncate">Agent Facilité</span>
-                    <span className="text-[10px] text-emerald-400 font-bold">En ligne</span>
+          {activeSubTab === "diagnostic" ? (
+            /* LABO DE TEST DU DIAGNOSTIC CV EN DIRECT */
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[720px] overflow-hidden">
+              {/* Header du Labo */}
+              <div className="p-4 border-b border-[#2A2F3A] bg-[#1F232B] flex items-center justify-between gap-2 flex-none">
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-gray-950 font-black text-xs flex items-center justify-center shadow-xs flex-shrink-0">
+                    <i className="fa-solid fa-stethoscope"></i>
                   </div>
-                  <span className="text-[10px] text-gray-400">Playground de test</span>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                {/* Toggle Devise Dynamique (Présent sur la capture) */}
-                <div className="flex items-center space-x-1.5 bg-[#14161A] px-2 py-1 rounded-xl border border-[#2E3542]">
-                  <span className="text-[9px] font-extrabold text-gray-400">Devise :</span>
-                  <button
-                    type="button"
-                    onClick={() => setCurrency(currency === "FCFA" ? "EUR" : "FCFA")}
-                    className="text-[10px] font-black text-emerald-400 hover:underline cursor-pointer"
-                  >
-                    {currency}
-                  </button>
+                  <div className="min-w-0">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-black text-white truncate">Test Diagnostic CV & ATS</span>
+                      <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                        En direct
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-gray-400">Vérification de vos règles sur un vrai CV</span>
+                  </div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleResetChat}
+                  onClick={() => {
+                    setDiagTestFile(null);
+                    setDiagResult(null);
+                    setDiagError(null);
+                  }}
                   className="w-8 h-8 rounded-xl bg-[#14161A] hover:bg-red-950 text-gray-400 hover:text-red-400 border border-[#2E3542] flex items-center justify-center transition cursor-pointer"
-                  title="Réinitialiser la conversation de test"
+                  title="Réinitialiser le test"
                 >
                   <i className="fa-solid fa-rotate-right text-xs"></i>
                 </button>
               </div>
-            </div>
 
-            {/* Zone de conversation / Messages */}
-            <div
-              ref={chatScrollRef}
-              className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-[#131518]"
-            >
-              {chatMessages.length === 0 ? (
-                // Écran de bienvenue (Exactement comme dans la capture)
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-600 to-[#10E688] text-gray-950 flex items-center justify-center text-2xl shadow-xl animate-pulse">
-                    <i className="fa-solid fa-wave-square"></i>
-                  </div>
-                  <div className="space-y-1.5 max-w-sm">
-                    <h3 className="text-base font-black text-white">Testez votre Agent ici</h3>
-                    <p className="text-xs text-gray-400 font-medium leading-relaxed">
-                      Cet espace vous permet de vérifier l'efficacité de votre agent avant de le mettre en ligne. Envoyez un message pour commencer.
-                    </p>
-                  </div>
-                  <div className="p-3 bg-[#1A1D24] border border-[#2E3542] rounded-xl text-[11px] text-gray-400 max-w-xs leading-normal">
-                    Toutes les conversations ici sont en mode test et n'affecteront pas votre environnement de production.
-                  </div>
-                  <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-                    <span>↓ Commencez par envoyer un message</span>
-                  </div>
-                </div>
-              ) : (
-                chatMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} items-start gap-2`}
-                  >
-                    {msg.role === "assistant" && (
-                      <div className="w-7 h-7 rounded-full bg-emerald-600 text-gray-950 font-black text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-xs">
-                        IA
-                      </div>
-                    )}
-
-                    <div
-                      className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed space-y-1.5 shadow-md ${
-                        msg.role === "user"
-                          ? "bg-[#1E60E6] text-white rounded-tr-xs"
-                          : msg.isError
-                          ? "bg-red-950/80 text-red-200 border border-red-800 rounded-tl-xs"
-                          : "bg-[#1F232B] text-gray-200 border border-[#2E3542] rounded-tl-xs"
-                      }`}
-                    >
-                      {/* Affichage de la pièce jointe dans la bulle de chat */}
-                      {msg.attachment && (
-                        <div className="p-2.5 bg-black/30 rounded-xl border border-white/15 flex items-center space-x-2.5">
-                          {msg.attachment.type === "image" ? (
-                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/20 flex-shrink-0 bg-black/40">
-                              <img src={msg.attachment.data} alt="Aperçu CV" className="w-full h-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg bg-red-600/30 border border-red-500/40 text-red-400 flex items-center justify-center text-lg flex-shrink-0">
-                              <i className={msg.attachment.name.endsWith(".pdf") ? "fa-solid fa-file-pdf" : "fa-solid fa-file-lines"}></i>
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[11px] font-bold text-white truncate">{msg.attachment.name}</div>
-                            <div className="text-[9px] text-gray-300 font-mono">
-                              {(msg.attachment.size / 1024).toFixed(0)} Ko • {msg.attachment.type === "image" ? "Photo CV / Lettre" : "Document CV"}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="whitespace-pre-wrap font-normal">{msg.content}</div>
-                      <div className="flex items-center justify-between text-[9px] opacity-60 pt-1 font-mono">
-                        <span>{msg.time}</span>
-                        {msg.elapsedMs && <span>{(msg.elapsedMs / 1000).toFixed(2)}s</span>}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-
-              {isGenerating && (
-                <div className="flex justify-start items-center gap-2 animate-pulse">
-                  <div className="w-7 h-7 rounded-full bg-emerald-600 text-gray-950 font-black text-[10px] flex items-center justify-center">
-                    IA
-                  </div>
-                  <div className="bg-[#1F232B] border border-[#2E3542] rounded-2xl px-4 py-2 text-xs text-gray-400 flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>L'IA analyse vos documents et formule sa réponse...</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Suggestions rapides en 1 clic au-dessus de l'input */}
-            <div className="px-3 py-2 bg-[#1A1D24] border-t border-[#2A2F3A] flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-none">
-              <span className="text-[10px] font-black text-gray-400 uppercase flex-shrink-0">Tests :</span>
-              <button
-                type="button"
-                onClick={() => handleSendTestMessage("Quels sont vos tarifs de CV ?")}
-                disabled={isGenerating}
-                className="text-[10px] font-bold bg-[#242A36] hover:bg-[#10E688] hover:text-gray-950 text-gray-300 px-2.5 py-1 rounded-full border border-[#353D4E] transition flex-shrink-0 cursor-pointer disabled:opacity-50"
-              >
-                Prix CV
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendTestMessage("Je veux créer un CV pour un poste de Comptable à Dakar")}
-                disabled={isGenerating}
-                className="text-[10px] font-bold bg-[#242A36] hover:bg-[#10E688] hover:text-gray-950 text-gray-300 px-2.5 py-1 rounded-full border border-[#353D4E] transition flex-shrink-0 cursor-pointer disabled:opacity-50"
-              >
-                Création CV
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendTestMessage("Naka liggéey bi ?")}
-                disabled={isGenerating}
-                className="text-[10px] font-bold bg-[#242A36] hover:bg-[#10E688] hover:text-gray-950 text-gray-300 px-2.5 py-1 rounded-full border border-[#353D4E] transition flex-shrink-0 cursor-pointer disabled:opacity-50"
-              >
-                Test Wolof
-              </button>
-            </div>
-
-            {/* Barre de prévisualisation du fichier sélectionné */}
-            {selectedAttachment && (
-              <div className="px-3.5 py-2 bg-[#1F232B] border-t border-[#2A2F3A] flex items-center justify-between gap-3 animate-fade-in flex-none">
-                <div className="flex items-center space-x-2.5 min-w-0">
-                  {selectedAttachment.type === "image" ? (
-                    <img src={selectedAttachment.data} alt="Preview" className="w-9 h-9 rounded-lg object-cover border border-[#10E688] flex-shrink-0" />
-                  ) : (
-                    <div className="w-9 h-9 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center text-base flex-shrink-0">
-                      <i className="fa-solid fa-file-pdf"></i>
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-white truncate">{selectedAttachment.name}</div>
-                    <div className="text-[10px] text-emerald-400 font-medium">Prêt pour l'analyse IA • {(selectedAttachment.size / 1024).toFixed(0)} Ko</div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedAttachment(null)}
-                  className="text-gray-400 hover:text-red-400 p-1.5 transition cursor-pointer"
-                  title="Retirer le fichier"
-                >
-                  <i className="fa-solid fa-xmark text-sm"></i>
-                </button>
-              </div>
-            )}
-
-            {/* Zone de saisie avec boutons Trombone (Document) et Photo (Image) */}
-            <div className="p-3 bg-[#181B20] border-t border-[#2A2F3A] flex-none">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendTestMessage();
-                }}
-                className="flex items-center gap-2"
-              >
-                {/* Inputs de fichiers cachés */}
+              {/* Corps du Labo */}
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#131518]">
+                {/* Inputs cachés */}
                 <input
                   type="file"
-                  ref={fileInputRef}
-                  onChange={(e) => handleFileChange(e, "document")}
+                  ref={diagFileInputRef}
+                  onChange={(e) => handleDiagFileChange(e, "document")}
                   accept=".pdf,.doc,.docx,.txt"
                   className="hidden"
                 />
                 <input
                   type="file"
-                  ref={imageInputRef}
-                  onChange={(e) => handleFileChange(e, "image")}
+                  ref={diagPhotoInputRef}
+                  onChange={(e) => handleDiagFileChange(e, "image")}
                   accept="image/*"
                   className="hidden"
                 />
 
-                {/* Bouton Trombone (Document PDF/Word) */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isGenerating}
-                  className="p-2.5 bg-[#1F232B] hover:bg-[#2A303C] text-gray-300 hover:text-[#10E688] border border-[#2E3542] rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center"
-                  title="Insérer un document (CV PDF, Word, Lettre...)"
-                >
-                  <i className="fa-solid fa-paperclip text-sm"></i>
-                </button>
+                {/* 1. Boutons d'insertion / Téléversement */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-gray-300 block">
+                    1. Choisissez un CV ou une photo pour tester :
+                  </span>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => diagFileInputRef.current?.click()}
+                      disabled={diagIsAnalyzing}
+                      className="p-3.5 bg-[#1F232B] hover:bg-[#282F3C] border border-[#2E3542] hover:border-[#10E688]/60 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition text-center cursor-pointer disabled:opacity-50 group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-base group-hover:scale-110 transition">
+                        <i className="fa-solid fa-file-arrow-up"></i>
+                      </div>
+                      <span className="text-xs font-black text-white">Importer Document</span>
+                      <span className="text-[9px] text-gray-400 font-mono">PDF, DOCX, Word</span>
+                    </button>
 
-                {/* Bouton Appareil Photo / Image */}
-                <button
-                  type="button"
-                  onClick={() => imageInputRef.current?.click()}
-                  disabled={isGenerating}
-                  className="p-2.5 bg-[#1F232B] hover:bg-[#2A303C] text-gray-300 hover:text-[#10E688] border border-[#2E3542] rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center"
-                  title="Insérer une photo (Photo de CV, capture d'écran...)"
-                >
-                  <i className="fa-solid fa-camera text-sm"></i>
-                </button>
-
-                {/* Champ texte */}
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder={selectedAttachment ? "Ajouter un message d'accompagnement..." : "Message ou insérer CV..."}
-                    disabled={isGenerating}
-                    className="w-full pl-4 pr-9 py-2.5 bg-[#131518] border border-[#2E3542] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#10E688] transition font-medium"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleSendTestMessage("Bonjour, voici mon CV pour analyse")}
-                    className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white transition cursor-pointer"
-                    title="Suggestion automatique"
-                  >
-                    <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => diagPhotoInputRef.current?.click()}
+                      disabled={diagIsAnalyzing}
+                      className="p-3.5 bg-[#1F232B] hover:bg-[#282F3C] border border-[#2E3542] hover:border-[#10E688]/60 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition text-center cursor-pointer disabled:opacity-50 group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-base group-hover:scale-110 transition">
+                        <i className="fa-solid fa-camera"></i>
+                      </div>
+                      <span className="text-xs font-black text-white">Téléverser Photo</span>
+                      <span className="text-[9px] text-gray-400 font-mono">PNG, JPG, Scan</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Bouton Envoi */}
-                <button
-                  type="submit"
-                  disabled={(!inputText.trim() && !selectedAttachment) || isGenerating}
-                  className="px-4 py-2.5 bg-[#10E688] hover:bg-[#10E688]/90 disabled:bg-gray-700 text-gray-950 font-black rounded-xl text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
-                >
-                  <i className="fa-solid fa-paper-plane"></i>
-                </button>
-              </form>
-            </div>
+                {/* 2. Fichier sélectionné + Bouton d'action */}
+                {diagTestFile && (
+                  <div className="p-3.5 bg-[#1C2027] border border-[#2E3542] rounded-2xl space-y-3 animate-fade-in">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center space-x-2.5 min-w-0">
+                        {diagTestFile.type === "image" ? (
+                          <img
+                            src={diagTestFile.data}
+                            alt="Aperçu CV"
+                            className="w-10 h-10 rounded-lg object-cover border border-[#10E688]"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-red-600/20 border border-red-500/30 text-red-400 flex items-center justify-center text-base">
+                            <i className="fa-solid fa-file-pdf"></i>
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-white truncate">{diagTestFile.name}</div>
+                          <div className="text-[10px] text-gray-400 font-mono">
+                            {(diagTestFile.size / 1024).toFixed(0)} Ko • {diagTestFile.type === "image" ? "Photo de CV" : "Document CV"}
+                          </div>
+                        </div>
+                      </div>
 
-          </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDiagTestFile(null);
+                          setDiagResult(null);
+                        }}
+                        className="text-gray-400 hover:text-red-400 p-1.5 transition cursor-pointer"
+                      >
+                        <i className="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRunDiagnosticTest}
+                      disabled={diagIsAnalyzing}
+                      className="w-full py-3 bg-gradient-to-r from-[#10E688] to-teal-400 hover:opacity-95 text-gray-950 font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {diagIsAnalyzing ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-gray-950 border-t-transparent rounded-full animate-spin"></span>
+                          <span>Analyse IA selon vos règles en cours...</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="fa-solid fa-bolt text-sm"></i>
+                          <span>Lancer le Diagnostic Immédiat</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* 3. Message d'erreur si échec */}
+                {diagError && (
+                  <div className="p-3 bg-red-950/70 border border-red-800/80 rounded-xl text-red-200 text-xs flex items-center gap-2">
+                    <i className="fa-solid fa-triangle-exclamation"></i>
+                    <span>{diagError}</span>
+                  </div>
+                )}
+
+                {/* 4. Résultats détaillés du Diagnostic */}
+                {diagResult && (
+                  <div className="space-y-3 animate-fade-in">
+                    {/* Score & Compatibilité */}
+                    <div className="p-4 bg-[#1F232B] border border-[#2E3542] rounded-2xl flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">
+                          Score Global ATS
+                        </span>
+                        <div className="flex items-baseline space-x-1.5 mt-0.5">
+                          <span
+                            className={`text-2xl font-black ${
+                              diagResult.score_global >= 75
+                                ? "text-emerald-400"
+                                : diagResult.score_global >= 50
+                                ? "text-amber-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {diagResult.score_global}
+                          </span>
+                          <span className="text-xs text-gray-400 font-bold">/ 100</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">
+                          Compatibilité ATS
+                        </span>
+                        <span className="inline-block mt-0.5 text-xs font-extrabold bg-[#131518] px-2.5 py-1 rounded-lg border border-[#2E3542] text-white">
+                          {diagResult.compatibilite_ats || "Moyenne"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Points Forts */}
+                    {diagResult.points_forts && diagResult.points_forts.length > 0 && (
+                      <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-2xl space-y-1.5">
+                        <div className="flex items-center space-x-1.5 text-emerald-400 font-black text-xs">
+                          <i className="fa-solid fa-circle-check"></i>
+                          <span>Points Forts Validés :</span>
+                        </div>
+                        <ul className="space-y-1 pl-4 list-disc text-xs text-gray-200">
+                          {diagResult.points_forts.map((pt, idx) => (
+                            <li key={idx} className="leading-snug">{pt}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Axes d'Amélioration */}
+                    {diagResult.axes_amelioration && diagResult.axes_amelioration.length > 0 && (
+                      <div className="p-3.5 bg-amber-950/20 border border-amber-500/30 rounded-2xl space-y-1.5">
+                        <div className="flex items-center space-x-1.5 text-amber-400 font-black text-xs">
+                          <i className="fa-solid fa-circle-exclamation"></i>
+                          <span>Axes d'Amélioration Relevés :</span>
+                        </div>
+                        <ul className="space-y-1 pl-4 list-disc text-xs text-gray-200">
+                          {diagResult.axes_amelioration.map((ax, idx) => (
+                            <li key={idx} className="leading-snug">{ax}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Conseils Clés */}
+                    {diagResult.conseils_cles && diagResult.conseils_cles.length > 0 && (
+                      <div className="p-3.5 bg-blue-950/20 border border-blue-500/30 rounded-2xl space-y-1.5">
+                        <div className="flex items-center space-x-1.5 text-blue-400 font-black text-xs">
+                          <i className="fa-solid fa-lightbulb"></i>
+                          <span>Recommandations & Conseils Clés :</span>
+                        </div>
+                        <ul className="space-y-1 pl-4 list-disc text-xs text-gray-200">
+                          {diagResult.conseils_cles.map((cs, idx) => (
+                            <li key={idx} className="leading-snug">{cs}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* PLAYGROUND DE TEST CONVERSATIONNEL STANDARD */
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[720px] overflow-hidden">
+              
+              {/* Header du Playground */}
+              <div className="p-4 border-b border-[#2A2F3A] bg-[#1F232B] flex items-center justify-between gap-2 flex-none">
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-gray-950 font-black text-xs flex items-center justify-center shadow-xs flex-shrink-0">
+                    N
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-black text-white truncate">Agent Facilité</span>
+                      <span className="text-[10px] text-emerald-400 font-bold">En ligne</span>
+                    </div>
+                    <span className="text-[10px] text-gray-400">Playground de test</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  {/* Toggle Devise Dynamique (Présent sur la capture) */}
+                  <div className="flex items-center space-x-1.5 bg-[#14161A] px-2 py-1 rounded-xl border border-[#2E3542]">
+                    <span className="text-[9px] font-extrabold text-gray-400">Devise :</span>
+                    <button
+                      type="button"
+                      onClick={() => setCurrency(currency === "FCFA" ? "EUR" : "FCFA")}
+                      className="text-[10px] font-black text-emerald-400 hover:underline cursor-pointer"
+                    >
+                      {currency}
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleResetChat}
+                    className="w-8 h-8 rounded-xl bg-[#14161A] hover:bg-red-950 text-gray-400 hover:text-red-400 border border-[#2E3542] flex items-center justify-center transition cursor-pointer"
+                    title="Réinitialiser la conversation de test"
+                  >
+                    <i className="fa-solid fa-rotate-right text-xs"></i>
+                  </button>
+                </div>
+              </div>
+
+              {/* Zone de conversation / Messages */}
+              <div
+                ref={chatScrollRef}
+                className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-[#131518]"
+              >
+                {chatMessages.length === 0 ? (
+                  // Écran de bienvenue (Exactement comme dans la capture)
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-600 to-[#10E688] text-gray-950 flex items-center justify-center text-2xl shadow-xl animate-pulse">
+                      <i className="fa-solid fa-wave-square"></i>
+                    </div>
+                    <div className="space-y-1.5 max-w-sm">
+                      <h3 className="text-base font-black text-white">Testez votre Agent ici</h3>
+                      <p className="text-xs text-gray-400 font-medium leading-relaxed">
+                        Cet espace vous permet de vérifier l'efficacité de votre agent avant de le mettre en ligne. Envoyez un message pour commencer.
+                      </p>
+                    </div>
+                    <div className="p-3 bg-[#1A1D24] border border-[#2E3542] rounded-xl text-[11px] text-gray-400 max-w-xs leading-normal">
+                      Toutes les conversations ici sont en mode test et n'affecteront pas votre environnement de production.
+                    </div>
+                    <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                      <span>↓ Commencez par envoyer un message</span>
+                    </div>
+                  </div>
+                ) : (
+                  chatMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} items-start gap-2`}
+                    >
+                      {msg.role === "assistant" && (
+                        <div className="w-7 h-7 rounded-full bg-emerald-600 text-gray-950 font-black text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-xs">
+                          IA
+                        </div>
+                      )}
+
+                      <div
+                        className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed space-y-1.5 shadow-md ${
+                          msg.role === "user"
+                            ? "bg-[#1E60E6] text-white rounded-tr-xs"
+                            : msg.isError
+                            ? "bg-red-950/80 text-red-200 border border-red-800 rounded-tl-xs"
+                            : "bg-[#1F232B] text-gray-200 border border-[#2E3542] rounded-tl-xs"
+                        }`}
+                      >
+                        {/* Affichage de la pièce jointe dans la bulle de chat */}
+                        {msg.attachment && (
+                          <div className="p-2.5 bg-black/30 rounded-xl border border-white/15 flex items-center space-x-2.5">
+                            {msg.attachment.type === "image" ? (
+                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/20 flex-shrink-0 bg-black/40">
+                                <img src={msg.attachment.data} alt="Aperçu CV" className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-red-600/30 border border-red-500/40 text-red-400 flex items-center justify-center text-lg flex-shrink-0">
+                                <i className={msg.attachment.name.endsWith(".pdf") ? "fa-solid fa-file-pdf" : "fa-solid fa-file-lines"}></i>
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[11px] font-bold text-white truncate">{msg.attachment.name}</div>
+                              <div className="text-[9px] text-gray-300 font-mono">
+                                {(msg.attachment.size / 1024).toFixed(0)} Ko • {msg.attachment.type === "image" ? "Photo CV / Lettre" : "Document CV"}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="whitespace-pre-wrap font-normal">{msg.content}</div>
+                        <div className="flex items-center justify-between text-[9px] opacity-60 pt-1 font-mono">
+                          <span>{msg.time}</span>
+                          {msg.elapsedMs && <span>{(msg.elapsedMs / 1000).toFixed(2)}s</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {isGenerating && (
+                  <div className="flex justify-start items-center gap-2 animate-pulse">
+                    <div className="w-7 h-7 rounded-full bg-emerald-600 text-gray-950 font-black text-[10px] flex items-center justify-center">
+                      IA
+                    </div>
+                    <div className="bg-[#1F232B] border border-[#2E3542] rounded-2xl px-4 py-2 text-xs text-gray-400 flex items-center space-x-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                      <span>L'IA analyse vos documents et formule sa réponse...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Suggestions rapides en 1 clic au-dessus de l'input */}
+              <div className="px-3 py-2 bg-[#1A1D24] border-t border-[#2A2F3A] flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-none">
+                <span className="text-[10px] font-black text-gray-400 uppercase flex-shrink-0">Tests :</span>
+                <button
+                  type="button"
+                  onClick={() => handleSendTestMessage("Quels sont vos tarifs de CV ?")}
+                  disabled={isGenerating}
+                  className="text-[10px] font-bold bg-[#242A36] hover:bg-[#10E688] hover:text-gray-950 text-gray-300 px-2.5 py-1 rounded-full border border-[#353D4E] transition flex-shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  Prix CV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendTestMessage("Je veux créer un CV pour un poste de Comptable à Dakar")}
+                  disabled={isGenerating}
+                  className="text-[10px] font-bold bg-[#242A36] hover:bg-[#10E688] hover:text-gray-950 text-gray-300 px-2.5 py-1 rounded-full border border-[#353D4E] transition flex-shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  Création CV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendTestMessage("Naka liggéey bi ?")}
+                  disabled={isGenerating}
+                  className="text-[10px] font-bold bg-[#242A36] hover:bg-[#10E688] hover:text-gray-950 text-gray-300 px-2.5 py-1 rounded-full border border-[#353D4E] transition flex-shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  Test Wolof
+                </button>
+              </div>
+
+              {/* Barre de prévisualisation du fichier sélectionné */}
+              {selectedAttachment && (
+                <div className="px-3.5 py-2 bg-[#1F232B] border-t border-[#2A2F3A] flex items-center justify-between gap-3 animate-fade-in flex-none">
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    {selectedAttachment.type === "image" ? (
+                      <img src={selectedAttachment.data} alt="Preview" className="w-9 h-9 rounded-lg object-cover border border-[#10E688] flex-shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center text-base flex-shrink-0">
+                        <i className="fa-solid fa-file-pdf"></i>
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{selectedAttachment.name}</div>
+                      <div className="text-[10px] text-emerald-400 font-medium">Prêt pour l'analyse IA • {(selectedAttachment.size / 1024).toFixed(0)} Ko</div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAttachment(null)}
+                    className="text-gray-400 hover:text-red-400 p-1.5 transition cursor-pointer"
+                    title="Retirer le fichier"
+                  >
+                    <i className="fa-solid fa-xmark text-sm"></i>
+                  </button>
+                </div>
+              )}
+
+              {/* Zone de saisie avec boutons Trombone (Document) et Photo (Image) */}
+              <div className="p-3 bg-[#181B20] border-t border-[#2A2F3A] flex-none">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendTestMessage();
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  {/* Inputs de fichiers cachés */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={(e) => handleFileChange(e, "document")}
+                    accept=".pdf,.doc,.docx,.txt"
+                    className="hidden"
+                  />
+                  <input
+                    type="file"
+                    ref={imageInputRef}
+                    onChange={(e) => handleFileChange(e, "image")}
+                    accept="image/*"
+                    className="hidden"
+                  />
+
+                  {/* Bouton Trombone (Document PDF/Word) */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isGenerating}
+                    className="p-2.5 bg-[#1F232B] hover:bg-[#2A303C] text-gray-300 hover:text-[#10E688] border border-[#2E3542] rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                    title="Insérer un document (CV PDF, Word, Lettre...)"
+                  >
+                    <i className="fa-solid fa-paperclip text-sm"></i>
+                  </button>
+
+                  {/* Bouton Appareil Photo / Image */}
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={isGenerating}
+                    className="p-2.5 bg-[#1F232B] hover:bg-[#2A303C] text-gray-300 hover:text-[#10E688] border border-[#2E3542] rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                    title="Insérer une photo (Photo de CV, capture d'écran...)"
+                  >
+                    <i className="fa-solid fa-camera text-sm"></i>
+                  </button>
+
+                  {/* Champ texte */}
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      placeholder={selectedAttachment ? "Ajouter un message d'accompagnement..." : "Message ou insérer CV..."}
+                      disabled={isGenerating}
+                      className="w-full pl-4 pr-9 py-2.5 bg-[#131518] border border-[#2E3542] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#10E688] transition font-medium"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSendTestMessage("Bonjour, voici mon CV pour analyse")}
+                      className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white transition cursor-pointer"
+                      title="Suggestion automatique"
+                    >
+                      <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                    </button>
+                  </div>
+
+                  {/* Bouton Envoi */}
+                  <button
+                    type="submit"
+                    disabled={(!inputText.trim() && !selectedAttachment) || isGenerating}
+                    className="px-4 py-2.5 bg-[#10E688] hover:bg-[#10E688]/90 disabled:bg-gray-700 text-gray-950 font-black rounded-xl text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    <i className="fa-solid fa-paper-plane"></i>
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          )}
         </div>
 
       </div>

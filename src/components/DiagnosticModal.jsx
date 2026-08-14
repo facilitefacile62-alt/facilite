@@ -61,6 +61,7 @@ export default function DiagnosticModal({ isOpen, onClose }) {
           throw new Error("Veuillez vous connecter pour utiliser le diagnostic IA.");
         }
 
+        const savedRules = typeof window !== "undefined" ? localStorage.getItem("FACILITE_DIAGNOSTIC_RULES") : null;
         const response = await fetch("/api/diagnostic-cv", {
           method: "POST",
           headers: {
@@ -70,7 +71,8 @@ export default function DiagnosticModal({ isOpen, onClose }) {
           body: JSON.stringify({
             fileData: base64Data,
             fileName: selectedFile.name,
-            mimeType: selectedFile.type
+            mimeType: selectedFile.type,
+            customRules: savedRules || undefined
           })
         });
 
