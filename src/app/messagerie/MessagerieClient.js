@@ -3113,25 +3113,9 @@ export default function MessagerieClient() {
                         </div>
                       );
                     })()}
-                        
-                        <div className="flex items-center justify-end space-x-1 mt-1 text-[9px] opacity-75 font-bold" suppressHydrationWarning>
-                          <span>{msg.time}</span>
-                          {msg.sender === "me" && (
-                            <span>
-                              {msg.status === "sent" && <i className="fa-solid fa-check"></i>}
-                              {msg.status === "delivered" && <i className="fa-solid fa-check-double text-gray-300"></i>}
-                              {msg.status === "read" && <i className="fa-solid fa-check-double text-[#10E688]"></i>}
-                              {msg.status === "error" && (
-                                <i className="fa-solid fa-triangle-exclamation text-red-400" title="Échec de l'envoi"></i>
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    </div>
-                    );
-                  })}
+                  </div>
+                );
+              })}
 
                   {(isTyping || (activeConvId === AI_PINNED_CHAT.id && assistantLoading)) && (
                     <div className="flex justify-start items-end space-x-2 animate-pulse">
