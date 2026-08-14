@@ -307,19 +307,20 @@ export async function POST(req) {
     const finalRecruiterEmail = testRecipient || recruiterEmail;
     const finalCandidateEmail = testRecipient || email;
 
-    // Auto-création d'une conversation et d'un message 'OFFRE' dans Supabase
+    // Auto-création d'une conversation et d'un message 'OFFRE' dans Supabase,
+    // uniquement pour une vraie offre recruteur (le flux historique n'a pas
+    // de destinataire interne connu — il repose uniquement sur l'e-mail).
+    // Cas sans recruteur identifié : aucun message n'est créé (décision
+    // explicite du Point 1 — pas d'auto-message ni de conversation de
+    // repli vers un admin). conversationId déclaré ICI (hors du try, avant
+    // toute condition) pour rester accessible au second bloc d'insertion
+    // plus bas : une régression précédente le déclarait à l'intérieur du
+    // bloc try, provoquant un ReferenceError silencieux (avalé par le
+    // try/catch du second bloc) à chaque candidature avec recruteur identifié.
+    let conversationId = null;
     try {
-      let targetRecruiterId = offerRecruiterId;
-      if (!targetRecruiterId) {
-        const { data: adminId } = await supabase.rpc("resolve_admin_id");
-        if (adminId && adminId !== user.id) {
-          targetRecruiterId = adminId;
-        }
-      }
-
-      let conversationId = null;
-      if (targetRecruiterId) {
-        conversationId = await findOrCreateConversationServer(supabase, user.id, targetRecruiterId);
+      if (offerRecruiterId) {
+        conversationId = await findOrCreateConversationServer(supabase, user.id, offerRecruiterId);
 
         const primaryAttachment = allAttachments[0] || null;
         let chatAttachmentPath = null;

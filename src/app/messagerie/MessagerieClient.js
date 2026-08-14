@@ -2917,7 +2917,27 @@ export default function MessagerieClient() {
                               </div>
 
                               {/* 3. CORPS DU MESSAGE (LE TEXTE PROPRE STYLE E-MAIL) */}
-                              <div className="text-xs sm:text-sm text-gray-800 leading-relaxed font-normal bg-[#FAF9F6] p-4 sm:p-5 rounded-xl border border-gray-200/80 space-y-3">
+                              <div className="text-xs sm:text-sm text-gray-800 leading-relaxed font-normal bg-[#FAF9F6] p-4 sm:p-5 rounded-xl border border-gray-200/80 space-y-3.5">
+                                {/* Encadré des coordonnées du destinataire à l'intérieur du message */}
+                                {parsed.recipientEmail && (
+                                  <div className="bg-white p-3 rounded-lg border border-gray-200/90 shadow-2xs space-y-1.5 text-xs">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-gray-500 font-bold min-w-[95px]">📧 Destinataire :</span>
+                                      <span className="font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 break-all">
+                                        {parsed.recipientEmail}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-gray-500 font-bold min-w-[95px]">🏢 Entreprise :</span>
+                                      <span className="font-extrabold text-gray-900">{parsed.company}</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-gray-500 font-bold min-w-[95px]">💼 Poste :</span>
+                                      <span className="font-extrabold text-emerald-800">{parsed.jobTitle}</span>
+                                    </div>
+                                  </div>
+                                )}
+
                                 <p className="font-semibold text-gray-700">Madame, Monsieur,</p>
                                 
                                 <p className="whitespace-pre-wrap text-gray-800">
@@ -2926,7 +2946,7 @@ export default function MessagerieClient() {
                                     : `Veuillez trouver ci-joint mon CV ainsi que ma candidature pour le poste de ${parsed.jobTitle} au sein de l'entreprise ${parsed.company}.\n\nJe reste à votre entière disposition pour tout échange ou entretien éventuel.`}
                                 </p>
 
-                                <p className="font-semibold text-gray-700 pt-2">
+                                <p className="font-semibold text-gray-700 pt-1">
                                   Bien cordialement,<br />
                                   <span className="text-gray-900 font-extrabold">{parsed.candidateName}</span>
                                 </p>
