@@ -400,7 +400,18 @@ export default function CreerCv() {
       { id: 1, name: "Entrepreneuriat & Commerce" },
       { id: 2, name: "Santé & Pharmacologie" },
       { id: 3, name: "Technologies & Digital" }
-    ]
+    ],
+    sectionTitles: {
+      contact: "Coordonnées",
+      experience: "EXPÉRIENCE",
+      education: "FORMATION",
+      skills: "APTITUDES",
+      profile: "PROFIL",
+      languages: "LANGUES",
+      itSkills: "LOGICIELS",
+      qualities: "CERTIFICATIONS",
+      hobbies: "CENTRES D'INTÉRÊT"
+    }
   });
 
   // Toggles for optional info fields
@@ -1267,6 +1278,26 @@ export default function CreerCv() {
             {activeStep === 0 && (
               <div className="space-y-6">
                 
+                {/* Personnalisation du Titre de la Section sur le CV */}
+                <div className="p-3.5 bg-gradient-to-r from-blue-50 to-emerald-50/50 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                      <i className="fa-solid fa-pen"></i>
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-gray-900 uppercase tracking-wide">Titre de la Section sur le CV</span>
+                      <p className="text-[10px] text-gray-500">Nom qui apparaîtra en haut de vos coordonnées</p>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={cvData.sectionTitles?.contact || "Coordonnées"}
+                    onChange={(e) => setCvData(prev => ({ ...prev, sectionTitles: { ...(prev.sectionTitles || {}), contact: e.target.value } }))}
+                    className="w-full sm:w-60 p-2.5 text-xs font-black border border-blue-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="Coordonnées"
+                  />
+                </div>
+                
                 {/* Photo uploader + CV Lang dropdown */}
                 <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 p-4 border border-gray-150 rounded-2xl bg-gray-50/50">
                   <div className="flex items-center space-x-4">
@@ -1592,6 +1623,26 @@ export default function CreerCv() {
             {activeStep === 1 && (
               <div className="space-y-6">
                 
+                {/* Personnalisation du Titre de la Section sur le CV */}
+                <div className="p-3.5 bg-gradient-to-r from-blue-50 to-emerald-50/50 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                      <i className="fa-solid fa-pen"></i>
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-gray-900 uppercase tracking-wide">Titre de la Section sur le CV</span>
+                      <p className="text-[10px] text-gray-500">Nom qui apparaîtra en haut de vos expériences</p>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={cvData.sectionTitles?.experience || "EXPÉRIENCE"}
+                    onChange={(e) => setCvData(prev => ({ ...prev, sectionTitles: { ...(prev.sectionTitles || {}), experience: e.target.value } }))}
+                    className="w-full sm:w-60 p-2.5 text-xs font-black border border-blue-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="EXPÉRIENCE"
+                  />
+                </div>
+                
                 {cvData.experiences.map((exp, idx) => (
                   <div key={exp.id} className="p-5 border border-gray-200 bg-gray-50/30 rounded-2xl relative space-y-4 shadow-xs">
                     
@@ -1745,6 +1796,26 @@ export default function CreerCv() {
             {activeStep === 2 && (
               <div className="space-y-6">
                 
+                {/* Personnalisation du Titre de la Section sur le CV */}
+                <div className="p-3.5 bg-gradient-to-r from-blue-50 to-emerald-50/50 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                      <i className="fa-solid fa-pen"></i>
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-gray-900 uppercase tracking-wide">Titre de la Section sur le CV</span>
+                      <p className="text-[10px] text-gray-500">Nom qui apparaîtra en haut de vos formations</p>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={cvData.sectionTitles?.education || "FORMATION"}
+                    onChange={(e) => setCvData(prev => ({ ...prev, sectionTitles: { ...(prev.sectionTitles || {}), education: e.target.value } }))}
+                    className="w-full sm:w-60 p-2.5 text-xs font-black border border-blue-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="FORMATION"
+                  />
+                </div>
+                
                 {cvData.educations.map((edu, idx) => (
                   <div key={edu.id} className="p-5 border border-gray-200 bg-gray-50/30 rounded-2xl relative space-y-4 shadow-xs">
                     
@@ -1857,6 +1928,26 @@ export default function CreerCv() {
             {activeStep === 3 && (
               <div className="space-y-6">
                 
+                {/* Personnalisation du Titre de la Section sur le CV */}
+                <div className="p-3.5 bg-gradient-to-r from-blue-50 to-emerald-50/50 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                      <i className="fa-solid fa-pen"></i>
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-gray-900 uppercase tracking-wide">Titre de la Section sur le CV</span>
+                      <p className="text-[10px] text-gray-500">Nom qui apparaîtra en haut de vos aptitudes & compétences</p>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={cvData.sectionTitles?.skills || "APTITUDES"}
+                    onChange={(e) => setCvData(prev => ({ ...prev, sectionTitles: { ...(prev.sectionTitles || {}), skills: e.target.value } }))}
+                    className="w-full sm:w-60 p-2.5 text-xs font-black border border-blue-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="APTITUDES"
+                  />
+                </div>
+                
                 <div className="space-y-3.5">
                   {cvData.skills.map((skill, idx) => (
                     <div key={skill.id} className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-gray-50/80 rounded-xl border border-gray-250/50 shadow-xs relative">
@@ -1912,6 +2003,27 @@ export default function CreerCv() {
             {/* STEP 4 FORM: PROFIL */}
             {activeStep === 4 && (
               <div className="space-y-6">
+                
+                {/* Personnalisation du Titre de la Section sur le CV */}
+                <div className="p-3.5 bg-gradient-to-r from-blue-50 to-emerald-50/50 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                      <i className="fa-solid fa-pen"></i>
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-gray-900 uppercase tracking-wide">Titre de la Section sur le CV</span>
+                      <p className="text-[10px] text-gray-500">Nom qui apparaîtra en haut de votre résumé / profil</p>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={cvData.sectionTitles?.profile || "PROFIL"}
+                    onChange={(e) => setCvData(prev => ({ ...prev, sectionTitles: { ...(prev.sectionTitles || {}), profile: e.target.value } }))}
+                    className="w-full sm:w-60 p-2.5 text-xs font-black border border-blue-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="PROFIL"
+                  />
+                </div>
+                
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">{t.labelProfileText}</label>
                   <textarea
@@ -1932,6 +2044,26 @@ export default function CreerCv() {
             {/* STEP 5 FORM: LANGUE */}
             {activeStep === 5 && (
               <div className="space-y-6">
+                
+                {/* Personnalisation du Titre de la Section sur le CV */}
+                <div className="p-3.5 bg-gradient-to-r from-blue-50 to-emerald-50/50 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                      <i className="fa-solid fa-pen"></i>
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-gray-900 uppercase tracking-wide">Titre de la Section sur le CV</span>
+                      <p className="text-[10px] text-gray-500">Nom qui apparaîtra en haut de vos langues parlées</p>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={cvData.sectionTitles?.languages || "LANGUES"}
+                    onChange={(e) => setCvData(prev => ({ ...prev, sectionTitles: { ...(prev.sectionTitles || {}), languages: e.target.value } }))}
+                    className="w-full sm:w-60 p-2.5 text-xs font-black border border-blue-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="LANGUES"
+                  />
+                </div>
                 
                 <div className="space-y-3">
                   {cvData.languages.map((lang, idx) => (
@@ -1989,9 +2121,21 @@ export default function CreerCv() {
             {/* STEP 6 FORM: COMPLEMENTS */}
             {activeStep === 6 && (
               <div className="space-y-8">
-                {/* Qualités */}
-                <div>
-                  <h3 className="text-sm font-black text-gray-900 uppercase mb-3">Qualités</h3>
+                {/* Qualités / Certifications */}
+                <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-200">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3.5 pb-3 border-b border-gray-200">
+                    <div className="flex items-center space-x-2">
+                      <i className="fa-solid fa-pen text-blue-600 text-xs"></i>
+                      <h3 className="text-xs font-black text-gray-900 uppercase tracking-wide">Titre de la section sur le CV :</h3>
+                    </div>
+                    <input
+                      type="text"
+                      value={cvData.sectionTitles?.qualities || "CERTIFICATIONS"}
+                      onChange={(e) => setCvData(prev => ({ ...prev, sectionTitles: { ...(prev.sectionTitles || {}), qualities: e.target.value } }))}
+                      className="w-full sm:w-56 p-2 text-xs font-black border border-blue-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="CERTIFICATIONS"
+                    />
+                  </div>
                   <div className="space-y-3">
                     {(cvData.qualities || []).map((quality, idx) => (
                       <div key={quality.id} className="flex items-center gap-3">
@@ -2021,9 +2165,21 @@ export default function CreerCv() {
                   </div>
                 </div>
 
-                {/* Informatique */}
-                <div>
-                  <h3 className="text-sm font-black text-gray-900 uppercase mb-3">Informatique</h3>
+                {/* Informatique / Logiciels */}
+                <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-200">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3.5 pb-3 border-b border-gray-200">
+                    <div className="flex items-center space-x-2">
+                      <i className="fa-solid fa-pen text-blue-600 text-xs"></i>
+                      <h3 className="text-xs font-black text-gray-900 uppercase tracking-wide">Titre de la section sur le CV :</h3>
+                    </div>
+                    <input
+                      type="text"
+                      value={cvData.sectionTitles?.itSkills || "LOGICIELS"}
+                      onChange={(e) => setCvData(prev => ({ ...prev, sectionTitles: { ...(prev.sectionTitles || {}), itSkills: e.target.value } }))}
+                      className="w-full sm:w-56 p-2 text-xs font-black border border-blue-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="LOGICIELS"
+                    />
+                  </div>
                   <div className="space-y-3">
                     {(cvData.itSkills || []).map((skill, idx) => (
                       <div key={skill.id} className="flex items-center gap-3">
@@ -2054,8 +2210,20 @@ export default function CreerCv() {
                 </div>
 
                 {/* Centres d'intérêt */}
-                <div>
-                  <h3 className="text-sm font-black text-gray-900 uppercase mb-3">Centres d'intérêt</h3>
+                <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-200">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3.5 pb-3 border-b border-gray-200">
+                    <div className="flex items-center space-x-2">
+                      <i className="fa-solid fa-pen text-blue-600 text-xs"></i>
+                      <h3 className="text-xs font-black text-gray-900 uppercase tracking-wide">Titre de la section sur le CV :</h3>
+                    </div>
+                    <input
+                      type="text"
+                      value={cvData.sectionTitles?.hobbies || "CENTRES D'INTÉRÊT"}
+                      onChange={(e) => setCvData(prev => ({ ...prev, sectionTitles: { ...(prev.sectionTitles || {}), hobbies: e.target.value } }))}
+                      className="w-full sm:w-56 p-2 text-xs font-black border border-blue-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="CENTRES D'INTÉRÊT"
+                    />
+                  </div>
                   <div className="space-y-3">
                     {(cvData.hobbies || []).map((hobby, idx) => (
                       <div key={hobby.id} className="flex items-center gap-3">
@@ -3631,7 +3799,7 @@ export default function CreerCv() {
                             <div>
                               <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
                                 <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
-                                LOGICIELS
+                                {cvData.sectionTitles?.itSkills?.toUpperCase() || "LOGICIELS"}
                               </h3>
                               <ul className="text-[8.5px] text-gray-800 leading-snug space-y-1 font-bold pl-1">
                                 {cvData.itSkills.map((skill) => (
@@ -3663,7 +3831,7 @@ export default function CreerCv() {
                             <div>
                               <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
                                 <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
-                                CERTIFICATIONS
+                                {cvData.sectionTitles?.qualities?.toUpperCase() || "CERTIFICATIONS"}
                               </h3>
                               <ul className="text-[8.5px] text-gray-800 leading-snug space-y-1 font-bold pl-1">
                                 {cvData.qualities.map((q) => (
@@ -3678,7 +3846,7 @@ export default function CreerCv() {
                             <div>
                               <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
                                 <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
-                                CENTRES D'INTÉRÊT
+                                {cvData.sectionTitles?.hobbies?.toUpperCase() || "CENTRES D'INTÉRÊT"}
                               </h3>
                               <ul className="text-[8.5px] text-gray-800 leading-snug space-y-1 font-bold pl-1">
                                 {cvData.hobbies.map((hobby) => (
