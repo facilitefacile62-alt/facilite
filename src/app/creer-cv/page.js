@@ -1041,6 +1041,18 @@ export default function CreerCv() {
     triggerToast("Phrase ajoutée !");
   };
 
+  // Change active step and force tab to edit mode (essential for mobile & desktop)
+  const handleGoToStep = (stepNum) => {
+    setActiveStep(stepNum);
+    setMobileTab("edit");
+    if (typeof window !== "undefined") {
+      const editorElem = document.getElementById("cv-form-editor-section");
+      if (editorElem) {
+        editorElem.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
   return (
     <>
       {/* Toast Notification Top Floating */}
@@ -1133,7 +1145,7 @@ export default function CreerCv() {
                 return (
                   <button
                     key={step.num}
-                    onClick={() => setActiveStep(step.num)}
+                    onClick={() => handleGoToStep(step.num)}
                     title={`Modifier l'étape ${step.num + 1} : ${step.label}`}
                     className={`w-full flex items-center justify-between p-3 rounded-xl transition text-left cursor-pointer text-sm font-semibold group ${
                       isActive
@@ -1217,9 +1229,12 @@ export default function CreerCv() {
           </div>
 
           {/* MIDDLE AREA: The Form Editor (Hides on mobile if mobileTab is 'preview') */}
-          <section className={`flex-1 p-6 md:p-8 bg-white border-r border-gray-200 overflow-y-auto max-w-full lg:max-w-2xl no-print ${
-            mobileTab === "preview" ? "hidden lg:block" : "block"
-          }`}>
+          <section
+            id="cv-form-editor-section"
+            className={`flex-1 p-6 md:p-8 bg-white border-r border-gray-200 overflow-y-auto max-w-full lg:max-w-2xl no-print ${
+              mobileTab === "preview" ? "hidden lg:block" : "block"
+            }`}
+          >
             
             {/* Steps Headings */}
             <div className="mb-8">
