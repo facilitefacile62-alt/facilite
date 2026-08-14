@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 
 const REACTIONS = [
   { id: "like", emoji: "👍", label: "J'aime", color: "text-blue-600", bg: "bg-blue-50" },
