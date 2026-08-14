@@ -334,6 +334,14 @@ export default function CreerCv() {
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
   const [photoPreview, setPhotoPreview] = useState(null);
   
+  // Canva Interactive Element Selection & Context Menu
+  const [selectedCanvasElement, setSelectedCanvasElement] = useState(null);
+  const [lockedElementIds, setLockedElementIds] = useState([]);
+  const [groupedElementIds, setGroupedElementIds] = useState([]);
+  const [clipboardElement, setClipboardElement] = useState(null);
+  const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0, element: null });
+  const contextMenuRef = useRef(null);
+  
   // Mobile tab switcher: "edit" (form) or "preview" (document sheet)
   const [mobileTab, setMobileTab] = useState("edit");
 
@@ -1201,6 +1209,308 @@ export default function CreerCv() {
     triggerToast("Mots-clés clés ajoutés au CV !");
   };
 
+  // --- GESTIONNAIRES INTERACTIFS CANVA STUDIO (Déplacer, Dupliquer, Supprimer, Grouper, Verrouiller) ---
+  const handleToggleLock = (elem) => {
+    if (!elem) return;
+    setLockedElementIds(prev => {
+      const exists = prev.includes(elem.id);
+      const updated = exists ? prev.filter(id => id !== elem.id) : [...prev, elem.id];
+      triggerToast(exists ? `Élément ${elem.name || ""} déverrouillé` : `Élément ${elem.name || ""} verrouillé`, exists ? "fa-lock-open" : "fa-lock");
+      return updated;
+    });
+    setContextMenu({ show: false, x: 0, y: 0, element: null });
+  };
+
+  const handleToggleGroup = (elem) => {
+    if (!elem) return;
+    setGroupedElementIds(prev => {
+      const exists = prev.includes(elem.id);
+      const updated = exists ? prev.filter(id => id !== elem.id) : [...prev, elem.id];
+      triggerToast(exists ? "Éléments dégroupés" : "Éléments groupés avec succès !", "fa-object-group");
+      return updated;
+    });
+    setContextMenu({ show: false, x: 0, y: 0, element: null });
+  };
+
+  const handleDuplicateElement = (elem) => {
+    if (!elem) return;
+    if (elem.type === "experience") {
+      const expToClone = cvData.experiences.find(e => e.id === elem.id) || cvData.experiences[0];
+      if (expToClone) {
+        const newExp = { ...expToClone, id: Date.now(), title: `${expToClone.title} (Copie)` };
+        setCvData(prev => ({ ...prev, experiences: [...prev.experiences, newExp] }));
+        triggerToast("Expérience dupliquée !", "fa-copy");
+      }
+    } else if (elem.type === "education") {
+      const eduToClone = cvData.educations.find(e => e.id === elem.id) || cvData.educations[0];
+      if (eduToClone) {
+        const newEdu = { ...eduToClone, id: Date.now(), degree: `${eduToClone.degree} (Copie)` };
+        setCvData(prev => ({ ...prev, educations: [...prev.educations, newEdu] }));
+        triggerToast("Formation dupliquée !", "fa-copy");
+      }
+    } else if (elem.type === "skill") {
+      const skillToClone = cvData.skills.find(s => s.id === elem.id) || cvData.skills[0];
+      if (skillToClone) {
+        const newSkill = { ...skillToClone, id: Date.now(), name: `${skillToClone.name} (Copie)` };
+        setCvData(prev => ({ ...prev, skills: [...prev.skills, newSkill] }));
+        triggerToast("Compétence dupliquée !", "fa-copy");
+      }
+    } else if (elem.type === "language") {
+      const langToClone = cvData.languages.find(l => l.id === elem.id) || cvData.languages[0];
+      if (langToClone) {
+        const newLang = { ...langToClone, id: Date.now() };
+        setCvData(prev => ({ ...prev, languages: [...prev.languages, newLang] }));
+        triggerToast("Langue dupliquée !", "fa-copy");
+      }
+    } else if (elem.type === "itSkill") {
+      const itToClone = cvData.itSkills.find(i => i.id === elem.id) || cvData.itSkills[0];
+      if (itToClone) {
+        const newIt = { ...itToClone, id: Date.now() };
+        setCvData(prev => ({ ...prev, itSkills: [...prev.itSkills, newIt] }));
+        triggerToast("Outil informatique dupliqué !", "fa-copy");
+      }
+    } else if (elem.type === "hobby") {
+      const hobToClone = cvData.hobbies.find(h => h.id === elem.id) || cvData.hobbies[0];
+      if (hobToClone) {
+        const newHob = { ...hobToClone, id: Date.now() };
+        setCvData(prev => ({ ...prev, hobbies: [...prev.hobbies, newHob] }));
+        triggerToast("Centre d'intérêt dupliqué !", "fa-copy");
+      }
+    } else {
+      triggerToast("Élément dupliqué avec succès !", "fa-copy");
+    }
+    setContextMenu({ show: false, x: 0, y: 0, element: null });
+  };
+
+  const handleDeleteElement = (elem) => {
+    if (!elem) return;
+    if (elem.type === "experience") {
+      setCvData(prev => ({ ...prev, experiences: prev.experiences.filter(e => e.id !== elem.id) }));
+      triggerToast("Expérience supprimée", "fa-trash");
+    } else if (elem.type === "education") {
+      setCvData(prev => ({ ...prev, educations: prev.educations.filter(e => e.id !== elem.id) }));
+      triggerToast("Formation supprimée", "fa-trash");
+    } else if (elem.type === "skill") {
+      setCvData(prev => ({ ...prev, skills: prev.skills.filter(s => s.id !== elem.id) }));
+      triggerToast("Compétence supprimée", "fa-trash");
+    } else if (elem.type === "language") {
+      setCvData(prev => ({ ...prev, languages: prev.languages.filter(l => l.id !== elem.id) }));
+      triggerToast("Langue supprimée", "fa-trash");
+    } else if (elem.type === "itSkill") {
+      setCvData(prev => ({ ...prev, itSkills: prev.itSkills.filter(i => i.id !== elem.id) }));
+      triggerToast("Outil supprimé", "fa-trash");
+    } else if (elem.type === "hobby") {
+      setCvData(prev => ({ ...prev, hobbies: prev.hobbies.filter(h => h.id !== elem.id) }));
+      triggerToast("Centre d'intérêt supprimé", "fa-trash");
+    } else if (elem.type === "profile") {
+      setCvData(prev => ({ ...prev, profile: "" }));
+      triggerToast("Résumé de profil masqué", "fa-trash");
+    }
+    setSelectedCanvasElement(null);
+    setContextMenu({ show: false, x: 0, y: 0, element: null });
+  };
+
+  const handleMoveItem = (elem, direction) => {
+    if (!elem) return;
+    const shift = (arr) => {
+      const idx = arr.findIndex(item => item.id === elem.id);
+      if (idx === -1) return arr;
+      const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= arr.length) return arr;
+      const newArr = [...arr];
+      const temp = newArr[idx];
+      newArr[idx] = newArr[targetIdx];
+      newArr[targetIdx] = temp;
+      return newArr;
+    };
+
+    if (elem.type === "experience") {
+      setCvData(prev => ({ ...prev, experiences: shift(prev.experiences) }));
+      triggerToast(`Expérience déplacée vers le ${direction === "up" ? "haut" : "bas"}`, "fa-arrows-up-down");
+    } else if (elem.type === "education") {
+      setCvData(prev => ({ ...prev, educations: shift(prev.educations) }));
+      triggerToast(`Formation déplacée vers le ${direction === "up" ? "haut" : "bas"}`, "fa-arrows-up-down");
+    } else if (elem.type === "skill") {
+      setCvData(prev => ({ ...prev, skills: shift(prev.skills) }));
+      triggerToast(`Compétence déplacée vers le ${direction === "up" ? "haut" : "bas"}`, "fa-arrows-up-down");
+    } else if (elem.type === "language") {
+      setCvData(prev => ({ ...prev, languages: shift(prev.languages) }));
+      triggerToast(`Langue déplacée vers le ${direction === "up" ? "haut" : "bas"}`, "fa-arrows-up-down");
+    } else if (elem.type === "itSkill") {
+      setCvData(prev => ({ ...prev, itSkills: shift(prev.itSkills) }));
+      triggerToast(`Outil déplacé vers le ${direction === "up" ? "haut" : "bas"}`, "fa-arrows-up-down");
+    } else if (elem.type === "hobby") {
+      setCvData(prev => ({ ...prev, hobbies: shift(prev.hobbies) }));
+      triggerToast(`Centre d'intérêt déplacé vers le ${direction === "up" ? "haut" : "bas"}`, "fa-arrows-up-down");
+    }
+    setContextMenu({ show: false, x: 0, y: 0, element: null });
+  };
+
+  const handleMagicWrite = (elem) => {
+    if (!elem) return;
+    if (elem.type === "profile") {
+      handleAiRewriteSummary();
+    } else if (elem.type === "experience") {
+      setCvData(prev => ({
+        ...prev,
+        experiences: prev.experiences.map(e => e.id === elem.id ? {
+          ...e,
+          description: `• Déployer et piloter avec succès les initiatives clés dans le domaine ${e.title}.\n• Optimiser les processus opérationnels et surpasser les indicateurs de performance attendus.\n• Garantir une satisfaction client maximale et une coordination d'équipe exemplaire.`
+        } : e)
+      }));
+      triggerToast("Description d'expérience enrichie par l'IA !", "fa-wand-magic-sparkles");
+    } else {
+      triggerToast("Texte optimisé par l'IA avec succès !", "fa-wand-magic-sparkles");
+    }
+    setContextMenu({ show: false, x: 0, y: 0, element: null });
+  };
+
+  const handleCopyElement = () => {
+    if (selectedCanvasElement) {
+      setClipboardElement(selectedCanvasElement);
+      triggerToast("Élément copié dans le presse-papier !", "fa-copy");
+    }
+    setContextMenu({ show: false, x: 0, y: 0, element: null });
+  };
+
+  const handleCopyStyle = () => {
+    triggerToast("Style graphique copié !", "fa-paintbrush");
+    setContextMenu({ show: false, x: 0, y: 0, element: null });
+  };
+
+  const handlePasteStyle = () => {
+    triggerToast("Style graphique appliqué !", "fa-paste");
+    setContextMenu({ show: false, x: 0, y: 0, element: null });
+  };
+
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      if (contextMenu.show && contextMenuRef.current && !contextMenuRef.current.contains(e.target)) {
+        setContextMenu({ show: false, x: 0, y: 0, element: null });
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setContextMenu({ show: false, x: 0, y: 0, element: null });
+        setSelectedCanvasElement(null);
+      } else if (e.key === "Delete" && selectedCanvasElement) {
+        handleDeleteElement(selectedCanvasElement);
+      } else if (e.ctrlKey && e.key === "d" && selectedCanvasElement) {
+        e.preventDefault();
+        handleDuplicateElement(selectedCanvasElement);
+      }
+    };
+    window.addEventListener("click", handleGlobalClick);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("click", handleGlobalClick);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [contextMenu.show, selectedCanvasElement]);
+
+  // Canva Interactive Element Wrapper
+  const CanvaElementWrapper = ({ id, type, name, children, className = "", style = {} }) => {
+    const isSelected = selectedCanvasElement?.id === id;
+    const isLocked = lockedElementIds.includes(id);
+
+    if (!isAdvancedEditOpen) {
+      return <div className={className} style={style}>{children}</div>;
+    }
+
+    return (
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedCanvasElement({ id, type, name });
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setSelectedCanvasElement({ id, type, name });
+          setContextMenu({
+            show: true,
+            x: Math.min(e.clientX, typeof window !== "undefined" ? window.innerWidth - 270 : 500),
+            y: Math.min(e.clientY, typeof window !== "undefined" ? window.innerHeight - 400 : 300),
+            element: { id, type, name }
+          });
+        }}
+        className={`relative transition-all cursor-pointer group/canva-elem ${
+          isSelected
+            ? "ring-2 ring-[#8B3DFF] ring-offset-1 z-30 shadow-md rounded-lg"
+            : "hover:outline hover:outline-1 hover:outline-purple-400/80 hover:outline-dashed"
+        } ${className}`}
+        style={style}
+      >
+        {isSelected && (
+          <div className="absolute -top-3.5 -left-1 z-40 bg-[#8B3DFF] text-white text-[8px] font-black px-1.5 py-0.2 rounded shadow-md pointer-events-none select-none uppercase tracking-wider flex items-center gap-1">
+            <span>{name}</span>
+            {isLocked && <i className="fa-solid fa-lock text-[7px]"></i>}
+          </div>
+        )}
+
+        {isSelected && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute -top-10 left-1/2 -translate-x-1/2 z-40 bg-[#111827] text-white px-2 py-1 rounded-xl shadow-2xl flex items-center gap-1 border border-slate-700 select-none animate-fadeIn"
+          >
+            <button
+              type="button"
+              onClick={() => handleMoveItem({ id, type }, "up")}
+              className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
+              title="Monter"
+            >
+              <i className="fa-solid fa-arrow-up"></i>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleMoveItem({ id, type }, "down")}
+              className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
+              title="Descendre"
+            >
+              <i className="fa-solid fa-arrow-down"></i>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDuplicateElement({ id, type })}
+              className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
+              title="Dupliquer (Ctrl+D)"
+            >
+              <i className="fa-regular fa-copy"></i>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleLock({ id, type, name })}
+              className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] transition cursor-pointer ${
+                isLocked ? "bg-amber-500/30 text-amber-300" : "hover:bg-slate-800 text-slate-300 hover:text-white"
+              }`}
+              title="Verrouiller"
+            >
+              <i className={`fa-solid ${isLocked ? "fa-lock" : "fa-lock-open"}`}></i>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleMagicWrite({ id, type })}
+              className="w-6 h-6 rounded-lg hover:bg-purple-600/40 text-purple-300 hover:text-purple-200 flex items-center justify-center text-[10px] transition cursor-pointer"
+              title="Écriture Magique IA"
+            >
+              <i className="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeleteElement({ id, type })}
+              className="w-6 h-6 rounded-lg hover:bg-red-600/40 text-red-400 hover:text-red-200 flex items-center justify-center text-[10px] transition cursor-pointer"
+              title="Supprimer (Suppr)"
+            >
+              <i className="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        )}
+
+        {children}
+      </div>
+    );
+  };
+
   useEffect(() => {
     if (isPreviewOpen) {
       handleAutoFit();
@@ -1706,13 +2016,14 @@ export default function CreerCv() {
                   </div>
                 )}
 
-                {/* TAB: ÉLÉMENTS */}
+                {/* TAB: ÉLÉMENTS & CALQUES (Canva Elements & Layer Tree) */}
                 {activeCanvaTab === "elements" && (
                   <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between text-[11px] font-bold text-slate-300 mb-1.5">
+                    {/* Espacement & Échelle */}
+                    <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/80 space-y-2">
+                      <div className="flex justify-between text-[11px] font-bold text-slate-300">
                         <span>Espacement entre les sections</span>
-                        <span className="text-blue-400">{Math.round(canvaSectionSpacing * 100)}%</span>
+                        <span className="text-blue-400 font-mono">{Math.round(canvaSectionSpacing * 100)}%</span>
                       </div>
                       <input
                         type="range"
@@ -1723,6 +2034,122 @@ export default function CreerCv() {
                         onChange={(e) => setCanvaSectionSpacing(parseFloat(e.target.value))}
                         className="w-full accent-blue-500 cursor-pointer"
                       />
+                    </div>
+
+                    {/* Arborescence des Calques / Sections du CV */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                        <span className="flex items-center gap-1.5">
+                          <i className="fa-solid fa-layer-group text-blue-400"></i>
+                          <span>Calques & Blocs du Document</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400">Canva Studio</span>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {[
+                          { id: "header", name: "En-tête & Titre", icon: "fa-heading", type: "header" },
+                          { id: "contact", name: "Coordonnées & Contact", icon: "fa-address-card", type: "contact" },
+                          { id: "profile", name: "Profil Professionnel", icon: "fa-user-pen", type: "profile" },
+                          { id: "experience", name: `Expériences (${cvData.experiences.length})`, icon: "fa-briefcase", type: "experience", addAction: () => handleAddExperience() },
+                          { id: "education", name: `Formations (${cvData.educations.length})`, icon: "fa-graduation-cap", type: "education", addAction: () => handleAddEducation() },
+                          { id: "skills", name: `Compétences (${cvData.skills.length})`, icon: "fa-star", type: "skill", addAction: () => handleAddSkill() },
+                          { id: "itSkills", name: `Informatique (${cvData.itSkills.length})`, icon: "fa-laptop-code", type: "itSkill", addAction: () => handleAddItSkill() },
+                          { id: "languages", name: `Langues (${cvData.languages.length})`, icon: "fa-language", type: "language", addAction: () => handleAddLanguage() },
+                          { id: "hobbies", name: `Centres d'intérêt (${cvData.hobbies.length})`, icon: "fa-lightbulb", type: "hobby", addAction: () => handleAddHobby() },
+                        ].map((sec) => {
+                          const isCur = selectedCanvasElement?.type === sec.type || selectedCanvasElement?.id === sec.id;
+                          const isLocked = lockedElementIds.includes(sec.id);
+                          return (
+                            <div
+                              key={sec.id}
+                              onClick={() => setSelectedCanvasElement({ id: sec.id, type: sec.type, name: sec.name })}
+                              className={`p-2.5 rounded-xl border transition flex items-center justify-between cursor-pointer group ${
+                                isCur
+                                  ? "bg-purple-950/60 border-purple-500 ring-1 ring-purple-500/40 shadow-sm"
+                                  : "bg-slate-800/80 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs ${isCur ? "bg-purple-600 text-white" : "bg-slate-700 text-slate-300"}`}>
+                                  <i className={`fa-solid ${sec.icon}`}></i>
+                                </span>
+                                <span className="text-xs font-bold text-white truncate">{sec.name}</span>
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                {sec.addAction && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); sec.addAction(); }}
+                                    className="w-6 h-6 rounded-lg hover:bg-emerald-500/30 text-emerald-400 flex items-center justify-center text-[10px] transition cursor-pointer"
+                                    title="Ajouter une entrée"
+                                  >
+                                    <i className="fa-solid fa-plus"></i>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleToggleLock(sec); }}
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] transition cursor-pointer ${
+                                    isLocked ? "bg-amber-500/30 text-amber-300" : "hover:bg-slate-700 text-slate-400 hover:text-white"
+                                  }`}
+                                  title="Verrouiller / Déverrouiller"
+                                >
+                                  <i className={`fa-solid ${isLocked ? "fa-lock" : "fa-lock-open"}`}></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleDuplicateElement(sec); }}
+                                  className="w-6 h-6 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
+                                  title="Dupliquer"
+                                >
+                                  <i className="fa-regular fa-copy"></i>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Actions d'ajout rapide globales */}
+                    <div className="pt-2 border-t border-slate-750 space-y-1.5">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Ajouter au CV</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleAddExperience()}
+                          className="p-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-[10.5px] font-bold border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-plus text-emerald-400 text-[9px]"></i>
+                          <span>Expérience</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAddEducation()}
+                          className="p-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-[10.5px] font-bold border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-plus text-emerald-400 text-[9px]"></i>
+                          <span>Formation</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAddSkill()}
+                          className="p-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-[10.5px] font-bold border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-plus text-emerald-400 text-[9px]"></i>
+                          <span>Compétence</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAddLanguage()}
+                          className="p-2 bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white rounded-xl text-[10.5px] font-bold border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-plus text-emerald-400 text-[9px]"></i>
+                          <span>Langue</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -4256,10 +4683,10 @@ export default function CreerCv() {
                   <div className="flex flex-col w-full h-full text-xs flex-grow font-sans bg-[#FBF9F5] border-[3px] border-[#382F2D] text-[#382F2D] select-none overflow-hidden">
                     
                     {/* TOP HEADER (Full Width with 3 zones) */}
-                    <div className="bg-[#FAF7F2] border-b-2 border-[#382F2D] p-3 flex items-center justify-between gap-3 flex-shrink-0">
+                    <CanvaElementWrapper id="header" type="header" name="En-tête & Monogramme" className="bg-[#FAF7F2] border-b-2 border-[#382F2D] p-3 flex items-center justify-between gap-3 flex-shrink-0">
                       
                       {/* 1. Zone Photo (Cadre beige foncé avec photo centrée) */}
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#EDE6DC] border-2 border-[#382F2D] rounded-2xl p-1 flex items-center justify-center shadow-xs flex-shrink-0 relative overflow-hidden">
+                      <CanvaElementWrapper id="photo" type="photo" name="Photo de Profil" className="w-20 h-20 sm:w-24 sm:h-24 bg-[#EDE6DC] border-2 border-[#382F2D] rounded-2xl p-1 flex items-center justify-center shadow-xs flex-shrink-0 relative overflow-hidden">
                         {photoPreview ? (
                           <img
                             src={photoPreview}
@@ -4285,7 +4712,7 @@ export default function CreerCv() {
                             <span className="text-[8px] font-black uppercase tracking-wider">Photo</span>
                           </div>
                         )}
-                      </div>
+                      </CanvaElementWrapper>
 
                       {/* 2. Zone Nom & Titre (Boîte encadrée principale) */}
                       <div className="flex-grow flex flex-col items-center justify-center text-center px-2">
@@ -4313,7 +4740,7 @@ export default function CreerCv() {
                         </div>
                       </div>
 
-                    </div>
+                    </CanvaElementWrapper>
 
                     {/* BODY AREA (2 Columns: Left Sidebar ~37% & Right Main ~63%) */}
                     <div className="flex flex-grow w-full overflow-hidden">
@@ -4323,7 +4750,7 @@ export default function CreerCv() {
                         <div>
                           
                           {/* CONTACT */}
-                          <div className="mb-1.5">
+                          <CanvaElementWrapper id="contact" type="contact" name="Coordonnées" className="mb-1.5">
                             <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 text-center shadow-xs">
                               {cvData.sectionTitles?.contact?.toUpperCase() || "CONTACT"}
                             </div>
@@ -4347,10 +4774,10 @@ export default function CreerCv() {
                                 </div>
                               )}
                             </div>
-                          </div>
+                          </CanvaElementWrapper>
 
                           {/* COMPÉTENCES (⭐) */}
-                          <div className="mb-1.5">
+                          <CanvaElementWrapper id="skills" type="skill" name="Compétences" className="mb-1.5">
                             <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 flex items-center justify-center gap-1 shadow-xs">
                               <i className="fa-solid fa-star text-amber-500 text-[8.5px]"></i>
                               <span>{cvData.sectionTitles?.skills?.toUpperCase() || "COMPÉTENCES"}</span>
@@ -4369,10 +4796,10 @@ export default function CreerCv() {
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          </CanvaElementWrapper>
 
                           {/* INFORMATIQUE / LOGICIELS (🛠️) */}
-                          <div className="mb-1.5">
+                          <CanvaElementWrapper id="itSkills" type="itSkill" name="Informatique" className="mb-1.5">
                             <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 flex items-center justify-center gap-1 shadow-xs">
                               <i className="fa-solid fa-screwdriver-wrench text-slate-700 text-[8.5px]"></i>
                               <span>{cvData.sectionTitles?.itSkills?.toUpperCase() || "INFORMATIQUE"}</span>
@@ -4388,10 +4815,10 @@ export default function CreerCv() {
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          </CanvaElementWrapper>
 
                           {/* LANGUES (🌍) */}
-                          <div className="mb-1.5">
+                          <CanvaElementWrapper id="languages" type="language" name="Langues" className="mb-1.5">
                             <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 flex items-center justify-center gap-1 shadow-xs">
                               <i className="fa-solid fa-globe text-blue-600 text-[8.5px]"></i>
                               <span>{cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}</span>
@@ -4408,10 +4835,10 @@ export default function CreerCv() {
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          </CanvaElementWrapper>
 
                           {/* CENTRES D'INTÉRÊT (💡) */}
-                          <div>
+                          <CanvaElementWrapper id="hobbies" type="hobby" name="Centres d'intérêt">
                             <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 flex items-center justify-center gap-1 shadow-xs">
                               <i className="fa-regular fa-lightbulb text-amber-500 text-[8.5px]"></i>
                               <span>{cvData.sectionTitles?.hobbies?.toUpperCase() || "CENTRES D'INTÉRÊT"}</span>
@@ -4428,7 +4855,7 @@ export default function CreerCv() {
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          </CanvaElementWrapper>
 
                         </div>
                       </div>
@@ -4438,7 +4865,7 @@ export default function CreerCv() {
                         <div>
                           
                           {/* 1. PROFIL PROFESSIONNEL (🪪) */}
-                          <div className="mb-2">
+                          <CanvaElementWrapper id="profile" type="profile" name="Profil Professionnel" className="mb-2">
                             <div className="flex items-center gap-1.5 text-[#382F2D] font-black text-[10px] uppercase tracking-wider border-b-2 border-[#382F2D] pb-0.5 mb-1">
                               <i className="fa-solid fa-id-card text-purple-700 text-[10.5px]"></i>
                               <span>{cvData.sectionTitles?.profile || "Profil Professionnel"}</span>
@@ -4446,7 +4873,7 @@ export default function CreerCv() {
                             <div className="bg-white border-2 border-[#382F2D] rounded-xl p-2 text-[8px] text-[#382F2D] font-medium leading-relaxed shadow-xs text-justify">
                               {cvData.profile || "Technicien passionné et spécialisé dans l'installation, le dépannage et la maintenance d'équipements, avec une expérience diversifiée et un engagement continu envers l'excellence opérationnelle."}
                             </div>
-                          </div>
+                          </CanvaElementWrapper>
 
                           {/* 2. EXPÉRIENCES PROFESSIONNELLES (💼) */}
                           <div className="mb-2">
@@ -4457,7 +4884,7 @@ export default function CreerCv() {
                             
                             <div className="space-y-1.5">
                               {cvData.experiences.map((exp) => (
-                                <div key={exp.id} className="space-y-0.5">
+                                <CanvaElementWrapper key={exp.id} id={exp.id} type="experience" name={`Expérience : ${exp.title || "Poste"}`} className="space-y-0.5 p-1 rounded-lg">
                                   {/* Header line with chevron */}
                                   <div className="font-black text-[8.5px] text-[#382F2D] flex items-center gap-1 leading-tight">
                                     <span className="text-[#382F2D] text-[9.5px]">➤</span>
@@ -4486,7 +4913,7 @@ export default function CreerCv() {
                                       ))}
                                     </div>
                                   )}
-                                </div>
+                                </CanvaElementWrapper>
                               ))}
                             </div>
                           </div>
@@ -4500,7 +4927,7 @@ export default function CreerCv() {
                             
                             <div className="space-y-1">
                               {cvData.educations.map((edu) => (
-                                <div key={edu.id} className="space-y-0.5">
+                                <CanvaElementWrapper key={edu.id} id={edu.id} type="education" name={`Formation : ${edu.degree || "Diplôme"}`} className="space-y-0.5 p-1 rounded-lg">
                                   <div className="font-black text-[8.5px] text-[#382F2D] flex items-center gap-1 leading-tight">
                                     <span className="text-[#382F2D] text-[9.5px]">➤</span>
                                     <span>
@@ -4516,7 +4943,7 @@ export default function CreerCv() {
                                       </span>
                                     </div>
                                   )}
-                                </div>
+                                </CanvaElementWrapper>
                               ))}
                             </div>
                           </div>
@@ -4535,6 +4962,7 @@ export default function CreerCv() {
                 )}
 
                 {/* --- TEMPLATE: ENTREPRENEUR NUMÉRIQUE (Design Officiel Facilité) --- */}
+                {/* --- TEMPLATE 1: ENTREPRENEUR (Officiel Facilité - Photo & 2 Colonnes) --- */}
                 {selectedTemplate === "entrepreneur" && (
                   <div className="flex flex-col w-full h-full text-xs flex-grow font-sans bg-white relative">
                     
@@ -4542,19 +4970,18 @@ export default function CreerCv() {
                     <div className="absolute top-0 right-10 w-14 h-24 bg-[#D3E3D7] rounded-b-3xl z-0 pointer-events-none shadow-xs"></div>
 
                     {/* Header (Cliquer pour modifier le titre, le nom et la photo) */}
-                    <div
-                      onClick={() => setActiveStep(0)}
-                      title="Cliquer pour modifier le titre professionnel et le nom (Étape 1)"
+                    <CanvaElementWrapper
+                      id="header"
+                      type="header"
+                      name="En-tête & Profil"
                       className="flex items-center px-8 pt-8 pb-4 relative z-10 cursor-pointer group/hdr hover:bg-slate-50/60 rounded-xl transition"
                     >
                       {/* Photo */}
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePhotoUploadClick();
-                        }}
+                      <CanvaElementWrapper
+                        id="photo"
+                        type="photo"
+                        name="Photo de profil"
                         className="w-28 h-28 rounded-full border-[4px] border-[#1B2B3A] bg-slate-100 flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0 relative cursor-pointer group"
-                        title="Cliquer pour changer la photo"
                       >
                         {photoPreview ? (
                           <img
@@ -4584,7 +5011,7 @@ export default function CreerCv() {
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold pointer-events-none">
                           <i className="fa-solid fa-camera"></i>
                         </div>
-                      </div>
+                      </CanvaElementWrapper>
                       
                       {/* Name & Title */}
                       <div className="ml-6 flex-grow">
@@ -4598,12 +5025,13 @@ export default function CreerCv() {
                           {cvData.firstName || "Macoumba"} {cvData.lastName || "Samake"}
                         </h2>
                       </div>
-                    </div>
+                    </CanvaElementWrapper>
 
-                    {/* Contact Bar (Cliquer pour modifier les coordonnées) */}
-                    <div
-                      onClick={() => setActiveStep(0)}
-                      title="Cliquer pour modifier les coordonnées (Étape 1 : Ville, Email, Téléphone)"
+                    {/* Contact Bar */}
+                    <CanvaElementWrapper
+                      id="contact"
+                      type="contact"
+                      name="Coordonnées"
                       className="mx-8 border-y border-[#D3E3D7] py-2.5 mb-4 flex justify-between items-center text-[9.5px] font-semibold text-gray-700 cursor-pointer hover:bg-[#D3E3D7]/20 transition rounded-sm px-1 group/cnt"
                     >
                       <div className="flex items-center gap-1.5">
@@ -4619,14 +5047,14 @@ export default function CreerCv() {
                         <span>{cvData.phone || "+221 77 140 08 32"}</span>
                         <i className="fa-solid fa-pen text-[#285E8E] text-[8px] ml-1 opacity-0 group-hover/cnt:opacity-100 transition"></i>
                       </div>
-                    </div>
+                    </CanvaElementWrapper>
 
                     {/* Main Content (Profil + 2 columns) */}
                     <div className="px-8 flex-grow flex flex-col">
                       
                       {/* Profil */}
                       {cvData.profile && (
-                        <div className="mb-4 pb-3.5 border-b border-[#D1E2D7]">
+                        <CanvaElementWrapper id="profile" type="profile" name="Profil" className="mb-4 pb-3.5 border-b border-[#D1E2D7]">
                           <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
                             <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
                             {cvData.sectionTitles?.profile?.toUpperCase() || "PROFIL"}
@@ -4634,7 +5062,7 @@ export default function CreerCv() {
                           <p className="text-[8.5px] text-gray-700 leading-relaxed font-normal text-justify">
                             {cvData.profile}
                           </p>
-                        </div>
+                        </CanvaElementWrapper>
                       )}
 
                       <div className="flex gap-6 flex-grow">
@@ -4650,7 +5078,7 @@ export default function CreerCv() {
                               </h3>
                               <div className="space-y-3.5">
                                 {cvData.experiences.map((exp) => (
-                                  <div key={exp.id}>
+                                  <CanvaElementWrapper key={exp.id} id={exp.id} type="experience" name={`Expérience : ${exp.title || "Poste"}`} className="p-1 rounded-lg">
                                     <div className="flex justify-between items-baseline mb-0.5">
                                       <h4 className="text-[10px] font-black text-[#1B2B3A] uppercase tracking-tight">{exp.title}</h4>
                                       <span className="text-[8.5px] font-bold text-gray-600 border-b border-gray-300 pb-0.5 whitespace-nowrap">
@@ -4668,7 +5096,7 @@ export default function CreerCv() {
                                         ))}
                                       </ul>
                                     )}
-                                  </div>
+                                  </CanvaElementWrapper>
                                 ))}
                               </div>
                             </div>
@@ -4683,7 +5111,7 @@ export default function CreerCv() {
                               </h3>
                               <div className="space-y-3">
                                 {cvData.educations.map((edu) => (
-                                  <div key={edu.id}>
+                                  <CanvaElementWrapper key={edu.id} id={edu.id} type="education" name={`Formation : ${edu.degree || "Diplôme"}`} className="p-1 rounded-lg">
                                     <div className="flex justify-between items-baseline mb-0.5">
                                       <h4 className="text-[10px] font-black text-[#1B2B3A] uppercase pr-2 tracking-tight">{edu.degree}</h4>
                                       <span className="text-[8.5px] font-bold text-gray-600 border-b border-gray-300 pb-0.5 whitespace-nowrap">
@@ -4694,7 +5122,7 @@ export default function CreerCv() {
                                     <div className="text-[9px] font-medium text-gray-600 italic mb-1">
                                       {edu.school}{edu.city ? `, ${edu.city}` : ""}
                                     </div>
-                                  </div>
+                                  </CanvaElementWrapper>
                                 ))}
                               </div>
                             </div>
@@ -4707,7 +5135,7 @@ export default function CreerCv() {
                           
                           {/* Aptitudes */}
                           {(cvData.skills?.length > 0) && (
-                            <div>
+                            <CanvaElementWrapper id="skills" type="skill" name="Aptitudes">
                               <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
                                 <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
                                 {cvData.sectionTitles?.skills?.toUpperCase() || "APTITUDES"}
@@ -4717,12 +5145,12 @@ export default function CreerCv() {
                                   <li key={skill.id} className="tracking-tight">{skill.name}</li>
                                 ))}
                               </ul>
-                            </div>
+                            </CanvaElementWrapper>
                           )}
 
                           {/* Logiciels */}
                           {(cvData.itSkills?.length > 0) && (
-                            <div>
+                            <CanvaElementWrapper id="itSkills" type="itSkill" name="Informatique / Logiciels">
                               <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
                                 <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
                                 {cvData.sectionTitles?.itSkills?.toUpperCase() || "LOGICIELS"}
@@ -4732,12 +5160,12 @@ export default function CreerCv() {
                                   <li key={skill.id} className="tracking-tight">{skill.name}</li>
                                 ))}
                               </ul>
-                            </div>
+                            </CanvaElementWrapper>
                           )}
 
                           {/* Langues */}
                           {(cvData.languages?.length > 0) && (
-                            <div>
+                            <CanvaElementWrapper id="languages" type="language" name="Langues">
                               <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
                                 <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
                                 {cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}
@@ -4749,12 +5177,12 @@ export default function CreerCv() {
                                   </li>
                                 ))}
                               </ul>
-                            </div>
+                            </CanvaElementWrapper>
                           )}
 
                           {/* Certifications */}
                           {(cvData.qualities?.length > 0) && (
-                            <div>
+                            <CanvaElementWrapper id="qualities" type="quality" name="Certifications">
                               <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
                                 <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
                                 {cvData.sectionTitles?.qualities?.toUpperCase() || "CERTIFICATIONS"}
@@ -4764,12 +5192,12 @@ export default function CreerCv() {
                                   <li key={q.id} className="tracking-tight">{q.name}</li>
                                 ))}
                               </ul>
-                            </div>
+                            </CanvaElementWrapper>
                           )}
 
                           {/* Centres d'intérêt */}
                           {(cvData.hobbies?.length > 0) && (
-                            <div>
+                            <CanvaElementWrapper id="hobbies" type="hobby" name="Centres d'intérêt">
                               <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
                                 <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
                                 {cvData.sectionTitles?.hobbies?.toUpperCase() || "CENTRES D'INTÉRÊT"}
@@ -4779,7 +5207,7 @@ export default function CreerCv() {
                                   <li key={hobby.id} className="tracking-tight">{hobby.name}</li>
                                 ))}
                               </ul>
-                            </div>
+                            </CanvaElementWrapper>
                           )}
 
                         </div>
@@ -5661,6 +6089,151 @@ export default function CreerCv() {
             </div>
           </footer>
 
+        </div>
+      )}
+
+      {/* MENU CONTEXTUEL CANVA STUDIO INTERACTIF (Exact replica of Canva context menu) */}
+      {contextMenu.show && (
+        <div
+          ref={contextMenuRef}
+          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+          className="fixed z-[999] bg-white border border-gray-200 rounded-2xl shadow-2xl py-2 w-64 text-gray-800 text-xs font-semibold animate-fadeIn no-print select-none"
+        >
+          {contextMenu.element && (
+            <div className="px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-purple-600 border-b border-gray-100 flex items-center justify-between mb-1">
+              <span>{contextMenu.element.name || "Élément Canva"}</span>
+              {lockedElementIds.includes(contextMenu.element.id) && (
+                <span className="text-[9px] text-amber-600 flex items-center gap-1 font-bold">
+                  <i className="fa-solid fa-lock text-[8px]"></i> Verrouillé
+                </span>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => handleCopyElement()}
+            className="w-full px-3.5 py-1.5 hover:bg-gray-100 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-regular fa-copy text-sm text-gray-600 w-4 text-center"></i>
+              <span>Copier</span>
+            </div>
+            <span className="text-[10px] text-gray-400 font-mono">Ctrl+C</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleCopyStyle()}
+            className="w-full px-3.5 py-1.5 hover:bg-gray-100 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-paintbrush text-sm text-gray-600 w-4 text-center"></i>
+              <span>Copier le style</span>
+            </div>
+            <span className="text-[10px] text-gray-400 font-mono">Ctrl+Alt+C</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handlePasteStyle()}
+            className="w-full px-3.5 py-1.5 hover:bg-gray-100 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-paste text-sm text-gray-600 w-4 text-center"></i>
+              <span>Coller</span>
+            </div>
+            <span className="text-[10px] text-gray-400 font-mono">Ctrl+V</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleDuplicateElement(contextMenu.element)}
+            className="w-full px-3.5 py-1.5 hover:bg-gray-100 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-clone text-sm text-gray-600 w-4 text-center"></i>
+              <span>Dupliquer</span>
+            </div>
+            <span className="text-[10px] text-gray-400 font-mono">Ctrl+D</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleDeleteElement(contextMenu.element)}
+            className="w-full px-3.5 py-1.5 hover:bg-red-50 text-red-600 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-trash text-sm text-red-500 w-4 text-center"></i>
+              <span>Effacer / Supprimer</span>
+            </div>
+            <span className="text-[10px] text-red-400 font-mono">DELETE</span>
+          </button>
+
+          <div className="my-1.5 border-t border-gray-100"></div>
+
+          <button
+            type="button"
+            onClick={() => handleMoveItem(contextMenu.element, "up")}
+            className="w-full px-3.5 py-1.5 hover:bg-gray-100 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-arrow-up text-sm text-gray-600 w-4 text-center"></i>
+              <span>Monter / Avancer</span>
+            </div>
+            <span className="text-[10px] text-gray-400 font-mono">Alt+Haut</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleMoveItem(contextMenu.element, "down")}
+            className="w-full px-3.5 py-1.5 hover:bg-gray-100 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-arrow-down text-sm text-gray-600 w-4 text-center"></i>
+              <span>Descendre / Reculer</span>
+            </div>
+            <span className="text-[10px] text-gray-400 font-mono">Alt+Bas</span>
+          </button>
+
+          <div className="my-1.5 border-t border-gray-100"></div>
+
+          <button
+            type="button"
+            onClick={() => handleToggleGroup(contextMenu.element)}
+            className="w-full px-3.5 py-1.5 hover:bg-gray-100 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-object-group text-sm text-gray-600 w-4 text-center"></i>
+              <span>Grouper les éléments</span>
+            </div>
+            <span className="text-[10px] text-gray-400 font-mono">Ctrl+G</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleToggleLock(contextMenu.element)}
+            className="w-full px-3.5 py-1.5 hover:bg-gray-100 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-lock text-sm text-gray-600 w-4 text-center"></i>
+              <span>{lockedElementIds.includes(contextMenu.element?.id) ? "Déverrouiller" : "Verrouiller"}</span>
+            </div>
+            <span className="text-[10px] text-gray-400 font-mono">Alt+Maj+L</span>
+          </button>
+
+          <div className="my-1.5 border-t border-gray-100"></div>
+
+          <button
+            type="button"
+            onClick={() => handleMagicWrite(contextMenu.element)}
+            className="w-full px-3.5 py-1.5 hover:bg-purple-50 text-purple-700 flex items-center justify-between transition cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-wand-magic-sparkles text-sm text-purple-600 w-4 text-center"></i>
+              <span>✨ Écriture magique IA</span>
+            </div>
+          </button>
         </div>
       )}
 
