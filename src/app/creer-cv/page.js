@@ -291,6 +291,18 @@ export default function CreerCv() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isAdvancedEditOpen, setIsAdvancedEditOpen] = useState(false);
   const [canvaZoom, setCanvaZoom] = useState(1);
+  const [cvPages, setCvPages] = useState([
+    { id: 1, type: "cv_p1", title: "Page 1 — CV Principal", isLocked: false }
+  ]);
+  const [showAddPageMenu, setShowAddPageMenu] = useState(false);
+  const [coverLetterData, setCoverLetterData] = useState({
+    recipientName: "Responsable du Recrutement",
+    companyName: "Entreprise Cible",
+    city: "Dakar",
+    date: "14/08/2026",
+    subject: "Candidature au poste de Entrepreneur numérique",
+    body: "Madame, Monsieur,\n\nVivement intéressé(e) par les opportunités au sein de votre structure, je vous présente ma candidature.\n\nFort(e) de mon parcours et des compétences acquises, je serais ravi(e) de mettre mon dynamisme et mon expertise au service de vos projets.\n\nDans l'attente d'un échange, je vous prie d'agréer, Madame, Monsieur, mes salutations distinguées."
+  });
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
   const [photoPreview, setPhotoPreview] = useState(null);
   
@@ -1098,6 +1110,44 @@ export default function CreerCv() {
       const fitScale = Math.min(availableHeight / 842, availableWidth / 595, 1.35);
       setCanvaZoom(parseFloat(fitScale.toFixed(2)));
     }
+  };
+
+  // Canva Page Management
+  const handleAddPage = (type = "cv_p2") => {
+    const newId = Date.now();
+    const newPage = {
+      id: newId,
+      type: type,
+      title: type === "cover_letter" ? `Page ${cvPages.length + 1} — Lettre de motivation` : `Page ${cvPages.length + 1} — Suite du CV`,
+      isLocked: false
+    };
+    setCvPages(prev => [...prev, newPage]);
+    setShowAddPageMenu(false);
+    triggerToast(`Page ${cvPages.length + 1} ajoutée avec succès !`);
+  };
+
+  const handleDuplicatePage = (pageIndex) => {
+    const targetPage = cvPages[pageIndex] || cvPages[0];
+    const newId = Date.now();
+    const newPage = {
+      ...targetPage,
+      id: newId,
+      title: `Page ${cvPages.length + 1} (Copie de la page ${pageIndex + 1})`
+    };
+    setCvPages(prev => [...prev, newPage]);
+    setShowAddPageMenu(false);
+    triggerToast("Page dupliquée avec succès !");
+  };
+
+  const handleDeletePage = (pageIndex) => {
+    if (cvPages.length <= 1) return;
+    setCvPages(prev => prev.filter((_, idx) => idx !== pageIndex));
+    triggerToast("Page supprimée");
+  };
+
+  const handleToggleLockPage = (pageIndex) => {
+    setCvPages(prev => prev.map((p, idx) => idx === pageIndex ? { ...p, isLocked: !p.isLocked } : p));
+    triggerToast(cvPages[pageIndex]?.isLocked ? "Page déverrouillée" : "Page verrouillée");
   };
 
   useEffect(() => {
@@ -2500,6 +2550,48 @@ export default function CreerCv() {
                     <i className="fa-solid fa-print text-gray-500"></i>
                     <span>Imprimer</span>
                   </button>
+                </div>
+              </div>
+
+              {/* CANVA TOP FLOATING PAGE 1 BAR */}
+              <div className="w-full max-w-[595px] flex items-center justify-between py-1.5 px-3 mb-2 bg-slate-900/80 backdrop-blur-xs border border-slate-750 rounded-xl text-white text-xs font-bold shadow-xs no-print">
+                <div className="flex items-center space-x-2">
+                  <span className="text-[11px] font-black text-slate-200">Page 1 sur {cvPages.length}</span>
+                  {cvPages[0]?.isLocked && (
+                    <span className="text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded flex items-center gap-1 border border-amber-500/30">
+                      <i className="fa-solid fa-lock text-[8px]"></i> Verrouillée
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleLockPage(0)}
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition cursor-pointer ${
+                      cvPages[0]?.isLocked ? "bg-amber-500/30 text-amber-300 border border-amber-500/40" : "hover:bg-slate-800 text-slate-300 hover:text-white"
+                    }`}
+                    title={cvPages[0]?.isLocked ? "Déverrouiller la page 1" : "Verrouiller la page 1"}
+                  >
+                    <i className={`fa-solid ${cvPages[0]?.isLocked ? "fa-lock" : "fa-lock-open"} text-xs`}></i>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicatePage(0)}
+                    className="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                    title="Dupliquer la page 1"
+                  >
+                    <i className="fa-regular fa-copy text-xs"></i>
+                  </button>
+                  {cvPages.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePage(0)}
+                      className="w-7 h-7 rounded-lg hover:bg-red-500/30 hover:text-red-300 text-slate-400 flex items-center justify-center transition cursor-pointer"
+                      title="Supprimer la page 1"
+                    >
+                      <i className="fa-solid fa-trash text-xs"></i>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -4176,6 +4268,233 @@ export default function CreerCv() {
                   </div>
                 )}
 
+              </div>
+
+              {/* RENDER ADDITIONAL PAGES (Page 2, Page 3, Cover Letters...) */}
+              {cvPages.slice(1).map((page, pageIdx) => {
+                const actualIdx = pageIdx + 1;
+                return (
+                  <div key={page.id} className="mt-8 flex flex-col items-center w-full">
+                    {/* Top Floating Page Bar */}
+                    <div className="w-full max-w-[595px] flex items-center justify-between py-1.5 px-3 mb-2 bg-slate-900/80 backdrop-blur-xs border border-slate-750 rounded-xl text-white text-xs font-bold shadow-xs no-print">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-[11px] font-black text-slate-200">Page {actualIdx + 1} sur {cvPages.length}</span>
+                        <span className="text-[10px] text-blue-300 bg-blue-900/40 px-2 py-0.5 rounded-md border border-blue-500/30">
+                          {page.type === "cover_letter" ? "Lettre de motivation" : "Suite du CV"}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleLockPage(actualIdx)}
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center transition cursor-pointer ${
+                            page.isLocked ? "bg-amber-500/30 text-amber-300 border border-amber-500/40" : "hover:bg-slate-800 text-slate-300 hover:text-white"
+                          }`}
+                          title={page.isLocked ? "Déverrouiller la page" : "Verrouiller la page"}
+                        >
+                          <i className={`fa-solid ${page.isLocked ? "fa-lock" : "fa-lock-open"} text-xs`}></i>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicatePage(actualIdx)}
+                          className="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                          title="Dupliquer cette page"
+                        >
+                          <i className="fa-regular fa-copy text-xs"></i>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePage(actualIdx)}
+                          className="w-7 h-7 rounded-lg hover:bg-red-500/30 hover:text-red-300 text-slate-400 flex items-center justify-center transition cursor-pointer"
+                          title="Supprimer cette page"
+                        >
+                          <i className="fa-solid fa-trash text-xs"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Page Sheet Container */}
+                    <div
+                      id={`cv-page-${actualIdx + 1}-sheet`}
+                      className="bg-white shadow-2xl relative w-[595px] min-h-[842px] h-[842px] max-w-[595px] max-h-[842px] min-w-[595px] overflow-hidden text-gray-900 border border-gray-300 rounded-sm flex flex-col font-sans"
+                    >
+                      {page.type === "cover_letter" ? (
+                        /* COVER LETTER MATCHING TEMPLATE */
+                        <div className="flex flex-col w-full h-full p-8 text-xs font-sans bg-white justify-between">
+                          <div>
+                            {/* Header matching CV style */}
+                            <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-end">
+                              <div>
+                                <h1 className="text-xl font-black uppercase text-slate-900 tracking-tight">{cvData.firstName} {cvData.lastName}</h1>
+                                <p className="text-xs font-bold text-blue-600 tracking-wider uppercase mt-0.5">{cvData.jobTitle || "Professionnel"}</p>
+                              </div>
+                              <div className="text-[9px] text-gray-600 text-right leading-tight font-medium">
+                                <p>{cvData.phone || "+221 77 140 08 32"}</p>
+                                <p>{cvData.email || "facilitefacile@gmail.com"}</p>
+                                <p>{cvData.city || "Dakar, Sénégal"}</p>
+                              </div>
+                            </div>
+
+                            {/* Recipient & Date */}
+                            <div className="flex justify-between text-[10px] text-gray-700 font-bold mb-6">
+                              <div>
+                                <p className="font-extrabold text-gray-900">{coverLetterData.recipientName}</p>
+                                <p>{coverLetterData.companyName}</p>
+                                <p>{coverLetterData.city}</p>
+                              </div>
+                              <div className="text-right">
+                                <p>{coverLetterData.city}, le {coverLetterData.date}</p>
+                              </div>
+                            </div>
+
+                            {/* Subject */}
+                            <div className="mb-5">
+                              <p className="font-black text-xs text-slate-900 border-b border-gray-200 pb-1">
+                                {coverLetterData.subject}
+                              </p>
+                            </div>
+
+                            {/* Letter Body */}
+                            <div className="text-[10px] text-gray-800 leading-relaxed space-y-3 font-normal text-justify">
+                              {coverLetterData.body.split("\n\n").map((para, pIdx) => (
+                                <p key={pIdx}>{para}</p>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Signature */}
+                          <div className="text-right pt-6">
+                            <p className="text-[10px] text-gray-600">Cordialement,</p>
+                            <p className="text-xs font-black text-slate-900 mt-2">{cvData.firstName} {cvData.lastName}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        /* CV CONTINUATION PAGE 2 */
+                        <div className="flex flex-col w-full h-full p-8 text-xs font-sans bg-white justify-between">
+                          <div className="space-y-6">
+                            {/* Page 2 Header */}
+                            <div className="border-b border-gray-300 pb-3 flex justify-between items-center">
+                              <div>
+                                <h2 className="text-base font-black text-slate-900 uppercase">{cvData.firstName} {cvData.lastName}</h2>
+                                <p className="text-[10px] font-bold text-gray-600">{cvData.jobTitle} — Page 2</p>
+                              </div>
+                              <div className="text-[9px] text-gray-500 font-semibold">
+                                {cvData.email} • {cvData.phone}
+                              </div>
+                            </div>
+
+                            {/* Section: Réalisations & Projets */}
+                            <div>
+                              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2 border-b border-gray-200 pb-1 flex items-center gap-1.5">
+                                <i className="fa-solid fa-trophy text-amber-500 text-xs"></i>
+                                PROJETS & RÉALISATIONS COMPLÉMENTAIRES
+                              </h3>
+                              <div className="space-y-3 text-[10px] text-gray-800">
+                                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/80">
+                                  <div className="font-bold text-gray-900">Projet Clé — Optimisation & Déploiement</div>
+                                  <p className="text-[9px] text-gray-600 mt-0.5">Pilotage stratégique, coordination des équipes et atteinte des objectifs fixés.</p>
+                                </div>
+                                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/80">
+                                  <div className="font-bold text-gray-900">Initiative & Innovation Opérationnelle</div>
+                                  <p className="text-[9px] text-gray-600 mt-0.5">Amélioration continue des processus et satisfaction client renforcée.</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Section: Références Professionnelles */}
+                            <div>
+                              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2 border-b border-gray-200 pb-1 flex items-center gap-1.5">
+                                <i className="fa-solid fa-user-check text-blue-600 text-xs"></i>
+                                RÉFÉRENCES PROFESSIONNELLES
+                              </h3>
+                              <div className="grid grid-cols-2 gap-3 text-[10px] text-gray-800">
+                                <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-200/80">
+                                  <p className="font-bold text-gray-900">Direction Générale / Superviseur</p>
+                                  <p className="text-[9px] text-gray-500">Contact disponible sur demande</p>
+                                </div>
+                                <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-200/80">
+                                  <p className="font-bold text-gray-900">Responsable Pédagogique</p>
+                                  <p className="text-[9px] text-gray-500">Contact disponible sur demande</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-[8px] text-gray-400 font-medium text-center border-t border-gray-100 pt-3">
+                            Document généré via Facilite.fr • Page 2
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* CANVA-STYLE ADD PAGE BUTTON */}
+              <div className="relative mt-6 mb-4 no-print flex flex-col items-center">
+                <div className="inline-flex rounded-2xl shadow-md border border-gray-300 bg-white overflow-hidden group">
+                  <button
+                    type="button"
+                    onClick={() => handleAddPage("cv_p2")}
+                    className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-900 hover:text-blue-600 font-extrabold text-xs transition flex items-center gap-2 cursor-pointer"
+                  >
+                    <i className="fa-solid fa-plus text-blue-600 text-sm"></i>
+                    <span>Ajouter une page</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddPageMenu(prev => !prev)}
+                    className="px-3.5 py-2.5 bg-gray-50 hover:bg-gray-100 border-l border-gray-200 text-gray-600 hover:text-blue-600 transition cursor-pointer"
+                    title="Choisir le type de page à ajouter"
+                  >
+                    <i className={`fa-solid fa-chevron-down text-[10px] transition-transform ${showAddPageMenu ? "rotate-180" : ""}`}></i>
+                  </button>
+                </div>
+
+                {/* Dropdown Menu */}
+                {showAddPageMenu && (
+                  <div className="absolute top-full mt-2 z-40 bg-white border border-gray-200 rounded-2xl shadow-2xl p-2 w-64 text-left animate-fadeIn">
+                    <button
+                      type="button"
+                      onClick={() => handleAddPage("cv_p2")}
+                      className="w-full p-2.5 rounded-xl hover:bg-blue-50/70 text-left transition flex items-center gap-3 cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                        <i className="fa-solid fa-file-lines text-xs"></i>
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-gray-900 block group-hover:text-blue-600">Suite du CV (Page 2)</span>
+                        <span className="text-[10px] text-gray-500">Expériences & projets additionnels</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddPage("cover_letter")}
+                      className="w-full p-2.5 rounded-xl hover:bg-purple-50/70 text-left transition flex items-center gap-3 cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center flex-shrink-0">
+                        <i className="fa-solid fa-envelope-open-text text-xs"></i>
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-gray-900 block group-hover:text-purple-600">Lettre de motivation</span>
+                        <span className="text-[10px] text-gray-500">Design assorti au modèle</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDuplicatePage(cvPages.length - 1)}
+                      className="w-full p-2.5 rounded-xl hover:bg-emerald-50/70 text-left transition flex items-center gap-3 cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                        <i className="fa-solid fa-copy text-xs"></i>
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-gray-900 block group-hover:text-emerald-600">Dupliquer la page</span>
+                        <span className="text-[10px] text-gray-500">Copie conforme</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Bottom Print / Preview Notice */}
