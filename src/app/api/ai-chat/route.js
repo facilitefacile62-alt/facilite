@@ -142,7 +142,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { messages, message, activeAiRole, attachments } = parsed.data;
+    const { messages, message, activeAiRole, customSystemPrompt, temperature, attachments } = parsed.data;
 
     // Normalisation des deux formes acceptées vers un historique unique.
     const historique =
@@ -150,7 +150,9 @@ export async function POST(req) {
         ? messages
         : [{ role: "user", content: message }];
 
-    const systemPrompt = BASE_PROMPT + (ROLE_PROMPTS[activeAiRole] || "");
+    const systemPrompt = customSystemPrompt?.trim() 
+      ? customSystemPrompt.trim() 
+      : (BASE_PROMPT + (ROLE_PROMPTS[activeAiRole] || ""));
 
     // 3. Pièces jointes
     const images = (attachments || []).filter((a) => a.type === "image");
@@ -204,7 +206,7 @@ export async function POST(req) {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [{ role: "system", content: systemPrompt }, ...historique],
-        temperature: 0.7,
+        temperature: typeof temperature === "number" ? temperature : 0.7,
         stream: false,
       }),
     });

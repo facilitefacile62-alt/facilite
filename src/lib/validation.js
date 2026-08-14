@@ -125,7 +125,9 @@ export const AiChatPayloadSchema = z
       .max(30)
       .optional(),
     message: z.string().min(1).max(20_000).optional(),
-    activeAiRole: z.enum(["cv", "coach", "interview", "orientation"]).optional(),
+    activeAiRole: z.enum(["cv", "coach", "interview", "orientation", "custom"]).optional(),
+    customSystemPrompt: z.string().max(25_000).optional(),
+    temperature: z.number().min(0).max(2).optional(),
     attachments: z.array(AttachmentSchema).max(5).optional(),
   })
   .refine((d) => (d.messages && d.messages.length > 0) || d.message, {

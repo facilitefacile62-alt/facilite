@@ -12,6 +12,7 @@ import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityAlertsWidget";
 import { getFeatureFlagsTree, saveFeatureFlagsTree, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import AvatarImage from "@/components/AvatarImage";
+import AdminAIStudio from "@/components/AdminAIStudio";
 
 // "Utilisateurs", "Tarification" et "Messagerie Support" ont migré dans
 // NAV_SECTIONS (sidebar catégorisée) — les garder ici aurait recréé le
@@ -19,6 +20,7 @@ import AvatarImage from "@/components/AvatarImage";
 const TABS = [
   { id: "dashboard", label: "Tableau de bord", icon: "📊" },
   { id: "fonctionnalites", label: "Fonctionnalités", icon: "✨" },
+  { id: "ia_studio", label: "Entraînement IA", icon: "🧠" },
   { id: "securite", label: "Sécurité", icon: "🛡️" },
   { id: "badges", label: "Demandes de badge", icon: "🎖️" },
   { id: "offres", label: "Offres d'emploi", icon: "💼" },
@@ -59,6 +61,7 @@ const NAV_SECTIONS = [
     label: "Gestion",
     items: [
       { type: "tab", id: "fonctionnalites", icon: "✨", label: "Fonctionnalités" },
+      { type: "tab", id: "ia_studio", icon: "🧠", label: "Entraînement IA", badge: "Studio" },
       { type: "tab", id: "utilisateurs", icon: "👥", label: "Utilisateurs" },
       { type: "tab", id: "tarification", icon: "💳", label: "Tarification" },
       { type: "link", href: "/admin/dashboard", icon: "💰", label: "Facturation & Transactions" },
@@ -2056,6 +2059,8 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           )}
+
+          {activeTab === "ia_studio" && <AdminAIStudio />}
         </main>
       </div>
     </div>
