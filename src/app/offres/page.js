@@ -226,26 +226,26 @@ function OffresContent() {
         <span className="text-sm font-semibold">{toast}</span>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 flex-1 w-full">
-        {/* Hero Banner */}
-        <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-emerald-950 rounded-3xl p-6 sm:p-10 text-white mb-8 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-            <i className="fa-solid fa-briefcase text-9xl"></i>
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6 pb-12 flex-1 w-full">
+        {/* Hero Banner - Format Compact & Épuré sur Mobile */}
+        <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-emerald-950 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white mb-4 sm:mb-6 shadow-md sm:shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-3 sm:p-8 opacity-10 pointer-events-none">
+            <i className="fa-solid fa-briefcase text-5xl sm:text-9xl"></i>
           </div>
-          <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-2 relative z-10">
+          <span className="text-[10px] sm:text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-1 sm:mb-1.5 relative z-10">
             Catalogue des Emplois
           </span>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 relative z-10">
+          <h1 className="text-lg sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-1 sm:mb-2 relative z-10 leading-snug">
             Offres d'Emploi Disponibles
           </h1>
-          <p className="text-base text-emerald-100 font-medium leading-relaxed max-w-2xl relative z-10">
-            Explorez toutes les opportunités publiées par nos recruteurs partenaires au Sénégal. Postulez en un clic avec vos CVs enregistrés.
+          <p className="text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed max-w-2xl relative z-10">
+            Explorez toutes les opportunités publiées par nos recruteurs au Sénégal et postulez en un clic.
           </p>
         </div>
 
         {/* Barre de Recherche & Filtres */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs mb-8">
-          <div className="flex flex-col md:flex-row items-center gap-4">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-200 shadow-xs mb-4 sm:mb-8">
+          <div className="flex flex-col md:flex-row items-center gap-2.5 sm:gap-4">
             <div className="relative flex-1 w-full">
               <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
               <input
