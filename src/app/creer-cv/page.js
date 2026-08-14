@@ -1134,29 +1134,46 @@ export default function CreerCv() {
                   <button
                     key={step.num}
                     onClick={() => setActiveStep(step.num)}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl transition text-left cursor-pointer text-sm font-semibold ${
+                    title={`Modifier l'étape ${step.num + 1} : ${step.label}`}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl transition text-left cursor-pointer text-sm font-semibold group ${
                       isActive
                         ? "bg-[#1E293B] text-white border-l-4 border-[#10E688] shadow-md"
                         : "text-slate-400 hover:bg-slate-850 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center space-x-3.5">
-                      <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
+                      <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
                         isActive
                           ? "bg-[#10E688] text-gray-900"
                           : isCompleted
-                            ? "bg-emerald-900/40 text-[#10E688] border border-emerald-500/30"
-                            : "bg-slate-800 text-slate-400"
+                            ? "bg-emerald-900/40 text-[#10E688] border border-emerald-500/30 group-hover:bg-emerald-800/60"
+                            : "bg-slate-800 text-slate-400 group-hover:bg-slate-700"
                       }`}>
                         {isCompleted ? (
-                          <i className="fa-solid fa-check"></i>
+                          <>
+                            <i className="fa-solid fa-check group-hover:hidden"></i>
+                            <i className="fa-solid fa-pen text-[10px] hidden group-hover:inline-block text-[#10E688]"></i>
+                          </>
                         ) : (
-                          step.num + 1
+                          <>
+                            <span className="group-hover:hidden">{step.num + 1}</span>
+                            <i className="fa-solid fa-pen text-[10px] hidden group-hover:inline-block text-white"></i>
+                          </>
                         )}
                       </span>
-                      <span>{step.label}</span>
+                      <span className="group-hover:text-white transition-colors">{step.label}</span>
                     </div>
-                    <i className={`fa-solid ${step.icon} text-xs transition-opacity ${isActive ? "opacity-100 text-[#10E688]" : "opacity-40"}`}></i>
+
+                    {/* Stylo d'édition visible */}
+                    <div className="flex items-center gap-2">
+                      {isCompleted && (
+                        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-[#10E688] bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/30 flex items-center gap-1">
+                          <i className="fa-solid fa-pen text-[8px]"></i>
+                          <span>Modifier</span>
+                        </span>
+                      )}
+                      <i className={`fa-solid ${isActive ? "fa-pen-to-square text-[#10E688] opacity-100" : isCompleted ? "fa-pen-to-square text-emerald-400/80 group-hover:text-[#10E688] group-hover:opacity-100 opacity-70" : step.icon} text-xs transition-all ${isActive ? "opacity-100 text-[#10E688]" : "opacity-40 group-hover:opacity-80"}`}></i>
+                    </div>
                   </button>
                 );
               })}
@@ -3415,11 +3432,18 @@ export default function CreerCv() {
                     {/* Top Right Decoration (Pastel Green Bookmark) */}
                     <div className="absolute top-0 right-10 w-14 h-24 bg-[#D3E3D7] rounded-b-3xl z-0 pointer-events-none shadow-xs"></div>
 
-                    {/* Header */}
-                    <div className="flex items-center px-8 pt-8 pb-4 relative z-10">
+                    {/* Header (Cliquer pour modifier le titre, le nom et la photo) */}
+                    <div
+                      onClick={() => setActiveStep(0)}
+                      title="Cliquer pour modifier le titre professionnel et le nom (Étape 1)"
+                      className="flex items-center px-8 pt-8 pb-4 relative z-10 cursor-pointer group/hdr hover:bg-slate-50/60 rounded-xl transition"
+                    >
                       {/* Photo */}
                       <div
-                        onClick={handlePhotoUploadClick}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePhotoUploadClick();
+                        }}
                         className="w-28 h-28 rounded-full border-[4px] border-[#1B2B3A] bg-slate-100 flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0 relative cursor-pointer group"
                         title="Cliquer pour changer la photo"
                       >
@@ -3455,17 +3479,24 @@ export default function CreerCv() {
                       
                       {/* Name & Title */}
                       <div className="ml-6 flex-grow">
-                        <h1 className="text-xl sm:text-2xl font-black text-[#285E8E] tracking-wide mb-1 leading-tight">
-                          {cvData.jobTitle || cvData.experiences[0]?.title || "Entrepreneur numérique"}
-                        </h1>
+                        <div className="flex items-center gap-2">
+                          <h1 className="text-xl sm:text-2xl font-black text-[#285E8E] tracking-wide mb-1 leading-tight">
+                            {cvData.jobTitle || cvData.experiences[0]?.title || "Entrepreneur numérique"}
+                          </h1>
+                          <i className="fa-solid fa-pen text-[#285E8E] text-xs opacity-0 group-hover/hdr:opacity-100 transition" title="Modifier"></i>
+                        </div>
                         <h2 className="text-base font-bold text-gray-800 tracking-tight">
                           {cvData.firstName || "Macoumba"} {cvData.lastName || "Samake"}
                         </h2>
                       </div>
                     </div>
 
-                    {/* Contact Bar */}
-                    <div className="mx-8 border-y border-[#D1E2D7] py-2.5 mb-4 flex justify-between items-center text-[9.5px] font-semibold text-gray-700">
+                    {/* Contact Bar (Cliquer pour modifier les coordonnées) */}
+                    <div
+                      onClick={() => setActiveStep(0)}
+                      title="Cliquer pour modifier les coordonnées (Étape 1 : Ville, Email, Téléphone)"
+                      className="mx-8 border-y border-[#D3E3D7] py-2.5 mb-4 flex justify-between items-center text-[9.5px] font-semibold text-gray-700 cursor-pointer hover:bg-[#D3E3D7]/20 transition rounded-sm px-1 group/cnt"
+                    >
                       <div className="flex items-center gap-1.5">
                         <i className="fa-solid fa-location-dot text-[#285E8E] text-[10px]"></i>
                         <span>{cvData.city || cvData.address || "Pikine"}</span>
@@ -3477,6 +3508,7 @@ export default function CreerCv() {
                       <div className="flex items-center gap-1.5">
                         <i className="fa-solid fa-phone text-[#285E8E] text-[10px]"></i>
                         <span>{cvData.phone || "+221 77 140 08 32"}</span>
+                        <i className="fa-solid fa-pen text-[#285E8E] text-[8px] ml-1 opacity-0 group-hover/cnt:opacity-100 transition"></i>
                       </div>
                     </div>
 
