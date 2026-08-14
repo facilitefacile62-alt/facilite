@@ -3,10 +3,14 @@ import { getSupabasePublicClient } from "@/lib/supabase";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const STATIC_ROUTES = [
-  { path: "/", changeFrequency: "daily", priority: 1 },
+  { path: "/", changeFrequency: "daily", priority: 1.0 },
   { path: "/service", changeFrequency: "weekly", priority: 0.8 },
   { path: "/offres", changeFrequency: "daily", priority: 0.9 },
-  { path: "/boite-a-idees", changeFrequency: "monthly", priority: 0.5 },
+  { path: "/modeles", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/recrutement-spontane", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/recrutement-journalier", changeFrequency: "daily", priority: 0.8 },
+  { path: "/boite-a-idees", changeFrequency: "monthly", priority: 0.6 },
+  { path: "/faq", changeFrequency: "monthly", priority: 0.7 },
 ];
 
 export default async function sitemap() {
