@@ -444,27 +444,27 @@ ${productsContext}
   };
 
   return (
-    <div className="space-y-3 animate-fade-in-up font-sans text-gray-100">
+    <div className="h-full flex flex-col min-h-0 space-y-2 font-sans text-gray-100">
       
       {/* HEADER & SUB-NAV FIXES DE L'AGENT IA */}
-      <div className="sticky top-[82px] sm:top-[78px] z-20 space-y-2 bg-[#FAF6F1]/95 backdrop-blur-md pt-0 pb-1.5">
+      <div className="flex-none space-y-1.5 pb-0.5">
         {/* 1. TOP BAR NOIRE DU STUDIO (Style Référence) */}
-        <div className="bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-2.5 sm:p-3 flex flex-wrap items-center justify-between gap-2.5 shadow-xl">
+        <div className="bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 shadow-md">
           
           {/* Titre Agent + Bouton Déployer */}
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-[#10E688] text-gray-950 flex items-center justify-center font-black text-lg shadow-lg">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-[#10E688] text-gray-950 flex items-center justify-center font-black text-base shadow-md">
               ⚡
             </div>
             <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-sm sm:text-base font-black text-white tracking-tight">Agent IA Facilité</h1>
-                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+              <div className="flex items-center space-x-1.5">
+                <h1 className="text-xs sm:text-sm font-black text-white tracking-tight">Agent IA Facilité</h1>
+                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-1.5 py-0.2 rounded-full flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                   {isDeployed ? "En ligne" : "Brouillon"}
                 </span>
               </div>
-              <p className="text-[10px] text-gray-400 font-medium">Studio d'entraînement & supervision de l'assistant</p>
+              <p className="text-[9px] text-gray-400 font-medium">Studio d'entraînement & supervision de l'assistant</p>
             </div>
 
             <button
@@ -473,133 +473,133 @@ ${productsContext}
                 setIsDeployed(!isDeployed);
                 handleSaveConfig();
               }}
-              className="ml-2 px-3 py-1 bg-[#10E688] hover:bg-[#10E688]/90 text-gray-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+              className="ml-1.5 px-2.5 py-1 bg-[#10E688] hover:bg-[#10E688]/90 text-gray-950 font-black text-[11px] rounded-xl shadow-md transition flex items-center gap-1 cursor-pointer"
             >
-              <i className="fa-solid fa-rocket text-xs"></i>
+              <i className="fa-solid fa-rocket text-[10px]"></i>
               <span>{isDeployed ? "Déployé" : "Déployer"}</span>
             </button>
           </div>
 
           {/* Badge Milieu : Assistant IA Actif */}
-          <div className="hidden md:flex items-center space-x-2 bg-[#222730] border border-[#333A48] px-3 py-1 rounded-full text-xs font-bold text-gray-200">
-            <span>Assistant IA</span>
-            <span className="bg-[#10E688] text-gray-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">v2</span>
-            <span className="w-2 h-2 rounded-full bg-[#10E688] animate-ping"></span>
+          <div className="hidden md:flex items-center space-x-1.5 bg-[#222730] border border-[#333A48] px-2.5 py-1 rounded-full text-xs font-bold text-gray-200">
+            <span className="text-[11px]">Assistant IA</span>
+            <span className="bg-[#10E688] text-gray-950 text-[9px] font-black px-1.5 py-0.2 rounded-full">v2</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10E688] animate-ping"></span>
           </div>
 
           {/* Solde & Jetons (Top Right) */}
-          <div className="flex items-center space-x-2.5">
-            <div className="bg-[#222730] border border-[#333A48] px-2.5 py-1 rounded-xl flex items-center space-x-1.5 text-xs font-bold text-emerald-400">
+          <div className="flex items-center space-x-2">
+            <div className="bg-[#222730] border border-[#333A48] px-2 py-1 rounded-xl flex items-center space-x-1 text-xs font-bold text-emerald-400">
               <i className="fa-solid fa-bolt text-amber-400 text-xs"></i>
-              <span>100% Opérationnel</span>
+              <span className="text-[11px]">100% Opérationnel</span>
             </div>
 
             <button
               type="button"
               onClick={handleSaveConfig}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition shadow-md flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1 rounded-xl text-xs font-extrabold transition shadow-md flex items-center gap-1 cursor-pointer ${
                 savedToast
                   ? "bg-emerald-500 text-white"
                   : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white"
               }`}
             >
-              <i className={`fa-solid ${savedToast ? "fa-circle-check" : "fa-floppy-disk"}`}></i>
+              <i className={`fa-solid ${savedToast ? "fa-circle-check" : "fa-floppy-disk"} text-xs`}></i>
               <span>{savedToast ? "Enregistré !" : "Enregistrer"}</span>
             </button>
           </div>
         </div>
 
         {/* 2. BARRE D'ONGLETS DU STUDIO (Sub-nav avec persistance) */}
-        <div className="flex items-center space-x-1.5 bg-[#181B20] border border-[#2A2F3A] p-1 rounded-2xl overflow-x-auto scrollbar-none shadow-md">
+        <div className="flex items-center space-x-1 bg-[#181B20] border border-[#2A2F3A] p-1 rounded-xl overflow-x-auto scrollbar-none shadow-sm">
           <button
             type="button"
             onClick={() => handleSubTabChange("prompt")}
-            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer flex-shrink-0 ${
               activeSubTab === "prompt"
-                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                ? "bg-[#2A303C] text-white shadow-xs border border-[#3E4758]"
                 : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
             }`}
           >
-            <i className="fa-solid fa-sliders text-emerald-400"></i>
+            <i className="fa-solid fa-sliders text-emerald-400 text-xs"></i>
             <span>Prompt & Directives</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSubTabChange("knowledge")}
-            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer flex-shrink-0 ${
               activeSubTab === "knowledge"
-                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                ? "bg-[#2A303C] text-white shadow-xs border border-[#3E4758]"
                 : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
             }`}
           >
-            <i className="fa-solid fa-book-bookmark text-blue-400"></i>
+            <i className="fa-solid fa-book-bookmark text-blue-400 text-xs"></i>
             <span>Base de connaissances</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSubTabChange("diagnostic")}
-            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer flex-shrink-0 ${
               activeSubTab === "diagnostic"
-                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                ? "bg-[#2A303C] text-white shadow-xs border border-[#3E4758]"
                 : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
             }`}
           >
-            <i className="fa-solid fa-stethoscope text-emerald-400"></i>
+            <i className="fa-solid fa-stethoscope text-emerald-400 text-xs"></i>
             <span>Règles Diagnostic CV</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSubTabChange("products")}
-            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer flex-shrink-0 ${
               activeSubTab === "products"
-                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                ? "bg-[#2A303C] text-white shadow-xs border border-[#3E4758]"
                 : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
             }`}
           >
-            <i className="fa-solid fa-boxes-stacked text-purple-400"></i>
+            <i className="fa-solid fa-boxes-stacked text-purple-400 text-xs"></i>
             <span>Produits & Tarifs</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSubTabChange("connections")}
-            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer flex-shrink-0 ${
               activeSubTab === "connections"
-                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                ? "bg-[#2A303C] text-white shadow-xs border border-[#3E4758]"
                 : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
             }`}
           >
-            <i className="fa-brands fa-whatsapp text-green-400"></i>
+            <i className="fa-brands fa-whatsapp text-green-400 text-xs"></i>
             <span>Connexions (WhatsApp / Web)</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSubTabChange("tools")}
-            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer flex-shrink-0 ${
               activeSubTab === "tools"
-                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                ? "bg-[#2A303C] text-white shadow-xs border border-[#3E4758]"
                 : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
             }`}
           >
-            <i className="fa-solid fa-screwdriver-wrench text-amber-400"></i>
+            <i className="fa-solid fa-screwdriver-wrench text-amber-400 text-xs"></i>
             <span>Outils & Relais Humain</span>
           </button>
         </div>
       </div>
 
       {/* 3. GRILLE PRINCIPALE (CONFIGURATION À GAUCHE | PLAYGROUND À DROITE) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-stretch">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
         
         {/* ================= COLONNE GAUCHE (7/12) : FORMATION & CONFIGURATION ================= */}
-        <div className="lg:col-span-7 flex flex-col">
+        <div className="lg:col-span-7 h-full flex flex-col min-h-0">
           
           {/* ONGLET 1 : PROMPT & CONFIGURATION */}
           {activeSubTab === "prompt" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col h-[560px] lg:h-[calc(100vh-215px)] lg:min-h-[480px]">
+            <div className="h-full flex flex-col min-h-0 bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-3.5 sm:p-4 shadow-xl overflow-hidden">
               
               <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3 flex-none">
                 <h2 className="text-sm sm:text-base font-extrabold text-white">Configuration du prompt</h2>
@@ -723,7 +723,7 @@ ${productsContext}
 
           {/* ONGLET 2 : BASE DE CONNAISSANCES */}
           {activeSubTab === "knowledge" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col h-[560px] lg:h-[calc(100vh-215px)] lg:min-h-[480px]">
+            <div className="h-full flex flex-col min-h-0 bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-3.5 sm:p-4 shadow-xl overflow-hidden">
               <div className="border-b border-[#2A2F3A] pb-3 flex-none">
                 <h2 className="text-sm sm:text-base font-extrabold text-white">Base de connaissances métier</h2>
                 <p className="text-xs text-gray-400">Règles d'entreprise, FAQ, coordonnées et faits officiels</p>
@@ -753,7 +753,7 @@ ${productsContext}
 
           {/* ONGLET NOUVEAU : RÈGLES DE DIAGNOSTIC CV */}
           {activeSubTab === "diagnostic" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col h-[560px] lg:h-[calc(100vh-215px)] lg:min-h-[480px]">
+            <div className="h-full flex flex-col min-h-0 bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-3.5 sm:p-4 shadow-xl overflow-hidden">
               <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3 flex-none">
                 <div>
                   <div className="flex items-center space-x-2">
@@ -853,7 +853,7 @@ ${productsContext}
 
           {/* ONGLET 3 : PRODUITS ET SERVICES */}
           {activeSubTab === "products" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col h-[560px] lg:h-[calc(100vh-215px)] lg:min-h-[480px]">
+            <div className="h-full flex flex-col min-h-0 bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-3.5 sm:p-4 shadow-xl overflow-hidden">
               <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3 flex-none">
                 <div>
                   <h2 className="text-sm sm:text-base font-extrabold text-white">Produits & Tarification</h2>
@@ -915,7 +915,7 @@ ${productsContext}
 
           {/* ONGLET 4 : CONNEXIONS WHATSAPP / WEB */}
           {activeSubTab === "connections" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col h-[560px] lg:h-[calc(100vh-215px)] lg:min-h-[480px]">
+            <div className="h-full flex flex-col min-h-0 bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-3.5 sm:p-4 shadow-xl overflow-hidden">
               <div className="border-b border-[#2A2F3A] pb-3 flex-none">
                 <h2 className="text-sm sm:text-base font-extrabold text-white">Canaux de communication & Déploiement</h2>
                 <p className="text-xs text-gray-400">Où cet assistant IA est-il actif en temps réel ?</p>
@@ -972,7 +972,7 @@ ${productsContext}
 
           {/* ONGLET 5 : OUTILS & RELAIS HUMAIN */}
           {activeSubTab === "tools" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col h-[560px] lg:h-[calc(100vh-215px)] lg:min-h-[480px]">
+            <div className="h-full flex flex-col min-h-0 bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-3.5 sm:p-4 shadow-xl overflow-hidden">
               <div className="border-b border-[#2A2F3A] pb-3 flex-none">
                 <h2 className="text-sm sm:text-base font-extrabold text-white">Relais Humain & Outils Automatisés</h2>
                 <p className="text-xs text-gray-400">Passage de relais à l'équipe humaine et règles de fin d'échange</p>
@@ -995,10 +995,10 @@ ${productsContext}
         </div>
 
         {/* ================= COLONNE DROITE (5/12) : PLAYGROUND TEST OU LABO DE DIAGNOSTIC ================= */}
-        <div className="lg:col-span-5 flex flex-col">
+        <div className="lg:col-span-5 h-full flex flex-col min-h-0">
           {activeSubTab === "diagnostic" ? (
             /* LABO DE TEST DU DIAGNOSTIC CV EN DIRECT */
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[560px] lg:h-[calc(100vh-215px)] lg:min-h-[480px] overflow-hidden">
+            <div className="h-full flex flex-col min-h-0 bg-[#181B20] border border-[#2A2F3A] rounded-2xl shadow-xl overflow-hidden">
               {/* Header du Labo */}
               <div className="p-4 border-b border-[#2A2F3A] bg-[#1F232B] flex items-center justify-between gap-2 flex-none">
                 <div className="flex items-center space-x-2.5 min-w-0">
@@ -1232,7 +1232,7 @@ ${productsContext}
             </div>
           ) : (
             /* PLAYGROUND DE TEST CONVERSATIONNEL STANDARD */
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[560px] lg:h-[calc(100vh-215px)] lg:min-h-[480px] overflow-hidden">
+            <div className="h-full flex flex-col min-h-0 bg-[#181B20] border border-[#2A2F3A] rounded-2xl shadow-xl overflow-hidden">
               
               {/* Header du Playground */}
               <div className="p-4 border-b border-[#2A2F3A] bg-[#1F232B] flex items-center justify-between gap-2 flex-none">

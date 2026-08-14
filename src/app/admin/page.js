@@ -959,7 +959,7 @@ export default function AdminDashboardPage() {
   const currentPeriodLabel = PERIODS.find((p) => p.days === periodDays)?.label || "7 derniers jours";
 
   return (
-    <div className="min-h-screen bg-[#F7F7F8] font-sans flex">
+    <div className={`font-sans flex ${activeTab === "ia_studio" ? "h-screen overflow-hidden bg-[#FAF6F1]" : "min-h-screen bg-[#F7F7F8]"}`}>
       {/* Toast Notification Flottant */}
       {toast.show && (
         <div className="fixed top-5 right-5 z-[1000] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 animate-fade-in-down">
@@ -1023,10 +1023,10 @@ export default function AdminDashboardPage() {
       {/* ------------------------------------------------------------- */}
       {/* CONTENU PRINCIPAL */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex-1 min-w-0">
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3">
+      <div className={`flex-1 min-w-0 ${activeTab === "ia_studio" ? "h-screen flex flex-col overflow-hidden" : ""}`}>
+        <main className={`max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3 ${activeTab === "ia_studio" ? "flex-1 flex flex-col min-h-0 overflow-hidden" : ""}`}>
           {/* Header & Barre d'onglets fixes en haut */}
-          <div className="sticky top-0 z-30 bg-[#FAF6F1]/95 backdrop-blur-md pt-2 pb-2 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-orange-200/50 shadow-xs mb-3">
+          <div className="flex-none bg-[#FAF6F1]/95 backdrop-blur-md pt-2 pb-2 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-orange-200/50 shadow-xs mb-2">
             {/* En-tête principal */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 mb-2 sm:mb-2.5">
               <div className="flex items-center gap-3">
@@ -2090,7 +2090,11 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {activeTab === "ia_studio" && <AdminAIStudio />}
+          {activeTab === "ia_studio" && (
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+              <AdminAIStudio />
+            </div>
+          )}
         </main>
       </div>
     </div>
