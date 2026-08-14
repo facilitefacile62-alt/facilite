@@ -913,12 +913,10 @@ export default function MessagerieClient() {
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: true }); // Du plus ancien au plus récent
 
-        // Regrouper les candidatures par offre ou par entreprise pour éviter les doublons de cartes
+        // Regrouper les candidatures par offre ou par entreprise pour éviter tout doublon de carte
         const groupedCandidatures = new Map();
         for (const cand of (userCandidatures || [])) {
-          const groupKey = cand.job_offer_id
-            ? `offer_${cand.job_offer_id}`
-            : `job_${(cand.job_title || "offre").toLowerCase().trim()}_${(cand.company || "ent").toLowerCase().trim()}`;
+          const groupKey = `job_${(cand.job_title || "offre").toLowerCase().replace(/[^a-z0-9]/g, "")}_${(cand.company || "ent").toLowerCase().replace(/[^a-z0-9]/g, "")}`;
 
           if (!groupedCandidatures.has(groupKey)) {
             groupedCandidatures.set(groupKey, []);
@@ -2754,38 +2752,6 @@ export default function MessagerieClient() {
                     </div>
                   )}
                 </div>
-
-                {/* BANNIÈRE DE LIVRAISON & SUIVI DE CANDIDATURE (ACCUSÉ DE RÉCEPTION OFFICIEL) */}
-                {(activeConversation?.isCandidature || activeConversation?.typeDiscussion === "OFFRE") && (
-                  <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/60 border-b border-emerald-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
-                    <div className="flex items-center space-x-3 min-w-0">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <i className="fa-solid fa-paper-plane text-base"></i>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs font-black text-emerald-950 truncate">
-                            {activeConversation.name}
-                          </span>
-                          <span className="bg-emerald-200/90 text-emerald-900 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                            Transmise avec succès
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-emerald-800/80 font-semibold truncate">
-                          Entreprise : <strong className="text-emerald-950 font-bold">{activeConversation.company}</strong>
-                          {activeConversation.candidatureData?.email ? ` • Destinataire : ${activeConversation.candidatureData.email}` : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-[11px] font-black text-emerald-800 bg-white border border-emerald-300/80 px-3 py-1.5 rounded-xl shadow-xs flex items-center gap-1.5">
-                        <i className="fa-solid fa-circle-check text-emerald-600"></i>
-                        <span>E-mail délivré</span>
-                      </span>
-                    </div>
-                  </div>
-                )}
 
                 {/* BANNIÈRE MESSAGE ÉPINGLÉ (toujours visible en haut du fil) */}
                 {pinnedMessage && (
