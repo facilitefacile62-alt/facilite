@@ -599,9 +599,9 @@ ${productsContext}
           
           {/* ONGLET 1 : PROMPT & CONFIGURATION */}
           {activeSubTab === "prompt" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-5 shadow-xl">
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col h-[650px] lg:h-[calc(100vh-270px)] lg:min-h-[540px]">
               
-              <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3">
+              <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3 flex-none">
                 <h2 className="text-sm sm:text-base font-extrabold text-white">Configuration du prompt</h2>
                 <div className="flex items-center space-x-1 text-xs">
                   <span className="text-gray-400 font-bold">Prompt score</span>
@@ -611,100 +611,103 @@ ${productsContext}
                 </div>
               </div>
 
-              {/* Sélecteur Modèle d'IA */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-300">Modèle d'IA :</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {AI_MODELS.map((model) => {
-                    const isSelected = selectedModel === model.id;
-                    return (
-                      <button
-                        key={model.id}
-                        type="button"
-                        onClick={() => setSelectedModel(model.id)}
-                        className={`p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
-                          isSelected
-                            ? "bg-[#252B35] border-[#10E688] ring-1 ring-[#10E688]/30 shadow-md"
-                            : "bg-[#1F232B] border-[#2E3542] hover:border-gray-500"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-white">{model.name}</span>
-                          <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded">
-                            {model.cost}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-1 truncate">{model.tag}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Style de communication (Menu déroulant comme dans la capture) */}
-              <div className="space-y-1.5 relative">
-                <label className="text-xs font-bold text-gray-300">Style de communication :</label>
-                
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setStyleDropdownOpen(!styleDropdownOpen)}
-                    className="w-full p-3 bg-[#1F232B] border border-[#2E3542] hover:border-gray-500 rounded-2xl text-left flex items-center justify-between text-xs transition cursor-pointer"
-                  >
-                    <div>
-                      <div className="font-extrabold text-white">
-                        {COMMUNICATION_STYLES.find((s) => s.id === commStyle)?.label}
-                      </div>
-                      <div className="text-[11px] text-gray-400">
-                        {COMMUNICATION_STYLES.find((s) => s.id === commStyle)?.desc}
-                      </div>
-                    </div>
-                    <i className={`fa-solid fa-chevron-down text-gray-400 transition-transform ${styleDropdownOpen ? "rotate-180" : ""}`}></i>
-                  </button>
-
-                  {styleDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#1F232B] border border-[#333A48] rounded-2xl shadow-2xl z-30 p-1.5 space-y-1">
-                      {COMMUNICATION_STYLES.map((style) => (
+              {/* Contenu avec défilement interne exclusif */}
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-4 py-3 pr-1.5 scrollbar-thin">
+                {/* Sélecteur Modèle d'IA */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-300">Modèle d'IA :</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {AI_MODELS.map((model) => {
+                      const isSelected = selectedModel === model.id;
+                      return (
                         <button
-                          key={style.id}
+                          key={model.id}
                           type="button"
-                          onClick={() => {
-                            setCommStyle(style.id);
-                            setStyleDropdownOpen(false);
-                          }}
-                          className={`w-full p-2.5 rounded-xl text-left text-xs transition flex items-center justify-between cursor-pointer ${
-                            commStyle === style.id ? "bg-[#2A303C] text-emerald-400 font-bold" : "hover:bg-[#252B35] text-gray-300"
+                          onClick={() => setSelectedModel(model.id)}
+                          className={`p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            isSelected
+                              ? "bg-[#252B35] border-[#10E688] ring-1 ring-[#10E688]/30 shadow-md"
+                              : "bg-[#1F232B] border-[#2E3542] hover:border-gray-500"
                           }`}
                         >
-                          <div>
-                            <div className="font-bold">{style.label}</div>
-                            <div className="text-[10px] text-gray-400">{style.desc}</div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-white">{model.name}</span>
+                            <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded">
+                              {model.cost}
+                            </span>
                           </div>
-                          {commStyle === style.id && <i className="fa-solid fa-check text-emerald-400"></i>}
+                          <p className="text-[10px] text-gray-400 mt-1 truncate">{model.tag}</p>
                         </button>
-                      ))}
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Style de communication (Menu déroulant comme dans la capture) */}
+                <div className="space-y-1.5 relative">
+                  <label className="text-xs font-bold text-gray-300">Style de communication :</label>
+                  
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setStyleDropdownOpen(!styleDropdownOpen)}
+                      className="w-full p-3 bg-[#1F232B] border border-[#2E3542] hover:border-gray-500 rounded-2xl text-left flex items-center justify-between text-xs transition cursor-pointer"
+                    >
+                      <div>
+                        <div className="font-extrabold text-white">
+                          {COMMUNICATION_STYLES.find((s) => s.id === commStyle)?.label}
+                        </div>
+                        <div className="text-[11px] text-gray-400">
+                          {COMMUNICATION_STYLES.find((s) => s.id === commStyle)?.desc}
+                        </div>
+                      </div>
+                      <i className={`fa-solid fa-chevron-down text-gray-400 transition-transform ${styleDropdownOpen ? "rotate-180" : ""}`}></i>
+                    </button>
+
+                    {styleDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#1F232B] border border-[#333A48] rounded-2xl shadow-2xl z-30 p-1.5 space-y-1">
+                        {COMMUNICATION_STYLES.map((style) => (
+                          <button
+                            key={style.id}
+                            type="button"
+                            onClick={() => {
+                              setCommStyle(style.id);
+                              setStyleDropdownOpen(false);
+                            }}
+                            className={`w-full p-2.5 rounded-xl text-left text-xs transition flex items-center justify-between cursor-pointer ${
+                              commStyle === style.id ? "bg-[#2A303C] text-emerald-400 font-bold" : "hover:bg-[#252B35] text-gray-300"
+                            }`}
+                          >
+                            <div>
+                              <div className="font-bold">{style.label}</div>
+                              <div className="text-[10px] text-gray-400">{style.desc}</div>
+                            </div>
+                            {commStyle === style.id && <i className="fa-solid fa-check text-emerald-400"></i>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Zone d'écriture du Prompt */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-bold text-gray-300">Instructions du prompt système :</label>
+                    <span className="text-[11px] text-gray-500 font-mono">{promptText.length} caractères</span>
+                  </div>
+                  <textarea
+                    value={promptText}
+                    onChange={(e) => setPromptText(e.target.value)}
+                    rows={12}
+                    className="w-full p-4 bg-[#14161A] border border-[#2E3542] focus:border-[#10E688] focus:ring-1 focus:ring-[#10E688]/30 rounded-2xl text-xs font-mono text-gray-200 leading-relaxed transition resize-y focus:outline-none"
+                    placeholder="Écrivez vos instructions personnalisées ici..."
+                  />
                 </div>
               </div>
 
-              {/* Zone d'écriture du Prompt */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <label className="font-bold text-gray-300">Instructions du prompt système :</label>
-                  <span className="text-[11px] text-gray-500 font-mono">{promptText.length} caractères</span>
-                </div>
-                <textarea
-                  value={promptText}
-                  onChange={(e) => setPromptText(e.target.value)}
-                  rows={10}
-                  className="w-full p-4 bg-[#14161A] border border-[#2E3542] focus:border-[#10E688] focus:ring-1 focus:ring-[#10E688]/30 rounded-2xl text-xs font-mono text-gray-200 leading-relaxed transition resize-y focus:outline-none"
-                  placeholder="Écrivez vos instructions personnalisées ici..."
-                />
-              </div>
-
-              {/* Bouton Enregistrer au bas de la section */}
-              <div className="flex justify-end pt-2">
+              {/* Bouton Enregistrer fixé au bas */}
+              <div className="flex justify-end pt-3 border-t border-[#2A2F3A] flex-none">
                 <button
                   type="button"
                   onClick={handleSaveConfig}
@@ -720,21 +723,22 @@ ${productsContext}
 
           {/* ONGLET 2 : BASE DE CONNAISSANCES */}
           {activeSubTab === "knowledge" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
-              <div className="border-b border-[#2A2F3A] pb-3">
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col h-[650px] lg:h-[calc(100vh-270px)] lg:min-h-[540px]">
+              <div className="border-b border-[#2A2F3A] pb-3 flex-none">
                 <h2 className="text-sm sm:text-base font-extrabold text-white">Base de connaissances métier</h2>
                 <p className="text-xs text-gray-400">Règles d'entreprise, FAQ, coordonnées et faits officiels</p>
               </div>
 
-              <textarea
-                value={knowledgeText}
-                onChange={(e) => setKnowledgeText(e.target.value)}
-                rows={12}
-                className="w-full p-4 bg-[#14161A] border border-[#2E3542] focus:border-blue-400 focus:ring-1 focus:ring-blue-400/30 rounded-2xl text-xs font-mono text-gray-200 leading-relaxed transition resize-y focus:outline-none"
-                placeholder="Renseignez ici toutes les connaissances métier de Facilité..."
-              />
+              <div className="flex-1 min-h-0 py-3">
+                <textarea
+                  value={knowledgeText}
+                  onChange={(e) => setKnowledgeText(e.target.value)}
+                  className="w-full h-full p-4 bg-[#14161A] border border-[#2E3542] focus:border-blue-400 focus:ring-1 focus:ring-blue-400/30 rounded-2xl text-xs font-mono text-gray-200 leading-relaxed transition resize-none focus:outline-none"
+                  placeholder="Renseignez ici toutes les connaissances métier de Facilité..."
+                />
+              </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end pt-3 border-t border-[#2A2F3A] flex-none">
                 <button
                   type="button"
                   onClick={handleSaveConfig}
@@ -749,8 +753,8 @@ ${productsContext}
 
           {/* ONGLET NOUVEAU : RÈGLES DE DIAGNOSTIC CV */}
           {activeSubTab === "diagnostic" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-5 shadow-xl">
-              <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3">
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col h-[650px] lg:h-[calc(100vh-270px)] lg:min-h-[540px]">
+              <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3 flex-none">
                 <div>
                   <div className="flex items-center space-x-2">
                     <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-500/30">
@@ -773,65 +777,68 @@ ${productsContext}
                 </button>
               </div>
 
-              {/* Presets rapides de barème */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-gray-300 block">
-                  Appliquer un barème spécial (Presets) :
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {DIAGNOSTIC_PRESETS.map((dp) => (
-                    <button
-                      key={dp.name}
-                      type="button"
-                      onClick={() => setDiagnosticRulesText((prev) => `${prev.trim()}\n\n[Barème Spécifique : ${dp.name}]\n${dp.modifier}`)}
-                      className="text-[10px] font-bold bg-[#1F232B] hover:bg-emerald-950 hover:text-emerald-300 text-gray-300 px-3 py-1 rounded-xl border border-[#2E3542] hover:border-emerald-500/50 transition cursor-pointer"
-                    >
-                      + {dp.name}
-                    </button>
-                  ))}
+              {/* Contenu défilable */}
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-4 py-3 pr-1.5 scrollbar-thin">
+                {/* Presets rapides de barème */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-300 block">
+                    Appliquer un barème spécial (Presets) :
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DIAGNOSTIC_PRESETS.map((dp) => (
+                      <button
+                        key={dp.name}
+                        type="button"
+                        onClick={() => setDiagnosticRulesText((prev) => `${prev.trim()}\n\n[Barème Spécifique : ${dp.name}]\n${dp.modifier}`)}
+                        className="text-[10px] font-bold bg-[#1F232B] hover:bg-emerald-950 hover:text-emerald-300 text-gray-300 px-3 py-1 rounded-xl border border-[#2E3542] hover:border-emerald-500/50 transition cursor-pointer"
+                      >
+                        + {dp.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Zone d'écriture des règles de diagnostic */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-bold text-gray-300">Critères & Instructions d'Audit CV :</label>
+                    <span className="text-[11px] text-gray-500 font-mono">{diagnosticRulesText.length} caractères</span>
+                  </div>
+                  <textarea
+                    value={diagnosticRulesText}
+                    onChange={(e) => setDiagnosticRulesText(e.target.value)}
+                    rows={12}
+                    className="w-full p-4 bg-[#14161A] border border-[#2E3542] focus:border-[#10E688] focus:ring-1 focus:ring-[#10E688]/30 rounded-2xl text-xs font-mono text-gray-200 leading-relaxed transition resize-y focus:outline-none"
+                    placeholder="Rédigez les critères de notation, rubriques obligatoires et conseils d'audit CV..."
+                  />
+                </div>
+
+                {/* Résumé des 4 piliers d'évaluation */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
+                    <span className="text-base block mb-0.5">🎯</span>
+                    <span className="text-[10px] font-black text-white block">Méthode STAR</span>
+                    <span className="text-[9px] text-gray-400">Verbes & KPI</span>
+                  </div>
+                  <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
+                    <span className="text-base block mb-0.5">🤖</span>
+                    <span className="text-[10px] font-black text-white block">Score ATS</span>
+                    <span className="text-[9px] text-gray-400">Mots-clés & Structure</span>
+                  </div>
+                  <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
+                    <span className="text-base block mb-0.5">✨</span>
+                    <span className="text-[10px] font-black text-white block">Design & Clarté</span>
+                    <span className="text-[9px] text-gray-400">Aéré & Lisible</span>
+                  </div>
+                  <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
+                    <span className="text-base block mb-0.5">💼</span>
+                    <span className="text-[10px] font-black text-white block">Recommandations</span>
+                    <span className="text-[9px] text-gray-400">Modèles Facilité</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Zone d'écriture des règles de diagnostic */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <label className="font-bold text-gray-300">Critères & Instructions d'Audit CV :</label>
-                  <span className="text-[11px] text-gray-500 font-mono">{diagnosticRulesText.length} caractères</span>
-                </div>
-                <textarea
-                  value={diagnosticRulesText}
-                  onChange={(e) => setDiagnosticRulesText(e.target.value)}
-                  rows={13}
-                  className="w-full p-4 bg-[#14161A] border border-[#2E3542] focus:border-[#10E688] focus:ring-1 focus:ring-[#10E688]/30 rounded-2xl text-xs font-mono text-gray-200 leading-relaxed transition resize-y focus:outline-none"
-                  placeholder="Rédigez les critères de notation, rubriques obligatoires et conseils d'audit CV..."
-                />
-              </div>
-
-              {/* Résumé des 4 piliers d'évaluation */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
-                  <span className="text-base block mb-0.5">🎯</span>
-                  <span className="text-[10px] font-black text-white block">Méthode STAR</span>
-                  <span className="text-[9px] text-gray-400">Verbes & KPI</span>
-                </div>
-                <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
-                  <span className="text-base block mb-0.5">🤖</span>
-                  <span className="text-[10px] font-black text-white block">Score ATS</span>
-                  <span className="text-[9px] text-gray-400">Mots-clés & Structure</span>
-                </div>
-                <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
-                  <span className="text-base block mb-0.5">✨</span>
-                  <span className="text-[10px] font-black text-white block">Design & Clarté</span>
-                  <span className="text-[9px] text-gray-400">Aéré & Lisible</span>
-                </div>
-                <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
-                  <span className="text-base block mb-0.5">💼</span>
-                  <span className="text-[10px] font-black text-white block">Recommandations</span>
-                  <span className="text-[9px] text-gray-400">Modèles Facilité</span>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-end pt-3 border-t border-[#2A2F3A] flex-none">
                 <button
                   type="button"
                   onClick={handleSaveConfig}
@@ -846,8 +853,8 @@ ${productsContext}
 
           {/* ONGLET 3 : PRODUITS ET SERVICES */}
           {activeSubTab === "products" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3">
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col h-[650px] lg:h-[calc(100vh-270px)] lg:min-h-[540px]">
+              <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3 flex-none">
                 <div>
                   <h2 className="text-sm sm:text-base font-extrabold text-white">Produits & Tarification</h2>
                   <p className="text-xs text-gray-400">L'IA connaît exactement vos prix et les propose aux clients</p>
@@ -874,8 +881,8 @@ ${productsContext}
                 </div>
               </div>
 
-              <div className="space-y-2.5">
-                {productsList.map((prod, idx) => (
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 py-3 pr-1.5 scrollbar-thin">
+                {productsList.map((prod) => (
                   <div
                     key={prod.id}
                     className="p-3.5 bg-[#1F232B] border border-[#2E3542] rounded-2xl flex items-center justify-between gap-3"
@@ -892,18 +899,29 @@ ${productsContext}
                   </div>
                 ))}
               </div>
+
+              <div className="flex justify-end pt-3 border-t border-[#2A2F3A] flex-none">
+                <button
+                  type="button"
+                  onClick={handleSaveConfig}
+                  className="px-5 py-2.5 bg-[#10E688] hover:bg-[#10E688]/90 text-gray-950 font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Enregistrer les tarifs</span>
+                  <i className="fa-solid fa-floppy-disk"></i>
+                </button>
+              </div>
             </div>
           )}
 
           {/* ONGLET 4 : CONNEXIONS WHATSAPP / WEB */}
           {activeSubTab === "connections" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
-              <div className="border-b border-[#2A2F3A] pb-3">
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col h-[650px] lg:h-[calc(100vh-270px)] lg:min-h-[540px]">
+              <div className="border-b border-[#2A2F3A] pb-3 flex-none">
                 <h2 className="text-sm sm:text-base font-extrabold text-white">Canaux de communication & Déploiement</h2>
                 <p className="text-xs text-gray-400">Où cet assistant IA est-il actif en temps réel ?</p>
               </div>
 
-              <div className="space-y-3">
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-3 py-3 pr-1.5 scrollbar-thin">
                 <div className="p-4 bg-[#1F232B] border border-emerald-500/40 rounded-2xl flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/30">
@@ -954,20 +972,22 @@ ${productsContext}
 
           {/* ONGLET 5 : OUTILS & RELAIS HUMAIN */}
           {activeSubTab === "tools" && (
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
-              <div className="border-b border-[#2A2F3A] pb-3">
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col h-[650px] lg:h-[calc(100vh-270px)] lg:min-h-[540px]">
+              <div className="border-b border-[#2A2F3A] pb-3 flex-none">
                 <h2 className="text-sm sm:text-base font-extrabold text-white">Relais Humain & Outils Automatisés</h2>
                 <p className="text-xs text-gray-400">Passage de relais à l'équipe humaine et règles de fin d'échange</p>
               </div>
 
-              <div className="p-4 bg-[#1F232B] border border-amber-500/30 rounded-2xl space-y-2">
-                <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
-                  <i className="fa-solid fa-user-tie"></i>
-                  <span>Protocole de Relais Canva & Facturation :</span>
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-3 py-3 pr-1.5 scrollbar-thin">
+                <div className="p-4 bg-[#1F232B] border border-amber-500/30 rounded-2xl space-y-2">
+                  <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
+                    <i className="fa-solid fa-user-tie"></i>
+                    <span>Protocole de Relais Canva & Facturation :</span>
+                  </div>
+                  <p className="text-xs text-gray-300 leading-relaxed">
+                    Lorsque l'IA a collecté le nom, le poste et les expériences du client, elle lui présente un récapitulatif clair et lui annonce que le **Responsable Canva** va prendre le relais en direct pour la maquette et la validation du paiement Wave/Orange Money.
+                  </p>
                 </div>
-                <p className="text-xs text-gray-300 leading-relaxed">
-                  Lorsque l'IA a collecté le nom, le poste et les expériences du client, elle lui présente un récapitulatif clair et lui annonce que le **Responsable Canva** va prendre le relais en direct pour la maquette et la validation du paiement Wave/Orange Money.
-                </p>
               </div>
             </div>
           )}
@@ -975,10 +995,10 @@ ${productsContext}
         </div>
 
         {/* ================= COLONNE DROITE (5/12) : PLAYGROUND TEST OU LABO DE DIAGNOSTIC ================= */}
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-5 flex flex-col">
           {activeSubTab === "diagnostic" ? (
             /* LABO DE TEST DU DIAGNOSTIC CV EN DIRECT */
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[720px] overflow-hidden">
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[650px] lg:h-[calc(100vh-270px)] lg:min-h-[540px] overflow-hidden">
               {/* Header du Labo */}
               <div className="p-4 border-b border-[#2A2F3A] bg-[#1F232B] flex items-center justify-between gap-2 flex-none">
                 <div className="flex items-center space-x-2.5 min-w-0">
@@ -1212,7 +1232,7 @@ ${productsContext}
             </div>
           ) : (
             /* PLAYGROUND DE TEST CONVERSATIONNEL STANDARD */
-            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[720px] overflow-hidden">
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[650px] lg:h-[calc(100vh-270px)] lg:min-h-[540px] overflow-hidden">
               
               {/* Header du Playground */}
               <div className="p-4 border-b border-[#2A2F3A] bg-[#1F232B] flex items-center justify-between gap-2 flex-none">
