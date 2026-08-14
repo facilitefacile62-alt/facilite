@@ -8,7 +8,8 @@ import Link from "next/link";
 // le fichier (piège rencontré en testant : "Image is not a constructor").
 import NextImage from "next/image";
 import { usePathname } from "next/navigation";
-import { supabase, handleGlobalSignOut, getSignedCvUrl, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 import AIAssistantModal from "@/components/AIAssistantModal";
 import RoleBadge from "@/components/RoleBadge";
 import RoleNavLink from "@/components/RoleNavLink";
@@ -57,7 +58,10 @@ export default function ProfilPage() {
   const [notificationsList, setNotificationsList] = useState([]);
 
   // Équipes & États Profil Éditable (Chargés dynamiquement depuis Supabase)
-  const [userSession, setUserSession] = useState(null);
+  // Session/profil/rôles chargés une seule fois pour toute l'app par
+  // AuthContext (Point F1) — plus de getSession() ni de fetch profiles/
+  // has_badge/is_admin propres à cette page.
+  const { session: userSession, profile: authProfile, isAdmin: authIsAdmin, isRecruiter: authIsRecruiter, loading: authLoading, refreshProfile } = useAuth();
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [profileName, setProfileName] = useState("");
   const [profileRole, setProfileRole] = useState("user");
@@ -98,62 +102,12 @@ const [activeSection, setActiveSection] = useState(() => {
     const tabParam = new URLSearchParams(window.location.search).get("tab");
     return tabParam === "personal_info" ? "info_perso" : (tabParam || null);
   });
-useEffect(() => {
-    if (!userSession?.user?.id) {
-      setIsNavAdmin(false);
-      setIsNavRecruiter(false);
-      return;
-    }
-    let cancelled = false;
-
-    // Invalidation du cache session
-    supabase.auth.refreshSession().catch(() => {}).then(async () => {
-      if (cancelled) return;
-      const { data: { session: freshSession } } = await supabase.auth.getSession();
-      const checkUserId = freshSession?.user?.id || userSession.user.id;
-
-      supabase
-        .rpc("is_admin", { check_user_id: checkUserId })
-        .then(({ data: isAdmin, error }) => {
-          if (cancelled) return;
-          if (error) {
-            console.warn("[Profil Nav] Erreur RPC is_admin:", error.message);
-            setAdminRpcError(error.message);
-            setIsNavAdmin(false);
-          } else {
-            setIsNavAdmin(isAdmin === true);
-            if (isAdmin === true) {
-              setProfileRole("admin");
-            }
-          }
-        })
-        .catch((err) => {
-          if (!cancelled) setAdminRpcError(err.message || "Catch error");
-        });
-
-      supabase
-        .rpc("has_badge", {
-          check_user_id: checkUserId,
-          badge_name: "verified_recruiter",
-        })
-        .then(({ data, error }) => {
-          if (cancelled) return;
-          if (error) {
-            console.warn("[Profil Nav] Erreur RPC has_badge:", error.message);
-            setIsNavRecruiter(false);
-          } else {
-            setIsNavRecruiter(data === true);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setIsNavRecruiter(false);
-        });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userSession?.user?.id]);
+  // isNavAdmin/isNavRecruiter/profileRole/profileBadges dérivés directement
+  // de useAuth() (authIsAdmin/authIsRecruiter) plus bas dans l'effet de
+  // synchronisation du profil — l'ancien effet dédié (refreshSession +
+  // getSession + is_admin + has_badge, sa propre requête réseau à chaque
+  // montage) est supprimé, ce rôle est déjà résolu une fois pour toute
+  // l'app par AuthContext.
 
   // Accordéon mobile de la liste d'onglets "À propos" : replié par défaut
   // pour économiser l'espace d'écran (sans effet en desktop, où la liste
@@ -161,18 +115,27 @@ useEffect(() => {
   const [aboutTabsOpen, setAboutTabsOpen] = useState(false);
   const [gender, setGender] = useState("");
   const [company, setCompany] = useState("");
+  // avatarUrl/coverUrl contiennent directement la valeur AFFICHABLE : soit
+  // l'URL signée déjà résolue par AuthContext (profile.avatar_url/cover_url,
+  // voir Point F1), soit un aperçu local optimiste juste après un upload
+  // (handleSaveCroppedImage). Plus de ref de "chemin brut" séparé — le
+  // renouvellement sur expiration (onError) passe par refreshProfile() du
+  // contexte, qui re-signe depuis la vraie colonne en base.
   const [avatarUrl, setAvatarUrl] = useState("/logo.jpeg");
   const [coverUrl, setCoverUrl] = useState("/stellar-cover.png");
-  // Chemin BRUT (celui stocké dans profiles), distinct de avatarUrl/coverUrl
-  // qui contiennent la valeur AFFICHABLE (URL signée) une fois résolue —
-  // nécessaire pour régénérer une URL signée fraîche si elle expire (onError).
-  const avatarPathRef = useRef("/logo.jpeg");
-  const coverPathRef = useRef("/stellar-cover.png");
-  // Tant que le profil n'a pas fini de charger, on affiche un skeleton à la
-  // place de la photo/couverture plutôt que le placeholder par défaut — sans
-  // ce garde, la vraie photo "remplaçait" visuellement le placeholder après
-  // coup, donnant l'impression qu'elle disparaissait puis revenait.
-  const [profileLoading, setProfileLoading] = useState(true);
+  // profileSynced : distinct de authLoading. authLoading passe à false dans
+  // le même rendu où authProfile devient disponible, mais l'effet qui copie
+  // authProfile vers l'état local éditable (profileName, avatarUrl, etc.)
+  // ne s'exécute qu'APRÈS ce rendu (règle React : les effects courent après
+  // le commit) — sans ce second flag, un rendu intermédiaire afficherait le
+  // skeleton déjà masqué mais encore les valeurs par défaut (flash qu'on a
+  // justement corrigé au Point 2). Le skeleton reste donc affiché tant que
+  // authLoading est vrai OU que la copie locale n'a pas encore eu lieu.
+  const [profileSynced, setProfileSynced] = useState(false);
+  const profileLoading = authLoading || !profileSynced;
+  // Documents (table resumes) : fetch local séparé, découplé du skeleton
+  // photo/profil (Point F1-C/D) — son propre état de chargement.
+  const [resumesLoading, setResumesLoading] = useState(true);
   const [isEditingBio, setIsEditingBio] = useState(false);
   // Dropdowns & Menu Actions pour Couverture et Avatar
   const [coverMenuOpen, setCoverMenuOpen] = useState(false);
@@ -393,179 +356,156 @@ useEffect(() => {
     setTimeout(() => setToast({ show: false, message: "", icon: "" }), 3000);
   };
 
-  // Synchroniser les données depuis Supabase et protéger la route
-  //
-  // Avant : 8 appels réseau strictement séquentiels (refreshSession,
-  // getSession, resumes, profiles, has_badge, refreshSession À NOUVEAU,
-  // getSession À NOUVEAU, is_admin) — chacun attendait le précédent.
-  // Après : 1 refreshSession + 1 getSession (le deuxième couple était une
-  // pure duplication, aucune raison de rafraîchir deux fois la même session
-  // à quelques lignes d'écart), puis les 4 lectures restantes (resumes,
-  // profiles, has_badge, is_admin) lancées en parallèle via Promise.all —
-  // 6 appels réseau au total au lieu de 8, et surtout seulement 3 étapes
-  // séquentielles au lieu de 8 (le batch parallèle ne coûte qu'un aller-
-  // retour, pas quatre).
+  // Redirection stricte vers /login si le visiteur n'est pas connecté — ne
+  // se déclenche qu'une fois AuthContext a fini de résoudre la session
+  // (authLoading === false), jamais pendant le court instant où elle est
+  // encore inconnue.
   useEffect(() => {
-    async function loadUserProfile() {
-      // Invalidation du cache client de session : rafraîchissement forcé
-      await supabase.auth.refreshSession().catch(() => {});
-      const { data: { session } } = await supabase.auth.getSession();
-      setUserSession(session);
+    if (authLoading) return;
+    if (!userSession) {
+      window.location.href = "/login";
+    }
+  }, [authLoading, userSession]);
 
-      if (!session) {
-        // Redirection stricte vers /login si le visiteur n'est pas connecté
-        window.location.href = "/login";
-        return;
+  // Copie l'état du profil (déjà chargé une seule fois pour toute l'app par
+  // AuthContext — Point F1) vers l'état local ÉDITABLE de cette page (bio,
+  // expériences, etc. sont modifiés localement avant sauvegarde, donc ne
+  // peuvent pas être de simples valeurs dérivées de authProfile). Plus de
+  // fetch profiles/has_badge/is_admin propre à cette page.
+  useEffect(() => {
+    if (authLoading || !userSession) return;
+    const session = userSession;
+    const profile = authProfile;
+
+    let finalRole = "user";
+    if (authIsAdmin) {
+      finalRole = "admin";
+      setIsNavAdmin(true);
+      setIsNavRecruiter(false);
+    } else if (authIsRecruiter) {
+      finalRole = "recruiter";
+      setIsNavRecruiter(true);
+      setIsNavAdmin(false);
+    } else {
+      setIsNavAdmin(false);
+      setIsNavRecruiter(false);
+    }
+    setProfileRole(finalRole);
+
+    let finalBadges = profile?.badges || [];
+    if (authIsAdmin && !finalBadges.includes("administrateur")) {
+      finalBadges = [...finalBadges, "administrateur"];
+    }
+    setProfileBadges(finalBadges);
+
+    if (profile) {
+      setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
+      setEducationLevel(profile.education_level || "Aucun");
+      setProfileSubtitle(profile.headline || "");
+      setProfileLocation(profile.location || "");
+      setProfileBio(profile.bio || "");
+      setTempBio(profile.bio || "");
+      const initialPinned = profile.pinned_details || (typeof window !== "undefined" && localStorage.getItem("user_pinned_details") ? JSON.parse(localStorage.getItem("user_pinned_details")) : []);
+      setPinnedDetails(initialPinned);
+      setTempPinnedDetails(initialPinned);
+      setPhone(profile.phone || (typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : ""));
+      setWebsiteUrl(profile.website_url || (typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : ""));
+      setGender(profile.gender || (typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : ""));
+      setCompany(profile.company || (typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : ""));
+      // profile.avatar_url/cover_url sont déjà des URL signées résolues par
+      // AuthContext (voir src/context/AuthContext.jsx) — rien à signer ici.
+      setAvatarUrl(profile.avatar_url || "/logo.jpeg");
+      setCoverUrl(profile.cover_url || "/stellar-cover.png");
+      setExperiences(profile.experiences || []);
+      setEducations(profile.educations || []);
+      setUserLanguages(profile.languages || []);
+      setUserSkills(profile.skills || []);
+      setUserInterests(profile.interests || []);
+      setContactEmail(profile.contact_email || session.user.email || "");
+      setIsPublic(profile.is_public === true);
+      setShowContact(profile.show_contact === true);
+      setCvVisibleRecruteurs(profile.cv_visible_recruteurs === true);
+
+      // Incrémenter dynamiquement le compteur de vues du profil (optionnel, silencieux)
+      try {
+        const updatedProfileViews = (profile.profile_views || 0) + 1;
+        supabase
+          .from("profiles")
+          .update({ profile_views: updatedProfileViews })
+          .eq("id", session.user.id)
+          .then();
+      } catch (err) {}
+
+      if (profile.full_name) {
+        const parts = profile.full_name.trim().split(" ");
+        setFirstName(parts[0] || "");
+        setLastName(parts.slice(1).join(" ") || "");
+      } else if (typeof window !== "undefined") {
+        setFirstName(localStorage.getItem("user_first_name") || "");
+        setLastName(localStorage.getItem("user_last_name") || "");
+      }
+      setJobTitle(profile.headline || (typeof window !== "undefined" ? localStorage.getItem("user_job_title") || "" : ""));
+      setCity(profile.city || (profile.location ? profile.location.split(",")[0]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_city") || "" : "")));
+      setCountry(profile.country || (profile.location ? profile.location.split(",")[1]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_country") || "" : "")));
+    } else {
+      // En cas d'erreur 500 ou d'échec de chargement, bascule sur des valeurs par défaut à partir de la session
+      setProfileName(session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "");
+      setContactEmail(session.user.email || "");
+      setAvatarUrl(session.user.user_metadata?.avatar_url || "/logo.jpeg");
+      setCoverUrl("/stellar-cover.png");
+      setEducationLevel("Aucun");
+      setProfileSubtitle("");
+      setProfileLocation("");
+      setProfileBio("");
+      setTempBio("");
+      setExperiences([]);
+      setEducations([]);
+      setUserLanguages([]);
+      setUserSkills([]);
+      setUserInterests([]);
+      setPinnedDetails([]);
+      setTempPinnedDetails([]);
+      setPhone(typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : "");
+      setWebsiteUrl(typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : "");
+      setGender(typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : "");
+      setCompany(typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : "");
+      setIsPublic(false);
+      setShowContact(true);
+      setCvVisibleRecruteurs(true);
+    }
+
+    setProfileSynced(true);
+  }, [authLoading, userSession, authProfile, authIsAdmin, authIsRecruiter]);
+
+  // Documents (table resumes) : fetch local séparé de la synchronisation du
+  // profil (Point F1-C) — a son propre état de chargement (resumesLoading),
+  // découplé du skeleton photo/profil piloté par authLoading. profileCvUrl/
+  // profileCvName restent une donnée du PROFIL (authProfile.cv_url), utilisés
+  // seulement en repli si la table resumes ne renvoie aucune ligne.
+  useEffect(() => {
+    if (authLoading || !userSession) return;
+    let cancelled = false;
+
+    async function loadResumes() {
+      setResumesLoading(true);
+      const userId = userSession.user.id;
+      const { data, error } = await supabase
+        .from("resumes")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.warn("[loadResumes] Erreur de chargement des resumes:", error.message);
       }
 
-      const userId = session.user.id;
-      // Chaque promesse est protégée individuellement (comme les try/catch
-      // qu'elle remplace) pour qu'une exception réseau sur l'une n'empêche
-      // pas les trois autres d'aboutir — Promise.all rejetterait globalement
-      // sinon dès la première erreur.
-      const safe = (promise) => Promise.resolve(promise).catch((err) => ({ data: null, error: err }));
+      const resumesList = data || [];
+      let profileCvUrl = authProfile?.cv_url || null;
+      let profileCvName = authProfile?.cv_name || null;
 
-      const [resumesResult, profileResult, badgeResult, adminResult] = await Promise.all([
-        safe(
-          supabase
-            .from("resumes")
-            .select("*")
-            .eq("user_id", userId)
-            .order("created_at", { ascending: false })
-        ),
-        safe(supabase.from("profiles").select("*").eq("id", userId).single()),
-        safe(supabase.rpc("has_badge", { check_user_id: userId, badge_name: "verified_recruiter" })),
-        safe(supabase.rpc("is_admin", { check_user_id: userId })),
-      ]);
-
-      // 1. Documents de l'utilisateur (table resumes)
-      let resumesList = [];
-      if (resumesResult.error) {
-        console.warn("[loadUserProfile] Erreur de chargement des resumes:", resumesResult.error.message);
-      } else {
-        resumesList = resumesResult.data || [];
-      }
-
-      // 2. Profil (table profiles)
-      let profile = null;
-      if (profileResult.error) {
-        console.warn("[loadUserProfile] Erreur de chargement du profil:", profileResult.error.message);
-      } else {
-        profile = profileResult.data;
-      }
-
-      // 3. Recruteur vérifié (RPC has_badge)
-      let isRecruiterRpc = false;
-      if (badgeResult.error) {
-        console.warn("[loadUserProfile] Erreur RPC has_badge:", badgeResult.error.message);
-      } else {
-        isRecruiterRpc = badgeResult.data === true;
-      }
-
-      // 4. Admin (RPC is_admin, SECURITY DEFINER)
-      let isAdminRpc = false;
-      if (adminResult.error) {
-        setAdminRpcError(adminResult.error.message);
-        console.warn("[loadUserProfile] Erreur RPC is_admin:", adminResult.error.message);
-      } else {
-        isAdminRpc = adminResult.data === true;
-      }
-
-      // Déterminer le rôle final et les badges indépendamment du profil
-      let finalRole = "user";
-      if (isAdminRpc === true) {
-        finalRole = "admin";
-        setIsNavAdmin(true);
-      } else if (isRecruiterRpc === true) {
-        finalRole = "recruiter";
-        setIsNavRecruiter(true);
-      }
-      setProfileRole(finalRole);
-
-      let finalBadges = profile?.badges || [];
-      if (isAdminRpc === true && !finalBadges.includes("administrateur")) {
-        finalBadges = [...finalBadges, "administrateur"];
-      }
-      setProfileBadges(finalBadges);
-
-      let profileCvUrl = profile?.cv_url || null;
-      let profileCvName = profile?.cv_name || null;
-
-      if (profile) {
-        setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
-        setEducationLevel(profile.education_level || "Aucun");
-        setProfileSubtitle(profile.headline || "");
-        setProfileLocation(profile.location || "");
-        setProfileBio(profile.bio || "");
-        setTempBio(profile.bio || "");
-        const initialPinned = profile.pinned_details || (typeof window !== "undefined" && localStorage.getItem("user_pinned_details") ? JSON.parse(localStorage.getItem("user_pinned_details")) : []);
-        setPinnedDetails(initialPinned);
-        setTempPinnedDetails(initialPinned);
-        setPhone(profile.phone || (typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : ""));
-        setWebsiteUrl(profile.website_url || (typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : ""));
-        setGender(profile.gender || (typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : ""));
-        setCompany(profile.company || (typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : ""));
-        avatarPathRef.current = profile.avatar_url || "/logo.jpeg";
-        coverPathRef.current = profile.cover_url || "/stellar-cover.png";
-        // getSignedAvatarUrl/getSignedCoverUrl renvoient la valeur telle
-        // quelle sans appel réseau pour un asset local ou un data:image —
-        // ne coûte donc rien pour l'immense majorité des comptes qui n'ont
-        // pas encore de photo migrée vers Storage.
-        const [resolvedAvatarUrl, resolvedCoverUrl] = await Promise.all([
-          getSignedAvatarUrl(avatarPathRef.current),
-          getSignedCoverUrl(coverPathRef.current),
-        ]);
-        setAvatarUrl(resolvedAvatarUrl || avatarPathRef.current);
-        setCoverUrl(resolvedCoverUrl || coverPathRef.current);
-        setExperiences(profile.experiences || []);
-        setEducations(profile.educations || []);
-        setUserLanguages(profile.languages || []);
-        setUserSkills(profile.skills || []);
-        setUserInterests(profile.interests || []);
-        setContactEmail(profile.contact_email || session.user.email || "");
-        setIsPublic(profile.is_public === true);
-        setShowContact(profile.show_contact === true);
-        setCvVisibleRecruteurs(profile.cv_visible_recruteurs === true);
-
-        // Incrémenter dynamiquement le compteur de vues du profil (optionnel, silencieux)
-        try {
-          const updatedProfileViews = (profile.profile_views || 0) + 1;
-          supabase
-            .from("profiles")
-            .update({ profile_views: updatedProfileViews })
-            .eq("id", session.user.id)
-            .then();
-        } catch (err) {}
-      } else {
-        // En cas d'erreur 500 ou d'échec de chargement, bascule sur des valeurs par défaut à partir de la session
-        setProfileName(session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "");
-        setContactEmail(session.user.email || "");
-        avatarPathRef.current = session.user.user_metadata?.avatar_url || "/logo.jpeg";
-        coverPathRef.current = "/stellar-cover.png";
-        setAvatarUrl(avatarPathRef.current);
-        setCoverUrl(coverPathRef.current);
-        setEducationLevel("Aucun");
-        setProfileSubtitle("");
-        setProfileLocation("");
-        setProfileBio("");
-        setTempBio("");
-        setExperiences([]);
-        setEducations([]);
-        setUserLanguages([]);
-        setUserSkills([]);
-        setUserInterests([]);
-        setPinnedDetails([]);
-        setTempPinnedDetails([]);
-        setPhone(typeof window !== "undefined" ? localStorage.getItem("user_phone") || "" : "");
-        setWebsiteUrl(typeof window !== "undefined" ? localStorage.getItem("user_website_url") || "" : "");
-        setGender(typeof window !== "undefined" ? localStorage.getItem("user_gender") || "" : "");
-        setCompany(typeof window !== "undefined" ? localStorage.getItem("user_company") || "" : "");
-        setIsPublic(false);
-        setShowContact(true);
-        setCvVisibleRecruteurs(true);
-      }
-
-      if (resumesList && resumesList.length > 0) {
+      if (resumesList.length > 0) {
         setUserDocuments(resumesList);
         if (!profileCvUrl) {
           profileCvUrl = resumesList[0].file_url;
@@ -607,24 +547,14 @@ useEffect(() => {
         }
       }
 
-      if (profile?.full_name) {
-        const parts = profile.full_name.trim().split(" ");
-        setFirstName(parts[0] || "");
-        setLastName(parts.slice(1).join(" ") || "");
-      } else if (typeof window !== "undefined") {
-        setFirstName(localStorage.getItem("user_first_name") || "");
-        setLastName(localStorage.getItem("user_last_name") || "");
-      }
-
-      setJobTitle(profile?.headline || (typeof window !== "undefined" ? localStorage.getItem("user_job_title") || "" : ""));
-      setCity(profile?.city || (profile?.location ? profile.location.split(",")[0]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_city") || "" : "")));
-      setCountry(profile?.country || (profile?.location ? profile.location.split(",")[1]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_country") || "" : "")));
-
-      setProfileLoading(false);
+      setResumesLoading(false);
     }
 
-    loadUserProfile();
-  }, []);
+    loadResumes();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, userSession, authProfile?.cv_url, authProfile?.cv_name]);
 
   // Abonnement Realtime sur `resumes` : reflète en direct le passage
   // 'processing' -> 'completed'/'error' déclenché par /api/process-resume

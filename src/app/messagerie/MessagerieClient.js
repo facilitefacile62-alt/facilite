@@ -2587,8 +2587,10 @@ export default function MessagerieClient() {
             </div>
           </aside>
 
-          {/* COLONNE DROITE : CHAT ACTIF */}
-          <section className={`flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[#FAF9F6] relative ${
+          {/* COLONNE DROITE : CHAT ACTIF / LECTEUR D'E-MAIL CANDIDATURE */}
+          <section className={`flex-1 flex flex-col h-full min-h-0 overflow-hidden ${
+            activeConversation?.isCandidature ? "bg-white" : "bg-[#FAF9F6]"
+          } relative ${
             activeConvId ? "flex" : "hidden md:flex"
           }`}>
             {activeConversation ? (
@@ -2801,7 +2803,9 @@ export default function MessagerieClient() {
                 {/* Messages scrollarea */}
                 <div
                   ref={messagesContainerRef}
-                  className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4"
+                  className={`flex-1 min-h-0 overflow-y-auto ${
+                    activeConversation?.isCandidature ? "bg-white px-4 sm:px-8 py-5 space-y-6" : "p-4 space-y-4"
+                  }`}
                 >
                   {/* Séparateur visuel entre la zone épinglée et le fil chronologique */}
                   {pinnedMessage && (
@@ -2842,38 +2846,37 @@ export default function MessagerieClient() {
                       if (isOffreMessage) {
                         const parsed = parseCandidatureMessage(msg, userSession);
                         return (
-                          <div className="w-full flex justify-center pt-0 pb-3">
-                            <div className="w-full max-w-3xl bg-white text-gray-900 border border-gray-200/90 rounded-2xl p-5 sm:p-7 shadow-xs relative group transition-all hover:shadow-md space-y-4">
-                              {/* 1. OBJET / TITRE DE L'E-MAIL STYLE GMAIL */}
-                              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-150 pb-3.5">
-                                <div className="min-w-0 flex-1">
-                                  <h2 className="text-base sm:text-lg font-black text-gray-900 leading-snug">
-                                    Candidature — Poste de {parsed.jobTitle} — {parsed.candidateName}
-                                  </h2>
-                                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                    <span className="bg-emerald-50 text-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                                      E-mail transmis avec succès
+                          <div className="w-full max-w-4xl mx-auto space-y-5 pb-6 border-b border-gray-150 last:border-b-0">
+                            {/* 1. OBJET / TITRE DE L'E-MAIL STYLE GMAIL */}
+                            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-150 pb-4">
+                              <div className="min-w-0 flex-1">
+                                <h2 className="text-base sm:text-xl font-black text-gray-900 leading-snug">
+                                  Candidature — Poste de {parsed.jobTitle} — {parsed.candidateName}
+                                </h2>
+                                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                  <span className="bg-emerald-50 text-emerald-800 text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 border border-emerald-200 shadow-2xs">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                                    E-mail transmis avec succès
+                                  </span>
+                                  {parsed.cvScore && (
+                                    <span className="bg-blue-50 text-blue-800 text-[11px] font-black px-3 py-1 rounded-full border border-blue-200 shadow-2xs">
+                                      Score CV : {parsed.cvScore}%
                                     </span>
-                                    {parsed.cvScore && (
-                                      <span className="bg-blue-50 text-blue-800 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-blue-200">
-                                        Score CV : {parsed.cvScore}%
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center space-x-2 text-gray-400 text-xs">
-                                  <button
-                                    type="button"
-                                    onClick={() => window.print()}
-                                    className="hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition cursor-pointer"
-                                    title="Imprimer"
-                                  >
-                                    <i className="fa-solid fa-print"></i>
-                                  </button>
+                                  )}
                                 </div>
                               </div>
+
+                              <div className="flex items-center space-x-2 text-gray-400 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => window.print()}
+                                  className="hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                                  title="Imprimer"
+                                >
+                                  <i className="fa-solid fa-print text-sm"></i>
+                                </button>
+                              </div>
+                            </div>
 
                               {/* 2. EXPÉDITEUR & DESTINATAIRE (STYLE GMAIL) */}
                               <div className="flex items-start justify-between gap-3">
@@ -2943,44 +2946,35 @@ export default function MessagerieClient() {
 
                               {/* 4. PIÈCES JOINTES EN BAS (VIGNETTES STYLE GMAIL) */}
                               {(msg.attachment_url || msg.file) && (
-                                <div className="pt-2 border-t border-gray-150">
-                                  <div className="flex items-center justify-between text-xs text-gray-500 font-bold mb-2.5">
+                                <div className="px-4 sm:px-8 pt-3 pb-6 border-b border-gray-150">
+                                  <div className="flex items-center justify-between text-xs text-gray-500 font-bold mb-3">
                                     <span>1 pièce jointe • Analysé & Sécurisé par Facilité 🛡️</span>
                                   </div>
 
-                                  <ChatAttachmentUrl path={msg.attachment_url}>
-                                    {(resolvedUrl) => (
-                                      <div className="flex flex-wrap gap-3">
+                                  <div className="flex flex-wrap gap-3">
+                                    <ChatAttachmentUrl storagePath={msg.attachment_url}>
+                                      {(fileUrl) => (
                                         <a
-                                          href={resolvedUrl || "#"}
+                                          href={fileUrl || "#"}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="group relative flex flex-col bg-white hover:bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition w-60 cursor-pointer"
+                                          download={msg.file_name || "CV_Candidature.pdf"}
+                                          className="w-full sm:w-72 bg-white border border-gray-200 hover:border-gray-400 rounded-2xl p-3.5 flex items-center space-x-3.5 transition-all shadow-xs hover:shadow-md group/att cursor-pointer"
                                         >
-                                          {/* Vignette Preview */}
-                                          <div className="h-28 bg-gray-100 flex flex-col items-center justify-center border-b border-gray-200 relative group-hover:bg-emerald-50/40 transition">
-                                            <i className="fa-solid fa-file-pdf text-4xl text-red-500 group-hover:scale-110 transition-transform"></i>
-                                            <span className="absolute bottom-2 right-2 bg-gray-900/80 text-white text-[9px] font-black px-1.5 py-0.5 rounded">
-                                              PDF
-                                            </span>
+                                          <div className="w-12 h-14 bg-red-50 text-red-500 rounded-xl flex flex-col items-center justify-center border border-red-100 flex-shrink-0 group-hover/att:scale-105 transition-transform">
+                                            <i className="fa-solid fa-file-pdf text-xl"></i>
+                                            <span className="text-[8px] font-black uppercase mt-0.5">PDF</span>
                                           </div>
-
-                                          {/* Footer Fichier */}
-                                          <div className="p-3 flex items-center justify-between gap-2">
-                                            <div className="min-w-0 flex-1">
-                                              <span className="text-xs font-bold text-gray-900 block truncate group-hover:text-blue-600">
-                                                {msg.file_name || msg.file?.name || "CV_Professionnel.pdf"}
-                                              </span>
-                                              <span className="text-[10px] text-gray-400 font-semibold block">
-                                                {msg.file_size || msg.file?.size || "Document PDF"}
-                                              </span>
-                                            </div>
-                                            <div className="w-8 h-8 rounded-lg bg-gray-100 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-gray-500 transition flex-shrink-0">
-                                              <i className="fa-solid fa-download text-xs"></i>
-                                            </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-bold text-gray-900 truncate group-hover/att:text-blue-600 transition-colors">
+                                              {msg.file_name || "CV_Candidature.pdf"}
+                                            </p>
+                                            <p className="text-[10px] text-gray-400 font-medium">Document PDF</p>
+                                          </div>
+                                          <div className="w-8 h-8 rounded-full bg-gray-100 group-hover/att:bg-blue-50 text-gray-500 group-hover/att:text-blue-600 flex items-center justify-center flex-shrink-0 transition-colors">
+                                            <i className="fa-solid fa-download text-xs"></i>
                                           </div>
                                         </a>
-                                      </div>
                                     )}
                                   </ChatAttachmentUrl>
                                 </div>
