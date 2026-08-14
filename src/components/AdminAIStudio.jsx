@@ -56,6 +56,50 @@ const DEFAULT_KNOWLEDGE = `• Entreprise : Facilité (https://ffacilite.com/)
 • Dépôts Physiques : Possibilité de déposer des dossiers dans les stations-services et entreprises partenaires répertoriées sur la plateforme.
 • Contact Support WhatsApp : Disponible via la plateforme pour toute assistance personnalisée.`;
 
+// Règles officielles de Diagnostic CV & ATS
+const DEFAULT_DIAGNOSTIC_RULES = `• CRITÈRES D'ÉVALUATION D'UN BON CV (DIAGNOSTIC FACILITÉ) :
+
+1. EN-TÊTE & COORDONNÉES PROFESSIONNELLES :
+   - Présence obligatoire : Nom et Prénom, Numéro de téléphone fonctionnel (WhatsApp), Adresse email pro, Ville/Localité au Sénégal ou pays cible.
+   - Titre de poste précis et percutant en tête de CV (ex: "Comptable Général Junior", "Développeur Fullstack React").
+   - Accroche professionnelle percutante (3 à 4 lignes résumant la valeur ajoutée et les objectifs).
+
+2. EXPÉRIENCES PROFESSIONNELLES (MÉTHODE STAR) :
+   - Ordre chronologique inversé (du plus récent au plus ancien).
+   - Chaque poste doit préciser : Entreprise, Période (Mois/Année), Missions avec verbes d'action.
+   - Résultats chiffrés & indicateurs de performance (KPI) obligatoires (ex: "+20% de chiffre d'affaires", "Gestion d'une équipe de 5 personnes", "Réduction du temps de traitement de 30%").
+
+3. COMPATIBILITÉ ATS (Applicant Tracking Systems) :
+   - Structure claire en sections standards (Expériences, Formations, Compétences, Langues).
+   - Mots-clés pertinents en lien avec le métier cible.
+   - Éviter les tableaux complexes et graphiques illisibles par les robots recruteurs.
+
+4. FORMATION, COMPÉTENCES & LANGUES :
+   - Diplômes récents et vérifiables (CFEE, BFEM, BAC, Licence, Master, Certifications).
+   - Séparation entre Compétences Techniques (Hard Skills) et Qualités Humaines (Soft Skills).
+   - Niveau de langue clair (Français, Wolof, Anglais).
+
+5. BARÈME DU SCORE ATS :
+   - 85-100% : Excellent CV, directement exploitable pour postuler.
+   - 65-84% : Bon CV avec quelques ajustements de formulation ou de mise en page requis.
+   - 40-64% : CV Moyen, refonte fortement recommandée avec les modèles Facilité à 1000/2500 FCFA.
+   - < 40% : CV Insuffisant, refonte intégrale et accompagnement prioritaires nécessaires.`;
+
+const DIAGNOSTIC_PRESETS = [
+  {
+    name: "Standard Marché Sénégal & UEMOA",
+    modifier: "Mets l'accent sur les réalités du marché local à Dakar et en Afrique de l'Ouest (diplômes reconnus, coordonnées directes, adaptabilité aux entreprises locales et multinationales).",
+  },
+  {
+    name: "Exigence ATS International & Canada",
+    modifier: "Applique une rigueur maximale sur la norme ATS nord-américaine (aucune photo, pas d'âge ni situation matrimoniale, verbes d'action stricts, résultats 100% mesurables).",
+  },
+  {
+    name: "Profil Débutant, Stage & Reconversion",
+    modifier: "Valorise les projets académiques, stages, compétences transférables, bénévolat et la motivation du candidat plutôt que l'ancienneté.",
+  },
+];
+
 const DEFAULT_MAIN_PROMPT = `Tu es l'agent IA officiel de "Facilité" (https://ffacilite.com/), fondé par Macoumba Samake.
 Ton rôle est d'accueillir les visiteurs, les guider dans la création de leur CV ou lettre de motivation, répondre à leurs questions d'emploi et collecter leurs informations.
 
@@ -76,6 +120,7 @@ export default function AdminAIStudio() {
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
   const [promptText, setPromptText] = useState(DEFAULT_MAIN_PROMPT);
   const [knowledgeText, setKnowledgeText] = useState(DEFAULT_KNOWLEDGE);
+  const [diagnosticRulesText, setDiagnosticRulesText] = useState(DEFAULT_DIAGNOSTIC_RULES);
   const [productsList, setProductsList] = useState(DEFAULT_PRODUCTS);
   const [currency, setCurrency] = useState("FCFA"); // "FCFA" | "EUR"
   const [isDeployed, setIsDeployed] = useState(true);
@@ -112,6 +157,7 @@ export default function AdminAIStudio() {
         const parsed = JSON.parse(saved);
         if (parsed.promptText) setPromptText(parsed.promptText);
         if (parsed.knowledgeText) setKnowledgeText(parsed.knowledgeText);
+        if (parsed.diagnosticRulesText) setDiagnosticRulesText(parsed.diagnosticRulesText);
         if (parsed.commStyle) setCommStyle(parsed.commStyle);
         if (parsed.selectedModel) setSelectedModel(parsed.selectedModel);
         if (parsed.productsList) setProductsList(parsed.productsList);
@@ -132,6 +178,7 @@ export default function AdminAIStudio() {
       const config = {
         promptText,
         knowledgeText,
+        diagnosticRulesText,
         commStyle,
         selectedModel,
         productsList,
@@ -208,6 +255,9 @@ ${activeStyleObj.modifier}
 
 [BASE DE CONNAISSANCES OFFICIELLE & TARIFS EN VIGUEUR]
 ${knowledgeText.trim()}
+
+[RÈGLES ET CRITÈRES OFFICIELS DU DIAGNOSTIC CV & SCORING ATS]
+${diagnosticRulesText.trim()}
 
 [CATALOGUE DES PRODUITS ET TARIFS (${currency})]
 ${productsContext}
@@ -374,6 +424,19 @@ ${productsContext}
         >
           <i className="fa-solid fa-book-bookmark text-blue-400"></i>
           <span>Base de connaissances</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("diagnostic")}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            activeSubTab === "diagnostic"
+              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+          }`}
+        >
+          <i className="fa-solid fa-stethoscope text-emerald-400"></i>
+          <span>Règles Diagnostic CV</span>
         </button>
 
         <button
@@ -566,6 +629,103 @@ ${productsContext}
                   className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
                 >
                   <span>Sauvegarder les connaissances</span>
+                  <i className="fa-solid fa-floppy-disk"></i>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ONGLET NOUVEAU : RÈGLES DE DIAGNOSTIC CV */}
+          {activeSubTab === "diagnostic" && (
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-5 shadow-xl">
+              <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-500/30">
+                      Audit & Scoring ATS
+                    </span>
+                    <h2 className="text-sm sm:text-base font-extrabold text-white">Règles du Diagnostic CV</h2>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Définissez précisément les critères qui caractérisent un bon CV pour que l'IA évalue et note les CVs des candidats.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDiagnosticRulesText(DEFAULT_DIAGNOSTIC_RULES)}
+                  className="text-[11px] font-bold text-gray-400 hover:text-emerald-400 transition cursor-pointer flex items-center gap-1"
+                  title="Rétablir les règles de diagnostic par défaut"
+                >
+                  <i className="fa-solid fa-rotate-left"></i>
+                  <span>Défaut</span>
+                </button>
+              </div>
+
+              {/* Presets rapides de barème */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-300 block">
+                  Appliquer un barème spécial (Presets) :
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DIAGNOSTIC_PRESETS.map((dp) => (
+                    <button
+                      key={dp.name}
+                      type="button"
+                      onClick={() => setDiagnosticRulesText((prev) => `${prev.trim()}\n\n[Barème Spécifique : ${dp.name}]\n${dp.modifier}`)}
+                      className="text-[10px] font-bold bg-[#1F232B] hover:bg-emerald-950 hover:text-emerald-300 text-gray-300 px-3 py-1 rounded-xl border border-[#2E3542] hover:border-emerald-500/50 transition cursor-pointer"
+                    >
+                      + {dp.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Zone d'écriture des règles de diagnostic */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <label className="font-bold text-gray-300">Critères & Instructions d'Audit CV :</label>
+                  <span className="text-[11px] text-gray-500 font-mono">{diagnosticRulesText.length} caractères</span>
+                </div>
+                <textarea
+                  value={diagnosticRulesText}
+                  onChange={(e) => setDiagnosticRulesText(e.target.value)}
+                  rows={13}
+                  className="w-full p-4 bg-[#14161A] border border-[#2E3542] focus:border-[#10E688] focus:ring-1 focus:ring-[#10E688]/30 rounded-2xl text-xs font-mono text-gray-200 leading-relaxed transition resize-y focus:outline-none"
+                  placeholder="Rédigez les critères de notation, rubriques obligatoires et conseils d'audit CV..."
+                />
+              </div>
+
+              {/* Résumé des 4 piliers d'évaluation */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
+                  <span className="text-base block mb-0.5">🎯</span>
+                  <span className="text-[10px] font-black text-white block">Méthode STAR</span>
+                  <span className="text-[9px] text-gray-400">Verbes & KPI</span>
+                </div>
+                <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
+                  <span className="text-base block mb-0.5">🤖</span>
+                  <span className="text-[10px] font-black text-white block">Score ATS</span>
+                  <span className="text-[9px] text-gray-400">Mots-clés & Structure</span>
+                </div>
+                <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
+                  <span className="text-base block mb-0.5">✨</span>
+                  <span className="text-[10px] font-black text-white block">Design & Clarté</span>
+                  <span className="text-[9px] text-gray-400">Aéré & Lisible</span>
+                </div>
+                <div className="p-2.5 bg-[#1F232B] border border-[#2E3542] rounded-xl text-center">
+                  <span className="text-base block mb-0.5">💼</span>
+                  <span className="text-[10px] font-black text-white block">Recommandations</span>
+                  <span className="text-[9px] text-gray-400">Modèles Facilité</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveConfig}
+                  className="px-5 py-2.5 bg-[#10E688] hover:bg-[#10E688]/90 text-gray-950 font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Enregistrer les règles de diagnostic</span>
                   <i className="fa-solid fa-floppy-disk"></i>
                 </button>
               </div>
