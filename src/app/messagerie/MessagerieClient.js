@@ -259,6 +259,45 @@ function formatDateSeparatorLabel(dateInput) {
   });
 }
 
+/**
+ * Analyse et structure le contenu textuel d'un message de candidature pour
+ * afficher les 3 parties distinctes :
+ * 1. En haut : adresse du destinataire et informations de l'offre
+ * 2. Au milieu : message du candidat (à part)
+ * 3. En bas : CV et document joint (à part)
+ */
+function parseCandidatureMessage(msg) {
+  const text = msg?.text || "";
+  
+  // Extraire le poste
+  const jobMatch = text.match(/poste\s*:\s*([^\(\n]+)/i);
+  const jobTitle = jobMatch ? jobMatch[1].trim() : (msg?.candidatureData?.job_title || "Offre d'emploi");
+  
+  // Extraire l'entreprise
+  const compMatch = text.match(/\(([^)]+)\)/);
+  const company = compMatch ? compMatch[1].trim() : (msg?.candidatureData?.company || "Entreprise confidentielle");
+  
+  // Extraire le destinataire
+  const emailMatch = text.match(/Destinataire\s*:\s*([^\n]+)/i);
+  const recipientEmail = emailMatch ? emailMatch[1].trim() : (msg?.candidatureData?.email || "");
+  
+  // Extraire le score CV
+  const scoreMatch = text.match(/Score CV\s*:\s*(\d+)%/i);
+  const cvScore = scoreMatch ? scoreMatch[1] : (msg?.candidatureData?.cv_match_score || null);
+  
+  // Extraire le message d'accompagnement
+  const msgParts = text.split(/💬 Message (?:du candidat|d'accompagnement)\s*:\s*/i);
+  const coverMessage = msgParts.length > 1 ? msgParts[1].trim() : (msg?.candidatureData?.cover_letter || null);
+
+  return {
+    jobTitle,
+    company,
+    recipientEmail,
+    cvScore,
+    coverMessage,
+  };
+}
+
 export default function MessagerieClient() {
   const pathname = usePathname();
   const router = useRouter();
@@ -2828,84 +2867,164 @@ export default function MessagerieClient() {
                           </div>
                         )}
 
-                        {/* Entretien vidéo (Daily.co) — attachment_url porte l'id de
-                            la ligne interviews, pas une URL directe : le jeton de
-                            participation est minté à la demande au clic, jamais
-                            persisté (voir src/lib/dailyco.js). */}
-                        {msg.attachment_type === "video-interview" && msg.attachment_url && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveInterviewId(msg.attachment_url)}
-                            className="flex items-center space-x-3 bg-[#2563EB]/90 hover:bg-[#2563EB] text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition cursor-pointer w-full"
-                          >
-                            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
-                              <i className="fa-solid fa-video text-lg"></i>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="text-xs font-extrabold block">Entretien vidéo</span>
-                              <span className="text-[10px] opacity-80 block font-semibold truncate">
-                                {msg.file_name || "Rejoindre l'entretien"}
-                              </span>
-                            </div>
-                            <i className="fa-solid fa-arrow-right text-xs opacity-80"></i>
-                          </button>
-                        )}
+                        {(() => {
+                          const isOffreMessage = msg.typeDiscussion === "OFFRE" || msg.isCandidatureReceipt || msg.text?.includes("Candidature envoyée");
+                          if (isOffreMessage) {
+                            const parsed = parseCandidatureMessage(msg);
+                            return (
+                              <div className="space-y-2.5 text-left w-full">
+                                {/* 1. EN HAUT : ADRESSE DU DESTINATAIRE & INFOS DE L'OFFRE */}
+                                <div className="bg-white/10 rounded-xl p-3 border border-white/20 shadow-xs">
+                                  <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-white/15">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                                      <i className="fa-solid fa-circle-check text-emerald-400"></i>
+                                      Candidature transmise
+                                    </span>
+                                    {parsed.cvScore !== null && parsed.cvScore !== undefined && (
+                                      <span className="bg-emerald-500/25 text-emerald-200 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-emerald-400/30">
+                                        Score CV : {parsed.cvScore}%
+                                      </span>
+                                    )}
+                                  </div>
 
-                        {/* Pièce jointe PDF / Document (Carte Bleue Ergonomique) */}
-                        {(msg.attachment_url || msg.file) && msg.attachment_type !== "audio" && msg.attachment_type !== "video-interview" && (
-                          <ChatAttachmentUrl path={msg.attachment_url}>
-                            {(resolvedUrl) => (
-                              <a
-                                href={resolvedUrl || "#"}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center space-x-3 bg-blue-600/90 hover:bg-blue-700 text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition group/file"
-                              >
-                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
-                                  <i className={`fa-solid ${msg.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
+                                  <div className="space-y-1 text-xs">
+                                    <div className="flex items-start gap-1.5">
+                                      <span className="text-white/75 font-bold min-w-[80px]">Destinataire :</span>
+                                      <span className="font-extrabold text-white break-all">{parsed.recipientEmail || "Recruteur"}</span>
+                                    </div>
+                                    <div className="flex items-start gap-1.5">
+                                      <span className="text-white/75 font-bold min-w-[80px]">Entreprise :</span>
+                                      <span className="font-extrabold text-white">{parsed.company}</span>
+                                    </div>
+                                    <div className="flex items-start gap-1.5">
+                                      <span className="text-white/75 font-bold min-w-[80px]">Poste :</span>
+                                      <span className="font-extrabold text-emerald-200">{parsed.jobTitle}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <span className="text-xs font-extrabold block truncate max-w-xs md:max-w-md">
-                                    {msg.file_name || msg.file?.name || "Document"}
-                                  </span>
-                                  <span className="text-[10px] opacity-80 block font-semibold">
-                                    {msg.file_size || msg.file?.size || "PDF / Fichier"}
-                                  </span>
-                                </div>
-                                <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
-                                  <i className="fa-solid fa-download text-xs"></i>
-                                </div>
-                              </a>
-                            )}
-                          </ChatAttachmentUrl>
-                        )}
 
-                        {/* Note Vocale (Lecteur Audio Style Messenger/WhatsApp) */}
-                        {msg.attachment_type === "audio" && msg.attachment_url && (
-                          <div className="mb-1 min-w-[200px] md:min-w-[240px]">
-                            <ChatAttachmentUrl path={msg.attachment_url}>
-                              {(resolvedUrl) =>
-                                resolvedUrl && (
-                                  <VoiceMessagePlayer
-                                    src={resolvedUrl}
-                                    variant={msg.sender === "me" ? "sent" : "received"}
-                                  />
-                                )
-                              }
-                            </ChatAttachmentUrl>
-                          </div>
-                        )}
+                                {/* 2. AU MILIEU : LE TEXTE DU MESSAGE DU CANDIDAT (À PART) */}
+                                {parsed.coverMessage && (
+                                  <div className="bg-black/20 rounded-xl p-3 border border-white/15 text-left">
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/80 block mb-1">
+                                      💬 Message du candidat :
+                                    </span>
+                                    <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap text-white">
+                                      {parsed.coverMessage}
+                                    </p>
+                                  </div>
+                                )}
 
-                        {/* La légende auto-générée ("📎 Fichier joint : <nom>") duplique
-                            exactement le nom déjà affiché — tronqué — dans la carte
-                            ci-dessus ; l'afficher en clair produisait un texte très long
-                            (nom de fichier répété) qui s'enroulait sur plusieurs lignes et
-                            étirait la bulle verticalement. Un vrai message tapé par
-                            l'utilisateur continue de s'afficher normalement (multi-lignes
-                            légitimes, whitespace-pre-wrap conservé). */}
-                        {msg.text && !(msg.attachment_url && msg.attachment_type !== "audio" && msg.text.startsWith("📎")) && (
-                          <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
-                        )}
+                                {/* 3. EN BAS : LE CV / PIÈCE JOINTE (À PART) */}
+                                {(msg.attachment_url || msg.file) && (
+                                  <div className="pt-0.5">
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/80 block mb-1">
+                                      📎 CV & Pièces jointes :
+                                    </span>
+                                    <ChatAttachmentUrl path={msg.attachment_url}>
+                                      {(resolvedUrl) => (
+                                        <a
+                                          href={resolvedUrl || "#"}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center space-x-3 bg-white/20 hover:bg-white/30 text-white p-3 rounded-xl border border-white/25 transition group/file shadow-xs"
+                                        >
+                                          <div className="w-10 h-10 bg-emerald-500/30 rounded-lg flex items-center justify-center text-emerald-300 flex-shrink-0 text-xl">
+                                            <i className={`fa-solid ${msg.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"}`}></i>
+                                          </div>
+                                          <div className="min-w-0 flex-1">
+                                            <span className="text-xs font-extrabold block truncate max-w-xs md:max-w-md">
+                                              {msg.file_name || msg.file?.name || "CV_Professionnel.pdf"}
+                                            </span>
+                                            <span className="text-[10px] opacity-80 block font-semibold">
+                                              {msg.file_size || msg.file?.size || "Document PDF"} • Cliquez pour ouvrir
+                                            </span>
+                                          </div>
+                                          <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
+                                            <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                                          </div>
+                                        </a>
+                                      )}
+                                    </ChatAttachmentUrl>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <>
+                              {/* Entretien vidéo (Daily.co) */}
+                              {msg.attachment_type === "video-interview" && msg.attachment_url && (
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveInterviewId(msg.attachment_url)}
+                                  className="flex items-center space-x-3 bg-[#2563EB]/90 hover:bg-[#2563EB] text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition cursor-pointer w-full"
+                                >
+                                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                                    <i className="fa-solid fa-video text-lg"></i>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <span className="text-xs font-extrabold block">Entretien vidéo</span>
+                                    <span className="text-[10px] opacity-80 block font-semibold truncate">
+                                      {msg.file_name || "Rejoindre l'entretien"}
+                                    </span>
+                                  </div>
+                                  <i className="fa-solid fa-arrow-right text-xs opacity-80"></i>
+                                </button>
+                              )}
+
+                              {/* Pièce jointe PDF / Document standard */}
+                              {(msg.attachment_url || msg.file) && msg.attachment_type !== "audio" && msg.attachment_type !== "video-interview" && (
+                                <ChatAttachmentUrl path={msg.attachment_url}>
+                                  {(resolvedUrl) => (
+                                    <a
+                                      href={resolvedUrl || "#"}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center space-x-3 bg-blue-600/90 hover:bg-blue-700 text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition group/file"
+                                    >
+                                      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                                        <i className={`fa-solid ${msg.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <span className="text-xs font-extrabold block truncate max-w-xs md:max-w-md">
+                                          {msg.file_name || msg.file?.name || "Document"}
+                                        </span>
+                                        <span className="text-[10px] opacity-80 block font-semibold">
+                                          {msg.file_size || msg.file?.size || "PDF / Fichier"}
+                                        </span>
+                                      </div>
+                                      <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
+                                        <i className="fa-solid fa-download text-xs"></i>
+                                      </div>
+                                    </a>
+                                  )}
+                                </ChatAttachmentUrl>
+                              )}
+
+                              {/* Note Vocale */}
+                              {msg.attachment_type === "audio" && msg.attachment_url && (
+                                <div className="mb-1 min-w-[200px] md:min-w-[240px]">
+                                  <ChatAttachmentUrl path={msg.attachment_url}>
+                                    {(resolvedUrl) =>
+                                      resolvedUrl && (
+                                        <VoiceMessagePlayer
+                                          src={resolvedUrl}
+                                          variant={msg.sender === "me" ? "sent" : "received"}
+                                        />
+                                      )
+                                    }
+                                  </ChatAttachmentUrl>
+                                </div>
+                              )}
+
+                              {msg.text && !(msg.attachment_url && msg.attachment_type !== "audio" && msg.text.startsWith("📎")) && (
+                                <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                              )}
+                            </>
+                          );
+                        })()}
                         
                         <div className="flex items-center justify-end space-x-1 mt-1 text-[9px] opacity-75 font-bold" suppressHydrationWarning>
                           <span>{msg.time}</span>

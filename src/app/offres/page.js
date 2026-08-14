@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 import ApplyModal from "@/components/ApplyModal";
 import SocialShareButtons from "@/components/SocialShareButtons";
 
@@ -50,9 +51,12 @@ function OffresContent() {
   const searchParams = useSearchParams();
   const queryParam = searchParams?.get("q") || "";
 
-  const [userSession, setUserSession] = useState(null);
-  const [, setUserRole] = useState(null);
-  const [candidateEducationLevel, setCandidateEducationLevel] = useState("Aucun");
+  // Session/profil chargés une seule fois pour toute l'app par AuthContext
+  // (Point F1) — plus de getSession() ni de fetch profiles/user_roles propre
+  // à cette page ; candidateEducationLevel dérivé directement du profil déjà
+  // en contexte.
+  const { session: userSession, profile: authProfile } = useAuth();
+  const candidateEducationLevel = authProfile?.education_level || authProfile?.degree || "Aucun";
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(queryParam);
@@ -94,28 +98,6 @@ function OffresContent() {
   useEffect(() => {
     async function loadData() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUserSession(session);
-
-        if (session?.user?.id) {
-          const [profileRes, roleRes] = await Promise.all([
-            supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", session.user.id)
-              .single(),
-            supabase
-              .from("user_roles")
-              .select("role")
-              .eq("user_id", session.user.id)
-              .maybeSingle()
-          ]);
-
-          const profile = profileRes.data;
-          setCandidateEducationLevel(profile?.degree || profile?.education_level || "Aucun");
-          setUserRole(roleRes.data?.role || "user");
-        }
-
         const { data, error } = await supabase
           .from("job_offers")
           .select("*")
