@@ -40,6 +40,14 @@ export default function SocialShareButtons({
   const location = offer?.location || "Sénégal";
   const contract = offer?.contract || offer?.contract_type || "CDI";
 
+  const hash = offerId ? offerId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) : 42;
+  const initialLikes = (hash * 17) % 800 + 45;
+  const commentsCount = (hash * 7) % 350 + 12;
+  const initialShares = (hash * 3) % 80 + 5;
+
+  const [likesCount, setLikesCount] = useState(initialLikes);
+  const [sharesCount, setSharesCount] = useState(initialShares);
+
   const getBaseUrl = () => {
     if (typeof window !== "undefined") {
       return window.location.origin;
@@ -90,6 +98,7 @@ export default function SocialShareButtons({
           url: shareUrl,
         });
         setDropdownOpen(false);
+        setSharesCount((prev) => prev + 1);
         if (onToast) onToast("Offre partagée avec succès !");
       } catch {
         // Annulation ou non-support
@@ -103,18 +112,22 @@ export default function SocialShareButtons({
     if (e) e.stopPropagation();
     if (activeReaction?.id === reaction.id) {
       setActiveReaction(null);
+      setLikesCount((prev) => Math.max(0, prev - 1));
     } else {
+      if (!activeReaction) setLikesCount((prev) => prev + 1);
       setActiveReaction(reaction);
     }
     setReactionsOpen(false);
   };
 
   const handleLikeButtonClick = (e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     if (activeReaction) {
       setActiveReaction(null);
+      setLikesCount((prev) => Math.max(0, prev - 1));
     } else {
       setActiveReaction(REACTIONS[0]); // Par défaut : 👍 J'aime
+      setLikesCount((prev) => prev + 1);
     }
   };
 
@@ -140,12 +153,74 @@ export default function SocialShareButtons({
     telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
   };
 
-  // 1. Rendu Compact pour le Flux d'Accueil et Listes (3 Actions horizontales équilibrées)
+  // 1. Rendu Compact pour le Flux d'Accueil et Listes (Style 1:1 Facebook Footer)
   if (variant === "compact") {
     return (
       <div className={`relative w-full pt-2 border-t border-gray-100 ${className}`} ref={dropdownRef}>
-        <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-          {/* Action 1 : J'aime avec Barre de Réactions Flottante (Style Facebook/LinkedIn) */}
+        {/* Barre de Stats Facebook (👍 796, 💬 395, ↪️ 29, 🔵👍) */}
+        <div className="flex items-center justify-between px-1 pb-2 text-xs text-gray-600 font-semibold select-none">
+          <div className="flex items-center gap-4 sm:gap-6">
+            {/* 👍 Likes */}
+            <button
+              type="button"
+              onClick={handleLikeButtonClick}
+              className={`flex items-center gap-1.5 hover:text-[#1877F2] transition cursor-pointer ${
+                activeReaction ? "text-[#1877F2] font-bold" : "text-gray-600"
+              }`}
+              title="J'aime"
+            >
+              <i className={`fa-regular fa-thumbs-up text-sm ${activeReaction ? "text-[#1877F2] fa-solid" : ""}`}></i>
+              <span>{likesCount}</span>
+            </button>
+
+            {/* 💬 Commentaires / Messagerie */}
+            <Link
+              href="/messagerie"
+              className="flex items-center gap-1.5 hover:text-emerald-600 transition cursor-pointer text-gray-600"
+              title="Commentaires et messages"
+            >
+              <i className="fa-regular fa-comment text-sm"></i>
+              <span>{commentsCount}</span>
+            </Link>
+
+            {/* ↪️ Partages (Ouvre tous les liens au clic) */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdownOpen(true);
+              }}
+              className="flex items-center gap-1.5 hover:text-emerald-600 transition cursor-pointer text-gray-600"
+              title="Partager sur tous les réseaux"
+            >
+              <svg
+                className="w-4 h-4 text-gray-600 hover:text-emerald-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+              <span>{sharesCount}</span>
+            </button>
+          </div>
+
+          {/* Pastille ronde bleue Facebook */}
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-[9px] shadow-2xs">
+              <i className="fa-solid fa-thumbs-up"></i>
+            </div>
+          </div>
+        </div>
+
+        {/* Boutons d'Action Principaux */}
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2 pt-1 border-t border-gray-100/80">
+          {/* Action 1 : J'aime avec Barre de Réactions Flottante */}
           <div
             className="relative flex-1 min-w-0"
             onMouseEnter={handleMouseEnterLike}
@@ -190,18 +265,17 @@ export default function SocialShareButtons({
             </button>
           </div>
 
-          {/* Action 2 : Partager (Bouton Élégant avec Menu Déroulant) */}
+          {/* Action 2 : Partager (Ouvre le modal avec tous les liens) */}
           <div className="relative flex-1 min-w-0">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setDropdownOpen((prev) => !prev);
+                setDropdownOpen(true);
               }}
               className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-emerald-50/80 hover:bg-emerald-100 text-emerald-800 font-extrabold text-[11px] sm:text-xs transition-all border border-emerald-200/90 shadow-2xs cursor-pointer active:scale-95 truncate"
-              title="Partager cette annonce"
+              title="Partager cette annonce sur tous les réseaux"
             >
-              {/* Flèche incurvée de partage */}
               <svg
                 className="w-3.5 h-3.5 text-emerald-800"
                 viewBox="0 0 24 24"
@@ -216,12 +290,49 @@ export default function SocialShareButtons({
                 <line x1="12" y1="2" x2="12" y2="15" />
               </svg>
               <span>Partager</span>
-              <i
-                className={`fa-solid fa-chevron-down text-[8px] transition-transform duration-200 ${
-                  dropdownOpen ? "rotate-180" : ""
-                }`}
-              ></i>
             </button>
+          </div>
+
+          {/* Action 3 : Envoyer */}
+          <div className="flex-1 min-w-0">
+            {externalLink ? (
+              <a
+                href={externalLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd07b] text-gray-950 font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 truncate"
+                title="Postuler à cette offre"
+              >
+                <i className="fa-solid fa-paper-plane text-xs flex-shrink-0"></i>
+                <span className="truncate">{externalButtonLabel || "Envoyer"}</span>
+              </a>
+            ) : onApply ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApply(offer);
+                }}
+                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd07b] text-gray-950 font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 cursor-pointer truncate"
+                title="Postuler à cette offre"
+              >
+                <i className="fa-solid fa-paper-plane text-xs flex-shrink-0"></i>
+                <span className="truncate">Envoyer</span>
+              </button>
+            ) : (
+              <Link
+                href={`/offres/${offerId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd07b] text-gray-950 font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 truncate"
+                title="Consulter et postuler"
+              >
+                <i className="fa-solid fa-paper-plane text-xs flex-shrink-0"></i>
+                <span className="truncate">Envoyer</span>
+              </Link>
+            )}
+          </div>
+        </div>
 
             {/* Modal de Partage Social 100% visible et non tronqué */}
             {dropdownOpen && (
