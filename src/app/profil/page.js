@@ -583,50 +583,14 @@ const [activeSection, setActiveSection] = useState(() => {
     };
   }, [userSession?.user?.id]);
 
-  // Synchronisation Realtime sur les modifications de profil
-  useEffect(() => {
-    const userId = userSession?.user?.id;
-    if (!userId) return;
-
-    const channel = supabase
-      .channel(`profile-live-sync-${userId}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
-        (payload) => {
-          const updated = payload.new;
-          if (!updated) return;
-          setProfileName(updated.full_name || "");
-          setProfileBio(updated.bio || "");
-
-          // updated.avatar_url/cover_url sont les valeurs BRUTES de la
-          // colonne (chemin Storage) — jamais injectées telles quelles dans
-          // avatarUrl/coverUrl, qui doivent toujours contenir l'URL signée
-          // résolue (voir Point 3). Comparaison au ref pour ignorer les
-          // UPDATE qui ne touchent pas la photo (bio seule, etc.) et pour
-          // ne pas re-signer une valeur que ce même client vient de poser
-          // lui-même (handleSaveCroppedImage a déjà mis à jour le ref et
-          // l'URL affichée avant que cet événement Realtime n'arrive).
-          if (updated.avatar_url && updated.avatar_url !== avatarPathRef.current) {
-            avatarPathRef.current = updated.avatar_url;
-            getSignedAvatarUrl(updated.avatar_url).then((signedUrl) => {
-              if (signedUrl) setAvatarUrl(signedUrl);
-            });
-          }
-          if (updated.cover_url && updated.cover_url !== coverPathRef.current) {
-            coverPathRef.current = updated.cover_url;
-            getSignedCoverUrl(updated.cover_url).then((signedUrl) => {
-              if (signedUrl) setCoverUrl(signedUrl);
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userSession?.user?.id]);
+  // La synchronisation Realtime sur `profiles` (channel dédié comparant un
+  // ref de chemin brut) a été retirée (Point F1-B) : AuthContext maintient
+  // déjà son propre canal Realtime sur cette même table pour l'utilisateur
+  // courant (voir src/context/AuthContext.jsx, channel
+  // `auth-context-sync-${user.id}`) — un seul canal WebSocket par table par
+  // utilisateur. authProfile se met à jour automatiquement, et l'effet de
+  // synchronisation ci-dessus (dépendant de authProfile) reflète le
+  // changement dans l'état local.
 
   // Filtered Notifications helper
   const filteredNotifications = notificationsList.filter(n => {
@@ -706,14 +670,15 @@ const [activeSection, setActiveSection] = useState(() => {
   // Régénère une URL signée fraîche si l'affichage échoue (URL expirée après
   // 1h, ou révoquée) — se déclenche sur l'événement onError de l'<img>,
   // jamais de façon proactive (pas de minuteur : la plupart des visites de
-  // /profil durent bien moins d'une heure).
+  // /profil durent bien moins d'une heure). refreshProfile() (AuthContext)
+  // re-signe depuis la vraie colonne en base ; l'effet de synchronisation
+  // ci-dessus reflète ensuite le nouveau authProfile.avatar_url/cover_url
+  // dans avatarUrl/coverUrl.
   const handleAvatarImgError = async () => {
-    const fresh = await getSignedAvatarUrl(avatarPathRef.current);
-    if (fresh && fresh !== avatarUrl) setAvatarUrl(fresh);
+    await refreshProfile();
   };
   const handleCoverImgError = async () => {
-    const fresh = await getSignedCoverUrl(coverPathRef.current);
-    if (fresh && fresh !== coverUrl) setCoverUrl(fresh);
+    await refreshProfile();
   };
 
   // Traitement du Canvas et Enregistrement final sur Supabase
@@ -785,16 +750,19 @@ const [activeSection, setActiveSection] = useState(() => {
       if (updateError) throw updateError;
 
       if (isAvatar) {
-        avatarPathRef.current = storagePath;
+        // Résolution locale immédiate (retour instantané, sans attendre le
+        // aller-retour Realtime d'AuthContext) — refreshProfile() ci-dessous
+        // garde ensuite AuthContext (et donc tout autre consommateur, ex. le
+        // Header) synchronisé avec la même URL signée.
         const signedUrl = await getSignedAvatarUrl(storagePath);
         setAvatarUrl(signedUrl || finalBase64);
         triggerToast("Photo de profil mise à jour avec succès !", "fa-camera");
       } else {
-        coverPathRef.current = storagePath;
         const signedUrl = await getSignedCoverUrl(storagePath);
         setCoverUrl(signedUrl || finalBase64);
         triggerToast("Photo de couverture mise à jour avec succès !", "fa-image");
       }
+      refreshProfile();
       setCropModalOpen(false);
     } catch (err) {
       console.error(err);

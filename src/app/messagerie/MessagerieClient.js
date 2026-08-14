@@ -2946,16 +2946,16 @@ export default function MessagerieClient() {
 
                               {/* 4. PIÈCES JOINTES EN BAS (VIGNETTES STYLE GMAIL) */}
                               {(msg.attachment_url || msg.file) && (
-                                <div className="px-4 sm:px-8 pt-3 pb-6 border-b border-gray-150">
+                                <div className="pt-3 border-t border-gray-150">
                                   <div className="flex items-center justify-between text-xs text-gray-500 font-bold mb-3">
                                     <span>1 pièce jointe • Analysé & Sécurisé par Facilité 🛡️</span>
                                   </div>
 
                                   <div className="flex flex-wrap gap-3">
-                                    <ChatAttachmentUrl storagePath={msg.attachment_url}>
-                                      {(fileUrl) => (
+                                    <ChatAttachmentUrl path={msg.attachment_url}>
+                                      {(resolvedUrl) => (
                                         <a
-                                          href={fileUrl || "#"}
+                                          href={resolvedUrl || "#"}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           download={msg.file_name || "CV_Candidature.pdf"}
@@ -2975,8 +2975,9 @@ export default function MessagerieClient() {
                                             <i className="fa-solid fa-download text-xs"></i>
                                           </div>
                                         </a>
-                                    )}
-                                  </ChatAttachmentUrl>
+                                      )}
+                                    </ChatAttachmentUrl>
+                                  </div>
                                 </div>
                               )}
                             </div>
