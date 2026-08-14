@@ -279,7 +279,9 @@ export default function LoginPage() {
         {isRecoveryMode ? (
           <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/60 transition-all duration-300 max-h-[85vh] overflow-y-auto no-scrollbar animate-fade-in-up">
             <div className="flex justify-center mb-5">
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
+              <Link href="/" className="cursor-pointer hover:opacity-85 transition" title="Retour à l'accueil Facilite">
+                <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
+              </Link>
             </div>
 
             <div className="text-center mb-8">
@@ -371,7 +373,9 @@ export default function LoginPage() {
 
           {/* Logo officiel du site au-dessus de la carte */}
           <div className="flex justify-center mb-3">
-            <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
+            <Link href="/" className="cursor-pointer hover:opacity-85 transition" title="Retour à l'accueil Facilite">
+              <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
+            </Link>
           </div>
 
           {/* Titre & Sous-titre */}

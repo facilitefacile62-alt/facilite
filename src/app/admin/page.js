@@ -972,11 +972,13 @@ export default function AdminDashboardPage() {
       {/* ------------------------------------------------------------- */}
       <aside className="hidden md:flex w-60 flex-shrink-0 bg-white border-r border-gray-200 flex-col h-screen sticky top-0">
         <div className="flex items-center space-x-2 px-5 py-5 border-b border-gray-100">
-          <Link href="/" className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition">
+          <Link href="/" className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition" title="Retour à l'accueil">
             <i className="fa-solid fa-chevron-left text-xs"></i>
           </Link>
-          <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
-          <span className="text-base font-extrabold text-gray-900 tracking-tight">Facilite</span>
+          <Link href="/" className="flex items-center space-x-2 group cursor-pointer" title="Aller à l'accueil Facilite">
+            <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover border border-gray-200 group-hover:opacity-80 transition" />
+            <span className="text-base font-extrabold text-gray-900 tracking-tight group-hover:text-orange-600 transition">Facilite</span>
+          </Link>
         </div>
 
         <nav className="flex-1 px-3 py-5 overflow-y-auto">{renderNavSections()}</nav>
@@ -1001,10 +1003,10 @@ export default function AdminDashboardPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileNavOpen(false)} />
           <div className="relative w-72 max-w-[85vw] h-full bg-white flex flex-col shadow-2xl animate-in slide-in-from-left duration-200">
             <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
-                <span className="text-base font-extrabold text-gray-900 tracking-tight">Facilite</span>
-              </div>
+              <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center gap-2 group cursor-pointer" title="Aller à l'accueil Facilite">
+                <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover border border-gray-200 group-hover:opacity-80 transition" />
+                <span className="text-base font-extrabold text-gray-900 tracking-tight group-hover:text-orange-600 transition">Facilite</span>
+              </Link>
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(false)}

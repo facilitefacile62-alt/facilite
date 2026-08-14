@@ -86,7 +86,9 @@ export default function ForgotPasswordPage() {
           
           {/* Logo officiel du site au-dessus de la carte */}
           <div className="flex justify-center mb-5">
-            <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
+            <Link href="/" className="cursor-pointer hover:opacity-85 transition" title="Retour à l'accueil Facilite">
+              <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
+            </Link>
           </div>
 
           {/* Titre & Sous-titre */}

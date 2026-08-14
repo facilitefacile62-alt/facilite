@@ -967,10 +967,10 @@ export default function BoiteAIdees() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Colonne 1 : À Propos */}
           <div className="flex flex-col">
-            <div className="flex items-center space-x-2.5 mb-4">
-              <img src="/logo.jpeg" alt="Logo" className="w-7 h-7 rounded-full object-cover" />
-              <h3 className="text-white text-xl font-extrabold">À propos de Facilite</h3>
-            </div>
+            <Link href="/" className="flex items-center space-x-2.5 mb-4 group cursor-pointer" title="Aller à l'accueil Facilite">
+              <img src="/logo.jpeg" alt="Logo" className="w-7 h-7 rounded-full object-cover group-hover:opacity-80 transition" />
+              <h3 className="text-white text-xl font-extrabold group-hover:text-[#10E688] transition">À propos de Facilite</h3>
+            </Link>
             <p className="text-sm leading-relaxed mb-6 text-gray-400 font-medium">
               Facilite est votre allié de confiance pour concevoir des CV percutants et professionnels. Grâce à nos outils intuitifs et nos modèles optimisés, propulsez votre carrière.
             </p>
