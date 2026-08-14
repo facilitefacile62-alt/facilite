@@ -937,7 +937,7 @@ export default function MessagerieClient() {
           );
 
           const receiptMsgs = cands.map((c) => {
-            const recruiterContactEmail = c.job_offers?.contact_email || `recrutement@${(c.company || 'entreprise').toLowerCase().replace(/[^a-z0-9]/g, '') || 'facilite'}.sn`;
+            const recruiterContactEmail = c.recruiter_email || c.job_offers?.contact_email || `recrutement@${(c.company || 'entreprise').toLowerCase().replace(/[^a-z0-9]/g, '') || 'facilite'}.sn`;
             return {
               id: `cand_receipt_${c.id}`,
               sender: "me",

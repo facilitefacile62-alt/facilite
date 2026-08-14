@@ -279,6 +279,7 @@ export async function POST(req) {
         company: company,
         full_name: fullName,
         email: email,
+        recruiter_email: recruiterEmail || null,
         cv_url: primaryCvUrl,
         cover_letter: coverLetter,
         cv_match_score: cvMatchScore,
