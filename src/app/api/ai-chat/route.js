@@ -142,7 +142,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { messages, message, activeAiRole, customSystemPrompt, temperature, attachments } = parsed.data;
+    const { messages, message, activeAiRole, model: requestedModel, customSystemPrompt, temperature, attachments } = parsed.data;
 
     // Normalisation des deux formes acceptées vers un historique unique.
     const historique =
@@ -188,50 +188,103 @@ export async function POST(req) {
       });
     }
 
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) {
-      console.error("Clé DEEPSEEK_API_KEY manquante dans .env");
-      return NextResponse.json(
-        { error: "Configuration serveur incomplète (Clé API DeepSeek manquante)." },
-        { status: 500 }
-      );
+    const temp = typeof temperature === "number" ? temperature : 0.7;
+
+    // 1. Tentative avec DeepSeek (si demandé ou par défaut)
+    if (!requestedModel || requestedModel === "deepseek-chat") {
+      const apiKey = process.env.DEEPSEEK_API_KEY;
+      if (apiKey && !apiKey.includes("[") && apiKey.trim() !== "") {
+        try {
+          const response = await fetch("https://api.deepseek.com/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: "deepseek-chat",
+              messages: [{ role: "system", content: systemPrompt }, ...historique],
+              temperature: temp,
+              stream: false,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const reply = data.choices?.[0]?.message?.content;
+            if (reply) return NextResponse.json({ reply });
+          }
+        } catch (deepseekErr) {
+          console.warn("ai-chat: échec DeepSeek, bascule sur Gemini Flash:", deepseekErr.message);
+        }
+      }
     }
 
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [{ role: "system", content: systemPrompt }, ...historique],
-        temperature: typeof temperature === "number" ? temperature : 0.7,
-        stream: false,
-      }),
-    });
+    // 2. Tentative avec Google Gemini Flash
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey && !geminiKey.includes("[") && geminiKey.trim() !== "") {
+      try {
+        const contents = historique.map((m) => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }],
+        }));
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Erreur réponse DeepSeek:", response.status, errorData);
-      // Le détail de l'erreur amont n'est pas renvoyé au client : il peut
-      // contenir des informations de configuration côté fournisseur.
-      return NextResponse.json(
-        { error: `Erreur API DeepSeek (${response.status})` },
-        { status: response.status }
-      );
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": geminiKey,
+            },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents,
+              generationConfig: { temperature: temp },
+            }),
+          }
+        );
+
+        if (geminiRes.ok) {
+          const geminiData = await geminiRes.json();
+          const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (reply) return NextResponse.json({ reply });
+        }
+      } catch (geminiErr) {
+        console.warn("ai-chat: échec Gemini, bascule sur Groq:", geminiErr.message);
+      }
     }
 
-    const data = await response.json();
-    const reply =
-      data.choices?.[0]?.message?.content || "Désolé, je n'ai pas pu générer de réponse.";
+    // 3. Repli de secours : Groq (Llama 3.3 70B)
+    const groqKey = process.env.GROQ_API_KEY;
+    if (groqKey && !groqKey.includes("[") && groqKey.trim() !== "") {
+      try {
+        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "system", content: systemPrompt }, ...historique],
+            temperature: temp,
+          }),
+        });
 
-    return NextResponse.json({ reply });
-  } catch (error) {
-    console.error("Erreur serveur lors de l'appel DeepSeek:", error);
+        if (groqRes.ok) {
+          const groqData = await groqRes.json();
+          const reply = groqData.choices?.[0]?.message?.content;
+          if (reply) return NextResponse.json({ reply });
+        }
+      } catch (groqErr) {
+        console.error("ai-chat: échec Groq:", groqErr.message);
+      }
+    }
+
     return NextResponse.json(
-      { error: "Erreur serveur interne lors du traitement de votre demande." },
-      { status: 500 }
+      { error: "Aucun fournisseur d'intelligence artificielle n'a pu répondre à la requête." },
+      { status: 503 }
     );
   }
 }

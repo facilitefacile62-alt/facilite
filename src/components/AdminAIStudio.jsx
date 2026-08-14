@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 
 // Modèles IA supportés
 const AI_MODELS = [
@@ -180,6 +181,9 @@ ${productsContext}
 `.trim();
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
       const apiMessages = newHistory.map((m) => ({
         role: m.role,
         content: m.content,
@@ -187,9 +191,13 @@ ${productsContext}
 
       const res = await fetch("/api/ai-chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           messages: apiMessages,
+          model: selectedModel,
           customSystemPrompt: fullSystemPrompt,
           temperature: commStyle === "concis" ? 0.3 : commStyle === "commercial" ? 0.8 : 0.7,
         }),
