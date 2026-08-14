@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import RoleNavLink from "@/components/RoleNavLink";
 import { isFeatureAllowed } from "@/lib/featureFlags";
@@ -159,7 +160,9 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [userSession, setUserSession] = useState(null);
+  // Session/rôle chargés une seule fois pour toute l'app par AuthContext
+  // (Point F1) — plus de getSession() propre à ce composant.
+  const { session: userSession, loading: authLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
@@ -167,8 +170,19 @@ export default function Header() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
 
-  // Centre de notifications Facebook 1:1 connecté à Supabase et aux offres publiées
-  const [notifications, setNotifications] = useState([]);
+  // Centre de notifications Facebook 1:1 : deux flux distincts fusionnés à
+  // l'affichage — dbNotifications (table notifications réelle, is_read
+  // géré côté serveur par mark_notification_read) et jobOfferNotifs (flux
+  // "offres récemment publiées", pas de ligne réelle donc lu/non-lu suivi
+  // via localStorage). Séparés pour permettre un ajout incrémental (une
+  // seule ligne prependée) sur les vraies notifications Realtime, sans
+  // perturber le flux d'offres.
+  const [dbNotifications, setDbNotifications] = useState([]);
+  const [jobOfferNotifs, setJobOfferNotifs] = useState([]);
+  const notifications = useMemo(
+    () => [...dbNotifications, ...jobOfferNotifs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+    [dbNotifications, jobOfferNotifs]
+  );
   const [notificationFilter, setNotificationFilter] = useState("all"); // "all" | "unread"
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [notifOptionsMenuOpen, setNotifOptionsMenuOpen] = useState(false);
@@ -194,8 +208,73 @@ export default function Header() {
     return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   };
 
-  const loadNotifications = useCallback(async (session) => {
-    const userId = session?.user?.id;
+  // Normalise une ligne brute de la table notifications vers le format
+  // d'affichage Facebook-style. is_read vient directement de la colonne
+  // (source de vérité depuis mark_notification_read, Point B) — plus de
+  // repli localStorage ici, contrairement au flux offres ci-dessous qui
+  // n'a pas de ligne réelle donc pas de colonne is_read.
+  const normalizeDbNotification = useCallback((n) => ({
+    id: n.id,
+    type: n.type || "system",
+    title:
+      n.type === "candidature"
+        ? "Nouvelle candidature"
+        : n.type === "reponse"
+        ? "Réponse recruteur"
+        : n.type === "jobs"
+        ? "Offre d'emploi"
+        : n.type === "message"
+        ? "Nouveau message"
+        : n.type === "badge"
+        ? "Statut de votre badge"
+        : "Notification Facilité",
+    content: n.content,
+    link: n.link || "/offres",
+    created_at: n.created_at,
+    is_read: n.is_read,
+    avatar: "/logo.jpeg",
+    badgeIcon:
+      n.type === "candidature"
+        ? "fa-gem"
+        : n.type === "reponse"
+        ? "fa-reply"
+        : n.type === "jobs"
+        ? "fa-briefcase"
+        : n.type === "message"
+        ? "fa-comment"
+        : "fa-bell",
+    badgeBg:
+      n.type === "jobs"
+        ? "bg-[#1877F2]"
+        : n.type === "candidature"
+        ? "bg-[#9333EA]"
+        : n.type === "message"
+        ? "bg-[#10B981]"
+        : "bg-[#1877F2]",
+  }), []);
+
+  const fetchDbNotifications = useCallback(async (userId) => {
+    if (!userId) {
+      setDbNotifications([]);
+      return;
+    }
+    try {
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setDbNotifications((data || []).map(normalizeDbNotification));
+    } catch (err) {
+      console.warn("[Notifications] Erreur chargement:", err);
+    }
+  }, [normalizeDbNotification]);
+
+  // Flux "offres récemment publiées" — indépendant de la table
+  // notifications, pas de ligne réelle donc lu/non-lu suivi via
+  // localStorage (seul état persistant disponible pour ce flux).
+  const fetchJobOfferNotifs = useCallback(async (userId) => {
     let readIds = [];
     if (userId) {
       try {
@@ -205,19 +284,6 @@ export default function Header() {
     }
 
     try {
-      // 1. Notifications depuis Supabase (table notifications)
-      let dbNotifs = [];
-      if (userId) {
-        const { data } = await supabase
-          .from("notifications")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(30);
-        if (data) dbNotifs = data;
-      }
-
-      // 2. Dernières offres d'emploi publiées sur la plateforme (job_offers)
       const { data: offersData } = await supabase
         .from("job_offers")
         .select("id, title, company, location, created_at, recruiter_id, is_active")
@@ -243,55 +309,9 @@ export default function Header() {
           badgeBg: "bg-[#1877F2]",
         };
       });
-
-      const normalizedDbNotifs = (dbNotifs || []).map((n) => ({
-        id: n.id,
-        type: n.type || "system",
-        title:
-          n.type === "candidature"
-            ? "Nouvelle candidature"
-            : n.type === "reponse"
-            ? "Réponse recruteur"
-            : n.type === "jobs"
-            ? "Offre d'emploi"
-            : n.type === "message"
-            ? "Nouveau message"
-            : n.type === "badge"
-            ? "Statut de votre badge"
-            : "Notification Facilité",
-        content: n.content,
-        link: n.link || "/offres",
-        created_at: n.created_at,
-        is_read: n.is_read || readIds.includes(n.id),
-        avatar: "/logo.jpeg",
-        badgeIcon:
-          n.type === "candidature"
-            ? "fa-gem"
-            : n.type === "reponse"
-            ? "fa-reply"
-            : n.type === "jobs"
-            ? "fa-briefcase"
-            : n.type === "message"
-            ? "fa-comment"
-            : "fa-bell",
-        badgeBg:
-          n.type === "jobs"
-            ? "bg-[#1877F2]"
-            : n.type === "candidature"
-            ? "bg-[#9333EA]"
-            : n.type === "message"
-            ? "bg-[#10B981]"
-            : "bg-[#1877F2]",
-      }));
-
-      // Fusion et déduplication antéchronologique
-      const merged = [...normalizedDbNotifs, ...offerNotifs].sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      );
-
-      setNotifications(merged);
+      setJobOfferNotifs(offerNotifs);
     } catch (err) {
-      console.warn("[Notifications] Erreur chargement:", err);
+      console.warn("[Notifications] Erreur chargement offres:", err);
     }
   }, []);
 
@@ -299,42 +319,58 @@ export default function Header() {
 
   const handleMarkAllAsRead = async () => {
     const userId = userSession?.user?.id;
-    const allIds = notifications.map((n) => n.id);
-    if (userId) {
+    const allOfferIds = jobOfferNotifs.map((n) => n.id);
+    if (userId && allOfferIds.length > 0) {
       try {
-        localStorage.setItem(`FACILITE_READ_NOTIFS_${userId}`, JSON.stringify(allIds));
+        const stored = localStorage.getItem(`FACILITE_READ_NOTIFS_${userId}`);
+        const readIds = new Set(stored ? JSON.parse(stored) : []);
+        allOfferIds.forEach((id) => readIds.add(id));
+        localStorage.setItem(`FACILITE_READ_NOTIFS_${userId}`, JSON.stringify([...readIds]));
       } catch {}
     }
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+
+    // Mise à jour optimiste : l'UI passe "tout lu" immédiatement, sans
+    // attendre la réponse de mark_notification_read() pour chaque ligne.
+    const unreadDbNotifs = dbNotifications.filter((n) => !n.is_read);
+    setDbNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setJobOfferNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
 
     if (userId) {
-      notifications
-        .filter((n) => !n.id.startsWith("offer_") && !n.is_read)
-        .forEach((n) => {
-          supabase.rpc("mark_notification_read", { notification_id: n.id }).catch(() => {});
-        });
+      unreadDbNotifs.forEach((n) => {
+        supabase.rpc("mark_notification_read", { notification_id: n.id }).catch(() => {});
+      });
     }
   };
 
   const handleNotificationClick = (item) => {
     const userId = userSession?.user?.id;
-    if (userId) {
-      try {
-        const stored = localStorage.getItem(`FACILITE_READ_NOTIFS_${userId}`);
-        const readIds = stored ? JSON.parse(stored) : [];
-        if (!readIds.includes(item.id)) {
-          readIds.push(item.id);
-          localStorage.setItem(`FACILITE_READ_NOTIFS_${userId}`, JSON.stringify(readIds));
-        }
-      } catch {}
-    }
+    const isRealNotif = !item.id.startsWith("offer_");
 
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n))
-    );
-
-    if (!item.id.startsWith("offer_") && userSession) {
-      supabase.rpc("mark_notification_read", { notification_id: item.id }).catch(() => {});
+    if (isRealNotif) {
+      // Mise à jour optimiste : marque "lu" dans l'UI immédiatement, sans
+      // attendre la réponse de mark_notification_read().
+      setDbNotifications((prev) =>
+        prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n))
+      );
+      if (userSession) {
+        supabase.rpc("mark_notification_read", { notification_id: item.id }).catch(() => {});
+      }
+    } else {
+      // Flux offres : pas de ligne réelle, seul le suivi localStorage
+      // existe pour marquer "lu".
+      if (userId) {
+        try {
+          const stored = localStorage.getItem(`FACILITE_READ_NOTIFS_${userId}`);
+          const readIds = stored ? JSON.parse(stored) : [];
+          if (!readIds.includes(item.id)) {
+            readIds.push(item.id);
+            localStorage.setItem(`FACILITE_READ_NOTIFS_${userId}`, JSON.stringify(readIds));
+          }
+        } catch {}
+      }
+      setJobOfferNotifs((prev) =>
+        prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n))
+      );
     }
 
     setNotificationsModalOpen(false);
@@ -404,21 +440,18 @@ export default function Header() {
     handleNavClick(e, "/", "nav_home", "Accueil");
   };
 
+  // Session/rôle ne sont plus chargés ici (voir useAuth() ci-dessus) — cet
+  // abonnement séparé, minimal, ne sert plus qu'à un seul effet de bord :
+  // notifier /api/auth/confirm-after-login après une connexion OAuth
+  // (Google), qui atterrit directement sur /profil sans repasser par
+  // /login — Header étant monté partout, c'est le seul point commun à
+  // toutes les connexions. login/page.js et PhoneAuthForm.jsx appellent
+  // déjà cette route pour leurs propres flux. Idempotent (annule une
+  // suppression en attente, best-effort).
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserSession(session);
-    });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserSession(session);
-      // Filet de sécurité pour les connexions OAuth (Google) et tout futur
-      // point d'entrée : login/page.js et PhoneAuthForm.jsx appellent déjà
-      // cette route explicitement pour leurs propres flux, mais l'OAuth
-      // atterrit directement sur /profil sans repasser par /login — Header
-      // étant monté partout, c'est le seul point commun à toutes les
-      // connexions. Idempotent (annule une suppression en attente, best-effort).
       if (_event === "SIGNED_IN" && session?.access_token) {
         fetch("/api/auth/confirm-after-login", {
           method: "POST",
@@ -430,32 +463,55 @@ export default function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Synchronisation Realtime des notifications & des offres d'emploi
+  // Chargement + Realtime des notifications & des offres d'emploi. Deux
+  // canaux distincts : les vraies notifications reçoivent un ajout
+  // incrémental (une ligne prependée en tête + badge mis à jour) au lieu
+  // d'un refetch complet à chaque événement ; le flux offres garde son
+  // comportement existant (refetch sur tout changement job_offers).
   useEffect(() => {
-    loadNotifications(userSession);
+    if (authLoading) return;
+    const userId = userSession?.user?.id;
 
-    const channel = supabase
-      .channel("header-notifications-sync")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "job_offers" },
-        () => {
-          loadNotifications(userSession);
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notifications" },
-        () => {
-          loadNotifications(userSession);
-        }
-      )
+    fetchDbNotifications(userId);
+    fetchJobOfferNotifs(userId);
+
+    const channels = [];
+
+    if (userId) {
+      const notifChannel = supabase
+        .channel(`header-notifications-${userId}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            setDbNotifications((prev) => [normalizeDbNotification(payload.new), ...prev].slice(0, 20));
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            setDbNotifications((prev) =>
+              prev.map((n) => (n.id === payload.new.id ? { ...n, is_read: payload.new.is_read } : n))
+            );
+          }
+        )
+        .subscribe();
+      channels.push(notifChannel);
+    }
+
+    const offersChannel = supabase
+      .channel("header-job-offers-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "job_offers" }, () => {
+        fetchJobOfferNotifs(userId);
+      })
       .subscribe();
+    channels.push(offersChannel);
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach((c) => supabase.removeChannel(c));
     };
-  }, [userSession, loadNotifications]);
+  }, [authLoading, userSession, fetchDbNotifications, fetchJobOfferNotifs, normalizeDbNotification]);
 
   // 2. Debounce de 300ms pour éviter d'inonder le backend FastAPI
   useEffect(() => {
