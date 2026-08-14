@@ -2191,19 +2191,20 @@ export default function ProfilPage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-900/30 to-indigo-950/50"></div>
 
                 {/* Bouton Changer la photo de couverture avec menu déroulant */}
-                <div className={`absolute top-4 right-4 z-30 ${profileLoading ? "hidden" : ""}`} ref={coverMenuRef}>
+                <div className={`absolute top-3.5 right-3.5 z-30 ${profileLoading ? "hidden" : ""}`} ref={coverMenuRef}>
                   <button
                     type="button"
                     onClick={() => setCoverMenuOpen(!coverMenuOpen)}
-                    className="bg-white/95 hover:bg-white text-gray-800 p-2.5 px-4 rounded-full shadow-lg text-xs font-extrabold transition flex items-center space-x-2 cursor-pointer backdrop-blur-md active:scale-95 border border-gray-200"
+                    className="bg-white/95 hover:bg-white text-gray-900 w-10 h-10 rounded-2xl shadow-md text-sm font-extrabold transition flex items-center justify-center cursor-pointer backdrop-blur-md active:scale-95 border border-gray-100 hover:shadow-lg"
+                    title="Changer la photo de couverture"
+                    aria-label="Changer la photo de couverture"
                   >
-                    <i className="fa-solid fa-camera text-gray-800 text-sm"></i>
-                    <span className="hidden sm:inline">Changer la photo de couverture</span>
+                    <i className="fa-solid fa-camera text-gray-800 text-base"></i>
                   </button>
 
                   {/* Menu Déroulant Couverture */}
                   {coverMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-50 animate-fade-in-up">
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-gray-100 shadow-2xl py-1.5 z-50 animate-fade-in-up">
                       <button
                         type="button"
                         onClick={() => {
@@ -2212,7 +2213,7 @@ export default function ProfilPage() {
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left"
                       >
-                        <i className="fa-regular fa-image text-gray-600 text-sm w-5 text-center"></i>
+                        <i className="fa-regular fa-image text-gray-600 text-base w-5 text-center"></i>
                         <span>Choisir une photo de couverture</span>
                       </button>
                       <button
@@ -2223,7 +2224,7 @@ export default function ProfilPage() {
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left"
                       >
-                        <i className="fa-solid fa-upload text-gray-600 text-sm w-5 text-center"></i>
+                        <i className="fa-solid fa-arrow-up-from-bracket text-gray-600 text-base w-5 text-center"></i>
                         <span>Importer une photo</span>
                       </button>
                       <button
@@ -2240,11 +2241,12 @@ export default function ProfilPage() {
                             triggerToast("Veuillez d'abord choisir une photo", "fa-info-circle");
                           }
                         }}
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left border-b border-gray-100"
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left"
                       >
-                        <i className="fa-solid fa-arrows-up-down-left-right text-gray-600 text-sm w-5 text-center"></i>
+                        <i className="fa-solid fa-arrows-up-down-left-right text-gray-600 text-base w-5 text-center"></i>
                         <span>Repositionner</span>
                       </button>
+                      <div className="border-t border-gray-100 my-1"></div>
                       <button
                         type="button"
                         onClick={async () => {
@@ -2262,7 +2264,7 @@ export default function ProfilPage() {
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition cursor-pointer text-left"
                       >
-                        <i className="fa-regular fa-trash-can text-red-500 text-sm w-5 text-center"></i>
+                        <i className="fa-regular fa-trash-can text-red-500 text-base w-5 text-center"></i>
                         <span>Supprimer</span>
                       </button>
                     </div>
