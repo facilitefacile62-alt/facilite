@@ -144,10 +144,10 @@ export default function SocialShareButtons({
   if (variant === "compact") {
     return (
       <div className={`relative w-full pt-2 border-t border-gray-100 ${className}`} ref={dropdownRef}>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2">
           {/* Action 1 : J'aime avec Barre de Réactions Flottante (Style Facebook/LinkedIn) */}
           <div
-            className="relative flex-1"
+            className="relative flex-1 min-w-0"
             onMouseEnter={handleMouseEnterLike}
             onMouseLeave={handleMouseLeaveLike}
           >
@@ -175,30 +175,30 @@ export default function SocialShareButtons({
             <button
               type="button"
               onClick={handleLikeButtonClick}
-              className={`w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer border ${
+              className={`w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer border truncate ${
                 activeReaction
                   ? `${activeReaction.color} ${activeReaction.bg} border-transparent shadow-xs`
                   : "text-gray-700 bg-gray-50/90 hover:bg-gray-100 border-gray-200/80 hover:border-gray-300"
               }`}
             >
               {activeReaction ? (
-                <span className="text-sm select-none">{activeReaction.emoji}</span>
+                <span className="text-xs sm:text-sm select-none">{activeReaction.emoji}</span>
               ) : (
-                <i className="fa-regular fa-thumbs-up text-sm"></i>
+                <i className="fa-regular fa-thumbs-up text-xs sm:text-sm"></i>
               )}
-              <span>{activeReaction ? activeReaction.label : "J'aime"}</span>
+              <span className="truncate">{activeReaction ? activeReaction.label : "J'aime"}</span>
             </button>
           </div>
 
           {/* Action 2 : Partager (Bouton Élégant avec Menu Déroulant) */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setDropdownOpen((prev) => !prev);
               }}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-50/80 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs transition-all border border-emerald-200/90 shadow-2xs cursor-pointer active:scale-95"
+              className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-emerald-50/80 hover:bg-emerald-100 text-emerald-800 font-extrabold text-[11px] sm:text-xs transition-all border border-emerald-200/90 shadow-2xs cursor-pointer active:scale-95 truncate"
               title="Partager cette annonce"
             >
               {/* Flèche incurvée de partage */}
@@ -379,25 +379,25 @@ export default function SocialShareButtons({
           </div>
 
           {/* Action 3 : Envoyer / Postuler (Bouton Principal Vert Fluo #10E688) */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {externalLink ? (
               <a
                 href={externalLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black text-xs transition-all shadow-[0_2px_8px_rgba(16,230,136,0.3)] transform hover:-translate-y-0.5 cursor-pointer text-center"
+                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black text-[11px] sm:text-xs transition-all shadow-[0_2px_8px_rgba(16,230,136,0.3)] transform hover:-translate-y-0.5 cursor-pointer text-center truncate"
               >
-                <i className="fa-solid fa-paper-plane text-xs"></i>
-                <span>{externalButtonLabel || "Envoyer"}</span>
+                <i className="fa-solid fa-paper-plane text-xs flex-shrink-0"></i>
+                <span className="truncate">{externalButtonLabel || "Envoyer"}</span>
               </a>
             ) : (
               <button
                 type="button"
                 onClick={() => onApply && onApply(offer)}
-                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black text-xs transition-all shadow-[0_2px_8px_rgba(16,230,136,0.3)] transform hover:-translate-y-0.5 cursor-pointer text-center"
+                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black text-[11px] sm:text-xs transition-all shadow-[0_2px_8px_rgba(16,230,136,0.3)] transform hover:-translate-y-0.5 cursor-pointer text-center truncate"
               >
-                <i className="fa-solid fa-paper-plane text-xs"></i>
-                <span>Envoyer</span>
+                <i className="fa-solid fa-paper-plane text-xs flex-shrink-0"></i>
+                <span className="truncate">Envoyer</span>
               </button>
             )}
           </div>
