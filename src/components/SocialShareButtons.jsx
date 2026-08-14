@@ -40,7 +40,8 @@ export default function SocialShareButtons({
   const location = offer?.location || "Sénégal";
   const contract = offer?.contract || offer?.contract_type || "CDI";
 
-  const hash = offerId ? offerId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) : 42;
+  const strOfferId = offerId ? String(offerId) : "";
+  const hash = strOfferId ? strOfferId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) : 42;
   const initialLikes = (hash * 17) % 800 + 45;
   const commentsCount = (hash * 7) % 350 + 12;
   const initialShares = (hash * 3) % 80 + 5;
