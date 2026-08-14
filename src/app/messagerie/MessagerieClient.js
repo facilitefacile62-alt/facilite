@@ -891,61 +891,82 @@ export default function MessagerieClient() {
           triggerToast("Erreur de chargement de la discussion", "fa-triangle-exclamation");
         }
 
-        // Chargement des candidatures de l'utilisateur pour créer une carte distincte par offre
+        // Chargement des candidatures de l'utilisateur
         const { data: userCandidatures } = await supabase
           .from("candidatures")
           .select("*")
           .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: true }); // Du plus ancien au plus récent
 
-        // Créer une carte distincte pour chaque candidature envoyée
-        const candidatureCards = (userCandidatures || []).map((cand) => {
+        // Regrouper les candidatures par offre ou par e-mail destinataire pour éviter les doublons de cartes
+        const groupedCandidatures = new Map();
+        for (const cand of (userCandidatures || [])) {
+          const groupKey = cand.job_offer_id
+            ? `offer_${cand.job_offer_id}`
+            : cand.email
+            ? `email_${cand.email.toLowerCase().trim()}`
+            : `job_${(cand.job_title || "offre").toLowerCase().trim()}_${(cand.company || "ent").toLowerCase().trim()}`;
+
+          if (!groupedCandidatures.has(groupKey)) {
+            groupedCandidatures.set(groupKey, []);
+          }
+          groupedCandidatures.get(groupKey).push(cand);
+        }
+
+        // Créer une carte unique par offre/e-mail avec un compteur si plusieurs envois
+        const candidatureCards = Array.from(groupedCandidatures.entries()).map(([groupKey, cands]) => {
+          const latestCand = cands[cands.length - 1];
+          const offerIds = new Set(cands.map((c) => c.job_offer_id).filter(Boolean));
           const matchedMsgs = formattedMsgs.filter(
             (m) =>
-              (cand.job_offer_id && m.jobOfferId === cand.job_offer_id) ||
-              (m.typeDiscussion === "OFFRE" && m.text && m.text.includes(cand.job_title))
+              (m.jobOfferId && offerIds.has(m.jobOfferId)) ||
+              (m.typeDiscussion === "OFFRE" && m.text && m.text.includes(latestCand.job_title))
           );
 
-          const defaultMsg = {
-            id: `cand_receipt_${cand.id}`,
+          const receiptMsgs = cands.map((c) => ({
+            id: `cand_receipt_${c.id}`,
             sender: "me",
             senderId: session.user.id,
-            receiverId: cand.recruiter_id || null,
-            text: `💼 Candidature envoyée pour le poste : ${cand.job_title} (${cand.company})\n📧 Destinataire : ${cand.email || "Recruteur"}\n📊 Score CV : ${cand.cv_match_score || 0}%\n💬 Message d'accompagnement : ${cand.cover_letter || "Aucun message d'accompagnement"}`,
-            time: new Date(cand.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            createdAt: cand.created_at,
+            receiverId: c.recruiter_id || null,
+            text: `💼 Candidature envoyée pour le poste : ${c.job_title} (${c.company})\n📧 Destinataire : ${c.email || "Recruteur"}\n📊 Score CV : ${c.cv_match_score || 0}%\n💬 Message d'accompagnement : ${c.cover_letter || "Aucun message d'accompagnement"}`,
+            time: new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            createdAt: c.created_at,
             status: "delivered",
             isPinned: false,
             persisted: true,
             typeDiscussion: "OFFRE",
-            jobOfferId: cand.job_offer_id,
-            attachment_url: cand.cv_url,
+            jobOfferId: c.job_offer_id,
+            attachment_url: c.cv_url,
             file_name: "CV_Candidature.pdf",
             isCandidatureReceipt: true,
-            candidatureData: cand,
-          };
+            candidatureData: c,
+          }));
 
-          const cardMessages = matchedMsgs.length > 0 ? matchedMsgs : [defaultMsg];
-          const lastMsg = cardMessages[cardMessages.length - 1];
+          const allGroupMessages = matchedMsgs.length > 0 ? matchedMsgs : receiptMsgs;
+          const lastMsg = allGroupMessages[allGroupMessages.length - 1];
 
           return {
-            id: `cand_${cand.id}`,
-            candidatureId: cand.id,
-            name: cand.job_title || "Offre d'emploi",
-            title: `Candidature • ${cand.company || "Entreprise"}`,
-            company: cand.company || "Entreprise",
+            id: `cand_group_${groupKey}`,
+            candidatureId: latestCand.id,
+            name: latestCand.job_title || "Offre d'emploi",
+            title: `Candidature • ${latestCand.company || "Entreprise"}`,
+            company: latestCand.company || "Entreprise",
             avatarColor: "bg-emerald-600",
-            avatarInitials: (cand.company || "OF").slice(0, 2).toUpperCase(),
+            avatarInitials: (latestCand.company || "OF").slice(0, 2).toUpperCase(),
             logo: null,
-            lastMessage: `✅ Candidature transmise : ${cand.job_title}`,
-            time: lastMsg.time || new Date(cand.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            sendCount: cands.length,
+            lastMessage: cands.length > 1
+              ? `✅ ${cands.length} candidatures envoyées`
+              : `✅ Candidature transmise : ${latestCand.job_title}`,
+            time: lastMsg.time || new Date(latestCand.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             unreadCount: 0,
             online: false,
             favorite: false,
             typeDiscussion: "OFFRE",
             isCandidature: true,
-            candidatureData: cand,
-            messages: cardMessages,
+            candidatureData: latestCand,
+            allCandidatures: cands,
+            messages: allGroupMessages,
           };
         });
 
@@ -2507,6 +2528,11 @@ export default function MessagerieClient() {
                       <div className="flex justify-between items-baseline mb-1">
                         <div className="flex items-center space-x-1.5 min-w-0 pr-2">
                           <h3 className="text-sm font-extrabold text-gray-900 truncate">{conv.name}</h3>
+                          {conv.sendCount > 1 && (
+                            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0" title={`${conv.sendCount} candidatures envoyées`}>
+                              {conv.sendCount}
+                            </span>
+                          )}
                           {conv.favorite && (
                             <i className="fa-solid fa-heart text-red-500 text-[10px]" title="Favori"></i>
                           )}
