@@ -2980,7 +2980,6 @@ export default function MessagerieClient() {
                                 </div>
                               )}
                             </div>
-                          </div>
                         );
                       }
 
