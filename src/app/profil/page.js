@@ -8,7 +8,7 @@ import Link from "next/link";
 // le fichier (piège rencontré en testant : "Image is not a constructor").
 import NextImage from "next/image";
 import { usePathname } from "next/navigation";
-import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut, getSignedCvUrl, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import AIAssistantModal from "@/components/AIAssistantModal";
 import RoleBadge from "@/components/RoleBadge";
@@ -2247,7 +2247,6 @@ const [activeSection, setActiveSection] = useState(() => {
                         type="button"
                         onClick={async () => {
                           setCoverMenuOpen(false);
-                          coverPathRef.current = "/stellar-cover.png";
                           setCoverUrl("/stellar-cover.png");
                           if (userSession?.user) {
                             await supabase.from("profiles").upsert({
@@ -2255,6 +2254,7 @@ const [activeSection, setActiveSection] = useState(() => {
                               cover_url: "/stellar-cover.png",
                               updated_at: new Date().toISOString()
                             });
+                            refreshProfile();
                           }
                           triggerToast("Couverture réinitialisée", "fa-trash-can");
                         }}

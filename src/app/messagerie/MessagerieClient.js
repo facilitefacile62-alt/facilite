@@ -1904,7 +1904,7 @@ export default function MessagerieClient() {
   });
 
   return (
-    <div suppressHydrationWarning>
+    <div className="h-[calc(100dvh-64px)] max-h-[calc(100dvh-64px)] overflow-hidden flex flex-col w-full" suppressHydrationWarning>
       {/* Toast Notification Top Floating */}
       <div
         className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
@@ -2350,19 +2350,7 @@ export default function MessagerieClient() {
       </nav>
 
       {/* Interface de Messagerie */}
-      {/*
-        min-h-screen laissait le <main> grandir avec le contenu (une longue
-        conversation poussait la zone de saisie hors de l'écran, obligeant à
-        faire défiler toute la page). h-screen + overflow-hidden verrouille
-        la hauteur au viewport une fois pour toutes ; c'est la boîte de chat
-        ci-dessous (flex-1 overflow-y-auto sur la zone de messages) qui doit
-        seule défiler, jamais la page.
-      */}
-      <main className="h-screen overflow-hidden bg-[#F4F2EE] pt-16 pb-4 md:pb-10 px-4 md:px-6">
-        {/* h-full seul (pas de calc() redondant en doublon, qui entrait en
-            conflit avec h-full selon l'ordre de génération des classes
-            Tailwind) : la hauteur vient désormais uniquement du <main>
-            ci-dessus, correctement borné au viewport. */}
+      <main className="flex-1 h-full min-h-0 max-h-full overflow-hidden bg-[#F4F2EE] p-2 sm:p-3 md:p-4 flex flex-col w-full">
         <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs h-full min-h-0 flex flex-row w-full overflow-hidden">
 
           {/* COLONNE GAUCHE : LISTE DES DISCUSSIONS */}
