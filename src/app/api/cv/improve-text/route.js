@@ -108,7 +108,12 @@ export async function POST(req) {
     if (!improved) {
       // Rembourse le crédit consommé : l'utilisateur ne doit pas payer un
       // appel IA qui a échoué côté fournisseur (clés manquantes, panne...).
-      await admin.rpc("refund_credit", { p_user_id: user.id }).catch(() => {});
+      // PostgrestBuilder n'implémente que .then(), pas .catch() — un vrai
+      // Promise. .catch(...) directement dessus lève "catch is not a
+      // function", ce qui court-circuitait le remboursement ET faisait
+      // remonter un 500 générique au lieu du 502 voulu (trouvé en testant
+      // Header.jsx en conditions réelles, même bug).
+      await admin.rpc("refund_credit", { p_user_id: user.id }).then(null, () => {});
       return NextResponse.json(
         { error: "Le service de reformulation IA est momentanément indisponible." },
         { status: 502 }
