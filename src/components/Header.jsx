@@ -337,7 +337,10 @@ export default function Header() {
 
     if (userId) {
       unreadDbNotifs.forEach((n) => {
-        supabase.rpc("mark_notification_read", { notification_id: n.id }).catch(() => {});
+        // PostgrestBuilder n'implémente que .then(), pas .catch() — un
+        // vrai Promise. .catch(...) directement dessus lève "catch is not
+        // a function" (trouvé en testant ce clic en conditions réelles).
+        supabase.rpc("mark_notification_read", { notification_id: n.id }).then(null, () => {});
       });
     }
   };
@@ -353,7 +356,7 @@ export default function Header() {
         prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n))
       );
       if (userSession) {
-        supabase.rpc("mark_notification_read", { notification_id: item.id }).catch(() => {});
+        supabase.rpc("mark_notification_read", { notification_id: item.id }).then(null, () => {});
       }
     } else {
       // Flux offres : pas de ligne réelle, seul le suivi localStorage

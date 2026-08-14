@@ -501,12 +501,6 @@ export default function OffreDetailClient({ initialOffer }) {
                     <i className="fa-solid fa-location-dot text-emerald-600 w-4 text-center"></i>
                     <span>{offer.location}</span>
                   </div>
-                  {offer.salary_range && (
-                    <div className="flex items-center gap-2">
-                      <i className="fa-solid fa-coins text-emerald-600 w-4 text-center"></i>
-                      <span>{offer.salary_range}</span>
-                    </div>
-                  )}
                   {offer.contact_email && (
                     <div className="flex items-center gap-2">
                       <i className="fa-solid fa-envelope text-emerald-600 w-4 text-center"></i>
@@ -525,8 +519,8 @@ export default function OffreDetailClient({ initialOffer }) {
                   )}
                 </div>
 
-                {/* Boutons de Partage Universels sur les Réseaux Sociaux */}
-                <SocialShareButtons offer={offer} variant="banner" className="mb-8" />
+                {/* Barre d'Engagement & Partage Réseau Social (Style Facebook Compact) */}
+                <SocialShareButtons offer={offer} variant="compact" className="my-6" />
 
                 <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line leading-relaxed mb-8">
                   {offer.description}
