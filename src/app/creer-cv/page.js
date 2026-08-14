@@ -278,7 +278,7 @@ const cvTemplates = [
   { id: "executif", num: 5, name: "Modèle 5 — Exécutif", category: "Bandeau formel & dense", icon: "fa-briefcase", previewUrl: "/model5.png", accentColor: "#1E293B" },
   { id: "creatif", num: 6, name: "Modèle 6 — Créatif", category: "Coloré & asymétrique", icon: "fa-palette", previewUrl: "/model6.png", accentColor: "#8B5CF6" },
   { id: "technique", num: 7, name: "Modèle 7 — Technique", category: "Grille de compétences", icon: "fa-code", previewUrl: "/model7.png", accentColor: "#059669" },
-  { id: "professionnel", num: 8, name: "Modèle 8 — Professionnel", category: "2 Colonnes Pro", icon: "fa-user-tie", previewUrl: "/model8.png", accentColor: "#D97706" },
+  { id: "professionnel", num: 8, name: "Modèle 8 — Professionnel Canva", category: "Style Canva 1:1 (Cadres & Badges)", icon: "fa-palette", previewUrl: "/model8.png", accentColor: "#382F2D" },
   { id: "elegance", num: 9, name: "Modèle 9 — Élégance", category: "Sidebar noire, touches dorées", icon: "fa-crown", previewUrl: "/model9.png", accentColor: "#B45309" }
 ];
 
@@ -1434,6 +1434,38 @@ export default function CreerCv() {
                         placeholder="Rechercher un modèle..."
                         className="w-full bg-slate-800/90 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-hidden focus:border-blue-500"
                       />
+                    </div>
+
+                    {/* BANNIÈRE QUICK ACTION: COPIER / COLLER LE STYLE CANVA 1:1 */}
+                    <div className="p-3 bg-gradient-to-br from-amber-950/80 via-slate-900 to-amber-900/60 rounded-2xl border border-amber-500/50 shadow-lg space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-xs border border-amber-400/40">
+                          <i className="fa-solid fa-wand-magic-sparkles"></i>
+                        </span>
+                        <div>
+                          <div className="text-xs font-black text-white flex items-center gap-1.5">
+                            <span>Style Canva 1:1 Officiel</span>
+                            <span className="text-[9px] bg-amber-500 text-gray-950 px-1.5 py-0.2 rounded font-black">Top</span>
+                          </div>
+                          <div className="text-[9px] text-amber-200/80 font-medium">Cadres espresso, cartes sable & badges</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedTemplate("professionnel");
+                          setAccentColor("#382F2D");
+                          setCanvaFontFamily("font-sans");
+                          setCanvaPhotoShape("rounded");
+                          setCanvaPhotoBorderWidth(2);
+                          setCanvaPhotoBorderColor("#382F2D");
+                          triggerToast("Style Canva 1:1 appliqué à votre CV !", "fa-palette");
+                        }}
+                        className="w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-black text-xs rounded-xl transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                      >
+                        <i className="fa-solid fa-copy"></i>
+                        <span>Copier & Coller le Style Canva</span>
+                      </button>
                     </div>
 
                     <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between pt-1">
@@ -2906,7 +2938,7 @@ export default function CreerCv() {
                       { id: "executif", num: 5, name: "Modèle 5 — Exécutif", desc: "Bandeau formel & dense", icon: "fa-briefcase", previewUrl: "/model5.png" },
                       { id: "creatif", num: 6, name: "Modèle 6 — Créatif", desc: "Coloré & asymétrique", icon: "fa-palette", previewUrl: "/model6.png" },
                       { id: "technique", num: 7, name: "Modèle 7 — Technique", desc: "Grille de compétences", icon: "fa-code", previewUrl: "/model7.png" },
-                      { id: "professionnel", num: 8, name: "Modèle 8 — Professionnel", desc: "2 Colonnes Pro", icon: "fa-user-tie", previewUrl: "/model8.png" },
+                      { id: "professionnel", num: 8, name: "Modèle 8 — Professionnel Canva", desc: "Style Canva 1:1 (Cadres & Badges)", icon: "fa-palette", previewUrl: "/model8.png" },
                       { id: "elegance", num: 9, name: "Modèle 9 — Élégance", desc: "Sidebar noire, touches dorées", icon: "fa-crown", previewUrl: "/model9.png" }
                     ].map((tpl) => {
                       const active = selectedTemplate === tpl.id;
@@ -4219,17 +4251,15 @@ export default function CreerCv() {
                   </div>
                 )}
 
-                {/* --- TEMPLATE 7: PROFESSIONNEL (2 Colonnes Pro) --- */}
+                {/* --- TEMPLATE 8: PROFESSIONNEL CANVA (Style Canva 1:1 - Cadres, Cartes Sables & Badges) --- */}
                 {selectedTemplate === "professionnel" && (
-                  <div className="flex w-full h-full text-xs flex-grow font-sans">
+                  <div className="flex flex-col w-full h-full text-xs flex-grow font-sans bg-[#FBF9F5] border-[3px] border-[#382F2D] text-[#382F2D] select-none overflow-hidden">
                     
-                    {/* Left Column (Grey Background) */}
-                    <div className="w-[35%] bg-[#e6e6e6] p-5 flex flex-col flex-shrink-0 relative overflow-hidden">
-                      {/* Dark strip at top */}
-                      <div className="absolute top-0 left-0 w-full h-[120px] bg-[#20232a]"></div>
+                    {/* TOP HEADER (Full Width with 3 zones) */}
+                    <div className="bg-[#FAF7F2] border-b-2 border-[#382F2D] p-3 flex items-center justify-between gap-3 flex-shrink-0">
                       
-                      {/* Profile Picture */}
-                      <div className="relative z-10 w-32 h-32 rounded-full border-4 border-white bg-[#20232a] flex items-center justify-center mx-auto mt-2 mb-6 shadow-md flex-shrink-0 select-none overflow-hidden">
+                      {/* 1. Zone Photo (Cadre beige foncé avec photo centrée) */}
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#EDE6DC] border-2 border-[#382F2D] rounded-2xl p-1 flex items-center justify-center shadow-xs flex-shrink-0 relative overflow-hidden">
                         {photoPreview ? (
                           <img
                             src={photoPreview}
@@ -4247,203 +4277,258 @@ export default function CreerCv() {
                               transition: "none",
                               cursor: "move"
                             }}
-                            className="w-full h-full object-cover select-none bg-white"
+                            className="w-full h-full object-cover rounded-xl select-none"
                           />
                         ) : (
-                          <span className="text-white font-serif italic text-4xl">CV</span>
+                          <div className="w-full h-full rounded-xl bg-[#FAF7F2] border border-[#382F2D]/40 flex flex-col items-center justify-center text-[#382F2D]">
+                            <i className="fa-solid fa-user text-2xl mb-0.5 text-[#382F2D]/70"></i>
+                            <span className="text-[8px] font-black uppercase tracking-wider">Photo</span>
+                          </div>
                         )}
                       </div>
 
-                      {/* Contact */}
-                      <h3 className="text-lg font-bold text-center mb-4 text-black border-b-2 border-slate-300 pb-1">{cvData.sectionTitles?.contact?.toUpperCase() || "CONTACT"}</h3>
-                      <ul className="space-y-3 mb-6 font-bold text-black border-l-2 border-[#10E688] pl-2 text-[10px]">
-                        {cvData.phone && (
-                          <li className="flex items-center space-x-2">
-                            <i className="fa-solid fa-mobile-screen text-[#10E688] w-4 text-center"></i>
-                            <span>{cvData.phone}</span>
-                          </li>
-                        )}
-                        {cvData.email && (
-                          <li className="flex items-center space-x-2">
-                            <i className="fa-solid fa-envelope text-[#10E688] w-4 text-center"></i>
-                            <span className="break-all">{cvData.email}</span>
-                          </li>
-                        )}
-                        {(cvData.address || cvData.city) && (
-                          <li className="flex items-center space-x-2">
-                            <i className="fa-solid fa-location-dot text-[#10E688] w-4 text-center"></i>
-                            <span>
-                              {cvData.address && `${cvData.address}, `}
-                              {cvData.city}
-                            </span>
-                          </li>
-                        )}
-                      </ul>
-
-                      {/* Qualités */}
-                      {(cvData.qualities?.length > 0) && (
-                        <div className="mb-5">
-                          <h3 className="text-sm font-bold text-black uppercase mb-2 flex items-center border-b-4 border-slate-500 pb-1 w-max">
-                            <i className="fa-solid fa-star text-yellow-400 mr-2"></i> QUALITÉS
-                          </h3>
-                          <ul className="list-disc list-inside space-y-1 font-bold text-black text-[10px] pl-2">
-                            {cvData.qualities.map(q => (
-                              <li key={q.id}>{q.name}</li>
-                            ))}
-                          </ul>
+                      {/* 2. Zone Nom & Titre (Boîte encadrée principale) */}
+                      <div className="flex-grow flex flex-col items-center justify-center text-center px-2">
+                        {/* Name Box */}
+                        <div className="w-full bg-[#FAF7F2] border-2 border-[#382F2D] rounded-xl px-4 py-1.5 shadow-xs">
+                          <h1 className="text-sm sm:text-base font-black uppercase tracking-wider text-[#382F2D] leading-tight">
+                            {cvData.firstName || "Amadou"} {cvData.lastName || "Hamidou Sarr"}
+                          </h1>
                         </div>
-                      )}
-
-                      {/* Informatique */}
-                      {(cvData.itSkills?.length > 0) && (
-                        <div className="mb-5">
-                          <h3 className="text-sm font-bold text-black uppercase mb-2 flex items-center border-b-4 border-slate-500 pb-1 w-max">
-                            <i className="fa-solid fa-screwdriver-wrench text-slate-500 mr-2"></i> INFORMATIQUE
-                          </h3>
-                          <ul className="list-disc list-inside space-y-1 font-bold text-black text-[10px] pl-2">
-                            {cvData.itSkills.map(s => (
-                              <li key={s.id}>{s.name}</li>
-                            ))}
-                          </ul>
+                        {/* Title Pill Box */}
+                        <div className="bg-[#EDE6DC] border border-[#382F2D] rounded-full px-4 py-0.5 mt-1 shadow-xs">
+                          <h2 className="text-[9.5px] font-black uppercase tracking-wide text-[#382F2D]">
+                            {cvData.experiences[0]?.title || cvData.jobTitle || "Technicien en Froid et Climatisation"}
+                          </h2>
                         </div>
-                      )}
+                      </div>
 
-                      {/* Langues */}
-                      {(cvData.languages?.length > 0) && (
-                        <div className="mb-5">
-                          <h3 className="text-sm font-bold text-black uppercase mb-2 flex items-center border-b-4 border-slate-500 pb-1 w-max">
-                            <i className="fa-solid fa-globe text-blue-500 mr-2"></i>{cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}</h3>
-                          <ul className="list-disc list-inside space-y-1 font-bold text-black text-[10px] pl-2">
-                            {cvData.languages.map(l => (
-                              <li key={l.id}>{l.name} : <span className="font-normal text-[9px]">{l.level}</span></li>
-                            ))}
-                          </ul>
+                      {/* 3. Zone Monogramme / Cachet Graphique Canva */}
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#EDE6DC] border-2 border-[#382F2D] rounded-2xl p-1.5 flex flex-col items-center justify-center flex-shrink-0 shadow-xs relative overflow-hidden">
+                        <div className="relative w-8 h-8 flex flex-col justify-center items-center">
+                          <div className="w-6 h-1.5 bg-[#382F2D] rounded-full -rotate-45 mb-0.5 transform translate-x-1"></div>
+                          <div className="w-8 h-1.5 bg-[#382F2D] rounded-full -rotate-45 mb-0.5"></div>
+                          <div className="w-5 h-1 bg-[#382F2D] rounded-full -rotate-45 -translate-x-1"></div>
+                          <div className="absolute right-0.5 bottom-0.5 w-1.5 h-1.5 rounded-full border border-[#382F2D] bg-[#FAF7F2]"></div>
                         </div>
-                      )}
-
-                      {/* Centres d'intérêt */}
-                      {(cvData.hobbies?.length > 0) && (
-                        <div className="mb-5">
-                          <h3 className="text-sm font-bold text-black uppercase mb-2 flex items-center border-b-4 border-slate-500 pb-1 w-max">
-                            <i className="fa-regular fa-lightbulb text-yellow-400 mr-2"></i> CENTRES D'INTÉRÊT
-                          </h3>
-                          <ul className="list-disc list-inside space-y-1 font-bold text-black text-[10px] pl-2">
-                            {cvData.hobbies.map(h => (
-                              <li key={h.id}>{h.name}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      </div>
 
                     </div>
 
-                    {/* Right Column (White Background) */}
-                    <div className="w-[65%] bg-white flex flex-col">
+                    {/* BODY AREA (2 Columns: Left Sidebar ~37% & Right Main ~63%) */}
+                    <div className="flex flex-grow w-full overflow-hidden">
                       
-                      {/* Header Title */}
-                      <div className="bg-[#20232a] text-white pt-10 pb-4 px-6 mb-4 h-[120px] flex flex-col justify-end">
-                        <h1 className="text-3xl font-black uppercase tracking-wide leading-none mb-1">
-                          {cvData.firstName} {cvData.lastName}
-                        </h1>
-                        <div className="h-0.5 w-full bg-white my-1.5 opacity-80"></div>
-                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-white mt-1">
-                          {cvData.experiences[0]?.title || "Titre Professionnel"}
-                        </h2>
+                      {/* LEFT COLUMN (Sable / Beige Sidebar with Framed Cards) */}
+                      <div className="w-[37%] bg-[#EDE6DC] border-r-2 border-[#382F2D] p-2 flex flex-col justify-between overflow-y-auto space-y-1.5">
+                        <div>
+                          
+                          {/* CONTACT */}
+                          <div className="mb-1.5">
+                            <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 text-center shadow-xs">
+                              {cvData.sectionTitles?.contact?.toUpperCase() || "CONTACT"}
+                            </div>
+                            <div className="space-y-0.5">
+                              {cvData.phone && (
+                                <div className="bg-[#FAF7F2] border border-[#382F2D] rounded-lg px-2 py-0.5 text-[8px] font-bold text-[#382F2D] flex items-center gap-1.5 shadow-xs">
+                                  <i className="fa-solid fa-mobile-screen text-emerald-600 text-[8.5px] w-3 text-center"></i>
+                                  <span className="truncate">{cvData.phone}</span>
+                                </div>
+                              )}
+                              {cvData.email && (
+                                <div className="bg-[#FAF7F2] border border-[#382F2D] rounded-lg px-2 py-0.5 text-[8px] font-bold text-[#382F2D] flex items-center gap-1.5 shadow-xs">
+                                  <i className="fa-solid fa-envelope text-blue-600 text-[8.5px] w-3 text-center"></i>
+                                  <span className="break-all truncate">{cvData.email}</span>
+                                </div>
+                              )}
+                              {(cvData.address || cvData.city) && (
+                                <div className="bg-[#FAF7F2] border border-[#382F2D] rounded-lg px-2 py-0.5 text-[8px] font-bold text-[#382F2D] flex items-center gap-1.5 shadow-xs">
+                                  <i className="fa-solid fa-location-dot text-red-600 text-[8.5px] w-3 text-center"></i>
+                                  <span className="truncate">{cvData.address ? `${cvData.address}, ` : ""}{cvData.city || "Dakar, Sénégal"}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* COMPÉTENCES (⭐) */}
+                          <div className="mb-1.5">
+                            <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 flex items-center justify-center gap-1 shadow-xs">
+                              <i className="fa-solid fa-star text-amber-500 text-[8.5px]"></i>
+                              <span>{cvData.sectionTitles?.skills?.toUpperCase() || "COMPÉTENCES"}</span>
+                            </div>
+                            <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-xl p-1.5 text-[8px] text-[#382F2D] font-bold space-y-0.5 shadow-xs">
+                              {(cvData.skills?.length > 0 ? cvData.skills : [
+                                { id: 1, name: "Systèmes de réfrigération et de climatisation" },
+                                { id: 2, name: "Électricité, plomberie et menuiserie" },
+                                { id: 3, name: "Polyvalence & Gestion technique" },
+                                { id: 4, name: "Rigueur technique & Organisation" },
+                                { id: 5, name: "Esprit d'équipe & Adaptabilité" }
+                              ]).map((skill) => (
+                                <div key={skill.id} className="flex items-start gap-1 leading-tight">
+                                  <span className="text-[#382F2D] font-black">•</span>
+                                  <span>{skill.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* INFORMATIQUE / LOGICIELS (🛠️) */}
+                          <div className="mb-1.5">
+                            <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 flex items-center justify-center gap-1 shadow-xs">
+                              <i className="fa-solid fa-screwdriver-wrench text-slate-700 text-[8.5px]"></i>
+                              <span>{cvData.sectionTitles?.itSkills?.toUpperCase() || "INFORMATIQUE"}</span>
+                            </div>
+                            <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-xl p-1.5 text-[8px] text-[#382F2D] font-bold space-y-0.5 shadow-xs">
+                              {(cvData.itSkills?.length > 0 ? cvData.itSkills : [
+                                { id: 1, name: "Word : Excellent" },
+                                { id: 2, name: "Internet / Web : Excellent" }
+                              ]).map((it) => (
+                                <div key={it.id} className="flex items-start gap-1 leading-tight">
+                                  <span className="text-[#382F2D] font-black">•</span>
+                                  <span>{it.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* LANGUES (🌍) */}
+                          <div className="mb-1.5">
+                            <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 flex items-center justify-center gap-1 shadow-xs">
+                              <i className="fa-solid fa-globe text-blue-600 text-[8.5px]"></i>
+                              <span>{cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}</span>
+                            </div>
+                            <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-xl p-1.5 text-[8px] text-[#382F2D] font-bold space-y-0.5 shadow-xs">
+                              {(cvData.languages?.length > 0 ? cvData.languages : [
+                                { id: 1, name: "Français", level: "Couramment" },
+                                { id: 2, name: "Anglais", level: "Faible" },
+                                { id: 3, name: "Wolof", level: "Bien" }
+                              ]).map((lang) => (
+                                <div key={lang.id} className="flex items-start gap-1 leading-tight">
+                                  <span className="text-[#382F2D] font-black">•</span>
+                                  <span>{lang.name} {lang.level ? `: ${lang.level}` : ""}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* CENTRES D'INTÉRÊT (💡) */}
+                          <div>
+                            <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-lg px-2 py-0.5 text-[9px] font-black text-[#382F2D] uppercase tracking-wider mb-1 flex items-center justify-center gap-1 shadow-xs">
+                              <i className="fa-regular fa-lightbulb text-amber-500 text-[8.5px]"></i>
+                              <span>{cvData.sectionTitles?.hobbies?.toUpperCase() || "CENTRES D'INTÉRÊT"}</span>
+                            </div>
+                            <div className="bg-[#FAF7F2] border-2 border-[#382F2D] rounded-xl p-1.5 text-[8px] text-[#382F2D] font-bold space-y-0.5 shadow-xs">
+                              {(cvData.hobbies?.length > 0 ? cvData.hobbies : [
+                                { id: 1, name: "Sport collectif" },
+                                { id: 2, name: "Voyages et découvertes" },
+                                { id: 3, name: "Vie associative" }
+                              ]).map((hob) => (
+                                <div key={hob.id} className="flex items-start gap-1 leading-tight">
+                                  <span className="text-[#382F2D] font-black">•</span>
+                                  <span>{hob.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                        </div>
                       </div>
 
-                      <div className="px-6 pb-6 flex-grow flex flex-col space-y-4">
-                        
-                        {/* Profil */}
-                        {cvData.profile && (
-                          <div>
-                            <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-1.5 border-b border-gray-300 pb-0.5">
-                              <i className="fa-solid fa-bullseye text-red-500 mr-2"></i> {cvData.sectionTitles?.profile || "Profil Professionnel"}
-                            </h3>
-                            <p className="text-[10px] text-gray-900 leading-relaxed font-bold text-justify">
-                              {cvData.profile}
-                            </p>
+                      {/* RIGHT MAIN COLUMN (~63% width) */}
+                      <div className="w-[63%] bg-[#FAF7F2] p-2.5 flex flex-col justify-between overflow-y-auto space-y-2">
+                        <div>
+                          
+                          {/* 1. PROFIL PROFESSIONNEL (🪪) */}
+                          <div className="mb-2">
+                            <div className="flex items-center gap-1.5 text-[#382F2D] font-black text-[10px] uppercase tracking-wider border-b-2 border-[#382F2D] pb-0.5 mb-1">
+                              <i className="fa-solid fa-id-card text-purple-700 text-[10.5px]"></i>
+                              <span>{cvData.sectionTitles?.profile || "Profil Professionnel"}</span>
+                            </div>
+                            <div className="bg-white border-2 border-[#382F2D] rounded-xl p-2 text-[8px] text-[#382F2D] font-medium leading-relaxed shadow-xs text-justify">
+                              {cvData.profile || "Technicien passionné et spécialisé dans l'installation, le dépannage et la maintenance d'équipements, avec une expérience diversifiée et un engagement continu envers l'excellence opérationnelle."}
+                            </div>
                           </div>
-                        )}
 
-                        {/* Expériences */}
-                        {(cvData.experiences?.length > 0) && (
-                          <div>
-                            <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-3 border-b border-gray-300 pb-0.5">
-                              <i className="fa-solid fa-briefcase text-amber-800 mr-2"></i> {cvData.sectionTitles?.experience || "Expériences Professionnelles"}
-                            </h3>
-                            <div className="relative border-l border-gray-400 ml-1.5 pl-4 space-y-3 pb-2">
-                              {cvData.experiences.map((exp, idx) => (
-                                <div key={exp.id} className="relative">
-                                  {/* Timeline dot */}
-                                  <div className="absolute -left-[20.5px] top-1 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
-                                  
-                                  <div className="font-bold text-gray-900 text-[11px] mb-0.5 flex items-center">
-                                    <span className="mr-1 mt-0.5">➤</span>
-                                    {exp.startDate ? `${exp.startDate} - ` : ""}
-                                    {exp.current ? "Présent" : exp.endDate || ""} : <span className="ml-1 font-black">{exp.employer}</span>
+                          {/* 2. EXPÉRIENCES PROFESSIONNELLES (💼) */}
+                          <div className="mb-2">
+                            <div className="flex items-center gap-1.5 text-[#382F2D] font-black text-[10px] uppercase tracking-wider border-b-2 border-[#382F2D] pb-0.5 mb-1">
+                              <i className="fa-solid fa-briefcase text-amber-800 text-[10.5px]"></i>
+                              <span>{cvData.sectionTitles?.experience || "Expériences Professionnelles"}</span>
+                            </div>
+                            
+                            <div className="space-y-1.5">
+                              {cvData.experiences.map((exp) => (
+                                <div key={exp.id} className="space-y-0.5">
+                                  {/* Header line with chevron */}
+                                  <div className="font-black text-[8.5px] text-[#382F2D] flex items-center gap-1 leading-tight">
+                                    <span className="text-[#382F2D] text-[9.5px]">➤</span>
+                                    <span>
+                                      {exp.startDate ? `${exp.startDate} ` : ""}
+                                      {exp.endDate ? `- ${exp.endDate}` : exp.current ? "- Présent" : ""}
+                                      {exp.title ? ` : ${exp.title}` : ""}
+                                    </span>
                                   </div>
-                                  <div className="font-black text-[11px] text-gray-900 mb-1 pl-4">{exp.title}</div>
+                                  {/* Employer badge */}
+                                  {exp.employer && (
+                                    <div className="pl-3">
+                                      <span className="bg-[#EDE6DC] border border-[#382F2D] rounded-md px-1.5 py-0.2 text-[7.5px] font-black text-[#382F2D] inline-block">
+                                        {exp.employer}{exp.city ? ` (${exp.city})` : ""}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {/* Details bullet box */}
                                   {exp.description && (
-                                    <ul className="text-[9px] text-gray-700 leading-tight space-y-0.5 pl-4 list-disc list-inside text-justify">
-                                      {exp.description.split("\n").filter(Boolean).map((line, i) => (
-                                        <li key={i}>{line.replace(/^[•\-\*]\s*/, "")}</li>
+                                    <div className="ml-3 bg-white border border-[#382F2D] rounded-lg p-1.5 text-[7.5px] text-[#382F2D] leading-tight space-y-0.5 shadow-xs">
+                                      {exp.description.split("\n").filter(Boolean).map((line, lIdx) => (
+                                        <div key={lIdx} className="flex items-start gap-1">
+                                          <span className="font-black">•</span>
+                                          <span>{line.replace(/^[•\-\*]\s*/, "")}</span>
+                                        </div>
                                       ))}
-                                    </ul>
+                                    </div>
                                   )}
                                 </div>
                               ))}
-                              {/* Bottom timeline circle */}
-                              <div className="absolute -left-[4.5px] bottom-0 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
                             </div>
                           </div>
-                        )}
 
-                        {/* Formations */}
-                        {(cvData.educations?.length > 0) && (
+                          {/* 3. FORMATION ET DIPLÔMES (🎓) */}
                           <div>
-                            <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-3 border-b border-gray-300 pb-0.5">
-                              <i className="fa-solid fa-graduation-cap text-slate-800 mr-2"></i> {cvData.sectionTitles?.education || "Formation et Diplômes"}
-                            </h3>
-                            <div className="relative border-l border-gray-400 ml-1.5 pl-4 space-y-3 pb-2">
-                              {cvData.educations.map((edu, idx) => (
-                                <div key={edu.id} className="relative">
-                                  <div className="absolute -left-[20.5px] top-1 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
-                                  
-                                  <div className="font-bold text-gray-900 text-[11px] mb-0.5 flex items-center">
-                                    <span className="mr-1 mt-0.5">➤</span>
-                                    {edu.startDate ? `${edu.startDate} - ` : ""}
-                                    {edu.current ? "Présent" : edu.endDate || ""} : <span className="ml-1 font-black">{edu.degree}</span>
+                            <div className="flex items-center gap-1.5 text-[#382F2D] font-black text-[10px] uppercase tracking-wider border-b-2 border-[#382F2D] pb-0.5 mb-1">
+                              <i className="fa-solid fa-graduation-cap text-slate-800 text-[10.5px]"></i>
+                              <span>{cvData.sectionTitles?.education || "FORMATION ET DIPLÔMES"}</span>
+                            </div>
+                            
+                            <div className="space-y-1">
+                              {cvData.educations.map((edu) => (
+                                <div key={edu.id} className="space-y-0.5">
+                                  <div className="font-black text-[8.5px] text-[#382F2D] flex items-center gap-1 leading-tight">
+                                    <span className="text-[#382F2D] text-[9.5px]">➤</span>
+                                    <span>
+                                      {edu.startDate ? `${edu.startDate} ` : ""}
+                                      {edu.endDate ? `- ${edu.endDate}` : edu.current ? "- Présent" : ""}
+                                      {edu.degree ? ` : ${edu.degree}` : ""}
+                                    </span>
                                   </div>
-                                  <ul className="text-[10px] text-gray-900 leading-tight pl-4 list-disc list-inside font-bold">
-                                    <li>{edu.school}{edu.city ? `, ${edu.city}` : ""}</li>
-                                  </ul>
+                                  {edu.school && (
+                                    <div className="pl-3">
+                                      <span className="bg-[#EDE6DC] border border-[#382F2D] rounded-md px-1.5 py-0.2 text-[7.5px] font-bold text-[#382F2D] inline-block">
+                                        {edu.school}{edu.city ? ` • ${edu.city}` : ""}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
-                              <div className="absolute -left-[4.5px] bottom-0 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
                             </div>
                           </div>
-                        )}
 
-                        {/* {cvData.sectionTitles?.skills || "Compétences Clés"} */}
-                        {(cvData.skills?.length > 0) && (
-                          <div>
-                            <h3 className="text-sm font-bold text-[#20232a] flex items-center mb-2 border-b border-gray-300 pb-0.5">
-                              <i className="fa-solid fa-star text-yellow-400 mr-2"></i>{cvData.sectionTitles?.skills?.toUpperCase() || "COMPÉTENCES CLÉS"}</h3>
-                            <div className="relative border-l border-gray-400 ml-1.5 pl-4 pb-2">
-                              <ul className="text-[10px] text-gray-900 leading-tight space-y-1.5 list-disc list-inside">
-                                {cvData.skills.map((skill, idx) => (
-                                  <li key={skill.id} className="relative">
-                                    {idx === 0 && <div className="absolute -left-[20.5px] top-1.5 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>}
-                                    <span className="font-bold">{skill.name}</span> : <span className="font-normal">{skill.level}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                              <div className="absolute -left-[4.5px] bottom-0 w-2 h-2 rounded-full bg-white border-2 border-gray-500"></div>
-                            </div>
-                          </div>
-                        )}
+                        </div>
 
+                        {/* Footer footnote */}
+                        <div className="text-[7px] text-[#382F2D]/60 font-semibold text-center pt-1 border-t border-[#382F2D]/20">
+                          Créé via Facilite.fr • Conforme aux standards professionnels
+                        </div>
                       </div>
+
                     </div>
 
                   </div>
