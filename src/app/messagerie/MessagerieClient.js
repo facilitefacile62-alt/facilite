@@ -415,6 +415,15 @@ export default function MessagerieClient() {
     }
   }, [activeConvId]);
 
+  // Verrouillage du scroll global de la page sur mobile et desktop pour éliminer tout 2ème scrollbar
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
   // Language management
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
@@ -1904,7 +1913,7 @@ export default function MessagerieClient() {
   });
 
   return (
-    <div className="h-[calc(100dvh-64px)] max-h-[calc(100dvh-64px)] overflow-hidden flex flex-col w-full" suppressHydrationWarning>
+    <div className="h-[calc(100dvh-106px)] lg:h-[calc(100dvh-64px)] max-h-[calc(100dvh-106px)] lg:max-h-[calc(100dvh-64px)] overflow-hidden flex flex-col w-full" suppressHydrationWarning>
       {/* Toast Notification Top Floating */}
       <div
         className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
@@ -2350,7 +2359,7 @@ export default function MessagerieClient() {
       </nav>
 
       {/* Interface de Messagerie */}
-      <main className="flex-1 h-full min-h-0 max-h-full overflow-hidden bg-[#F4F2EE] p-2 sm:p-3 md:p-4 flex flex-col w-full">
+      <main className="flex-1 h-full min-h-0 max-h-full overflow-hidden bg-[#F4F2EE] p-1.5 sm:p-2.5 md:p-4 flex flex-col w-full">
         <div className="max-w-[1180px] mx-auto bg-white rounded-2xl border border-gray-200 shadow-xs h-full min-h-0 flex flex-row w-full overflow-hidden">
 
           {/* COLONNE GAUCHE : LISTE DES DISCUSSIONS */}
