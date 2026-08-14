@@ -196,9 +196,16 @@ export async function POST(req) {
       .select("id, full_name, bio, skills, city, avatar_url, cv_url")
       .in("id", userIds);
 
+    // raw_text/skills/experiences/education n'existent pas sur resumes (seul
+    // content JSONB existe) — le select précédent échouait silencieusement
+    // (erreur PostgREST ignorée, seul `data` était destructuré), laissant
+    // fullResumes/resumeMap toujours vides : cvExtract était systématiquement
+    // "" en production, quel que soit le contenu réel des CV. content.extractedText
+    // est le champ réellement écrit par /api/process-resume (et par le
+    // backfill des CV existants).
     const { data: fullResumes } = await admin
       .from("resumes")
-      .select("id, user_id, raw_text, skills, experiences, education, ats_score, updated_at")
+      .select("id, user_id, content, ats_score, updated_at")
       .in("user_id", userIds)
       .eq("status", "completed");
 
@@ -209,7 +216,7 @@ export async function POST(req) {
     const candidatesContext = matchedCandidates.map((m, idx) => {
       const p = profileMap.get(m.user_id) || {};
       const r = resumeMap.get(m.user_id) || {};
-      const cvExtract = r.raw_text ? r.raw_text.slice(0, 1200) : "";
+      const cvExtract = r.content?.extractedText ? r.content.extractedText.slice(0, 1200) : "";
       const skillsStr = Array.isArray(p.skills) ? p.skills.join(", ") : (p.skills || "Non spécifié");
 
       return `--- CANDIDAT #${idx + 1} (ID: ${m.user_id}) ---
@@ -314,7 +321,7 @@ Pour CHAQUE candidat listé ci-dessus, analyse rigoureusement la correspondance 
         city: p.city || "Sénégal",
         avatarUrl: p.avatar_url || null,
         skills: Array.isArray(p.skills) ? p.skills : [],
-        hasCv: !!p.cv_url || !!r.raw_text,
+        hasCv: !!p.cv_url || !!r.content?.extractedText,
         similarityScore: Math.round((m.similarity || 0.5) * 100),
         ragAnalysis: {
           matchScore: ev.matchScore ?? Math.round((m.similarity || 0.5) * 100),

@@ -289,6 +289,7 @@ export default function CreerCv() {
   // est en TypeScript ; pas d'annotation de type ici, ce fichier reste en JS.
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [canvaZoom, setCanvaZoom] = useState(1);
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
   const [photoPreview, setPhotoPreview] = useState(null);
   
@@ -1087,6 +1088,25 @@ export default function CreerCv() {
       }, 60);
     }
   };
+
+  // Canva full view auto-fit calculation
+  const handleAutoFit = () => {
+    if (typeof window !== "undefined") {
+      const availableHeight = window.innerHeight - 150;
+      const availableWidth = window.innerWidth - 60;
+      const fitScale = Math.min(availableHeight / 842, availableWidth / 595, 1.35);
+      setCanvaZoom(parseFloat(fitScale.toFixed(2)));
+    }
+  };
+
+  useEffect(() => {
+    if (isPreviewOpen) {
+      handleAutoFit();
+      const onResize = () => handleAutoFit();
+      window.addEventListener("resize", onResize);
+      return () => window.removeEventListener("resize", onResize);
+    }
+  }, [isPreviewOpen]);
 
   return (
     <>
@@ -4364,62 +4384,187 @@ export default function CreerCv() {
         </div>
       )}
 
-      {/* FULLSCREEN A4 LIVE PREVIEW MODAL */}
+      {/* CANVA-INSPIRED FULLSCREEN A4 WORKSPACE VIEWER */}
       {isPreviewOpen && (
-        <div className="fixed inset-0 z-[850] bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 no-print">
-          {/* Header Bar */}
-          <div className="w-full max-w-4xl bg-slate-900/95 border border-slate-700/80 text-white px-5 py-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-2xl mb-3">
-            <div className="flex items-center space-x-3">
-              <span className="w-3 h-3 rounded-full bg-[#10E688] animate-pulse"></span>
-              <div>
-                <h3 className="text-sm font-black tracking-wide flex items-center gap-2">
-                  <i className="fa-solid fa-eye text-[#10E688]"></i>
-                  Aperçu Haute Définition — Format A4 (595 × 842 pt)
-                </h3>
-                <p className="text-[10px] text-slate-400">Modèle {selectedTemplate} • Couleur : {accentColor}</p>
+        <div className="fixed inset-0 z-[950] bg-[#0E131F] text-white flex flex-col overflow-hidden no-print animate-fadeIn select-none">
+          
+          {/* TOP TOOLBAR (Canva Style) */}
+          <header className="h-16 px-4 sm:px-6 bg-[#161C2C] border-b border-slate-700/80 flex items-center justify-between flex-shrink-0 z-20 shadow-md">
+            {/* Left: Brand & Document info */}
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="flex items-center space-x-2">
+                <img src="/logo.jpeg" alt="Logo Facilité" className="w-8 h-8 rounded-full object-cover border border-slate-600 shadow-sm" />
+                <span className="font-extrabold text-sm tracking-tight hidden md:inline">Facilité Studio</span>
+              </div>
+              <div className="h-5 w-[1px] bg-slate-700 hidden sm:block"></div>
+              <div className="flex flex-col">
+                <span className="text-xs sm:text-sm font-black text-gray-100 truncate max-w-[160px] sm:max-w-xs">
+                  {cvData.jobTitle || "CV Professionnel"} — {cvData.firstName} {cvData.lastName}
+                </span>
+                <div className="flex items-center space-x-2 text-[10px] text-slate-400">
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Enregistré
+                  </span>
+                  <span>•</span>
+                  <span>Format A4</span>
+                  <span>•</span>
+                  <span className="capitalize text-slate-300 font-semibold">Modèle {selectedTemplate}</span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2.5">
+            {/* Center: Zoom Presets (Desktop) */}
+            <div className="hidden lg:flex items-center space-x-1.5 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setCanvaZoom(z => Math.max(0.3, +(z - 0.1).toFixed(2)))}
+                className="w-6 h-6 rounded-lg hover:bg-slate-700 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
+                title="Zoomer en arrière"
+              >
+                –
+              </button>
+              <button
+                type="button"
+                onClick={handleAutoFit}
+                className="px-2.5 py-1 rounded-lg bg-blue-600/40 hover:bg-blue-600 text-blue-200 hover:text-white transition cursor-pointer text-[11px]"
+              >
+                Adapter
+              </button>
+              <button
+                type="button"
+                onClick={() => setCanvaZoom(0.75)}
+                className={`px-2 py-1 rounded-lg hover:bg-slate-700 transition cursor-pointer text-[11px] ${canvaZoom === 0.75 ? "bg-slate-700 text-[#10E688]" : "text-slate-300"}`}
+              >
+                75%
+              </button>
+              <button
+                type="button"
+                onClick={() => setCanvaZoom(1)}
+                className={`px-2 py-1 rounded-lg hover:bg-slate-700 transition cursor-pointer text-[11px] ${canvaZoom === 1 ? "bg-slate-700 text-[#10E688]" : "text-slate-300"}`}
+              >
+                100%
+              </button>
+              <button
+                type="button"
+                onClick={() => setCanvaZoom(1.25)}
+                className={`px-2 py-1 rounded-lg hover:bg-slate-700 transition cursor-pointer text-[11px] ${canvaZoom === 1.25 ? "bg-slate-700 text-[#10E688]" : "text-slate-300"}`}
+              >
+                125%
+              </button>
+              <button
+                type="button"
+                onClick={() => setCanvaZoom(z => Math.min(2.0, +(z + 0.1).toFixed(2)))}
+                className="w-6 h-6 rounded-lg hover:bg-slate-700 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
+                title="Zoomer en avant"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Right: Actions */}
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer border border-slate-600"
+                className="px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-extrabold rounded-xl transition flex items-center gap-2 cursor-pointer border border-slate-600 shadow-sm"
               >
                 <i className="fa-solid fa-print"></i>
-                <span>Imprimer</span>
+                <span className="hidden sm:inline">Imprimer</span>
               </button>
+
               <button
                 type="button"
                 onClick={downloadMode ? handleDownloadPdf : saveCvDraftAndOpenPricing}
                 disabled={downloadingPdf || savingDraft}
-                className="px-4 py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 text-xs font-black rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#10E688]/20"
+                className="px-4 sm:px-5 py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 text-xs font-black rounded-xl transition flex items-center gap-2 cursor-pointer shadow-lg shadow-[#10E688]/25"
               >
                 <i className={`fa-solid ${downloadingPdf || savingDraft ? "fa-spinner fa-spin" : "fa-download"}`}></i>
-                <span>{downloadingPdf ? "Génération..." : savingDraft ? "Enregistrement..." : downloadMode ? "Télécharger PDF" : "Valider & Télécharger"}</span>
+                <span>{downloadingPdf ? "Génération..." : savingDraft ? "Enregistrement..." : downloadMode ? "Télécharger PDF" : "Télécharger"}</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => setIsPreviewOpen(false)}
-                className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-sm font-black ml-2"
-                title="Fermer"
+                className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-base font-black ml-1"
+                title="Quitter l'aperçu"
               >
                 ✕
               </button>
             </div>
-          </div>
+          </header>
 
-          {/* Body with Sheet */}
-          <div className="w-full max-w-4xl flex-grow overflow-auto flex items-start justify-center p-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 shadow-inner">
-            <div className="scale-[0.85] sm:scale-100 origin-top transition-transform my-2">
+          {/* MAIN INFINITE CANVAS (Canva Style) */}
+          <main className="flex-1 overflow-auto flex items-center justify-center p-4 sm:p-10 relative bg-[#0E131F]">
+            <div
+              style={{
+                transform: `scale(${canvaZoom})`,
+                transformOrigin: "center center",
+                transition: "transform 0.12s ease-out"
+              }}
+              className="relative shadow-[0_30px_90px_rgba(0,0,0,0.85)] rounded-xs bg-white flex-shrink-0 my-auto"
+            >
               <div
                 dangerouslySetInnerHTML={{
                   __html: typeof document !== "undefined" && document.getElementById("cv-preview-sheet") ? document.getElementById("cv-preview-sheet").innerHTML : ""
                 }}
-                className="bg-white shadow-2xl w-[595px] min-h-[842px] h-[842px] max-w-[595px] max-h-[842px] min-w-[595px] overflow-hidden text-gray-900 border border-gray-300 rounded-sm flex flex-col font-sans pointer-events-none"
+                className="bg-white w-[595px] min-h-[842px] h-[842px] max-w-[595px] max-h-[842px] min-w-[595px] overflow-hidden text-gray-900 border border-gray-300 rounded-sm flex flex-col font-sans pointer-events-none select-none"
               />
             </div>
-          </div>
+          </main>
+
+          {/* FLOATING BOTTOM CONTROLS (Canva Style) */}
+          <footer className="h-14 bg-[#161C2C]/90 backdrop-blur-md border-t border-slate-700/80 px-6 flex items-center justify-between flex-shrink-0 z-20 text-xs font-bold text-slate-300">
+            <div className="flex items-center space-x-2">
+              <span className="text-slate-400">Page</span>
+              <span className="bg-slate-800 px-2 py-0.5 rounded-md text-white font-extrabold border border-slate-700">1 / 1</span>
+            </div>
+
+            {/* Bottom Floating Zoom Slider */}
+            <div className="flex items-center space-x-3 bg-slate-900/90 border border-slate-700 px-4 py-1.5 rounded-full shadow-xl">
+              <button
+                type="button"
+                onClick={() => setCanvaZoom(z => Math.max(0.3, +(z - 0.1).toFixed(2)))}
+                className="w-5 h-5 rounded hover:bg-slate-700 flex items-center justify-center text-slate-300 hover:text-white cursor-pointer"
+                title="Dézoomer"
+              >
+                –
+              </button>
+              <input
+                type="range"
+                min="0.35"
+                max="2.0"
+                step="0.05"
+                value={canvaZoom}
+                onChange={(e) => setCanvaZoom(parseFloat(e.target.value))}
+                className="w-24 sm:w-36 accent-[#10E688] h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+              />
+              <button
+                type="button"
+                onClick={() => setCanvaZoom(z => Math.min(2.0, +(z + 0.1).toFixed(2)))}
+                className="w-5 h-5 rounded hover:bg-slate-700 flex items-center justify-center text-slate-300 hover:text-white cursor-pointer"
+                title="Zoomer"
+              >
+                +
+              </button>
+              <span className="w-12 text-center text-[11px] font-black text-emerald-400">
+                {Math.round(canvaZoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={handleAutoFit}
+                className="p-1 hover:text-white text-slate-400 transition cursor-pointer ml-1"
+                title="Adapter à la hauteur de l'écran"
+              >
+                <i className="fa-solid fa-expand text-xs"></i>
+              </button>
+            </div>
+
+            <div className="hidden sm:flex items-center space-x-2 text-[11px] text-slate-400">
+              <span>Haute Résolution 300 DPI</span>
+            </div>
+          </footer>
+
         </div>
       )}
 
