@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -167,10 +167,174 @@ export default function Header() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
 
-  // Centre de notifications : pas encore de vraies notifications côté
-  // backend (table à venir) — état minimal en attendant, pour ne jamais
-  // afficher un contenu inventé aux premiers visiteurs du site.
+  // Centre de notifications interactif connecté à Supabase et aux offres publiées
+  const [notifications, setNotifications] = useState([]);
+  const [notificationFilter, setNotificationFilter] = useState("all");
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
+
+  const formatRelativeTime = (dateStr) => {
+    if (!dateStr) return "";
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMin < 1) return "À l'instant";
+    if (diffMin < 60) return `Il y a ${diffMin} min`;
+    if (diffHours < 24) return `Il y a ${diffHours} h`;
+    if (diffDays === 1) return "Hier";
+    if (diffDays < 7) return `Il y a ${diffDays} j`;
+    return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  };
+
+  const loadNotifications = useCallback(async (session) => {
+    const userId = session?.user?.id;
+    let readIds = [];
+    if (userId) {
+      try {
+        const stored = localStorage.getItem(`FACILITE_READ_NOTIFS_${userId}`);
+        if (stored) readIds = JSON.parse(stored);
+      } catch {}
+    }
+
+    try {
+      // 1. Notifications depuis Supabase (table notifications)
+      let dbNotifs = [];
+      if (userId) {
+        const { data } = await supabase
+          .from("notifications")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (data) dbNotifs = data;
+      }
+
+      // 2. Dernières offres d'emploi publiées sur la plateforme (job_offers)
+      const { data: offersData } = await supabase
+        .from("job_offers")
+        .select("id, title, company, location, created_at, recruiter_id, is_active")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(15);
+
+      const offerNotifs = (offersData || []).map((o) => {
+        const isMine = userId && o.recruiter_id === userId;
+        return {
+          id: `offer_${o.id}`,
+          type: "jobs",
+          title: isMine ? "Votre offre d'emploi est active" : "Nouvelle opportunité d'emploi",
+          content: isMine
+            ? `Votre offre « ${o.title} » (${o.company || "Entreprise"} - ${o.location || "Sénégal"}) est bien en ligne et visible par tous les candidats.`
+            : `Nouvelle offre publiée : « ${o.title} » chez ${o.company || "Entreprise"} (${o.location || "Sénégal"}).`,
+          link: `/offres/${o.id}`,
+          created_at: o.created_at,
+          is_read: readIds.includes(`offer_${o.id}`),
+          icon: "fa-briefcase",
+          badgeColor: "emerald",
+        };
+      });
+
+      const normalizedDbNotifs = (dbNotifs || []).map((n) => ({
+        id: n.id,
+        type: n.type || "system",
+        title:
+          n.type === "candidature"
+            ? "Nouvelle candidature reçue"
+            : n.type === "reponse"
+            ? "Réponse à votre candidature"
+            : n.type === "jobs"
+            ? "Offre d'emploi"
+            : n.type === "message"
+            ? "Nouveau message"
+            : n.type === "badge"
+            ? "Statut de votre badge"
+            : "Notification Facilité",
+        content: n.content,
+        link: n.link || "/offres",
+        created_at: n.created_at,
+        is_read: n.is_read || readIds.includes(n.id),
+        icon:
+          n.type === "candidature"
+            ? "fa-file-user"
+            : n.type === "reponse"
+            ? "fa-reply"
+            : n.type === "jobs"
+            ? "fa-briefcase"
+            : n.type === "message"
+            ? "fa-comments"
+            : "fa-bell",
+        badgeColor: n.type === "jobs" ? "emerald" : n.type === "candidature" ? "blue" : "purple",
+      }));
+
+      // Fusion et déduplication antéchronologique
+      const merged = [...normalizedDbNotifs, ...offerNotifs].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setNotifications(merged);
+    } catch (err) {
+      console.warn("[Notifications] Erreur chargement:", err);
+    }
+  }, []);
+
+  const unreadNotificationsCount = notifications.filter((n) => !n.is_read).length;
+
+  const handleMarkAllAsRead = async () => {
+    const userId = userSession?.user?.id;
+    const allIds = notifications.map((n) => n.id);
+    if (userId) {
+      try {
+        localStorage.setItem(`FACILITE_READ_NOTIFS_${userId}`, JSON.stringify(allIds));
+      } catch {}
+    }
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+
+    if (userId) {
+      notifications
+        .filter((n) => !n.id.startsWith("offer_") && !n.is_read)
+        .forEach((n) => {
+          supabase.rpc("mark_notification_read", { notification_id: n.id }).catch(() => {});
+        });
+    }
+  };
+
+  const handleNotificationClick = (item) => {
+    const userId = userSession?.user?.id;
+    if (userId) {
+      try {
+        const stored = localStorage.getItem(`FACILITE_READ_NOTIFS_${userId}`);
+        const readIds = stored ? JSON.parse(stored) : [];
+        if (!readIds.includes(item.id)) {
+          readIds.push(item.id);
+          localStorage.setItem(`FACILITE_READ_NOTIFS_${userId}`, JSON.stringify(readIds));
+        }
+      } catch {}
+    }
+
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n))
+    );
+
+    if (!item.id.startsWith("offer_") && userSession) {
+      supabase.rpc("mark_notification_read", { notification_id: item.id }).catch(() => {});
+    }
+
+    setNotificationsModalOpen(false);
+    if (item.link) {
+      router.push(item.link);
+    }
+  };
+
+  const filteredNotifications = notifications.filter((n) => {
+    if (notificationFilter === "all") return true;
+    if (notificationFilter === "jobs") return n.type === "jobs";
+    if (notificationFilter === "candidature") return n.type === "candidature" || n.type === "reponse";
+    if (notificationFilter === "messages") return n.type === "message" || n.type === "mentions" || n.type === "posts";
+    return true;
+  });
 
   // États de la recherche globale reliée à l'API FastAPI
   const [query, setQuery] = useState("");
@@ -253,6 +417,33 @@ export default function Header() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Synchronisation Realtime des notifications & des offres d'emploi
+  useEffect(() => {
+    loadNotifications(userSession);
+
+    const channel = supabase
+      .channel("header-notifications-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_offers" },
+        () => {
+          loadNotifications(userSession);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications" },
+        () => {
+          loadNotifications(userSession);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userSession, loadNotifications]);
 
   // 2. Debounce de 300ms pour éviter d'inonder le backend FastAPI
   useEffect(() => {
@@ -878,18 +1069,21 @@ export default function Header() {
             </div>
           )}
 
-          {/* Centre de Notifications */}
-          {userSession && (
-            <button
-              type="button"
-              onClick={() => setNotificationsModalOpen(true)}
-              className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative flex items-center justify-center flex-shrink-0"
-              title="Notifications"
-              aria-label="Ouvrir les notifications"
-            >
-              <i className="fa-regular fa-bell text-base sm:text-lg"></i>
-            </button>
-          )}
+          {/* Centre de Notifications Interactif avec Compteur Dynamique */}
+          <button
+            type="button"
+            onClick={() => setNotificationsModalOpen(true)}
+            className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative flex items-center justify-center flex-shrink-0 cursor-pointer"
+            title="Centre de notifications"
+            aria-label="Ouvrir les notifications"
+          >
+            <i className="fa-regular fa-bell text-base sm:text-lg"></i>
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center animate-pulse shadow-sm">
+                {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+              </span>
+            )}
+          </button>
 
           {/* Bouton Loupe pour ouvrir la recherche sur mobile */}
           <button
@@ -1097,27 +1291,180 @@ export default function Header() {
         </div>
       )}
 
-      {/* Centre de Notifications — version minimale en attendant la vraie
-          table de notifications côté backend (voir chantier Point 3) */}
+      {/* Centre de Notifications Interactif (Style LinkedIn) */}
       {notificationsModalOpen && (
-        <div className="fixed inset-0 z-[800] bg-black/50 backdrop-blur-xs flex justify-center md:items-start md:pt-16 p-2 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 flex flex-col">
+        <div className="fixed inset-0 z-[800] bg-black/60 backdrop-blur-xs flex justify-center md:items-start md:pt-16 p-2 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 flex flex-col max-h-[85vh]">
+            
+            {/* Header du Modal */}
             <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-[#FAF6F1] dark:bg-gray-800/60">
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <i className="fa-solid fa-bell text-xl text-[#10E688]"></i>
-                <h3 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white">Notifications</h3>
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <i className="fa-solid fa-bell text-base"></i>
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>Notifications</span>
+                    {unreadNotificationsCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300">
+                        {unreadNotificationsCount} non lue{unreadNotificationsCount > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </h3>
+                </div>
               </div>
+
+              <div className="flex items-center gap-2">
+                {unreadNotificationsCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllAsRead}
+                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-gray-800 transition cursor-pointer"
+                    title="Tout marquer comme lu"
+                  >
+                    <i className="fa-solid fa-check-double text-xs"></i>
+                    <span className="hidden sm:inline">Tout marquer comme lu</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setNotificationsModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transition cursor-pointer"
+                  aria-label="Fermer"
+                >
+                  <i className="fa-solid fa-xmark text-base"></i>
+                </button>
+              </div>
+            </div>
+
+            {/* Filtres par Pilules */}
+            <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-1.5 overflow-x-auto bg-gray-50/50 dark:bg-gray-900">
               <button
                 type="button"
-                onClick={() => setNotificationsModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 transition cursor-pointer"
+                onClick={() => setNotificationFilter("all")}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  notificationFilter === "all"
+                    ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-xs"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200"
+                }`}
               >
-                <i className="fa-solid fa-xmark text-base"></i>
+                Toutes ({notifications.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotificationFilter("jobs")}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  notificationFilter === "jobs"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200"
+                }`}
+              >
+                Offres d'emploi ({notifications.filter((n) => n.type === "jobs").length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotificationFilter("candidature")}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  notificationFilter === "candidature"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200"
+                }`}
+              >
+                Candidatures ({notifications.filter((n) => n.type === "candidature" || n.type === "reponse").length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotificationFilter("messages")}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  notificationFilter === "messages"
+                    ? "bg-purple-600 text-white shadow-xs"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200"
+                }`}
+              >
+                Messages ({notifications.filter((n) => n.type === "message" || n.type === "mentions" || n.type === "posts").length})
               </button>
             </div>
 
-            <div className="py-14 text-center text-gray-400 dark:text-gray-500 font-medium text-sm">
-              Aucune notification pour l'instant.
+            {/* Liste Défilante des Notifications */}
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 max-h-[55vh]">
+              {filteredNotifications.length === 0 ? (
+                <div className="py-16 px-4 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mx-auto mb-3">
+                    <i className="fa-regular fa-bell-slash text-2xl"></i>
+                  </div>
+                  <h4 className="text-sm font-extrabold text-gray-700 dark:text-gray-300">
+                    Aucune notification
+                  </h4>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto">
+                    {notificationFilter === "all"
+                      ? "Vous n'avez aucune nouvelle notification pour le moment."
+                      : "Aucune notification ne correspond à ce filtre."}
+                  </p>
+                </div>
+              ) : (
+                filteredNotifications.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleNotificationClick(item)}
+                    className={`p-4 flex items-start gap-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/70 transition cursor-pointer group ${
+                      !item.is_read ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""
+                    }`}
+                  >
+                    {/* Icône du type */}
+                    <div
+                      className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-2xs ${
+                        item.badgeColor === "emerald"
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                          : item.badgeColor === "blue"
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                          : "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300"
+                      }`}
+                    >
+                      <i className={`fa-solid ${item.icon} text-base`}></i>
+                    </div>
+
+                    {/* Contenu */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white truncate group-hover:text-emerald-600 transition">
+                          {item.title}
+                        </h4>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium whitespace-nowrap flex-shrink-0">
+                          {formatRelativeTime(item.created_at)}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 line-clamp-2 leading-relaxed font-normal">
+                        {item.content}
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 group-hover:underline">
+                          <span>Voir les détails</span>
+                          <i className="fa-solid fa-arrow-right text-[9px]"></i>
+                        </span>
+                        {!item.is_read && (
+                          <span className="w-2 h-2 rounded-full bg-[#10E688] shadow-xs" title="Non lu"></span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Pied du Modal */}
+            <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 bg-[#FAF6F1] dark:bg-gray-800/60 flex items-center justify-between text-xs text-gray-500">
+              <span className="font-semibold text-gray-600 dark:text-gray-400">
+                {notifications.length} notification{notifications.length > 1 ? "s" : ""} au total
+              </span>
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(false)}
+                className="px-3.5 py-1.5 bg-gray-900 text-white dark:bg-white dark:text-gray-900 font-extrabold rounded-xl hover:opacity-90 transition cursor-pointer text-xs"
+              >
+                Fermer
+              </button>
             </div>
           </div>
         </div>
