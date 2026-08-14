@@ -393,14 +393,6 @@ function OffresContent() {
                         </p>
                       </div>
                     </div>
-
-                    {/* Badge Rémunération en Haut à Droite */}
-                    <div className="flex-shrink-0">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-200/90 shadow-2xs">
-                        <span>💰</span>
-                        <span>{offer.salary_range && offer.salary_range !== "Non spécifié" ? offer.salary_range : "Non renseigné"}</span>
-                      </span>
-                    </div>
                   </div>
 
                   {/* Description Rapide */}

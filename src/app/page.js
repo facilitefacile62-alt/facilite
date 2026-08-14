@@ -1798,27 +1798,7 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-
-                      {/* Badge Rémunération sur Desktop (en haut à droite) */}
-                      {job.salary && job.salary !== "Non spécifié" && job.salary !== "Non renseigné" && (
-                        <div className="flex-shrink-0 hidden sm:block">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-200/90 shadow-2xs whitespace-nowrap">
-                            <span>💰</span>
-                            <span>{job.salary}</span>
-                          </span>
-                        </div>
-                      )}
                     </div>
-
-                    {/* Badge Rémunération sur Mobile (en dessous pour ne pas écraser le titre) */}
-                    {job.salary && job.salary !== "Non spécifié" && job.salary !== "Non renseigné" && (
-                      <div className="sm:hidden -mt-1">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-200/90 shadow-2xs">
-                          <span>💰</span>
-                          <span>{job.salary}</span>
-                        </span>
-                      </div>
-                    )}
 
                     {/* Description */}
                     <div className="text-xs text-gray-600 font-semibold leading-relaxed whitespace-pre-line">
