@@ -408,6 +408,13 @@ export default function MessagerieClient() {
 
   const t = translations[selectedLang] || translations.FR;
 
+  // Reset scroll to top when changing active conversation
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = 0;
+    }
+  }, [activeConvId]);
+
   // Language management
   useEffect(() => {
     const savedLang = localStorage.getItem("lang");
@@ -2835,8 +2842,8 @@ export default function MessagerieClient() {
                       if (isOffreMessage) {
                         const parsed = parseCandidatureMessage(msg, userSession);
                         return (
-                          <div className="w-full flex justify-center my-2">
-                            <div className="w-full max-w-2xl bg-white text-gray-900 border border-gray-200/90 rounded-2xl p-5 sm:p-7 shadow-xs relative group transition-all hover:shadow-md space-y-4">
+                          <div className="w-full flex justify-center pt-0 pb-3">
+                            <div className="w-full max-w-3xl bg-white text-gray-900 border border-gray-200/90 rounded-2xl p-5 sm:p-7 shadow-xs relative group transition-all hover:shadow-md space-y-4">
                               {/* 1. OBJET / TITRE DE L'E-MAIL STYLE GMAIL */}
                               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-150 pb-3.5">
                                 <div className="min-w-0 flex-1">
