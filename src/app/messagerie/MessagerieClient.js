@@ -1852,6 +1852,10 @@ export default function MessagerieClient() {
   // s'applique qu'au fil de messages réels (pas au fil IA, hors de ce concept).
   const visibleMessages = (activeConversation?.messages || []).filter((m) => {
     if (activeConversation?.id === AI_PINNED_CHAT.id) return true;
+    if (activeConversation?.isCandidature || activeConversation?.typeDiscussion === "OFFRE") {
+      // Pour une candidature, seul le document d'envoi officiel est affiché (pas de tchat superflu)
+      return m.isCandidatureReceipt || m.typeDiscussion === "OFFRE" || m.text?.includes("Candidature envoyée");
+    }
     if (discussionTypeFilter === "all") return true;
     return (m.typeDiscussion || "ECHANGE") === discussionTypeFilter;
   });
@@ -2945,28 +2949,6 @@ export default function MessagerieClient() {
                                   </ChatAttachmentUrl>
                                 </div>
                               )}
-
-                              {/* 5. BOUTONS D'ACTION STYLE GMAIL */}
-                              <div className="pt-3 border-t border-gray-150 flex items-center space-x-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMessageText(`Bonjour,\nSuite à ma candidature pour le poste de ${parsed.jobTitle}, `);
-                                  }}
-                                  className="px-4 py-2 text-xs font-black text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center space-x-2 transition cursor-pointer"
-                                >
-                                  <i className="fa-solid fa-reply text-xs"></i>
-                                  <span>Répondre</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => triggerToast("Candidature prête au transfert", "fa-share")}
-                                  className="px-4 py-2 text-xs font-black text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center space-x-2 transition cursor-pointer"
-                                >
-                                  <i className="fa-solid fa-share text-xs"></i>
-                                  <span>Transférer</span>
-                                </button>
-                              </div>
                             </div>
                           </div>
                         );
@@ -3132,8 +3114,15 @@ export default function MessagerieClient() {
 
                 </div>
 
-                {/* Input Area (style Messenger : actions rapides à gauche,
-                    champ épuré au centre, émoji + Like/Envoyer à droite) */}
+                {/* Input Area ou Bannière d'archivage sécurisée pour les candidatures */}
+                {activeConversation?.isCandidature || activeConversation?.typeDiscussion === "OFFRE" ? (
+                  <div className="bg-gray-50/90 border-t border-gray-200 p-4 text-center flex items-center justify-center gap-2.5 text-xs font-bold text-gray-600 shadow-2xs flex-none">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-lock text-[10px]"></i>
+                    </div>
+                    <span>Cette candidature a été transmise par e-mail au recruteur • Dossier officiel archivé en lecture seule</span>
+                  </div>
+                ) : (
                 <div className="bg-white p-3 sm:p-4 border-t border-gray-200 relative flex-none">
                   {showQuickActions && (
                     <div className="absolute bottom-full left-3 sm:left-4 bg-white border border-gray-200 p-2 rounded-2xl shadow-xl flex gap-2 z-40 mb-2 animate-fade-in-up">
@@ -3285,6 +3274,7 @@ export default function MessagerieClient() {
                     </form>
                   )}
                 </div>
+                )}
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50">
