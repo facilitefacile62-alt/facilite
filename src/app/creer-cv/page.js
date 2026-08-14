@@ -2064,15 +2064,15 @@ export default function CreerCv() {
                   <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">{t.chooseTemplate}</h3>
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { id: "entrepreneur", name: "Entrepreneur Pro", desc: "Officiel Facilité (Photo & 2 Col)", icon: "fa-rocket", previewUrl: "/model4.png" },
-                      { id: "modern", name: t.templateModern, desc: "2 Colonnes structuré", icon: "fa-grip", previewUrl: "/model1.png" },
-                      { id: "minimalist", name: t.templateMinimal, desc: "Aéré & Moderne", icon: "fa-align-left", previewUrl: "/model2.png" },
-                      { id: "classic", name: t.templateClassic, desc: "Traditionnel & Chic", icon: "fa-newspaper", previewUrl: "/model3.png" },
-                      { id: "executif", name: t.templateExecutif, desc: "Bandeau formel & dense", icon: "fa-briefcase", previewUrl: "/model5.png" },
-                      { id: "creatif", name: t.templateCreatif, desc: "Coloré & asymétrique", icon: "fa-palette", previewUrl: "/model6.png" },
-                      { id: "technique", name: t.templateTechnique, desc: "Grille de compétences", icon: "fa-code", previewUrl: "/model7.png" },
-                      { id: "professionnel", name: t.templateProfessionnel, desc: "2 Colonnes Pro", icon: "fa-user-tie", previewUrl: "/model8.png" },
-                      { id: "elegance", name: t.templateElegance, desc: "Sidebar noire, touches dorées", icon: "fa-crown", previewUrl: "/model9.png" }
+                      { id: "entrepreneur", num: 1, name: "Modèle 1 — Entrepreneur Pro", desc: "Officiel Facilité (Photo & 2 Col)", icon: "fa-rocket", previewUrl: "/model4.png" },
+                      { id: "modern", num: 2, name: "Modèle 2 — Moderne", desc: "2 Colonnes structuré", icon: "fa-grip", previewUrl: "/model1.png" },
+                      { id: "minimalist", num: 3, name: "Modèle 3 — Minimaliste", desc: "Aéré & Moderne", icon: "fa-align-left", previewUrl: "/model2.png" },
+                      { id: "classic", num: 4, name: "Modèle 4 — Classique", desc: "Traditionnel & Chic", icon: "fa-newspaper", previewUrl: "/model3.png" },
+                      { id: "executif", num: 5, name: "Modèle 5 — Exécutif", desc: "Bandeau formel & dense", icon: "fa-briefcase", previewUrl: "/model5.png" },
+                      { id: "creatif", num: 6, name: "Modèle 6 — Créatif", desc: "Coloré & asymétrique", icon: "fa-palette", previewUrl: "/model6.png" },
+                      { id: "technique", num: 7, name: "Modèle 7 — Technique", desc: "Grille de compétences", icon: "fa-code", previewUrl: "/model7.png" },
+                      { id: "professionnel", num: 8, name: "Modèle 8 — Professionnel", desc: "2 Colonnes Pro", icon: "fa-user-tie", previewUrl: "/model8.png" },
+                      { id: "elegance", num: 9, name: "Modèle 9 — Élégance", desc: "Sidebar noire, touches dorées", icon: "fa-crown", previewUrl: "/model9.png" }
                     ].map((tpl) => {
                       const active = selectedTemplate === tpl.id;
                       return (

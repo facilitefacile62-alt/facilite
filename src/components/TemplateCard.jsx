@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function TemplateCard({ isRecommended = false, previewImage = "/affiche_cv_pro.jpg", title = "Modèle CV Pro", onSelect }) {
+export default function TemplateCard({ number, isRecommended = false, previewImage = "/affiche_cv_pro.jpg", title = "Modèle CV Pro", onSelect }) {
   return (
     <div
       onClick={onSelect}
@@ -11,6 +11,14 @@ export default function TemplateCard({ isRecommended = false, previewImage = "/a
       }}
       className="relative group flex flex-col rounded-2xl overflow-hidden border border-gray-200 bg-white transition-all duration-300 hover:shadow-2xl hover:border-emerald-400 cursor-pointer shadow-xs"
     >
+
+      {/* Badge Numéro de Modèle Flottant */}
+      {number && (
+        <div className="absolute top-3 left-3 z-10 bg-gray-950/80 backdrop-blur-xs text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow-md border border-white/20 flex items-center gap-1">
+          <span className="text-[#10E688]">#</span>
+          <span>Modèle {number}</span>
+        </div>
+      )}
 
       {/* Badge Recommandé Flottant */}
       {isRecommended && (
