@@ -1024,24 +1024,24 @@ export default function AdminDashboardPage() {
       {/* CONTENU PRINCIPAL */}
       {/* ------------------------------------------------------------- */}
       <div className="flex-1 min-w-0">
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3">
           {/* Header & Barre d'onglets fixes en haut */}
-          <div className="sticky top-0 z-30 bg-[#FAF6F1]/95 backdrop-blur-md pt-4 pb-2.5 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-orange-200/50 shadow-xs mb-6">
+          <div className="sticky top-0 z-30 bg-[#FAF6F1]/95 backdrop-blur-md pt-2 pb-2 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-orange-200/50 shadow-xs mb-3">
             {/* En-tête principal */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-sm flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 mb-2 sm:mb-2.5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center text-lg sm:text-xl shadow-sm flex-shrink-0">
                   🛡️
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Administration</h1>
-                  <p className="text-xs sm:text-sm text-gray-500 font-medium">Gérez votre plateforme Facilite</p>
+                  <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900 tracking-tight">Administration</h1>
+                  <p className="text-xs text-gray-500 font-medium">Gérez votre plateforme Facilite</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
                 <span>Connecté en tant que {userSession?.user?.email}</span>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-orange-100 text-orange-700">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-orange-100 text-orange-700">
                   Admin
                 </span>
               </div>
