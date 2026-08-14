@@ -25,8 +25,24 @@ const AuthContext = createContext({
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [role, setRole] = useState("visitor");
+  const [profile, setProfile] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("FACILITE_CACHED_PROFILE_V1");
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return null;
+  });
+  const [role, setRole] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cachedRole = localStorage.getItem("FACILITE_CACHED_ROLE_V1");
+        if (cachedRole) return cachedRole;
+      } catch {}
+    }
+    return "visitor";
+  });
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async (currentSession) => {
@@ -36,6 +52,10 @@ export function AuthProvider({ children }) {
       setProfile(null);
       setRole("visitor");
       setLoading(false);
+      try {
+        localStorage.removeItem("FACILITE_CACHED_PROFILE_V1");
+        localStorage.removeItem("FACILITE_CACHED_ROLE_V1");
+      } catch {}
       return;
     }
 
@@ -73,19 +93,29 @@ export function AuthProvider({ children }) {
           getSignedCoverUrl(profileData.cover_url),
         ]);
 
-        setProfile({
+        const fullProfile = {
           ...profileData,
           avatar_url: avatarUrl || profileData.avatar_url || "/logo.jpeg",
           cover_url: coverUrl || profileData.cover_url || null,
-        });
+        };
+        setProfile(fullProfile);
+        try {
+          localStorage.setItem("FACILITE_CACHED_PROFILE_V1", JSON.stringify(fullProfile));
+          localStorage.setItem("FACILITE_CACHED_ROLE_V1", userRole);
+        } catch {}
       } else {
-        setProfile({
+        const fallbackProfile = {
           id: currentUser.id,
           full_name: currentUser.user_metadata?.full_name || currentUser.email?.split("@")[0] || "Utilisateur",
           avatar_url: currentUser.user_metadata?.avatar_url || "/logo.jpeg",
           bio: "",
           badges: [],
-        });
+        };
+        setProfile(fallbackProfile);
+        try {
+          localStorage.setItem("FACILITE_CACHED_PROFILE_V1", JSON.stringify(fallbackProfile));
+          localStorage.setItem("FACILITE_CACHED_ROLE_V1", userRole);
+        } catch {}
       }
     } catch (err) {
       console.error("Erreur AuthContext fetchUserData:", err);

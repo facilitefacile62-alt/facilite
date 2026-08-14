@@ -1506,56 +1506,69 @@ export default function Home() {
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
           <aside className="hidden md:flex md:w-[215px] flex-shrink-0 flex-col gap-2 md:pr-0.5 md:sticky md:top-[72px] md:h-fit md:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
 
-            {/* Carte Profil (toujours visible, ne défile pas) */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs flex-shrink-0">
-              {/* Image de couverture en hauteur */}
-              <Link
-                href={userSession ? "/profil" : "/login"}
-                className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
-                style={{ backgroundImage: `url('${userProfile?.cover_url || '/stellar-cover.png'}')` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
-              </Link>
-              
-              <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
-                {/* Photo de profil (Logo ou Avatar personnalisé) */}
+            {authLoading && !userProfile ? (
+              /* Squelette de chargement doux pour éviter les 3 états sautillants */
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs flex-shrink-0 animate-pulse">
+                <div className="h-16 bg-gray-200"></div>
+                <div className="px-3 pb-3.5 pt-0 flex flex-col items-center text-center">
+                  <div className="-mt-7 mb-2 w-14 h-14 rounded-full border-2 border-white bg-gray-300"></div>
+                  <div className="h-3 w-28 bg-gray-200 rounded mb-1.5"></div>
+                  <div className="h-2 w-36 bg-gray-100 rounded mb-1"></div>
+                  <div className="h-2 w-20 bg-gray-100 rounded"></div>
+                </div>
+              </div>
+            ) : (
+              /* Carte Profil (toujours visible, ne défile pas) */
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs flex-shrink-0">
+                {/* Image de couverture en hauteur */}
                 <Link
-                  href={userSession ? "/profil" : "/login"}
-                  className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white shadow-md overflow-hidden bg-white block cursor-pointer group"
+                  href={userSession || userProfile ? "/profil" : "/login"}
+                  className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
+                  style={{ backgroundImage: `url('${userProfile?.cover_url || '/stellar-cover.png'}')` }}
                 >
-                  <img
-                    src={userProfile?.avatar_url || "/logo.jpeg"}
-                    alt="Facilite Logo Profile"
-                    className="w-full h-full object-cover group-hover:scale-105 transition"
-                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
                 </Link>
                 
-                <Link href={userSession ? "/profil" : "/login"} className="group">
-                  <h2 className="text-sm font-extrabold text-gray-900 leading-tight group-hover:text-blue-600 transition">
-                    {userProfile?.full_name || (userSession ? userSession.user.email : "Se connecter pour voir votre profil")}
-                  </h2>
-                </Link>
-                <p className="text-[10px] text-gray-500 font-bold mt-0.5">
-                  {userProfile?.headline || (userSession ? "Complétez votre profil" : "Créez votre CV en ligne")}
-                </p>
-                {(userProfile?.location || userSession) && (
-                  <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
-                    {userProfile?.location || "Localisation non renseignée"}
-                  </p>
-                )}
-
-                {/* Bouton Ajouter Expérience (visible uniquement si connecté) */}
-                {userSession && (
-                  <button
-                    onClick={() => setExperienceModalOpen(true)}
-                    className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white"
+                <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
+                  {/* Photo de profil (Logo ou Avatar personnalisé) */}
+                  <Link
+                    href={userSession || userProfile ? "/profil" : "/login"}
+                    className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white shadow-md overflow-hidden bg-white block cursor-pointer group"
                   >
-                    <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
-                    <span>{t.profileExperienceBtn}</span>
-                  </button>
-                )}
+                    <img
+                      src={userProfile?.avatar_url || "/logo.jpeg"}
+                      alt="Photo de profil"
+                      className="w-full h-full object-cover group-hover:scale-105 transition"
+                    />
+                  </Link>
+                  
+                  <Link href={userSession || userProfile ? "/profil" : "/login"} className="group">
+                    <h2 className="text-sm font-extrabold text-gray-900 leading-tight group-hover:text-blue-600 transition">
+                      {userProfile?.full_name || (userSession ? userSession.user.email : "Se connecter pour voir votre profil")}
+                    </h2>
+                  </Link>
+                  <p className="text-[10px] text-gray-500 font-bold mt-0.5">
+                    {userProfile?.headline || (userSession ? "Complétez votre profil" : "Créez votre CV en ligne")}
+                  </p>
+                  {(userProfile?.location || userSession) && (
+                    <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
+                      {userProfile?.location || "Localisation non renseignée"}
+                    </p>
+                  )}
+
+                  {/* Bouton Ajouter Expérience (visible uniquement si connecté) */}
+                  {(userSession || userProfile) && (
+                    <button
+                      onClick={() => setExperienceModalOpen(true)}
+                      className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white"
+                    >
+                      <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
+                      <span>{t.profileExperienceBtn}</span>
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Zone défilante : tout le reste de la barre latérale */}
             <div className="flex-1 min-h-0 flex flex-col space-y-2 pr-0.5">
@@ -1644,7 +1657,13 @@ export default function Home() {
             )}
 
             {/* Conditionnel : Statistiques & Déconnexion uniquement si connecté, sinon Bloc Call-to-Action */}
-            {userSession ? (
+            {authLoading && !userProfile ? (
+              <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs animate-pulse space-y-2">
+                <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                <div className="h-2.5 w-full bg-gray-100 rounded"></div>
+                <div className="h-2.5 w-full bg-gray-100 rounded"></div>
+              </div>
+            ) : (userSession || userProfile) ? (
               <>
                 {/* Carte Statistiques */}
                 <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
