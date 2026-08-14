@@ -84,9 +84,12 @@ export default function AdminAIStudio() {
   // État du Bac à sable (Playground)
   const [chatMessages, setChatMessages] = useState([]);
   const [inputText, setInputText] = useState("");
+  const [selectedAttachment, setSelectedAttachment] = useState(null); // { name, type, mimeType, size, data }
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastElapsedMs, setLastElapsedMs] = useState(null);
   const chatScrollRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
 
   // Calcul du score de prompt en direct (sur 10)
   const promptScore = (() => {
@@ -142,15 +145,45 @@ export default function AdminAIStudio() {
     }
   };
 
+  // Gestion de la sélection de fichier (document ou photo)
+  const handleFileChange = (e, forcedType = null) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Le fichier ne doit pas dépasser 10 Mo.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      const isImage = file.type.startsWith("image/") || forcedType === "image";
+      setSelectedAttachment({
+        name: file.name,
+        type: isImage ? "image" : "document",
+        mimeType: file.type || (isImage ? "image/jpeg" : "application/pdf"),
+        size: file.size,
+        data: dataUrl,
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   // Envoi d'un message de test dans le Playground
   const handleSendTestMessage = async (overrideText = null) => {
     const textToSend = overrideText || inputText.trim();
-    if (!textToSend || isGenerating) return;
+    if ((!textToSend && !selectedAttachment) || isGenerating) return;
+
+    const currentAttachment = selectedAttachment;
+    setSelectedAttachment(null);
 
     const userMsg = {
       id: `user_${Date.now()}`,
       role: "user",
-      content: textToSend,
+      content: textToSend || (currentAttachment ? `[Fichier joint : ${currentAttachment.name}]` : ""),
+      attachment: currentAttachment,
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
@@ -200,6 +233,16 @@ ${productsContext}
           model: selectedModel,
           customSystemPrompt: fullSystemPrompt,
           temperature: commStyle === "concis" ? 0.3 : commStyle === "commercial" ? 0.8 : 0.7,
+          attachments: currentAttachment
+            ? [
+                {
+                  type: currentAttachment.type,
+                  name: currentAttachment.name,
+                  mimeType: currentAttachment.mimeType,
+                  data: currentAttachment.data,
+                },
+              ]
+            : undefined,
         }),
       });
 
@@ -739,7 +782,7 @@ ${productsContext}
                     )}
 
                     <div
-                      className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed space-y-1 shadow-md ${
+                      className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed space-y-1.5 shadow-md ${
                         msg.role === "user"
                           ? "bg-[#1E60E6] text-white rounded-tr-xs"
                           : msg.isError
@@ -747,6 +790,27 @@ ${productsContext}
                           : "bg-[#1F232B] text-gray-200 border border-[#2E3542] rounded-tl-xs"
                       }`}
                     >
+                      {/* Affichage de la pièce jointe dans la bulle de chat */}
+                      {msg.attachment && (
+                        <div className="p-2.5 bg-black/30 rounded-xl border border-white/15 flex items-center space-x-2.5">
+                          {msg.attachment.type === "image" ? (
+                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/20 flex-shrink-0 bg-black/40">
+                              <img src={msg.attachment.data} alt="Aperçu CV" className="w-full h-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-red-600/30 border border-red-500/40 text-red-400 flex items-center justify-center text-lg flex-shrink-0">
+                              <i className={msg.attachment.name.endsWith(".pdf") ? "fa-solid fa-file-pdf" : "fa-solid fa-file-lines"}></i>
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[11px] font-bold text-white truncate">{msg.attachment.name}</div>
+                            <div className="text-[9px] text-gray-300 font-mono">
+                              {(msg.attachment.size / 1024).toFixed(0)} Ko • {msg.attachment.type === "image" ? "Photo CV / Lettre" : "Document CV"}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="whitespace-pre-wrap font-normal">{msg.content}</div>
                       <div className="flex items-center justify-between text-[9px] opacity-60 pt-1 font-mono">
                         <span>{msg.time}</span>
@@ -764,7 +828,7 @@ ${productsContext}
                   </div>
                   <div className="bg-[#1F232B] border border-[#2E3542] rounded-2xl px-4 py-2 text-xs text-gray-400 flex items-center space-x-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>L'IA formule sa réponse avec vos directives...</span>
+                    <span>L'IA analyse vos documents et formule sa réponse...</span>
                   </div>
                 </div>
               )}
@@ -799,7 +863,35 @@ ${productsContext}
               </button>
             </div>
 
-            {/* Zone de saisie (Message + micro + bouton) */}
+            {/* Barre de prévisualisation du fichier sélectionné */}
+            {selectedAttachment && (
+              <div className="px-3.5 py-2 bg-[#1F232B] border-t border-[#2A2F3A] flex items-center justify-between gap-3 animate-fade-in flex-none">
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  {selectedAttachment.type === "image" ? (
+                    <img src={selectedAttachment.data} alt="Preview" className="w-9 h-9 rounded-lg object-cover border border-[#10E688] flex-shrink-0" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center text-base flex-shrink-0">
+                      <i className="fa-solid fa-file-pdf"></i>
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-white truncate">{selectedAttachment.name}</div>
+                    <div className="text-[10px] text-emerald-400 font-medium">Prêt pour l'analyse IA • {(selectedAttachment.size / 1024).toFixed(0)} Ko</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedAttachment(null)}
+                  className="text-gray-400 hover:text-red-400 p-1.5 transition cursor-pointer"
+                  title="Retirer le fichier"
+                >
+                  <i className="fa-solid fa-xmark text-sm"></i>
+                </button>
+              </div>
+            )}
+
+            {/* Zone de saisie avec boutons Trombone (Document) et Photo (Image) */}
             <div className="p-3 bg-[#181B20] border-t border-[#2A2F3A] flex-none">
               <form
                 onSubmit={(e) => {
@@ -808,28 +900,68 @@ ${productsContext}
                 }}
                 className="flex items-center gap-2"
               >
+                {/* Inputs de fichiers cachés */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => handleFileChange(e, "document")}
+                  accept=".pdf,.doc,.docx,.txt"
+                  className="hidden"
+                />
+                <input
+                  type="file"
+                  ref={imageInputRef}
+                  onChange={(e) => handleFileChange(e, "image")}
+                  accept="image/*"
+                  className="hidden"
+                />
+
+                {/* Bouton Trombone (Document PDF/Word) */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isGenerating}
+                  className="p-2.5 bg-[#1F232B] hover:bg-[#2A303C] text-gray-300 hover:text-[#10E688] border border-[#2E3542] rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                  title="Insérer un document (CV PDF, Word, Lettre...)"
+                >
+                  <i className="fa-solid fa-paperclip text-sm"></i>
+                </button>
+
+                {/* Bouton Appareil Photo / Image */}
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={isGenerating}
+                  className="p-2.5 bg-[#1F232B] hover:bg-[#2A303C] text-gray-300 hover:text-[#10E688] border border-[#2E3542] rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                  title="Insérer une photo (Photo de CV, capture d'écran...)"
+                >
+                  <i className="fa-solid fa-camera text-sm"></i>
+                </button>
+
+                {/* Champ texte */}
                 <div className="relative flex-1">
                   <input
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Message..."
+                    placeholder={selectedAttachment ? "Ajouter un message d'accompagnement..." : "Message ou insérer CV..."}
                     disabled={isGenerating}
                     className="w-full pl-4 pr-9 py-2.5 bg-[#131518] border border-[#2E3542] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#10E688] transition font-medium"
                   />
                   <button
                     type="button"
-                    onClick={() => handleSendTestMessage("Bonjour, pouvez-vous m'aider pour mon CV ?")}
+                    onClick={() => handleSendTestMessage("Bonjour, voici mon CV pour analyse")}
                     className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white transition cursor-pointer"
-                    title="Commande vocale simulée"
+                    title="Suggestion automatique"
                   >
-                    <i className="fa-solid fa-microphone text-xs"></i>
+                    <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
                   </button>
                 </div>
 
+                {/* Bouton Envoi */}
                 <button
                   type="submit"
-                  disabled={!inputText.trim() || isGenerating}
+                  disabled={(!inputText.trim() && !selectedAttachment) || isGenerating}
                   className="px-4 py-2.5 bg-[#10E688] hover:bg-[#10E688]/90 disabled:bg-gray-700 text-gray-950 font-black rounded-xl text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
                 >
                   <i className="fa-solid fa-paper-plane"></i>
