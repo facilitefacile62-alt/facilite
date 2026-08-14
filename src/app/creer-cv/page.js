@@ -1132,11 +1132,13 @@ export default function CreerCv() {
     const newPage = {
       ...targetPage,
       id: newId,
-      title: `Page ${cvPages.length + 1} (Copie de la page ${pageIndex + 1})`
+      type: "cv_duplicate",
+      title: `Page ${cvPages.length + 1} (Copie exacte de la page ${pageIndex + 1})`,
+      isLocked: false
     };
     setCvPages(prev => [...prev, newPage]);
     setShowAddPageMenu(false);
-    triggerToast("Page dupliquée avec succès !");
+    triggerToast("Page dupliquée à l'identique !");
   };
 
   const handleDeletePage = (pageIndex) => {
@@ -4368,7 +4370,7 @@ export default function CreerCv() {
                             <p className="text-xs font-black text-slate-900 mt-2">{cvData.firstName} {cvData.lastName}</p>
                           </div>
                         </div>
-                      ) : (
+                      ) : page.type === "cv_p2" ? (
                         /* CV CONTINUATION PAGE 2 */
                         <div className="flex flex-col w-full h-full p-8 text-xs font-sans bg-white justify-between">
                           <div className="space-y-6">
@@ -4424,6 +4426,14 @@ export default function CreerCv() {
                             Document généré via Facilite.fr • Page 2
                           </div>
                         </div>
+                      ) : (
+                        /* EXACT IDENTICAL CLONE OF PAGE 1 (CV DUPLICATE) */
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html: typeof document !== "undefined" && document.getElementById("cv-preview-sheet") ? document.getElementById("cv-preview-sheet").innerHTML : ""
+                          }}
+                          className="w-full h-full flex flex-col font-sans"
+                        />
                       )}
                     </div>
                   </div>
