@@ -870,7 +870,18 @@ export default function AdminDashboardPage() {
 
     if (item.type === "link") {
       return (
-        <Link key={item.label} href={item.href} onClick={onNavigate} className={baseClass}>
+        <Link
+          key={item.label}
+          href={item.href}
+          onClick={(e) => {
+            onNavigate?.();
+            if (pathname === item.href) {
+              e.preventDefault();
+              window.location.href = item.href;
+            }
+          }}
+          className={baseClass}
+        >
           <span>{item.icon}</span>
           <span>{item.label}</span>
           {item.unread && <UnreadBadge count={unreadMessagesCount} />}
@@ -1056,6 +1067,12 @@ export default function AdminDashboardPage() {
                   <Link
                     key={tab.id}
                     href={tab.href}
+                    onClick={(e) => {
+                      if (pathname === tab.href) {
+                        e.preventDefault();
+                        window.location.href = tab.href;
+                      }
+                    }}
                     className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 text-gray-500 hover:text-gray-800"
                   >
                     <span>{tab.icon}</span>

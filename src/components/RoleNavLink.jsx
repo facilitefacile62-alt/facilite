@@ -106,7 +106,13 @@ export default function RoleNavLink({ session, className, variant = "desktop", o
           <Link
             key={link.href}
             href={link.href}
-            onClick={onClick}
+            onClick={(e) => {
+              if (onClick) onClick(e);
+              if (typeof window !== "undefined" && window.location.pathname === link.href) {
+                e.preventDefault();
+                window.location.href = link.href;
+              }
+            }}
             className={
               className ||
               `flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-extrabold transition shadow-2xs border ${
