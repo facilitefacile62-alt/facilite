@@ -346,14 +346,15 @@ export async function POST(req) {
           }
         }
 
-        let messageContent = `💼 Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company})\n📧 Destinataire : ${finalRecruiterEmail || "Recruteur"}\n📊 Score CV : ${cvMatchScore || 0}%`;
+        const realRecruiterContactEmail = recruiterEmail || offerData?.contact_email || `recrutement@${(company || "entreprise").toLowerCase().replace(/[^a-z0-9]/g, "") || "facilite"}.sn`;
+        let messageContent = `💼 Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company})\n📧 Destinataire : ${realRecruiterContactEmail}\n📊 Score CV : ${cvMatchScore || 0}%`;
         if (coverLetter && coverLetter.trim()) {
           messageContent += `\n\n💬 Message du candidat :\n${coverLetter.trim()}`;
         }
 
         const { error: applyMsgError } = await supabase.from("messages").insert({
           sender_id: user.id,
-          receiver_id: targetRecruiterId,
+          receiver_id: offerRecruiterId,
           conversation_id: conversationId,
           content: messageContent,
           type_discussion: "OFFRE",

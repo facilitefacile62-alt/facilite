@@ -269,6 +269,10 @@ function formatDateSeparatorLabel(dateInput) {
 function parseCandidatureMessage(msg, userSession) {
   const text = msg?.text || "";
   
+  // Nom et email du candidat (Expéditeur)
+  const candidateName = msg?.candidatureData?.full_name || userSession?.user?.user_metadata?.full_name || "Candidat";
+  const candidateEmail = userSession?.user?.email || msg?.candidatureData?.email || "candidat@facilite.sn";
+
   // Extraire le poste
   const jobMatch = text.match(/poste\s*:\s*([^\(\n]+)/i);
   const jobTitle = jobMatch ? jobMatch[1].trim() : (msg?.candidatureData?.job_title || "Offre d'emploi");
@@ -277,9 +281,23 @@ function parseCandidatureMessage(msg, userSession) {
   const compMatch = text.match(/\(([^)]+)\)/);
   const company = compMatch ? compMatch[1].trim() : (msg?.candidatureData?.company || "Entreprise confidentielle");
   
-  // Extraire le destinataire
+  // Extraire le destinataire réel (Recruteur / Entreprise)
+  let recipientEmail = null;
   const emailMatch = text.match(/Destinataire\s*:\s*([^\n]+)/i);
-  const recipientEmail = emailMatch ? emailMatch[1].trim() : (msg?.candidatureData?.email || "recrutement@facilite.sn");
+  if (emailMatch && emailMatch[1].trim() && emailMatch[1].trim().toLowerCase() !== candidateEmail.toLowerCase() && !emailMatch[1].includes("onboarding@resend.dev")) {
+    recipientEmail = emailMatch[1].trim();
+  }
+
+  if (!recipientEmail) {
+    recipientEmail = msg?.candidatureData?.job_offers?.contact_email || 
+                     msg?.candidatureData?.recruiter_email || 
+                     null;
+  }
+
+  if (!recipientEmail || recipientEmail.toLowerCase() === candidateEmail.toLowerCase()) {
+    const cleanComp = (company || "entreprise").toLowerCase().replace(/[^a-z0-9]/g, "");
+    recipientEmail = `recrutement@${cleanComp || "facilite"}.sn`;
+  }
   
   // Extraire le score CV
   const scoreMatch = text.match(/Score CV\s*:\s*(\d+)%/i);
@@ -288,9 +306,6 @@ function parseCandidatureMessage(msg, userSession) {
   // Extraire le message d'accompagnement
   const msgParts = text.split(/💬 Message (?:du candidat|d'accompagnement)\s*:\s*/i);
   let coverMessage = msgParts.length > 1 ? msgParts[1].trim() : (msg?.candidatureData?.cover_letter || null);
-
-  const candidateName = msg?.candidatureData?.full_name || userSession?.user?.user_metadata?.full_name || "Fatou Diongue";
-  const candidateEmail = userSession?.user?.email || "facilitefacile62@gmail.com";
 
   return {
     jobTitle,
@@ -891,20 +906,18 @@ export default function MessagerieClient() {
           triggerToast("Erreur de chargement de la discussion", "fa-triangle-exclamation");
         }
 
-        // Chargement des candidatures de l'utilisateur
+        // Chargement des candidatures de l'utilisateur avec les données de l'offre
         const { data: userCandidatures } = await supabase
           .from("candidatures")
-          .select("*")
+          .select("*, job_offers:job_offer_id(id, contact_email, company, title)")
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: true }); // Du plus ancien au plus récent
 
-        // Regrouper les candidatures par offre ou par e-mail destinataire pour éviter les doublons de cartes
+        // Regrouper les candidatures par offre ou par entreprise pour éviter les doublons de cartes
         const groupedCandidatures = new Map();
         for (const cand of (userCandidatures || [])) {
           const groupKey = cand.job_offer_id
             ? `offer_${cand.job_offer_id}`
-            : cand.email
-            ? `email_${cand.email.toLowerCase().trim()}`
             : `job_${(cand.job_title || "offre").toLowerCase().trim()}_${(cand.company || "ent").toLowerCase().trim()}`;
 
           if (!groupedCandidatures.has(groupKey)) {
@@ -913,7 +926,7 @@ export default function MessagerieClient() {
           groupedCandidatures.get(groupKey).push(cand);
         }
 
-        // Créer une carte unique par offre/e-mail avec un compteur si plusieurs envois
+        // Créer une carte unique par offre avec un compteur si plusieurs envois
         const candidatureCards = Array.from(groupedCandidatures.entries()).map(([groupKey, cands]) => {
           const latestCand = cands[cands.length - 1];
           const offerIds = new Set(cands.map((c) => c.job_offer_id).filter(Boolean));
@@ -923,24 +936,27 @@ export default function MessagerieClient() {
               (m.typeDiscussion === "OFFRE" && m.text && m.text.includes(latestCand.job_title))
           );
 
-          const receiptMsgs = cands.map((c) => ({
-            id: `cand_receipt_${c.id}`,
-            sender: "me",
-            senderId: session.user.id,
-            receiverId: c.recruiter_id || null,
-            text: `💼 Candidature envoyée pour le poste : ${c.job_title} (${c.company})\n📧 Destinataire : ${c.email || "Recruteur"}\n📊 Score CV : ${c.cv_match_score || 0}%\n💬 Message d'accompagnement : ${c.cover_letter || "Aucun message d'accompagnement"}`,
-            time: new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            createdAt: c.created_at,
-            status: "delivered",
-            isPinned: false,
-            persisted: true,
-            typeDiscussion: "OFFRE",
-            jobOfferId: c.job_offer_id,
-            attachment_url: c.cv_url,
-            file_name: "CV_Candidature.pdf",
-            isCandidatureReceipt: true,
-            candidatureData: c,
-          }));
+          const receiptMsgs = cands.map((c) => {
+            const recruiterContactEmail = c.job_offers?.contact_email || `recrutement@${(c.company || 'entreprise').toLowerCase().replace(/[^a-z0-9]/g, '') || 'facilite'}.sn`;
+            return {
+              id: `cand_receipt_${c.id}`,
+              sender: "me",
+              senderId: session.user.id,
+              receiverId: c.recruiter_id || null,
+              text: `💼 Candidature envoyée pour le poste : ${c.job_title} (${c.company})\n📧 Destinataire : ${recruiterContactEmail}\n📊 Score CV : ${c.cv_match_score || 0}%\n💬 Message d'accompagnement : ${c.cover_letter || "Aucun message d'accompagnement"}`,
+              time: new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              createdAt: c.created_at,
+              status: "delivered",
+              isPinned: false,
+              persisted: true,
+              typeDiscussion: "OFFRE",
+              jobOfferId: c.job_offer_id,
+              attachment_url: c.cv_url,
+              file_name: "CV_Candidature.pdf",
+              isCandidatureReceipt: true,
+              candidatureData: c,
+            };
+          });
 
           // Afficher tous les envois de candidatures successifs
           const allGroupMessages = receiptMsgs.length > 0 ? receiptMsgs : matchedMsgs;
