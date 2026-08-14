@@ -1086,11 +1086,11 @@ export default function Header() {
             </div>
           )}
 
-          {/* Centre de Notifications Interactif avec Compteur Dynamique */}
+          {/* Centre de Notifications Interactif avec Compteur Dynamique (Desktop uniquement, sur mobile accessible via la barre d'onglets) */}
           <button
             type="button"
             onClick={() => setNotificationsModalOpen(true)}
-            className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative flex items-center justify-center flex-shrink-0 cursor-pointer"
+            className="hidden lg:flex p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative items-center justify-center flex-shrink-0 cursor-pointer"
             title="Centre de notifications"
             aria-label="Ouvrir les notifications"
           >
