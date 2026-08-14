@@ -1194,6 +1194,22 @@ export default function Header() {
             <i className="fa-regular fa-comments text-sm sm:text-base"></i>
             <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
           </Link>
+          <button
+            type="button"
+            onClick={() => setNotificationsModalOpen(true)}
+            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition relative text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+            aria-label="Notifications"
+          >
+            <div className="relative">
+              <i className="fa-regular fa-bell text-sm sm:text-base"></i>
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] font-black rounded-full min-w-[15px] h-[15px] px-0.5 flex items-center justify-center animate-pulse">
+                  {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[9px] font-bold tracking-tight truncate w-full">Notifs</span>
+          </button>
           <RoleNavLink session={userSession} variant="bottom-bar" />
         </div>
       )}
@@ -1211,6 +1227,25 @@ export default function Header() {
               <i className="fa-solid fa-file-arrow-up text-base"></i>
               <span>Importer CV (Scanner IA)</span>
             </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setNotificationsModalOpen(true);
+              }}
+              className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <i className="fa-solid fa-bell w-5 text-center text-emerald-600"></i>
+                <span>Notifications</span>
+              </div>
+              {unreadNotificationsCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-red-500 text-white shadow-xs animate-pulse">
+                  {unreadNotificationsCount} non lue{unreadNotificationsCount > 1 ? "s" : ""}
+                </span>
+              )}
+            </button>
           </div>
 
           <div className="py-1">

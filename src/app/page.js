@@ -1212,21 +1212,19 @@ export default function Home() {
               </Link>
             )}
 
-            {userSession && (
-              <button
-                type="button"
-                onClick={() => setNotificationsModalOpen(true)}
-                className="relative w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
-                aria-label="Notifications"
-              >
-                <i className="fa-regular fa-bell text-sm"></i>
-                {unreadNotifCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
-                    {unreadNotifCount}
-                  </span>
-                )}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setNotificationsModalOpen(true)}
+              className="relative w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-black/5 transition cursor-pointer"
+              aria-label="Notifications"
+            >
+              <i className="fa-regular fa-bell text-sm"></i>
+              {unreadNotifCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 bg-red-600 text-white text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center border border-white">
+                  {unreadNotifCount}
+                </span>
+              )}
+            </button>
 
             <Link
               href={userSession ? "/profil" : "/login"}
