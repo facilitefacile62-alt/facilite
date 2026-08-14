@@ -446,146 +446,149 @@ ${productsContext}
   return (
     <div className="space-y-5 animate-fade-in-up font-sans text-gray-100">
       
-      {/* 1. TOP BAR NOIRE DU STUDIO (Style Référence) */}
-      <div className="bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
-        
-        {/* Titre Agent + Bouton Déployer */}
-        <div className="flex items-center space-x-3.5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-[#10E688] text-gray-950 flex items-center justify-center font-black text-xl shadow-lg">
-            ⚡
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-base sm:text-lg font-black text-white tracking-tight">Agent IA Facilité</h1>
-              <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                {isDeployed ? "En ligne" : "Brouillon"}
-              </span>
+      {/* HEADER & SUB-NAV FIXES DE L'AGENT IA */}
+      <div className="sticky top-[138px] sm:top-[128px] z-20 space-y-2.5 bg-[#FAF6F1]/95 backdrop-blur-md pt-1 pb-2.5">
+        {/* 1. TOP BAR NOIRE DU STUDIO (Style Référence) */}
+        <div className="bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+          
+          {/* Titre Agent + Bouton Déployer */}
+          <div className="flex items-center space-x-3.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-[#10E688] text-gray-950 flex items-center justify-center font-black text-xl shadow-lg">
+              ⚡
             </div>
-            <p className="text-[11px] text-gray-400 font-medium">Studio d'entraînement & supervision de l'assistant</p>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h1 className="text-base sm:text-lg font-black text-white tracking-tight">Agent IA Facilité</h1>
+                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  {isDeployed ? "En ligne" : "Brouillon"}
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-400 font-medium">Studio d'entraînement & supervision de l'assistant</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsDeployed(!isDeployed);
+                handleSaveConfig();
+              }}
+              className="ml-2 px-3.5 py-1.5 bg-[#10E688] hover:bg-[#10E688]/90 text-gray-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <i className="fa-solid fa-rocket text-xs"></i>
+              <span>{isDeployed ? "Déployé" : "Déployer"}</span>
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setIsDeployed(!isDeployed);
-              handleSaveConfig();
-            }}
-            className="ml-2 px-3.5 py-1.5 bg-[#10E688] hover:bg-[#10E688]/90 text-gray-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <i className="fa-solid fa-rocket text-xs"></i>
-            <span>{isDeployed ? "Déployé" : "Déployer"}</span>
-          </button>
-        </div>
-
-        {/* Badge Milieu : Assistant IA Actif */}
-        <div className="hidden md:flex items-center space-x-2 bg-[#222730] border border-[#333A48] px-3.5 py-1.5 rounded-full text-xs font-bold text-gray-200">
-          <span>Assistant IA</span>
-          <span className="bg-[#10E688] text-gray-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">v2</span>
-          <span className="w-2 h-2 rounded-full bg-[#10E688] animate-ping"></span>
-        </div>
-
-        {/* Solde & Jetons (Top Right) */}
-        <div className="flex items-center space-x-3">
-          <div className="bg-[#222730] border border-[#333A48] px-3 py-1.5 rounded-xl flex items-center space-x-2 text-xs font-bold text-emerald-400">
-            <i className="fa-solid fa-bolt text-amber-400"></i>
-            <span>100% Opérationnel</span>
+          {/* Badge Milieu : Assistant IA Actif */}
+          <div className="hidden md:flex items-center space-x-2 bg-[#222730] border border-[#333A48] px-3.5 py-1.5 rounded-full text-xs font-bold text-gray-200">
+            <span>Assistant IA</span>
+            <span className="bg-[#10E688] text-gray-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">v2</span>
+            <span className="w-2 h-2 rounded-full bg-[#10E688] animate-ping"></span>
           </div>
 
+          {/* Solde & Jetons (Top Right) */}
+          <div className="flex items-center space-x-3">
+            <div className="bg-[#222730] border border-[#333A48] px-3 py-1.5 rounded-xl flex items-center space-x-2 text-xs font-bold text-emerald-400">
+              <i className="fa-solid fa-bolt text-amber-400"></i>
+              <span>100% Opérationnel</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveConfig}
+              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition shadow-md flex items-center gap-2 cursor-pointer ${
+                savedToast
+                  ? "bg-emerald-500 text-white"
+                  : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white"
+              }`}
+            >
+              <i className={`fa-solid ${savedToast ? "fa-circle-check" : "fa-floppy-disk"}`}></i>
+              <span>{savedToast ? "Enregistré !" : "Enregistrer"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 2. BARRE D'ONGLETS DU STUDIO (Sub-nav avec persistance) */}
+        <div className="flex items-center space-x-2 bg-[#181B20] border border-[#2A2F3A] p-1.5 rounded-2xl overflow-x-auto scrollbar-none shadow-md">
           <button
             type="button"
-            onClick={handleSaveConfig}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition shadow-md flex items-center gap-2 cursor-pointer ${
-              savedToast
-                ? "bg-emerald-500 text-white"
-                : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white"
+            onClick={() => handleSubTabChange("prompt")}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+              activeSubTab === "prompt"
+                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
             }`}
           >
-            <i className={`fa-solid ${savedToast ? "fa-circle-check" : "fa-floppy-disk"}`}></i>
-            <span>{savedToast ? "Enregistré !" : "Enregistrer"}</span>
+            <i className="fa-solid fa-sliders text-emerald-400"></i>
+            <span>Prompt & Directives</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSubTabChange("knowledge")}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+              activeSubTab === "knowledge"
+                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+            }`}
+          >
+            <i className="fa-solid fa-book-bookmark text-blue-400"></i>
+            <span>Base de connaissances</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSubTabChange("diagnostic")}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+              activeSubTab === "diagnostic"
+                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+            }`}
+          >
+            <i className="fa-solid fa-stethoscope text-emerald-400"></i>
+            <span>Règles Diagnostic CV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSubTabChange("products")}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+              activeSubTab === "products"
+                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+            }`}
+          >
+            <i className="fa-solid fa-boxes-stacked text-purple-400"></i>
+            <span>Produits & Tarifs</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSubTabChange("connections")}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+              activeSubTab === "connections"
+                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+            }`}
+          >
+            <i className="fa-brands fa-whatsapp text-green-400"></i>
+            <span>Connexions (WhatsApp / Web)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSubTabChange("tools")}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+              activeSubTab === "tools"
+                ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+                : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+            }`}
+          >
+            <i className="fa-solid fa-screwdriver-wrench text-amber-400"></i>
+            <span>Outils & Relais Humain</span>
           </button>
         </div>
-      </div>
-
-      {/* 2. BARRE D'ONGLETS DU STUDIO (Sub-nav avec persistance) */}
-      <div className="flex items-center space-x-2 bg-[#181B20] border border-[#2A2F3A] p-1.5 rounded-2xl overflow-x-auto scrollbar-none">
-        <button
-          type="button"
-          onClick={() => handleSubTabChange("prompt")}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
-            activeSubTab === "prompt"
-              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
-              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
-          }`}
-        >
-          <i className="fa-solid fa-sliders text-emerald-400"></i>
-          <span>Prompt & Directives</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSubTabChange("knowledge")}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
-            activeSubTab === "knowledge"
-              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
-              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
-          }`}
-        >
-          <i className="fa-solid fa-book-bookmark text-blue-400"></i>
-          <span>Base de connaissances</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSubTabChange("diagnostic")}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
-            activeSubTab === "diagnostic"
-              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
-              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
-          }`}
-        >
-          <i className="fa-solid fa-stethoscope text-emerald-400"></i>
-          <span>Règles Diagnostic CV</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSubTabChange("products")}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
-            activeSubTab === "products"
-              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
-              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
-          }`}
-        >
-          <i className="fa-solid fa-boxes-stacked text-purple-400"></i>
-          <span>Produits & Tarifs</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSubTabChange("connections")}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
-            activeSubTab === "connections"
-              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
-              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
-          }`}
-        >
-          <i className="fa-brands fa-whatsapp text-green-400"></i>
-          <span>Connexions (WhatsApp / Web)</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSubTabChange("tools")}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
-            activeSubTab === "tools"
-              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
-              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
-          }`}
-        >
-          <i className="fa-solid fa-screwdriver-wrench text-amber-400"></i>
-          <span>Outils & Relais Humain</span>
-        </button>
       </div>
 
       {/* 3. GRILLE PRINCIPALE (CONFIGURATION À GAUCHE | PLAYGROUND À DROITE) */}

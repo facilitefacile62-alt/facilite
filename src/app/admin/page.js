@@ -1024,24 +1024,131 @@ export default function AdminDashboardPage() {
       {/* CONTENU PRINCIPAL */}
       {/* ------------------------------------------------------------- */}
       <div className="flex-1 min-w-0">
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* En-tête principal */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-sm flex-shrink-0">
-                🛡️
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          {/* Header & Barre d'onglets fixes en haut */}
+          <div className="sticky top-0 z-30 bg-[#FAF6F1]/95 backdrop-blur-md pt-4 pb-2.5 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-orange-200/50 shadow-xs mb-6">
+            {/* En-tête principal */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-sm flex-shrink-0">
+                  🛡️
+                </div>
+                <div>
+                  <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Administration</h1>
+                  <p className="text-xs sm:text-sm text-gray-500 font-medium">Gérez votre plateforme Facilite</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Administration</h1>
-                <p className="text-sm text-gray-500 font-medium">Gérez votre plateforme Facilite</p>
+
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+                <span>Connecté en tant que {userSession?.user?.email}</span>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-orange-100 text-orange-700">
+                  Admin
+                </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-              <span>Connecté en tant que {userSession?.user?.email}</span>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-orange-100 text-orange-700">
-                Admin
-              </span>
+            {/* Onglets horizontaux (Desktop) */}
+            <div className="hidden sm:flex items-center gap-1 bg-gray-100 p-1.5 rounded-2xl overflow-x-auto">
+              {TABS.map((tab) => (
+                tab.href ? (
+                  <Link
+                    key={tab.id}
+                    href={tab.href}
+                    className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 text-gray-500 hover:text-gray-800"
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </Link>
+                ) : (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      activeTab === tab.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                )
+              ))}
+            </div>
+
+            {/* Onglets horizontaux (Mobile) avec bouton Plus */}
+            <div className="flex sm:hidden items-center justify-between bg-gray-100 p-1.5 rounded-2xl relative">
+              <div className="flex items-center gap-1 overflow-hidden">
+                {TABS.slice(0, 2).map((tab) => (
+                  tab.href ? (
+                    <Link
+                      key={tab.id}
+                      href={tab.href}
+                      className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 text-gray-500 hover:text-gray-800"
+                    >
+                      <span>{tab.icon}</span>
+                      <span className="truncate max-w-[90px]">{tab.label}</span>
+                    </Link>
+                  ) : (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => handleTabChange(tab.id)}
+                      className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        activeTab === tab.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                      }`}
+                    >
+                      <span>{tab.icon}</span>
+                      <span className="truncate max-w-[90px]">{tab.label}</span>
+                    </button>
+                  )
+                ))}
+              </div>
+
+              <div className="relative flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMobilePlusMenuOpen(!mobilePlusMenuOpen)}
+                  className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    mobilePlusMenuOpen ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  <span>➕</span>
+                  <span>Plus</span>
+                </button>
+
+                {mobilePlusMenuOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl z-[100] py-2 flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                    {TABS.slice(2).map((tab) => (
+                      tab.href ? (
+                        <Link
+                          key={tab.id}
+                          href={tab.href}
+                          onClick={() => setMobilePlusMenuOpen(false)}
+                          className="px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          <span>{tab.icon}</span>
+                          <span>{tab.label}</span>
+                        </Link>
+                      ) : (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => {
+                            handleTabChange(tab.id);
+                            setMobilePlusMenuOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 transition-colors ${
+                            activeTab === tab.id ? "bg-orange-50 text-orange-700" : "text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          <span>{tab.icon}</span>
+                          <span>{tab.label}</span>
+                        </button>
+                      )
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1051,110 +1158,6 @@ export default function AdminDashboardPage() {
               <span>Mode test — données fictives. Ce compte administrateur est marqué comme compte de test.</span>
             </div>
           )}
-
-          {/* Onglets horizontaux (Desktop) */}
-          <div className="hidden sm:flex items-center gap-1 bg-gray-100 p-1.5 rounded-2xl mb-6 overflow-x-auto">
-            {TABS.map((tab) => (
-              tab.href ? (
-                <Link
-                  key={tab.id}
-                  href={tab.href}
-                  className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 text-gray-500 hover:text-gray-800"
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </Link>
-              ) : (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    activeTab === tab.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </button>
-              )
-            ))}
-          </div>
-
-          {/* Onglets horizontaux (Mobile) avec bouton Plus */}
-          <div className="flex sm:hidden items-center justify-between bg-gray-100 p-1.5 rounded-2xl mb-6 relative">
-            <div className="flex items-center gap-1 overflow-hidden">
-              {TABS.slice(0, 2).map((tab) => (
-                tab.href ? (
-                  <Link
-                    key={tab.id}
-                    href={tab.href}
-                    className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 text-gray-500 hover:text-gray-800"
-                  >
-                    <span>{tab.icon}</span>
-                    <span className="truncate max-w-[90px]">{tab.label}</span>
-                  </Link>
-                ) : (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => handleTabChange(tab.id)}
-                    className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      activeTab === tab.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
-                    }`}
-                  >
-                    <span>{tab.icon}</span>
-                    <span className="truncate max-w-[90px]">{tab.label}</span>
-                  </button>
-                )
-              ))}
-            </div>
-
-            <div className="relative flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setMobilePlusMenuOpen(!mobilePlusMenuOpen)}
-                className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  mobilePlusMenuOpen ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                <span>➕</span>
-                <span>Plus</span>
-              </button>
-
-              {mobilePlusMenuOpen && (
-                <div className="absolute top-full right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl z-[100] py-2 flex flex-col animate-in fade-in zoom-in-95 duration-150">
-                  {TABS.slice(2).map((tab) => (
-                    tab.href ? (
-                      <Link
-                        key={tab.id}
-                        href={tab.href}
-                        onClick={() => setMobilePlusMenuOpen(false)}
-                        className="px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition-colors"
-                      >
-                        <span>{tab.icon}</span>
-                        <span>{tab.label}</span>
-                      </Link>
-                    ) : (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => {
-                          handleTabChange(tab.id);
-                          setMobilePlusMenuOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 transition-colors ${
-                          activeTab === tab.id ? "bg-orange-50 text-orange-700" : "text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        <span>{tab.icon}</span>
-                        <span>{tab.label}</span>
-                      </button>
-                    )
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
 
           {activeTab === "dashboard" && (
             <>
