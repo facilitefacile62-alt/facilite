@@ -1794,9 +1794,15 @@ export default function Home() {
                             <span className="font-extrabold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
                               {job.contract}
                             </span>
-                            <span className="text-gray-400 font-normal">{selectedLang === "FR" ? job.timeFR : job.timeEN}</span>
                           </div>
                         </div>
+                      </div>
+
+                      {/* Date en haut à droite pour gagner de l'espace */}
+                      <div className="flex-shrink-0 text-right mt-0.5">
+                        <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
+                          {selectedLang === "FR" ? job.timeFR : job.timeEN}
+                        </span>
                       </div>
                     </div>
 

@@ -379,19 +379,23 @@ function OffresContent() {
                         <p className="text-xs text-gray-700 font-bold mt-0.5 truncate">
                           {offer.company || "Recruteur Confidentiel"}
                         </p>
-                        <p className="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5 flex-wrap">
+                        <div className="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5 flex-wrap">
                           <span className="text-emerald-700 font-extrabold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
                             <i className="fa-solid fa-location-dot text-[10px]"></i>
                             {offer.location || "Sénégal"}
                           </span>
-                          <span>•</span>
                           <span className="font-extrabold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
                             {offer.contract_type || "CDI"}
                           </span>
-                          <span>•</span>
-                          <span className="text-gray-400 font-normal">{dateFormatted}</span>
-                        </p>
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Date en haut à droite pour gagner de l'espace */}
+                    <div className="flex-shrink-0 text-right mt-0.5">
+                      <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
+                        {dateFormatted}
+                      </span>
                     </div>
                   </div>
 
