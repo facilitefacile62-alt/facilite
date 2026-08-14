@@ -272,7 +272,7 @@ const translations = {
 export default function CreerCv() {
   const [selectedLang, setSelectedLang] = useState("FR");
   const [activeStep, setActiveStep] = useState(0);
-  const [selectedTemplate, setSelectedTemplate] = useState("modern");
+  const [selectedTemplate, setSelectedTemplate] = useState("entrepreneur");
   const [accentColor, setAccentColor] = useState("#10E688"); // Primary Green by default
   const [showPricingModal, setShowPricingModal] = useState(false);
   // Id du brouillon (resumes.id) une fois sauvegardé — lie la commande KPay
@@ -303,69 +303,103 @@ export default function CreerCv() {
 
   // Resume Form Data State
   const [cvData, setCvData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
+    firstName: "Macoumba",
+    lastName: "Samake",
+    jobTitle: "Entrepreneur numérique",
+    email: "facilitefacile@gmail.com",
+    phone: "+221 77 140 08 32",
     address: "",
     postalCode: "",
-    city: "",
+    city: "Pikine",
     birthDate: "",
     drivingLicense: "",
-    nationality: "",
+    nationality: "Sénégalaise",
     maritalStatus: "",
-    linkedin: "",
-    availability: "",
+    linkedin: "https://www.linkedin.com/company/facilite-digital",
+    availability: "Disponible",
     cvLang: "Français",
     photoZoom: 1,
-    photoX: 0,
-    photoY: 0,
+    photoX: 50,
+    photoY: 50,
     experiences: [
       {
         id: 1,
-        title: "Conseiller Clientèle",
-        employer: "Orange Sénégal",
+        title: "ENTREPRENEURE",
+        employer: "AZMA Collection",
         city: "Dakar",
-        startDate: "2024-03",
+        startDate: "Jan 2024",
         endDate: "",
         current: true,
-        description: "Gérer le portefeuille client et traiter les requêtes téléphoniques en wolof et français."
+        description: "• Piloter quotidiennement les activités, suivre les stocks, gérer les inventaires et les commandes.\n• Accueillir, conseiller, vendre et fidéliser la clientèle.\n• Promouvoir les produits et gérer la relation fournisseur.\n• Faire preuve de rigueur, d'autonomie, de gestion des priorités et d'esprit d'initiative."
+      },
+      {
+        id: 2,
+        title: "GÉRANTE",
+        employer: "AZMA Collection",
+        city: "Dakar",
+        startDate: "Jan 2024",
+        endDate: "",
+        current: true,
+        description: "• Piloter quotidiennement les activités, suivre les stocks, gérer les inventaires et les commandes.\n• Accueillir, conseiller, vendre et fidéliser la clientèle.\n• Promouvoir les produits et gérer la relation fournisseur.\n• Faire preuve de rigueur, d'autonomie, de gestion des priorités et d'esprit d'initiative."
       }
     ],
     educations: [
       {
         id: 1,
-        degree: "Licence en Sciences Commerciales",
-        school: "Université Cheikh Anta Diop (UCAD)",
+        degree: "FORMATION DE DÉLÉGUÉE MÉDICALE ET GESTIONNAIRE EN PHARMACIE",
+        school: "CEFAS (Centre de Formation Africain du Sénégal)",
         city: "Dakar",
-        startDate: "2021-10",
-        endDate: "2024-06",
+        startDate: "Jan 2026",
+        endDate: "",
+        current: true,
+        description: ""
+      },
+      {
+        id: 2,
+        degree: "TERMINALE",
+        school: "Lycée de Kébémer",
+        city: "Kébémer",
+        startDate: "Jan 2024",
+        endDate: "Jan 2025",
         current: false,
-        description: "Spécialisation commerce et marketing relationnel."
+        description: ""
+      },
+      {
+        id: 3,
+        degree: "BREVET DE FIN D'ÉTUDES MOYENNES (BFEM)",
+        school: "CEM Commune 3, Kébémer",
+        city: "Kébémer",
+        startDate: "Jan 2021",
+        endDate: "Jan 2022",
+        current: false,
+        description: ""
       }
     ],
     skills: [
-      { id: 1, name: "Gestion de la relation client", level: "Avancé" },
-      { id: 2, name: "Négociation commerciale", level: "Intermédiaire" }
+      { id: 1, name: "Gestion des stocks et inventaires", level: "Avancé" },
+      { id: 2, name: "Accueil et fidélisation client", level: "Avancé" },
+      { id: 3, name: "Négociation & relation fournisseurs", level: "Avancé" },
+      { id: 4, name: "Rigueur et autonomie opérationnelle", level: "Avancé" }
     ],
-    profile: "Professionnel dynamique et rigoureux, fort d'une première expérience réussie dans le conseil client et la gestion commerciale. Je souhaite mettre mes compétences relationnelles au service d'une entreprise innovante.",
+    profile: "Professionnelle polyvalente du secteur pharmaceutique, diplômée en déléguée médicale et gestionnaire en pharmacie du CEFAS, je conjugue rigueur scientifique et expertise opérationnelle. Forte d'une expérience entrepreneuriale réussie, je maîtrise les enjeux de la gestion des stocks, de l'approvisionnement et de la relation client. Dotée d'une solide compréhension de la pharmacologie et des normes pharmaceutiques, je suis reconnue pour mon aisance relationnelle, ma capacité d'analyse et ma proactivité. Passionnée par le secteur de la santé, je souhaite mettre mon sens de l'organisation et mon efficacité au service de votre structure pour optimiser la qualité du conseil et le développement de vos activités.",
     languages: [
-      { id: 1, name: "Français", level: "Langue maternelle" },
+      { id: 1, name: "Français", level: "Langue véhiculaire" },
       { id: 2, name: "Wolof", level: "Langue maternelle" },
       { id: 3, name: "Anglais", level: "Intermédiaire (B2)" }
     ],
     qualities: [
-      { id: 1, name: "Polyvalence" },
-      { id: 2, name: "Rigueur" },
-      { id: 3, name: "Autonomie" }
+      { id: 1, name: "Déléguée Médicale CEFAS" },
+      { id: 2, name: "Gestionnaire en Pharmacie" }
     ],
     itSkills: [
-      { id: 1, name: "Réseaux sociaux : Bon" },
-      { id: 2, name: "Internet/Web : Bon" }
+      { id: 1, name: "Pack Office (Word, Excel)" },
+      { id: 2, name: "Logiciels de gestion de stock" },
+      { id: 3, name: "Canva & Outils numériques" }
     ],
     hobbies: [
-      { id: 1, name: "Sport collectif et Lecture" },
-      { id: 2, name: "Voyages et découvertes" }
+      { id: 1, name: "Entrepreneuriat & Commerce" },
+      { id: 2, name: "Santé & Pharmacologie" },
+      { id: 3, name: "Technologies & Digital" }
     ]
   });
 
@@ -440,13 +474,14 @@ export default function CreerCv() {
       // doit rester dans un effet (jamais pendant le rendu, pour éviter un
       // hydration mismatch).
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (urlTemplate === "1" || urlTemplate === "s1" || urlTemplate === "modern") setSelectedTemplate("modern");
-      if (urlTemplate === "2" || urlTemplate === "s2" || urlTemplate === "minimal" || urlTemplate === "minimalist") setSelectedTemplate("minimalist");
-      if (urlTemplate === "3" || urlTemplate === "s3" || urlTemplate === "classic") setSelectedTemplate("classic");
-      if (urlTemplate === "4" || urlTemplate === "s4") setSelectedTemplate("minimalist");
+      if (!urlTemplate || urlTemplate === "1" || urlTemplate === "s1" || urlTemplate === "entrepreneur") setSelectedTemplate("entrepreneur");
+      if (urlTemplate === "2" || urlTemplate === "s2" || urlTemplate === "modern") setSelectedTemplate("modern");
+      if (urlTemplate === "3" || urlTemplate === "s3" || urlTemplate === "minimal" || urlTemplate === "minimalist") setSelectedTemplate("minimalist");
+      if (urlTemplate === "4" || urlTemplate === "s4" || urlTemplate === "classic") setSelectedTemplate("classic");
       if (urlTemplate === "5" || urlTemplate === "s5" || urlTemplate === "executif") setSelectedTemplate("executif");
       if (urlTemplate === "6" || urlTemplate === "s6" || urlTemplate === "creatif") setSelectedTemplate("creatif");
       if (urlTemplate === "7" || urlTemplate === "s7" || urlTemplate === "technique") setSelectedTemplate("technique");
+      if (urlTemplate === "8" || urlTemplate === "s8" || urlTemplate === "elegance") setSelectedTemplate("elegance");
     }
   }, []);
 
@@ -1311,6 +1346,20 @@ export default function CreerCv() {
                   </div>
                 </div>
 
+                {/* Titre professionnel */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
+                    {selectedLang === "FR" ? "Titre professionnel / Métier visé" : "Professional Job Title"}
+                  </label>
+                  <input
+                    type="text"
+                    value={cvData.jobTitle || ""}
+                    onChange={(e) => handlePersonalChange("jobTitle", e.target.value)}
+                    className="w-full p-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition"
+                    placeholder="ex. Entrepreneur numérique, Développeur Web, etc."
+                  />
+                </div>
+
                 {/* Prénom, Nom */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -2015,6 +2064,7 @@ export default function CreerCv() {
                   <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">{t.chooseTemplate}</h3>
                   <div className="grid grid-cols-3 gap-3">
                     {[
+                      { id: "entrepreneur", name: "Entrepreneur Pro", desc: "Officiel Facilité (Photo & 2 Col)", icon: "fa-rocket", previewUrl: "/model4.png" },
                       { id: "modern", name: t.templateModern, desc: "2 Colonnes structuré", icon: "fa-grip", previewUrl: "/model1.png" },
                       { id: "minimalist", name: t.templateMinimal, desc: "Aéré & Moderne", icon: "fa-align-left", previewUrl: "/model2.png" },
                       { id: "classic", name: t.templateClassic, desc: "Traditionnel & Chic", icon: "fa-newspaper", previewUrl: "/model3.png" },
@@ -2022,7 +2072,6 @@ export default function CreerCv() {
                       { id: "creatif", name: t.templateCreatif, desc: "Coloré & asymétrique", icon: "fa-palette", previewUrl: "/model6.png" },
                       { id: "technique", name: t.templateTechnique, desc: "Grille de compétences", icon: "fa-code", previewUrl: "/model7.png" },
                       { id: "professionnel", name: t.templateProfessionnel, desc: "2 Colonnes Pro", icon: "fa-user-tie", previewUrl: "/model8.png" },
-                      { id: "entrepreneur", name: t.templateEntrepreneur, desc: "Clair & Structuré", icon: "fa-rocket", previewUrl: "/model4.png" },
                       { id: "elegance", name: t.templateElegance, desc: "Sidebar noire, touches dorées", icon: "fa-crown", previewUrl: "/model9.png" }
                     ].map((tpl) => {
                       const active = selectedTemplate === tpl.id;
@@ -3359,17 +3408,17 @@ export default function CreerCv() {
                   </div>
                 )}
 
-                {/* --- TEMPLATE 8: ENTREPRENEUR (Clair & Structuré) --- */}
+                {/* --- TEMPLATE: ENTREPRENEUR NUMÉRIQUE (Design Officiel Facilité) --- */}
                 {selectedTemplate === "entrepreneur" && (
                   <div className="flex flex-col w-full h-full text-xs flex-grow font-sans bg-white relative">
                     
-                    {/* Top Right Decoration */}
-                    <div className="absolute top-0 right-10 w-16 h-28 bg-[#d1e2d7] rounded-b-3xl z-0"></div>
+                    {/* Top Right Decoration (Pastel Green Bookmark) */}
+                    <div className="absolute top-0 right-8 w-14 h-24 bg-[#D1E2D7] rounded-b-3xl z-0 pointer-events-none"></div>
 
                     {/* Header */}
                     <div className="flex items-center px-8 pt-8 pb-4 relative z-10">
                       {/* Photo */}
-                      <div className="w-28 h-28 rounded-full border-[5px] border-[#1b2b3a] bg-gray-100 flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0 relative">
+                      <div className="w-28 h-28 rounded-full border-[4px] border-[#1B2B3A] bg-gray-100 flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0 relative">
                         {photoPreview ? (
                           <img
                             src={photoPreview}
@@ -3390,41 +3439,37 @@ export default function CreerCv() {
                             className="w-full h-full object-cover select-none bg-white"
                           />
                         ) : (
-                          <span className="text-gray-400 font-serif italic text-2xl">CV</span>
+                          <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white font-black text-2xl">
+                            {cvData.firstName?.[0] || "M"}{cvData.lastName?.[0] || "S"}
+                          </div>
                         )}
                       </div>
                       
                       {/* Name & Title */}
                       <div className="ml-6 flex-grow">
-                        <h1 className="text-2xl font-black text-[#1b2b3a] tracking-wide mb-1">
-                          {cvData.experiences[0]?.title || "Titre Professionnel"}
+                        <h1 className="text-xl md:text-2xl font-black text-[#2B6CB0] tracking-wide mb-0.5">
+                          {cvData.jobTitle || cvData.experiences[0]?.title || "Entrepreneur numérique"}
                         </h1>
-                        <h2 className="text-sm font-bold text-gray-500">
-                          {cvData.firstName} {cvData.lastName}
+                        <h2 className="text-base font-bold text-gray-900 tracking-tight">
+                          {cvData.firstName || "Macoumba"} {cvData.lastName || "Samake"}
                         </h2>
                       </div>
                     </div>
 
                     {/* Contact Bar */}
-                    <div className="mx-8 border-y border-[#d1e2d7] py-2.5 mb-5 flex justify-around items-center text-[9px] font-bold text-gray-600">
-                      {(cvData.address || cvData.city) && (
-                        <div className="flex items-center gap-1.5">
-                          <i className="fa-solid fa-location-dot text-gray-400"></i>
-                          <span>{cvData.address ? `${cvData.address}, ` : ""}{cvData.city}</span>
-                        </div>
-                      )}
-                      {cvData.email && (
-                        <div className="flex items-center gap-1.5">
-                          <i className="fa-solid fa-envelope text-gray-400"></i>
-                          <span>{cvData.email}</span>
-                        </div>
-                      )}
-                      {cvData.phone && (
-                        <div className="flex items-center gap-1.5">
-                          <i className="fa-solid fa-phone text-gray-400"></i>
-                          <span>{cvData.phone}</span>
-                        </div>
-                      )}
+                    <div className="mx-8 border-y border-[#D1E2D7] py-2 mb-4 flex justify-between items-center text-[9px] font-bold text-gray-600">
+                      <div className="flex items-center gap-1.5">
+                        <i className="fa-solid fa-location-dot text-gray-500"></i>
+                        <span>{cvData.city || cvData.address || "Pikine"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <i className="fa-solid fa-envelope text-gray-500"></i>
+                        <span>{cvData.email || "facilitefacile@gmail.com"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <i className="fa-solid fa-phone text-gray-500"></i>
+                        <span>{cvData.phone || "+221 77 140 08 32"}</span>
+                      </div>
                     </div>
 
                     {/* Main Content (Profil + 2 columns) */}
@@ -3432,10 +3477,12 @@ export default function CreerCv() {
                       
                       {/* Profil */}
                       {cvData.profile && (
-                        <div className="mb-4 pb-4 border-b border-[#d1e2d7]">
-                          <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-2">
-                            <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.profile?.toUpperCase() || "PROFIL"}</h3>
-                          <p className="text-[9px] text-gray-700 leading-relaxed font-medium text-justify">
+                        <div className="mb-4 pb-3.5 border-b border-[#D1E2D7]">
+                          <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
+                            <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
+                            {cvData.sectionTitles?.profile?.toUpperCase() || "PROFIL"}
+                          </h3>
+                          <p className="text-[8.5px] text-gray-700 leading-relaxed font-normal text-justify">
                             {cvData.profile}
                           </p>
                         </div>
@@ -3447,24 +3494,26 @@ export default function CreerCv() {
                           
                           {/* Expériences */}
                           {(cvData.experiences?.length > 0) && (
-                            <div className="mb-5">
-                              <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-3">
-                                <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.experience?.toUpperCase() || "EXPÉRIENCE"}</h3>
-                              <div className="space-y-4">
-                                {cvData.experiences.map((exp, idx) => (
+                            <div className="mb-4">
+                              <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-2.5">
+                                <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
+                                {cvData.sectionTitles?.experience?.toUpperCase() || "EXPÉRIENCE"}
+                              </h3>
+                              <div className="space-y-3.5">
+                                {cvData.experiences.map((exp) => (
                                   <div key={exp.id}>
                                     <div className="flex justify-between items-baseline mb-0.5">
-                                      <h4 className="text-[10px] font-black text-[#1b2b3a] uppercase">{exp.title}</h4>
-                                      <span className="text-[8px] font-bold text-gray-500">
-                                        {exp.startDate ? `${exp.startDate} - ` : ""}
+                                      <h4 className="text-[10px] font-black text-[#1B2B3A] uppercase tracking-tight">{exp.title}</h4>
+                                      <span className="text-[8.5px] font-bold text-gray-600 border-b border-gray-300 pb-0.5 whitespace-nowrap">
+                                        {exp.startDate ? `${exp.startDate} – ` : ""}
                                         {exp.current ? "présent" : exp.endDate || ""}
                                       </span>
                                     </div>
-                                    <div className="text-[9px] font-extrabold text-gray-500 mb-1.5">
+                                    <div className="text-[9px] font-bold text-gray-600 italic mb-1">
                                       {exp.employer}
                                     </div>
                                     {exp.description && (
-                                      <ul className="text-[9px] text-gray-700 leading-tight space-y-0.5 pl-3 list-disc list-outside text-justify font-medium">
+                                      <ul className="text-[8.5px] text-gray-700 leading-snug space-y-0.5 pl-3 list-disc list-outside text-justify font-medium">
                                         {exp.description.split("\n").filter(Boolean).map((line, i) => (
                                           <li key={i}>{line.replace(/^[•\-\*]\s*/, "")}</li>
                                         ))}
@@ -3478,20 +3527,22 @@ export default function CreerCv() {
 
                           {/* Formations */}
                           {(cvData.educations?.length > 0) && (
-                            <div className="mb-5">
-                              <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-3">
-                                <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.education?.toUpperCase() || "FORMATION"}</h3>
+                            <div className="mb-4">
+                              <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-2.5">
+                                <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
+                                {cvData.sectionTitles?.education?.toUpperCase() || "FORMATION"}
+                              </h3>
                               <div className="space-y-3">
-                                {cvData.educations.map((edu, idx) => (
+                                {cvData.educations.map((edu) => (
                                   <div key={edu.id}>
                                     <div className="flex justify-between items-baseline mb-0.5">
-                                      <h4 className="text-[10px] font-black text-[#1b2b3a] uppercase pr-4">{edu.degree}</h4>
-                                      <span className="text-[8px] font-bold text-gray-500 whitespace-nowrap">
-                                        {edu.startDate ? `${edu.startDate} - ` : ""}
+                                      <h4 className="text-[10px] font-black text-[#1B2B3A] uppercase pr-2 tracking-tight">{edu.degree}</h4>
+                                      <span className="text-[8.5px] font-bold text-gray-600 border-b border-gray-300 pb-0.5 whitespace-nowrap">
+                                        {edu.startDate ? `${edu.startDate} – ` : ""}
                                         {edu.current ? "présent" : edu.endDate || ""}
                                       </span>
                                     </div>
-                                    <div className="text-[9px] font-medium text-gray-500 italic">
+                                    <div className="text-[9px] font-medium text-gray-600 italic mb-1">
                                       {edu.school}{edu.city ? `, ${edu.city}` : ""}
                                     </div>
                                   </div>
@@ -3502,31 +3553,34 @@ export default function CreerCv() {
 
                         </div>
 
-                        {/* Right Column (Skills & Extra) */}
-                        <div className="w-[32%] flex flex-col space-y-4">
+                        {/* Right Column (Aptitudes, Logiciels, Langues, Certifications, Centres d'intérêt) */}
+                        <div className="w-[32%] flex flex-col space-y-3.5">
                           
-                          {/* {cvData.sectionTitles?.skills || "Compétences Clés"} / Aptitudes */}
+                          {/* Aptitudes */}
                           {(cvData.skills?.length > 0) && (
                             <div>
-                              <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-2">
-                                <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.skills?.toUpperCase() || "APTITUDES"}</h3>
-                              <ul className="text-[9px] text-gray-700 leading-snug space-y-1 font-bold pl-1">
-                                {cvData.skills.map((skill, idx) => (
-                                  <li key={skill.id}>{skill.name}</li>
+                              <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
+                                <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
+                                {cvData.sectionTitles?.skills?.toUpperCase() || "APTITUDES"}
+                              </h3>
+                              <ul className="text-[8.5px] text-gray-800 leading-snug space-y-1 font-bold pl-1">
+                                {cvData.skills.map((skill) => (
+                                  <li key={skill.id} className="tracking-tight">{skill.name}</li>
                                 ))}
                               </ul>
                             </div>
                           )}
 
-                          {/* Informatique / Logiciels */}
+                          {/* Logiciels */}
                           {(cvData.itSkills?.length > 0) && (
                             <div>
-                              <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-2">
-                                <span className="text-[#1b2b3a] mr-1">-</span> LOGICIELS
+                              <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
+                                <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
+                                LOGICIELS
                               </h3>
-                              <ul className="text-[9px] text-gray-700 leading-snug space-y-1 font-bold pl-1">
-                                {cvData.itSkills.map((skill, idx) => (
-                                  <li key={skill.id}>{skill.name}</li>
+                              <ul className="text-[8.5px] text-gray-800 leading-snug space-y-1 font-bold pl-1">
+                                {cvData.itSkills.map((skill) => (
+                                  <li key={skill.id} className="tracking-tight">{skill.name}</li>
                                 ))}
                               </ul>
                             </div>
@@ -3535,27 +3589,30 @@ export default function CreerCv() {
                           {/* Langues */}
                           {(cvData.languages?.length > 0) && (
                             <div>
-                              <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-2">
-                                <span className="text-[#1b2b3a] mr-1">-</span>{cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}</h3>
-                              <ul className="text-[9px] text-gray-700 leading-snug space-y-1 font-bold pl-1">
-                                {cvData.languages.map((lang, idx) => (
-                                  <li key={lang.id}>
-                                    {lang.name} <span className="text-gray-400 font-normal">({lang.level})</span>
+                              <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
+                                <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
+                                {cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}
+                              </h3>
+                              <ul className="text-[8.5px] text-gray-800 leading-snug space-y-1 font-bold pl-1">
+                                {cvData.languages.map((lang) => (
+                                  <li key={lang.id} className="tracking-tight">
+                                    {lang.name} <span className="text-gray-500 font-normal">({lang.level})</span>
                                   </li>
                                 ))}
                               </ul>
                             </div>
                           )}
 
-                          {/* Qualités / Certifications */}
+                          {/* Certifications */}
                           {(cvData.qualities?.length > 0) && (
                             <div>
-                              <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-2">
-                                <span className="text-[#1b2b3a] mr-1">-</span> CERTIFICATIONS
+                              <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
+                                <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
+                                CERTIFICATIONS
                               </h3>
-                              <ul className="text-[9px] text-gray-700 leading-snug space-y-1 font-bold pl-1">
-                                {cvData.qualities.map((q, idx) => (
-                                  <li key={q.id}>{q.name}</li>
+                              <ul className="text-[8.5px] text-gray-800 leading-snug space-y-1 font-bold pl-1">
+                                {cvData.qualities.map((q) => (
+                                  <li key={q.id} className="tracking-tight">{q.name}</li>
                                 ))}
                               </ul>
                             </div>
@@ -3564,12 +3621,13 @@ export default function CreerCv() {
                           {/* Centres d'intérêt */}
                           {(cvData.hobbies?.length > 0) && (
                             <div>
-                              <h3 className="text-[11px] font-black text-[#1b2b3a] uppercase tracking-widest flex items-center mb-2">
-                                <span className="text-[#1b2b3a] mr-1">-</span> CENTRES D'INTÉRÊT
+                              <h3 className="text-[11px] font-black text-[#1B2B3A] uppercase tracking-widest flex items-center mb-1.5">
+                                <span className="text-[#1B2B3A] mr-1.5 font-black text-sm">•</span>
+                                CENTRES D'INTÉRÊT
                               </h3>
-                              <ul className="text-[9px] text-gray-700 leading-snug space-y-1 font-bold pl-1">
-                                {cvData.hobbies.map((hobby, idx) => (
-                                  <li key={hobby.id}>{hobby.name}</li>
+                              <ul className="text-[8.5px] text-gray-800 leading-snug space-y-1 font-bold pl-1">
+                                {cvData.hobbies.map((hobby) => (
+                                  <li key={hobby.id} className="tracking-tight">{hobby.name}</li>
                                 ))}
                               </ul>
                             </div>
