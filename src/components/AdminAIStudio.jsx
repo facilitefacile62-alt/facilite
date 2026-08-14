@@ -2,222 +2,148 @@
 
 import { useState, useEffect, useRef } from "react";
 
-// Profils prédéfinis d'assistants Facilité
-const PRESET_ROLES = [
-  {
-    id: "general",
-    apiRole: "custom",
-    name: "Assistant Général Facilité",
-    icon: "🤖",
-    badge: "Principal",
-    description: "Accompagnement général, navigation, services et orientation des utilisateurs.",
-    defaultPrompt: `Tu es l'assistant IA officiel de la plateforme "Facilité" (https://ffacilite.com/), fondée par Macoumba Samake au Sénégal.
-Facilité est un écosystème numérique tout-en-un d'insertion professionnelle, de rédaction de CVs ATS, de recrutement intelligent et d'accompagnement administratif.
+// Modèles IA supportés
+const AI_MODELS = [
+  { id: "deepseek-chat", name: "DeepSeek V3", tag: "Recommandé • Ultra-Rapide", cost: "⚡ Rapide", badge: "best" },
+  { id: "gemini-flash-latest", name: "Gemini 2.5 Flash", tag: "Vision & Documents", cost: "⚡ Vision", badge: "vision" },
+  { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", tag: "Raisonnement structuré", cost: "⚡ Précis", badge: "groq" },
+];
 
-Consignes obligatoires :
+// Styles de communication
+const COMMUNICATION_STYLES = [
+  {
+    id: "normal",
+    label: "Normal",
+    desc: "Ton équilibré, bienveillant et naturel",
+    modifier: "Adopte un ton naturel, chaleureux, bienveillant et professionnel.",
+  },
+  {
+    id: "concis",
+    label: "Concis",
+    desc: "Réponses courtes, directes et percutantes",
+    modifier: "Sois direct et ultra-synthétique. Limite tes réponses à 2-4 phrases ou points clés sans bavardage.",
+  },
+  {
+    id: "explicatif",
+    label: "Explicatif",
+    desc: "Réponses détaillées, pédagogiques et structurées",
+    modifier: "Donne des explications complètes et pédagogiques, étape par étape, avec des exemples concrets.",
+  },
+  {
+    id: "commercial",
+    label: "Commercial & Conversion",
+    desc: "Persuasif, orienté vers la commande et l'action",
+    modifier: "Mets en valeur la qualité des maquettes Canva de Facilité et invite poliment le client à valider sa commande de CV ou lettre.",
+  },
+];
+
+// Catalogue des Produits & Services Facilité
+const DEFAULT_PRODUCTS = [
+  { id: "cv_pro", name: "Modèle CV Professionnel Standard", priceFCFA: 1000, priceEUR: 1.5, desc: "Format Sénégal/Afrique de l'Ouest, conforme ATS" },
+  { id: "cv_en", name: "CV Version Anglaise (Resume)", priceFCFA: 2500, priceEUR: 3.8, desc: "Traduction & adaptation aux standards internationaux" },
+  { id: "cv_ca", name: "CV Format Canadien", priceFCFA: 2500, priceEUR: 3.8, desc: "Normes strictes immigration & entreprises canadiennes" },
+  { id: "lettre", name: "Lettre de Motivation Personnalisée", priceFCFA: 1500, priceEUR: 2.3, desc: "Accroche percutante et alignée au poste ciblé" },
+  { id: "pack_vip", name: "Pack VIP (CV + Lettre + Coaching)", priceFCFA: 4500, priceEUR: 6.9, desc: "Accompagnement complet jusqu'à l'embauche" },
+];
+
+// Base de connaissances par défaut
+const DEFAULT_KNOWLEDGE = `• Entreprise : Facilité (https://ffacilite.com/)
+• Fondateur : Macoumba Samake
+• Mission : Aider les candidats et professionnels au Sénégal et en Afrique à réussir leur insertion professionnelle grâce à des CVs ATS d'élite, du coaching et des opportunités d'emploi réelles.
+• Moyens de Paiement supportés : Wave, Orange Money, Carte Bancaire, Kpay.
+• Processus de commande : L'utilisateur fournit ses informations ➔ l'équipe prépare la maquette Canva ➔ validation par le client ➔ livraison finale en PDF haute définition en 15 min à 2h.
+• Dépôts Physiques : Possibilité de déposer des dossiers dans les stations-services et entreprises partenaires répertoriées sur la plateforme.
+• Contact Support WhatsApp : Disponible via la plateforme pour toute assistance personnalisée.`;
+
+const DEFAULT_MAIN_PROMPT = `Tu es l'agent IA officiel de "Facilité" (https://ffacilite.com/), fondé par Macoumba Samake.
+Ton rôle est d'accueillir les visiteurs, les guider dans la création de leur CV ou lettre de motivation, répondre à leurs questions d'emploi et collecter leurs informations.
+
+Directives fondamentales :
 1. Tu es trilingue : réponds en Français, en Wolof ou en Anglais selon la langue de l'utilisateur.
-2. Ton ton est chaleureux, très poli, bienveillant, professionnel et encourageant.
-3. Tarifs Facilité : CV Professionnel Standard = 1 000 FCFA, CV Version Anglaise = 2 500 FCFA, CV Canadien = 2 500 FCFA, Lettre de motivation = 1 500 FCFA.
-4. Si la question sort du cadre de l'emploi, du CV ou des services de Facilité, ramène poliment la discussion vers l'insertion professionnelle.`,
-    defaultKnowledge: `Fondateur : Macoumba Samake
-Site web officiel : https://ffacilite.com
-Devise : FCFA (XOF)
-Services : CV ATS, Lettres de motivation, Coaching entretien, Recrutement spontané dans 77 entreprises, Dépôts physiques en stations-services.
-Délais de livraison des CVs personnalisés : 15 minutes à 2 heures.`,
-    quickPrompts: [
-      "Quels sont vos tarifs pour créer un CV ?",
-      "Qui a fondé la plateforme Facilité ?",
-      "Comment postuler aux offres de recrutement spontané ?",
-      "Naka liggéey bi ? (Test Wolof)",
-    ],
-  },
-  {
-    id: "cv",
-    apiRole: "cv",
-    name: "Expert Rédaction CV & ATS",
-    icon: "📄",
-    badge: "CV & Lettre",
-    description: "Optimisation de CV, respect des normes ATS, phrases d'accroche et élimination des erreurs.",
-    defaultPrompt: `Tu es un expert senior en recrutement et en optimisation de CVs selon les standards ATS (Applicant Tracking Systems) internationaux et du marché sénégalais/ouest-africain.
-
-Tes missions :
-1. Structurer les expériences avec la méthode STAR (Situation, Tâche, Action, Résultat mesurable).
-2. Utiliser des verbes d'action percutants et éliminer les formulations passives.
-3. Adapter le CV aux mots-clés de l'offre d'emploi visée.
-4. Corriger impitoyablement toute faute d'orthographe ou de syntaxe.
-5. Proposer des phrases d'accroche captivantes et des compétences clés adaptées au poste.`,
-    defaultKnowledge: `Standards ATS : Typographie claire sans tableaux complexes, titres de sections standards (Expériences, Formations, Compétences), format PDF texte sélectionnable.
-Formats supportés sur Facilité : Standard Sénégalais (1000 FCFA), Canadien (2500 FCFA), Anglais / International (2500 FCFA).`,
-    quickPrompts: [
-      "Rédige une accroche percutante pour un CV de Comptable à Dakar",
-      "Comment transformer mon expérience en points d'impact chiffrés ?",
-      "Quelles sont les compétences indispensables pour un Développeur Web ?",
-      "Donne-moi un modèle de lettre de motivation courte",
-    ],
-  },
-  {
-    id: "coach",
-    apiRole: "coach",
-    name: "Coach Entretien d'Embauche",
-    icon: "💼",
-    badge: "Entretien RH",
-    description: "Simulation d'entretiens, réponses aux questions pièges et négociation de salaire.",
-    defaultPrompt: `Tu es un Coach RH expert en préparation aux entretiens d'embauche au Sénégal et à l'international.
-
-Consignes pédagogiques :
-1. Entraîne le candidat avec des simulations interactives (pose-lui une question, écoute sa réponse et donne un feedback constructif).
-2. Aide à répondre aux questions classiques et pièges : 'Parlez-moi de vous', 'Vos qualités et défauts', 'Pourquoi vous et pas un autre ?'.
-3. Donne des conseils précis sur la négociation du salaire en FCFA ou devises locales.
-4. Encourage et renforce la confiance du candidat.`,
-    defaultKnowledge: `Marché du travail : Salaire net vs brut, grille indiciaire, prétentions salariales réalistes à Dakar et en Afrique de l'Ouest.
-Attitude en entretien : Posture, écoute active, questions pertinentes à poser au recruteur en fin d'entretien.`,
-    quickPrompts: [
-      "Faisons une simulation : pose-moi la première question d'un entretien RH",
-      "Comment répondre à la question : 'Quel est votre principal défaut ?'",
-      "Comment négocier mon salaire lors d'une embauche à Dakar ?",
-      "Quelles questions poser au recruteur à la fin de l'entretien ?",
-    ],
-  },
-  {
-    id: "orientation",
-    apiRole: "orientation",
-    name: "Conseiller Orientation & Carrière",
-    icon: "🧭",
-    badge: "Orientation",
-    description: "Démarches administratives, reconversion professionnelle et formations.",
-    defaultPrompt: `Tu es un Conseiller d'orientation professionnelle et administrative spécialisé sur l'écosystème sénégalais et africain.
-
-Tes missions :
-1. Guider les jeunes diplômés et professionnels dans leur choix de carrière et reconversion.
-2. Expliquer simplement les démarches administratives numériques au Sénégal.
-3. Conseiller sur les formations e-learning et les compétences numériques en forte demande (Tech, Digital, Gestion).`,
-    defaultKnowledge: `Démarches au Sénégal : CNI biométrique CEDEAO, casier judiciaire en ligne, légalisation de diplômes, inscription aux concours publics.`,
-    quickPrompts: [
-      "Quels sont les métiers qui recrutent le plus actuellement au Sénégal ?",
-      "Comment entamer une reconversion dans le numérique sans diplôme en informatique ?",
-      "Quelles démarches pour faire légaliser mes diplômes ?",
-      "Quelles compétences apprendre en priorité en 2026 ?",
-    ],
-  },
-];
-
-const TEMPLATES_PRESETS = [
-  {
-    name: "Standard Bienveillant & Marché Sénégalais",
-    promptModifier: "Adopte un ton très bienveillant, chaleureux, structuré avec des exemples ancrés dans les réalités professionnelles du Sénégal et de l'Afrique de l'Ouest. Sois trilingue Français/Wolof/Anglais.",
-  },
-  {
-    name: "Recruteur Exigeant & Strict ATS",
-    promptModifier: "Agis comme un recruteur de cabinet international très rigoureux. Chaque conseil doit être direct, sans complaisance, axé sur les résultats chiffrés et la conformité ATS absolue.",
-  },
-  {
-    name: "Coach Motivation & Concision",
-    promptModifier: "Réponds toujours de manière ultra synthétique (maximum 3 à 5 points clés à puces). Utilise des émojis professionnels et termine toujours par une phrase motivante d'encouragement.",
-  },
-];
+2. Pose des questions ciblées pour recueillir les données du candidat (nom complet, poste visé, niveau d'études, expériences clés).
+3. Une fois toutes les informations nécessaires collectées, résume proprement les données du client.
+4. Termine en informant le client que ses données sont transmises pour la préparation de sa maquette Canva et qu'un Responsable va prendre le relais pour la validation finale et le paiement.
+5. Sois toujours courtois, encourageant et dynamique.`;
 
 export default function AdminAIStudio() {
-  const [selectedRole, setSelectedRole] = useState(PRESET_ROLES[0]);
-  const [systemPrompt, setSystemPrompt] = useState(PRESET_ROLES[0].defaultPrompt);
-  const [knowledgeBase, setKnowledgeBase] = useState(PRESET_ROLES[0].defaultKnowledge);
-  const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(800);
-  const [preferredLang, setPreferredLang] = useState("auto");
+  // Navigation interne du studio (inspirée de la référence)
+  const [activeSubTab, setActiveSubTab] = useState("prompt"); // "prompt" | "knowledge" | "products" | "connections" | "tools"
+  
+  // Paramètres de configuration
+  const [selectedModel, setSelectedModel] = useState("deepseek-chat");
+  const [commStyle, setCommStyle] = useState("normal");
+  const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
+  const [promptText, setPromptText] = useState(DEFAULT_MAIN_PROMPT);
+  const [knowledgeText, setKnowledgeText] = useState(DEFAULT_KNOWLEDGE);
+  const [productsList, setProductsList] = useState(DEFAULT_PRODUCTS);
+  const [currency, setCurrency] = useState("FCFA"); // "FCFA" | "EUR"
+  const [isDeployed, setIsDeployed] = useState(true);
+  const [savedToast, setSavedToast] = useState(false);
 
-  // État du Bac à Sable (Playground Test)
-  const [chatMessages, setChatMessages] = useState([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: `👋 Bonjour ! Je suis prêt pour vos tests d'entraînement.\n\nTapez un message ou cliquez sur un des scénarios rapides ci-dessous pour tester mes réponses avec vos consignes actuelles.`,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    },
-  ]);
+  // État du Bac à sable (Playground)
+  const [chatMessages, setChatMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [lastResponseTimeMs, setLastResponseTimeMs] = useState(null);
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [lastElapsedMs, setLastElapsedMs] = useState(null);
   const chatScrollRef = useRef(null);
 
-  // Charger la configuration sauvegardée pour ce rôle si existante
+  // Calcul du score de prompt en direct (sur 10)
+  const promptScore = (() => {
+    let score = 5.0;
+    const lower = promptText.toLowerCase();
+    if (lower.includes("facilité") || lower.includes("samake")) score += 1.0;
+    if (lower.includes("wolof") || lower.includes("trilingue") || lower.includes("anglais")) score += 1.0;
+    if (lower.includes("canva") || lower.includes("maquette") || lower.includes("cv")) score += 1.0;
+    if (lower.includes("résume") || lower.includes("collecte") || lower.includes("information")) score += 1.0;
+    if (promptText.length > 300) score += 0.8;
+    if (promptText.length > 600) score += 0.2;
+    return Math.min(10, score).toFixed(1);
+  })();
+
+  // Chargement des données persistées
   useEffect(() => {
     try {
-      const savedConfig = localStorage.getItem(`FACILITE_AI_TRAINING_${selectedRole.id}`);
-      if (savedConfig) {
-        const parsed = JSON.parse(savedConfig);
-        if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
-        if (parsed.knowledgeBase) setKnowledgeBase(parsed.knowledgeBase);
-        if (typeof parsed.temperature === "number") setTemperature(parsed.temperature);
-        if (parsed.maxTokens) setMaxTokens(parsed.maxTokens);
-        if (parsed.preferredLang) setPreferredLang(parsed.preferredLang);
-      } else {
-        setSystemPrompt(selectedRole.defaultPrompt);
-        setKnowledgeBase(selectedRole.defaultKnowledge);
+      const saved = localStorage.getItem("FACILITE_AI_STUDIO_V2");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.promptText) setPromptText(parsed.promptText);
+        if (parsed.knowledgeText) setKnowledgeText(parsed.knowledgeText);
+        if (parsed.commStyle) setCommStyle(parsed.commStyle);
+        if (parsed.selectedModel) setSelectedModel(parsed.selectedModel);
+        if (parsed.productsList) setProductsList(parsed.productsList);
       }
-    } catch {
-      setSystemPrompt(selectedRole.defaultPrompt);
-      setKnowledgeBase(selectedRole.defaultKnowledge);
-    }
-  }, [selectedRole]);
+    } catch {}
+  }, []);
 
-  // Scroll en bas du chat de test lors de nouveaux messages
+  // Défilement automatique dans le playground
   useEffect(() => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   }, [chatMessages, isGenerating]);
 
-  // Changement de rôle
-  const handleSelectRole = (role) => {
-    setSelectedRole(role);
-    setChatMessages([
-      {
-        id: `switch_${role.id}_${Date.now()}`,
-        role: "assistant",
-        content: `🎯 **Mode actif : ${role.name}**\n\nPrêt pour vos tests avec les directives de ce profil. Posez-moi vos questions d'évaluation !`,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      },
-    ]);
-  };
-
-  // Sauvegarder les instructions
-  const handleSaveInstructions = () => {
+  // Sauvegarde des réglages
+  const handleSaveConfig = () => {
     try {
       const config = {
-        roleId: selectedRole.id,
-        systemPrompt,
-        knowledgeBase,
-        temperature,
-        maxTokens,
-        preferredLang,
+        promptText,
+        knowledgeText,
+        commStyle,
+        selectedModel,
+        productsList,
         updatedAt: new Date().toISOString(),
       };
-      localStorage.setItem(`FACILITE_AI_TRAINING_${selectedRole.id}`, JSON.stringify(config));
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
+      localStorage.setItem("FACILITE_AI_STUDIO_V2", JSON.stringify(config));
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 3000);
     } catch (e) {
-      console.error("Erreur sauvegarde config IA:", e);
+      console.error("Erreur sauvegarde studio IA:", e);
     }
   };
 
-  // Réinitialiser les instructions par défaut
-  const handleResetDefaults = () => {
-    if (confirm("Réinitialiser les directives de ce rôle aux valeurs recommandées par défaut ?")) {
-      setSystemPrompt(selectedRole.defaultPrompt);
-      setKnowledgeBase(selectedRole.defaultKnowledge);
-      setTemperature(0.7);
-      localStorage.removeItem(`FACILITE_AI_TRAINING_${selectedRole.id}`);
-    }
-  };
-
-  // Appliquer un template de prompt rapide
-  const handleApplyTemplate = (tmpl) => {
-    setSystemPrompt((prev) => `${prev.trim()}\n\n[Directive complémentaire : ${tmpl.name}]\n${tmpl.promptModifier}`);
-  };
-
-  // Envoi d'un message dans le Bac à Sable
-  const handleSendMessage = async (customQuery = null) => {
-    const textToSend = customQuery || inputText.trim();
+  // Envoi d'un message de test dans le Playground
+  const handleSendTestMessage = async (overrideText = null) => {
+    const textToSend = overrideText || inputText.trim();
     if (!textToSend || isGenerating) return;
 
     const userMsg = {
@@ -234,54 +160,55 @@ export default function AdminAIStudio() {
 
     const startTime = Date.now();
 
-    // Assemblage du prompt complet avec base de connaissances
+    // Construction du System Prompt complet enrichi avec le style et la base de connaissances
+    const activeStyleObj = COMMUNICATION_STYLES.find((s) => s.id === commStyle) || COMMUNICATION_STYLES[0];
+    const productsContext = productsList
+      .map((p) => `• ${p.name} : ${currency === "FCFA" ? `${p.priceFCFA} FCFA` : `${p.priceEUR} €`} (${p.desc})`)
+      .join("\n");
+
     const fullSystemPrompt = `
-${systemPrompt.trim()}
+${promptText.trim()}
 
---- BASE DE CONNAISSANCES OFFICIELLE & FAITS MÉTIER FACILITÉ ---
-${knowledgeBase.trim()}
+[STYLE DE COMMUNICATION OBLIGATOIRE]
+${activeStyleObj.modifier}
 
---- CONSIGNES DE LANGUE & FORMAT ---
-Langue demandée : ${preferredLang === "auto" ? "Selon la langue de l'utilisateur (Français, Wolof ou Anglais)" : preferredLang}
-Longueur maximale estimée : ${maxTokens} jetons.
+[BASE DE CONNAISSANCES OFFICIELLE & TARIFS EN VIGUEUR]
+${knowledgeText.trim()}
+
+[CATALOGUE DES PRODUITS ET TARIFS (${currency})]
+${productsContext}
 `.trim();
 
     try {
-      // Préparation de l'historique filtré (uniquement user/assistant)
-      const apiMessages = newHistory
-        .filter((m) => m.id !== "welcome" && !m.id.startsWith("switch_"))
-        .map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
+      const apiMessages = newHistory.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
       const res = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: apiMessages,
-          activeAiRole: selectedRole.apiRole,
           customSystemPrompt: fullSystemPrompt,
-          temperature: temperature,
+          temperature: commStyle === "concis" ? 0.3 : commStyle === "commercial" ? 0.8 : 0.7,
         }),
       });
 
       const data = await res.json();
       const elapsedMs = Date.now() - startTime;
-      setLastResponseTimeMs(elapsedMs);
+      setLastElapsedMs(elapsedMs);
 
       if (!res.ok) {
-        throw new Error(data.error || `Erreur serveur ${res.status}`);
+        throw new Error(data.error || `Erreur serveur (${res.status})`);
       }
 
-      const aiReplyText = data.reply || data.content || "Je n'ai pas pu générer de réponse avec ces paramètres.";
-      
       setChatMessages((prev) => [
         ...prev,
         {
           id: `ai_${Date.now()}`,
           role: "assistant",
-          content: aiReplyText,
+          content: data.reply || data.content || "Je n'ai pas pu formuler de réponse.",
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           elapsedMs,
         },
@@ -292,7 +219,7 @@ Longueur maximale estimée : ${maxTokens} jetons.
         {
           id: `err_${Date.now()}`,
           role: "assistant",
-          content: `⚠️ **Erreur d'entraînement :** ${err.message || "Impossible de joindre l'API d'entraînement."}\n\n*Vérifiez la clé API ou réduisez la longueur du prompt.*`,
+          content: `⚠️ **Erreur d'exécution :** ${err.message || "Erreur de connexion avec l'IA."}`,
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           isError: true,
         },
@@ -302,377 +229,602 @@ Longueur maximale estimée : ${maxTokens} jetons.
     }
   };
 
-  const handleClearTestChat = () => {
-    setChatMessages([
-      {
-        id: `welcome_${Date.now()}`,
-        role: "assistant",
-        content: `🧹 **Session de test réinitialisée.**\n\nPrêt pour de nouveaux scénarios avec vos directives actuelles.`,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      },
-    ]);
+  const handleResetChat = () => {
+    setChatMessages([]);
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      {/* 1. EN-TÊTE DU STUDIO AVEC STATUS & ACTIONS RAPIDES */}
-      <div className="bg-gradient-to-r from-gray-900 via-indigo-950 to-gray-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-indigo-900/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 space-y-2 max-w-2xl">
-          <div className="flex items-center space-x-2.5">
-            <span className="bg-emerald-500/20 text-emerald-400 text-xs font-black px-3 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1.5 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Studio IA & Prompt Engineering
-            </span>
-            <span className="bg-indigo-500/20 text-indigo-300 text-xs font-black px-3 py-1 rounded-full border border-indigo-500/30">
-              DeepSeek / Gemini Vision / Groq
-            </span>
+    <div className="space-y-5 animate-fade-in-up font-sans text-gray-100">
+      
+      {/* 1. TOP BAR NOIRE DU STUDIO (Style Référence) */}
+      <div className="bg-[#181B20] border border-[#2A2F3A] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        
+        {/* Titre Agent + Bouton Déployer */}
+        <div className="flex items-center space-x-3.5">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-[#10E688] text-gray-950 flex items-center justify-center font-black text-xl shadow-lg">
+            ⚡
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
-            <span>🧠 Formation & Test de l'Assistant IA</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-300 font-medium leading-relaxed">
-            Configurez les directives, enrichissez la base de connaissances et testez en direct le comportement de vos modèles IA avant déploiement aux utilisateurs.
-          </p>
-        </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h1 className="text-base sm:text-lg font-black text-white tracking-tight">Agent IA Facilité</h1>
+              <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                {isDeployed ? "En ligne" : "Brouillon"}
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-400 font-medium">Studio d'entraînement & supervision de l'assistant</p>
+          </div>
 
-        <div className="relative z-10 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={handleSaveInstructions}
-            className={`px-5 py-3 rounded-2xl font-extrabold text-xs transition-all shadow-lg flex items-center gap-2 cursor-pointer ${
-              savedSuccess
-                ? "bg-emerald-500 text-white scale-105"
-                : "bg-gradient-to-r from-[#10E688] to-emerald-500 hover:from-[#10E688]/90 hover:to-emerald-600 text-gray-950 font-black"
+            onClick={() => {
+              setIsDeployed(!isDeployed);
+              handleSaveConfig();
+            }}
+            className="ml-2 px-3.5 py-1.5 bg-[#10E688] hover:bg-[#10E688]/90 text-gray-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <i className="fa-solid fa-rocket text-xs"></i>
+            <span>{isDeployed ? "Déployé" : "Déployer"}</span>
+          </button>
+        </div>
+
+        {/* Badge Milieu : Assistant IA Actif */}
+        <div className="hidden md:flex items-center space-x-2 bg-[#222730] border border-[#333A48] px-3.5 py-1.5 rounded-full text-xs font-bold text-gray-200">
+          <span>Assistant IA</span>
+          <span className="bg-[#10E688] text-gray-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">v2</span>
+          <span className="w-2 h-2 rounded-full bg-[#10E688] animate-ping"></span>
+        </div>
+
+        {/* Solde & Jetons (Top Right) */}
+        <div className="flex items-center space-x-3">
+          <div className="bg-[#222730] border border-[#333A48] px-3 py-1.5 rounded-xl flex items-center space-x-2 text-xs font-bold text-emerald-400">
+            <i className="fa-solid fa-bolt text-amber-400"></i>
+            <span>100% Opérationnel</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveConfig}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition shadow-md flex items-center gap-2 cursor-pointer ${
+              savedToast
+                ? "bg-emerald-500 text-white"
+                : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white"
             }`}
           >
-            <i className={`fa-solid ${savedSuccess ? "fa-circle-check" : "fa-floppy-disk"}`}></i>
-            <span>{savedSuccess ? "Directives Déployées !" : "Sauvegarder & Déployer"}</span>
+            <i className={`fa-solid ${savedToast ? "fa-circle-check" : "fa-floppy-disk"}`}></i>
+            <span>{savedToast ? "Enregistré !" : "Enregistrer"}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. SÉLECTEUR DE RÔLE / PROFIL D'IA À FORMER */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {PRESET_ROLES.map((role) => {
-          const isSelected = selectedRole.id === role.id;
-          return (
-            <button
-              key={role.id}
-              type="button"
-              onClick={() => handleSelectRole(role)}
-              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
-                isSelected
-                  ? "bg-white border-indigo-600 ring-2 ring-indigo-500/20 shadow-md transform -translate-y-0.5"
-                  : "bg-white/80 hover:bg-white border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-2xl">{role.icon}</span>
-                <span
-                  className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                    isSelected ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {role.badge}
-                </span>
-              </div>
-              <div>
-                <h3 className="text-xs font-black text-gray-900 leading-snug">{role.name}</h3>
-                <p className="text-[10px] text-gray-500 line-clamp-2 mt-0.5">{role.description}</p>
-              </div>
-            </button>
-          );
-        })}
+      {/* 2. BARRE D'ONGLETS DU STUDIO (Sub-nav comme dans la capture) */}
+      <div className="flex items-center space-x-2 bg-[#181B20] border border-[#2A2F3A] p-1.5 rounded-2xl overflow-x-auto scrollbar-none">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("prompt")}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            activeSubTab === "prompt"
+              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+          }`}
+        >
+          <i className="fa-solid fa-sliders text-emerald-400"></i>
+          <span>Prompt & Directives</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("knowledge")}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            activeSubTab === "knowledge"
+              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+          }`}
+        >
+          <i className="fa-solid fa-book-bookmark text-blue-400"></i>
+          <span>Base de connaissances</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("products")}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            activeSubTab === "products"
+              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+          }`}
+        >
+          <i className="fa-solid fa-boxes-stacked text-purple-400"></i>
+          <span>Produits & Tarifs</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("connections")}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            activeSubTab === "connections"
+              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+          }`}
+        >
+          <i className="fa-brands fa-whatsapp text-green-400"></i>
+          <span>Connexions (WhatsApp / Web)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("tools")}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
+            activeSubTab === "tools"
+              ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
+              : "text-gray-400 hover:text-gray-200 hover:bg-[#222730]"
+          }`}
+        >
+          <i className="fa-solid fa-screwdriver-wrench text-amber-400"></i>
+          <span>Outils & Relais Humain</span>
+        </button>
       </div>
 
-      {/* 3. GRILLE PRINCIPALE : CONFIGURATION (GAUCHE) & BAC À SABLE / PLAYGROUND (DROITE) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* 3. GRILLE PRINCIPALE (CONFIGURATION À GAUCHE | PLAYGROUND À DROITE) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         
-        {/* COLONNE GAUCHE (5/12) : ÉDITEUR D'INSTRUCTIONS & PARAMÈTRES */}
-        <div className="lg:col-span-5 space-y-5">
+        {/* ================= COLONNE GAUCHE (7/12) : FORMATION & CONFIGURATION ================= */}
+        <div className="lg:col-span-7 space-y-4">
           
-          {/* Section 1 : Directives Système (System Prompt) */}
-          <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div>
-                <h2 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
-                  <i className="fa-solid fa-code text-indigo-600"></i>
-                  <span>Directives & Prompt Système</span>
-                </h2>
-                <p className="text-[11px] text-gray-500 font-medium">Définissez la personnalité et les règles de l'IA</p>
+          {/* ONGLET 1 : PROMPT & CONFIGURATION */}
+          {activeSubTab === "prompt" && (
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-5 shadow-xl">
+              
+              <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3">
+                <h2 className="text-sm sm:text-base font-extrabold text-white">Configuration du prompt</h2>
+                <div className="flex items-center space-x-1 text-xs">
+                  <span className="text-gray-400 font-bold">Prompt score</span>
+                  <span className="bg-[#222730] border border-amber-500/40 text-amber-400 font-black px-2 py-0.5 rounded-lg">
+                    {promptScore} <span className="text-[10px] text-gray-400 font-normal">/ 10</span>
+                  </span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={handleResetDefaults}
-                className="text-[11px] font-bold text-gray-400 hover:text-red-600 transition cursor-pointer"
-                title="Rétablir les consignes par défaut"
-              >
-                <i className="fa-solid fa-rotate-left mr-1"></i>
-                Défaut
-              </button>
-            </div>
 
-            {/* Presets rapides de style */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-gray-600 block">
-                Ajouter une consigne rapide (Templates) :
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {TEMPLATES_PRESETS.map((tmpl) => (
+              {/* Sélecteur Modèle d'IA */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-300">Modèle d'IA :</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {AI_MODELS.map((model) => {
+                    const isSelected = selectedModel === model.id;
+                    return (
+                      <button
+                        key={model.id}
+                        type="button"
+                        onClick={() => setSelectedModel(model.id)}
+                        className={`p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? "bg-[#252B35] border-[#10E688] ring-1 ring-[#10E688]/30 shadow-md"
+                            : "bg-[#1F232B] border-[#2E3542] hover:border-gray-500"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-white">{model.name}</span>
+                          <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded">
+                            {model.cost}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-1 truncate">{model.tag}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Style de communication (Menu déroulant comme dans la capture) */}
+              <div className="space-y-1.5 relative">
+                <label className="text-xs font-bold text-gray-300">Style de communication :</label>
+                
+                <div className="relative">
                   <button
-                    key={tmpl.name}
                     type="button"
-                    onClick={() => handleApplyTemplate(tmpl)}
-                    className="text-[10px] font-bold bg-gray-50 hover:bg-indigo-50 hover:text-indigo-700 text-gray-700 px-2.5 py-1 rounded-lg border border-gray-200 transition cursor-pointer"
+                    onClick={() => setStyleDropdownOpen(!styleDropdownOpen)}
+                    className="w-full p-3 bg-[#1F232B] border border-[#2E3542] hover:border-gray-500 rounded-2xl text-left flex items-center justify-between text-xs transition cursor-pointer"
                   >
-                    + {tmpl.name}
+                    <div>
+                      <div className="font-extrabold text-white">
+                        {COMMUNICATION_STYLES.find((s) => s.id === commStyle)?.label}
+                      </div>
+                      <div className="text-[11px] text-gray-400">
+                        {COMMUNICATION_STYLES.find((s) => s.id === commStyle)?.desc}
+                      </div>
+                    </div>
+                    <i className={`fa-solid fa-chevron-down text-gray-400 transition-transform ${styleDropdownOpen ? "rotate-180" : ""}`}></i>
                   </button>
+
+                  {styleDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#1F232B] border border-[#333A48] rounded-2xl shadow-2xl z-30 p-1.5 space-y-1">
+                      {COMMUNICATION_STYLES.map((style) => (
+                        <button
+                          key={style.id}
+                          type="button"
+                          onClick={() => {
+                            setCommStyle(style.id);
+                            setStyleDropdownOpen(false);
+                          }}
+                          className={`w-full p-2.5 rounded-xl text-left text-xs transition flex items-center justify-between cursor-pointer ${
+                            commStyle === style.id ? "bg-[#2A303C] text-emerald-400 font-bold" : "hover:bg-[#252B35] text-gray-300"
+                          }`}
+                        >
+                          <div>
+                            <div className="font-bold">{style.label}</div>
+                            <div className="text-[10px] text-gray-400">{style.desc}</div>
+                          </div>
+                          {commStyle === style.id && <i className="fa-solid fa-check text-emerald-400"></i>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Zone d'écriture du Prompt */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <label className="font-bold text-gray-300">Instructions du prompt système :</label>
+                  <span className="text-[11px] text-gray-500 font-mono">{promptText.length} caractères</span>
+                </div>
+                <textarea
+                  value={promptText}
+                  onChange={(e) => setPromptText(e.target.value)}
+                  rows={10}
+                  className="w-full p-4 bg-[#14161A] border border-[#2E3542] focus:border-[#10E688] focus:ring-1 focus:ring-[#10E688]/30 rounded-2xl text-xs font-mono text-gray-200 leading-relaxed transition resize-y focus:outline-none"
+                  placeholder="Écrivez vos instructions personnalisées ici..."
+                />
+              </div>
+
+              {/* Bouton Enregistrer au bas de la section */}
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveConfig}
+                  className="px-5 py-2.5 bg-[#10E688] hover:bg-[#10E688]/90 text-gray-950 font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Enregistrer</span>
+                  <i className="fa-solid fa-floppy-disk"></i>
+                </button>
+              </div>
+
+            </div>
+          )}
+
+          {/* ONGLET 2 : BASE DE CONNAISSANCES */}
+          {activeSubTab === "knowledge" && (
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
+              <div className="border-b border-[#2A2F3A] pb-3">
+                <h2 className="text-sm sm:text-base font-extrabold text-white">Base de connaissances métier</h2>
+                <p className="text-xs text-gray-400">Règles d'entreprise, FAQ, coordonnées et faits officiels</p>
+              </div>
+
+              <textarea
+                value={knowledgeText}
+                onChange={(e) => setKnowledgeText(e.target.value)}
+                rows={12}
+                className="w-full p-4 bg-[#14161A] border border-[#2E3542] focus:border-blue-400 focus:ring-1 focus:ring-blue-400/30 rounded-2xl text-xs font-mono text-gray-200 leading-relaxed transition resize-y focus:outline-none"
+                placeholder="Renseignez ici toutes les connaissances métier de Facilité..."
+              />
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSaveConfig}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Sauvegarder les connaissances</span>
+                  <i className="fa-solid fa-floppy-disk"></i>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ONGLET 3 : PRODUITS ET SERVICES */}
+          {activeSubTab === "products" && (
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-[#2A2F3A] pb-3">
+                <div>
+                  <h2 className="text-sm sm:text-base font-extrabold text-white">Produits & Tarification</h2>
+                  <p className="text-xs text-gray-400">L'IA connaît exactement vos prix et les propose aux clients</p>
+                </div>
+                <div className="flex items-center space-x-1.5 bg-[#222730] p-1 rounded-xl border border-[#333A48]">
+                  <button
+                    type="button"
+                    onClick={() => setCurrency("FCFA")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black transition ${
+                      currency === "FCFA" ? "bg-[#10E688] text-gray-950" : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    FCFA 🇸🇳
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrency("EUR")}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black transition ${
+                      currency === "EUR" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    EUR 🇪🇺
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                {productsList.map((prod, idx) => (
+                  <div
+                    key={prod.id}
+                    className="p-3.5 bg-[#1F232B] border border-[#2E3542] rounded-2xl flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-black text-white truncate">{prod.name}</h4>
+                      <p className="text-[11px] text-gray-400 truncate">{prod.desc}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-xs font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-800/60">
+                        {currency === "FCFA" ? `${prod.priceFCFA} FCFA` : `${prod.priceEUR} €`}
+                      </span>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
+          )}
 
-            {/* Zone de saisie du System Prompt */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-extrabold text-gray-800">
-                  Instructions détaillées :
-                </label>
-                <span className="text-[10px] font-bold text-gray-400">
-                  {systemPrompt.length} caractères
-                </span>
-              </div>
-              <textarea
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                rows={9}
-                className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-mono text-gray-900 leading-relaxed focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition resize-y"
-                placeholder="Écrivez vos instructions système ici..."
-              />
-            </div>
-          </div>
-
-          {/* Section 2 : Base de Connaissances Spécifique (Knowledge Base) */}
-          <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-xs space-y-4">
-            <div className="border-b border-gray-100 pb-3">
-              <h2 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
-                <i className="fa-solid fa-book-bookmark text-emerald-600"></i>
-                <span>Base de Connaissances & Faits Métier</span>
-              </h2>
-              <p className="text-[11px] text-gray-500 font-medium">Informations officielles, prix et services à respecter</p>
-            </div>
-
-            <textarea
-              value={knowledgeBase}
-              onChange={(e) => setKnowledgeBase(e.target.value)}
-              rows={5}
-              className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-mono text-gray-900 leading-relaxed focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition resize-y"
-              placeholder="Tarifs, contacts, délais, règles indispensables..."
-            />
-          </div>
-
-          {/* Section 3 : Hyperparamètres (Température, Langue, Longueur) */}
-          <div className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-extrabold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
-              <i className="fa-solid fa-sliders text-amber-500"></i>
-              <span>Paramètres de Génération</span>
-            </h2>
-
-            {/* Slider Température */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-extrabold text-gray-800">
-                  Créativité / Température : <strong className="text-indigo-600">{temperature}</strong>
-                </span>
-                <span className="text-[10px] text-gray-500 font-medium">
-                  {temperature <= 0.3 ? "🎯 Très factuel / Précis" : temperature <= 0.7 ? "⚖️ Équilibré" : "🎨 Créatif & Éloquent"}
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0.1"
-                max="1.2"
-                step="0.1"
-                value={temperature}
-                onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-              />
-            </div>
-
-            {/* Sélecteur de Langue */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                  Langue par défaut :
-                </label>
-                <select
-                  value={preferredLang}
-                  onChange={(e) => setPreferredLang(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="auto">🌐 Automatique (FR/Wolof/EN)</option>
-                  <option value="Français">🇫🇷 Français obligatoire</option>
-                  <option value="Wolof">🇸🇳 Wolof prioritaire</option>
-                  <option value="Anglais">🇬🇧 Anglais</option>
-                </select>
+          {/* ONGLET 4 : CONNEXIONS WHATSAPP / WEB */}
+          {activeSubTab === "connections" && (
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
+              <div className="border-b border-[#2A2F3A] pb-3">
+                <h2 className="text-sm sm:text-base font-extrabold text-white">Canaux de communication & Déploiement</h2>
+                <p className="text-xs text-gray-400">Où cet assistant IA est-il actif en temps réel ?</p>
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                  Longueur max :
-                </label>
-                <select
-                  value={maxTokens}
-                  onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500"
-                >
-                  <option value={400}>Court & Synthétique (400)</option>
-                  <option value={800}>Standard Équilibré (800)</option>
-                  <option value={1500}>Détaillé & Approfondi (1500)</option>
-                </select>
+              <div className="space-y-3">
+                <div className="p-4 bg-[#1F232B] border border-emerald-500/40 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/30">
+                      <i className="fa-solid fa-globe"></i>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">Widget Web & Page Accueil</h4>
+                      <p className="text-[10px] text-gray-400">Actif pour tous les visiteurs sur ffacilite.com</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black text-emerald-400 bg-emerald-950/90 px-2.5 py-1 rounded-full border border-emerald-600">
+                    Connecté 🟢
+                  </span>
+                </div>
+
+                <div className="p-4 bg-[#1F232B] border border-[#2E3542] rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg border border-blue-500/30">
+                      <i className="fa-solid fa-comments"></i>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">Messagerie Interne (/messagerie)</h4>
+                      <p className="text-[10px] text-gray-400">Fil permanent "Assistance IA Facilité"</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black text-blue-400 bg-blue-950/90 px-2.5 py-1 rounded-full border border-blue-600">
+                    Connecté 🟢
+                  </span>
+                </div>
+
+                <div className="p-4 bg-[#1F232B] border border-green-500/30 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-green-600/20 text-green-400 flex items-center justify-center text-lg border border-green-500/30">
+                      <i className="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">Passerelle WhatsApp Business</h4>
+                      <p className="text-[10px] text-gray-400">Prise de relais automatique vers le WhatsApp officiel</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black text-green-400 bg-green-950/90 px-2.5 py-1 rounded-full border border-green-600">
+                    Configuré ✅
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* ONGLET 5 : OUTILS & RELAIS HUMAIN */}
+          {activeSubTab === "tools" && (
+            <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xl">
+              <div className="border-b border-[#2A2F3A] pb-3">
+                <h2 className="text-sm sm:text-base font-extrabold text-white">Relais Humain & Outils Automatisés</h2>
+                <p className="text-xs text-gray-400">Passage de relais à l'équipe humaine et règles de fin d'échange</p>
+              </div>
+
+              <div className="p-4 bg-[#1F232B] border border-amber-500/30 rounded-2xl space-y-2">
+                <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
+                  <i className="fa-solid fa-user-tie"></i>
+                  <span>Protocole de Relais Canva & Facturation :</span>
+                </div>
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  Lorsque l'IA a collecté le nom, le poste et les expériences du client, elle lui présente un récapitulatif clair et lui annonce que le **Responsable Canva** va prendre le relais en direct pour la maquette et la validation du paiement Wave/Orange Money.
+                </p>
+              </div>
+            </div>
+          )}
+
         </div>
 
-        {/* COLONNE DROITE (7/12) : BAC À SABLE / PLAYGROUND TEST EN DIRECT */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-md flex flex-col h-[760px] overflow-hidden">
+        {/* ================= COLONNE DROITE (5/12) : PLAYGROUND TEST EN DIRECT (Comme la capture) ================= */}
+        <div className="lg:col-span-5">
+          <div className="bg-[#181B20] border border-[#2A2F3A] rounded-3xl shadow-2xl flex flex-col h-[720px] overflow-hidden">
             
-            {/* Header du Chat Playground */}
-            <div className="p-4 sm:p-5 border-b border-gray-150 bg-gradient-to-r from-gray-50 to-white flex items-center justify-between gap-3 flex-none">
-              <div className="flex items-center space-x-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-lg shadow-sm flex-shrink-0">
-                  {selectedRole.icon}
+            {/* Header du Playground */}
+            <div className="p-4 border-b border-[#2A2F3A] bg-[#1F232B] flex items-center justify-between gap-2 flex-none">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-gray-950 font-black text-xs flex items-center justify-center shadow-xs flex-shrink-0">
+                  N
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-sm font-black text-gray-900 truncate">
-                      Playground : {selectedRole.name}
-                    </h3>
-                    <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                      Directives actives
-                    </span>
+                    <span className="text-xs font-black text-white truncate">Agent Facilité</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">En ligne</span>
                   </div>
-                  <p className="text-[11px] text-gray-500 font-medium truncate">
-                    Température : {temperature} • Modèle : DeepSeek Chat
-                  </p>
+                  <span className="text-[10px] text-gray-400">Playground de test</span>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleClearTestChat}
-                className="px-3 py-1.5 bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-600 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                title="Effacer l'historique du test"
-              >
-                <i className="fa-solid fa-trash-can text-xs"></i>
-                <span className="hidden sm:inline">Effacer</span>
-              </button>
-            </div>
+              <div className="flex items-center space-x-2">
+                {/* Toggle Devise Dynamique (Présent sur la capture) */}
+                <div className="flex items-center space-x-1.5 bg-[#14161A] px-2 py-1 rounded-xl border border-[#2E3542]">
+                  <span className="text-[9px] font-extrabold text-gray-400">Devise :</span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrency(currency === "FCFA" ? "EUR" : "FCFA")}
+                    className="text-[10px] font-black text-emerald-400 hover:underline cursor-pointer"
+                  >
+                    {currency}
+                  </button>
+                </div>
 
-            {/* Scénarios de test rapide (1-Click Prompts) */}
-            <div className="px-4 py-2.5 bg-indigo-50/50 border-b border-indigo-100/60 flex items-center gap-2 overflow-x-auto flex-none scrollbar-none">
-              <span className="text-[10px] font-black text-indigo-900 uppercase tracking-wider flex-shrink-0 flex items-center gap-1">
-                <i className="fa-solid fa-bolt text-amber-500"></i>
-                Tests rapides :
-              </span>
-              {selectedRole.quickPrompts.map((q, idx) => (
                 <button
-                  key={idx}
                   type="button"
-                  onClick={() => handleSendMessage(q)}
-                  disabled={isGenerating}
-                  className="text-[11px] font-bold bg-white hover:bg-indigo-600 hover:text-white text-gray-800 px-3 py-1 rounded-full border border-indigo-200 transition-all flex-shrink-0 shadow-2xs cursor-pointer disabled:opacity-50"
+                  onClick={handleResetChat}
+                  className="w-8 h-8 rounded-xl bg-[#14161A] hover:bg-red-950 text-gray-400 hover:text-red-400 border border-[#2E3542] flex items-center justify-center transition cursor-pointer"
+                  title="Réinitialiser la conversation de test"
                 >
-                  {q}
+                  <i className="fa-solid fa-rotate-right text-xs"></i>
                 </button>
-              ))}
+              </div>
             </div>
 
-            {/* Zone de Messages (Scrollable) */}
+            {/* Zone de conversation / Messages */}
             <div
               ref={chatScrollRef}
-              className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#FAF9F6]"
+              className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-[#131518]"
             >
-              {chatMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} items-start gap-2.5`}
-                >
-                  {msg.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs flex-shrink-0 shadow-xs mt-0.5">
-                      {selectedRole.icon}
-                    </div>
-                  )}
-
-                  <div
-                    className={`max-w-[85%] rounded-2xl p-4 space-y-1.5 shadow-xs ${
-                      msg.role === "user"
-                        ? "bg-[#2563EB] text-white rounded-tr-xs"
-                        : msg.isError
-                        ? "bg-red-50 text-red-900 border border-red-200 rounded-tl-xs"
-                        : "bg-white text-gray-900 border border-gray-200/80 rounded-tl-xs"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-4 text-[10px] opacity-70 font-semibold mb-1">
-                      <span>{msg.role === "user" ? "Administrateur (Testeur)" : selectedRole.name}</span>
-                      <span>{msg.time}</span>
-                    </div>
-
-                    <div className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-normal">
-                      {msg.content}
-                    </div>
-
-                    {msg.elapsedMs && (
-                      <div className="pt-1.5 text-[9px] text-gray-400 font-mono flex items-center gap-1 border-t border-gray-100">
-                        <i className="fa-solid fa-stopwatch text-indigo-500"></i>
-                        <span>Généré en {(msg.elapsedMs / 1000).toFixed(2)}s • Directives appliquées</span>
-                      </div>
-                    )}
+              {chatMessages.length === 0 ? (
+                // Écran de bienvenue (Exactement comme dans la capture)
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-600 to-[#10E688] text-gray-950 flex items-center justify-center text-2xl shadow-xl animate-pulse">
+                    <i className="fa-solid fa-wave-square"></i>
+                  </div>
+                  <div className="space-y-1.5 max-w-sm">
+                    <h3 className="text-base font-black text-white">Testez votre Agent ici</h3>
+                    <p className="text-xs text-gray-400 font-medium leading-relaxed">
+                      Cet espace vous permet de vérifier l'efficacité de votre agent avant de le mettre en ligne. Envoyez un message pour commencer.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-[#1A1D24] border border-[#2E3542] rounded-xl text-[11px] text-gray-400 max-w-xs leading-normal">
+                    Toutes les conversations ici sont en mode test et n'affecteront pas votre environnement de production.
+                  </div>
+                  <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                    <span>↓ Commencez par envoyer un message</span>
                   </div>
                 </div>
-              ))}
+              ) : (
+                chatMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} items-start gap-2`}
+                  >
+                    {msg.role === "assistant" && (
+                      <div className="w-7 h-7 rounded-full bg-emerald-600 text-gray-950 font-black text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-xs">
+                        IA
+                      </div>
+                    )}
+
+                    <div
+                      className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed space-y-1 shadow-md ${
+                        msg.role === "user"
+                          ? "bg-[#1E60E6] text-white rounded-tr-xs"
+                          : msg.isError
+                          ? "bg-red-950/80 text-red-200 border border-red-800 rounded-tl-xs"
+                          : "bg-[#1F232B] text-gray-200 border border-[#2E3542] rounded-tl-xs"
+                      }`}
+                    >
+                      <div className="whitespace-pre-wrap font-normal">{msg.content}</div>
+                      <div className="flex items-center justify-between text-[9px] opacity-60 pt-1 font-mono">
+                        <span>{msg.time}</span>
+                        {msg.elapsedMs && <span>{(msg.elapsedMs / 1000).toFixed(2)}s</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
 
               {isGenerating && (
-                <div className="flex justify-start items-center gap-2.5 animate-pulse">
-                  <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs shadow-xs">
-                    {selectedRole.icon}
+                <div className="flex justify-start items-center gap-2 animate-pulse">
+                  <div className="w-7 h-7 rounded-full bg-emerald-600 text-gray-950 font-black text-[10px] flex items-center justify-center">
+                    IA
                   </div>
-                  <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 text-xs text-gray-600 font-bold flex items-center space-x-2 shadow-xs">
-                    <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping"></span>
-                    <span>L'IA analyse vos instructions et génère sa réponse...</span>
+                  <div className="bg-[#1F232B] border border-[#2E3542] rounded-2xl px-4 py-2 text-xs text-gray-400 flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>L'IA formule sa réponse avec vos directives...</span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Zone de saisie du message */}
-            <div className="p-3 sm:p-4 bg-white border-t border-gray-200 flex-none">
+            {/* Suggestions rapides en 1 clic au-dessus de l'input */}
+            <div className="px-3 py-2 bg-[#1A1D24] border-t border-[#2A2F3A] flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-none">
+              <span className="text-[10px] font-black text-gray-400 uppercase flex-shrink-0">Tests :</span>
+              <button
+                type="button"
+                onClick={() => handleSendTestMessage("Quels sont vos tarifs de CV ?")}
+                disabled={isGenerating}
+                className="text-[10px] font-bold bg-[#242A36] hover:bg-[#10E688] hover:text-gray-950 text-gray-300 px-2.5 py-1 rounded-full border border-[#353D4E] transition flex-shrink-0 cursor-pointer disabled:opacity-50"
+              >
+                Prix CV
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendTestMessage("Je veux créer un CV pour un poste de Comptable à Dakar")}
+                disabled={isGenerating}
+                className="text-[10px] font-bold bg-[#242A36] hover:bg-[#10E688] hover:text-gray-950 text-gray-300 px-2.5 py-1 rounded-full border border-[#353D4E] transition flex-shrink-0 cursor-pointer disabled:opacity-50"
+              >
+                Création CV
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendTestMessage("Naka liggéey bi ?")}
+                disabled={isGenerating}
+                className="text-[10px] font-bold bg-[#242A36] hover:bg-[#10E688] hover:text-gray-950 text-gray-300 px-2.5 py-1 rounded-full border border-[#353D4E] transition flex-shrink-0 cursor-pointer disabled:opacity-50"
+              >
+                Test Wolof
+              </button>
+            </div>
+
+            {/* Zone de saisie (Message + micro + bouton) */}
+            <div className="p-3 bg-[#181B20] border-t border-[#2A2F3A] flex-none">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  handleSendMessage();
+                  handleSendTestMessage();
                 }}
                 className="flex items-center gap-2"
               >
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder={`Tester une consigne avec ${selectedRole.name}...`}
-                  disabled={isGenerating}
-                  className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/20 transition disabled:opacity-50 font-medium"
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    placeholder="Message..."
+                    disabled={isGenerating}
+                    className="w-full pl-4 pr-9 py-2.5 bg-[#131518] border border-[#2E3542] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#10E688] transition font-medium"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSendTestMessage("Bonjour, pouvez-vous m'aider pour mon CV ?")}
+                    className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white transition cursor-pointer"
+                    title="Commande vocale simulée"
+                  >
+                    <i className="fa-solid fa-microphone text-xs"></i>
+                  </button>
+                </div>
 
                 <button
                   type="submit"
                   disabled={!inputText.trim() || isGenerating}
-                  className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 text-white font-extrabold rounded-2xl text-xs sm:text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
+                  className="px-4 py-2.5 bg-[#10E688] hover:bg-[#10E688]/90 disabled:bg-gray-700 text-gray-950 font-black rounded-xl text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
                 >
                   <i className="fa-solid fa-paper-plane"></i>
-                  <span className="hidden sm:inline">Tester</span>
                 </button>
               </form>
             </div>
@@ -681,6 +833,7 @@ Longueur maximale estimée : ${maxTokens} jetons.
         </div>
 
       </div>
+
     </div>
   );
 }
