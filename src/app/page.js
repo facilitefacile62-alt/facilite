@@ -1500,7 +1500,7 @@ export default function Home() {
       </nav>
 
       {/* Main Job Board Feed (LinkedIn Style) */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-4 pb-8 md:pb-16 px-4 md:px-6">
+      <main className="min-h-screen bg-[#F4F2EE] pt-4 pb-8 md:pb-16 px-4 md:px-6" suppressHydrationWarning>
         <div className="max-w-[1180px] mx-auto flex flex-col md:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
