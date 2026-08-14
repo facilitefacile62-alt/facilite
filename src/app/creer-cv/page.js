@@ -269,6 +269,19 @@ const translations = {
   }
 };
 
+// --- LISTE DES MODÈLES DE CV DU STUDIO ---
+const cvTemplates = [
+  { id: "entrepreneur", num: 1, name: "Modèle 1 — Entrepreneur Pro", category: "Officiel Facilité (Photo & 2 Col)", icon: "fa-rocket", previewUrl: "/model4.png", accentColor: "#10E688" },
+  { id: "modern", num: 2, name: "Modèle 2 — Moderne", category: "2 Colonnes structuré", icon: "fa-grip", previewUrl: "/model1.png", accentColor: "#2563EB" },
+  { id: "minimalist", num: 3, name: "Modèle 3 — Minimaliste", category: "Aéré & Moderne", icon: "fa-align-left", previewUrl: "/model2.png", accentColor: "#0EA5E9" },
+  { id: "classic", num: 4, name: "Modèle 4 — Classique", category: "Traditionnel & Chic", icon: "fa-newspaper", previewUrl: "/model3.png", accentColor: "#475569" },
+  { id: "executif", num: 5, name: "Modèle 5 — Exécutif", category: "Bandeau formel & dense", icon: "fa-briefcase", previewUrl: "/model5.png", accentColor: "#1E293B" },
+  { id: "creatif", num: 6, name: "Modèle 6 — Créatif", category: "Coloré & asymétrique", icon: "fa-palette", previewUrl: "/model6.png", accentColor: "#8B5CF6" },
+  { id: "technique", num: 7, name: "Modèle 7 — Technique", category: "Grille de compétences", icon: "fa-code", previewUrl: "/model7.png", accentColor: "#059669" },
+  { id: "professionnel", num: 8, name: "Modèle 8 — Professionnel", category: "2 Colonnes Pro", icon: "fa-user-tie", previewUrl: "/model8.png", accentColor: "#D97706" },
+  { id: "elegance", num: 9, name: "Modèle 9 — Élégance", category: "Sidebar noire, touches dorées", icon: "fa-crown", previewUrl: "/model9.png", accentColor: "#B45309" }
+];
+
 export default function CreerCv() {
   const [selectedLang, setSelectedLang] = useState("FR");
   const [activeStep, setActiveStep] = useState(0);

@@ -23,9 +23,12 @@ const PUBLIC_ROUTES = [
   "/recruteurs", // vitrines publiques recruteur (/recruteurs/[id])
   "/recrutement-spontane",
   "/recrutement-journalier",
-  "/modeles", // vitrine publique des modèles de CV — l'action "Créer avec
-              // Canva" reste protégée séparément (session requise avant
-              // /api/canva/auth, voir src/app/modeles/page.jsx)
+  "/modeles", // vitrine publique des modèles de CV — le choix d'un modèle
+              // reste protégé séparément (session requise avant /creer-cv,
+              // voir src/app/modeles/page.jsx). L'intégration Canva OAuth
+              // (/api/canva/*) a été retirée le 2026-08-14, jamais
+              // atteignable depuis l'UI (aucun composant ne la déclenchait) :
+              // le générateur interne /creer-cv l'a remplacée.
 ];
 
 // Comparaison par segment de chemin plutôt que préfixe brut : pathname.startsWith("/recruteur")
