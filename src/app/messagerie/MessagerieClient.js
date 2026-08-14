@@ -1877,11 +1877,14 @@ export default function MessagerieClient() {
     if (filterTab === "favorites" && !c.favorite) return false;
 
     // Filtre par catégorie de discussion (OFFRE / ECHANGE / SUPPORT)
-    if (discussionTypeFilter !== "all" && c.id !== AI_PINNED_CHAT.id) {
+    if (discussionTypeFilter !== "all") {
+      if (c.id === AI_PINNED_CHAT.id) return false;
       if (discussionTypeFilter === "OFFRE") {
-        const isOffre = c.typeDiscussion === "OFFRE" || (c.messages || []).some(m => m.typeDiscussion === "OFFRE");
+        const isOffre = c.isCandidature || c.typeDiscussion === "OFFRE" || (c.messages || []).some(m => m.typeDiscussion === "OFFRE");
         if (!isOffre) return false;
       } else if (discussionTypeFilter === "ECHANGE") {
+        // Demande de stage uniquement (pas le support ni les offres)
+        if (c.id === 1 || c.typeDiscussion === "SUPPORT") return false;
         const isEchange = c.typeDiscussion === "ECHANGE" || (c.messages || []).some(m => m.typeDiscussion === "ECHANGE");
         if (!isEchange) return false;
       } else if (discussionTypeFilter === "SUPPORT") {
@@ -2474,54 +2477,56 @@ export default function MessagerieClient() {
 
             {/* Liste des conversations */}
             <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-100">
-              {/* 🤖 Carte de discussion IA Épinglée toujours visible en haut */}
-              <div
-                key={AI_PINNED_CHAT.id}
-                onClick={() => {
-                  setActiveConvId(AI_PINNED_CHAT.id);
-                  setMobileChatView(true);
-                  if (userSession?.user?.id) {
-                    loadAiMessagesFromSupabase(userSession.user.id);
-                  }
-                }}
-                className={`flex items-start space-x-3 p-4 cursor-pointer transition-all relative border-b border-emerald-200/80 ${
-                  activeConvId === AI_PINNED_CHAT.id
-                    ? "bg-emerald-100/70 border-l-4 border-[#10E688]"
-                    : "bg-emerald-50/60 hover:bg-emerald-100/40"
-                }`}
-              >
-                <div className="relative flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm bg-white border border-emerald-200">
-                    <img src="/ouvrier.jpg" alt="IA" className="w-full h-full object-cover" />
-                  </div>
-                  <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-emerald-500 border-2 border-white"></span>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline mb-1">
-                    <div className="flex items-center space-x-1.5 min-w-0 pr-2">
-                      <h3 className="text-sm font-extrabold text-gray-900 truncate">
-                        {AI_PINNED_CHAT.name}
-                      </h3>
-                      <span className="bg-emerald-200 text-emerald-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                        📌 Épinglé
-                      </span>
+              {/* 🤖 Carte de discussion IA Épinglée : affichée uniquement sous l'onglet 'Tous' */}
+              {discussionTypeFilter === "all" && (
+                <div
+                  key={AI_PINNED_CHAT.id}
+                  onClick={() => {
+                    setActiveConvId(AI_PINNED_CHAT.id);
+                    setMobileChatView(true);
+                    if (userSession?.user?.id) {
+                      loadAiMessagesFromSupabase(userSession.user.id);
+                    }
+                  }}
+                  className={`flex items-start space-x-3 p-4 cursor-pointer transition-all relative border-b border-emerald-200/80 ${
+                    activeConvId === AI_PINNED_CHAT.id
+                      ? "bg-emerald-100/70 border-l-4 border-[#10E688]"
+                      : "bg-emerald-50/60 hover:bg-emerald-100/40"
+                  }`}
+                >
+                  <div className="relative flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm bg-white border border-emerald-200">
+                      <img src="/ouvrier.jpg" alt="IA" className="w-full h-full object-cover" />
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-700">{AI_PINNED_CHAT.time}</span>
+                    <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-emerald-500 border-2 border-white"></span>
                   </div>
-                  <div className="flex items-center space-x-1 mb-0.5">
-                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded-md truncate max-w-[150px]">
-                      {AI_PINNED_CHAT.company}
-                    </span>
-                    <span className="text-[10px] font-medium text-gray-500 truncate">{AI_PINNED_CHAT.title}</span>
-                  </div>
-                  <p className="text-xs truncate font-medium text-gray-700">
-                    {AI_PINNED_CHAT.lastMessage}
-                  </p>
-                </div>
-              </div>
 
-              {/* Autres discussions */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <div className="flex items-center space-x-1.5 min-w-0 pr-2">
+                        <h3 className="text-sm font-extrabold text-gray-900 truncate">
+                          {AI_PINNED_CHAT.name}
+                        </h3>
+                        <span className="bg-emerald-200 text-emerald-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                          📌 Épinglé
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-700">{AI_PINNED_CHAT.time}</span>
+                    </div>
+                    <div className="flex items-center space-x-1 mb-0.5">
+                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded-md truncate max-w-[150px]">
+                        {AI_PINNED_CHAT.company}
+                      </span>
+                      <span className="text-[10px] font-medium text-gray-500 truncate">{AI_PINNED_CHAT.title}</span>
+                    </div>
+                    <p className="text-xs truncate font-medium text-gray-700">
+                      {AI_PINNED_CHAT.lastMessage}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Autres discussions filtrées */}
               {filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).length > 0 ? (
                 filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).map(conv => (
                   <div
@@ -2577,8 +2582,28 @@ export default function MessagerieClient() {
                   </div>
                 ))
               ) : (
-                <div className="p-8 text-center text-xs text-gray-400 font-semibold italic">
-                  Aucune autre discussion.
+                <div className="p-8 text-center text-xs text-gray-400 font-semibold space-y-1">
+                  {discussionTypeFilter === "ECHANGE" ? (
+                    <>
+                      <div className="text-2xl mb-1">🎓</div>
+                      <p className="text-gray-700 font-bold">Aucune demande de stage</p>
+                      <p className="text-[11px] text-gray-400">Vous n'avez pas encore envoyé de demande de stage.</p>
+                    </>
+                  ) : discussionTypeFilter === "OFFRE" ? (
+                    <>
+                      <div className="text-2xl mb-1">💼</div>
+                      <p className="text-gray-700 font-bold">Aucune candidature d'offre</p>
+                      <p className="text-[11px] text-gray-400">Vous n'avez pas encore postulé à une offre d'emploi.</p>
+                    </>
+                  ) : discussionTypeFilter === "SUPPORT" ? (
+                    <>
+                      <div className="text-2xl mb-1">🎧</div>
+                      <p className="text-gray-700 font-bold">Aucun échange support</p>
+                      <p className="text-[11px] text-gray-400">Le fil Support RH Facilité s'affichera dès votre premier message.</p>
+                    </>
+                  ) : (
+                    <p className="italic">Aucune discussion trouvée.</p>
+                  )}
                 </div>
               )}
             </div>
