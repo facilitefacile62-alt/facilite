@@ -942,7 +942,8 @@ export default function MessagerieClient() {
             candidatureData: c,
           }));
 
-          const allGroupMessages = matchedMsgs.length > 0 ? matchedMsgs : receiptMsgs;
+          // Afficher tous les envois de candidatures successifs
+          const allGroupMessages = receiptMsgs.length > 0 ? receiptMsgs : matchedMsgs;
           const lastMsg = allGroupMessages[allGroupMessages.length - 1];
 
           return {
