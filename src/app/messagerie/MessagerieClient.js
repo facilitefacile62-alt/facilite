@@ -847,128 +847,91 @@ export default function MessagerieClient() {
           triggerToast("Erreur de chargement de la discussion", "fa-triangle-exclamation");
         }
 
-        // Point 1.B : depuis /api/postuler, une nouvelle candidature crée une
-        // vraie conversation dédiée par recruteur (conversation_id non NULL)
-        // au lieu de laisser ces messages se fondre dans le fil générique
-        // "Support RH Facilité". On isole ici tout message dont le
-        // conversation_id est partagé par au moins un message de type OFFRE,
-        // pour lui donner sa propre carte sous le vrai nom du recruteur. Les
-        // anciens messages OFFRE historiques (conversation_id NULL, ~67
-        // lignes) restent volontairement dans le fil fusionné — décision
-        // explicite : pas de correctif rétroactif sur les données existantes.
-        const offreConversationIds = new Set(
-          formattedMsgs
-            .filter((m) => m.typeDiscussion === "OFFRE" && m.conversationId)
-            .map((m) => m.conversationId)
-        );
-        const distinctMsgs = formattedMsgs.filter((m) => m.conversationId && offreConversationIds.has(m.conversationId));
-        const mergedMsgs = formattedMsgs.filter((m) => !(m.conversationId && offreConversationIds.has(m.conversationId)));
-
-        const groupsByConversation = new Map();
-        for (const msg of distinctMsgs) {
-          const otherPartyId = msg.senderId === session.user.id ? msg.receiverId : msg.senderId;
-          if (!groupsByConversation.has(msg.conversationId)) {
-            groupsByConversation.set(msg.conversationId, { otherPartyId, messages: [] });
-          }
-          groupsByConversation.get(msg.conversationId).messages.push(msg);
-        }
-
-        // Chargement des candidatures de l'utilisateur pour l'historique complet
+        // Chargement des candidatures de l'utilisateur pour créer une carte distincte par offre
         const { data: userCandidatures } = await supabase
           .from("candidatures")
           .select("*")
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: false });
 
-        const recruiterCards = await Promise.all(
-          Array.from(groupsByConversation.entries()).map(async ([convId, { otherPartyId, messages: groupMessages }]) => {
-            const [{ data: recruiterProfile }, { data: profileRow }] = await Promise.all([
-              supabase.from("recruiter_profiles").select("company_name, sector, logo_url").eq("user_id", otherPartyId).maybeSingle(),
-              supabase.from("profiles").select("full_name").eq("id", otherPartyId).maybeSingle(),
-            ]);
-            const displayName = recruiterProfile?.company_name || profileRow?.full_name || "Recruteur / Offre";
-            const lastMsg = groupMessages[groupMessages.length - 1];
-            return {
-              id: convId,
-              name: displayName,
-              title: recruiterProfile?.sector || "Candidature Offre",
-              company: displayName,
-              avatarColor: "bg-emerald-600",
-              avatarInitials: displayName.slice(0, 2).toUpperCase(),
-              logo: recruiterProfile?.logo_url || null,
-              lastMessage: lastMsg.text,
-              time: lastMsg.time,
-              unreadCount: 0,
-              online: false,
-              favorite: false,
-              typeDiscussion: "OFFRE",
-              messages: groupMessages,
-            };
-          })
-        );
+        // Créer une carte distincte pour chaque candidature envoyée
+        const candidatureCards = (userCandidatures || []).map((cand) => {
+          const matchedMsgs = formattedMsgs.filter(
+            (m) =>
+              (cand.job_offer_id && m.jobOfferId === cand.job_offer_id) ||
+              (m.typeDiscussion === "OFFRE" && m.text && m.text.includes(cand.job_title))
+          );
 
-        // Intégrer également les candidatures de l'historique si elles n'ont pas encore de message
-        const existingCardOfferIds = new Set(formattedMsgs.filter(m => m.jobOfferId).map(m => m.jobOfferId));
-        const standaloneCandidatureCards = (userCandidatures || [])
-          .filter(cand => cand.job_offer_id && !existingCardOfferIds.has(cand.job_offer_id))
-          .map(cand => ({
+          const defaultMsg = {
+            id: `cand_receipt_${cand.id}`,
+            sender: "me",
+            senderId: session.user.id,
+            receiverId: cand.recruiter_id || null,
+            text: `💼 Candidature envoyée pour le poste : ${cand.job_title} (${cand.company})\n📧 Destinataire : ${cand.email || "Recruteur"}\n📊 Score CV : ${cand.cv_match_score || 0}%\n💬 Message d'accompagnement : ${cand.cover_letter || "Aucun message d'accompagnement"}`,
+            time: new Date(cand.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            createdAt: cand.created_at,
+            status: "delivered",
+            isPinned: false,
+            persisted: true,
+            typeDiscussion: "OFFRE",
+            jobOfferId: cand.job_offer_id,
+            attachment_url: cand.cv_url,
+            file_name: "CV_Candidature.pdf",
+            isCandidatureReceipt: true,
+            candidatureData: cand,
+          };
+
+          const cardMessages = matchedMsgs.length > 0 ? matchedMsgs : [defaultMsg];
+          const lastMsg = cardMessages[cardMessages.length - 1];
+
+          return {
             id: `cand_${cand.id}`,
-            name: cand.company || "Entreprise",
-            title: cand.job_title || "Offre d'emploi",
+            candidatureId: cand.id,
+            name: cand.job_title || "Offre d'emploi",
+            title: `Candidature • ${cand.company || "Entreprise"}`,
             company: cand.company || "Entreprise",
             avatarColor: "bg-emerald-600",
-            avatarInitials: (cand.company || "CO").slice(0, 2).toUpperCase(),
+            avatarInitials: (cand.company || "OF").slice(0, 2).toUpperCase(),
             logo: null,
-            lastMessage: `Candidature transmise pour : ${cand.job_title}`,
-            time: new Date(cand.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            lastMessage: `✅ Candidature transmise : ${cand.job_title}`,
+            time: lastMsg.time || new Date(cand.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             unreadCount: 0,
             online: false,
             favorite: false,
             typeDiscussion: "OFFRE",
-            messages: [
-              {
-                id: `cand_msg_${cand.id}`,
-                sender: "me",
-                senderId: session.user.id,
-                receiverId: cand.recruiter_id || null,
-                text: `💼 Candidature envoyée pour le poste : ${cand.job_title} chez ${cand.company}\n📊 Score CV : ${cand.cv_match_score || 0}%\n💬 Message d'accompagnement : ${cand.cover_letter || "Aucun message d'accompagnement"}`,
-                time: new Date(cand.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                createdAt: cand.created_at,
-                status: "sent",
-                isPinned: false,
-                persisted: true,
-                typeDiscussion: "OFFRE",
-                jobOfferId: cand.job_offer_id,
-                attachment_url: cand.cv_url,
-                file_name: "CV_Candidature.pdf",
-              }
-            ],
-          }));
+            isCandidature: true,
+            candidatureData: cand,
+            messages: cardMessages,
+          };
+        });
+
+        // Les messages Support généraux (excluant les candidatures)
+        const supportMsgs = formattedMsgs.filter((m) => m.typeDiscussion !== "OFFRE");
 
         if (!isActive) return;
 
         setConversations(prev => {
           const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
           const next = [aiConv];
-          if (mergedMsgs.length > 0) {
+          if (supportMsgs.length > 0) {
             next.push({
               id: 1,
               name: "Support RH Facilité",
-              title: "Assistance & Recrutement",
+              title: "Assistance & Support",
               company: "Facilite Corporation",
               avatarColor: "bg-[#10E688]",
               avatarInitials: "FC",
               logo: "/logo.jpeg",
-              lastMessage: mergedMsgs[mergedMsgs.length - 1].text,
-              time: mergedMsgs[mergedMsgs.length - 1].time,
+              lastMessage: supportMsgs[supportMsgs.length - 1].text,
+              time: supportMsgs[supportMsgs.length - 1].time,
               unreadCount: 0,
               online: true,
               favorite: true,
               typeDiscussion: "SUPPORT",
-              messages: mergedMsgs,
+              messages: supportMsgs,
             });
           }
-          for (const card of [...recruiterCards, ...standaloneCandidatureCards]) {
+          for (const card of candidatureCards) {
             const alreadyPresent = prev.some((c) => c.id === card.id) || next.some((c) => c.id === card.id);
             if (!alreadyPresent) next.push(card);
           }
@@ -2700,6 +2663,38 @@ export default function MessagerieClient() {
                     </div>
                   )}
                 </div>
+
+                {/* BANNIÈRE DE LIVRAISON & SUIVI DE CANDIDATURE (ACCUSÉ DE RÉCEPTION OFFICIEL) */}
+                {(activeConversation?.isCandidature || activeConversation?.typeDiscussion === "OFFRE") && (
+                  <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/60 border-b border-emerald-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <i className="fa-solid fa-paper-plane text-base"></i>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-black text-emerald-950 truncate">
+                            {activeConversation.name}
+                          </span>
+                          <span className="bg-emerald-200/90 text-emerald-900 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                            Transmise avec succès
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-emerald-800/80 font-semibold truncate">
+                          Entreprise : <strong className="text-emerald-950 font-bold">{activeConversation.company}</strong>
+                          {activeConversation.candidatureData?.email ? ` • Destinataire : ${activeConversation.candidatureData.email}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[11px] font-black text-emerald-800 bg-white border border-emerald-300/80 px-3 py-1.5 rounded-xl shadow-xs flex items-center gap-1.5">
+                        <i className="fa-solid fa-circle-check text-emerald-600"></i>
+                        <span>E-mail délivré</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* BANNIÈRE MESSAGE ÉPINGLÉ (toujours visible en haut du fil) */}
                 {pinnedMessage && (
