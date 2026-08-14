@@ -286,5 +286,11 @@ export async function POST(req) {
       { error: "Aucun fournisseur d'intelligence artificielle n'a pu répondre à la requête." },
       { status: 503 }
     );
+  } catch (error) {
+    console.error("ai-chat: Erreur serveur:", error);
+    return NextResponse.json(
+      { error: "Erreur serveur lors du traitement de la requête IA." },
+      { status: 500 }
+    );
   }
 }
