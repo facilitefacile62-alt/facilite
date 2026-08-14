@@ -290,6 +290,20 @@ export default function CreerCv() {
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isAdvancedEditOpen, setIsAdvancedEditOpen] = useState(false);
+  const [activeCanvaTab, setActiveCanvaTab] = useState("models");
+  const [canvaFontFamily, setCanvaFontFamily] = useState("font-sans");
+  const [canvaFontSize, setCanvaFontSize] = useState(14);
+  const [canvaScale, setCanvaScale] = useState(1);
+  const [canvaSectionSpacing, setCanvaSectionSpacing] = useState(1);
+  const [canvaPhotoBorderWidth, setCanvaPhotoBorderWidth] = useState(4);
+  const [canvaPhotoBorderColor, setCanvaPhotoBorderColor] = useState("#1B2B3A");
+  const [canvaPhotoShape, setCanvaPhotoShape] = useState("circle");
+  const [canvaTextAlign, setCanvaTextAlign] = useState("left");
+  const [canvaBold, setCanvaBold] = useState(false);
+  const [canvaItalic, setCanvaItalic] = useState(false);
+  const [canvaUnderline, setCanvaUnderline] = useState(false);
+  const [canvaUppercase, setCanvaUppercase] = useState(false);
+  const [canvaSearchQuery, setCanvaSearchQuery] = useState("");
   const [canvaZoom, setCanvaZoom] = useState(1);
   const [cvPages, setCvPages] = useState([
     { id: 1, type: "cv_p1", title: "Page 1 — CV Principal", isLocked: false }
@@ -1152,6 +1166,27 @@ export default function CreerCv() {
     triggerToast(cvPages[pageIndex]?.isLocked ? "Page déverrouillée" : "Page verrouillée");
   };
 
+  const handleAiRewriteSummary = () => {
+    const job = cvData.jobTitle || "Professionnel";
+    setCvData(prev => ({
+      ...prev,
+      profileSummary: `Professionnel dynamique et orienté résultats avec une solide expertise en ${job}. Reconnu(e) pour ma rigueur, ma capacité d'adaptation rapide et mon engagement vers l'excellence opérationnelle. Passionné(e) par la création de valeur et l'atteinte des objectifs stratégiques au sein d'environnements exigeants.`
+    }));
+    triggerToast("Profil reformulé par l'IA avec succès !");
+  };
+
+  const handleAiAddKeywords = () => {
+    setCvData(prev => ({
+      ...prev,
+      skills: [
+        ...prev.skills,
+        { id: Date.now(), name: "Gestion de projet & Rigueur", level: "Avancé" },
+        { id: Date.now() + 1, name: "Leadership & Collaboration", level: "Expert" }
+      ]
+    }));
+    triggerToast("Mots-clés clés ajoutés au CV !");
+  };
+
   useEffect(() => {
     if (isPreviewOpen) {
       handleAutoFit();
@@ -1233,103 +1268,562 @@ export default function CreerCv() {
       {/* Main Workspace Wrapper (Full viewport, height minus navbar) */}
       <div className="flex-grow flex flex-col md:flex-row pt-16 min-h-[calc(100vh-4rem)] bg-gray-50 w-full max-w-full overflow-x-hidden">
         
-        {/* SIDEBAR (WIZARD STEPS) - Hides on print */}
-        <aside className="w-full md:w-64 bg-[#0F172A] text-white flex flex-col justify-between flex-shrink-0 border-r border-slate-800 no-print">
-          
-          {/* Scrollable list of steps */}
-          <div className="p-4 flex-grow overflow-y-auto">
-            <div className="mb-6 px-2">
-              <div className="flex items-center space-x-2 text-[#10E688] font-bold text-xs uppercase tracking-widest">
-                <span className="w-2 h-2 rounded-full bg-[#10E688] animate-pulse"></span>
-                <span>Édition en cours</span>
+        {/* SIDEBAR: EITHER CANVA LATERAL STUDIO OR STANDARD WIZARD STEPS */}
+        {isAdvancedEditOpen ? (
+          /* FULL CANVA LATERAL STUDIO */
+          <div className="flex flex-row flex-shrink-0 z-30 no-print">
+            {/* 1. VERTICAL ICON NAV RAIL (Canva Left Rail) */}
+            <div className="w-20 bg-[#0A0E1A] border-r border-slate-800 flex flex-col justify-between py-3 items-center text-slate-400 select-none">
+              <div className="flex flex-col items-center space-y-2.5 w-full px-1">
+                {/* Modèles */}
+                <button
+                  type="button"
+                  onClick={() => setActiveCanvaTab("models")}
+                  className={`w-full py-2 rounded-xl flex flex-col items-center justify-center transition cursor-pointer ${
+                    activeCanvaTab === "models"
+                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
+                      : "hover:bg-slate-800/70 hover:text-white"
+                  }`}
+                  title="Modèles de CV"
+                >
+                  <i className="fa-solid fa-table-cells-large text-sm mb-1"></i>
+                  <span className="text-[9px] font-extrabold">Modèles</span>
+                </button>
+
+                {/* Éléments */}
+                <button
+                  type="button"
+                  onClick={() => setActiveCanvaTab("elements")}
+                  className={`w-full py-2 rounded-xl flex flex-col items-center justify-center transition cursor-pointer ${
+                    activeCanvaTab === "elements"
+                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
+                      : "hover:bg-slate-800/70 hover:text-white"
+                  }`}
+                  title="Éléments & Structure"
+                >
+                  <i className="fa-solid fa-shapes text-sm mb-1"></i>
+                  <span className="text-[9px] font-extrabold">Éléments</span>
+                </button>
+
+                {/* Texte */}
+                <button
+                  type="button"
+                  onClick={() => setActiveCanvaTab("text")}
+                  className={`w-full py-2 rounded-xl flex flex-col items-center justify-center transition cursor-pointer ${
+                    activeCanvaTab === "text"
+                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
+                      : "hover:bg-slate-800/70 hover:text-white"
+                  }`}
+                  title="Texte & Typographie"
+                >
+                  <i className="fa-solid fa-font text-sm mb-1"></i>
+                  <span className="text-[9px] font-extrabold">Texte</span>
+                </button>
+
+                {/* Marque / Couleurs */}
+                <button
+                  type="button"
+                  onClick={() => setActiveCanvaTab("colors")}
+                  className={`w-full py-2 rounded-xl flex flex-col items-center justify-center transition cursor-pointer ${
+                    activeCanvaTab === "colors"
+                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
+                      : "hover:bg-slate-800/70 hover:text-white"
+                  }`}
+                  title="Couleurs & Marque"
+                >
+                  <i className="fa-solid fa-palette text-sm mb-1"></i>
+                  <span className="text-[9px] font-extrabold">Marque</span>
+                </button>
+
+                {/* Importer / Photos */}
+                <button
+                  type="button"
+                  onClick={() => setActiveCanvaTab("photo")}
+                  className={`w-full py-2 rounded-xl flex flex-col items-center justify-center transition cursor-pointer ${
+                    activeCanvaTab === "photo"
+                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
+                      : "hover:bg-slate-800/70 hover:text-white"
+                  }`}
+                  title="Importer photos & médias"
+                >
+                  <i className="fa-solid fa-cloud-arrow-up text-sm mb-1"></i>
+                  <span className="text-[9px] font-extrabold">Importer</span>
+                </button>
+
+                {/* IA Studio */}
+                <button
+                  type="button"
+                  onClick={() => setActiveCanvaTab("ai")}
+                  className={`w-full py-2 rounded-xl flex flex-col items-center justify-center transition cursor-pointer ${
+                    activeCanvaTab === "ai"
+                      ? "bg-purple-600/25 text-purple-300 border border-purple-500/40"
+                      : "hover:bg-slate-800/70 hover:text-purple-300"
+                  }`}
+                  title="Assistant IA Facilité"
+                >
+                  <i className="fa-solid fa-wand-magic-sparkles text-sm mb-1 text-purple-400"></i>
+                  <span className="text-[9px] font-extrabold">IA Studio</span>
+                </button>
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">Les modifications sont enregistrées localement</p>
+
+              {/* Bouton Revenir aux étapes */}
+              <div className="w-full px-1.5 pt-2 border-t border-slate-800 flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => setIsAdvancedEditOpen(false)}
+                  className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white flex flex-col items-center justify-center transition cursor-pointer border border-slate-700 shadow-sm"
+                  title="Revenir aux étapes standards"
+                >
+                  <i className="fa-solid fa-arrow-left text-xs mb-1"></i>
+                  <span className="text-[8px] font-black uppercase text-center leading-tight">Étapes</span>
+                </button>
+              </div>
             </div>
 
-            <nav className="space-y-1.5">
-              {stepsList.map((step) => {
-                const isActive = activeStep === step.num;
-                const isCompleted = activeStep > step.num;
-                return (
-                  <button
-                    key={step.num}
-                    onClick={() => handleGoToStep(step.num)}
-                    title={`Modifier l'étape ${step.num + 1} : ${step.label}`}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl transition text-left cursor-pointer text-sm font-semibold group ${
-                      isActive
-                        ? "bg-[#1E293B] text-white border-l-4 border-[#10E688] shadow-md"
-                        : "text-slate-400 hover:bg-slate-850 hover:text-white"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3.5">
-                      <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
-                        isActive
-                          ? "bg-[#10E688] text-gray-900"
-                          : isCompleted
-                            ? "bg-emerald-900/40 text-[#10E688] border border-emerald-500/30 group-hover:bg-emerald-800/60"
-                            : "bg-slate-800 text-slate-400 group-hover:bg-slate-700"
-                      }`}>
-                        {isCompleted ? (
-                          <>
-                            <i className="fa-solid fa-check group-hover:hidden"></i>
-                            <i className="fa-solid fa-pen text-[10px] hidden group-hover:inline-block text-[#10E688]"></i>
-                          </>
-                        ) : (
-                          <>
-                            <span className="group-hover:hidden">{step.num + 1}</span>
-                            <i className="fa-solid fa-pen text-[10px] hidden group-hover:inline-block text-white"></i>
-                          </>
-                        )}
-                      </span>
-                      <span className="group-hover:text-white transition-colors">{step.label}</span>
-                    </div>
-
-                    {/* Stylo d'édition visible */}
-                    <div className="flex items-center gap-2">
-                      {isCompleted && (
-                        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-[#10E688] bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/30 flex items-center gap-1">
-                          <i className="fa-solid fa-pen text-[8px]"></i>
-                          <span>Modifier</span>
-                        </span>
-                      )}
-                      <i className={`fa-solid ${isActive ? "fa-pen-to-square text-[#10E688] opacity-100" : isCompleted ? "fa-pen-to-square text-emerald-400/80 group-hover:text-[#10E688] group-hover:opacity-100 opacity-70" : step.icon} text-xs transition-all ${isActive ? "opacity-100 text-[#10E688]" : "opacity-40 group-hover:opacity-80"}`}></i>
-                    </div>
-                  </button>
-                );
-              })}
-            </nav>
-
-            {/* BOUTON MODIFICATION AVANCÉE */}
-            <div className="pt-4 mt-4 border-t border-slate-800/80">
-              <button
-                type="button"
-                onClick={() => setIsAdvancedEditOpen(true)}
-                className="w-full flex items-center justify-between p-3 rounded-xl transition text-left cursor-pointer text-xs font-black bg-gradient-to-r from-blue-950/70 via-indigo-950/50 to-slate-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white shadow-lg hover:shadow-blue-500/10 group"
-              >
-                <div className="flex items-center space-x-3">
-                  <span className="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-400 group-hover:text-white group-hover:bg-blue-600 transition-all">
-                    <i className="fa-solid fa-sliders text-xs"></i>
+            {/* 2. CANVA DRAWER PANEL */}
+            <div className="w-72 sm:w-80 md:w-88 bg-[#111726] border-r border-slate-750 text-white flex flex-col h-[calc(100vh-4rem)] overflow-hidden shadow-2xl">
+              {/* Drawer Header */}
+              <div className="p-3.5 border-b border-slate-750 flex items-center justify-between bg-slate-900/80">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                    {activeCanvaTab === "models" && "Modèles de CV"}
+                    {activeCanvaTab === "elements" && "Éléments & Structure"}
+                    {activeCanvaTab === "text" && "Texte & Typographie"}
+                    {activeCanvaTab === "colors" && "Couleurs & Charte"}
+                    {activeCanvaTab === "photo" && "Photo & Médias"}
+                    {activeCanvaTab === "ai" && "Studio IA Facilité"}
                   </span>
-                  <div className="flex flex-col">
-                    <span className="font-extrabold text-white text-xs">Modification Avancée</span>
-                    <span className="text-[9px] text-blue-300/70 font-medium">Options expertes & styles</span>
-                  </div>
                 </div>
-                <i className="fa-solid fa-chevron-right text-[10px] text-blue-400/70 group-hover:translate-x-0.5 transition-transform"></i>
-              </button>
-            </div>
-          </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAdvancedEditOpen(false)}
+                  className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+                  title="Fermer la modification avancée"
+                >
+                  <i className="fa-solid fa-xmark text-xs"></i>
+                </button>
+              </div>
 
-          {/* Sidebar Footer links */}
-          <div className="p-4 border-t border-slate-800/80 bg-slate-950/40 text-center space-y-2">
-            <div className="flex justify-center space-x-3 text-[10px] text-slate-400 font-bold">
-              <a href="#" onClick={handleOpenContactModal} className="hover:text-white transition">{t.sidebarFooter3}</a>
-              <span>•</span>
-              <a href="#" className="hover:text-white transition">{t.sidebarFooter1}</a>
+              {/* Drawer Content Body */}
+              <div className="p-4 flex-grow overflow-y-auto space-y-4">
+                
+                {/* TAB: MODÈLES */}
+                {activeCanvaTab === "models" && (
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                      <input
+                        type="text"
+                        value={canvaSearchQuery}
+                        onChange={(e) => setCanvaSearchQuery(e.target.value)}
+                        placeholder="Rechercher un modèle..."
+                        className="w-full bg-slate-800/90 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-hidden focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between pt-1">
+                      <span>Tous les modèles ({cvTemplates.length})</span>
+                      <span className="text-blue-400 text-[10px]">Actif: {selectedTemplate}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {cvTemplates
+                        .filter(t => !canvaSearchQuery || t.name.toLowerCase().includes(canvaSearchQuery.toLowerCase()) || t.category.toLowerCase().includes(canvaSearchQuery.toLowerCase()))
+                        .map((tpl) => {
+                          const isCur = selectedTemplate === tpl.id;
+                          return (
+                            <button
+                              key={tpl.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedTemplate(tpl.id);
+                                triggerToast(`Modèle ${tpl.name} appliqué !`);
+                              }}
+                              className={`relative rounded-xl p-2 text-left transition border cursor-pointer group flex flex-col justify-between h-28 ${
+                                isCur
+                                  ? "bg-blue-950/60 border-blue-500 shadow-md ring-2 ring-blue-500/30"
+                                  : "bg-slate-850 border-slate-750 hover:border-slate-600 hover:bg-slate-800"
+                              }`}
+                            >
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[10px] font-extrabold text-white truncate block">{tpl.name}</span>
+                                  {isCur && <i className="fa-solid fa-circle-check text-blue-400 text-xs"></i>}
+                                </div>
+                                <span className="text-[9px] text-slate-400 block">{tpl.category}</span>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                                <div className="h-full" style={{ backgroundColor: tpl.accentColor, width: "100%" }}></div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: TEXTE */}
+                {activeCanvaTab === "text" && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Police de caractères</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: "font-sans", name: "Public Sans" },
+                          { id: "font-inter", name: "Inter" },
+                          { id: "font-outfit", name: "Outfit" },
+                          { id: "font-montserrat", name: "Montserrat" },
+                          { id: "font-roboto", name: "Roboto" },
+                          { id: "font-serif", name: "Playfair" },
+                        ].map(f => (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => {
+                              setCanvaFontFamily(f.id);
+                              triggerToast(`Police ${f.name} appliquée`);
+                            }}
+                            className={`p-2 rounded-xl text-left border text-xs transition cursor-pointer ${
+                              canvaFontFamily === f.id
+                                ? "bg-blue-600/20 border-blue-500 text-white font-bold"
+                                : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                            }`}
+                          >
+                            {f.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-[11px] font-bold text-slate-300 mb-1.5">
+                        <span>Échelle de taille du texte</span>
+                        <span className="text-blue-400">{Math.round(canvaScale * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.85"
+                        max="1.25"
+                        step="0.05"
+                        value={canvaScale}
+                        onChange={(e) => setCanvaScale(parseFloat(e.target.value))}
+                        className="w-full accent-blue-500 cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Alignement du texte</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: "left", icon: "fa-align-left", label: "Gauche" },
+                          { id: "center", icon: "fa-align-center", label: "Centré" },
+                          { id: "justify", icon: "fa-align-justify", label: "Justifié" },
+                        ].map(al => (
+                          <button
+                            key={al.id}
+                            type="button"
+                            onClick={() => setCanvaTextAlign(al.id)}
+                            className={`p-2 rounded-xl border flex flex-col items-center justify-center text-xs transition cursor-pointer ${
+                              canvaTextAlign === al.id
+                                ? "bg-blue-600/20 border-blue-500 text-white font-bold"
+                                : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                            }`}
+                          >
+                            <i className={`fa-solid ${al.icon} mb-1`}></i>
+                            <span className="text-[10px]">{al.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: COULEURS & MARQUE */}
+                {activeCanvaTab === "colors" && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Palettes de couleurs recommandées</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { name: "Bleu Royal", hex: "#2563EB" },
+                          { name: "Émeraude", hex: "#10E688" },
+                          { name: "Or / Ambre", hex: "#D97706" },
+                          { name: "Violet", hex: "#8B5CF6" },
+                          { name: "Anthracite", hex: "#1E293B" },
+                          { name: "Bordeaux", hex: "#991B1B" },
+                          { name: "Cyan Océan", hex: "#0EA5E9" },
+                          { name: "Rose Bonbon", hex: "#EC4899" },
+                        ].map(c => (
+                          <button
+                            key={c.hex}
+                            type="button"
+                            onClick={() => {
+                              setAccentColor(c.hex);
+                              triggerToast(`Couleur ${c.name} sélectionnée !`);
+                            }}
+                            className={`p-2 rounded-xl border flex flex-col items-center justify-center transition cursor-pointer ${
+                              accentColor === c.hex
+                                ? "border-white ring-2 ring-blue-400 bg-slate-800"
+                                : "border-slate-700 hover:border-slate-500 bg-slate-850"
+                            }`}
+                          >
+                            <span className="w-6 h-6 rounded-full shadow-inner border border-white/20 mb-1" style={{ backgroundColor: c.hex }}></span>
+                            <span className="text-[9px] text-slate-300 truncate w-full text-center">{c.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Couleur personnalisée (HEX)</label>
+                      <div className="flex items-center space-x-2 bg-slate-800 p-2 rounded-xl border border-slate-700">
+                        <input
+                          type="color"
+                          value={accentColor}
+                          onChange={(e) => setAccentColor(e.target.value)}
+                          className="w-9 h-9 rounded-lg border-0 cursor-pointer bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={accentColor}
+                          onChange={(e) => setAccentColor(e.target.value)}
+                          className="bg-transparent border-0 text-white font-mono text-xs font-bold uppercase focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: PHOTO & MÉDIAS */}
+                {activeCanvaTab === "photo" && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Photo du profil</label>
+                      <div className="flex items-center gap-3 p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+                        <div className="w-14 h-14 rounded-full overflow-hidden bg-slate-700 border-2 border-slate-500 flex items-center justify-center flex-shrink-0">
+                          {photoPreview ? (
+                            <img src={photoPreview} alt="Aperçu" className="w-full h-full object-cover" />
+                          ) : (
+                            <i className="fa-solid fa-user text-slate-400 text-lg"></i>
+                          )}
+                        </div>
+                        <div>
+                          <label className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg transition cursor-pointer inline-flex items-center gap-1.5">
+                            <i className="fa-solid fa-upload text-[10px]"></i>
+                            <span>Changer la photo</span>
+                            <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Forme du cadre photo</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: "circle", label: "Cercle", icon: "fa-circle" },
+                          { id: "rounded", label: "Arrondi", icon: "fa-square" },
+                          { id: "square", label: "Carré", icon: "fa-square-full" },
+                        ].map(sh => (
+                          <button
+                            key={sh.id}
+                            type="button"
+                            onClick={() => setCanvaPhotoShape(sh.id)}
+                            className={`p-2 rounded-xl border flex flex-col items-center justify-center text-xs transition cursor-pointer ${
+                              canvaPhotoShape === sh.id
+                                ? "bg-blue-600/20 border-blue-500 text-white font-bold"
+                                : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                            }`}
+                          >
+                            <i className={`fa-solid ${sh.icon} mb-1 text-sm`}></i>
+                            <span className="text-[10px]">{sh.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-[11px] font-bold text-slate-300 mb-1.5">
+                        <span>Épaisseur de la bordure</span>
+                        <span className="text-blue-400">{canvaPhotoBorderWidth}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={canvaPhotoBorderWidth}
+                        onChange={(e) => setCanvaPhotoBorderWidth(parseInt(e.target.value))}
+                        className="w-full accent-blue-500 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: ÉLÉMENTS */}
+                {activeCanvaTab === "elements" && (
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-[11px] font-bold text-slate-300 mb-1.5">
+                        <span>Espacement entre les sections</span>
+                        <span className="text-blue-400">{Math.round(canvaSectionSpacing * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.8"
+                        max="1.3"
+                        step="0.05"
+                        value={canvaSectionSpacing}
+                        onChange={(e) => setCanvaSectionSpacing(parseFloat(e.target.value))}
+                        className="w-full accent-blue-500 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: IA STUDIO */}
+                {activeCanvaTab === "ai" && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-purple-950/40 rounded-xl border border-purple-500/30">
+                      <div className="flex items-center gap-2 text-purple-300 font-black text-xs mb-1">
+                        <i className="fa-solid fa-sparkles"></i>
+                        <span>Assistant IA Facilité</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300">Boostez votre CV avec des descriptions percutantes adaptées aux recruteurs.</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAiRewriteSummary()}
+                      className="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-left transition flex items-center gap-3 cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-purple-900/60 text-purple-300 flex items-center justify-center flex-shrink-0">
+                        <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block group-hover:text-purple-300">Reformuler le profil</span>
+                        <span className="text-[9px] text-slate-400">Rendre le résumé professionnel plus percutant</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAiAddKeywords()}
+                      className="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-left transition flex items-center gap-3 cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-900/60 text-blue-300 flex items-center justify-center flex-shrink-0">
+                        <i className="fa-solid fa-key text-xs"></i>
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block group-hover:text-blue-300">Enrichir mots-clés ATS</span>
+                        <span className="text-[9px] text-slate-400">Optimiser pour passer les filtres de recrutement</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+
+              </div>
             </div>
-            <p className="text-[9px] text-slate-500">{t.sidebarFooterCopyright} All rights reserved.</p>
           </div>
-        </aside>
+        ) : (
+          /* STANDARD WIZARD STEPS SIDEBAR */
+          <aside className="w-full md:w-64 bg-[#0F172A] text-white flex flex-col justify-between flex-shrink-0 border-r border-slate-800 no-print">
+            
+            {/* Scrollable list of steps */}
+            <div className="p-4 flex-grow overflow-y-auto">
+              <div className="mb-6 px-2">
+                <div className="flex items-center space-x-2 text-[#10E688] font-bold text-xs uppercase tracking-widest">
+                  <span className="w-2 h-2 rounded-full bg-[#10E688] animate-pulse"></span>
+                  <span>Édition en cours</span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Les modifications sont enregistrées localement</p>
+              </div>
+
+              <nav className="space-y-1.5">
+                {stepsList.map((step) => {
+                  const isActive = activeStep === step.num;
+                  const isCompleted = activeStep > step.num;
+                  return (
+                    <button
+                      key={step.num}
+                      onClick={() => handleGoToStep(step.num)}
+                      title={`Modifier l'étape ${step.num + 1} : ${step.label}`}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition text-left cursor-pointer text-sm font-semibold group ${
+                        isActive
+                          ? "bg-[#1E293B] text-white border-l-4 border-[#10E688] shadow-md"
+                          : "text-slate-400 hover:bg-slate-850 hover:text-white"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3.5">
+                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+                          isActive
+                            ? "bg-[#10E688] text-gray-900"
+                            : isCompleted
+                              ? "bg-emerald-900/40 text-[#10E688] border border-emerald-500/30 group-hover:bg-emerald-800/60"
+                              : "bg-slate-800 text-slate-400 group-hover:bg-slate-700"
+                        }`}>
+                          {isCompleted ? (
+                            <>
+                              <i className="fa-solid fa-check group-hover:hidden"></i>
+                              <i className="fa-solid fa-pen text-[10px] hidden group-hover:inline-block text-[#10E688]"></i>
+                            </>
+                          ) : (
+                            <>
+                              <span className="group-hover:hidden">{step.num + 1}</span>
+                              <i className="fa-solid fa-pen text-[10px] hidden group-hover:inline-block text-white"></i>
+                            </>
+                          )}
+                        </span>
+                        <span className="group-hover:text-white transition-colors">{step.label}</span>
+                      </div>
+
+                      {/* Stylo d'édition visible */}
+                      <div className="flex items-center gap-2">
+                        {isCompleted && (
+                          <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-[#10E688] bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/30 flex items-center gap-1">
+                            <i className="fa-solid fa-pen text-[8px]"></i>
+                            <span>Modifier</span>
+                          </span>
+                        )}
+                        <i className={`fa-solid ${isActive ? "fa-pen-to-square text-[#10E688] opacity-100" : isCompleted ? "fa-pen-to-square text-emerald-400/80 group-hover:text-[#10E688] group-hover:opacity-100 opacity-70" : step.icon} text-xs transition-all ${isActive ? "opacity-100 text-[#10E688]" : "opacity-40 group-hover:opacity-80"}`}></i>
+                      </div>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* BOUTON MODIFICATION AVANCÉE */}
+              <div className="pt-4 mt-4 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => setIsAdvancedEditOpen(true)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl transition text-left cursor-pointer text-xs font-black bg-gradient-to-r from-blue-950/70 via-indigo-950/50 to-slate-900 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white shadow-lg hover:shadow-blue-500/10 group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-400 group-hover:text-white group-hover:bg-blue-600 transition-all">
+                      <i className="fa-solid fa-sliders text-xs"></i>
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-extrabold text-white text-xs">Modification Avancée</span>
+                      <span className="text-[9px] text-blue-300/70 font-medium">Options expertes & styles</span>
+                    </div>
+                  </div>
+                  <i className="fa-solid fa-chevron-right text-[10px] text-blue-400/70 group-hover:translate-x-0.5 transition-transform"></i>
+                </button>
+              </div>
+            </div>
+
+            {/* Sidebar Footer links */}
+            <div className="p-4 border-t border-slate-800/80 bg-slate-950/40 text-center space-y-2">
+              <div className="flex justify-center space-x-3 text-[10px] text-slate-400 font-bold">
+                <a href="#" onClick={handleOpenContactModal} className="hover:text-white transition">{t.sidebarFooter3}</a>
+                <span>•</span>
+                <a href="#" className="hover:text-white transition">{t.sidebarFooter1}</a>
+              </div>
+              <p className="text-[9px] text-slate-500">{t.sidebarFooterCopyright} All rights reserved.</p>
+            </div>
+          </aside>
+        )}
 
         {/* WORKSPACE AREA: Form Editor (Middle) + CV Live Preview (Right) */}
         <div className="flex-grow flex flex-col lg:flex-row h-full">
@@ -2553,6 +3047,129 @@ export default function CreerCv() {
                     <span>Imprimer</span>
                   </button>
                 </div>
+              </div>
+
+              {/* CANVA CONTEXTUAL TOP FORMATTING BAR (Style Canva Top Menu) */}
+              <div className="w-full max-w-[595px] flex items-center justify-between py-1.5 px-3 mb-2 bg-white/95 backdrop-blur-xs border border-gray-200 shadow-sm rounded-2xl text-xs text-gray-700 font-bold overflow-x-auto no-print gap-2">
+                {/* Font selector */}
+                <select
+                  value={canvaFontFamily}
+                  onChange={(e) => setCanvaFontFamily(e.target.value)}
+                  className="bg-gray-100 hover:bg-gray-200 border-0 rounded-lg px-2 py-1 text-xs font-bold text-gray-800 cursor-pointer focus:outline-hidden"
+                >
+                  <option value="font-sans">Public Sans</option>
+                  <option value="font-inter">Inter</option>
+                  <option value="font-outfit">Outfit</option>
+                  <option value="font-montserrat">Montserrat</option>
+                  <option value="font-roboto">Roboto</option>
+                  <option value="font-serif">Playfair</option>
+                </select>
+
+                {/* Font Size - / + */}
+                <div className="flex items-center bg-gray-100 rounded-lg px-1 py-0.5 border border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setCanvaScale(prev => Math.max(0.85, parseFloat((prev - 0.05).toFixed(2))))}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-gray-200 rounded text-gray-700 font-black cursor-pointer"
+                  >
+                    –
+                  </button>
+                  <span className="text-[11px] font-black px-1.5 min-w-[28px] text-center text-gray-900">
+                    {Math.round(canvaScale * 14)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCanvaScale(prev => Math.min(1.25, parseFloat((prev + 0.05).toFixed(2))))}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-gray-200 rounded text-gray-700 font-black cursor-pointer"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Text Color A */}
+                <label className="flex items-center gap-1 px-1.5 py-1 hover:bg-gray-100 rounded-lg cursor-pointer" title="Changer la couleur principale">
+                  <span className="font-serif font-black text-sm text-gray-900">A</span>
+                  <span className="w-3.5 h-3.5 rounded-full border border-gray-300 shadow-2xs" style={{ backgroundColor: accentColor }}></span>
+                  <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="hidden" />
+                </label>
+
+                {/* Format buttons B, I, U, aA */}
+                <div className="flex items-center gap-0.5 border-l border-gray-200 pl-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCanvaBold(prev => !prev)}
+                    className={`w-6 h-6 rounded flex items-center justify-center font-black cursor-pointer transition ${canvaBold ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
+                    title="Gras"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCanvaItalic(prev => !prev)}
+                    className={`w-6 h-6 rounded flex items-center justify-center italic font-serif cursor-pointer transition ${canvaItalic ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
+                    title="Italique"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCanvaUnderline(prev => !prev)}
+                    className={`w-6 h-6 rounded flex items-center justify-center underline cursor-pointer transition ${canvaUnderline ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
+                    title="Souligné"
+                  >
+                    U
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCanvaUppercase(prev => !prev)}
+                    className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold cursor-pointer transition ${canvaUppercase ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
+                    title="Majuscules"
+                  >
+                    aA
+                  </button>
+                </div>
+
+                {/* Alignment */}
+                <div className="flex items-center gap-0.5 border-l border-gray-200 pl-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCanvaTextAlign("left")}
+                    className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${canvaTextAlign === "left" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                    title="Aligner à gauche"
+                  >
+                    <i className="fa-solid fa-align-left text-[11px]"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCanvaTextAlign("center")}
+                    className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${canvaTextAlign === "center" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                    title="Centrer"
+                  >
+                    <i className="fa-solid fa-align-center text-[11px]"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCanvaTextAlign("justify")}
+                    className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${canvaTextAlign === "justify" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                    title="Justifier"
+                  >
+                    <i className="fa-solid fa-align-justify text-[11px]"></i>
+                  </button>
+                </div>
+
+                {/* AI Assistant Quick Pill */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAdvancedEditOpen(true);
+                    setActiveCanvaTab("ai");
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-[10px] font-black flex items-center gap-1 transition cursor-pointer"
+                  title="Ouvrir l'assistant IA"
+                >
+                  <i className="fa-solid fa-wand-magic-sparkles text-[10px] text-purple-600"></i>
+                  <span>IA</span>
+                </button>
               </div>
 
               {/* CANVA TOP FLOATING PAGE 1 BAR */}
