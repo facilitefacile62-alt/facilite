@@ -3413,12 +3413,16 @@ export default function CreerCv() {
                   <div className="flex flex-col w-full h-full text-xs flex-grow font-sans bg-white relative">
                     
                     {/* Top Right Decoration (Pastel Green Bookmark) */}
-                    <div className="absolute top-0 right-8 w-14 h-24 bg-[#D1E2D7] rounded-b-3xl z-0 pointer-events-none"></div>
+                    <div className="absolute top-0 right-10 w-14 h-24 bg-[#D3E3D7] rounded-b-3xl z-0 pointer-events-none shadow-xs"></div>
 
                     {/* Header */}
                     <div className="flex items-center px-8 pt-8 pb-4 relative z-10">
                       {/* Photo */}
-                      <div className="w-28 h-28 rounded-full border-[4px] border-[#1B2B3A] bg-gray-100 flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0 relative">
+                      <div
+                        onClick={handlePhotoUploadClick}
+                        className="w-28 h-28 rounded-full border-[4px] border-[#1B2B3A] bg-slate-100 flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0 relative cursor-pointer group"
+                        title="Cliquer pour changer la photo"
+                      >
                         {photoPreview ? (
                           <img
                             src={photoPreview}
@@ -3439,35 +3443,39 @@ export default function CreerCv() {
                             className="w-full h-full object-cover select-none bg-white"
                           />
                         ) : (
-                          <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white font-black text-2xl">
-                            {cvData.firstName?.[0] || "M"}{cvData.lastName?.[0] || "S"}
+                          <div className="w-full h-full bg-gradient-to-b from-slate-100 to-slate-200 flex flex-col items-center justify-center text-slate-400 group-hover:bg-slate-200 transition">
+                            <i className="fa-solid fa-user text-4xl text-slate-400 mb-1"></i>
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-tight">Ajouter photo</span>
                           </div>
                         )}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold pointer-events-none">
+                          <i className="fa-solid fa-camera"></i>
+                        </div>
                       </div>
                       
                       {/* Name & Title */}
                       <div className="ml-6 flex-grow">
-                        <h1 className="text-xl md:text-2xl font-black text-[#2B6CB0] tracking-wide mb-0.5">
+                        <h1 className="text-xl sm:text-2xl font-black text-[#285E8E] tracking-wide mb-1 leading-tight">
                           {cvData.jobTitle || cvData.experiences[0]?.title || "Entrepreneur numérique"}
                         </h1>
-                        <h2 className="text-base font-bold text-gray-900 tracking-tight">
+                        <h2 className="text-base font-bold text-gray-800 tracking-tight">
                           {cvData.firstName || "Macoumba"} {cvData.lastName || "Samake"}
                         </h2>
                       </div>
                     </div>
 
                     {/* Contact Bar */}
-                    <div className="mx-8 border-y border-[#D1E2D7] py-2 mb-4 flex justify-between items-center text-[9px] font-bold text-gray-600">
+                    <div className="mx-8 border-y border-[#D1E2D7] py-2.5 mb-4 flex justify-between items-center text-[9.5px] font-semibold text-gray-700">
                       <div className="flex items-center gap-1.5">
-                        <i className="fa-solid fa-location-dot text-gray-500"></i>
+                        <i className="fa-solid fa-location-dot text-[#285E8E] text-[10px]"></i>
                         <span>{cvData.city || cvData.address || "Pikine"}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <i className="fa-solid fa-envelope text-gray-500"></i>
+                        <i className="fa-solid fa-envelope text-[#285E8E] text-[10px]"></i>
                         <span>{cvData.email || "facilitefacile@gmail.com"}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <i className="fa-solid fa-phone text-gray-500"></i>
+                        <i className="fa-solid fa-phone text-[#285E8E] text-[10px]"></i>
                         <span>{cvData.phone || "+221 77 140 08 32"}</span>
                       </div>
                     </div>
