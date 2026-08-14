@@ -150,6 +150,33 @@ export default function AdminDashboardPage() {
   const [selectedLang, setSelectedLang] = useState("FR");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  // Hydratation et synchronisation de l'onglet actif (URL + localStorage)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab");
+      if (urlTab) {
+        setActiveTab(urlTab);
+        return;
+      }
+      const savedTab = localStorage.getItem("FACILITE_ADMIN_ACTIVE_TAB");
+      if (savedTab) {
+        setActiveTab(savedTab);
+      }
+    } catch {}
+  }, []);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    try {
+      localStorage.setItem("FACILITE_ADMIN_ACTIVE_TAB", tabId);
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tabId);
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
+  };
+
   const [periodDays, setPeriodDays] = useState(7);
   const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
   const [mobilePlusMenuOpen, setMobilePlusMenuOpen] = useState(false);
@@ -856,7 +883,7 @@ export default function AdminDashboardPage() {
         key={item.label}
         type="button"
         onClick={() => {
-          setActiveTab(item.id);
+          handleTabChange(item.id);
           onNavigate?.();
         }}
         className={`${baseClass} w-full text-left cursor-pointer`}
@@ -1041,7 +1068,7 @@ export default function AdminDashboardPage() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
                     activeTab === tab.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
                   }`}
@@ -1070,7 +1097,7 @@ export default function AdminDashboardPage() {
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => handleTabChange(tab.id)}
                     className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeTab === tab.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
                     }`}
@@ -1112,7 +1139,7 @@ export default function AdminDashboardPage() {
                         key={tab.id}
                         type="button"
                         onClick={() => {
-                          setActiveTab(tab.id);
+                          handleTabChange(tab.id);
                           setMobilePlusMenuOpen(false);
                         }}
                         className={`w-full text-left px-4 py-2.5 text-xs font-extrabold flex items-center gap-2 transition-colors ${
@@ -1131,7 +1158,7 @@ export default function AdminDashboardPage() {
 
           {activeTab === "dashboard" && (
             <>
-              <SecurityAlertsWidget onVoirTout={() => setActiveTab("securite")} />
+              <SecurityAlertsWidget onVoirTout={() => handleTabChange("securite")} />
 
               {/* Barre de filtres — mise en évidence dans son propre bandeau, au-dessus des métriques */}
               <div className="flex flex-wrap items-center gap-3 mb-6 p-3 bg-orange-50/60 border border-orange-100 rounded-2xl">

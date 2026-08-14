@@ -157,7 +157,7 @@ export default function AdminAIStudio() {
     return Math.min(10, score).toFixed(1);
   })();
 
-  // Chargement des données persistées
+  // Chargement des données persistées (Paramètres, Sous-onglet actif et Historique du Playground)
   useEffect(() => {
     try {
       const saved = localStorage.getItem("FACILITE_AI_STUDIO_V2");
@@ -170,8 +170,36 @@ export default function AdminAIStudio() {
         if (parsed.selectedModel) setSelectedModel(parsed.selectedModel);
         if (parsed.productsList) setProductsList(parsed.productsList);
       }
+
+      const savedSubTab = localStorage.getItem("FACILITE_AI_STUDIO_ACTIVE_SUBTAB");
+      if (savedSubTab) setActiveSubTab(savedSubTab);
+
+      const savedHistory = localStorage.getItem("FACILITE_AI_STUDIO_CHAT_HISTORY");
+      if (savedHistory) {
+        const parsedHistory = JSON.parse(savedHistory);
+        if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
+          setChatMessages(parsedHistory);
+        }
+      }
     } catch {}
   }, []);
+
+  // Changement de sous-onglet avec persistance
+  const handleSubTabChange = (subTabId) => {
+    setActiveSubTab(subTabId);
+    try {
+      localStorage.setItem("FACILITE_AI_STUDIO_ACTIVE_SUBTAB", subTabId);
+    } catch {}
+  };
+
+  // Persistance de l'historique des discussions du playground
+  useEffect(() => {
+    try {
+      if (chatMessages && chatMessages.length > 0) {
+        localStorage.setItem("FACILITE_AI_STUDIO_CHAT_HISTORY", JSON.stringify(chatMessages));
+      }
+    } catch {}
+  }, [chatMessages]);
 
   // Défilement automatique dans le playground
   useEffect(() => {
@@ -405,8 +433,14 @@ ${productsContext}
     }
   };
 
+  // Réinitialisation de la conversation
   const handleResetChat = () => {
     setChatMessages([]);
+    setInputText("");
+    setSelectedAttachment(null);
+    try {
+      localStorage.removeItem("FACILITE_AI_STUDIO_CHAT_HISTORY");
+    } catch {}
   };
 
   return (
@@ -473,11 +507,11 @@ ${productsContext}
         </div>
       </div>
 
-      {/* 2. BARRE D'ONGLETS DU STUDIO (Sub-nav comme dans la capture) */}
+      {/* 2. BARRE D'ONGLETS DU STUDIO (Sub-nav avec persistance) */}
       <div className="flex items-center space-x-2 bg-[#181B20] border border-[#2A2F3A] p-1.5 rounded-2xl overflow-x-auto scrollbar-none">
         <button
           type="button"
-          onClick={() => setActiveSubTab("prompt")}
+          onClick={() => handleSubTabChange("prompt")}
           className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
             activeSubTab === "prompt"
               ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
@@ -490,7 +524,7 @@ ${productsContext}
 
         <button
           type="button"
-          onClick={() => setActiveSubTab("knowledge")}
+          onClick={() => handleSubTabChange("knowledge")}
           className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
             activeSubTab === "knowledge"
               ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
@@ -503,7 +537,7 @@ ${productsContext}
 
         <button
           type="button"
-          onClick={() => setActiveSubTab("diagnostic")}
+          onClick={() => handleSubTabChange("diagnostic")}
           className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
             activeSubTab === "diagnostic"
               ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
@@ -516,7 +550,7 @@ ${productsContext}
 
         <button
           type="button"
-          onClick={() => setActiveSubTab("products")}
+          onClick={() => handleSubTabChange("products")}
           className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
             activeSubTab === "products"
               ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
@@ -529,7 +563,7 @@ ${productsContext}
 
         <button
           type="button"
-          onClick={() => setActiveSubTab("connections")}
+          onClick={() => handleSubTabChange("connections")}
           className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
             activeSubTab === "connections"
               ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
@@ -542,7 +576,7 @@ ${productsContext}
 
         <button
           type="button"
-          onClick={() => setActiveSubTab("tools")}
+          onClick={() => handleSubTabChange("tools")}
           className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer flex-shrink-0 ${
             activeSubTab === "tools"
               ? "bg-[#2A303C] text-white shadow-sm border border-[#3E4758]"
