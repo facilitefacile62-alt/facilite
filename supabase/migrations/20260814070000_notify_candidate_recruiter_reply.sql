@@ -36,7 +36,7 @@ BEGIN
       NEW.receiver_id,
       NEW.sender_id,
       'reponse',
-      'Le recruteur de ' || COALESCE(v_company, 'l''entreprise') || ' vous a répondu concernant ' || COALESCE(v_job_title, 'votre candidature'),
+      'Le recruteur de ' || COALESCE(v_company, 'cette entreprise') || ' vous a répondu concernant ' || COALESCE(v_job_title, 'votre candidature'),
       '/messagerie'
     );
   END IF;
