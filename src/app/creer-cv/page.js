@@ -493,6 +493,17 @@ export default function CreerCv() {
       if (urlTemplate === "6" || urlTemplate === "s6" || urlTemplate === "creatif") setSelectedTemplate("creatif");
       if (urlTemplate === "7" || urlTemplate === "s7" || urlTemplate === "technique") setSelectedTemplate("technique");
       if (urlTemplate === "8" || urlTemplate === "s8" || urlTemplate === "elegance") setSelectedTemplate("elegance");
+
+      // ?color=<hex> depuis /modeles (sélecteur d'accent de la galerie) —
+      // appliqué directement comme accentColor initial. Validé (motif hex
+      // strict) avant application : une valeur invalide est simplement
+      // ignorée plutôt que transmise telle quelle à un style inline. Sans
+      // effet visuel sur les modèles à couleur fixe (entrepreneur,
+      // elegance), normal — ils n'utilisent pas accentColor.
+      const urlColor = params.get("color");
+      if (urlColor && /^#[0-9A-Fa-f]{6}$/.test(urlColor)) {
+        setAccentColor(urlColor);
+      }
     }
   }, []);
 
@@ -1064,6 +1075,19 @@ export default function CreerCv() {
     }
   };
 
+  // Show live preview tab and scroll to it on mobile
+  const handleShowPreviewMobile = () => {
+    setMobileTab("preview");
+    if (typeof window !== "undefined") {
+      setTimeout(() => {
+        const previewElem = document.getElementById("cv-preview-sheet");
+        if (previewElem) {
+          previewElem.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 60);
+    }
+  };
+
   return (
     <>
       {/* Toast Notification Top Floating */}
@@ -1229,9 +1253,9 @@ export default function CreerCv() {
               Édition du CV
             </button>
             <button
-              onClick={() => setMobileTab("preview")}
-              className={`flex-1 py-2 text-center rounded-lg transition-all ${
-                mobileTab === "preview" ? "bg-gray-100 text-gray-950 border border-gray-200 shadow-inner" : "text-gray-500"
+              onClick={handleShowPreviewMobile}
+              className={`flex-1 py-2 text-center rounded-lg transition-all cursor-pointer ${
+                mobileTab === "preview" ? "bg-gray-100 text-gray-950 border border-gray-200 shadow-inner font-extrabold" : "text-gray-500 font-semibold"
               }`}
             >
               <i className="fa-solid fa-eye mr-2 text-blue-600"></i>
@@ -2407,14 +2431,35 @@ export default function CreerCv() {
             {/* Styled Sheet Wrapper (scaled with CSS dynamically if needed, optimized for paper format) */}
             <div className="sticky top-6 flex flex-col items-center">
               
-              <div className="hidden sm:flex justify-between items-center w-full max-w-[595px] mb-3 text-xs text-gray-500 font-bold px-2 no-print">
-                <span className="flex items-center">
-                  <i className="fa-solid fa-eye text-blue-600 mr-2"></i>
-                  Aperçu temps réel (A4)
-                </span>
-                <span className="capitalize">
-                  Modèle {selectedTemplate} • Couleur : {accentColor}
-                </span>
+              <div className="hidden sm:flex justify-between items-center w-full max-w-[595px] mb-3 text-xs text-gray-700 font-bold px-2 no-print">
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 shadow-2xs hover:shadow-xs transition active:scale-95 cursor-pointer text-xs font-black text-gray-800 group"
+                  title="Cliquer pour ouvrir l'aperçu complet et zoomer"
+                >
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                  <i className="fa-solid fa-eye text-blue-600 group-hover:scale-110 transition-transform"></i>
+                  <span>Aperçu temps réel (A4)</span>
+                  <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-md font-extrabold border border-blue-200/60 flex items-center gap-1">
+                    <i className="fa-solid fa-expand text-[8px]"></i>
+                    Plein écran
+                  </span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-500 font-semibold capitalize">
+                    Modèle <strong className="text-gray-800">{selectedTemplate}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 text-[11px] font-bold shadow-2xs transition cursor-pointer"
+                    title="Imprimer ou enregistrer en PDF"
+                  >
+                    <i className="fa-solid fa-print text-gray-500"></i>
+                    <span>Imprimer</span>
+                  </button>
+                </div>
               </div>
 
               {/* The CV Document Sheet to print/view */}
@@ -4314,6 +4359,65 @@ export default function CreerCv() {
                   Valider
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN A4 LIVE PREVIEW MODAL */}
+      {isPreviewOpen && (
+        <div className="fixed inset-0 z-[850] bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 no-print">
+          {/* Header Bar */}
+          <div className="w-full max-w-4xl bg-slate-900/95 border border-slate-700/80 text-white px-5 py-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-2xl mb-3">
+            <div className="flex items-center space-x-3">
+              <span className="w-3 h-3 rounded-full bg-[#10E688] animate-pulse"></span>
+              <div>
+                <h3 className="text-sm font-black tracking-wide flex items-center gap-2">
+                  <i className="fa-solid fa-eye text-[#10E688]"></i>
+                  Aperçu Haute Définition — Format A4 (595 × 842 pt)
+                </h3>
+                <p className="text-[10px] text-slate-400">Modèle {selectedTemplate} • Couleur : {accentColor}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2.5">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer border border-slate-600"
+              >
+                <i className="fa-solid fa-print"></i>
+                <span>Imprimer</span>
+              </button>
+              <button
+                type="button"
+                onClick={downloadMode ? handleDownloadPdf : saveCvDraftAndOpenPricing}
+                disabled={downloadingPdf || savingDraft}
+                className="px-4 py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-900 text-xs font-black rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#10E688]/20"
+              >
+                <i className={`fa-solid ${downloadingPdf || savingDraft ? "fa-spinner fa-spin" : "fa-download"}`}></i>
+                <span>{downloadingPdf ? "Génération..." : savingDraft ? "Enregistrement..." : downloadMode ? "Télécharger PDF" : "Valider & Télécharger"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(false)}
+                className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer text-sm font-black ml-2"
+                title="Fermer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Body with Sheet */}
+          <div className="w-full max-w-4xl flex-grow overflow-auto flex items-start justify-center p-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 shadow-inner">
+            <div className="scale-[0.85] sm:scale-100 origin-top transition-transform my-2">
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: typeof document !== "undefined" && document.getElementById("cv-preview-sheet") ? document.getElementById("cv-preview-sheet").innerHTML : ""
+                }}
+                className="bg-white shadow-2xl w-[595px] min-h-[842px] h-[842px] max-w-[595px] max-h-[842px] min-w-[595px] overflow-hidden text-gray-900 border border-gray-300 rounded-sm flex flex-col font-sans pointer-events-none"
+              />
             </div>
           </div>
         </div>

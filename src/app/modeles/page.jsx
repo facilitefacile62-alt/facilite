@@ -1,14 +1,36 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import TemplateCard from "@/components/TemplateCard";
 import { supabase } from "@/lib/supabase";
 import AdminPosterManagerModal from "@/components/AdminPosterManagerModal";
 
+// Métadonnées vérifiées directement dans src/app/creer-cv/page.js (présence
+// de photoPreview, nombre de colonnes du layout) — pas devinées. hasPhoto/
+// columns pilotent les filtres Photo/Colonnes ; category pilote le filtre
+// Catégorie. accentColor: false = couleur fixe du modèle (le sélecteur de
+// couleur n'a aucun effet visuel sur ces 2-là, normal, pas un bug).
+const TEMPLATES = [
+  { id: "entrepreneur", number: 1, title: "Modèle 1 — Entrepreneur Numérique", previewImage: "/model4.png", isRecommended: true, hasPhoto: true, columns: 1, category: "pro", accentColor: false },
+  { id: "modern", number: 2, title: "Modèle 2 — Professionnel Moderne", previewImage: "/affiche_cv_pro.jpg", isRecommended: true, hasPhoto: true, columns: 2, category: "modern", accentColor: true },
+  { id: "minimalist", number: 3, title: "Modèle 3 — Minimaliste & Épuré", previewImage: "/model2.png", isRecommended: false, hasPhoto: false, columns: 1, category: "modern", accentColor: true },
+  { id: "classic", number: 4, title: "Modèle 4 — Classique & Structuré", previewImage: "/model3.png", isRecommended: false, hasPhoto: true, columns: 1, category: "pro", accentColor: true },
+  { id: "executif", number: 5, title: "Modèle 5 — Exécutif International", previewImage: "/model5.png", isRecommended: false, hasPhoto: true, columns: 1, category: "pro", accentColor: true },
+  { id: "creatif", number: 6, title: "Modèle 6 — Créatif & Dynamique", previewImage: "/model6.png", isRecommended: false, hasPhoto: true, columns: 2, category: "creative", accentColor: true },
+  { id: "technique", number: 7, title: "Modèle 7 — Technique & Développeur", previewImage: "/model7.png", isRecommended: false, hasPhoto: true, columns: 2, category: "technique", accentColor: true },
+  { id: "elegance", number: 8, title: "Modèle 8 — Élégance & Sombre", previewImage: "/model9.png", isRecommended: false, hasPhoto: false, columns: 2, category: "pro", accentColor: false },
+];
+
 export default function ModelesPage() {
   const router = useRouter();
+  // selectedColor : sélecteur d'accent transmis tel quel à /creer-cv, PAS un
+  // filtre de visibilité — les cartes affichées ne changent jamais selon la
+  // couleur choisie ici (voir handleSelectTemplate).
   const [selectedColor, setSelectedColor] = useState(null);
+  const [photoFilter, setPhotoFilter] = useState("");
+  const [columnsFilter, setColumnsFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPosterModalOpen, setAdminPosterModalOpen] = useState(false);
   const [posterRefreshKey, setPosterRefreshKey] = useState(Date.now());
@@ -32,9 +54,19 @@ export default function ModelesPage() {
     });
   }, []);
 
+  // color.hex (pas color.id) : /creer-cv applique directement ce code hex
+  // comme accentColor initial — un id ("navy") ne correspondait à rien côté
+  // générateur, c'était un paramètre mort.
   function handleSelectTemplate(templateId = "s1") {
-    router.push(`/creer-cv?template=${templateId}${selectedColor ? `&color=${selectedColor}` : ""}`);
+    router.push(`/creer-cv?template=${templateId}${selectedColor ? `&color=${encodeURIComponent(selectedColor)}` : ""}`);
   }
+
+  function handleClearFilters() {
+    setPhotoFilter("");
+    setColumnsFilter("");
+    setCategoryFilter("");
+  }
+
   const colors = [
     { id: "gray", hex: "#9CA3AF" },
     { id: "brown", hex: "#8B5A2B" },
@@ -45,10 +77,22 @@ export default function ModelesPage() {
     { id: "red", hex: "#EF4444" },
   ];
 
+  const filteredTemplates = useMemo(() => {
+    return TEMPLATES.filter((tpl) => {
+      if (photoFilter === "with" && !tpl.hasPhoto) return false;
+      if (photoFilter === "without" && tpl.hasPhoto) return false;
+      if (columnsFilter && tpl.columns !== Number(columnsFilter)) return false;
+      if (categoryFilter && tpl.category !== categoryFilter) return false;
+      return true;
+    });
+  }, [photoFilter, columnsFilter, categoryFilter]);
+
+  const filtersActive = photoFilter !== "" || columnsFilter !== "" || categoryFilter !== "";
+
   return (
     <div className="min-h-screen bg-[#FAF6F1] pt-[80px] pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* En-tête */}
         <div className="text-center mt-10 mb-12">
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
@@ -73,7 +117,7 @@ export default function ModelesPage() {
 
         {/* Barre de filtrage */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-12">
-          {/* Ligne 1 : Couleurs et Bouton Filtres */}
+          {/* Ligne 1 : Couleurs (accent transmis à /creer-cv, ne filtre pas la grille) */}
           <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-gray-100 gap-4">
             <div className="flex items-center gap-4">
               <span className="font-semibold text-gray-700">Couleurs :</span>
@@ -81,117 +125,89 @@ export default function ModelesPage() {
                 {colors.map((color) => (
                   <button
                     key={color.id}
-                    onClick={() => setSelectedColor(color.id)}
+                    onClick={() => setSelectedColor((prev) => (prev === color.hex ? null : color.hex))}
                     className={`w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 ${
-                      selectedColor === color.id ? "border-blue-600 scale-110" : "border-transparent"
+                      selectedColor === color.hex ? "border-blue-600 scale-110" : "border-transparent"
                     }`}
                     style={{ backgroundColor: color.hex }}
                     aria-label={`Couleur ${color.id}`}
+                    title={`Appliquer cette couleur d'accent (${color.id})`}
                   />
                 ))}
               </div>
             </div>
-            
-            <button className="flex items-center gap-2 px-5 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
-              Filtres
-            </button>
           </div>
 
-          {/* Ligne 2 : Dropdowns et Reset */}
+          {/* Ligne 2 : Dropdowns (filtrent réellement la grille) et Reset */}
           <div className="flex flex-col md:flex-row items-center justify-between pt-6 gap-4">
             <div className="flex flex-wrap gap-4 w-full md:w-auto">
               {/* Select Photo */}
-              <select className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px] outline-none">
+              <select
+                value={photoFilter}
+                onChange={(e) => setPhotoFilter(e.target.value)}
+                className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px] outline-none"
+              >
                 <option value="">Photo</option>
                 <option value="with">Avec photo</option>
                 <option value="without">Sans photo</option>
               </select>
 
               {/* Select Colonnes */}
-              <select className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px] outline-none">
+              <select
+                value={columnsFilter}
+                onChange={(e) => setColumnsFilter(e.target.value)}
+                className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px] outline-none"
+              >
                 <option value="">Colonnes</option>
                 <option value="1">1 Colonne</option>
                 <option value="2">2 Colonnes</option>
               </select>
 
               {/* Select Catégorie */}
-              <select className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px] outline-none">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px] outline-none"
+              >
                 <option value="">Catégorie</option>
                 <option value="pro">Professionnel</option>
                 <option value="creative">Créatif</option>
                 <option value="modern">Moderne</option>
+                <option value="technique">Technique</option>
               </select>
             </div>
-            
-            <button className="text-gray-400 hover:text-gray-600 underline text-sm transition-colors mt-2 md:mt-0">
+
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              disabled={!filtersActive}
+              className="text-gray-400 hover:text-gray-600 underline text-sm transition-colors mt-2 md:mt-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+            >
               Effacer les filtres
             </button>
           </div>
         </div>
 
-        {/* Grille de modèles numérotés */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <TemplateCard
-            number={1}
-            isRecommended={true}
-            title="Modèle 1 — Entrepreneur Numérique"
-            previewImage={`/model4.png?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("entrepreneur")}
-          />
-          <TemplateCard
-            number={2}
-            isRecommended={true}
-            title="Modèle 2 — Professionnel Moderne"
-            previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("modern")}
-          />
-          <TemplateCard
-            number={3}
-            isRecommended={false}
-            title="Modèle 3 — Minimaliste & Épuré"
-            previewImage={`/model2.png?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("minimalist")}
-          />
-          <TemplateCard
-            number={4}
-            isRecommended={false}
-            title="Modèle 4 — Classique & Structuré"
-            previewImage={`/model3.png?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("classic")}
-          />
-          <TemplateCard
-            number={5}
-            isRecommended={false}
-            title="Modèle 5 — Exécutif International"
-            previewImage={`/model5.png?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("executif")}
-          />
-          <TemplateCard
-            number={6}
-            isRecommended={false}
-            title="Modèle 6 — Créatif & Dynamique"
-            previewImage={`/model6.png?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("creatif")}
-          />
-          <TemplateCard
-            number={7}
-            isRecommended={false}
-            title="Modèle 7 — Technique & Développeur"
-            previewImage={`/model7.png?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("technique")}
-          />
-          <TemplateCard
-            number={8}
-            isRecommended={false}
-            title="Modèle 8 — Élégance & Sombre"
-            previewImage={`/model9.png?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("elegance")}
-          />
-        </div>
-        
+        {/* Grille de modèles numérotés (filtrée) */}
+        {filteredTemplates.length === 0 ? (
+          <div className="text-center py-16 text-gray-400 font-semibold">
+            Aucun modèle ne correspond à ces filtres.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {filteredTemplates.map((tpl) => (
+              <TemplateCard
+                key={tpl.id}
+                number={tpl.number}
+                isRecommended={tpl.isRecommended}
+                title={tpl.title}
+                previewImage={`${tpl.previewImage}?v=${posterRefreshKey}`}
+                onSelect={() => handleSelectTemplate(tpl.id)}
+              />
+            ))}
+          </div>
+        )}
+
       </div>
 
       {/* Modal Admin Gestionnaire d'Affiches */}
