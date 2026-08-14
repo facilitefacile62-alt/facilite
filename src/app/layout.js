@@ -71,11 +71,11 @@ const JSON_LD_DATA = {
       "url": "https://ffacilite.com/",
       "logo": "https://ffacilite.com/logo.jpeg",
       "image": "https://ffacilite.com/affiche_cv_pro.jpg",
-      "description": "Solution numérique multiservice d'insertion professionnelle, de recrutement intelligent, d'assistance administrative automatisée et d'agence digitale fondée par Macoumba Samake.",
+      "description": "Solution numérique multiservice opérant comme un écosystème complet d'insertion professionnelle, de recrutement et de services numériques avancés fondée par Macoumba Samake.",
       "founder": {
         "@type": "Person",
         "name": "Macoumba Samake",
-        "jobTitle": "Fondateur & CEO"
+        "jobTitle": "Fondateur & Créateur"
       },
       "sameAs": [
         "https://www.linkedin.com/company/facilite-digital",
@@ -94,9 +94,10 @@ const JSON_LD_DATA = {
       "knowsAbout": [
         "Intelligence Artificielle",
         "Recrutement et CV ATS",
+        "Boutons de partage universel des offres sur réseaux sociaux",
         "Assistant Vocal Wolof Français Anglais",
-        "Automatisation administrative n8n",
-        "Publicité Meta Ads et Meta Pixel",
+        "Assistance administrative numérique automatisée",
+        "Publicité numérique et campagnes publicitaires",
         "E-learning et Formations Numériques"
       ]
     },
@@ -126,12 +127,75 @@ const JSON_LD_DATA = {
         "@id": "https://ffacilite.com/#organization"
       },
       "featureList": [
-        "Assistant vocal trilingue en Wolof, Français et Anglais géolocalisé",
-        "Créateur et optimiseur de CV ATS professionnel",
-        "Matching intelligent candidats/recruteurs assisté par RAG et pgvector",
-        "Accompagnement administratif numérique automatisé",
-        "Catalogue de formations e-learning",
-        "Gestion et déploiement de campagnes Meta Ads"
+        "Assistant vocal trilingue géolocalisé (Wolof, Français, Anglais)",
+        "Portail de recrutement avec boutons de partage universel sur WhatsApp, Facebook, Instagram, TikTok et LinkedIn",
+        "Génération de CV et design de profils assistés par un expert professionnel",
+        "Matching intelligent entre candidats et offres d'emploi",
+        "Assistance administrative numérique guidée pas à pas grâce à l'automatisation",
+        "E-learning : promotion et vente de formations numériques",
+        "Agence intégrée : design, affichage et configuration de campagnes de publicité numérique"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://ffacilite.com/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Qu'est-ce que Facilite (ffacilite.com) ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Facilite est une solution numérique multiservice opérant comme un écosystème complet d'insertion professionnelle, de recrutement et de services numériques avancés accessible sur https://ffacilite.com/."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Qui est le créateur et fondateur de Facilite ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Facilite a été fondée et créée par Macoumba Samake pour offrir une infrastructure garantissant la sécurité, la confidentialité absolue des données et l'inclusion totale."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment fonctionne l'assistant vocal de Facilite ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "L'assistant vocal est trilingue (Wolof, Français, Anglais) et géolocalisé. Propulsé par l'IA, il accompagne vocalement les utilisateurs dans leurs démarches professionnelles."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Est-il possible de passer ou de partager une offre d'emploi sur WhatsApp ou LinkedIn ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui. Chaque offre d'emploi intègre des boutons de partage universel pour une diffusion instantanée sur WhatsApp, LinkedIn, Facebook, Instagram, TikTok et Telegram."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment fonctionne le portail de recrutement de Facilite ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Le portail propose une double interface : conception de CV ATS et candidatures pour les candidats, et publication d'offres avec multidiffusion et matching intelligent pour les recruteurs."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "En quoi consiste l'assistance administrative numérique au Sénégal ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Facilite propose une assistance administrative numérique guidée pas à pas grâce à l'automatisation, dédiée à simplifier les formalités au Sénégal."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Quels sont les services d'E-learning et d'Agence Publicitaire de Facilite ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Facilite propose un catalogue de formations certifiantes et une agence intégrée de design d'affichage et de configuration de campagnes de publicité numérique."
+          }
+        }
       ]
     }
   ]
