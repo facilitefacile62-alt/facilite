@@ -290,6 +290,7 @@ export default function CreerCv() {
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isAdvancedEditOpen, setIsAdvancedEditOpen] = useState(false);
+  const [isFormPanelOpen, setIsFormPanelOpen] = useState(true);
   const [activeCanvaTab, setActiveCanvaTab] = useState("models");
   const [canvaFontFamily, setCanvaFontFamily] = useState("font-sans");
   const [canvaFontSize, setCanvaFontSize] = useState(14);
@@ -1850,13 +1851,23 @@ export default function CreerCv() {
             </button>
           </div>
 
-          {/* MIDDLE AREA: The Form Editor (Hides on mobile if mobileTab is 'preview') */}
-          <section
-            id="cv-form-editor-section"
-            className={`flex-1 p-6 md:p-8 bg-white border-r border-gray-200 overflow-y-auto max-w-full lg:max-w-2xl no-print ${
-              mobileTab === "preview" ? "hidden lg:block" : "block"
-            }`}
-          >
+          {/* MIDDLE AREA: The Form Editor (Hides on mobile if mobileTab is 'preview', collapsible on desktop) */}
+          {isFormPanelOpen ? (
+            <section
+              id="cv-form-editor-section"
+              className={`relative flex-1 p-6 md:p-8 bg-white border-r border-gray-200 overflow-y-auto max-w-full lg:max-w-2xl no-print ${
+                mobileTab === "preview" ? "hidden lg:block" : "block"
+              }`}
+            >
+              {/* CANVA-STYLE TOGGLE PILL BUTTON ON BORDER (< to collapse) */}
+              <button
+                type="button"
+                onClick={() => setIsFormPanelOpen(false)}
+                className="hidden lg:flex items-center justify-center absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 rounded-full bg-white border border-gray-300 shadow-md text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-all cursor-pointer z-30 group hover:scale-105 active:scale-95 select-none"
+                title="Réduire le formulaire d'édition"
+              >
+                <i className="fa-solid fa-chevron-left text-[10px] group-hover:scale-125 transition-transform"></i>
+              </button>
             
             {/* Steps Headings */}
             <div className="mb-8">
@@ -3009,6 +3020,26 @@ export default function CreerCv() {
             </div>
 
           </section>
+        ) : (
+          /* COLLAPSED FORM PANEL SLIM BAR (> to expand) */
+          <div className="hidden lg:flex flex-col items-center justify-start relative w-10 bg-white border-r border-gray-200 py-6 select-none z-20 no-print flex-shrink-0 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setIsFormPanelOpen(true)}
+              className="w-6 h-12 rounded-full bg-white border border-gray-300 shadow-md flex items-center justify-center text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-all cursor-pointer group hover:scale-105 active:scale-95"
+              title="Déplier le formulaire d'édition"
+            >
+              <i className="fa-solid fa-chevron-right text-[10px] group-hover:scale-125 transition-transform"></i>
+            </button>
+            <div
+              className="mt-12 [writing-mode:vertical-lr] rotate-180 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 cursor-pointer transition flex items-center gap-2"
+              onClick={() => setIsFormPanelOpen(true)}
+            >
+              <i className="fa-solid fa-pen text-[8px]"></i>
+              <span>Formulaire d'édition</span>
+            </div>
+          </div>
+        )}
 
           {/* RIGHT AREA: Live CV Preview Paper (Hides on mobile if mobileTab is 'edit') */}
           <section className={`flex-1 bg-slate-200/90 p-4 md:p-8 flex items-start justify-center overflow-auto min-h-0 ${
