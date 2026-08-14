@@ -32,19 +32,8 @@ export default function ModelesPage() {
     });
   }, []);
 
-  // Affichage des modèles : public, sans session (voir PUBLIC_ROUTES dans
-  // middleware.js). L'action "Créer avec Canva" reste protégée : un
-  // visiteur non connecté est redirigé vers /login?redirect=/modeles,
-  // jamais directement vers le flux OAuth Canva.
-  async function handleSelectTemplate() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      router.push("/login?redirect=/modeles");
-      return;
-    }
-    router.push("/api/canva/auth");
+  function handleSelectTemplate(templateId = "s1") {
+    router.push(`/creer-cv?template=${templateId}${selectedColor ? `&color=${selectedColor}` : ""}`);
   }
   const colors = [
     { id: "gray", hex: "#9CA3AF" },
@@ -149,25 +138,25 @@ export default function ModelesPage() {
             isRecommended={true}
             title="CV Professionnel Moderne"
             previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
-            onSelect={handleSelectTemplate}
+            onSelect={() => handleSelectTemplate("s1")}
           />
           <TemplateCard
             isRecommended={false}
             title="Lettre de Motivation Ciblée"
             previewImage={`/affiche_boostez_carriere.jpg?v=${posterRefreshKey}`}
-            onSelect={handleSelectTemplate}
+            onSelect={() => handleSelectTemplate("s2")}
           />
           <TemplateCard
             isRecommended={true}
             title="Pack Complet (CV + Lettre)"
             previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
-            onSelect={handleSelectTemplate}
+            onSelect={() => handleSelectTemplate("s3")}
           />
           <TemplateCard
             isRecommended={false}
             title="CV Exécutif & International"
             previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
-            onSelect={handleSelectTemplate}
+            onSelect={() => handleSelectTemplate("s4")}
           />
         </div>
         

@@ -17,6 +17,11 @@ export async function GET(request) {
   const clientId = process.env.CANVA_CLIENT_ID;
   const redirectUri = process.env.CANVA_REDIRECT_URI;
 
+  if (!clientId || clientId.trim() === '' || clientId.includes('your_canva') || clientId === 'undefined') {
+    // Si l'ID Client Canva OAuth n'est pas encore configuré, redirection directe vers le studio de création
+    return NextResponse.redirect(new URL('/creer-cv', request.url));
+  }
+
   // 1. Générer le PKCE Code Verifier et Challenge
   const codeVerifier = crypto.randomBytes(32).toString('base64url');
   const codeChallenge = crypto
