@@ -1343,25 +1343,25 @@ export default function Header() {
         </div>
       )}
 
-      {/* 🔔 CENTRE DE NOTIFICATIONS 1:1 FACEBOOK PIXEL-PERFECT */}
+      {/* 🔔 MENU DÉROULANT DES NOTIFICATIONS 1:1 FACEBOOK PIXEL-PERFECT */}
       {notificationsModalOpen && (
         <>
-          {/* Overlay sombre pour mobile & desktop backdrop */}
+          {/* Overlay sombre discret pour fermer au clic extérieur */}
           <div
-            className="fixed inset-0 z-[840] bg-black/40 md:bg-black/20 backdrop-blur-2xs transition-opacity"
+            className="fixed inset-0 z-[840] bg-black/40 md:bg-black/10 backdrop-blur-2xs transition-opacity"
             onClick={() => {
               setNotificationsModalOpen(false);
               setNotifOptionsMenuOpen(false);
             }}
           />
 
-          {/* Panneau de notifications (Sheet plein écran sur mobile, Dropdown flottant sur desktop) */}
+          {/* Menu déroulant des notifications (Drop-down sous la cloche sur desktop, Plein écran tactile sur mobile) */}
           <div
             ref={notificationsContainerRef}
-            className="fixed inset-x-0 bottom-0 top-0 md:top-14 md:bottom-auto md:left-auto md:right-4 lg:right-12 md:w-[410px] md:max-h-[85vh] bg-white dark:bg-gray-900 z-[850] shadow-2xl md:rounded-2xl border-t md:border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-3 md:slide-in-from-top-2 duration-200"
+            className="fixed inset-0 md:inset-auto md:top-14 md:right-4 lg:right-10 md:w-[410px] h-[100dvh] md:h-[560px] md:max-h-[85vh] bg-white dark:bg-gray-900 z-[850] shadow-2xl md:rounded-2xl border-t md:border border-gray-200 dark:border-gray-800 flex flex-col min-h-0 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
           >
             {/* Header Facebook : Notifications + Options (...) + Fermer */}
-            <div className="px-4 pt-3.5 pb-2 flex items-center justify-between border-b border-gray-100 dark:border-gray-800/80">
+            <div className="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-gray-100 dark:border-gray-800/80 flex-shrink-0 bg-white dark:bg-gray-900">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1430,7 +1430,7 @@ export default function Header() {
             </div>
 
             {/* Pilules Facebook : Tout / Non lu */}
-            <div className="px-4 py-2 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800/80">
+            <div className="px-4 py-2 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800/80 flex-shrink-0 bg-white dark:bg-gray-900">
               <button
                 type="button"
                 onClick={() => setNotificationFilter("all")}
@@ -1455,8 +1455,8 @@ export default function Header() {
               </button>
             </div>
 
-            {/* Liste Défilante des Notifications Facebook */}
-            <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1 divide-y-0">
+            {/* Liste Défilante des Notifications Facebook avec scrolling garanti */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1 divide-y-0">
               {/* Section Nouveau */}
               <div className="px-3 pt-2 pb-1.5 flex items-center justify-between">
                 <span className="text-sm font-bold text-gray-900 dark:text-white">
