@@ -2113,7 +2113,7 @@ export default function ProfilPage() {
       </nav>
 
       {/* Main Profile Page Container */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-16 pb-16 px-4 md:px-6">
+      <main className="min-h-screen bg-[#F4F2EE] pt-16 pb-16 px-4 md:px-6" suppressHydrationWarning>
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* COLONNE GAUCHE & CENTRALE COMBINÉE : Carte Profil Principale & Sections */}
@@ -2301,14 +2301,14 @@ export default function ProfilPage() {
 
                   {/* Menu Déroulant Avatar */}
                   {avatarMenuOpen && (
-                    <div className="absolute left-0 top-full mt-2 w-56 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-50 animate-fade-in-up">
+                    <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl border border-gray-100 shadow-2xl py-1.5 z-50 animate-fade-in-up">
                       <button
                         type="button"
                         onClick={() => {
                           setAvatarMenuOpen(false);
                           setViewImageModal({ open: true, url: avatarUrl, title: "Photo de profil" });
                         }}
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left border-b border-gray-100"
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left"
                       >
                         <i className="fa-regular fa-circle-user text-gray-600 text-base w-5 text-center"></i>
                         <span>Voir la photo de profil</span>
@@ -2323,6 +2323,57 @@ export default function ProfilPage() {
                       >
                         <i className="fa-regular fa-image text-gray-600 text-base w-5 text-center"></i>
                         <span>Choisir une photo de profil</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAvatarMenuOpen(false);
+                          avatarInputRef.current?.click();
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left"
+                      >
+                        <i className="fa-solid fa-arrow-up-from-bracket text-gray-600 text-base w-5 text-center"></i>
+                        <span>Importer une photo</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAvatarMenuOpen(false);
+                          if (avatarUrl && avatarUrl !== "/logo.jpeg") {
+                            setRawImageSrc(avatarUrl);
+                            setCropType("avatar");
+                            setZoomScale(1);
+                            setImagePos({ x: 0, y: 0 });
+                            setCropModalOpen(true);
+                          } else {
+                            triggerToast("Veuillez d'abord choisir une photo", "fa-info-circle");
+                          }
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-gray-800 hover:bg-gray-50 transition cursor-pointer text-left"
+                      >
+                        <i className="fa-solid fa-arrows-up-down-left-right text-gray-600 text-base w-5 text-center"></i>
+                        <span>Repositionner</span>
+                      </button>
+                      <div className="border-t border-gray-100 my-1"></div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setAvatarMenuOpen(false);
+                          setAvatarUrl("/logo.jpeg");
+                          if (userSession?.user) {
+                            await supabase.from("profiles").upsert({
+                              id: userSession.user.id,
+                              avatar_url: "/logo.jpeg",
+                              updated_at: new Date().toISOString()
+                            });
+                            refreshProfile();
+                          }
+                          triggerToast("Photo de profil supprimée", "fa-trash-can");
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition cursor-pointer text-left"
+                      >
+                        <i className="fa-regular fa-trash-can text-red-500 text-base w-5 text-center"></i>
+                        <span>Supprimer</span>
                       </button>
                     </div>
                   )}
