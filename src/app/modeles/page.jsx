@@ -136,27 +136,51 @@ export default function ModelesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <TemplateCard
             isRecommended={true}
-            title="CV Professionnel Moderne"
-            previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("s1")}
-          />
-          <TemplateCard
-            isRecommended={false}
-            title="Lettre de Motivation Ciblée"
-            previewImage={`/affiche_boostez_carriere.jpg?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("s2")}
+            title="CV Entrepreneur Numérique"
+            previewImage={`/model4.png?v=${posterRefreshKey}`}
+            onSelect={() => handleSelectTemplate("entrepreneur")}
           />
           <TemplateCard
             isRecommended={true}
-            title="Pack Complet (CV + Lettre)"
+            title="CV Professionnel Moderne"
             previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("s3")}
+            onSelect={() => handleSelectTemplate("modern")}
           />
           <TemplateCard
             isRecommended={false}
-            title="CV Exécutif & International"
-            previewImage={`/affiche_cv_pro.jpg?v=${posterRefreshKey}`}
-            onSelect={() => handleSelectTemplate("s4")}
+            title="CV Minimaliste & Épuré"
+            previewImage={`/model2.png?v=${posterRefreshKey}`}
+            onSelect={() => handleSelectTemplate("minimalist")}
+          />
+          <TemplateCard
+            isRecommended={false}
+            title="CV Classique & Structuré"
+            previewImage={`/model3.png?v=${posterRefreshKey}`}
+            onSelect={() => handleSelectTemplate("classic")}
+          />
+          <TemplateCard
+            isRecommended={false}
+            title="CV Exécutif International"
+            previewImage={`/model5.png?v=${posterRefreshKey}`}
+            onSelect={() => handleSelectTemplate("executif")}
+          />
+          <TemplateCard
+            isRecommended={false}
+            title="CV Créatif & Dynamique"
+            previewImage={`/model6.png?v=${posterRefreshKey}`}
+            onSelect={() => handleSelectTemplate("creatif")}
+          />
+          <TemplateCard
+            isRecommended={false}
+            title="CV Technique & Développeur"
+            previewImage={`/model7.png?v=${posterRefreshKey}`}
+            onSelect={() => handleSelectTemplate("technique")}
+          />
+          <TemplateCard
+            isRecommended={false}
+            title="CV Élégance & Sombre"
+            previewImage={`/model9.png?v=${posterRefreshKey}`}
+            onSelect={() => handleSelectTemplate("elegance")}
           />
         </div>
         

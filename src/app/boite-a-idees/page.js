@@ -106,10 +106,10 @@ const translations = {
 };
 
 const slides = [
-  { id: "s1", img: "model1.png", titleFR: "Modèle 1 — Moderne et photographique", titleEN: "Template 1 — Modern and photographic", descFR: "Parfait pour les profils créatifs et exécutifs exigeant une mise en avant visuelle élégante.", descEN: "Perfect for creative and executive profiles seeking elegant visual presentation." },
-  { id: "s2", img: "model2.png", titleFR: "Modèle 2 — Épuré et institutionnel", titleEN: "Template 2 — Clean and professional", descFR: "Design minimaliste axé sur l'impact des réalisations et la clarté de lecture pour recruteurs.", descEN: "Minimalist design focused on achievement impact and recruiter readability." },
-  { id: "s3", img: "model3.png", titleFR: "Modèle 3 — Classique et structuré", titleEN: "Template 3 — Classic and structured", descFR: "Structure équilibrée idéale pour l'ingénierie, la finance et le management stratégique.", descEN: "Balanced layout ideal for engineering, finance, and strategic management." },
-  { id: "s4", img: "model4.png", titleFR: "Modèle 4 — Nouveau design international", titleEN: "Template 4 — New international design", descFR: "Format optimisé pour les candidatures globales, normes anglo-saxonnes et compatibilité ATS.", descEN: "Optimized format for global applications, western standards and ATS compatibility." },
+  { id: "entrepreneur", img: "model4.png", titleFR: "Modèle 1 — Entrepreneur Numérique (Photo & 2 Colonnes)", titleEN: "Template 1 — Digital Entrepreneur (Photo & 2 Columns)", descFR: "Modèle officiel Facilité avec photo profil cerclée, marque-page pastel et 2 colonnes équilibrées.", descEN: "Official Facilité template with profile photo, pastel bookmark, and balanced 2-column layout." },
+  { id: "s1", img: "model1.png", titleFR: "Modèle 2 — Moderne et photographique", titleEN: "Template 2 — Modern and photographic", descFR: "Parfait pour les profils créatifs et exécutifs exigeant une mise en avant visuelle élégante.", descEN: "Perfect for creative and executive profiles seeking elegant visual presentation." },
+  { id: "s2", img: "model2.png", titleFR: "Modèle 3 — Épuré et institutionnel", titleEN: "Template 3 — Clean and professional", descFR: "Design minimaliste axé sur l'impact des réalisations et la clarté de lecture pour recruteurs.", descEN: "Minimalist design focused on achievement impact and recruiter readability." },
+  { id: "s3", img: "model3.png", titleFR: "Modèle 4 — Classique et structuré", titleEN: "Template 4 — Classic and structured", descFR: "Structure équilibrée idéale pour l'ingénierie, la finance et le management stratégique.", descEN: "Balanced layout ideal for engineering, finance, and strategic management." },
 ];
 
 export default function BoiteAIdees() {
