@@ -185,11 +185,12 @@ export default function Header() {
     const diffDays = Math.floor(diffHours / 24);
 
     if (diffMin < 1) return "À l'instant";
-    if (diffMin < 60) return `${diffMin} min`;
-    if (diffHours < 24) return `${diffHours} h`;
-    if (diffDays === 1) return "1 j";
-    if (diffDays < 7) return `${diffDays} j`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} sem`;
+    if (diffMin < 60) return `${diffMin} min.`;
+    if (diffHours < 24) return `${diffHours} h.`;
+    if (diffDays === 1) return "1 j.";
+    if (diffDays < 7) return `${diffDays} j.`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} sem.`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} mois`;
     return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   };
 
@@ -1343,72 +1344,51 @@ export default function Header() {
         </div>
       )}
 
-      {/* 🔔 MENU DÉROULANT DES NOTIFICATIONS 1:1 FACEBOOK PIXEL-PERFECT */}
+      {/* 🔔 POPUP DE NOTIFICATIONS 1:1 FACEBOOK PIXEL-PERFECT */}
       {notificationsModalOpen && (
         <>
           {/* Overlay sombre discret pour fermer au clic extérieur */}
           <div
-            className="fixed inset-0 z-[840] bg-black/40 md:bg-black/10 backdrop-blur-2xs transition-opacity"
+            className="fixed inset-0 z-[840] bg-black/20 backdrop-blur-2xs transition-opacity"
             onClick={() => {
               setNotificationsModalOpen(false);
               setNotifOptionsMenuOpen(false);
             }}
           />
 
-          {/* Menu déroulant des notifications (Drop-down sous la cloche sur desktop, Plein écran tactile sur mobile) */}
+          {/* Popup Déroulant Facebook */}
           <div
             ref={notificationsContainerRef}
-            className="fixed inset-0 md:inset-auto md:top-14 md:right-4 lg:right-10 md:w-[410px] h-[100dvh] md:h-[560px] md:max-h-[85vh] bg-white dark:bg-gray-900 z-[850] shadow-2xl md:rounded-2xl border-t md:border border-gray-200 dark:border-gray-800 flex flex-col min-h-0 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            className="fixed top-12 md:top-14 left-2 right-2 sm:left-auto sm:right-4 md:right-10 w-auto sm:w-[380px] max-w-[390px] mx-auto sm:mx-0 h-[520px] max-h-[85vh] bg-white dark:bg-gray-900 z-[850] shadow-2xl rounded-2xl border border-gray-200/90 dark:border-gray-800 flex flex-col min-h-0 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
           >
-            {/* Header Facebook : Notifications + Options (...) + Fermer */}
-            <div className="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-gray-100 dark:border-gray-800/80 flex-shrink-0 bg-white dark:bg-gray-900">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setNotificationsModalOpen(false)}
-                  className="md:hidden w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center text-gray-700 dark:text-gray-200 transition cursor-pointer -ml-1"
-                  aria-label="Retour"
-                >
-                  <i className="fa-solid fa-arrow-left text-base"></i>
-                </button>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-                  Notifications
-                </h2>
-              </div>
+            {/* Header Facebook : Titre "Notifications" en gras + Options (...) */}
+            <div className="px-4 pt-3.5 pb-2 flex items-center justify-between flex-shrink-0 bg-white dark:bg-gray-900">
+              <h2 className="text-2xl font-bold text-gray-950 dark:text-white tracking-tight">
+                Notifications
+              </h2>
 
               <div className="flex items-center gap-1 relative" ref={notifOptionsRef}>
                 {/* Bouton Options 3 petits points (...) */}
                 <button
                   type="button"
                   onClick={() => setNotifOptionsMenuOpen(!notifOptionsMenuOpen)}
-                  className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 transition cursor-pointer"
-                  title="Options des notifications"
+                  className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300 transition cursor-pointer"
+                  title="Options"
                   aria-label="Options"
                 >
                   <i className="fa-solid fa-ellipsis text-base"></i>
                 </button>
 
-                {/* Bouton Fermer (Desktop) */}
-                <button
-                  type="button"
-                  onClick={() => setNotificationsModalOpen(false)}
-                  className="hidden md:flex w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 items-center justify-center text-gray-600 dark:text-gray-300 transition cursor-pointer"
-                  title="Fermer"
-                  aria-label="Fermer"
-                >
-                  <i className="fa-solid fa-xmark text-sm"></i>
-                </button>
-
                 {/* Dropdown Options Facebook */}
                 {notifOptionsMenuOpen && (
-                  <div className="absolute right-0 top-11 w-60 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 py-1.5 z-50 animate-in fade-in zoom-in-95">
+                  <div className="absolute right-0 top-9 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 py-1.5 z-50 animate-in fade-in zoom-in-95">
                     <button
                       type="button"
                       onClick={() => {
                         handleMarkAllAsRead();
                         setNotifOptionsMenuOpen(false);
                       }}
-                      className="w-full px-4 py-2.5 flex items-center gap-3 text-left text-xs font-bold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer"
+                      className="w-full px-3.5 py-2 flex items-center gap-2.5 text-left text-xs font-bold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer"
                     >
                       <i className="fa-solid fa-check text-emerald-600 text-sm w-4 text-center"></i>
                       <span>Tout marquer comme lu</span>
@@ -1419,7 +1399,7 @@ export default function Header() {
                         setNotifOptionsMenuOpen(false);
                         setNotificationsModalOpen(false);
                       }}
-                      className="w-full px-4 py-2.5 flex items-center gap-3 text-left text-xs font-bold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer border-t border-gray-100 dark:border-gray-700"
+                      className="w-full px-3.5 py-2 flex items-center gap-2.5 text-left text-xs font-bold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer border-t border-gray-100 dark:border-gray-700"
                     >
                       <i className="fa-solid fa-briefcase text-[#1877F2] text-sm w-4 text-center"></i>
                       <span>Voir toutes les offres</span>
@@ -1430,14 +1410,14 @@ export default function Header() {
             </div>
 
             {/* Pilules Facebook : Tout / Non lu */}
-            <div className="px-4 py-2 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800/80 flex-shrink-0 bg-white dark:bg-gray-900">
+            <div className="px-4 pb-2.5 flex items-center gap-2 flex-shrink-0 bg-white dark:bg-gray-900">
               <button
                 type="button"
                 onClick={() => setNotificationFilter("all")}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full text-[13px] font-bold transition cursor-pointer ${
                   notificationFilter === "all"
                     ? "bg-[#E7F3FF] text-[#1877F2] dark:bg-blue-950 dark:text-blue-400 font-extrabold"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-semibold"
                 }`}
               >
                 Tout
@@ -1445,27 +1425,27 @@ export default function Header() {
               <button
                 type="button"
                 onClick={() => setNotificationFilter("unread")}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full text-[13px] font-bold transition cursor-pointer ${
                   notificationFilter === "unread"
                     ? "bg-[#E7F3FF] text-[#1877F2] dark:bg-blue-950 dark:text-blue-400 font-extrabold"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-semibold"
                 }`}
               >
                 Non lu {unreadNotificationsCount > 0 ? `(${unreadNotificationsCount})` : ""}
               </button>
             </div>
 
-            {/* Liste Défilante des Notifications Facebook avec scrolling garanti */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1 divide-y-0">
-              {/* Section Nouveau */}
-              <div className="px-3 pt-2 pb-1.5 flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-900 dark:text-white">
+            {/* Liste Défilante des Notifications Facebook */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-2 py-1 space-y-1">
+              {/* Section Nouveau + Voir tout */}
+              <div className="px-2 pt-1.5 pb-1 flex items-center justify-between">
+                <span className="text-[15px] font-bold text-gray-950 dark:text-white">
                   Nouveau
                 </span>
                 <Link
                   href="/offres"
                   onClick={() => setNotificationsModalOpen(false)}
-                  className="text-xs font-semibold text-[#1877F2] dark:text-blue-400 hover:underline cursor-pointer"
+                  className="text-sm font-semibold text-[#1877F2] dark:text-blue-400 hover:underline cursor-pointer"
                 >
                   Voir tout
                 </Link>
@@ -1473,13 +1453,13 @@ export default function Header() {
 
               {filteredNotifications.length === 0 ? (
                 <div className="py-16 px-4 text-center">
-                  <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mx-auto mb-3">
-                    <i className="fa-regular fa-bell-slash text-xl"></i>
+                  <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mx-auto mb-2.5">
+                    <i className="fa-regular fa-bell-slash text-lg"></i>
                   </div>
                   <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">
                     Aucune notification
                   </h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs mx-auto">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-xs mx-auto">
                     {notificationFilter === "unread"
                       ? "Vous avez lu toutes vos notifications !"
                       : "Vous n'avez aucune notification pour le moment."}
@@ -1490,13 +1470,13 @@ export default function Header() {
                   <div
                     key={item.id}
                     onClick={() => handleNotificationClick(item)}
-                    className={`p-2.5 sm:p-3 flex items-start gap-3 rounded-xl hover:bg-[#F2F2F2] dark:hover:bg-gray-800/80 transition cursor-pointer group relative ${
-                      !item.is_read ? "bg-[#EBF5FF]/50 dark:bg-blue-950/20" : ""
+                    className={`p-2 flex items-start gap-3 rounded-xl hover:bg-[#F2F2F2] dark:hover:bg-gray-800/80 transition cursor-pointer group relative ${
+                      !item.is_read ? "bg-[#EBF5FF]/40 dark:bg-blue-950/20" : ""
                     }`}
                   >
-                    {/* Avatar 56px avec Badge circulaire en bas à droite */}
-                    <div className="relative w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 font-extrabold text-base overflow-hidden border border-gray-100 dark:border-gray-800 shadow-2xs">
+                    {/* Avatar 52px avec Badge circulaire en bas à droite */}
+                    <div className="relative w-13 h-13 flex-shrink-0">
+                      <div className="w-13 h-13 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-800 shadow-2xs">
                         {item.avatar && item.avatar !== "/logo.jpeg" ? (
                           <img src={item.avatar} alt="Logo" className="w-full h-full object-cover" />
                         ) : (
@@ -1504,38 +1484,38 @@ export default function Header() {
                         )}
                       </div>
 
-                      {/* Badge Icon en superposition en bas à droite (Style Facebook) */}
+                      {/* Badge Icon en bas à droite (Style Facebook 1:1) */}
                       <div
-                        className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] border-2 border-white dark:border-gray-900 shadow-xs ${
+                        className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] border-2 border-white dark:border-gray-900 shadow-xs ${
                           item.badgeBg || "bg-[#1877F2]"
                         }`}
                       >
-                        <i className={`fa-solid ${item.badgeIcon || "fa-bell"}`}></i>
+                        <i className={`fa-solid ${item.badgeIcon || "fa-user"}`}></i>
                       </div>
                     </div>
 
                     {/* Texte de la notification */}
-                    <div className="flex-1 min-w-0 pr-2">
+                    <div className="flex-1 min-w-0 pr-1">
                       <p className="text-[13px] leading-snug text-gray-900 dark:text-gray-100 font-normal line-clamp-3">
-                        <strong className="font-bold text-gray-900 dark:text-white">
+                        <strong className="font-bold text-gray-950 dark:text-white">
                           {item.title}
                         </strong>{" "}
                         {item.content}
                       </p>
                       <span
-                        className={`text-[12px] font-bold mt-1 block ${
+                        className={`text-xs font-bold mt-0.5 block ${
                           !item.is_read
                             ? "text-[#1877F2] dark:text-blue-400"
-                            : "text-gray-500 dark:text-gray-400"
+                            : "text-gray-500 dark:text-gray-400 font-normal"
                         }`}
                       >
                         {formatRelativeTime(item.created_at)}
                       </span>
                     </div>
 
-                    {/* Point bleu non-lu (Style Facebook) */}
+                    {/* Point bleu non-lu Facebook */}
                     {!item.is_read && (
-                      <span className="w-3 h-3 bg-[#1877F2] rounded-full flex-shrink-0 self-center shadow-xs"></span>
+                      <span className="w-2.5 h-2.5 bg-[#1877F2] rounded-full flex-shrink-0 self-center shadow-xs"></span>
                     )}
                   </div>
                 ))
