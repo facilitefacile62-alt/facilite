@@ -642,6 +642,8 @@ export default function CreerCv() {
   const [canvaFontFamily, setCanvaFontFamily] = useState("Inter");
   const [canvaColorPasteInput, setCanvaColorPasteInput] = useState("");
   const [canvaColorFeedback, setCanvaColorFeedback] = useState(null); // { type: "warning", message }
+  const [savedStylePrefs, setSavedStylePrefs] = useState(null); // { accentColor, fontFamily } chargé depuis profiles.preferred_cv_style
+  const [showStyleBanner, setShowStyleBanner] = useState(false);
   const [canvaFontSize, setCanvaFontSize] = useState(14);
   const [canvaScale, setCanvaScale] = useState(1);
   const [canvaSectionSpacing, setCanvaSectionSpacing] = useState(1);
@@ -904,6 +906,73 @@ export default function CreerCv() {
       }
     }
   }, []);
+
+  // Point 3.3 — propose de réutiliser le dernier style CV sauvegardé
+  // (profiles.preferred_cv_style) pour un utilisateur connecté. Une seule
+  // lecture au montage ; "Non merci" masque juste le bandeau pour le reste
+  // de la session (pas de re-fetch derrière, donc pas besoin d'un drapeau
+  // "dismissed" séparé).
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("preferred_cv_style")
+        .eq("id", session.user.id)
+        .single();
+
+      const saved = data?.preferred_cv_style;
+      if (saved && (saved.accentColor || saved.fontFamily)) {
+        setSavedStylePrefs(saved);
+        setShowStyleBanner(true);
+      }
+    })();
+  }, []);
+
+  // Point 3.2 — sauvegarde silencieuse du style CV préféré (debounce 2s)
+  // pour un utilisateur connecté.
+  //
+  // styleAutoSaveReadyRef (armé 1s après le montage, PAS juste "ignorer le
+  // tout premier passage de l'effet") : les effets ?template=/?color= et le
+  // chargement d'un ?resumeId= existant changent accentColor/canvaFontFamily
+  // eux aussi juste après le montage — un simple "ignore le 1er tick"
+  // laissait ce DEUXIÈME changement (déclenché par le site, pas par
+  // l'utilisateur) déclencher une sauvegarde 2s plus tard, écrasant le vrai
+  // style préféré avec la couleur par défaut du template. Constaté en
+  // testant point 3.2/3.3 en direct (chargement de ?template=classic ->
+  // Non merci -> preferred_cv_style silencieusement réécrit avec la couleur
+  // par défaut de Classic).
+  const styleAutoSaveReadyRef = useRef(false);
+  const styleSaveTimerRef = useRef(null);
+
+  useEffect(() => {
+    const armTimer = setTimeout(() => {
+      styleAutoSaveReadyRef.current = true;
+    }, 1000);
+    return () => clearTimeout(armTimer);
+  }, []);
+
+  useEffect(() => {
+    if (!styleAutoSaveReadyRef.current) return;
+
+    if (styleSaveTimerRef.current) clearTimeout(styleSaveTimerRef.current);
+    styleSaveTimerRef.current = setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return; // pas connecté : pas de sauvegarde
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ preferred_cv_style: { accentColor, fontFamily: canvaFontFamily } })
+        .eq("id", session.user.id);
+      if (error) console.error("[Style CV préféré] échec de la sauvegarde :", error.message);
+    }, 2000);
+
+    return () => {
+      if (styleSaveTimerRef.current) clearTimeout(styleSaveTimerRef.current);
+    };
+  }, [accentColor, canvaFontFamily]);
 
   // Load imported CV data from localStorage if available
   useEffect(() => {
@@ -1586,6 +1655,24 @@ export default function CreerCv() {
     triggerToast(`Couleur ${hex} appliquée depuis Canva !`);
   }, [selectedTemplate]);
 
+  // --- BANDEAU "RÉUTILISER VOTRE DERNIER STYLE ?" (point 3.3) ---
+  const handleAcceptSavedStyle = () => {
+    // applyCanvaColor (pas setAccentColor direct) : même garde palette fixe
+    // que le champ "Coller une couleur Canva" — sinon "Oui" échouerait en
+    // silence sur le template par défaut (entrepreneur, palette fixe) sans
+    // que l'utilisateur comprenne pourquoi rien n'a changé.
+    if (savedStylePrefs?.accentColor) applyCanvaColor(savedStylePrefs.accentColor);
+    if (savedStylePrefs?.fontFamily) {
+      loadFont(savedStylePrefs.fontFamily);
+      setCanvaFontFamily(savedStylePrefs.fontFamily);
+    }
+    setShowStyleBanner(false);
+  };
+
+  const handleDismissSavedStyle = () => {
+    setShowStyleBanner(false);
+  };
+
   // --- GESTION DES MODÈLES (Suppression & Restauration) ---
   const handleDeleteTemplate = (e, tplId, tplName) => {
     if (e && e.stopPropagation) e.stopPropagation();
@@ -2219,6 +2306,37 @@ Laisse vide les champs non trouvés.`;
 
         </div>
       </nav>
+
+      {/* Bandeau "Réutiliser votre dernier style ?" (point 3.3) */}
+      {showStyleBanner && savedStylePrefs && (
+        <div className="fixed top-16 inset-x-0 z-[60] bg-slate-900 text-white border-b border-slate-700 px-4 py-2.5 flex items-center justify-center gap-3 text-xs shadow-lg no-print">
+          <span className="font-semibold">Réutiliser votre dernier style ?</span>
+          {savedStylePrefs.accentColor && (
+            <span
+              className="w-4 h-4 rounded-full border border-white/30 inline-block flex-shrink-0"
+              style={{ backgroundColor: savedStylePrefs.accentColor }}
+              title={savedStylePrefs.accentColor}
+            ></span>
+          )}
+          {savedStylePrefs.fontFamily && (
+            <span className="font-mono text-slate-300">{savedStylePrefs.fontFamily}</span>
+          )}
+          <button
+            type="button"
+            onClick={handleAcceptSavedStyle}
+            className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 font-bold cursor-pointer transition"
+          >
+            Oui
+          </button>
+          <button
+            type="button"
+            onClick={handleDismissSavedStyle}
+            className="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 font-bold cursor-pointer transition"
+          >
+            Non merci
+          </button>
+        </div>
+      )}
 
       {/* Main Workspace Wrapper (Full viewport, height minus navbar) */}
       <div className="flex-grow flex flex-col md:flex-row pt-16 min-h-[calc(100vh-4rem)] bg-gray-50 w-full max-w-full overflow-x-hidden">
