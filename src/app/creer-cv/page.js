@@ -293,7 +293,10 @@ const CanvaStudioContext = createContext({
   handleDuplicateElement: () => {},
   handleToggleLock: () => {},
   handleMagicWrite: () => {},
-  handleDeleteElement: () => {}
+  handleDeleteElement: () => {},
+  elementOffsets: {},
+  setElementOffsets: () => {},
+  canvaZoom: 1
 });
 
 // --- COMPOSANT D'ÉDITION DE TEXTE DIRECTE EN LIGNE (STABLE, ZERO-REMUNTING, ULTRA-RÉACTIF) ---
@@ -393,7 +396,7 @@ function CanvaText({
   );
 }
 
-// --- CONTENEUR D'ÉLÉMENT CANVA INTERACTIF (CADRE DE SÉLECTION, ACTIONS FLOTTANTES, ZÉRO PERTE DE FOCUS) ---
+// --- CONTENEUR D'ÉLÉMENT CANVA INTERACTIF (DÉPLACEMENT LIBRE, GLISSER-DÉPOSER, ACTIONS FLOTTANTES) ---
 function CanvaElementWrapper({ id, type, name, children, className = "", style = {} }) {
   const {
     lockedElementIds,
@@ -405,14 +408,106 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
     handleDuplicateElement,
     handleToggleLock,
     handleMagicWrite,
-    handleDeleteElement
+    handleDeleteElement,
+    elementOffsets = {},
+    setElementOffsets,
+    canvaZoom = 1
   } = useContext(CanvaStudioContext);
 
   const isSelected = selectedCanvasElement?.id === id;
   const isLocked = lockedElementIds?.includes(id);
+  const offset = elementOffsets?.[id] || { x: 0, y: 0 };
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
+
+  const startDrag = (e) => {
+    if (isLocked) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: offset.x,
+      initialY: offset.y
+    };
+
+    const handleMouseMove = (moveEvent) => {
+      const zoom = canvaZoom || 1;
+      const dx = (moveEvent.clientX - dragRef.current.startX) / zoom;
+      const dy = (moveEvent.clientY - dragRef.current.startY) / zoom;
+      if (setElementOffsets) {
+        setElementOffsets(prev => ({
+          ...prev,
+          [id]: {
+            x: Math.round(dragRef.current.initialX + dx),
+            y: Math.round(dragRef.current.initialY + dy)
+          }
+        }));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const startTouchDrag = (e) => {
+    if (isLocked || !e.touches[0]) return;
+    e.stopPropagation();
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      initialX: offset.x,
+      initialY: offset.y
+    };
+
+    const handleTouchMove = (moveEvent) => {
+      if (!moveEvent.touches[0]) return;
+      const zoom = canvaZoom || 1;
+      const dx = (moveEvent.touches[0].clientX - dragRef.current.startX) / zoom;
+      const dy = (moveEvent.touches[0].clientY - dragRef.current.startY) / zoom;
+      if (setElementOffsets) {
+        setElementOffsets(prev => ({
+          ...prev,
+          [id]: {
+            x: Math.round(dragRef.current.initialX + dx),
+            y: Math.round(dragRef.current.initialY + dy)
+          }
+        }));
+      }
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+
+    window.addEventListener("touchmove", handleTouchMove);
+    window.addEventListener("touchend", handleTouchEnd);
+  };
+
+  const transformStyle = (offset.x !== 0 || offset.y !== 0) ? `translate3d(${offset.x}px, ${offset.y}px, 0)` : undefined;
 
   if (!isAdvancedEditOpen) {
-    return <div className={className} style={style}>{children}</div>;
+    return (
+      <div
+        className={className}
+        style={{
+          ...style,
+          ...(transformStyle ? { transform: transformStyle } : {})
+        }}
+      >
+        {children}
+      </div>
+    );
   }
 
   return (
@@ -435,7 +530,11 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
           ? "ring-2 ring-[#8B3DFF] ring-offset-1 z-30 shadow-md rounded-lg"
           : "hover:outline hover:outline-1 hover:outline-purple-400/80 hover:outline-dashed cursor-pointer group/canva-elem"
       } ${className}`}
-      style={style}
+      style={{
+        ...style,
+        ...(transformStyle ? { transform: transformStyle } : {}),
+        transition: isDragging ? "none" : "box-shadow 0.2s, outline 0.2s, transform 0.1s ease-out"
+      }}
     >
       {isSelected && (
         <div className="absolute -top-3.5 -left-1 z-40 bg-[#8B3DFF] text-white text-[8px] font-black px-1.5 py-0.2 rounded shadow-md pointer-events-none select-none uppercase tracking-wider flex items-center gap-1">
@@ -444,6 +543,7 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
         </div>
       )}
 
+      {/* Floating Action Bar (Monter, Descendre, Dupliquer, Verrouiller, IA, Supprimer) */}
       {isSelected && (
         <div
           onClick={(e) => e.stopPropagation()}
@@ -453,7 +553,7 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
             type="button"
             onClick={() => handleMoveItem && handleMoveItem({ id, type }, "up")}
             className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
-            title="Monter"
+            title="Monter (Alt+Haut)"
           >
             <i className="fa-solid fa-arrow-up"></i>
           </button>
@@ -461,7 +561,7 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
             type="button"
             onClick={() => handleMoveItem && handleMoveItem({ id, type }, "down")}
             className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
-            title="Descendre"
+            title="Descendre (Alt+Bas)"
           >
             <i className="fa-solid fa-arrow-down"></i>
           </button>
@@ -499,6 +599,18 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
           >
             <i className="fa-solid fa-trash"></i>
           </button>
+        </div>
+      )}
+
+      {/* Poignée de déplacement libre 4 directions (Style Canva ✥) */}
+      {isSelected && !isLocked && (
+        <div
+          onMouseDown={startDrag}
+          onTouchStart={startTouchDrag}
+          className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-40 w-7 h-7 rounded-full bg-white text-[#8B3DFF] shadow-xl border-2 border-[#8B3DFF] flex items-center justify-center cursor-grab active:cursor-grabbing hover:scale-115 transition-transform select-none no-print group"
+          title="Cliquez et glissez pour déplacer librement cet élément partout sur la page"
+        >
+          <i className="fa-solid fa-up-down-left-right text-[11px] group-hover:scale-110 transition-transform"></i>
         </div>
       )}
 
@@ -544,6 +656,7 @@ export default function CreerCv() {
   const [canvaUppercase, setCanvaUppercase] = useState(false);
   const [canvaSearchQuery, setCanvaSearchQuery] = useState("");
   const [canvaZoom, setCanvaZoom] = useState(1);
+  const [elementOffsets, setElementOffsets] = useState({});
   const [cvPages, setCvPages] = useState([
     { id: 1, type: "cv_p1", title: "Page 1 — CV Principal", isLocked: false }
   ]);
@@ -1615,6 +1728,17 @@ export default function CreerCv() {
     } else if (elem.type === "hobby") {
       setCvData(prev => ({ ...prev, hobbies: shift(prev.hobbies) }));
       triggerToast(`Centre d'intérêt déplacé vers le ${direction === "up" ? "haut" : "bas"}`, "fa-arrows-up-down");
+    } else {
+      // Pour les sections et blocs uniques (ex: Profil, Photo, En-tête, Contact, etc.) -> translation verticale
+      const deltaY = direction === "up" ? -15 : 15;
+      setElementOffsets(prev => ({
+        ...prev,
+        [elem.id]: {
+          x: prev[elem.id]?.x || 0,
+          y: (prev[elem.id]?.y || 0) + deltaY
+        }
+      }));
+      triggerToast(`Élément déplacé vers le ${direction === "up" ? "haut" : "bas"}`, "fa-arrows-up-down");
     }
     setContextMenu({ show: false, x: 0, y: 0, element: null });
   };
@@ -1698,6 +1822,20 @@ export default function CreerCv() {
       } else if (e.ctrlKey && e.key === "d" && selectedCanvasElement && !isInputActive) {
         e.preventDefault();
         handleDuplicateElement(selectedCanvasElement);
+      } else if (selectedCanvasElement && !isInputActive && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 2;
+        const elemId = selectedCanvasElement.id;
+        setElementOffsets(prev => {
+          const cur = prev[elemId] || { x: 0, y: 0 };
+          return {
+            ...prev,
+            [elemId]: {
+              x: cur.x + (e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0),
+              y: cur.y + (e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0)
+            }
+          };
+        });
       }
     };
     window.addEventListener("click", handleGlobalClick);
@@ -1736,7 +1874,10 @@ export default function CreerCv() {
     handleDuplicateElement,
     handleToggleLock,
     handleMagicWrite,
-    handleDeleteElement
+    handleDeleteElement,
+    elementOffsets,
+    setElementOffsets,
+    canvaZoom
   };
 
   return (
@@ -6539,6 +6680,23 @@ export default function CreerCv() {
             </div>
             <span className="text-[10px] text-gray-400 font-mono">Alt+Bas</span>
           </button>
+
+          {contextMenu.element && elementOffsets[contextMenu.element?.id] && (elementOffsets[contextMenu.element?.id].x !== 0 || elementOffsets[contextMenu.element?.id].y !== 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                setElementOffsets(prev => ({ ...prev, [contextMenu.element?.id]: { x: 0, y: 0 } }));
+                triggerToast("Position réinitialisée");
+                setContextMenu({ show: false, x: 0, y: 0, element: null });
+              }}
+              className="w-full px-3.5 py-1.5 hover:bg-purple-50 text-purple-600 flex items-center justify-between transition cursor-pointer text-left"
+            >
+              <div className="flex items-center gap-2.5">
+                <i className="fa-solid fa-arrows-rotate text-sm text-purple-500 w-4 text-center"></i>
+                <span>Réinitialiser la position</span>
+              </div>
+            </button>
+          )}
 
           <div className="my-1.5 border-t border-gray-100"></div>
 
