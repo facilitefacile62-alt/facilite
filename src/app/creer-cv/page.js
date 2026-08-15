@@ -6,6 +6,9 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
 import TemplatePreviewModal from "@/components/TemplatePreviewModal";
+import { cvTemplates, resolveTemplateId, DEFAULT_TEMPLATE_ID } from "@/lib/cvModels";
+
+export { cvTemplates };
 
 // --- DICTIONNAIRE DE TRADUCTION POUR LE CREATEUR DE CV ---
 const translations = {
@@ -268,19 +271,6 @@ const translations = {
     toastContactOpen: "Contact form opened.",
   }
 };
-
-// --- LISTE DES MODÈLES DE CV DU STUDIO ---
-const cvTemplates = [
-  { id: "entrepreneur", num: 1, name: "Modèle 1 — Entrepreneur Pro", category: "Officiel Facilité (Photo & 2 Col)", icon: "fa-rocket", previewUrl: "/model4.png", accentColor: "#10E688" },
-  { id: "modern", num: 2, name: "Modèle 2 — Moderne", category: "2 Colonnes structuré", icon: "fa-grip", previewUrl: "/model1.png", accentColor: "#2563EB" },
-  { id: "minimalist", num: 3, name: "Modèle 3 — Minimaliste", category: "Aéré & Moderne", icon: "fa-align-left", previewUrl: "/model2.png", accentColor: "#0EA5E9" },
-  { id: "classic", num: 4, name: "Modèle 4 — Classique", category: "Traditionnel & Chic", icon: "fa-newspaper", previewUrl: "/model3.png", accentColor: "#475569" },
-  { id: "executif", num: 5, name: "Modèle 5 — Exécutif", category: "Bandeau formel & dense", icon: "fa-briefcase", previewUrl: "/model5.png", accentColor: "#1E293B" },
-  { id: "creatif", num: 6, name: "Modèle 6 — Créatif", category: "Coloré & asymétrique", icon: "fa-palette", previewUrl: "/model6.png", accentColor: "#8B5CF6" },
-  { id: "technique", num: 7, name: "Modèle 7 — Technique", category: "Grille de compétences", icon: "fa-code", previewUrl: "/model7.png", accentColor: "#059669" },
-  { id: "professionnel", num: 8, name: "Modèle 8 — Professionnel Canva", category: "Style Canva 1:1 (Cadres & Badges)", icon: "fa-palette", previewUrl: "/model8.png", accentColor: "#382F2D" },
-  { id: "elegance", num: 9, name: "Modèle 9 — Élégance", category: "Sidebar noire, touches dorées", icon: "fa-crown", previewUrl: "/model9.png", accentColor: "#B45309" }
-];
 
 // --- CONTEXTE REACT DU STUDIO CANVA ---
 const CanvaStudioContext = createContext({
@@ -865,30 +855,23 @@ export default function CreerCv() {
     loadExistingResume();
   }, []);
 
-  // Synchronize language check from URL search parameter
+  // Synchronize template and color check from URL search parameter
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const urlTemplate = params.get("template");
-      // window.location.search n'existe pas côté serveur : cette lecture
-      // doit rester dans un effet (jamais pendant le rendu, pour éviter un
-      // hydration mismatch).
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (!urlTemplate || urlTemplate === "1" || urlTemplate === "s1" || urlTemplate === "entrepreneur") setSelectedTemplate("entrepreneur");
-      if (urlTemplate === "2" || urlTemplate === "s2" || urlTemplate === "modern") setSelectedTemplate("modern");
-      if (urlTemplate === "3" || urlTemplate === "s3" || urlTemplate === "minimal" || urlTemplate === "minimalist") setSelectedTemplate("minimalist");
-      if (urlTemplate === "4" || urlTemplate === "s4" || urlTemplate === "classic") setSelectedTemplate("classic");
-      if (urlTemplate === "5" || urlTemplate === "s5" || urlTemplate === "executif") setSelectedTemplate("executif");
-      if (urlTemplate === "6" || urlTemplate === "s6" || urlTemplate === "creatif") setSelectedTemplate("creatif");
-      if (urlTemplate === "7" || urlTemplate === "s7" || urlTemplate === "technique") setSelectedTemplate("technique");
-      if (urlTemplate === "8" || urlTemplate === "s8" || urlTemplate === "elegance") setSelectedTemplate("elegance");
 
-      // ?color=<hex> depuis /modeles (sélecteur d'accent de la galerie) —
-      // appliqué directement comme accentColor initial. Validé (motif hex
-      // strict) avant application : une valeur invalide est simplement
-      // ignorée plutôt que transmise telle quelle à un style inline. Sans
-      // effet visuel sur les modèles à couleur fixe (entrepreneur,
-      // elegance), normal — ils n'utilisent pas accentColor.
+      // Sécurité & Fallback : résout le template proprement (ex: ?template=elegance -> "elegance", fallback -> "entrepreneur")
+      if (urlTemplate) {
+        const resolved = resolveTemplateId(urlTemplate);
+        setSelectedTemplate(resolved);
+        const tplObj = cvTemplates.find(t => t.id === resolved);
+        if (tplObj?.accentColor) {
+          setAccentColor(tplObj.accentColor);
+        }
+      }
+
+      // ?color=<hex> depuis /modeles (sélecteur d'accent de la galerie)
       const urlColor = params.get("color");
       if (urlColor && /^#[0-9A-Fa-f]{6}$/.test(urlColor)) {
         setAccentColor(urlColor);
