@@ -3912,7 +3912,7 @@ export default function CreerCv() {
                     >
                       <div>
                         {/* Profile Picture (Outer White Circle) */}
-                        <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center mx-auto mb-5 shadow-md flex-shrink-0 relative select-none">
+                        <CanvaElementWrapper id="photo" type="photo" name="Photo de Profil" className="w-24 h-24 rounded-full bg-white flex items-center justify-center mx-auto mb-5 shadow-md flex-shrink-0 relative select-none">
                           {/* Inner Image Circle */}
                           <div className="w-[84px] h-[84px] rounded-full overflow-hidden bg-transparent flex items-center justify-center relative">
                             {photoPreview ? (
@@ -3924,7 +3924,7 @@ export default function CreerCv() {
                                 onMouseUp={handlePhotoDragEnd}
                                 onMouseLeave={handlePhotoDragEnd}
                                 onTouchStart={handlePhotoDragStart}
-                                onTouchMove={handlePhotoDragMove}
+                                touchMove={handlePhotoDragMove}
                                 onTouchEnd={handlePhotoDragEnd}
                                 style={{
                                   objectPosition: `${cvData.photoX !== undefined ? cvData.photoX : 50}% ${cvData.photoY !== undefined ? cvData.photoY : 50}%`,
@@ -3938,95 +3938,85 @@ export default function CreerCv() {
                               <i className="fa-solid fa-user text-gray-400 text-3xl"></i>
                             )}
                           </div>
-                        </div>
+                        </CanvaElementWrapper>
 
                         {/* Coordonnées */}
                         <div className="space-y-4">
-                          <div>
+                          <CanvaElementWrapper id="contact" type="contact" name="Coordonnées">
                             <h3 className="text-[10px] font-black uppercase tracking-wider text-[#10E688] mb-2 border-b border-white/10 pb-1">{cvData.sectionTitles?.contact?.toUpperCase() || "COORDONNÉES"}</h3>
                             <ul className="space-y-2 text-[10px] text-slate-200">
-                              {cvData.email && (
-                                <li className="flex items-start space-x-1.5 min-w-0">
-                                  <i className="fa-regular fa-envelope mt-0.5 flex-shrink-0 text-white/60"></i>
-                                  <span className="break-all">{cvData.email}</span>
-                                </li>
-                              )}
-                              {cvData.phone && (
-                                <li className="flex items-start space-x-1.5">
-                                  <i className="fa-solid fa-phone mt-0.5 flex-shrink-0 text-white/60"></i>
-                                  <span>{cvData.phone}</span>
-                                </li>
-                              )}
-                              {(cvData.address || cvData.city) && (
-                                <li className="flex items-start space-x-1.5">
-                                  <i className="fa-solid fa-location-dot mt-0.5 flex-shrink-0 text-white/60"></i>
-                                  <span>
-                                    {cvData.address && `${cvData.address}, `}
-                                    {cvData.postalCode && `${cvData.postalCode} `}
-                                    {cvData.city}
-                                  </span>
-                                </li>
-                              )}
+                              <li className="flex items-start space-x-1.5 min-w-0">
+                                <i className="fa-regular fa-envelope mt-0.5 flex-shrink-0 text-white/60"></i>
+                                <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" className="break-all" />
+                              </li>
+                              <li className="flex items-start space-x-1.5">
+                                <i className="fa-solid fa-phone mt-0.5 flex-shrink-0 text-white/60"></i>
+                                <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                              </li>
+                              <li className="flex items-start space-x-1.5">
+                                <i className="fa-solid fa-location-dot mt-0.5 flex-shrink-0 text-white/60"></i>
+                                <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville / Adresse" placeholder="Dakar, Sénégal" />
+                              </li>
                             </ul>
-                          </div>
+                          </CanvaElementWrapper>
 
                           {/* Extra info panel */}
                           {(cvData.birthDate || cvData.drivingLicense || cvData.nationality || cvData.maritalStatus || cvData.linkedin || cvData.availability) && (
                             <div>
                               <h3 className="text-[10px] font-black uppercase tracking-wider text-[#10E688] mb-2 border-b border-white/10 pb-1">Détails</h3>
                               <ul className="space-y-1.5 text-[9px] text-slate-300">
-                                {cvData.birthDate && <li><span className="font-bold text-white">Âge :</span> {cvData.birthDate}</li>}
-                                {cvData.drivingLicense && <li><span className="font-bold text-white">Permis :</span> {cvData.drivingLicense}</li>}
-                                {cvData.nationality && <li><span className="font-bold text-white">Nationalité :</span> {cvData.nationality}</li>}
-                                {cvData.maritalStatus && <li><span className="font-bold text-white">Statut :</span> {cvData.maritalStatus}</li>}
-                                {cvData.linkedin && <li><span className="font-bold text-white">LinkedIn :</span> <span className="break-all text-[8px]">{cvData.linkedin}</span></li>}
-                                {cvData.availability && <li><span className="font-bold text-white">Disponibilité :</span> {cvData.availability}</li>}
+                                {cvData.birthDate && <li><span className="font-bold text-white">Âge :</span> <CanvaText value={cvData.birthDate} onChange={(v) => setCvData(prev => ({ ...prev, birthDate: v }))} id="birthDate" name="Âge" /></li>}
+                                {cvData.drivingLicense && <li><span className="font-bold text-white">Permis :</span> <CanvaText value={cvData.drivingLicense} onChange={(v) => setCvData(prev => ({ ...prev, drivingLicense: v }))} id="drivingLicense" name="Permis" /></li>}
+                                {cvData.nationality && <li><span className="font-bold text-white">Nationalité :</span> <CanvaText value={cvData.nationality} onChange={(v) => setCvData(prev => ({ ...prev, nationality: v }))} id="nationality" name="Nationalité" /></li>}
+                                {cvData.maritalStatus && <li><span className="font-bold text-white">Statut :</span> <CanvaText value={cvData.maritalStatus} onChange={(v) => setCvData(prev => ({ ...prev, maritalStatus: v }))} id="maritalStatus" name="Statut" /></li>}
+                                {cvData.linkedin && <li><span className="font-bold text-white">LinkedIn :</span> <CanvaText value={cvData.linkedin} onChange={(v) => setCvData(prev => ({ ...prev, linkedin: v }))} id="linkedin" name="LinkedIn" className="break-all text-[8px]" /></li>}
+                                {cvData.availability && <li><span className="font-bold text-white">Disponibilité :</span> <CanvaText value={cvData.availability} onChange={(v) => setCvData(prev => ({ ...prev, availability: v }))} id="availability" name="Disponibilité" /></li>}
                               </ul>
                             </div>
                           )}
 
                           {/* Compétences (Left sidebar) */}
-                          {cvData.skills.length > 0 && (
-                            <div>
-                              <h3 className="text-[10px] font-black uppercase tracking-wider text-[#10E688] mb-2 border-b border-white/10 pb-1">Compétences</h3>
-                              <ul className="space-y-2">
-                                {cvData.skills.map((skill) => (
-                                  <li key={skill.id} className="text-[10px] text-slate-200">
-                                    <div className="flex justify-between items-center mb-0.5">
-                                      <span className="font-bold truncate max-w-[120px]">{skill.name || "Compétence"}</span>
-                                      <span className="text-[8px] text-slate-400 font-medium">{skill.level}</span>
-                                    </div>
-                                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                                      <div
-                                        style={{
-                                          width:
-                                            skill.level === "Expert" ? "100%" :
-                                            skill.level === "Avancé" ? "80%" :
-                                            skill.level === "Intermédiaire" ? "55%" : "30%"
-                                        }}
-                                        className="h-full bg-[#10E688]"
-                                      ></div>
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                          <CanvaElementWrapper id="skills" type="skill" name="Compétences">
+                            <h3 className="text-[10px] font-black uppercase tracking-wider text-[#10E688] mb-2 border-b border-white/10 pb-1">Compétences</h3>
+                            <ul className="space-y-2">
+                              {(cvData.skills?.length > 0 ? cvData.skills : [
+                                { id: 1, name: "Gestion de projet", level: "Avancé" }
+                              ]).map((skill) => (
+                                <li key={skill.id} className="text-[10px] text-slate-200">
+                                  <div className="flex justify-between items-center mb-0.5">
+                                    <CanvaText value={skill.name} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, name: v } : s) }))} id={`skill-${skill.id}`} name="Compétence" className="font-bold truncate max-w-[120px]" />
+                                    <CanvaText value={skill.level} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, level: v } : s) }))} id={`skill-lvl-${skill.id}`} name="Niveau" className="text-[8px] text-slate-400 font-medium" />
+                                  </div>
+                                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                    <div
+                                      style={{
+                                        width:
+                                          skill.level === "Expert" ? "100%" :
+                                          skill.level === "Avancé" ? "80%" :
+                                          skill.level === "Intermédiaire" ? "55%" : "30%"
+                                      }}
+                                      className="h-full bg-[#10E688]"
+                                    ></div>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </CanvaElementWrapper>
 
                           {/* Langues (Left sidebar) */}
-                          {cvData.languages.length > 0 && (
-                            <div>
-                              <h3 className="text-[10px] font-black uppercase tracking-wider text-[#10E688] mb-2 border-b border-white/10 pb-1">Langues</h3>
-                              <ul className="space-y-1.5 text-[10px] text-slate-200">
-                                {cvData.languages.map((lang) => (
-                                  <li key={lang.id} className="flex justify-between">
-                                    <span className="font-bold">{lang.name || "Langue"}</span>
-                                    <span className="text-[8px] text-slate-400 font-medium">{lang.level}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                          <CanvaElementWrapper id="languages" type="language" name="Langues">
+                            <h3 className="text-[10px] font-black uppercase tracking-wider text-[#10E688] mb-2 border-b border-white/10 pb-1">Langues</h3>
+                            <ul className="space-y-1.5 text-[10px] text-slate-200">
+                              {(cvData.languages?.length > 0 ? cvData.languages : [
+                                { id: 1, name: "Français", level: "Courant" }
+                              ]).map((lang) => (
+                                <li key={lang.id} className="flex justify-between">
+                                  <CanvaText value={lang.name} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, name: v } : l) }))} id={`lang-${lang.id}`} name="Langue" className="font-bold" />
+                                  <CanvaText value={lang.level} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, level: v } : l) }))} id={`lang-lvl-${lang.id}`} name="Niveau" className="text-[8px] text-slate-400 font-medium" />
+                                </li>
+                              ))}
+                            </ul>
+                          </CanvaElementWrapper>
                         </div>
                       </div>
 
@@ -4040,74 +4030,78 @@ export default function CreerCv() {
                       <div className="space-y-5">
                         
                         {/* Header details */}
-                        <div className="border-b border-gray-150 pb-4">
-                          <h1 className="text-2xl font-black text-gray-900 tracking-tight capitalize">
-                            {cvData.firstName || "Prénom"} {cvData.lastName || "Nom"}
+                        <CanvaElementWrapper id="header" type="header" name="En-tête" className="border-b border-gray-150 pb-4">
+                          <h1 className="text-2xl font-black text-gray-900 tracking-tight capitalize flex items-center gap-2 flex-wrap">
+                            <CanvaText value={cvData.firstName} onChange={(v) => setCvData(prev => ({ ...prev, firstName: v }))} id="firstName" name="Prénom" placeholder="Prénom" />
+                            <CanvaText value={cvData.lastName} onChange={(v) => setCvData(prev => ({ ...prev, lastName: v }))} id="lastName" name="Nom" placeholder="Nom" />
                           </h1>
                           <p style={{ color: accentColor }} className="text-xs font-black uppercase tracking-widest mt-1">
-                            {cvData.experiences[0]?.title || "Titre professionnel"}
+                            <CanvaText value={cvData.jobTitle || cvData.experiences[0]?.title} onChange={(v) => setCvData(prev => ({ ...prev, jobTitle: v }))} id="jobTitle" name="Titre professionnel" placeholder="Titre professionnel" />
                           </p>
-                        </div>
+                        </CanvaElementWrapper>
 
                         {/* Professional pitch */}
-                        {cvData.profile && (
-                          <div className="space-y-1">
-                            <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">{cvData.sectionTitles?.profile || "Profil Professionnel"}</h3>
-                            <p className="text-[10px] text-gray-600 leading-relaxed font-medium text-justify">{cvData.profile}</p>
-                          </div>
-                        )}
+                        <CanvaElementWrapper id="profile" type="profile" name="Profil Professionnel" className="space-y-1">
+                          <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">{cvData.sectionTitles?.profile || "Profil Professionnel"}</h3>
+                          <p className="text-[10px] text-gray-600 leading-relaxed font-medium text-justify">
+                            <CanvaText value={cvData.profile} onChange={(v) => setCvData(prev => ({ ...prev, profile: v }))} id="profile" name="Résumé de Profil" multiline={true} placeholder="Cliquez pour rédiger votre profil..." className="block text-justify" />
+                          </p>
+                        </CanvaElementWrapper>
 
                         {/* Expériences */}
-                        {cvData.experiences.length > 0 && (
-                          <div className="space-y-2">
-                            <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">{cvData.sectionTitles?.experience || "Parcours Professionnel"}</h3>
-                            <div className="space-y-3">
-                              {cvData.experiences.map((exp) => (
-                                <div key={exp.id} className="text-[10px]">
-                                  <div className="flex justify-between items-start font-bold">
-                                    <span className="text-gray-950 font-black">{exp.title || "Poste / Titre"}</span>
-                                    <span className="text-gray-500 font-bold text-[8px] flex-shrink-0">
-                                      {exp.startDate ? `${exp.startDate} - ` : ""}
-                                      {exp.current ? "Aujourd'hui" : exp.endDate || ""}
-                                    </span>
-                                  </div>
-                                  <div className="text-[9px] font-bold text-gray-500 mt-0.5">
-                                    {exp.employer || "Employeur"} {exp.city ? `• ${exp.city}` : ""}
-                                  </div>
-                                  {exp.description && (
-                                    <p className="text-[9px] text-gray-600 mt-1 leading-relaxed whitespace-pre-line font-medium">{exp.description}</p>
-                                  )}
+                        <div className="space-y-2">
+                          <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">{cvData.sectionTitles?.experience || "Parcours Professionnel"}</h3>
+                          <div className="space-y-3">
+                            {cvData.experiences.map((exp) => (
+                              <CanvaElementWrapper key={exp.id} id={exp.id} type="experience" name={`Expérience : ${exp.title || "Poste"}`} className="text-[10px] p-1 rounded-lg">
+                                <div className="flex justify-between items-start font-bold">
+                                  <span className="text-gray-950 font-black">
+                                    <CanvaText value={exp.title} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, title: v } : e) }))} id={`exp-title-${exp.id}`} name="Poste" placeholder="Poste" />
+                                  </span>
+                                  <span className="text-gray-500 font-bold text-[8px] flex-shrink-0">
+                                    <CanvaText value={exp.startDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, startDate: v } : e) }))} id={`exp-start-${exp.id}`} name="Date de début" placeholder="2024" />
+                                    {" - "}
+                                    <CanvaText value={exp.current ? "Aujourd'hui" : exp.endDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, endDate: v } : e) }))} id={`exp-end-${exp.id}`} name="Date de fin" placeholder="Aujourd'hui" />
+                                  </span>
                                 </div>
-                              ))}
-                            </div>
+                                <div className="text-[9px] font-bold text-gray-500 mt-0.5">
+                                  <CanvaText value={exp.employer} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, employer: v } : e) }))} id={`exp-emp-${exp.id}`} name="Employeur" placeholder="Employeur" />
+                                  {exp.city ? ` • ${exp.city}` : ""}
+                                </div>
+                                {exp.description && (
+                                  <div className="text-[9px] text-gray-600 mt-1 leading-relaxed whitespace-pre-line font-medium">
+                                    <CanvaText value={exp.description} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, description: v } : e) }))} id={`exp-desc-${exp.id}`} name="Missions" multiline={true} className="block whitespace-pre-line" />
+                                  </div>
+                                )}
+                              </CanvaElementWrapper>
+                            ))}
                           </div>
-                        )}
+                        </div>
 
                         {/* Formation */}
-                        {cvData.educations.length > 0 && (
-                          <div className="space-y-2">
-                            <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">Formation</h3>
-                            <div className="space-y-3">
-                              {cvData.educations.map((edu) => (
-                                <div key={edu.id} className="text-[10px]">
-                                  <div className="flex justify-between items-start font-bold">
-                                    <span className="text-gray-950 font-black">{edu.degree || "Diplôme / Titre"}</span>
-                                    <span className="text-gray-500 font-bold text-[8px] flex-shrink-0">
-                                      {edu.startDate ? `${edu.startDate} - ` : ""}
-                                      {edu.current ? "En cours" : edu.endDate || ""}
-                                    </span>
-                                  </div>
-                                  <div className="text-[9px] font-bold text-gray-500 mt-0.5">
-                                    {edu.school || "École / Établissement"} {edu.city ? `• ${edu.city}` : ""}
-                                  </div>
-                                  {edu.description && (
-                                    <p className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">{edu.description}</p>
-                                  )}
+                        <div className="space-y-2">
+                          <h3 style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wider">Formation</h3>
+                          <div className="space-y-3">
+                            {cvData.educations.map((edu) => (
+                              <CanvaElementWrapper key={edu.id} id={edu.id} type="education" name={`Formation : ${edu.degree || "Diplôme"}`} className="text-[10px] p-1 rounded-lg">
+                                <div className="flex justify-between items-start font-bold">
+                                  <span className="text-gray-950 font-black">
+                                    <CanvaText value={edu.degree} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, degree: v } : e) }))} id={`edu-deg-${edu.id}`} name="Diplôme" placeholder="Diplôme" />
+                                  </span>
+                                  <span className="text-gray-500 font-bold text-[8px] flex-shrink-0">
+                                    <CanvaText value={edu.startDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, startDate: v } : e) }))} id={`edu-start-${edu.id}`} name="Année début" placeholder="2023" />
+                                    {" - "}
+                                    <CanvaText value={edu.current ? "En cours" : edu.endDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, endDate: v } : e) }))} id={`edu-end-${edu.id}`} name="Année fin" placeholder="2025" />
+                                  </span>
                                 </div>
-                              ))}
-                            </div>
+                                <div className="text-[9px] font-bold text-gray-500 mt-0.5">
+                                  <CanvaText value={edu.school} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, school: v } : e) }))} id={`edu-sch-${edu.id}`} name="Établissement" placeholder="Établissement" />
+                                  {edu.city ? ` • ${edu.city}` : ""}
+                                </div>
+                              </CanvaElementWrapper>
+                            ))}
                           </div>
-                        )}
+                        </div>
 
                       </div>
 
@@ -4126,115 +4120,118 @@ export default function CreerCv() {
                     <div className="space-y-6">
                       
                       {/* Center Header */}
-                      <div className="text-center space-y-2 border-b border-gray-100 pb-5">
-                        <h1 className="text-2xl font-black text-gray-900 tracking-tight capitalize">
-                          {cvData.firstName || "Prénom"} {cvData.lastName || "Nom"}
+                      <CanvaElementWrapper id="header" type="header" name="En-tête" className="text-center space-y-2 border-b border-gray-100 pb-5">
+                        <h1 className="text-2xl font-black text-gray-900 tracking-tight capitalize flex items-center justify-center gap-2 flex-wrap">
+                          <CanvaText value={cvData.firstName} onChange={(v) => setCvData(prev => ({ ...prev, firstName: v }))} id="firstName" name="Prénom" placeholder="Prénom" />
+                          <CanvaText value={cvData.lastName} onChange={(v) => setCvData(prev => ({ ...prev, lastName: v }))} id="lastName" name="Nom" placeholder="Nom" />
                         </h1>
                         <p style={{ color: accentColor }} className="text-xs font-black uppercase tracking-widest">
-                          {cvData.experiences[0]?.title || "Titre professionnel"}
+                          <CanvaText value={cvData.jobTitle || cvData.experiences[0]?.title} onChange={(v) => setCvData(prev => ({ ...prev, jobTitle: v }))} id="jobTitle" name="Titre professionnel" placeholder="Titre professionnel" />
                         </p>
                         
                         {/* Contacts horizontally */}
                         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[9px] text-gray-500 font-bold pt-1">
-                          {cvData.email && (
-                            <span className="flex items-center"><i className="fa-regular fa-envelope mr-1 text-gray-400"></i>{cvData.email}</span>
-                          )}
-                          {cvData.phone && (
-                            <span className="flex items-center"><i className="fa-solid fa-phone mr-1 text-gray-400"></i>{cvData.phone}</span>
-                          )}
-                          {cvData.city && (
-                            <span className="flex items-center"><i className="fa-solid fa-location-dot mr-1 text-gray-400"></i>{cvData.city}</span>
-                          )}
+                          <span className="flex items-center"><i className="fa-regular fa-envelope mr-1 text-gray-400"></i><CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" /></span>
+                          <span className="flex items-center"><i className="fa-solid fa-phone mr-1 text-gray-400"></i><CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" /></span>
+                          <span className="flex items-center"><i className="fa-solid fa-location-dot mr-1 text-gray-400"></i><CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" /></span>
                           {cvData.linkedin && (
-                            <span className="flex items-center"><i className="fa-brands fa-linkedin mr-1 text-gray-400"></i>{cvData.linkedin}</span>
+                            <span className="flex items-center"><i className="fa-brands fa-linkedin mr-1 text-gray-400"></i><CanvaText value={cvData.linkedin} onChange={(v) => setCvData(prev => ({ ...prev, linkedin: v }))} id="linkedin" name="LinkedIn" placeholder="linkedin.com/in/profil" /></span>
                           )}
+                        </div>
+                      </CanvaElementWrapper>
+
+                      {/* Professional summary */}
+                      <CanvaElementWrapper id="profile" type="profile" name="Profil Professionnel" className="space-y-1.5">
+                        <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">{cvData.sectionTitles?.profile || "Profil"}</h3>
+                        <p className="text-[10px] text-gray-600 leading-relaxed font-medium text-justify">
+                          <CanvaText value={cvData.profile} onChange={(v) => setCvData(prev => ({ ...prev, profile: v }))} id="profile" name="Résumé de Profil" multiline={true} placeholder="Cliquez pour rédiger votre profil..." className="block text-justify" />
+                        </p>
+                      </CanvaElementWrapper>
+
+                      {/* Experience list */}
+                      <div className="space-y-2.5">
+                        <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">{cvData.sectionTitles?.experience || "Expérience Professionnelle"}</h3>
+                        <div className="space-y-3">
+                          {cvData.experiences.map((exp) => (
+                            <CanvaElementWrapper key={exp.id} id={exp.id} type="experience" name={`Expérience : ${exp.title || "Poste"}`} className="grid grid-cols-4 gap-2 text-[10px] p-1 rounded-lg">
+                              <div className="col-span-1 text-gray-500 font-bold text-[8px] pt-0.5">
+                                <CanvaText value={exp.startDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, startDate: v } : e) }))} id={`exp-start-${exp.id}`} name="Date de début" placeholder="2024" />
+                                {" - "}
+                                <CanvaText value={exp.current ? "Aujourd'hui" : exp.endDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, endDate: v } : e) }))} id={`exp-end-${exp.id}`} name="Date de fin" placeholder="Aujourd'hui" />
+                              </div>
+                              <div className="col-span-3 text-[10px]">
+                                <div className="font-black text-gray-950">
+                                  <CanvaText value={exp.title} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, title: v } : e) }))} id={`exp-title-${exp.id}`} name="Poste" placeholder="Poste" />
+                                </div>
+                                <div className="text-[9px] font-bold text-gray-400 mt-0.5">
+                                  <CanvaText value={exp.employer} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, employer: v } : e) }))} id={`exp-emp-${exp.id}`} name="Employeur" placeholder="Employeur" />
+                                  {exp.city ? ` • ${exp.city}` : ""}
+                                </div>
+                                {exp.description && (
+                                  <div className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">
+                                    <CanvaText value={exp.description} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, description: v } : e) }))} id={`exp-desc-${exp.id}`} name="Missions" multiline={true} className="block whitespace-pre-line" />
+                                  </div>
+                                )}
+                              </div>
+                            </CanvaElementWrapper>
+                          ))}
                         </div>
                       </div>
 
-                      {/* Professional summary */}
-                      {cvData.profile && (
-                        <div className="space-y-1.5">
-                          <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">Profil</h3>
-                          <p className="text-[10px] text-gray-600 leading-relaxed font-medium text-justify">{cvData.profile}</p>
-                        </div>
-                      )}
-
-                      {/* Experience list */}
-                      {cvData.experiences.length > 0 && (
-                        <div className="space-y-2.5">
-                          <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">{cvData.sectionTitles?.experience || "Expérience Professionnelle"}</h3>
-                          <div className="space-y-3">
-                            {cvData.experiences.map((exp) => (
-                              <div key={exp.id} className="grid grid-cols-4 gap-2 text-[10px]">
-                                <div className="col-span-1 text-gray-500 font-bold text-[8px] pt-0.5">
-                                  {exp.startDate ? `${exp.startDate} - ` : ""}
-                                  {exp.current ? "Aujourd'hui" : exp.endDate || ""}
-                                </div>
-                                <div className="col-span-3 text-[10px]">
-                                  <div className="font-black text-gray-950">{exp.title}</div>
-                                  <div className="text-[9px] font-bold text-gray-400 mt-0.5">{exp.employer} {exp.city ? `• ${exp.city}` : ""}</div>
-                                  {exp.description && (
-                                    <p className="text-[9px] text-gray-600 mt-1 leading-relaxed whitespace-pre-line font-medium">{exp.description}</p>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
                       {/* Education list */}
-                      {cvData.educations.length > 0 && (
-                        <div className="space-y-2.5">
-                          <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">Formation</h3>
-                          <div className="space-y-3">
-                            {cvData.educations.map((edu) => (
-                              <div key={edu.id} className="grid grid-cols-4 gap-2 text-[10px]">
-                                <div className="col-span-1 text-gray-500 font-bold text-[8px] pt-0.5">
-                                  {edu.startDate ? `${edu.startDate} - ` : ""}
-                                  {edu.current ? "En cours" : edu.endDate || ""}
+                      <div className="space-y-2.5">
+                        <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">Formation</h3>
+                        <div className="space-y-3">
+                          {cvData.educations.map((edu) => (
+                            <CanvaElementWrapper key={edu.id} id={edu.id} type="education" name={`Formation : ${edu.degree || "Diplôme"}`} className="grid grid-cols-4 gap-2 text-[10px] p-1 rounded-lg">
+                              <div className="col-span-1 text-gray-500 font-bold text-[8px] pt-0.5">
+                                <CanvaText value={edu.startDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, startDate: v } : e) }))} id={`edu-start-${edu.id}`} name="Année début" placeholder="2023" />
+                                {" - "}
+                                <CanvaText value={edu.current ? "En cours" : edu.endDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, endDate: v } : e) }))} id={`edu-end-${edu.id}`} name="Année fin" placeholder="2025" />
+                              </div>
+                              <div className="col-span-3 text-[10px]">
+                                <div className="font-black text-gray-950">
+                                  <CanvaText value={edu.degree} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, degree: v } : e) }))} id={`edu-deg-${edu.id}`} name="Diplôme" placeholder="Diplôme" />
                                 </div>
-                                <div className="col-span-3 text-[10px]">
-                                  <div className="font-black text-gray-950">{edu.degree}</div>
-                                  <div className="text-[9px] font-bold text-gray-400 mt-0.5">{edu.school} {edu.city ? `• ${edu.city}` : ""}</div>
-                                  {edu.description && (
-                                    <p className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">{edu.description}</p>
-                                  )}
+                                <div className="text-[9px] font-bold text-gray-400 mt-0.5">
+                                  <CanvaText value={edu.school} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, school: v } : e) }))} id={`edu-sch-${edu.id}`} name="Établissement" placeholder="Établissement" />
+                                  {edu.city ? ` • ${edu.city}` : ""}
                                 </div>
                               </div>
-                            ))}
-                          </div>
+                            </CanvaElementWrapper>
+                          ))}
                         </div>
-                      )}
+                      </div>
 
                       {/* Skills & Languages grid */}
                       <div className="grid grid-cols-2 gap-4">
-                        {cvData.skills.length > 0 && (
-                          <div className="space-y-1.5">
-                            <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">Compétences</h3>
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {cvData.skills.map((skill) => (
-                                <span key={skill.id} className="px-2 py-1 bg-gray-100 rounded text-[9px] font-semibold text-gray-700">
-                                  {skill.name} <span className="text-[8px] text-gray-400 font-medium">({skill.level})</span>
-                                </span>
-                              ))}
-                            </div>
+                        <CanvaElementWrapper id="skills" type="skill" name="Compétences" className="space-y-1.5">
+                          <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">Compétences</h3>
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {(cvData.skills?.length > 0 ? cvData.skills : [
+                              { id: 1, name: "Gestion de projet", level: "Avancé" }
+                            ]).map((skill) => (
+                              <span key={skill.id} className="px-2 py-1 bg-gray-100 rounded text-[9px] font-semibold text-gray-700">
+                                <CanvaText value={skill.name} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, name: v } : s) }))} id={`skill-${skill.id}`} name="Compétence" />
+                                <span className="text-[8px] text-gray-400 font-medium"> (<CanvaText value={skill.level} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, level: v } : s) }))} id={`skill-lvl-${skill.id}`} name="Niveau" />)</span>
+                              </span>
+                            ))}
                           </div>
-                        )}
+                        </CanvaElementWrapper>
 
-                        {cvData.languages.length > 0 && (
-                          <div className="space-y-1.5">
-                            <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">Langues</h3>
-                            <ul className="space-y-1 text-[10px] font-medium text-gray-600">
-                              {cvData.languages.map((lang) => (
-                                <li key={lang.id} className="flex justify-between">
-                                  <span className="font-bold text-gray-900">{lang.name}</span>
-                                  <span>{lang.level}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                        <CanvaElementWrapper id="languages" type="language" name="Langues" className="space-y-1.5">
+                          <h3 style={{ borderColor: accentColor }} className="text-[10px] font-black uppercase tracking-wider border-l-3 pl-2.5">Langues</h3>
+                          <ul className="space-y-1 text-[10px] font-medium text-gray-600">
+                            {(cvData.languages?.length > 0 ? cvData.languages : [
+                              { id: 1, name: "Français", level: "Courant" }
+                            ]).map((lang) => (
+                              <li key={lang.id} className="flex justify-between">
+                                <CanvaText value={lang.name} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, name: v } : l) }))} id={`lang-${lang.id}`} name="Langue" className="font-bold text-gray-900" />
+                                <CanvaText value={lang.level} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, level: v } : l) }))} id={`lang-lvl-${lang.id}`} name="Niveau" />
+                              </li>
+                            ))}
+                          </ul>
+                        </CanvaElementWrapper>
                       </div>
 
                     </div>
@@ -4250,7 +4247,7 @@ export default function CreerCv() {
                   <div className="w-full h-full flex flex-col justify-between overflow-hidden bg-white text-xs">
                     
                     {/* Top banner header */}
-                    <div style={{ backgroundColor: accentColor }} className="p-6 text-white text-center space-y-2 relative">
+                    <CanvaElementWrapper id="header" type="header" name="En-tête" style={{ backgroundColor: accentColor }} className="p-6 text-white text-center space-y-2 relative">
                       {/* Profile Picture Classic (Outer White Circle) */}
                       <div className="absolute top-6 left-6 w-14 h-14 rounded-full bg-white hidden sm:flex items-center justify-center shadow-md select-none">
                         {/* Inner Image Circle */}
@@ -4279,108 +4276,116 @@ export default function CreerCv() {
                         </div>
                       </div>
                       
-                      <h1 className="text-2xl font-black tracking-tight capitalize">
-                        {cvData.firstName || "Prénom"} {cvData.lastName || "Nom"}
+                      <h1 className="text-2xl font-black tracking-tight capitalize flex items-center justify-center gap-2 flex-wrap">
+                        <CanvaText value={cvData.firstName} onChange={(v) => setCvData(prev => ({ ...prev, firstName: v }))} id="firstName" name="Prénom" placeholder="Prénom" />
+                        <CanvaText value={cvData.lastName} onChange={(v) => setCvData(prev => ({ ...prev, lastName: v }))} id="lastName" name="Nom" placeholder="Nom" />
                       </h1>
                       <p className="text-xs font-black uppercase tracking-widest text-white/90">
-                        {cvData.experiences[0]?.title || "Titre professionnel"}
+                        <CanvaText value={cvData.jobTitle || cvData.experiences[0]?.title} onChange={(v) => setCvData(prev => ({ ...prev, jobTitle: v }))} id="jobTitle" name="Titre professionnel" placeholder="Titre professionnel" />
                       </p>
                       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[9px] text-white/80 font-bold">
-                        {cvData.email && <span>{cvData.email}</span>}
-                        {cvData.phone && <span>{cvData.phone}</span>}
-                        {cvData.city && <span>{cvData.city}</span>}
-                        {cvData.linkedin && <span className="break-all">{cvData.linkedin}</span>}
+                        <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" />
+                        <span>•</span>
+                        <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                        <span>•</span>
+                        <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" />
                       </div>
-                    </div>
+                    </CanvaElementWrapper>
 
                     <div className="flex-grow p-6 space-y-4">
                       
                       {/* Summary */}
-                      {cvData.profile && (
-                        <div className="space-y-1">
-                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">{cvData.sectionTitles?.profile || "Résumé Professionnel"}</h3>
-                          <p className="text-[10px] text-gray-600 leading-relaxed font-medium">{cvData.profile}</p>
-                        </div>
-                      )}
+                      <CanvaElementWrapper id="profile" type="profile" name="Profil Professionnel" className="space-y-1">
+                        <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">{cvData.sectionTitles?.profile || "Résumé Professionnel"}</h3>
+                        <p className="text-[10px] text-gray-600 leading-relaxed font-medium">
+                          <CanvaText value={cvData.profile} onChange={(v) => setCvData(prev => ({ ...prev, profile: v }))} id="profile" name="Résumé de Profil" multiline={true} placeholder="Cliquez pour rédiger votre profil..." className="block text-justify" />
+                        </p>
+                      </CanvaElementWrapper>
 
                       {/* Expériences */}
-                      {cvData.experiences.length > 0 && (
-                        <div className="space-y-1">
-                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">{cvData.sectionTitles?.experience || "Expérience Professionnelle"}</h3>
-                          <div className="space-y-2.5 pt-1">
-                            {cvData.experiences.map((exp) => (
-                              <div key={exp.id} className="text-[10px]">
-                                <div className="flex justify-between items-start font-bold">
-                                  <span className="text-gray-950 font-black">{exp.title}</span>
-                                  <span className="text-gray-500 font-bold text-[8px] flex-shrink-0">
-                                    {exp.startDate ? `${exp.startDate} - ` : ""}
-                                    {exp.current ? "Aujourd'hui" : exp.endDate || ""}
-                                  </span>
-                                </div>
-                                <div className="text-[9px] font-bold text-gray-400 mt-0.5">
-                                  {exp.employer} {exp.city ? `• ${exp.city}` : ""}
-                                </div>
-                                {exp.description && (
-                                  <p className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">{exp.description}</p>
-                                )}
+                      <div className="space-y-1">
+                        <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">{cvData.sectionTitles?.experience || "Expérience Professionnelle"}</h3>
+                        <div className="space-y-2.5 pt-1">
+                          {cvData.experiences.map((exp) => (
+                            <CanvaElementWrapper key={exp.id} id={exp.id} type="experience" name={`Expérience : ${exp.title || "Poste"}`} className="text-[10px] p-1 rounded-lg">
+                              <div className="flex justify-between items-start font-bold">
+                                <span className="text-gray-950 font-black">
+                                  <CanvaText value={exp.title} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, title: v } : e) }))} id={`exp-title-${exp.id}`} name="Poste" placeholder="Poste" />
+                                </span>
+                                <span className="text-gray-500 font-bold text-[8px] flex-shrink-0">
+                                  <CanvaText value={exp.startDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, startDate: v } : e) }))} id={`exp-start-${exp.id}`} name="Date de début" placeholder="2024" />
+                                  {" - "}
+                                  <CanvaText value={exp.current ? "Aujourd'hui" : exp.endDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, endDate: v } : e) }))} id={`exp-end-${exp.id}`} name="Date de fin" placeholder="Aujourd'hui" />
+                                </span>
                               </div>
-                            ))}
-                          </div>
+                              <div className="text-[9px] font-bold text-gray-400 mt-0.5">
+                                <CanvaText value={exp.employer} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, employer: v } : e) }))} id={`exp-emp-${exp.id}`} name="Employeur" placeholder="Employeur" />
+                                {exp.city ? ` • ${exp.city}` : ""}
+                              </div>
+                              {exp.description && (
+                                <div className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">
+                                  <CanvaText value={exp.description} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, description: v } : e) }))} id={`exp-desc-${exp.id}`} name="Missions" multiline={true} className="block whitespace-pre-line" />
+                                </div>
+                              )}
+                            </CanvaElementWrapper>
+                          ))}
                         </div>
-                      )}
+                      </div>
 
                       {/* Formation */}
-                      {cvData.educations.length > 0 && (
-                        <div className="space-y-1">
-                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">Formation & Diplômes</h3>
-                          <div className="space-y-2.5 pt-1">
-                            {cvData.educations.map((edu) => (
-                              <div key={edu.id} className="text-[10px]">
-                                <div className="flex justify-between items-start font-bold">
-                                  <span className="text-gray-950 font-black">{edu.degree}</span>
-                                  <span className="text-gray-500 font-bold text-[8px] flex-shrink-0">
-                                    {edu.startDate ? `${edu.startDate} - ` : ""}
-                                    {edu.current ? "En cours" : edu.endDate || ""}
-                                  </span>
-                                </div>
-                                <div className="text-[9px] font-bold text-gray-400 mt-0.5">
-                                  {edu.school} {edu.city ? `• ${edu.city}` : ""}
-                                </div>
+                      <div className="space-y-1">
+                        <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">Formation & Diplômes</h3>
+                        <div className="space-y-2.5 pt-1">
+                          {cvData.educations.map((edu) => (
+                            <CanvaElementWrapper key={edu.id} id={edu.id} type="education" name={`Formation : ${edu.degree || "Diplôme"}`} className="text-[10px] p-1 rounded-lg">
+                              <div className="flex justify-between items-start font-bold">
+                                <span className="text-gray-950 font-black">
+                                  <CanvaText value={edu.degree} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, degree: v } : e) }))} id={`edu-deg-${edu.id}`} name="Diplôme" placeholder="Diplôme" />
+                                </span>
+                                <span className="text-gray-500 font-bold text-[8px] flex-shrink-0">
+                                  <CanvaText value={edu.startDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, startDate: v } : e) }))} id={`edu-start-${edu.id}`} name="Année début" placeholder="2023" />
+                                  {" - "}
+                                  <CanvaText value={edu.current ? "En cours" : edu.endDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, endDate: v } : e) }))} id={`edu-end-${edu.id}`} name="Année fin" placeholder="2025" />
+                                </span>
                               </div>
-                            ))}
-                          </div>
+                              <div className="text-[9px] font-bold text-gray-400 mt-0.5">
+                                <CanvaText value={edu.school} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, school: v } : e) }))} id={`edu-sch-${edu.id}`} name="Établissement" placeholder="Établissement" />
+                                {edu.city ? ` • ${edu.city}` : ""}
+                              </div>
+                            </CanvaElementWrapper>
+                          ))}
                         </div>
-                      )}
+                      </div>
 
                       {/* Skills & Lang grid */}
                       <div className="grid grid-cols-2 gap-4">
-                        {cvData.skills.length > 0 && (
-                          <div className="space-y-1">
-                            <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">Compétences</h3>
-                            <ul className="grid grid-cols-1 gap-1 pt-1 text-[9px] font-semibold text-gray-700">
-                              {cvData.skills.map((skill) => (
-                                <li key={skill.id} className="flex justify-between">
-                                  <span>{skill.name}</span>
-                                  <span className="text-gray-400 font-medium">({skill.level})</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                        <CanvaElementWrapper id="skills" type="skill" name="Compétences" className="space-y-1">
+                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">Compétences</h3>
+                          <ul className="grid grid-cols-1 gap-1 pt-1 text-[9px] font-semibold text-gray-700">
+                            {(cvData.skills?.length > 0 ? cvData.skills : [
+                              { id: 1, name: "Organisation", level: "Avancé" }
+                            ]).map((skill) => (
+                              <li key={skill.id} className="flex justify-between">
+                                <CanvaText value={skill.name} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, name: v } : s) }))} id={`skill-${skill.id}`} name="Compétence" />
+                                <span className="text-gray-400 font-medium">(<CanvaText value={skill.level} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, level: v } : s) }))} id={`skill-lvl-${skill.id}`} name="Niveau" />)</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </CanvaElementWrapper>
 
-                        {cvData.languages.length > 0 && (
-                          <div className="space-y-1">
-                            <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">Langues</h3>
-                            <ul className="space-y-1 pt-1 text-[9px] text-gray-700">
-                              {cvData.languages.map((lang) => (
-                                <li key={lang.id} className="flex justify-between font-semibold">
-                                  <span>{lang.name}</span>
-                                  <span className="text-gray-400 font-medium">{lang.level}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                        <CanvaElementWrapper id="languages" type="language" name="Langues" className="space-y-1">
+                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-950 border-b border-gray-200 pb-1">Langues</h3>
+                          <ul className="space-y-1 pt-1 text-[9px] text-gray-700">
+                            {(cvData.languages?.length > 0 ? cvData.languages : [
+                              { id: 1, name: "Français", level: "Courant" }
+                            ]).map((lang) => (
+                              <li key={lang.id} className="flex justify-between font-semibold">
+                                <CanvaText value={lang.name} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, name: v } : l) }))} id={`lang-${lang.id}`} name="Langue" />
+                                <CanvaText value={lang.level} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, level: v } : l) }))} id={`lang-lvl-${lang.id}`} name="Niveau" className="text-gray-400 font-medium" />
+                              </li>
+                            ))}
+                          </ul>
+                        </CanvaElementWrapper>
                       </div>
 
                     </div>
@@ -4397,7 +4402,7 @@ export default function CreerCv() {
                   <div className="w-full h-full flex flex-col overflow-hidden bg-white text-xs">
 
                     {/* Bandeau d'en-tête */}
-                    <div style={{ backgroundColor: accentColor === "#10E688" ? "#0f172a" : accentColor }} className="p-6 text-white flex items-center space-x-5 flex-shrink-0">
+                    <CanvaElementWrapper id="header" type="header" name="En-tête" style={{ backgroundColor: accentColor === "#10E688" ? "#0f172a" : accentColor }} className="p-6 text-white flex items-center space-x-5 flex-shrink-0">
                       <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-md flex-shrink-0 select-none">
                         <div className="w-[68px] h-[68px] rounded-full overflow-hidden bg-transparent flex items-center justify-center relative">
                           {photoPreview ? (
@@ -4425,101 +4430,112 @@ export default function CreerCv() {
                         </div>
                       </div>
                       <div className="min-w-0">
-                        <h1 className="text-2xl font-black tracking-tight capitalize truncate">
-                          {cvData.firstName || "Prénom"} {cvData.lastName || "Nom"}
+                        <h1 className="text-2xl font-black tracking-tight capitalize truncate flex items-center gap-2 flex-wrap">
+                          <CanvaText value={cvData.firstName} onChange={(v) => setCvData(prev => ({ ...prev, firstName: v }))} id="firstName" name="Prénom" placeholder="Prénom" />
+                          <CanvaText value={cvData.lastName} onChange={(v) => setCvData(prev => ({ ...prev, lastName: v }))} id="lastName" name="Nom" placeholder="Nom" />
                         </h1>
                         <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/80 mt-1">
-                          {cvData.experiences[0]?.title || "Titre professionnel"}
+                          <CanvaText value={cvData.jobTitle || cvData.experiences[0]?.title} onChange={(v) => setCvData(prev => ({ ...prev, jobTitle: v }))} id="jobTitle" name="Titre professionnel" placeholder="Titre professionnel" />
                         </p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] text-white/70 font-semibold mt-2">
-                          {cvData.email && <span>{cvData.email}</span>}
-                          {cvData.phone && <span>{cvData.phone}</span>}
-                          {cvData.city && <span>{cvData.city}</span>}
+                          <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" />
+                          <span>•</span>
+                          <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                          <span>•</span>
+                          <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" />
                         </div>
                       </div>
-                    </div>
+                    </CanvaElementWrapper>
 
                     {/* Corps en colonne unique, aéré */}
                     <div className="flex-grow p-7 space-y-5 overflow-hidden">
-                      {cvData.profile && (
-                        <div className="space-y-1.5">
-                          <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Synthèse</h3>
-                          <p className="text-[10px] text-gray-600 leading-relaxed font-medium text-justify">{cvData.profile}</p>
-                        </div>
-                      )}
+                      <CanvaElementWrapper id="profile" type="profile" name="Profil Professionnel" className="space-y-1.5">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Synthèse</h3>
+                        <p className="text-[10px] text-gray-600 leading-relaxed font-medium text-justify">
+                          <CanvaText value={cvData.profile} onChange={(v) => setCvData(prev => ({ ...prev, profile: v }))} id="profile" name="Résumé de Profil" multiline={true} placeholder="Cliquez pour rédiger votre profil..." className="block text-justify" />
+                        </p>
+                      </CanvaElementWrapper>
 
-                      {cvData.experiences.length > 0 && (
-                        <div className="space-y-1.5">
-                          <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Expérience</h3>
-                          <div className="space-y-3 pt-1">
-                            {cvData.experiences.map((exp) => (
-                              <div key={exp.id} className="text-[10px] flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <span className="text-gray-950 font-black block">{exp.title || "Poste / Titre"}</span>
-                                  <span className="text-[9px] font-bold text-gray-500">
-                                    {exp.employer || "Employeur"} {exp.city ? `• ${exp.city}` : ""}
-                                  </span>
-                                  {exp.description && (
-                                    <p className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">{exp.description}</p>
-                                  )}
-                                </div>
-                                <span className="text-gray-400 font-bold text-[8px] flex-shrink-0 whitespace-nowrap">
-                                  {exp.startDate ? `${exp.startDate} — ` : ""}
-                                  {exp.current ? "Aujourd'hui" : exp.endDate || ""}
+                      <div className="space-y-1.5">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Expérience</h3>
+                        <div className="space-y-3 pt-1">
+                          {cvData.experiences.map((exp) => (
+                            <CanvaElementWrapper key={exp.id} id={exp.id} type="experience" name={`Expérience : ${exp.title || "Poste"}`} className="text-[10px] flex items-start justify-between gap-3 p-1 rounded-lg">
+                              <div className="min-w-0">
+                                <span className="text-gray-950 font-black block">
+                                  <CanvaText value={exp.title} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, title: v } : e) }))} id={`exp-title-${exp.id}`} name="Poste" placeholder="Poste" />
+                                </span>
+                                <span className="text-[9px] font-bold text-gray-500">
+                                  <CanvaText value={exp.employer} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, employer: v } : e) }))} id={`exp-emp-${exp.id}`} name="Employeur" placeholder="Employeur" />
+                                  {exp.city ? ` • ${exp.city}` : ""}
+                                </span>
+                                {exp.description && (
+                                  <div className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">
+                                    <CanvaText value={exp.description} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, description: v } : e) }))} id={`exp-desc-${exp.id}`} name="Missions" multiline={true} className="block whitespace-pre-line" />
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-gray-400 font-bold text-[8px] flex-shrink-0 whitespace-nowrap">
+                                <CanvaText value={exp.startDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, startDate: v } : e) }))} id={`exp-start-${exp.id}`} name="Date de début" placeholder="2024" />
+                                {" — "}
+                                <CanvaText value={exp.current ? "Aujourd'hui" : exp.endDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, endDate: v } : e) }))} id={`exp-end-${exp.id}`} name="Date de fin" placeholder="Aujourd'hui" />
+                              </span>
+                            </CanvaElementWrapper>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Formation</h3>
+                        <div className="space-y-2 pt-1">
+                          {cvData.educations.map((edu) => (
+                            <CanvaElementWrapper key={edu.id} id={edu.id} type="education" name={`Formation : ${edu.degree || "Diplôme"}`} className="text-[10px] flex items-start justify-between gap-3 p-1 rounded-lg">
+                              <div className="min-w-0">
+                                <span className="text-gray-950 font-black block">
+                                  <CanvaText value={edu.degree} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, degree: v } : e) }))} id={`edu-deg-${edu.id}`} name="Diplôme" placeholder="Diplôme" />
+                                </span>
+                                <span className="text-[9px] font-bold text-gray-500">
+                                  <CanvaText value={edu.school} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, school: v } : e) }))} id={`edu-sch-${edu.id}`} name="Établissement" placeholder="Établissement" />
                                 </span>
                               </div>
-                            ))}
-                          </div>
+                              <span className="text-gray-400 font-bold text-[8px] flex-shrink-0 whitespace-nowrap">
+                                <CanvaText value={edu.startDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, startDate: v } : e) }))} id={`edu-start-${edu.id}`} name="Année début" placeholder="2023" />
+                                {" — "}
+                                <CanvaText value={edu.current ? "En cours" : edu.endDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, endDate: v } : e) }))} id={`edu-end-${edu.id}`} name="Année fin" placeholder="2025" />
+                              </span>
+                            </CanvaElementWrapper>
+                          ))}
                         </div>
-                      )}
-
-                      {cvData.educations.length > 0 && (
-                        <div className="space-y-1.5">
-                          <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Formation</h3>
-                          <div className="space-y-2 pt-1">
-                            {cvData.educations.map((edu) => (
-                              <div key={edu.id} className="text-[10px] flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <span className="text-gray-950 font-black block">{edu.degree || "Diplôme / Titre"}</span>
-                                  <span className="text-[9px] font-bold text-gray-500">{edu.school || "École / Établissement"}</span>
-                                </div>
-                                <span className="text-gray-400 font-bold text-[8px] flex-shrink-0 whitespace-nowrap">
-                                  {edu.startDate ? `${edu.startDate} — ` : ""}
-                                  {edu.current ? "En cours" : edu.endDate || ""}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      </div>
 
                       <div className="grid grid-cols-2 gap-5">
-                        {cvData.skills.length > 0 && (
-                          <div className="space-y-1.5">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Compétences</h3>
-                            <ul className="space-y-1 pt-1 text-[9px] font-semibold text-gray-700">
-                              {cvData.skills.map((skill) => (
-                                <li key={skill.id} className="flex justify-between">
-                                  <span>{skill.name || "Compétence"}</span>
-                                  <span className="text-gray-400 font-medium">{skill.level}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {cvData.languages.length > 0 && (
-                          <div className="space-y-1.5">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Langues</h3>
-                            <ul className="space-y-1 pt-1 text-[9px] font-semibold text-gray-700">
-                              {cvData.languages.map((lang) => (
-                                <li key={lang.id} className="flex justify-between">
-                                  <span>{lang.name || "Langue"}</span>
-                                  <span className="text-gray-400 font-medium">{lang.level}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                        <CanvaElementWrapper id="skills" type="skill" name="Compétences" className="space-y-1.5">
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Compétences</h3>
+                          <ul className="space-y-1 pt-1 text-[9px] font-semibold text-gray-700">
+                            {(cvData.skills?.length > 0 ? cvData.skills : [
+                              { id: 1, name: "Gestion stratégique", level: "Expert" }
+                            ]).map((skill) => (
+                              <li key={skill.id} className="flex justify-between">
+                                <CanvaText value={skill.name} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, name: v } : s) }))} id={`skill-${skill.id}`} name="Compétence" />
+                                <CanvaText value={skill.level} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, level: v } : s) }))} id={`skill-lvl-${skill.id}`} name="Niveau" className="text-gray-400 font-medium" />
+                              </li>
+                            ))}
+                          </ul>
+                        </CanvaElementWrapper>
+
+                        <CanvaElementWrapper id="languages" type="language" name="Langues" className="space-y-1.5">
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-900 pb-1.5 border-b-2" style={{ borderColor: accentColor }}>Langues</h3>
+                          <ul className="space-y-1 pt-1 text-[9px] font-semibold text-gray-700">
+                            {(cvData.languages?.length > 0 ? cvData.languages : [
+                              { id: 1, name: "Français", level: "Courant" }
+                            ]).map((lang) => (
+                              <li key={lang.id} className="flex justify-between">
+                                <CanvaText value={lang.name} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, name: v } : l) }))} id={`lang-${lang.id}`} name="Langue" />
+                                <CanvaText value={lang.level} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, level: v } : l) }))} id={`lang-lvl-${lang.id}`} name="Niveau" className="text-gray-400 font-medium" />
+                              </li>
+                            ))}
+                          </ul>
+                        </CanvaElementWrapper>
                       </div>
                     </div>
 
@@ -4539,7 +4555,7 @@ export default function CreerCv() {
                       className="w-[210px] text-white p-5 flex flex-col justify-between flex-shrink-0"
                     >
                       <div>
-                        <div className="w-24 h-24 rounded-full bg-white/95 flex items-center justify-center mx-auto mb-4 shadow-lg ring-4 ring-white/30 flex-shrink-0 relative select-none">
+                        <CanvaElementWrapper id="photo" type="photo" name="Photo de Profil" className="w-24 h-24 rounded-full bg-white/95 flex items-center justify-center mx-auto mb-4 shadow-lg ring-4 ring-white/30 flex-shrink-0 relative select-none">
                           <div className="w-[84px] h-[84px] rounded-full overflow-hidden bg-transparent flex items-center justify-center relative">
                             {photoPreview ? (
                               <img
@@ -4564,51 +4580,54 @@ export default function CreerCv() {
                               <i className="fa-solid fa-user text-gray-400 text-3xl"></i>
                             )}
                           </div>
-                        </div>
+                        </CanvaElementWrapper>
 
-                        <h1 className="text-lg font-black tracking-tight text-center capitalize mb-0.5">
-                          {cvData.firstName || "Prénom"} {cvData.lastName || "Nom"}
-                        </h1>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-center text-white/85 mb-5">
-                          {cvData.experiences[0]?.title || "Titre professionnel"}
-                        </p>
+                        <CanvaElementWrapper id="header" type="header" name="En-tête" className="text-center mb-5">
+                          <h1 className="text-lg font-black tracking-tight text-center capitalize mb-0.5 flex items-center justify-center gap-1.5 flex-wrap">
+                            <CanvaText value={cvData.firstName} onChange={(v) => setCvData(prev => ({ ...prev, firstName: v }))} id="firstName" name="Prénom" placeholder="Prénom" />
+                            <CanvaText value={cvData.lastName} onChange={(v) => setCvData(prev => ({ ...prev, lastName: v }))} id="lastName" name="Nom" placeholder="Nom" />
+                          </h1>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-center text-white/85">
+                            <CanvaText value={cvData.jobTitle || cvData.experiences[0]?.title} onChange={(v) => setCvData(prev => ({ ...prev, jobTitle: v }))} id="jobTitle" name="Titre professionnel" placeholder="Titre professionnel" />
+                          </p>
+                        </CanvaElementWrapper>
 
                         <div className="space-y-4">
-                          <div>
+                          <CanvaElementWrapper id="contact" type="contact" name="Coordonnées">
                             <h3 className="text-[10px] font-black uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="fa-solid fa-circle-dot text-[8px]"></i>{cvData.sectionTitles?.contact?.toUpperCase() || "CONTACT"}</h3>
                             <ul className="space-y-1.5 text-[9px] text-white/90 font-semibold">
-                              {cvData.email && <li className="break-all">{cvData.email}</li>}
-                              {cvData.phone && <li>{cvData.phone}</li>}
-                              {cvData.city && <li>{cvData.city}</li>}
+                              <li className="break-all"><CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" /></li>
+                              <li><CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" /></li>
+                              <li><CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" /></li>
                             </ul>
-                          </div>
+                          </CanvaElementWrapper>
 
-                          {cvData.skills.length > 0 && (
-                            <div>
-                              <h3 className="text-[10px] font-black uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="fa-solid fa-circle-dot text-[8px]"></i>Compétences</h3>
-                              <div className="flex flex-wrap gap-1.5">
-                                {cvData.skills.map((skill) => (
-                                  <span key={skill.id} className="px-2 py-1 rounded-full bg-white/20 text-[8px] font-bold whitespace-nowrap">
-                                    {skill.name || "Compétence"}
-                                  </span>
-                                ))}
-                              </div>
+                          <CanvaElementWrapper id="skills" type="skill" name="Compétences">
+                            <h3 className="text-[10px] font-black uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="fa-solid fa-circle-dot text-[8px]"></i>Compétences</h3>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(cvData.skills?.length > 0 ? cvData.skills : [
+                                { id: 1, name: "Design créatif" }
+                              ]).map((skill) => (
+                                <span key={skill.id} className="px-2 py-1 rounded-full bg-white/20 text-[8px] font-bold whitespace-nowrap">
+                                  <CanvaText value={skill.name} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, name: v } : s) }))} id={`skill-${skill.id}`} name="Compétence" />
+                                </span>
+                              ))}
                             </div>
-                          )}
+                          </CanvaElementWrapper>
 
-                          {cvData.languages.length > 0 && (
-                            <div>
-                              <h3 className="text-[10px] font-black uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="fa-solid fa-circle-dot text-[8px]"></i>Langues</h3>
-                              <ul className="space-y-1 text-[9px] text-white/90 font-semibold">
-                                {cvData.languages.map((lang) => (
-                                  <li key={lang.id} className="flex justify-between">
-                                    <span>{lang.name || "Langue"}</span>
-                                    <span className="text-white/60">{lang.level}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                          <CanvaElementWrapper id="languages" type="language" name="Langues">
+                            <h3 className="text-[10px] font-black uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="fa-solid fa-circle-dot text-[8px]"></i>Langues</h3>
+                            <ul className="space-y-1 text-[9px] text-white/90 font-semibold">
+                              {(cvData.languages?.length > 0 ? cvData.languages : [
+                                { id: 1, name: "Français", level: "Courant" }
+                              ]).map((lang) => (
+                                <li key={lang.id} className="flex justify-between">
+                                  <CanvaText value={lang.name} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, name: v } : l) }))} id={`lang-${lang.id}`} name="Langue" />
+                                  <CanvaText value={lang.level} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, level: v } : l) }))} id={`lang-lvl-${lang.id}`} name="Niveau" className="text-white/60" />
+                                </li>
+                              ))}
+                            </ul>
+                          </CanvaElementWrapper>
                         </div>
                       </div>
 
@@ -4620,59 +4639,65 @@ export default function CreerCv() {
                     {/* Colonne principale (blanche) */}
                     <div className="flex-grow p-6 flex flex-col overflow-hidden bg-white">
                       <div className="space-y-5">
-                        {cvData.profile && (
-                          <div className="space-y-1">
-                            <h3 className="text-[11px] font-black uppercase tracking-wider" style={{ color: accentColor }}>À propos</h3>
-                            <p className="text-[10px] text-gray-600 leading-relaxed font-medium">{cvData.profile}</p>
-                          </div>
-                        )}
+                        <CanvaElementWrapper id="profile" type="profile" name="Profil Professionnel" className="space-y-1">
+                          <h3 className="text-[11px] font-black uppercase tracking-wider" style={{ color: accentColor }}>À propos</h3>
+                          <p className="text-[10px] text-gray-600 leading-relaxed font-medium">
+                            <CanvaText value={cvData.profile} onChange={(v) => setCvData(prev => ({ ...prev, profile: v }))} id="profile" name="Résumé de Profil" multiline={true} placeholder="Cliquez pour rédiger votre profil..." className="block text-justify" />
+                          </p>
+                        </CanvaElementWrapper>
 
-                        {cvData.experiences.length > 0 && (
-                          <div className="space-y-2">
-                            <h3 className="text-[11px] font-black uppercase tracking-wider" style={{ color: accentColor }}>Expérience</h3>
-                            <div className="space-y-3">
-                              {cvData.experiences.map((exp) => (
-                                <div key={exp.id} className="text-[10px] pl-3 border-l-2" style={{ borderColor: accentColor }}>
-                                  <div className="flex justify-between items-start font-bold">
-                                    <span className="text-gray-950 font-black">{exp.title || "Poste / Titre"}</span>
-                                    <span className="text-gray-400 font-bold text-[8px] flex-shrink-0">
-                                      {exp.startDate ? `${exp.startDate} - ` : ""}
-                                      {exp.current ? "Aujourd'hui" : exp.endDate || ""}
-                                    </span>
-                                  </div>
-                                  <div className="text-[9px] font-bold text-gray-500 mt-0.5">
-                                    {exp.employer || "Employeur"} {exp.city ? `• ${exp.city}` : ""}
-                                  </div>
-                                  {exp.description && (
-                                    <p className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">{exp.description}</p>
-                                  )}
+                        <div className="space-y-2">
+                          <h3 className="text-[11px] font-black uppercase tracking-wider" style={{ color: accentColor }}>Expérience</h3>
+                          <div className="space-y-3">
+                            {cvData.experiences.map((exp) => (
+                              <CanvaElementWrapper key={exp.id} id={exp.id} type="experience" name={`Expérience : ${exp.title || "Poste"}`} className="text-[10px] pl-3 border-l-2 p-1 rounded-r-lg" style={{ borderColor: accentColor }}>
+                                <div className="flex justify-between items-start font-bold">
+                                  <span className="text-gray-950 font-black">
+                                    <CanvaText value={exp.title} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, title: v } : e) }))} id={`exp-title-${exp.id}`} name="Poste" placeholder="Poste" />
+                                  </span>
+                                  <span className="text-gray-400 font-bold text-[8px] flex-shrink-0">
+                                    <CanvaText value={exp.startDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, startDate: v } : e) }))} id={`exp-start-${exp.id}`} name="Date de début" placeholder="2024" />
+                                    {" - "}
+                                    <CanvaText value={exp.current ? "Aujourd'hui" : exp.endDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, endDate: v } : e) }))} id={`exp-end-${exp.id}`} name="Date de fin" placeholder="Aujourd'hui" />
+                                  </span>
                                 </div>
-                              ))}
-                            </div>
+                                <div className="text-[9px] font-bold text-gray-500 mt-0.5">
+                                  <CanvaText value={exp.employer} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, employer: v } : e) }))} id={`exp-emp-${exp.id}`} name="Employeur" placeholder="Employeur" />
+                                  {exp.city ? ` • ${exp.city}` : ""}
+                                </div>
+                                {exp.description && (
+                                  <div className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">
+                                    <CanvaText value={exp.description} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, description: v } : e) }))} id={`exp-desc-${exp.id}`} name="Missions" multiline={true} className="block whitespace-pre-line" />
+                                  </div>
+                                )}
+                              </CanvaElementWrapper>
+                            ))}
                           </div>
-                        )}
+                        </div>
 
-                        {cvData.educations.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-[11px] font-black uppercase tracking-wider" style={{ color: accentColor }}>Formation</h3>
                           <div className="space-y-2">
-                            <h3 className="text-[11px] font-black uppercase tracking-wider" style={{ color: accentColor }}>Formation</h3>
-                            <div className="space-y-2">
-                              {cvData.educations.map((edu) => (
-                                <div key={edu.id} className="text-[10px] pl-3 border-l-2" style={{ borderColor: accentColor }}>
-                                  <div className="flex justify-between items-start font-bold">
-                                    <span className="text-gray-950 font-black">{edu.degree || "Diplôme / Titre"}</span>
-                                    <span className="text-gray-400 font-bold text-[8px] flex-shrink-0">
-                                      {edu.startDate ? `${edu.startDate} - ` : ""}
-                                      {edu.current ? "En cours" : edu.endDate || ""}
-                                    </span>
-                                  </div>
-                                  <div className="text-[9px] font-bold text-gray-500 mt-0.5">
-                                    {edu.school || "École / Établissement"} {edu.city ? `• ${edu.city}` : ""}
-                                  </div>
+                            {cvData.educations.map((edu) => (
+                              <CanvaElementWrapper key={edu.id} id={edu.id} type="education" name={`Formation : ${edu.degree || "Diplôme"}`} className="text-[10px] pl-3 border-l-2 p-1 rounded-r-lg" style={{ borderColor: accentColor }}>
+                                <div className="flex justify-between items-start font-bold">
+                                  <span className="text-gray-950 font-black">
+                                    <CanvaText value={edu.degree} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, degree: v } : e) }))} id={`edu-deg-${edu.id}`} name="Diplôme" placeholder="Diplôme" />
+                                  </span>
+                                  <span className="text-gray-400 font-bold text-[8px] flex-shrink-0">
+                                    <CanvaText value={edu.startDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, startDate: v } : e) }))} id={`edu-start-${edu.id}`} name="Année début" placeholder="2023" />
+                                    {" - "}
+                                    <CanvaText value={edu.current ? "En cours" : edu.endDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, endDate: v } : e) }))} id={`edu-end-${edu.id}`} name="Année fin" placeholder="2025" />
+                                  </span>
                                 </div>
-                              ))}
-                            </div>
+                                <div className="text-[9px] font-bold text-gray-500 mt-0.5">
+                                  <CanvaText value={edu.school} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, school: v } : e) }))} id={`edu-sch-${edu.id}`} name="Établissement" placeholder="Établissement" />
+                                  {edu.city ? ` • ${edu.city}` : ""}
+                                </div>
+                              </CanvaElementWrapper>
+                            ))}
                           </div>
-                        )}
+                        </div>
                       </div>
 
                       <div className="mt-auto pt-4 text-[8px] text-gray-400 font-medium border-t border-gray-100">
@@ -4689,7 +4714,7 @@ export default function CreerCv() {
                     {/* Sidebar technique sombre */}
                     <div className="w-[190px] bg-[#0f172a] text-white p-5 flex flex-col justify-between flex-shrink-0">
                       <div>
-                        <div className="w-20 h-20 rounded-xl bg-white/10 flex items-center justify-center mx-auto mb-4 border-2 select-none" style={{ borderColor: accentColor }}>
+                        <CanvaElementWrapper id="photo" type="photo" name="Photo de Profil" className="w-20 h-20 rounded-xl bg-white/10 flex items-center justify-center mx-auto mb-4 border-2 select-none" style={{ borderColor: accentColor }}>
                           <div className="w-[68px] h-[68px] rounded-lg overflow-hidden bg-transparent flex items-center justify-center relative">
                             {photoPreview ? (
                               <img
@@ -4714,66 +4739,71 @@ export default function CreerCv() {
                               <i className="fa-solid fa-user text-gray-400 text-2xl"></i>
                             )}
                           </div>
-                        </div>
+                        </CanvaElementWrapper>
 
-                        <h1 className="text-sm font-black text-center capitalize mb-0.5">
-                          {cvData.firstName || "Prénom"} {cvData.lastName || "Nom"}
-                        </h1>
-                        <p style={{ color: accentColor }} className="text-[9px] font-black uppercase tracking-wider text-center mb-4">
-                          {cvData.experiences[0]?.title || "Titre professionnel"}
-                        </p>
+                        <CanvaElementWrapper id="header" type="header" name="En-tête" className="text-center mb-4">
+                          <h1 className="text-sm font-black text-center capitalize mb-0.5 flex items-center justify-center gap-1 flex-wrap">
+                            <CanvaText value={cvData.firstName} onChange={(v) => setCvData(prev => ({ ...prev, firstName: v }))} id="firstName" name="Prénom" placeholder="Prénom" />
+                            <CanvaText value={cvData.lastName} onChange={(v) => setCvData(prev => ({ ...prev, lastName: v }))} id="lastName" name="Nom" placeholder="Nom" />
+                          </h1>
+                          <p style={{ color: accentColor }} className="text-[9px] font-black uppercase tracking-wider text-center">
+                            <CanvaText value={cvData.jobTitle || cvData.experiences[0]?.title} onChange={(v) => setCvData(prev => ({ ...prev, jobTitle: v }))} id="jobTitle" name="Titre professionnel" placeholder="Titre professionnel" />
+                          </p>
+                        </CanvaElementWrapper>
 
                         <div className="space-y-4">
-                          <div>
+                          <CanvaElementWrapper id="contact" type="contact" name="Coordonnées">
                             <h3 className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1.5">{"// Contact"}</h3>
                             <ul className="space-y-1 text-[9px] text-slate-200 font-medium">
-                              {cvData.email && <li className="break-all">{cvData.email}</li>}
-                              {cvData.phone && <li>{cvData.phone}</li>}
-                              {cvData.city && <li>{cvData.city}</li>}
+                              <li className="break-all"><CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" /></li>
+                              <li><CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" /></li>
+                              <li><CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" /></li>
                             </ul>
-                          </div>
+                          </CanvaElementWrapper>
 
-                          {cvData.skills.length > 0 && (
-                            <div>
-                              <h3 className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1.5">{"// Compétences"}</h3>
-                              <ul className="space-y-2">
-                                {cvData.skills.map((skill) => {
-                                  const segments =
-                                    skill.level === "Expert" ? 4 :
-                                    skill.level === "Avancé" ? 3 :
-                                    skill.level === "Intermédiaire" ? 2 : 1;
-                                  return (
-                                    <li key={skill.id} className="text-[9px] text-slate-200">
-                                      <div className="font-bold truncate mb-1">{skill.name || "Compétence"}</div>
-                                      <div className="flex gap-1">
-                                        {[1, 2, 3, 4].map((seg) => (
-                                          <div
-                                            key={seg}
-                                            style={{ backgroundColor: seg <= segments ? accentColor : "rgba(255,255,255,0.1)" }}
-                                            className="h-1.5 flex-1 rounded-sm"
-                                          ></div>
-                                        ))}
-                                      </div>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            </div>
-                          )}
-
-                          {cvData.languages.length > 0 && (
-                            <div>
-                              <h3 className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1.5">{"// Langues"}</h3>
-                              <ul className="space-y-1 text-[9px] text-slate-200 font-medium">
-                                {cvData.languages.map((lang) => (
-                                  <li key={lang.id} className="flex justify-between">
-                                    <span>{lang.name || "Langue"}</span>
-                                    <span className="text-slate-400">{lang.level}</span>
+                          <CanvaElementWrapper id="skills" type="skill" name="Compétences">
+                            <h3 className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1.5">{"// Compétences"}</h3>
+                            <ul className="space-y-2">
+                              {(cvData.skills?.length > 0 ? cvData.skills : [
+                                { id: 1, name: "Développement React", level: "Expert" }
+                              ]).map((skill) => {
+                                const segments =
+                                  skill.level === "Expert" ? 4 :
+                                  skill.level === "Avancé" ? 3 :
+                                  skill.level === "Intermédiaire" ? 2 : 1;
+                                return (
+                                  <li key={skill.id} className="text-[9px] text-slate-200">
+                                    <div className="font-bold truncate mb-1">
+                                      <CanvaText value={skill.name} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, name: v } : s) }))} id={`skill-${skill.id}`} name="Compétence" />
+                                    </div>
+                                    <div className="flex gap-1">
+                                      {[1, 2, 3, 4].map((seg) => (
+                                        <div
+                                          key={seg}
+                                          style={{ backgroundColor: seg <= segments ? accentColor : "rgba(255,255,255,0.1)" }}
+                                          className="h-1.5 flex-1 rounded-sm"
+                                        ></div>
+                                      ))}
+                                    </div>
                                   </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                                );
+                              })}
+                            </ul>
+                          </CanvaElementWrapper>
+
+                          <CanvaElementWrapper id="languages" type="language" name="Langues">
+                            <h3 className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1.5">{"// Langues"}</h3>
+                            <ul className="space-y-1 text-[9px] text-slate-200 font-medium">
+                              {(cvData.languages?.length > 0 ? cvData.languages : [
+                                { id: 1, name: "Français", level: "Courant" }
+                              ]).map((lang) => (
+                                <li key={lang.id} className="flex justify-between">
+                                  <CanvaText value={lang.name} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, name: v } : l) }))} id={`lang-${lang.id}`} name="Langue" />
+                                  <CanvaText value={lang.level} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(l => l.id === lang.id ? { ...l, level: v } : l) }))} id={`lang-lvl-${lang.id}`} name="Niveau" className="text-slate-400" />
+                                </li>
+                              ))}
+                            </ul>
+                          </CanvaElementWrapper>
                         </div>
                       </div>
 
@@ -4785,67 +4815,73 @@ export default function CreerCv() {
                     {/* Colonne principale : timeline verticale */}
                     <div className="flex-grow p-6 flex flex-col justify-between overflow-hidden bg-white">
                       <div className="space-y-5">
-                        {cvData.profile && (
-                          <div className="space-y-1">
-                            <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-900">Profil</h3>
-                            <p className="text-[10px] text-gray-600 leading-relaxed font-medium">{cvData.profile}</p>
-                          </div>
-                        )}
+                        <CanvaElementWrapper id="profile" type="profile" name="Profil Professionnel" className="space-y-1">
+                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-900">Profil</h3>
+                          <p className="text-[10px] text-gray-600 leading-relaxed font-medium">
+                            <CanvaText value={cvData.profile} onChange={(v) => setCvData(prev => ({ ...prev, profile: v }))} id="profile" name="Résumé de Profil" multiline={true} placeholder="Cliquez pour rédiger votre profil..." className="block text-justify" />
+                          </p>
+                        </CanvaElementWrapper>
 
-                        {cvData.experiences.length > 0 && (
-                          <div className="space-y-1">
-                            <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-900">Expérience</h3>
-                            <div className="space-y-0 pt-1 relative pl-4 border-l-2 border-gray-150">
-                              {cvData.experiences.map((exp) => (
-                                <div key={exp.id} className="text-[10px] relative pb-3">
-                                  <div
-                                    style={{ backgroundColor: accentColor }}
-                                    className="absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white"
-                                  ></div>
-                                  <div className="flex justify-between items-start font-bold">
-                                    <span className="text-gray-950 font-black">{exp.title || "Poste / Titre"}</span>
-                                    <span className="text-gray-400 font-bold text-[8px] flex-shrink-0">
-                                      {exp.startDate ? `${exp.startDate} - ` : ""}
-                                      {exp.current ? "Aujourd'hui" : exp.endDate || ""}
-                                    </span>
-                                  </div>
-                                  <div className="text-[9px] font-bold text-gray-500 mt-0.5">
-                                    {exp.employer || "Employeur"} {exp.city ? `• ${exp.city}` : ""}
-                                  </div>
-                                  {exp.description && (
-                                    <p className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">{exp.description}</p>
-                                  )}
+                        <div className="space-y-1">
+                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-900">Expérience</h3>
+                          <div className="space-y-0 pt-1 relative pl-4 border-l-2 border-gray-150">
+                            {cvData.experiences.map((exp) => (
+                              <CanvaElementWrapper key={exp.id} id={exp.id} type="experience" name={`Expérience : ${exp.title || "Poste"}`} className="text-[10px] relative pb-3 p-1 rounded-lg">
+                                <div
+                                  style={{ backgroundColor: accentColor }}
+                                  className="absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white"
+                                ></div>
+                                <div className="flex justify-between items-start font-bold">
+                                  <span className="text-gray-950 font-black">
+                                    <CanvaText value={exp.title} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, title: v } : e) }))} id={`exp-title-${exp.id}`} name="Poste" placeholder="Poste" />
+                                  </span>
+                                  <span className="text-gray-400 font-bold text-[8px] flex-shrink-0">
+                                    <CanvaText value={exp.startDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, startDate: v } : e) }))} id={`exp-start-${exp.id}`} name="Date de début" placeholder="2024" />
+                                    {" - "}
+                                    <CanvaText value={exp.current ? "Aujourd'hui" : exp.endDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, endDate: v } : e) }))} id={`exp-end-${exp.id}`} name="Date de fin" placeholder="Aujourd'hui" />
+                                  </span>
                                 </div>
-                              ))}
-                            </div>
+                                <div className="text-[9px] font-bold text-gray-500 mt-0.5">
+                                  <CanvaText value={exp.employer} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, employer: v } : e) }))} id={`exp-emp-${exp.id}`} name="Employeur" placeholder="Employeur" />
+                                  {exp.city ? ` • ${exp.city}` : ""}
+                                </div>
+                                {exp.description && (
+                                  <div className="text-[9px] text-gray-600 mt-1 leading-relaxed font-medium">
+                                    <CanvaText value={exp.description} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, description: v } : e) }))} id={`exp-desc-${exp.id}`} name="Missions" multiline={true} className="block whitespace-pre-line" />
+                                  </div>
+                                )}
+                              </CanvaElementWrapper>
+                            ))}
                           </div>
-                        )}
+                        </div>
 
-                        {cvData.educations.length > 0 && (
-                          <div className="space-y-1">
-                            <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-900">Formation</h3>
-                            <div className="space-y-0 pt-1 relative pl-4 border-l-2 border-gray-150">
-                              {cvData.educations.map((edu) => (
-                                <div key={edu.id} className="text-[10px] relative pb-2.5">
-                                  <div
-                                    style={{ backgroundColor: accentColor }}
-                                    className="absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white"
-                                  ></div>
-                                  <div className="flex justify-between items-start font-bold">
-                                    <span className="text-gray-950 font-black">{edu.degree || "Diplôme / Titre"}</span>
-                                    <span className="text-gray-400 font-bold text-[8px] flex-shrink-0">
-                                      {edu.startDate ? `${edu.startDate} - ` : ""}
-                                      {edu.current ? "En cours" : edu.endDate || ""}
-                                    </span>
-                                  </div>
-                                  <div className="text-[9px] font-bold text-gray-500 mt-0.5">
-                                    {edu.school || "École / Établissement"} {edu.city ? `• ${edu.city}` : ""}
-                                  </div>
+                        <div className="space-y-1">
+                          <h3 className="text-[10px] font-black uppercase tracking-wider text-gray-900">Formation</h3>
+                          <div className="space-y-0 pt-1 relative pl-4 border-l-2 border-gray-150">
+                            {cvData.educations.map((edu) => (
+                              <CanvaElementWrapper key={edu.id} id={edu.id} type="education" name={`Formation : ${edu.degree || "Diplôme"}`} className="text-[10px] relative pb-2.5 p-1 rounded-lg">
+                                <div
+                                  style={{ backgroundColor: accentColor }}
+                                  className="absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white"
+                                ></div>
+                                <div className="flex justify-between items-start font-bold">
+                                  <span className="text-gray-950 font-black">
+                                    <CanvaText value={edu.degree} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, degree: v } : e) }))} id={`edu-deg-${edu.id}`} name="Diplôme" placeholder="Diplôme" />
+                                  </span>
+                                  <span className="text-gray-400 font-bold text-[8px] flex-shrink-0">
+                                    <CanvaText value={edu.startDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, startDate: v } : e) }))} id={`edu-start-${edu.id}`} name="Année début" placeholder="2023" />
+                                    {" - "}
+                                    <CanvaText value={edu.current ? "En cours" : edu.endDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, endDate: v } : e) }))} id={`edu-end-${edu.id}`} name="Année fin" placeholder="2025" />
+                                  </span>
                                 </div>
-                              ))}
-                            </div>
+                                <div className="text-[9px] font-bold text-gray-500 mt-0.5">
+                                  <CanvaText value={edu.school} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, school: v } : e) }))} id={`edu-sch-${edu.id}`} name="Établissement" placeholder="Établissement" />
+                                  {edu.city ? ` • ${edu.city}` : ""}
+                                </div>
+                              </CanvaElementWrapper>
+                            ))}
                           </div>
-                        )}
+                        </div>
                       </div>
 
                       <div className="text-[8px] text-gray-400 font-medium flex justify-between border-t border-gray-100 pt-3">
@@ -5412,213 +5448,217 @@ export default function CreerCv() {
                       </div>
 
                       {/* Contact */}
-                      <div className="mb-5">
+                      <CanvaElementWrapper id="contact" type="contact" name="Coordonnées" className="mb-5">
                         <h3 className="text-sm font-bold uppercase mb-2 flex items-center border-b border-[#D4AF37]/40 pb-1.5">
                           <i className="fa-solid fa-address-card text-[#D4AF37] mr-2"></i>
                           {cvData.sectionTitles?.contact?.toUpperCase() || "CONTACT"}
                         </h3>
                         <ul className="space-y-2 text-[10px] font-semibold">
-                          {cvData.phone && (
-                            <li className="flex items-center space-x-2">
-                              <i className="fa-solid fa-mobile-screen text-[#D4AF37] w-4 text-center"></i>
-                              <span>{cvData.phone}</span>
-                            </li>
-                          )}
-                          {cvData.email && (
-                            <li className="flex items-center space-x-2">
-                              <i className="fa-solid fa-envelope text-[#D4AF37] w-4 text-center"></i>
-                              <span className="break-all">{cvData.email}</span>
-                            </li>
-                          )}
-                          {(cvData.address || cvData.city) && (
-                            <li className="flex items-center space-x-2">
-                              <i className="fa-solid fa-location-dot text-[#D4AF37] w-4 text-center"></i>
-                              <span>
-                                {cvData.address && `${cvData.address}, `}
-                                {cvData.city}
-                              </span>
-                            </li>
-                          )}
+                          <li className="flex items-center space-x-2">
+                            <i className="fa-solid fa-mobile-screen text-[#D4AF37] w-4 text-center"></i>
+                            <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                          </li>
+                          <li className="flex items-center space-x-2">
+                            <i className="fa-solid fa-envelope text-[#D4AF37] w-4 text-center"></i>
+                            <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="facilitefacile@gmail.com" className="break-all" />
+                          </li>
+                          <li className="flex items-center space-x-2">
+                            <i className="fa-solid fa-location-dot text-[#D4AF37] w-4 text-center"></i>
+                            <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Pikine" />
+                          </li>
                         </ul>
-                      </div>
+                      </CanvaElementWrapper>
 
                       {/* Qualités */}
-                      {(cvData.qualities?.length > 0) && (
-                        <div className="mb-5">
-                          <h3 className="text-sm font-bold uppercase mb-2 flex items-center border-b border-[#D4AF37]/40 pb-1.5">
-                            <i className="fa-solid fa-star text-[#D4AF37] mr-2"></i>
-                            {cvData.sectionTitles?.qualities?.toUpperCase() || "QUALITÉS"}
-                          </h3>
-                          <ul className="space-y-1.5 text-[10px] font-semibold">
-                            {cvData.qualities.map((q) => (
-                              <li key={q.id} className="flex items-start space-x-1.5">
-                                <i className="fa-solid fa-star text-[#D4AF37] text-[7px] mt-1"></i>
-                                <span>{q.name}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      <CanvaElementWrapper id="qualities" type="quality" name="Qualités" className="mb-5">
+                        <h3 className="text-sm font-bold uppercase mb-2 flex items-center border-b border-[#D4AF37]/40 pb-1.5">
+                          <i className="fa-solid fa-star text-[#D4AF37] mr-2"></i>
+                          {cvData.sectionTitles?.qualities?.toUpperCase() || "QUALITÉS"}
+                        </h3>
+                        <ul className="space-y-1.5 text-[10px] font-semibold">
+                          {(cvData.qualities?.length > 0 ? cvData.qualities : [
+                            { id: 1, name: "Sens de l'organisation" },
+                            { id: 2, name: "Rigueur et autonomie" }
+                          ]).map((q) => (
+                            <li key={q.id} className="flex items-start space-x-1.5">
+                              <i className="fa-solid fa-star text-[#D4AF37] text-[7px] mt-1"></i>
+                              <CanvaText value={q.name} onChange={(v) => setCvData(prev => ({ ...prev, qualities: prev.qualities.map(item => item.id === q.id ? { ...item, name: v } : item) }))} id={`quality-${q.id}`} name="Qualité" />
+                            </li>
+                          ))}
+                        </ul>
+                      </CanvaElementWrapper>
 
                       {/* Informatique */}
-                      {(cvData.itSkills?.length > 0) && (
-                        <div className="mb-5">
-                          <h3 className="text-sm font-bold uppercase mb-2 flex items-center border-b border-[#D4AF37]/40 pb-1.5">
-                            <i className="fa-solid fa-screwdriver-wrench text-[#D4AF37] mr-2"></i>
-                            INFORMATIQUE
-                          </h3>
-                          <ul className="space-y-1.5 text-[10px] font-semibold">
-                            {cvData.itSkills.map((s) => (
-                              <li key={s.id} className="flex items-start space-x-1.5">
-                                <i className="fa-solid fa-star text-[#D4AF37] text-[7px] mt-1"></i>
-                                <span>{s.name}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      <CanvaElementWrapper id="itSkills" type="itSkill" name="Informatique" className="mb-5">
+                        <h3 className="text-sm font-bold uppercase mb-2 flex items-center border-b border-[#D4AF37]/40 pb-1.5">
+                          <i className="fa-solid fa-screwdriver-wrench text-[#D4AF37] mr-2"></i>
+                          INFORMATIQUE
+                        </h3>
+                        <ul className="space-y-1.5 text-[10px] font-semibold">
+                          {(cvData.itSkills?.length > 0 ? cvData.itSkills : [
+                            { id: 1, name: "Bureautique & Excel" },
+                            { id: 2, name: "Gestion pharmaceutique" }
+                          ]).map((s) => (
+                            <li key={s.id} className="flex items-start space-x-1.5">
+                              <i className="fa-solid fa-star text-[#D4AF37] text-[7px] mt-1"></i>
+                              <CanvaText value={s.name} onChange={(v) => setCvData(prev => ({ ...prev, itSkills: prev.itSkills.map(item => item.id === s.id ? { ...item, name: v } : item) }))} id={`it-${s.id}`} name="Logiciel" />
+                            </li>
+                          ))}
+                        </ul>
+                      </CanvaElementWrapper>
 
                       {/* Langues */}
-                      {(cvData.languages?.length > 0) && (
-                        <div className="mb-5">
-                          <h3 className="text-sm font-bold uppercase mb-2 flex items-center border-b border-[#D4AF37]/40 pb-1.5">
-                            <i className="fa-solid fa-globe text-[#D4AF37] mr-2"></i>
-                            {cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}
-                          </h3>
-                          <ul className="space-y-1.5 text-[10px] font-semibold">
-                            {cvData.languages.map((l) => (
-                              <li key={l.id} className="flex items-start space-x-1.5">
-                                <i className="fa-solid fa-star text-[#D4AF37] text-[7px] mt-1"></i>
-                                <span>{l.name} : <span className="font-normal opacity-80">{l.level}</span></span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      <CanvaElementWrapper id="languages" type="language" name="Langues" className="mb-5">
+                        <h3 className="text-sm font-bold uppercase mb-2 flex items-center border-b border-[#D4AF37]/40 pb-1.5">
+                          <i className="fa-solid fa-globe text-[#D4AF37] mr-2"></i>
+                          {cvData.sectionTitles?.languages?.toUpperCase() || "LANGUES"}
+                        </h3>
+                        <ul className="space-y-1.5 text-[10px] font-semibold">
+                          {(cvData.languages?.length > 0 ? cvData.languages : [
+                            { id: 1, name: "Français", level: "Courant" },
+                            { id: 2, name: "Anglais", level: "Moyen" }
+                          ]).map((l) => (
+                            <li key={l.id} className="flex items-start space-x-1.5">
+                              <i className="fa-solid fa-star text-[#D4AF37] text-[7px] mt-1"></i>
+                              <span>
+                                <CanvaText value={l.name} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(item => item.id === l.id ? { ...item, name: v } : item) }))} id={`lang-name-${l.id}`} name="Langue" />
+                                {" : "}
+                                <span className="font-normal opacity-80">
+                                  <CanvaText value={l.level} onChange={(v) => setCvData(prev => ({ ...prev, languages: prev.languages.map(item => item.id === l.id ? { ...item, level: v } : item) }))} id={`lang-lvl-${l.id}`} name="Niveau" />
+                                </span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CanvaElementWrapper>
 
                       {/* Centres d'intérêt */}
-                      {(cvData.hobbies?.length > 0) && (
-                        <div className="mb-5">
-                          <h3 className="text-sm font-bold uppercase mb-2 flex items-center border-b border-[#D4AF37]/40 pb-1.5">
-                            <i className="fa-regular fa-lightbulb text-[#D4AF37] mr-2"></i>
-                            CENTRES D'INTÉRÊT
-                          </h3>
-                          <ul className="space-y-1.5 text-[10px] font-semibold">
-                            {cvData.hobbies.map((h) => (
-                              <li key={h.id} className="flex items-start space-x-1.5">
-                                <i className="fa-solid fa-star text-[#D4AF37] text-[7px] mt-1"></i>
-                                <span>{h.name}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      <CanvaElementWrapper id="hobbies" type="hobby" name="Centres d'intérêt" className="mb-5">
+                        <h3 className="text-sm font-bold uppercase mb-2 flex items-center border-b border-[#D4AF37]/40 pb-1.5">
+                          <i className="fa-regular fa-lightbulb text-[#D4AF37] mr-2"></i>
+                          CENTRES D'INTÉRÊT
+                        </h3>
+                        <ul className="space-y-1.5 text-[10px] font-semibold">
+                          {(cvData.hobbies?.length > 0 ? cvData.hobbies : [
+                            { id: 1, name: "Santé et bien-être" },
+                            { id: 2, name: "Lecture" }
+                          ]).map((h) => (
+                            <li key={h.id} className="flex items-start space-x-1.5">
+                              <i className="fa-solid fa-star text-[#D4AF37] text-[7px] mt-1"></i>
+                              <CanvaText value={h.name} onChange={(v) => setCvData(prev => ({ ...prev, hobbies: prev.hobbies.map(item => item.id === h.id ? { ...item, name: v } : item) }))} id={`hobby-${h.id}`} name="Centre d'intérêt" />
+                            </li>
+                          ))}
+                        </ul>
+                      </CanvaElementWrapper>
                     </div>
 
                     {/* Colonne droite (blanche) */}
                     <div className="w-[65%] bg-white flex flex-col overflow-hidden">
                       {/* Bandeau noir en tête */}
-                      <div className="bg-black text-white px-6 py-6 flex-shrink-0">
-                        <h1 className="text-2xl font-black uppercase tracking-wide leading-tight">
-                          {cvData.firstName || "Prénom"} {cvData.lastName || "Nom"}
+                      <CanvaElementWrapper id="header" type="header" name="En-tête" className="bg-black text-white px-6 py-6 flex-shrink-0">
+                        <h1 className="text-2xl font-black uppercase tracking-wide leading-tight flex items-center gap-2 flex-wrap">
+                          <CanvaText value={cvData.firstName} onChange={(v) => setCvData(prev => ({ ...prev, firstName: v }))} id="firstName" name="Prénom" placeholder="Prénom" />
+                          <CanvaText value={cvData.lastName} onChange={(v) => setCvData(prev => ({ ...prev, lastName: v }))} id="lastName" name="Nom" placeholder="Nom" />
                         </h1>
                         <p className="text-[11px] font-light text-white/80 mt-1">
-                          {cvData.experiences[0]?.title || "Titre professionnel"}
+                          <CanvaText value={cvData.jobTitle || cvData.experiences[0]?.title} onChange={(v) => setCvData(prev => ({ ...prev, jobTitle: v }))} id="jobTitle" name="Titre professionnel" placeholder="Titre professionnel" />
                         </p>
-                      </div>
+                      </CanvaElementWrapper>
 
                       <div className="px-6 py-5 flex-grow flex flex-col space-y-4 overflow-hidden">
                         {/* Profil Professionnel */}
-                        {cvData.profile && (
-                          <div>
-                            <h3 className="text-sm font-bold text-black flex items-center mb-1.5">
-                              <span className="w-4 h-4 rounded-full bg-black flex items-center justify-center mr-2 flex-shrink-0">
-                                <i className="fa-solid fa-bullseye text-white text-[8px]"></i>
-                              </span>
-                              {cvData.sectionTitles?.profile || "Profil Professionnel"}
-                            </h3>
-                            <p className="text-[10px] text-gray-800 leading-relaxed font-medium text-justify">
-                              {cvData.profile}
-                            </p>
-                          </div>
-                        )}
+                        <CanvaElementWrapper id="profile" type="profile" name="Profil Professionnel">
+                          <h3 className="text-sm font-bold text-black flex items-center mb-1.5">
+                            <span className="w-4 h-4 rounded-full bg-black flex items-center justify-center mr-2 flex-shrink-0">
+                              <i className="fa-solid fa-bullseye text-white text-[8px]"></i>
+                            </span>
+                            {cvData.sectionTitles?.profile || "Profil Professionnel"}
+                          </h3>
+                          <p className="text-[10px] text-gray-800 leading-relaxed font-medium text-justify">
+                            <CanvaText value={cvData.profile} onChange={(v) => setCvData(prev => ({ ...prev, profile: v }))} id="profile" name="Résumé de Profil" multiline={true} placeholder="Professionnelle polyvalente du secteur pharmaceutique..." className="block text-justify" />
+                          </p>
+                        </CanvaElementWrapper>
 
                         {/* Expériences Professionnelles */}
-                        {(cvData.experiences?.length > 0) && (
-                          <div>
-                            <h3 className="text-sm font-bold text-black flex items-center mb-2">
-                              <span className="w-4 h-4 rounded-full bg-black flex items-center justify-center mr-2 flex-shrink-0">
-                                <i className="fa-solid fa-briefcase text-white text-[8px]"></i>
-                              </span>
-                              {cvData.sectionTitles?.experience || "Expériences Professionnelles"}
-                            </h3>
-                            <div className="space-y-2.5">
-                              {cvData.experiences.map((exp) => (
-                                <div key={exp.id}>
-                                  <div className="flex items-start justify-between gap-3">
-                                    <span className="font-bold text-[10.5px] text-gray-900">
-                                      {exp.title || "Poste"} {exp.employer ? `— ${exp.employer}` : ""}
-                                    </span>
-                                    <span className="text-[9px] font-semibold text-gray-500 flex-shrink-0 whitespace-nowrap">
-                                      {exp.startDate || ""}{exp.startDate ? " – " : ""}{exp.current ? "Présent" : exp.endDate || ""}
-                                    </span>
-                                  </div>
-                                  {exp.description && (
-                                    <ul className="text-[9px] text-gray-700 leading-tight space-y-0.5 mt-1 list-disc list-inside text-justify">
-                                      {exp.description.split("\n").filter(Boolean).map((line, i) => (
-                                        <li key={i}>{line.replace(/^[•\-\*]\s*/, "")}</li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Formation et Diplômes */}
-                        {(cvData.educations?.length > 0) && (
-                          <div>
-                            <h3 className="text-sm font-bold text-black flex items-center mb-2">
-                              <span className="w-4 h-4 rounded-full bg-black flex items-center justify-center mr-2 flex-shrink-0">
-                                <i className="fa-solid fa-graduation-cap text-white text-[8px]"></i>
-                              </span>
-                              {cvData.sectionTitles?.education || "Formation et Diplômes"}
-                            </h3>
-                            <div className="space-y-1.5">
-                              {cvData.educations.map((edu) => (
-                                <div key={edu.id} className="flex items-start justify-between gap-3">
-                                  <span className="font-bold text-[10px] text-gray-900">
-                                    {edu.degree || "Diplôme"}{edu.school ? ` — ${edu.school}` : ""}
+                        <div>
+                          <h3 className="text-sm font-bold text-black flex items-center mb-2">
+                            <span className="w-4 h-4 rounded-full bg-black flex items-center justify-center mr-2 flex-shrink-0">
+                              <i className="fa-solid fa-briefcase text-white text-[8px]"></i>
+                            </span>
+                            {cvData.sectionTitles?.experience || "Expériences Professionnelles"}
+                          </h3>
+                          <div className="space-y-2.5">
+                            {cvData.experiences.map((exp) => (
+                              <CanvaElementWrapper key={exp.id} id={exp.id} type="experience" name={`Expérience : ${exp.title || "Poste"}`} className="p-1 rounded-lg">
+                                <div className="flex items-start justify-between gap-3">
+                                  <span className="font-bold text-[10.5px] text-gray-900">
+                                    <CanvaText value={exp.title} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, title: v } : e) }))} id={`exp-title-${exp.id}`} name="Poste" placeholder="Poste" />
+                                    {" — "}
+                                    <CanvaText value={exp.employer} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, employer: v } : e) }))} id={`exp-emp-${exp.id}`} name="Entreprise" placeholder="Entreprise" />
                                   </span>
                                   <span className="text-[9px] font-semibold text-gray-500 flex-shrink-0 whitespace-nowrap">
-                                    {edu.startDate || ""}{edu.startDate ? " – " : ""}{edu.current ? "En cours" : edu.endDate || ""}
+                                    <CanvaText value={exp.startDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, startDate: v } : e) }))} id={`exp-start-${exp.id}`} name="Date de début" placeholder="2024" />
+                                    {" – "}
+                                    <CanvaText value={exp.current ? "Présent" : exp.endDate} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, endDate: v } : e) }))} id={`exp-end-${exp.id}`} name="Date de fin" placeholder="Présent" />
                                   </span>
                                 </div>
-                              ))}
-                            </div>
+                                {exp.description && (
+                                  <div className="text-[9px] text-gray-700 leading-tight space-y-0.5 mt-1 text-justify">
+                                    <CanvaText value={exp.description} onChange={(v) => setCvData(prev => ({ ...prev, experiences: prev.experiences.map(e => e.id === exp.id ? { ...e, description: v } : e) }))} id={`exp-desc-${exp.id}`} name="Missions" multiline={true} className="block whitespace-pre-line" />
+                                  </div>
+                                )}
+                              </CanvaElementWrapper>
+                            ))}
                           </div>
-                        )}
+                        </div>
+
+                        {/* Formation et Diplômes */}
+                        <div>
+                          <h3 className="text-sm font-bold text-black flex items-center mb-2">
+                            <span className="w-4 h-4 rounded-full bg-black flex items-center justify-center mr-2 flex-shrink-0">
+                              <i className="fa-solid fa-graduation-cap text-white text-[8px]"></i>
+                            </span>
+                            {cvData.sectionTitles?.education || "Formation et Diplômes"}
+                          </h3>
+                          <div className="space-y-1.5">
+                            {cvData.educations.map((edu) => (
+                              <CanvaElementWrapper key={edu.id} id={edu.id} type="education" name={`Formation : ${edu.degree || "Diplôme"}`} className="p-1 rounded-lg">
+                                <div className="flex items-start justify-between gap-3">
+                                  <span className="font-bold text-[10px] text-gray-900">
+                                    <CanvaText value={edu.degree} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, degree: v } : e) }))} id={`edu-deg-${edu.id}`} name="Diplôme" placeholder="Diplôme" />
+                                    {" — "}
+                                    <CanvaText value={edu.school} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, school: v } : e) }))} id={`edu-sch-${edu.id}`} name="Établissement" placeholder="Établissement" />
+                                  </span>
+                                  <span className="text-[9px] font-semibold text-gray-500 flex-shrink-0 whitespace-nowrap">
+                                    <CanvaText value={edu.startDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, startDate: v } : e) }))} id={`edu-start-${edu.id}`} name="Année début" placeholder="2023" />
+                                    {" – "}
+                                    <CanvaText value={edu.current ? "En cours" : edu.endDate} onChange={(v) => setCvData(prev => ({ ...prev, educations: prev.educations.map(e => e.id === edu.id ? { ...e, endDate: v } : e) }))} id={`edu-end-${edu.id}`} name="Année fin" placeholder="2025" />
+                                  </span>
+                                </div>
+                              </CanvaElementWrapper>
+                            ))}
+                          </div>
+                        </div>
 
                         {/* Compétences Clés */}
-                        {(cvData.skills?.length > 0) && (
-                          <div>
-                            <h3 className="text-sm font-bold text-black flex items-center mb-2">
-                              <span className="w-4 h-4 rounded-full bg-black flex items-center justify-center mr-2 flex-shrink-0">
-                                <i className="fa-solid fa-star text-white text-[8px]"></i>
-                              </span>
-                              {cvData.sectionTitles?.skills || "Compétences Clés"}
-                            </h3>
-                            <ul className="text-[10px] text-gray-800 leading-relaxed space-y-1">
-                              {cvData.skills.map((skill) => (
-                                <li key={skill.id}>
-                                  <span className="font-bold text-gray-900">{skill.name}</span>
-                                  {skill.level && <span className="font-normal"> : {skill.level}</span>}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                        <CanvaElementWrapper id="skills" type="skill" name="Compétences Clés">
+                          <h3 className="text-sm font-bold text-black flex items-center mb-2">
+                            <span className="w-4 h-4 rounded-full bg-black flex items-center justify-center mr-2 flex-shrink-0">
+                              <i className="fa-solid fa-star text-white text-[8px]"></i>
+                            </span>
+                            {cvData.sectionTitles?.skills || "Compétences Clés"}
+                          </h3>
+                          <ul className="text-[10px] text-gray-800 leading-relaxed space-y-1">
+                            {(cvData.skills?.length > 0 ? cvData.skills : [
+                              { id: 1, name: "Gestion de stocks et relation client" }
+                            ]).map((skill) => (
+                              <li key={skill.id}>
+                                <CanvaText value={skill.name} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, name: v } : s) }))} id={`skill-key-${skill.id}`} name="Compétence" className="font-bold text-gray-900" />
+                                {skill.level && <span> : <CanvaText value={skill.level} onChange={(v) => setCvData(prev => ({ ...prev, skills: prev.skills.map(s => s.id === skill.id ? { ...s, level: v } : s) }))} id={`skill-key-lvl-${skill.id}`} name="Niveau" /></span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </CanvaElementWrapper>
                       </div>
 
                       <div className="text-[8px] text-gray-400 font-medium text-center border-t border-gray-100 p-3 flex-shrink-0">
