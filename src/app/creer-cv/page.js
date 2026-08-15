@@ -341,6 +341,7 @@ export default function CreerCv() {
   const [clipboardElement, setClipboardElement] = useState(null);
   const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0, element: null });
   const contextMenuRef = useRef(null);
+  const [isMagicLoading, setIsMagicLoading] = useState(false);
   
   // Mobile tab switcher: "edit" (form) or "preview" (document sheet)
   const [mobileTab, setMobileTab] = useState("edit");
@@ -1188,13 +1189,55 @@ export default function CreerCv() {
     triggerToast(cvPages[pageIndex]?.isLocked ? "Page déverrouillée" : "Page verrouillée");
   };
 
-  const handleAiRewriteSummary = () => {
+  // --- ÉTAPE 4 : FONCTION D'APPEL ÉCRITURE MAGIQUE IA GEMINI ---
+  const utiliserEcritureMagique = async (texteSelectionne) => {
+    if (!texteSelectionne || !texteSelectionne.trim()) {
+      triggerToast("Le texte à améliorer est vide.", "fa-circle-exclamation");
+      return texteSelectionne;
+    }
+    try {
+      setIsMagicLoading(true);
+      console.log("L'IA réfléchit..."); 
+      triggerToast("✨ L'IA Gemini améliore votre texte...", "fa-wand-magic-sparkles");
+
+      const reponse = await fetch('/api/magique', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ texteInitial: texteSelectionne }),
+      });
+
+      const data = await reponse.json();
+
+      if (data.success && data.texteAmeliore) {
+        console.log("Texte amélioré :", data.texteAmeliore);
+        triggerToast("✨ Texte optimisé avec succès par l'IA !", "fa-circle-check");
+        return data.texteAmeliore; 
+      } else {
+        alert("Erreur lors de l'amélioration du texte.");
+        return texteSelectionne; // Fallback
+      }
+    } catch (error) {
+      console.error("Problème de connexion", error);
+      triggerToast("Problème de connexion avec l'IA.", "fa-triangle-exclamation");
+      return texteSelectionne;
+    } finally {
+      setIsMagicLoading(false);
+    }
+  };
+
+  const handleAiRewriteSummary = async () => {
     const job = cvData.jobTitle || "Professionnel";
-    setCvData(prev => ({
-      ...prev,
-      profileSummary: `Professionnel dynamique et orienté résultats avec une solide expertise en ${job}. Reconnu(e) pour ma rigueur, ma capacité d'adaptation rapide et mon engagement vers l'excellence opérationnelle. Passionné(e) par la création de valeur et l'atteinte des objectifs stratégiques au sein d'environnements exigeants.`
-    }));
-    triggerToast("Profil reformulé par l'IA avec succès !");
+    const initialText = cvData.profile || cvData.profileSummary || `Professionnel dynamique et orienté résultats avec une solide expertise en ${job}. Reconnu(e) pour ma rigueur, ma capacité d'adaptation rapide et mon engagement vers l'excellence opérationnelle.`;
+    const texteAmeliore = await utiliserEcritureMagique(initialText);
+    if (texteAmeliore) {
+      setCvData(prev => ({
+        ...prev,
+        profile: texteAmeliore,
+        profileSummary: texteAmeliore
+      }));
+    }
   };
 
   const handleAiAddKeywords = () => {
@@ -1346,23 +1389,49 @@ export default function CreerCv() {
     setContextMenu({ show: false, x: 0, y: 0, element: null });
   };
 
-  const handleMagicWrite = (elem) => {
+  const handleMagicWrite = async (elem) => {
     if (!elem) return;
-    if (elem.type === "profile") {
-      handleAiRewriteSummary();
-    } else if (elem.type === "experience") {
-      setCvData(prev => ({
-        ...prev,
-        experiences: prev.experiences.map(e => e.id === elem.id ? {
-          ...e,
-          description: `• Déployer et piloter avec succès les initiatives clés dans le domaine ${e.title}.\n• Optimiser les processus opérationnels et surpasser les indicateurs de performance attendus.\n• Garantir une satisfaction client maximale et une coordination d'équipe exemplaire.`
-        } : e)
-      }));
-      triggerToast("Description d'expérience enrichie par l'IA !", "fa-wand-magic-sparkles");
-    } else {
-      triggerToast("Texte optimisé par l'IA avec succès !", "fa-wand-magic-sparkles");
-    }
     setContextMenu({ show: false, x: 0, y: 0, element: null });
+
+    if (elem.type === "profile") {
+      await handleAiRewriteSummary();
+    } else if (elem.type === "experience") {
+      const exp = cvData.experiences.find(e => e.id === elem.id);
+      const initialText = exp?.description || `Poste : ${exp?.title || "Technicien"} chez ${exp?.employer || "Entreprise"}.\n• Missions principales et réalisations majeures.\n• Gestion d'équipe et optimisation des performances.`;
+      const improved = await utiliserEcritureMagique(initialText);
+      if (improved) {
+        setCvData(prev => ({
+          ...prev,
+          experiences: prev.experiences.map(e => e.id === elem.id ? { ...e, description: improved } : e)
+        }));
+      }
+    } else if (elem.type === "education") {
+      const edu = cvData.educations.find(e => e.id === elem.id);
+      const initialText = `${edu?.degree || "Diplôme"} à ${edu?.school || "Établissement"}`;
+      const improved = await utiliserEcritureMagique(initialText);
+      if (improved) {
+        setCvData(prev => ({
+          ...prev,
+          educations: prev.educations.map(e => e.id === elem.id ? { ...e, degree: improved } : e)
+        }));
+      }
+    } else if (elem.type === "skill") {
+      const skill = cvData.skills.find(s => s.id === elem.id);
+      const initialText = skill?.name || "Compétence technique et gestion de projet";
+      const improved = await utiliserEcritureMagique(initialText);
+      if (improved) {
+        setCvData(prev => ({
+          ...prev,
+          skills: prev.skills.map(s => s.id === elem.id ? { ...s, name: improved } : s)
+        }));
+      }
+    } else {
+      const initialText = cvData.jobTitle || "Titre professionnel";
+      const improved = await utiliserEcritureMagique(initialText);
+      if (improved) {
+        setCvData(prev => ({ ...prev, jobTitle: improved }));
+      }
+    }
   };
 
   const handleCopyElement = () => {
@@ -6234,6 +6303,20 @@ export default function CreerCv() {
               <span>✨ Écriture magique IA</span>
             </div>
           </button>
+        </div>
+      )}
+
+      {/* Visual Loader when Magic AI is thinking */}
+      {isMagicLoading && (
+        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-xs flex items-center justify-center animate-fadeIn no-print">
+          <div className="bg-slate-900 border border-purple-500/60 p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3.5 text-white max-w-xs text-center">
+            <div className="relative w-14 h-14 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-purple-500/30 border-t-purple-400 animate-spin"></div>
+              <i className="fa-solid fa-wand-magic-sparkles text-xl text-purple-300 animate-pulse"></i>
+            </div>
+            <div className="text-sm font-black tracking-wide text-purple-200">✨ Écriture Magique IA</div>
+            <div className="text-xs text-slate-300 font-medium">L&apos;IA Gemini analyse et optimise votre texte en temps réel...</div>
+          </div>
         </div>
       )}
 
