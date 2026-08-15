@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
@@ -281,6 +281,231 @@ const cvTemplates = [
   { id: "professionnel", num: 8, name: "Modèle 8 — Professionnel Canva", category: "Style Canva 1:1 (Cadres & Badges)", icon: "fa-palette", previewUrl: "/model8.png", accentColor: "#382F2D" },
   { id: "elegance", num: 9, name: "Modèle 9 — Élégance", category: "Sidebar noire, touches dorées", icon: "fa-crown", previewUrl: "/model9.png", accentColor: "#B45309" }
 ];
+
+// --- CONTEXTE REACT DU STUDIO CANVA ---
+const CanvaStudioContext = createContext({
+  lockedElementIds: [],
+  selectedCanvasElement: null,
+  isAdvancedEditOpen: false,
+  setSelectedCanvasElement: () => {},
+  openContextMenu: () => {},
+  handleMoveItem: () => {},
+  handleDuplicateElement: () => {},
+  handleToggleLock: () => {},
+  handleMagicWrite: () => {},
+  handleDeleteElement: () => {}
+});
+
+// --- COMPOSANT D'ÉDITION DE TEXTE DIRECTE EN LIGNE (STABLE, ZERO-REMUNTING, ULTRA-RÉACTIF) ---
+function CanvaText({
+  value = "",
+  onChange,
+  tagName: Tag = "span",
+  className = "",
+  placeholder = "Texte...",
+  id = "",
+  type = "text",
+  name = "Texte",
+  multiline = false
+}) {
+  const {
+    lockedElementIds,
+    selectedCanvasElement,
+    isAdvancedEditOpen,
+    setSelectedCanvasElement,
+    openContextMenu
+  } = useContext(CanvaStudioContext);
+
+  const isLocked = lockedElementIds?.includes(id);
+  const isSelected = selectedCanvasElement?.id === id;
+  const elementRef = useRef(null);
+  const isFocusedRef = useRef(false);
+
+  // Synchronise la valeur venant du parent uniquement lorsque l'utilisateur n'a PAS le focus actif de frappe
+  useEffect(() => {
+    if (elementRef.current && !isFocusedRef.current) {
+      const currentVal = elementRef.current.innerText;
+      const targetVal = value || (isAdvancedEditOpen ? placeholder : "");
+      if (currentVal !== targetVal) {
+        elementRef.current.innerText = targetVal;
+      }
+    }
+  }, [value, isAdvancedEditOpen, placeholder]);
+
+  const handleInput = (e) => {
+    const newText = e.currentTarget.innerText;
+    if (onChange) {
+      onChange(newText);
+    }
+  };
+
+  const handleFocus = () => {
+    isFocusedRef.current = true;
+    setSelectedCanvasElement({ id, type, name, value: elementRef.current?.innerText || value });
+  };
+
+  const handleBlur = (e) => {
+    isFocusedRef.current = false;
+    const newText = e.currentTarget.innerText;
+    if (onChange && newText !== value) {
+      onChange(newText);
+    }
+  };
+
+  return (
+    <Tag
+      ref={elementRef}
+      contentEditable={!isLocked}
+      suppressContentEditableWarning={true}
+      onInput={handleInput}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onClick={(e) => {
+        e.stopPropagation();
+        setSelectedCanvasElement({ id, type, name, value: elementRef.current?.innerText || value });
+      }}
+      onKeyDown={(e) => {
+        // Empêche les touches Suppr/Backspace de déclencher les raccourcis globaux du canva pendant la saisie
+        e.stopPropagation();
+        if (!multiline && e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedCanvasElement({ id, type, name, value: elementRef.current?.innerText || value });
+        if (openContextMenu) {
+          openContextMenu(e, { id, type, name, value: elementRef.current?.innerText || value });
+        }
+      }}
+      className={`outline-none transition-all ${
+        isSelected
+          ? "ring-2 ring-[#8B3DFF] ring-offset-1 rounded-sm bg-purple-500/10 px-0.5"
+          : isAdvancedEditOpen
+          ? "hover:ring-1 hover:ring-purple-400/60 rounded-xs cursor-text"
+          : "cursor-text hover:outline-dashed hover:outline-1 hover:outline-gray-300"
+      } ${className}`}
+      data-placeholder={placeholder}
+      dangerouslySetInnerHTML={{ __html: value || (isAdvancedEditOpen ? placeholder : "") }}
+    />
+  );
+}
+
+// --- CONTENEUR D'ÉLÉMENT CANVA INTERACTIF (CADRE DE SÉLECTION, ACTIONS FLOTTANTES, ZÉRO PERTE DE FOCUS) ---
+function CanvaElementWrapper({ id, type, name, children, className = "", style = {} }) {
+  const {
+    lockedElementIds,
+    selectedCanvasElement,
+    isAdvancedEditOpen,
+    setSelectedCanvasElement,
+    openContextMenu,
+    handleMoveItem,
+    handleDuplicateElement,
+    handleToggleLock,
+    handleMagicWrite,
+    handleDeleteElement
+  } = useContext(CanvaStudioContext);
+
+  const isSelected = selectedCanvasElement?.id === id;
+  const isLocked = lockedElementIds?.includes(id);
+
+  if (!isAdvancedEditOpen) {
+    return <div className={className} style={style}>{children}</div>;
+  }
+
+  return (
+    <div
+      onClick={(e) => {
+        if (e.target.isContentEditable) return;
+        e.stopPropagation();
+        setSelectedCanvasElement({ id, type, name });
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedCanvasElement({ id, type, name });
+        if (openContextMenu) {
+          openContextMenu(e, { id, type, name });
+        }
+      }}
+      className={`relative transition-all ${
+        isSelected
+          ? "ring-2 ring-[#8B3DFF] ring-offset-1 z-30 shadow-md rounded-lg"
+          : "hover:outline hover:outline-1 hover:outline-purple-400/80 hover:outline-dashed cursor-pointer group/canva-elem"
+      } ${className}`}
+      style={style}
+    >
+      {isSelected && (
+        <div className="absolute -top-3.5 -left-1 z-40 bg-[#8B3DFF] text-white text-[8px] font-black px-1.5 py-0.2 rounded shadow-md pointer-events-none select-none uppercase tracking-wider flex items-center gap-1">
+          <span>{name}</span>
+          {isLocked && <i className="fa-solid fa-lock text-[7px]"></i>}
+        </div>
+      )}
+
+      {isSelected && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute -top-10 left-1/2 -translate-x-1/2 z-40 bg-[#111827] text-white px-2 py-1 rounded-xl shadow-2xl flex items-center gap-1 border border-slate-700 select-none animate-fadeIn no-print"
+        >
+          <button
+            type="button"
+            onClick={() => handleMoveItem && handleMoveItem({ id, type }, "up")}
+            className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
+            title="Monter"
+          >
+            <i className="fa-solid fa-arrow-up"></i>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleMoveItem && handleMoveItem({ id, type }, "down")}
+            className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
+            title="Descendre"
+          >
+            <i className="fa-solid fa-arrow-down"></i>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDuplicateElement && handleDuplicateElement({ id, type })}
+            className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
+            title="Dupliquer (Ctrl+D)"
+          >
+            <i className="fa-regular fa-copy"></i>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleToggleLock && handleToggleLock({ id, type, name })}
+            className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] transition cursor-pointer ${
+              isLocked ? "bg-amber-500/30 text-amber-300" : "hover:bg-slate-800 text-slate-300 hover:text-white"
+            }`}
+            title="Verrouiller"
+          >
+            <i className={`fa-solid ${isLocked ? "fa-lock" : "fa-lock-open"}`}></i>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleMagicWrite && handleMagicWrite({ id, type })}
+            className="w-6 h-6 rounded-lg hover:bg-purple-600/40 text-purple-300 hover:text-purple-200 flex items-center justify-center text-[10px] transition cursor-pointer"
+            title="Écriture Magique IA"
+          >
+            <i className="fa-solid fa-wand-magic-sparkles"></i>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDeleteElement && handleDeleteElement({ id, type })}
+            className="w-6 h-6 rounded-lg hover:bg-red-600/40 text-red-400 hover:text-red-200 flex items-center justify-center text-[10px] transition cursor-pointer"
+            title="Supprimer (Suppr)"
+          >
+            <i className="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      )}
+
+      {children}
+    </div>
+  );
+}
 
 export default function CreerCv() {
   const [selectedLang, setSelectedLang] = useState("FR");
@@ -1464,12 +1689,13 @@ export default function CreerCv() {
       }
     };
     const handleKeyDown = (e) => {
+      const isInputActive = document.activeElement?.isContentEditable || ["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName);
       if (e.key === "Escape") {
         setContextMenu({ show: false, x: 0, y: 0, element: null });
         setSelectedCanvasElement(null);
-      } else if (e.key === "Delete" && selectedCanvasElement) {
+      } else if (e.key === "Delete" && selectedCanvasElement && !isInputActive) {
         handleDeleteElement(selectedCanvasElement);
-      } else if (e.ctrlKey && e.key === "d" && selectedCanvasElement) {
+      } else if (e.ctrlKey && e.key === "d" && selectedCanvasElement && !isInputActive) {
         e.preventDefault();
         handleDuplicateElement(selectedCanvasElement);
       }
@@ -1482,169 +1708,13 @@ export default function CreerCv() {
     };
   }, [contextMenu.show, selectedCanvasElement]);
 
-  // --- COMPOSANT D'ÉDITION DE TEXTE DIRECTE EN LIGNE (INLINE CANVA STYLE) ---
-  const CanvaText = ({
-    value,
-    onChange,
-    tagName: Tag = "span",
-    className = "",
-    placeholder = "Texte...",
-    id = "",
-    type = "text",
-    name = "Texte",
-    multiline = false
-  }) => {
-    const isLocked = lockedElementIds.includes(id);
-    const isSelected = selectedCanvasElement?.id === id;
-
-    return (
-      <Tag
-        contentEditable={!isLocked}
-        suppressContentEditableWarning={true}
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedCanvasElement({ id, type, name, value });
-        }}
-        onFocus={(e) => {
-          setSelectedCanvasElement({ id, type, name, value });
-        }}
-        onBlur={(e) => {
-          const newText = e.currentTarget.innerText;
-          if (onChange && newText !== value) {
-            onChange(newText);
-          }
-        }}
-        onKeyDown={(e) => {
-          if (!multiline && e.key === "Enter") {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setSelectedCanvasElement({ id, type, name, value });
-          setContextMenu({
-            show: true,
-            x: Math.min(e.clientX, typeof window !== "undefined" ? window.innerWidth - 270 : 500),
-            y: Math.min(e.clientY, typeof window !== "undefined" ? window.innerHeight - 400 : 300),
-            element: { id, type, name }
-          });
-        }}
-        className={`outline-none transition-all ${
-          isSelected
-            ? "ring-2 ring-[#8B3DFF] ring-offset-1 rounded-sm bg-purple-500/10 px-0.5"
-            : isAdvancedEditOpen
-            ? "hover:ring-1 hover:ring-purple-400/60 rounded-xs cursor-text"
-            : "cursor-text hover:outline-dashed hover:outline-1 hover:outline-gray-300"
-        } ${className}`}
-      >
-        {value || (isAdvancedEditOpen ? placeholder : "")}
-      </Tag>
-    );
-  };
-
-  // Canva Interactive Element Wrapper
-  const CanvaElementWrapper = ({ id, type, name, children, className = "", style = {} }) => {
-    const isSelected = selectedCanvasElement?.id === id;
-    const isLocked = lockedElementIds.includes(id);
-
-    if (!isAdvancedEditOpen) {
-      return <div className={className} style={style}>{children}</div>;
-    }
-
-    return (
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedCanvasElement({ id, type, name });
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setSelectedCanvasElement({ id, type, name });
-          setContextMenu({
-            show: true,
-            x: Math.min(e.clientX, typeof window !== "undefined" ? window.innerWidth - 270 : 500),
-            y: Math.min(e.clientY, typeof window !== "undefined" ? window.innerHeight - 400 : 300),
-            element: { id, type, name }
-          });
-        }}
-        className={`relative transition-all cursor-pointer group/canva-elem ${
-          isSelected
-            ? "ring-2 ring-[#8B3DFF] ring-offset-1 z-30 shadow-md rounded-lg"
-            : "hover:outline hover:outline-1 hover:outline-purple-400/80 hover:outline-dashed"
-        } ${className}`}
-        style={style}
-      >
-        {isSelected && (
-          <div className="absolute -top-3.5 -left-1 z-40 bg-[#8B3DFF] text-white text-[8px] font-black px-1.5 py-0.2 rounded shadow-md pointer-events-none select-none uppercase tracking-wider flex items-center gap-1">
-            <span>{name}</span>
-            {isLocked && <i className="fa-solid fa-lock text-[7px]"></i>}
-          </div>
-        )}
-
-        {isSelected && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="absolute -top-10 left-1/2 -translate-x-1/2 z-40 bg-[#111827] text-white px-2 py-1 rounded-xl shadow-2xl flex items-center gap-1 border border-slate-700 select-none animate-fadeIn"
-          >
-            <button
-              type="button"
-              onClick={() => handleMoveItem({ id, type }, "up")}
-              className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
-              title="Monter"
-            >
-              <i className="fa-solid fa-arrow-up"></i>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleMoveItem({ id, type }, "down")}
-              className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
-              title="Descendre"
-            >
-              <i className="fa-solid fa-arrow-down"></i>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDuplicateElement({ id, type })}
-              className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
-              title="Dupliquer (Ctrl+D)"
-            >
-              <i className="fa-regular fa-copy"></i>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleToggleLock({ id, type, name })}
-              className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] transition cursor-pointer ${
-                isLocked ? "bg-amber-500/30 text-amber-300" : "hover:bg-slate-800 text-slate-300 hover:text-white"
-              }`}
-              title="Verrouiller"
-            >
-              <i className={`fa-solid ${isLocked ? "fa-lock" : "fa-lock-open"}`}></i>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleMagicWrite({ id, type })}
-              className="w-6 h-6 rounded-lg hover:bg-purple-600/40 text-purple-300 hover:text-purple-200 flex items-center justify-center text-[10px] transition cursor-pointer"
-              title="Écriture Magique IA"
-            >
-              <i className="fa-solid fa-wand-magic-sparkles"></i>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDeleteElement({ id, type })}
-              className="w-6 h-6 rounded-lg hover:bg-red-600/40 text-red-400 hover:text-red-200 flex items-center justify-center text-[10px] transition cursor-pointer"
-              title="Supprimer (Suppr)"
-            >
-              <i className="fa-solid fa-trash"></i>
-            </button>
-          </div>
-        )}
-
-        {children}
-      </div>
-    );
+  const openContextMenu = (e, elem) => {
+    setContextMenu({
+      show: true,
+      x: Math.min(e.clientX, typeof window !== "undefined" ? window.innerWidth - 270 : 500),
+      y: Math.min(e.clientY, typeof window !== "undefined" ? window.innerHeight - 400 : 300),
+      element: elem
+    });
   };
 
   useEffect(() => {
@@ -1656,8 +1726,21 @@ export default function CreerCv() {
     }
   }, [isPreviewOpen]);
 
+  const studioContextValue = {
+    lockedElementIds,
+    selectedCanvasElement,
+    isAdvancedEditOpen,
+    setSelectedCanvasElement,
+    openContextMenu,
+    handleMoveItem,
+    handleDuplicateElement,
+    handleToggleLock,
+    handleMagicWrite,
+    handleDeleteElement
+  };
+
   return (
-    <>
+    <CanvaStudioContext.Provider value={studioContextValue}>
       {/* Toast Notification Top Floating */}
       <div
         className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
@@ -6596,6 +6679,6 @@ export default function CreerCv() {
           }
         }
       `}</style>
-    </>
+    </CanvaStudioContext.Provider>
   );
 }
