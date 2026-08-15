@@ -1150,17 +1150,22 @@ export default function CreerCv() {
   };
 
   // Canva Page Management
-  const handleAddPage = (type = "cv_p2") => {
+  const handleAddPage = (type = "blank") => {
     const newId = Date.now();
     const newPage = {
       id: newId,
       type: type,
-      title: type === "cover_letter" ? `Page ${cvPages.length + 1} — Lettre de motivation` : `Page ${cvPages.length + 1} — Suite du CV`,
-      isLocked: false
+      title: type === "blank"
+        ? `Page ${cvPages.length + 1} — Page Blanche Vierge`
+        : type === "cover_letter"
+        ? `Page ${cvPages.length + 1} — Lettre de motivation`
+        : `Page ${cvPages.length + 1} — Suite du CV`,
+      isLocked: false,
+      notes: ""
     };
     setCvPages(prev => [...prev, newPage]);
     setShowAddPageMenu(false);
-    triggerToast(`Page ${cvPages.length + 1} ajoutée avec succès !`);
+    triggerToast(type === "blank" ? "Nouvelle page blanche ajoutée !" : `Page ${cvPages.length + 1} ajoutée avec succès !`, "fa-file-circle-plus");
   };
 
   const handleDuplicatePage = (pageIndex) => {
@@ -3588,7 +3593,7 @@ export default function CreerCv() {
           }`}>
             
             {/* Styled Sheet Wrapper (scaled with CSS dynamically if needed, optimized for paper format) */}
-            <div className="sticky top-6 flex flex-col items-center">
+            <div style={{ transform: `scale(${canvaZoom})`, transformOrigin: "top center", transition: "transform 0.15s ease-out" }} className="sticky top-6 flex flex-col items-center">
               
               <div className="hidden sm:flex justify-between items-center w-full max-w-[595px] mb-3 text-xs text-gray-700 font-bold px-2 no-print">
                 <button
@@ -3772,6 +3777,14 @@ export default function CreerCv() {
                     title="Dupliquer la page 1"
                   >
                     <i className="fa-regular fa-copy text-xs"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddPage("blank")}
+                    className="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                    title="Ajouter une page blanche vide"
+                  >
+                    <i className="fa-solid fa-file-circle-plus text-xs text-blue-400"></i>
                   </button>
                   {cvPages.length > 1 && (
                     <button
@@ -5520,12 +5533,12 @@ export default function CreerCv() {
                 const actualIdx = pageIdx + 1;
                 return (
                   <div key={page.id} className="mt-8 flex flex-col items-center w-full">
-                    {/* Top Floating Page Bar */}
+                    {/* Top Floating Page Bar (Canva Style) */}
                     <div className="w-full max-w-[595px] flex items-center justify-between py-1.5 px-3 mb-2 bg-slate-900/80 backdrop-blur-xs border border-slate-750 rounded-xl text-white text-xs font-bold shadow-xs no-print">
                       <div className="flex items-center space-x-2">
                         <span className="text-[11px] font-black text-slate-200">Page {actualIdx + 1} sur {cvPages.length}</span>
                         <span className="text-[10px] text-blue-300 bg-blue-900/40 px-2 py-0.5 rounded-md border border-blue-500/30">
-                          {page.type === "cover_letter" ? "Lettre de motivation" : "Suite du CV"}
+                          {page.type === "blank" ? "Page Blanche" : page.type === "cover_letter" ? "Lettre de motivation" : "Suite du CV"}
                         </span>
                       </div>
                       <div className="flex items-center space-x-1.5">
@@ -5549,6 +5562,14 @@ export default function CreerCv() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => handleAddPage("blank")}
+                          className="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                          title="Ajouter une page blanche vide"
+                        >
+                          <i className="fa-solid fa-file-circle-plus text-xs text-blue-400"></i>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDeletePage(actualIdx)}
                           className="w-7 h-7 rounded-lg hover:bg-red-500/30 hover:text-red-300 text-slate-400 flex items-center justify-center transition cursor-pointer"
                           title="Supprimer cette page"
@@ -5563,7 +5584,41 @@ export default function CreerCv() {
                       id={`cv-page-${actualIdx + 1}-sheet`}
                       className="bg-white shadow-2xl relative w-[595px] min-h-[842px] h-[842px] max-w-[595px] max-h-[842px] min-w-[595px] overflow-hidden text-gray-900 border border-gray-300 rounded-sm flex flex-col font-sans"
                     >
-                      {page.type === "cover_letter" ? (
+                      {page.type === "blank" ? (
+                        /* CANVA BLANK WHITE PAGE */
+                        <div className="flex flex-col w-full h-full p-8 text-xs font-sans bg-white justify-between relative group">
+                          {/* Blank Canvas Header */}
+                          <div className="border-b border-gray-200 pb-3 flex justify-between items-center text-gray-400">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Page {actualIdx + 1} — Vierge</span>
+                            <span className="text-[9px] text-gray-400">{cvData.firstName} {cvData.lastName}</span>
+                          </div>
+
+                          {/* Blank Canvas Body (Editable & Clickable) */}
+                          <div className="flex-grow flex flex-col items-center justify-center text-center p-6 text-gray-400">
+                            <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center mb-3">
+                              <i className="fa-regular fa-file-lines text-2xl text-gray-300"></i>
+                            </div>
+                            <h3 className="text-sm font-bold text-gray-700 mb-1">Page Blanche A4 Personnalisable</h3>
+                            <p className="text-[10px] text-gray-400 max-w-xs leading-relaxed mb-4">
+                              Page vierge prête pour vos textes libres, annexes, attestations ou portfolio.
+                            </p>
+                            <textarea
+                              placeholder="Cliquez ici pour écrire vos notes libres ou insérer du texte complémentaire..."
+                              value={page.notes || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCvPages(prev => prev.map((p, idx) => idx === actualIdx ? { ...p, notes: val } : p));
+                              }}
+                              className="w-full h-44 p-3 bg-gray-50/70 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-blue-400 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 resize-none transition focus:outline-hidden"
+                            />
+                          </div>
+
+                          {/* Blank Canvas Footer */}
+                          <div className="text-[8px] text-gray-400 font-medium text-center border-t border-gray-100 pt-3">
+                            Facilité • Page {actualIdx + 1}
+                          </div>
+                        </div>
+                      ) : page.type === "cover_letter" ? (
                         /* COVER LETTER MATCHING TEMPLATE */
                         <div className="flex flex-col w-full h-full p-8 text-xs font-sans bg-white justify-between">
                           <div>
@@ -5688,7 +5743,7 @@ export default function CreerCv() {
                 <div className="inline-flex rounded-2xl shadow-md border border-gray-300 bg-white overflow-hidden group">
                   <button
                     type="button"
-                    onClick={() => handleAddPage("cv_p2")}
+                    onClick={() => handleAddPage("blank")}
                     className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-900 hover:text-blue-600 font-extrabold text-xs transition flex items-center gap-2 cursor-pointer"
                   >
                     <i className="fa-solid fa-plus text-blue-600 text-sm"></i>
@@ -5709,14 +5764,27 @@ export default function CreerCv() {
                   <div className="absolute top-full mt-2 z-40 bg-white border border-gray-200 rounded-2xl shadow-2xl p-2 w-64 text-left animate-fadeIn">
                     <button
                       type="button"
-                      onClick={() => handleAddPage("cv_p2")}
+                      onClick={() => handleAddPage("blank")}
                       className="w-full p-2.5 rounded-xl hover:bg-blue-50/70 text-left transition flex items-center gap-3 cursor-pointer group"
                     >
                       <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                        <i className="fa-solid fa-file text-xs"></i>
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-gray-900 block group-hover:text-blue-600">Page Blanche Vierge</span>
+                        <span className="text-[10px] text-gray-500">Page A4 vierge personnalisable</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddPage("cv_p2")}
+                      className="w-full p-2.5 rounded-xl hover:bg-blue-50/70 text-left transition flex items-center gap-3 cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
                         <i className="fa-solid fa-file-lines text-xs"></i>
                       </div>
                       <div>
-                        <span className="text-xs font-black text-gray-900 block group-hover:text-blue-600">Suite du CV (Page 2)</span>
+                        <span className="text-xs font-black text-gray-900 block group-hover:text-emerald-600">Suite du CV (Page 2)</span>
                         <span className="text-[10px] text-gray-500">Expériences & projets additionnels</span>
                       </div>
                     </button>
@@ -5738,11 +5806,11 @@ export default function CreerCv() {
                       onClick={() => handleDuplicatePage(cvPages.length - 1)}
                       className="w-full p-2.5 rounded-xl hover:bg-emerald-50/70 text-left transition flex items-center gap-3 cursor-pointer group"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
                         <i className="fa-solid fa-copy text-xs"></i>
                       </div>
                       <div>
-                        <span className="text-xs font-black text-gray-900 block group-hover:text-emerald-600">Dupliquer la page</span>
+                        <span className="text-xs font-black text-gray-900 block group-hover:text-amber-600">Dupliquer la page</span>
                         <span className="text-[10px] text-gray-500">Copie conforme</span>
                       </div>
                     </button>
@@ -6319,6 +6387,46 @@ export default function CreerCv() {
           </div>
         </div>
       )}
+
+      {/* CANVA FLOATING ZOOM BAR (Bottom Right - Style Canva 1:1) */}
+      <div className="fixed bottom-6 right-8 z-[600] bg-white/95 backdrop-blur-md border border-gray-200/90 shadow-2xl rounded-2xl px-3.5 py-1.5 flex items-center gap-3 no-print select-none transition hover:shadow-blue-500/10">
+        <button
+          type="button"
+          onClick={() => setCanvaZoom(z => Math.max(0.2, +(z - 0.05).toFixed(2)))}
+          className="w-6 h-6 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-black font-extrabold transition flex items-center justify-center cursor-pointer text-xs"
+          title="Zoom arrière (-)"
+        >
+          <i className="fa-solid fa-minus text-[10px]"></i>
+        </button>
+        
+        <input
+          type="range"
+          min="0.2"
+          max="1.8"
+          step="0.05"
+          value={canvaZoom}
+          onChange={(e) => setCanvaZoom(parseFloat(e.target.value))}
+          className="w-24 sm:w-32 accent-blue-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+        />
+
+        <button
+          type="button"
+          onClick={() => setCanvaZoom(z => Math.min(2.0, +(z + 0.05).toFixed(2)))}
+          className="w-6 h-6 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-black font-extrabold transition flex items-center justify-center cursor-pointer text-xs"
+          title="Zoom avant (+)"
+        >
+          <i className="fa-solid fa-plus text-[10px]"></i>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleAutoFit}
+          className="px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-blue-50 text-blue-600 hover:text-blue-700 text-xs font-black min-w-[48px] text-center transition cursor-pointer"
+          title="Ajuster à l'écran"
+        >
+          {Math.round(canvaZoom * 100)} %
+        </button>
+      </div>
 
       {/* GLOBAL MEDIA PRINT CUSTOM STYLES */}
       <style jsx global>{`
