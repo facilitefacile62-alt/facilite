@@ -3,13 +3,19 @@ import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 
 /**
- * Content-Security-Policy en mode Report-Only.
+ * Content-Security-Policy — appliquée en mode bloquant (header
+ * "Content-Security-Policy", pas "-Report-Only" : voir headers() plus bas).
  *
- * Volontairement non bloquante pour l'instant : une CSP stricte appliquée
- * d'emblée casserait le rendu (Font Awesome via cdnjs, images et PDF servis
- * depuis Supabase Storage). Observer d'abord les violations rapportées dans la
- * console du navigateur, ajuster, puis seulement basculer la clé sur
- * "Content-Security-Policy" pour qu'elle bloque réellement.
+ * Historique : la variable ci-dessous s'appelait cspReportOnly et le
+ * commentaire décrivait un plan "observer les violations, ajuster, puis
+ * seulement basculer sur le header bloquant" — mais le header réellement
+ * utilisé était déjà "Content-Security-Policy" (bloquant), pas
+ * "-Report-Only". Trouvé le 2026-08-15 en diagnostiquant un <link>
+ * Google Fonts silencieusement bloqué (creer-cv/page.js, sélecteur de
+ * police) : le navigateur rapportait un vrai blocage, pas juste un rapport
+ * de violation ignoré. Renommé pour refléter l'état réel — aucun
+ * changement de comportement, le site tourne déjà sous cette CSP
+ * bloquante depuis un moment sans régression connue.
  *
  * Notes sur les assouplissements :
  *  - 'unsafe-inline' / 'unsafe-eval' sur script-src : requis par le runtime
@@ -20,7 +26,7 @@ import { withSentryConfig } from "@sentry/nextjs";
  */
 const isDev = process.env.NODE_ENV !== "production";
 
-const cspReportOnly = [
+const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""}`,
   // fonts.googleapis.com : feuilles de style chargées dynamiquement par
@@ -52,11 +58,12 @@ const cspReportOnly = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  // upgrade-insecure-requests n'a aucun effet en mode Report-Only (le
-  // navigateur le rapporte explicitement comme ignoré) : cette directive ne
-  // fait que réécrire les requêtes http:// en https://, ce qui exige une
-  // application réelle. À réintroduire uniquement au moment du bascule vers
-  // le header "Content-Security-Policy" (enforced), pas avant.
+  // upgrade-insecure-requests délibérément absente : cette directive réécrit
+  // toute requête http:// en https:// avant même l'envoi — un effet réel
+  // (contrairement à ce que suggérait l'ancien commentaire ici, qui la
+  // croyait à tort inoffensive en mode Report-Only). Pas encore vérifié
+  // qu'aucune ressource legitime du site ne dépend encore de http:// ; à
+  // auditer avant de l'ajouter, pas dans ce nettoyage de nommage.
 ].join("; ");
 
 const nextConfig = {
@@ -108,7 +115,7 @@ const nextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value: cspReportOnly,
+            value: contentSecurityPolicy,
           },
         ],
       },

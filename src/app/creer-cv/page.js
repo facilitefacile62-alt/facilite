@@ -10,6 +10,16 @@ import { cvTemplates, resolveTemplateId, DEFAULT_TEMPLATE_ID } from "@/lib/cvMod
 
 export { cvTemplates };
 
+// Id local pour une nouvelle entrée de liste (expérience, compétence...),
+// jamais persisté tel quel. Remplace Date.now() (react-hooks/purity :
+// fonction impure, en plus de risquer un id dupliqué si deux ajouts
+// tombent sur le même timestamp) — un useRef ou une variable de module
+// réassignée auraient résolu la purity mais déclenchent react-hooks/refs /
+// react-hooks/globals dès qu'un composant y touche. Calcul purement
+// fonctionnel à partir de la liste existante à la place, appelé uniquement
+// depuis l'intérieur d'un updater setCvData(prev => ...).
+const nextIdFor = (list) => list.reduce((max, item) => Math.max(max, typeof item.id === "number" ? item.id : 0), 0) + 1;
+
 // Modèles dont le rendu ne référence jamais accentColor (couleurs codées en
 // dur dans le JSX) — vérifié par grep sur chaque bloc de template avant
 // d'écrire cette liste. "professionnel" (Modèle 8, style Canva) est dans le
@@ -681,17 +691,14 @@ export default function CreerCv() {
   const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0, element: null });
   const contextMenuRef = useRef(null);
   const [isMagicLoading, setIsMagicLoading] = useState(false);
-  const [deletedTemplateIds, setDeletedTemplateIds] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("facilite_deleted_templates");
-        return saved ? JSON.parse(saved) : [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
+  // [] déterministe sur serveur ET client au premier rendu — localStorage
+  // n'existe pas côté serveur, donc un initializer qui le lit directement
+  // (même derrière un garde typeof window) rend un résultat différent au
+  // premier rendu client (hydratation) qu'au rendu serveur dès qu'un modèle
+  // a déjà été supprimé, ce qui déclenche une erreur d'hydratation React.
+  // La vraie valeur est relue dans un effet juste en dessous, qui ne
+  // s'exécute jamais côté serveur.
+  const [deletedTemplateIds, setDeletedTemplateIds] = useState([]);
   
   // Mobile tab switcher: "edit" (form) or "preview" (document sheet)
   const [mobileTab, setMobileTab] = useState("edit");
@@ -842,6 +849,17 @@ export default function CreerCv() {
       setToast({ show: false, message: "", icon: "fa-circle-info" });
     }, 3500);
   };
+
+  // Relit facilite_deleted_templates côté client seulement, après
+  // l'hydratation (voir le commentaire sur deletedTemplateIds ci-dessus).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("facilite_deleted_templates");
+      if (saved) setDeletedTemplateIds(JSON.parse(saved));
+    } catch {
+      // localStorage indisponible ou JSON corrompu : reste à la valeur par défaut ([])
+    }
+  }, []);
 
   // Rechargement pour édition depuis /candidat/mes-cvs (?resumeId=...). Lecture
   // de window.location.search dans un effet (jamais pendant le rendu, pour
@@ -1192,17 +1210,19 @@ export default function CreerCv() {
 
   // Experiences handlers
   const handleAddExperience = () => {
-    const newExp = {
-      id: Date.now(),
-      title: "",
-      employer: "",
-      city: "",
-      startDate: "",
-      endDate: "",
-      current: false,
-      description: ""
-    };
-    setCvData(prev => ({ ...prev, experiences: [...prev.experiences, newExp] }));
+    setCvData(prev => ({
+      ...prev,
+      experiences: [...prev.experiences, {
+        id: nextIdFor(prev.experiences),
+        title: "",
+        employer: "",
+        city: "",
+        startDate: "",
+        endDate: "",
+        current: false,
+        description: ""
+      }]
+    }));
   };
 
   const handleExpChange = (id, field, val) => {
@@ -1262,17 +1282,19 @@ export default function CreerCv() {
 
   // Educations handlers
   const handleAddEducation = () => {
-    const newEdu = {
-      id: Date.now(),
-      degree: "",
-      school: "",
-      city: "",
-      startDate: "",
-      endDate: "",
-      current: false,
-      description: ""
-    };
-    setCvData(prev => ({ ...prev, educations: [...prev.educations, newEdu] }));
+    setCvData(prev => ({
+      ...prev,
+      educations: [...prev.educations, {
+        id: nextIdFor(prev.educations),
+        degree: "",
+        school: "",
+        city: "",
+        startDate: "",
+        endDate: "",
+        current: false,
+        description: ""
+      }]
+    }));
   };
 
   const handleEduChange = (id, field, val) => {
@@ -1291,8 +1313,10 @@ export default function CreerCv() {
 
   // Skills handlers
   const handleAddSkill = () => {
-    const newSkill = { id: Date.now(), name: "", level: "Intermédiaire" };
-    setCvData(prev => ({ ...prev, skills: [...prev.skills, newSkill] }));
+    setCvData(prev => ({
+      ...prev,
+      skills: [...prev.skills, { id: nextIdFor(prev.skills), name: "", level: "Intermédiaire" }]
+    }));
   };
 
   const handleSkillChange = (id, field, val) => {
@@ -1311,8 +1335,10 @@ export default function CreerCv() {
 
   // Languages handlers
   const handleAddLanguage = () => {
-    const newLang = { id: Date.now(), name: "", level: "Intermédiaire" };
-    setCvData(prev => ({ ...prev, languages: [...prev.languages, newLang] }));
+    setCvData(prev => ({
+      ...prev,
+      languages: [...prev.languages, { id: nextIdFor(prev.languages), name: "", level: "Intermédiaire" }]
+    }));
   };
 
   const handleLangChange = (id, field, val) => {
@@ -1331,8 +1357,10 @@ export default function CreerCv() {
 
   // Qualities handlers
   const handleAddQuality = () => {
-    const newQuality = { id: Date.now(), name: "" };
-    setCvData(prev => ({ ...prev, qualities: [...(prev.qualities || []), newQuality] }));
+    setCvData(prev => ({
+      ...prev,
+      qualities: [...(prev.qualities || []), { id: nextIdFor(prev.qualities || []), name: "" }]
+    }));
   };
 
   const handleQualityChange = (id, val) => {
@@ -1351,8 +1379,10 @@ export default function CreerCv() {
 
   // IT Skills handlers
   const handleAddItSkill = () => {
-    const newSkill = { id: Date.now(), name: "" };
-    setCvData(prev => ({ ...prev, itSkills: [...(prev.itSkills || []), newSkill] }));
+    setCvData(prev => ({
+      ...prev,
+      itSkills: [...(prev.itSkills || []), { id: nextIdFor(prev.itSkills || []), name: "" }]
+    }));
   };
 
   const handleItSkillChange = (id, val) => {
@@ -1371,8 +1401,10 @@ export default function CreerCv() {
 
   // Hobbies handlers
   const handleAddHobby = () => {
-    const newHobby = { id: Date.now(), name: "" };
-    setCvData(prev => ({ ...prev, hobbies: [...(prev.hobbies || []), newHobby] }));
+    setCvData(prev => ({
+      ...prev,
+      hobbies: [...(prev.hobbies || []), { id: nextIdFor(prev.hobbies || []), name: "" }]
+    }));
   };
 
   const handleHobbyChange = (id, val) => {
