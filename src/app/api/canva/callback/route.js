@@ -5,8 +5,8 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
-function signState(state) {
-  return crypto.createHmac("sha256", process.env.CANVA_CLIENT_SECRET).update(state).digest("hex");
+function signValue(value) {
+  return crypto.createHmac("sha256", process.env.CANVA_CLIENT_SECRET).update(value).digest("hex");
 }
 
 function timingSafeEqualStrings(a, b) {
@@ -16,40 +16,53 @@ function timingSafeEqualStrings(a, b) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+// Vérifie un cookie signé "${value}.${hmac}" et renvoie value, ou null si
+// absent/malformé/signature invalide.
+function readSignedCookie(req, name) {
+  const raw = req.cookies.get(name)?.value || "";
+  if (!raw) return null;
+  const dotIndex = raw.lastIndexOf(".");
+  if (dotIndex === -1) return null;
+  const value = raw.slice(0, dotIndex);
+  const signature = raw.slice(dotIndex + 1);
+  if (!timingSafeEqualStrings(signature, signValue(value))) return null;
+  return value;
+}
+
 /**
  * GET /api/canva/callback — reçu directement depuis Canva (redirection
  * navigateur, pas fetch()) : même contrainte que /api/canva/auth,
  * getUserFromCookies() plutôt que requireUser().
+ *
+ * PKCE obligatoire pour ce client Canva (confirmé en conditions réelles :
+ * "'code_verifier' must not be null" sans ça) — canva_pkce_verifier est lu
+ * ici et ajouté à l'échange de code, en plus de canva_oauth_state.
  */
 export async function GET(req) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const returnedState = url.searchParams.get("state");
 
-  const cookieValue = req.cookies.get("canva_oauth_state")?.value || "";
-
-  // Toujours supprimer le cookie state après lecture, succès ou échec — un
-  // state à usage unique qui traîne au-delà de cette vérification n'a plus
-  // aucune utilité et ne doit jamais être rejouable.
-  const clearStateCookie = (response) => {
+  // Toujours supprimer les deux cookies après lecture, succès ou échec —
+  // un state/verifier à usage unique qui traîne au-delà de cette
+  // vérification n'a plus aucune utilité et ne doit jamais être rejouable.
+  const clearOauthCookies = (response) => {
     response.cookies.set("canva_oauth_state", "", { maxAge: 0, path: "/" });
+    response.cookies.set("canva_pkce_verifier", "", { maxAge: 0, path: "/" });
     return response;
   };
 
   const errorRedirect = (reason) =>
-    clearStateCookie(NextResponse.redirect(new URL(`/creer-cv?canva=error&reason=${reason}`, req.url)));
+    clearOauthCookies(NextResponse.redirect(new URL(`/creer-cv?canva=error&reason=${reason}`, req.url)));
 
   if (!code || !returnedState) return errorRedirect("missing_params");
-  if (!cookieValue) return errorRedirect("missing_state_cookie");
 
-  const dotIndex = cookieValue.lastIndexOf(".");
-  if (dotIndex === -1) return errorRedirect("malformed_state_cookie");
-  const cookieState = cookieValue.slice(0, dotIndex);
-  const cookieSignature = cookieValue.slice(dotIndex + 1);
-
-  const expectedSignature = signState(cookieState);
-  if (!timingSafeEqualStrings(cookieSignature, expectedSignature)) return errorRedirect("invalid_state_signature");
+  const cookieState = readSignedCookie(req, "canva_oauth_state");
+  if (!cookieState) return errorRedirect("missing_or_invalid_state_cookie");
   if (!timingSafeEqualStrings(cookieState, returnedState)) return errorRedirect("state_mismatch");
+
+  const codeVerifier = readSignedCookie(req, "canva_pkce_verifier");
+  if (!codeVerifier) return errorRedirect("missing_pkce_verifier");
 
   const user = await getUserFromCookies();
   if (!user) return errorRedirect("not_authenticated");
@@ -65,6 +78,7 @@ export async function GET(req) {
         client_id: process.env.CANVA_CLIENT_ID,
         client_secret: process.env.CANVA_CLIENT_SECRET,
         redirect_uri: process.env.CANVA_REDIRECT_URI,
+        code_verifier: codeVerifier,
       }),
       cache: "no-store",
     });
@@ -100,5 +114,5 @@ export async function GET(req) {
     return errorRedirect("token_storage_failed");
   }
 
-  return clearStateCookie(NextResponse.redirect(new URL("/creer-cv?canva=connected", req.url)));
+  return clearOauthCookies(NextResponse.redirect(new URL("/creer-cv?canva=connected", req.url)));
 }

@@ -4,15 +4,18 @@ import { getUserFromCookies } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 
-// Signe le state anti-CSRF avec CANVA_CLIENT_SECRET (déjà un secret privé
-// serveur uniquement, scopé à ce flux Canva précis) plutôt que d'introduire
-// une nouvelle variable d'environnement dédiée.
-function signState(state) {
-  return crypto.createHmac("sha256", process.env.CANVA_CLIENT_SECRET).update(state).digest("hex");
+// Signe une valeur de cookie (state anti-CSRF, PKCE verifier) avec
+// CANVA_CLIENT_SECRET (déjà un secret privé serveur uniquement, scopé à ce
+// flux Canva précis) plutôt que d'introduire une nouvelle variable
+// d'environnement dédiée.
+function signValue(value) {
+  return crypto.createHmac("sha256", process.env.CANVA_CLIENT_SECRET).update(value).digest("hex");
 }
 
 /**
- * GET /api/canva/auth — initie le flux OAuth Canva.
+ * GET /api/canva/auth — initie le flux OAuth Canva (PKCE obligatoire pour
+ * ce client — confirmé en conditions réelles : Canva rejette l'échange de
+ * code avec "'code_verifier' must not be null" sans ça).
  *
  * Atteint par une navigation navigateur directe (clic sur "Connecter
  * Canva"), jamais par fetch() : requireUser() (Bearer) ne peut donc pas
@@ -28,7 +31,19 @@ export async function GET(req) {
   }
 
   const state = crypto.randomUUID();
-  const signature = signState(state);
+  const stateSignature = signValue(state);
+
+  // code_verifier : 32 octets aléatoires en base64url (43 caractères, dans
+  // la plage 43-128 exigée par PKCE). Buffer#toString("base64url") de
+  // Node.js n'ajoute jamais de padding — conforme à RFC 7636 sans étape
+  // supplémentaire.
+  const codeVerifier = crypto.randomBytes(32).toString("base64url");
+  const codeVerifierSignature = signValue(codeVerifier);
+
+  // code_challenge = BASE64URL(SHA256(ASCII(code_verifier))) — hash de la
+  // CHAÎNE code_verifier elle-même (ses octets UTF-8), pas des octets
+  // aléatoires d'origine.
+  const codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
 
   const authorizeUrl = new URL("https://www.canva.com/api/oauth/authorize");
   authorizeUrl.searchParams.set("response_type", "code");
@@ -36,15 +51,19 @@ export async function GET(req) {
   authorizeUrl.searchParams.set("redirect_uri", process.env.CANVA_REDIRECT_URI);
   authorizeUrl.searchParams.set("scope", "design:content:read design:content:write");
   authorizeUrl.searchParams.set("state", state);
+  authorizeUrl.searchParams.set("code_challenge", codeChallenge);
+  authorizeUrl.searchParams.set("code_challenge_method", "S256");
 
   const response = NextResponse.redirect(authorizeUrl.toString());
-  response.cookies.set("canva_oauth_state", `${state}.${signature}`, {
+  const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 600,
     path: "/",
-  });
+  };
+  response.cookies.set("canva_oauth_state", `${state}.${stateSignature}`, cookieOptions);
+  response.cookies.set("canva_pkce_verifier", `${codeVerifier}.${codeVerifierSignature}`, cookieOptions);
 
   return response;
 }
