@@ -3599,19 +3599,53 @@ export default function CreerCv() {
                 <button
                   type="button"
                   onClick={() => setIsPreviewOpen(true)}
-                  className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 shadow-2xs hover:shadow-xs transition active:scale-95 cursor-pointer text-xs font-black text-gray-800 group"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 shadow-2xs hover:shadow-xs transition active:scale-95 cursor-pointer text-xs font-black text-gray-800 group"
                   title="Cliquer pour ouvrir l'aperçu complet et zoomer"
                 >
                   <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
                   <i className="fa-solid fa-eye text-blue-600 group-hover:scale-110 transition-transform"></i>
-                  <span>Aperçu temps réel (A4)</span>
-                  <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-md font-extrabold border border-blue-200/60 flex items-center gap-1">
-                    <i className="fa-solid fa-expand text-[8px]"></i>
-                    Plein écran
-                  </span>
+                  <span className="hidden md:inline">Aperçu A4</span>
                 </button>
+
+                {/* CANVA ZOOM TOOLBAR CONTROL */}
+                <div className="flex items-center bg-white border border-gray-200 rounded-xl px-2.5 py-1 shadow-2xs gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCanvaZoom(z => Math.max(0.2, +(z - 0.05).toFixed(2)))}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-gray-100 rounded text-gray-700 font-black cursor-pointer text-xs"
+                    title="Zoom arrière (-)"
+                  >
+                    –
+                  </button>
+                  <input
+                    type="range"
+                    min="0.2"
+                    max="1.8"
+                    step="0.05"
+                    value={canvaZoom}
+                    onChange={(e) => setCanvaZoom(parseFloat(e.target.value))}
+                    className="w-16 sm:w-24 accent-blue-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCanvaZoom(z => Math.min(2.0, +(z + 0.05).toFixed(2)))}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-gray-100 rounded text-gray-700 font-black cursor-pointer text-xs"
+                    title="Zoom avant (+)"
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAutoFit}
+                    className="text-[11px] font-black text-blue-600 hover:text-blue-800 cursor-pointer min-w-[40px] text-center"
+                    title="Ajuster à l'écran"
+                  >
+                    {Math.round(canvaZoom * 100)} %
+                  </button>
+                </div>
+
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-500 font-semibold capitalize">
+                  <span className="text-[11px] text-gray-500 font-semibold capitalize hidden sm:inline">
                     Modèle <strong className="text-gray-800">{selectedTemplate}</strong>
                   </span>
                   <button
@@ -5585,38 +5619,20 @@ export default function CreerCv() {
                       className="bg-white shadow-2xl relative w-[595px] min-h-[842px] h-[842px] max-w-[595px] max-h-[842px] min-w-[595px] overflow-hidden text-gray-900 border border-gray-300 rounded-sm flex flex-col font-sans"
                     >
                       {page.type === "blank" ? (
-                        /* CANVA BLANK WHITE PAGE */
-                        <div className="flex flex-col w-full h-full p-8 text-xs font-sans bg-white justify-between relative group">
-                          {/* Blank Canvas Header */}
-                          <div className="border-b border-gray-200 pb-3 flex justify-between items-center text-gray-400">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Page {actualIdx + 1} — Vierge</span>
-                            <span className="text-[9px] text-gray-400">{cvData.firstName} {cvData.lastName}</span>
-                          </div>
-
-                          {/* Blank Canvas Body (Editable & Clickable) */}
-                          <div className="flex-grow flex flex-col items-center justify-center text-center p-6 text-gray-400">
-                            <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center mb-3">
-                              <i className="fa-regular fa-file-lines text-2xl text-gray-300"></i>
-                            </div>
-                            <h3 className="text-sm font-bold text-gray-700 mb-1">Page Blanche A4 Personnalisable</h3>
-                            <p className="text-[10px] text-gray-400 max-w-xs leading-relaxed mb-4">
-                              Page vierge prête pour vos textes libres, annexes, attestations ou portfolio.
-                            </p>
-                            <textarea
-                              placeholder="Cliquez ici pour écrire vos notes libres ou insérer du texte complémentaire..."
-                              value={page.notes || ""}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setCvPages(prev => prev.map((p, idx) => idx === actualIdx ? { ...p, notes: val } : p));
-                              }}
-                              className="w-full h-44 p-3 bg-gray-50/70 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-blue-400 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 resize-none transition focus:outline-hidden"
-                            />
-                          </div>
-
-                          {/* Blank Canvas Footer */}
-                          <div className="text-[8px] text-gray-400 font-medium text-center border-t border-gray-100 pt-3">
-                            Facilité • Page {actualIdx + 1}
-                          </div>
+                        /* CANVA PURE BLANK WHITE PAGE (100% BLANC COMME SUR CANVA) */
+                        <div
+                          className="w-full h-full bg-white relative p-10 flex flex-col justify-between font-sans select-text overflow-hidden"
+                          onClick={() => setSelectedCanvasElement({ id: `blank-page-${page.id}`, type: "blank_canvas", name: `Page Blanche ${actualIdx + 1}` })}
+                        >
+                          <textarea
+                            placeholder={isAdvancedEditOpen ? "Page blanche Canva vierge. Cliquez ici pour taper du texte librement ou y insérer vos éléments..." : ""}
+                            value={page.notes || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCvPages(prev => prev.map((p, idx) => idx === actualIdx ? { ...p, notes: val } : p));
+                            }}
+                            className="w-full h-full bg-transparent border-0 resize-none text-xs text-gray-900 placeholder:text-gray-300 focus:outline-hidden p-0 leading-relaxed font-sans"
+                          />
                         </div>
                       ) : page.type === "cover_letter" ? (
                         /* COVER LETTER MATCHING TEMPLATE */
@@ -6388,12 +6404,13 @@ export default function CreerCv() {
         </div>
       )}
 
-      {/* CANVA FLOATING ZOOM BAR (Bottom Right - Style Canva 1:1) */}
-      <div className="fixed bottom-6 right-8 z-[600] bg-white/95 backdrop-blur-md border border-gray-200/90 shadow-2xl rounded-2xl px-3.5 py-1.5 flex items-center gap-3 no-print select-none transition hover:shadow-blue-500/10">
+      {/* CANVA FLOATING ZOOM BAR (Bottom Right - Always visible with high contrast) */}
+      <div className="fixed bottom-8 right-8 z-[99999] bg-white border-2 border-slate-300 shadow-2xl rounded-full px-4 py-2 flex items-center gap-3 no-print select-none text-slate-800 pointer-events-auto">
+        <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider hidden sm:inline">Zoom</span>
         <button
           type="button"
           onClick={() => setCanvaZoom(z => Math.max(0.2, +(z - 0.05).toFixed(2)))}
-          className="w-6 h-6 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-black font-extrabold transition flex items-center justify-center cursor-pointer text-xs"
+          className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black font-extrabold transition flex items-center justify-center cursor-pointer text-xs"
           title="Zoom arrière (-)"
         >
           <i className="fa-solid fa-minus text-[10px]"></i>
@@ -6406,13 +6423,13 @@ export default function CreerCv() {
           step="0.05"
           value={canvaZoom}
           onChange={(e) => setCanvaZoom(parseFloat(e.target.value))}
-          className="w-24 sm:w-32 accent-blue-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          className="w-24 sm:w-32 accent-blue-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
         />
 
         <button
           type="button"
           onClick={() => setCanvaZoom(z => Math.min(2.0, +(z + 0.05).toFixed(2)))}
-          className="w-6 h-6 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-black font-extrabold transition flex items-center justify-center cursor-pointer text-xs"
+          className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black font-extrabold transition flex items-center justify-center cursor-pointer text-xs"
           title="Zoom avant (+)"
         >
           <i className="fa-solid fa-plus text-[10px]"></i>
@@ -6421,7 +6438,7 @@ export default function CreerCv() {
         <button
           type="button"
           onClick={handleAutoFit}
-          className="px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-blue-50 text-blue-600 hover:text-blue-700 text-xs font-black min-w-[48px] text-center transition cursor-pointer"
+          className="px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 text-xs font-black min-w-[52px] text-center transition cursor-pointer border border-blue-200"
           title="Ajuster à l'écran"
         >
           {Math.round(canvaZoom * 100)} %
