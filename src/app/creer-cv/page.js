@@ -7,9 +7,15 @@ import { supabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
 import TemplatePreviewModal from "@/components/TemplatePreviewModal";
 import { cvTemplates, resolveTemplateId, DEFAULT_TEMPLATE_ID } from "@/lib/cvModels";
-import CanvaStyleImporter from "@/components/CanvaStyleImporter";
 
 export { cvTemplates };
+
+// Modèles dont le rendu ne référence jamais accentColor (couleurs codées en
+// dur dans le JSX) — vérifié par grep sur chaque bloc de template avant
+// d'écrire cette liste. "professionnel" (Modèle 8, style Canva) est dans le
+// même cas qu'entrepreneur/elegance bien que non cité explicitement dans la
+// demande d'origine.
+const FIXED_ACCENT_COLOR_TEMPLATES = ["entrepreneur", "elegance", "professionnel"];
 
 // --- DICTIONNAIRE DE TRADUCTION POUR LE CREATEUR DE CV ---
 const translations = {
@@ -634,6 +640,8 @@ export default function CreerCv() {
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(true);
   const [activeCanvaTab, setActiveCanvaTab] = useState("models");
   const [canvaFontFamily, setCanvaFontFamily] = useState("Inter");
+  const [canvaColorPasteInput, setCanvaColorPasteInput] = useState("");
+  const [canvaColorFeedback, setCanvaColorFeedback] = useState(null); // { type: "warning", message }
   const [canvaFontSize, setCanvaFontSize] = useState(14);
   const [canvaScale, setCanvaScale] = useState(1);
   const [canvaSectionSpacing, setCanvaSectionSpacing] = useState(1);
@@ -1556,6 +1564,28 @@ export default function CreerCv() {
     document.head.appendChild(link);
   }, []);
 
+  // --- COULEUR D'ACCENT COLLÉE DEPUIS CANVA ---
+  const normalizeCanvaHex = (raw) => {
+    if (!raw) return null;
+    const trimmed = raw.trim().replace(/^#/, "");
+    if (!/^[0-9a-fA-F]{6}$/.test(trimmed)) return null;
+    return "#" + trimmed.toUpperCase();
+  };
+
+  const applyCanvaColor = useCallback((hex) => {
+    if (FIXED_ACCENT_COLOR_TEMPLATES.includes(selectedTemplate)) {
+      setCanvaColorFeedback({
+        type: "warning",
+        message:
+          "Ce modèle a une palette fixe. Choisis Modern, Classic, Exécutif, Créatif, Technique ou Minimaliste pour appliquer une couleur personnalisée.",
+      });
+      return;
+    }
+    setAccentColor(hex);
+    setCanvaColorFeedback(null);
+    triggerToast(`Couleur ${hex} appliquée depuis Canva !`);
+  }, [selectedTemplate]);
+
   // --- GESTION DES MODÈLES (Suppression & Restauration) ---
   const handleDeleteTemplate = (e, tplId, tplName) => {
     if (e && e.stopPropagation) e.stopPropagation();
@@ -2123,18 +2153,6 @@ Laisse vide les champs non trouvés.`;
 
   return (
     <CanvaStudioContext.Provider value={studioContextValue}>
-      {/* Étape 2A — diagnostic d'import de style Canva (collage hors champ
-          de formulaire). Étape 2B : la police détectée est désormais
-          chargée et appliquée immédiatement sur #cv-preview-sheet ; la
-          couleur reste diagnostic seul pour l'instant — voir
-          src/components/CanvaStyleImporter.jsx. */}
-      <CanvaStyleImporter
-        onFontDetected={(fontName) => {
-          loadFont(fontName);
-          setCanvaFontFamily(fontName);
-        }}
-      />
-
       {/* Toast Notification Top Floating */}
       <div
         className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
@@ -2586,6 +2604,59 @@ Laisse vide les champs non trouvés.`;
                           className="bg-transparent border-0 text-white font-mono text-xs font-bold uppercase focus:outline-hidden"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Coller une couleur Canva</label>
+                      <div
+                        className={`flex items-center gap-2 p-2 rounded-xl border-2 transition ${
+                          canvaColorPasteInput.trim()
+                            ? normalizeCanvaHex(canvaColorPasteInput)
+                              ? "border-emerald-500 bg-emerald-500/10"
+                              : "border-red-500 bg-red-500/10"
+                            : "border-slate-700 bg-slate-800"
+                        }`}
+                      >
+                        <span
+                          className="w-8 h-8 rounded-lg border border-white/20 flex-shrink-0"
+                          style={{ backgroundColor: normalizeCanvaHex(canvaColorPasteInput) || "transparent" }}
+                        ></span>
+                        <input
+                          type="text"
+                          value={canvaColorPasteInput}
+                          placeholder="#D4AF37 ou D4AF37"
+                          onChange={(e) => {
+                            setCanvaColorPasteInput(e.target.value);
+                            setCanvaColorFeedback(null);
+                          }}
+                          onPaste={(e) => {
+                            const pasted = e.clipboardData.getData("text/plain") || "";
+                            const wholeMatch = normalizeCanvaHex(pasted);
+                            const embeddedMatch = pasted.match(/#[0-9a-fA-F]{6}\b/);
+                            const hex = wholeMatch || (embeddedMatch ? normalizeCanvaHex(embeddedMatch[0]) : null);
+                            if (hex) {
+                              e.preventDefault();
+                              setCanvaColorPasteInput(hex);
+                              applyCanvaColor(hex);
+                            }
+                          }}
+                          className="flex-grow min-w-0 bg-transparent border-0 text-white font-mono text-xs font-bold uppercase focus:outline-hidden"
+                        />
+                        <button
+                          type="button"
+                          disabled={!normalizeCanvaHex(canvaColorPasteInput)}
+                          onClick={() => applyCanvaColor(normalizeCanvaHex(canvaColorPasteInput))}
+                          className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed disabled:text-slate-500 text-white text-[11px] font-bold cursor-pointer transition flex-shrink-0"
+                        >
+                          Appliquer
+                        </button>
+                      </div>
+                      {canvaColorPasteInput.trim() && !normalizeCanvaHex(canvaColorPasteInput) && (
+                        <p className="text-[10px] text-red-400 mt-1 font-semibold">Code couleur invalide</p>
+                      )}
+                      {canvaColorFeedback?.type === "warning" && (
+                        <p className="text-[10px] text-amber-400 mt-1 font-semibold">{canvaColorFeedback.message}</p>
+                      )}
                     </div>
                   </div>
                 )}
