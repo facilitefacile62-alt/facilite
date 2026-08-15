@@ -674,6 +674,12 @@ export default function CreerCv() {
   // Mobile tab switcher: "edit" (form) or "preview" (document sheet)
   const [mobileTab, setMobileTab] = useState("edit");
 
+  // AI CV Auto-Fill NLP Modal State
+  const [showAiFillModal, setShowAiFillModal] = useState(false);
+  const [aiRawText, setAiRawText] = useState("");
+  const [isAiFilling, setIsAiFilling] = useState(false);
+  const [aiFillError, setAiFillError] = useState("");
+
   // Contact Modal State (linked to header footer)
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", subject: "", message: "" });
@@ -1771,6 +1777,130 @@ export default function CreerCv() {
     }
   };
 
+  // --- AUTO-REMPLISSAGE DU CV VIA LE MOTEUR NLP GEMINI (/api/nlp) ---
+  const analyserEtRemplirCV = async (texteBrut) => {
+    const raw = (texteBrut || aiRawText || "").trim();
+    if (!raw) {
+      setAiFillError("Veuillez coller le texte de votre ancien CV ou profil LinkedIn.");
+      return;
+    }
+
+    setIsAiFilling(true);
+    setAiFillError("");
+
+    try {
+      const instructionSysteme = `Tu es un extracteur de données RH. Analyse ce texte et extrais les informations pour un CV. Renvoie UNIQUEMENT un objet JSON avec cette structure exacte : 
+{
+  "infosPersonnelles": { "nomPrenom": "", "email": "", "telephone": "", "adresse": "" },
+  "profil": "Résumé professionnel de 2 lignes max",
+  "experiences": [{ "poste": "", "entreprise": "", "date": "", "description": "" }],
+  "formations": [{ "diplome": "", "ecole": "", "annee": "" }],
+  "competences": ["compétence 1", "compétence 2"]
+}
+Laisse vide les champs non trouvés.`;
+
+      const response = await fetch("/api/nlp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          texteBrut: raw,
+          instructionSysteme
+        })
+      });
+
+      const resJson = await response.json();
+
+      if (!response.ok || !resJson.success || !resJson.data) {
+        throw new Error(resJson.message || "Échec de l'analyse sémantique du CV.");
+      }
+
+      const extracted = resJson.data;
+
+      // Mise à jour de l'état cvData pour actualisation immédiate du CV
+      setCvData(prev => {
+        const nextData = { ...prev };
+
+        // 1. Infos personnelles
+        if (extracted.infosPersonnelles) {
+          const { nomPrenom, email, telephone, adresse } = extracted.infosPersonnelles;
+          if (nomPrenom && typeof nomPrenom === "string") {
+            const parts = nomPrenom.trim().split(" ");
+            if (parts.length > 1) {
+              nextData.firstName = parts[0];
+              nextData.lastName = parts.slice(1).join(" ");
+            } else {
+              nextData.firstName = nomPrenom;
+            }
+          }
+          if (email) nextData.email = email;
+          if (telephone) nextData.phone = telephone;
+          if (adresse) {
+            nextData.city = adresse;
+            nextData.address = adresse;
+          }
+        }
+
+        // 2. Profil
+        if (extracted.profil && typeof extracted.profil === "string" && extracted.profil.trim()) {
+          nextData.profile = extracted.profil.trim();
+        }
+
+        // 3. Expériences
+        if (Array.isArray(extracted.experiences) && extracted.experiences.length > 0) {
+          nextData.experiences = extracted.experiences.map((exp, idx) => {
+            const dateStr = exp.date || "";
+            const parts = dateStr.includes("-") ? dateStr.split("-").map(d => d.trim()) : [dateStr, ""];
+            return {
+              id: Date.now() + idx,
+              title: exp.poste || "Poste",
+              employer: exp.entreprise || "Entreprise",
+              city: nextData.city || "",
+              startDate: parts[0] || "",
+              endDate: parts[1] || "",
+              current: !parts[1] || parts[1].toLowerCase().includes("présent") || parts[1].toLowerCase().includes("en cours"),
+              description: exp.description || ""
+            };
+          });
+        }
+
+        // 4. Formations
+        if (Array.isArray(extracted.formations) && extracted.formations.length > 0) {
+          nextData.educations = extracted.formations.map((form, idx) => ({
+            id: Date.now() + 100 + idx,
+            degree: form.diplome || "Diplôme",
+            school: form.ecole || "Établissement",
+            city: nextData.city || "",
+            startDate: form.annee || "",
+            endDate: "",
+            current: false,
+            description: ""
+          }));
+        }
+
+        // 5. Compétences
+        if (Array.isArray(extracted.competences) && extracted.competences.length > 0) {
+          nextData.skills = extracted.competences.map((comp, idx) => ({
+            id: Date.now() + 200 + idx,
+            name: typeof comp === "string" ? comp : (comp.name || comp.titre || "Compétence"),
+            level: "Avancé"
+          }));
+        }
+
+        return nextData;
+      });
+
+      setShowAiFillModal(false);
+      setAiRawText("");
+      triggerToast("✨ CV auto-rempli avec succès par l'IA !", "fa-wand-magic-sparkles");
+
+    } catch (err) {
+      console.error("Erreur Auto-remplissage IA :", err);
+      setAiFillError(err.message || "Une erreur est survenue lors de l'extraction des données.");
+    } finally {
+      setIsAiFilling(false);
+    }
+  };
+
   const handleCopyElement = () => {
     if (selectedCanvasElement) {
       setClipboardElement(selectedCanvasElement);
@@ -2508,6 +2638,24 @@ export default function CreerCv() {
                       <p className="text-[10px] text-slate-300">Boostez votre CV avec des descriptions percutantes adaptées aux recruteurs.</p>
                     </div>
 
+                    {/* Auto-remplissage complet */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAiFillError("");
+                        setShowAiFillModal(true);
+                      }}
+                      className="w-full p-3 rounded-xl bg-gradient-to-r from-purple-900/80 via-indigo-900/80 to-slate-900 hover:from-purple-800 hover:to-indigo-800 border border-purple-400/50 text-left transition flex items-center gap-3 cursor-pointer group shadow-lg"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center flex-shrink-0 text-base shadow-inner">
+                        🤖
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-white block group-hover:text-purple-200">Auto-remplir mon CV</span>
+                        <span className="text-[9px] text-purple-200/80">Coller ancien CV ou profil LinkedIn</span>
+                      </div>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleAiRewriteSummary()}
@@ -2684,31 +2832,50 @@ export default function CreerCv() {
                 <i className="fa-solid fa-chevron-left text-[10px] group-hover:scale-125 transition-transform"></i>
               </button>
             
-            {/* Steps Headings */}
-            <div className="mb-8">
-              <span className="text-xs font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full">
-                Étape {activeStep + 1} sur 8
-              </span>
-              <h2 className="text-2xl font-black text-gray-900 mt-3 leading-tight">
-                {activeStep === 0 && t.step0Title}
-                {activeStep === 1 && t.step1Title}
-                {activeStep === 2 && t.step2Title}
-                {activeStep === 3 && t.step3Title}
-                {activeStep === 4 && t.step4Title}
-                {activeStep === 5 && t.step5Title}
-                {activeStep === 6 && t.step6Title}
-                {activeStep === 7 && t.step7Title}
-              </h2>
-              <p className="text-sm font-medium text-gray-500 mt-2.5">
-                {activeStep === 0 && t.step0Subtitle}
-                {activeStep === 1 && t.step1Subtitle}
-                {activeStep === 2 && t.step2Subtitle}
-                {activeStep === 3 && t.step3Subtitle}
-                {activeStep === 4 && t.step4Subtitle}
-                {activeStep === 5 && t.step5Subtitle}
-                {activeStep === 6 && t.step6Subtitle}
-                {activeStep === 7 && t.step7Subtitle}
-              </p>
+            {/* Steps Headings & Quick AI Fill CTA */}
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full">
+                  Étape {activeStep + 1} sur 8
+                </span>
+                <h2 className="text-2xl font-black text-gray-900 mt-3 leading-tight">
+                  {activeStep === 0 && t.step0Title}
+                  {activeStep === 1 && t.step1Title}
+                  {activeStep === 2 && t.step2Title}
+                  {activeStep === 3 && t.step3Title}
+                  {activeStep === 4 && t.step4Title}
+                  {activeStep === 5 && t.step5Title}
+                  {activeStep === 6 && t.step6Title}
+                  {activeStep === 7 && t.step7Title}
+                </h2>
+                <p className="text-sm font-medium text-gray-500 mt-2.5">
+                  {activeStep === 0 && t.step0Subtitle}
+                  {activeStep === 1 && t.step1Subtitle}
+                  {activeStep === 2 && t.step2Subtitle}
+                  {activeStep === 3 && t.step3Subtitle}
+                  {activeStep === 4 && t.step4Subtitle}
+                  {activeStep === 5 && t.step5Subtitle}
+                  {activeStep === 6 && t.step6Subtitle}
+                  {activeStep === 7 && t.step7Subtitle}
+                </p>
+              </div>
+
+              {/* Bouton Auto-remplissage IA */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAiFillError("");
+                  setShowAiFillModal(true);
+                }}
+                className="self-start sm:self-center flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer group flex-shrink-0"
+                title="Auto-remplir instantanément toutes les étapes grâce à Gemini IA"
+              >
+                <span className="text-base">🤖</span>
+                <div className="text-left">
+                  <div className="font-black text-xs leading-tight">Auto-remplir mon CV</div>
+                  <div className="text-[9px] text-purple-200 font-normal">Extraction IA instantanée</div>
+                </div>
+              </button>
             </div>
 
             {/* STEP 0 FORM: COORDONNÉES */}
@@ -3864,17 +4031,33 @@ export default function CreerCv() {
             {/* Styled Sheet Wrapper (scaled with CSS dynamically if needed, optimized for paper format) */}
             <div style={{ transform: `scale(${canvaZoom})`, transformOrigin: "top center", transition: "transform 0.15s ease-out" }} className="sticky top-6 flex flex-col items-center">
               
-              <div className="hidden sm:flex justify-between items-center w-full max-w-[595px] mb-3 text-xs text-gray-700 font-bold px-2 no-print">
-                <button
-                  type="button"
-                  onClick={() => setIsPreviewOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 shadow-2xs hover:shadow-xs transition active:scale-95 cursor-pointer text-xs font-black text-gray-800 group"
-                  title="Cliquer pour ouvrir l'aperçu complet et zoomer"
-                >
-                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                  <i className="fa-solid fa-eye text-blue-600 group-hover:scale-110 transition-transform"></i>
-                  <span className="hidden md:inline">Aperçu A4</span>
-                </button>
+              <div className="hidden sm:flex justify-between items-center w-full max-w-[595px] mb-3 text-xs text-gray-700 font-bold px-2 no-print gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPreviewOpen(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 shadow-2xs hover:shadow-xs transition active:scale-95 cursor-pointer text-xs font-black text-gray-800 group"
+                    title="Cliquer pour ouvrir l'aperçu complet et zoomer"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                    <i className="fa-solid fa-eye text-blue-600 group-hover:scale-110 transition-transform"></i>
+                    <span className="hidden md:inline">Aperçu A4</span>
+                  </button>
+
+                  {/* BOUTON AUTO-REMPLIR MON CV IA */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiFillError("");
+                      setShowAiFillModal(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs font-black shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer group"
+                    title="Coller votre ancien CV ou profil LinkedIn pour auto-remplir instantanément le CV"
+                  >
+                    <span className="text-sm">🤖</span>
+                    <span className="font-extrabold tracking-wide">Auto-remplir mon CV</span>
+                  </button>
+                </div>
 
                 {/* CANVA ZOOM TOOLBAR CONTROL */}
                 <div className="flex items-center bg-white border border-gray-200 rounded-xl px-2.5 py-1 shadow-2xs gap-1.5">
@@ -6732,6 +6915,142 @@ export default function CreerCv() {
             </div>
             <div className="text-sm font-black tracking-wide text-purple-200">✨ Écriture Magique IA</div>
             <div className="text-xs text-slate-300 font-medium">L&apos;IA Gemini analyse et optimise votre texte en temps réel...</div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL AUTO-REMPLISSAGE IA DU CV (NLP GEMINI /api/nlp) */}
+      {showAiFillModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn no-print">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-150 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Header de la modale */}
+            <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/30 border border-purple-400/40 flex items-center justify-center text-xl shadow-inner">
+                  🤖
+                </div>
+                <div>
+                  <h3 className="text-base font-black tracking-wide flex items-center gap-2">
+                    <span>Auto-remplissage IA de votre CV</span>
+                    <span className="text-[10px] bg-purple-500 text-white font-bold px-2 py-0.5 rounded-full uppercase">NLP Gemini</span>
+                  </h3>
+                  <p className="text-xs text-purple-200/80">Collez le texte brut de votre CV ou profil LinkedIn pour générer le design instantanément.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isAiFilling && setShowAiFillModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+                disabled={isAiFilling}
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            {/* Corps de la modale */}
+            <div className="p-6 space-y-4 overflow-y-auto">
+              
+              {/* Message d'aide */}
+              <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-2xl flex items-start gap-3">
+                <i className="fa-solid fa-lightbulb text-purple-600 mt-0.5 text-sm"></i>
+                <div className="text-xs text-purple-900 leading-relaxed">
+                  <strong>Astuce :</strong> Copiez tout le texte de votre profil LinkedIn (section Infos, Expériences, Formations) ou d&apos;un fichier Word/PDF, puis collez-le ci-dessous. L&apos;IA Facilité structure et remplit automatiquement chaque section.
+                </div>
+              </div>
+
+              {/* Erreur éventuelle */}
+              {aiFillError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-semibold flex items-center gap-2">
+                  <i className="fa-solid fa-circle-exclamation text-red-500"></i>
+                  <span>{aiFillError}</span>
+                </div>
+              )}
+
+              {/* Zone de saisie texte */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-gray-800 uppercase tracking-wider">
+                    Texte brut de votre CV / LinkedIn :
+                  </label>
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    {aiRawText.length} caractères
+                  </span>
+                </div>
+                <textarea
+                  value={aiRawText}
+                  onChange={(e) => setAiRawText(e.target.value)}
+                  disabled={isAiFilling}
+                  placeholder={`Exemple :\nJean Dupont - Ingénieur Logiciel\nEmail : jean.dupont@email.com | Tél : +221 77 123 45 67\n\nExpérience :\n- Développeur Full-Stack chez TechAfrica (2022 - Présent) : Développement d'applications web Next.js et API REST...\n\nFormation :\n- Master en Informatique - Université Cheikh Anta Diop (2020 - 2022)\n\nCompétences : React, Node.js, Python, TailwindCSS, SQL`}
+                  rows={8}
+                  className="w-full p-3.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs text-gray-900 placeholder-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono leading-relaxed transition"
+                />
+              </div>
+
+              {/* Suggestions rapides */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Exemples types :</span>
+                <button
+                  type="button"
+                  disabled={isAiFilling}
+                  onClick={() => setAiRawText("Amadou Diallo\nIngénieur DevOps & Cloud\nDakar, Sénégal | +221 77 987 65 43 | amadou.diallo@email.com\n\nProfil :\nExpert Cloud AWS et automatisation CI/CD avec 4 ans d'expérience dans le déploiement d'architectures résilientes et sécurisées.\n\nExpériences :\n- Lead DevOps chez Sonatel (2023 - Présent) : Mise en place de pipelines GitLab CI et gestion de clusters Kubernetes.\n- Administrateur Systèmes chez TechSénégal (2021 - 2023) : Migration d'infrastructures vers AWS et conteneurisation Docker.\n\nFormations :\n- Diplôme d'Ingénieur Télécoms & Réseaux - ESP Dakar (2021)\n\nCompétences : AWS, Docker, Kubernetes, Terraform, Linux, Ansible, Python")}
+                  className="text-[10.5px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition cursor-pointer"
+                >
+                  Exemple Profil DevOps
+                </button>
+                <button
+                  type="button"
+                  disabled={isAiFilling}
+                  onClick={() => setAiRawText("Fatou Ndiaye\nResponsable Marketing & Communication Digitale\nDakar, Sénégal | +221 78 555 44 33 | fatou.ndiaye@gmail.com\n\nProfil :\nStratège en marketing numérique passionnée par la croissance des marques, l'acquisition client et la gestion de communauté.\n\nExpériences :\n- Chef de Projet Marketing chez Agency Plus (2022 - Présent) : Gestion de campagnes publicitaires Meta & Google Ads, augmentation de 45% du ROI.\n- Community Manager chez E-Commerce SN (2020 - 2022) : Création de contenu viral TikTok/Instagram et animation d'une communauté de 100k abonnés.\n\nFormations :\n- Master en Marketing & Stratégie - ISM Dakar (2020)\n\nCompétences : Meta Ads, Google Analytics, SEO, Copywriting, Canva, CRM Hubspot")}
+                  className="text-[10.5px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200 transition cursor-pointer"
+                >
+                  Exemple Profil Marketing
+                </button>
+                {aiRawText && (
+                  <button
+                    type="button"
+                    disabled={isAiFilling}
+                    onClick={() => setAiRawText("")}
+                    className="text-[10.5px] font-bold text-gray-500 hover:text-red-600 ml-auto transition cursor-pointer"
+                  >
+                    Effacer le texte
+                  </button>
+                )}
+              </div>
+
+            </div>
+
+            {/* Footer de la modale */}
+            <div className="bg-gray-50 border-t border-gray-150 p-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowAiFillModal(false)}
+                disabled={isAiFilling}
+                className="px-4 py-2.5 rounded-full border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-100 transition cursor-pointer disabled:opacity-50"
+              >
+                Annuler
+              </button>
+
+              <button
+                type="button"
+                onClick={() => analyserEtRemplirCV(aiRawText)}
+                disabled={isAiFilling || !aiRawText.trim()}
+                className="px-6 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-extrabold text-xs shadow-lg hover:shadow-xl transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+              >
+                {isAiFilling ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin text-sm"></i>
+                    <span>Extraction IA en cours...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                    <span>Analyser & Auto-remplir mon CV</span>
+                  </>
+                )}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
