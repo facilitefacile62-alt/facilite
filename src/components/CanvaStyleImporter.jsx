@@ -20,10 +20,11 @@ import { useEffect, useState, useCallback } from "react";
  * — plus robuste si Canva change son balisage, et ça fonctionne déjà avec
  * les seuls faits confirmés à ce stade.
  *
- * Ce composant ne modifie RIEN au CV en cours (pas d'appel à
- * setAccentColor ici) : il affiche seulement ce qui a été détecté. L'étape
- * D (panneau de prévisualisation) et E (application sur confirmation)
- * viendront après validation de cette étape.
+ * Étape 2B : la police détectée est désormais chargée (Google Fonts) et
+ * appliquée immédiatement via onFontDetected — la couleur reste diagnostic
+ * seul pour l'instant (pas d'appel à setAccentColor ici). Le panneau de
+ * prévisualisation/confirmation pour la couleur viendra dans une étape
+ * ultérieure.
  */
 
 const NEUTRAL_LIGHTNESS_MIN = 12;
@@ -117,7 +118,7 @@ function extractFromHtml(html) {
   };
 }
 
-export default function CanvaStyleImporter() {
+export default function CanvaStyleImporter({ onFontDetected }) {
   const [lastResult, setLastResult] = useState(null);
 
   const handlePaste = useCallback((e) => {
@@ -142,13 +143,17 @@ export default function CanvaStyleImporter() {
       sourceType = "text/plain seul (aucune couleur/police détectable depuis du texte brut)";
     }
 
+    if (extraction.fontFamily && onFontDetected) {
+      onFontDetected(extraction.fontFamily);
+    }
+
     setLastResult({
       types,
       sourceType,
       ...extraction,
       at: new Date().toLocaleTimeString("fr-FR"),
     });
-  }, []);
+  }, [onFontDetected]);
 
   useEffect(() => {
     window.addEventListener("paste", handlePaste);
@@ -211,12 +216,18 @@ export default function CanvaStyleImporter() {
 
         <div>
           <span className="text-gray-400">Police détectée :</span>{" "}
-          {lastResult.fontFamily || <span className="text-gray-400">aucune</span>}
+          {lastResult.fontFamily ? (
+            <span className="text-emerald-600 font-bold">{lastResult.fontFamily} (appliquée)</span>
+          ) : (
+            <span className="text-gray-400">aucune</span>
+          )}
         </div>
       </div>
 
       <p className="text-[10px] text-gray-400 mt-3 pt-2 border-t border-gray-100">
-        Diagnostic seul — rien n'est appliqué au CV pour l'instant.
+        {lastResult.fontFamily
+          ? "Police appliquée immédiatement à l'aperçu. Couleur : diagnostic seul pour l'instant."
+          : "Diagnostic seul — rien n'est appliqué au CV pour l'instant."}
       </p>
     </div>
   );

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
@@ -633,7 +633,7 @@ export default function CreerCv() {
   const [isAdvancedEditOpen, setIsAdvancedEditOpen] = useState(false);
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(true);
   const [activeCanvaTab, setActiveCanvaTab] = useState("models");
-  const [canvaFontFamily, setCanvaFontFamily] = useState("font-sans");
+  const [canvaFontFamily, setCanvaFontFamily] = useState("Inter");
   const [canvaFontSize, setCanvaFontSize] = useState(14);
   const [canvaScale, setCanvaScale] = useState(1);
   const [canvaSectionSpacing, setCanvaSectionSpacing] = useState(1);
@@ -1533,6 +1533,29 @@ export default function CreerCv() {
     triggerToast(cvPages[pageIndex]?.isLocked ? "Page déverrouillée" : "Page verrouillée");
   };
 
+  // --- CHARGEMENT DYNAMIQUE DES POLICES GOOGLE FONTS ---
+  // "Inter" est déjà chargée sitewide via next/font/google (layout.js) —
+  // inutile de la re-charger depuis le CDN Google Fonts.
+  const loadFont = useCallback((fontName) => {
+    if (typeof document === "undefined" || !fontName || fontName === "Inter") return;
+
+    const id = "cv-font-" + fontName.replace(/\s+/g, "-");
+    if (document.getElementById(id)) return;
+
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href =
+      "https://fonts.googleapis.com/css2?family=" +
+      fontName.replace(/\s+/g, "+") +
+      ":wght@400;500;600;700&display=swap";
+    link.onerror = () => {
+      console.warn(`[Polices] Échec du chargement de "${fontName}" depuis Google Fonts.`);
+      link.remove();
+    };
+    document.head.appendChild(link);
+  }, []);
+
   // --- GESTION DES MODÈLES (Suppression & Restauration) ---
   const handleDeleteTemplate = (e, tplId, tplName) => {
     if (e && e.stopPropagation) e.stopPropagation();
@@ -2101,9 +2124,16 @@ Laisse vide les champs non trouvés.`;
   return (
     <CanvaStudioContext.Provider value={studioContextValue}>
       {/* Étape 2A — diagnostic d'import de style Canva (collage hors champ
-          de formulaire). N'applique rien au CV, affiche seulement ce qui a
-          été détecté — voir src/components/CanvaStyleImporter.jsx. */}
-      <CanvaStyleImporter />
+          de formulaire). Étape 2B : la police détectée est désormais
+          chargée et appliquée immédiatement sur #cv-preview-sheet ; la
+          couleur reste diagnostic seul pour l'instant — voir
+          src/components/CanvaStyleImporter.jsx. */}
+      <CanvaStyleImporter
+        onFontDetected={(fontName) => {
+          loadFont(fontName);
+          setCanvaFontFamily(fontName);
+        }}
+      />
 
       {/* Toast Notification Top Floating */}
       <div
@@ -2434,22 +2464,23 @@ Laisse vide les champs non trouvés.`;
                       <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Police de caractères</label>
                       <div className="grid grid-cols-2 gap-2">
                         {[
-                          { id: "font-sans", name: "Public Sans" },
-                          { id: "font-inter", name: "Inter" },
-                          { id: "font-outfit", name: "Outfit" },
-                          { id: "font-montserrat", name: "Montserrat" },
-                          { id: "font-roboto", name: "Roboto" },
-                          { id: "font-serif", name: "Playfair" },
+                          { value: "Public Sans", name: "Public Sans" },
+                          { value: "Inter", name: "Inter" },
+                          { value: "Outfit", name: "Outfit" },
+                          { value: "Montserrat", name: "Montserrat" },
+                          { value: "Roboto", name: "Roboto" },
+                          { value: "Playfair Display", name: "Playfair" },
                         ].map(f => (
                           <button
-                            key={f.id}
+                            key={f.value}
                             type="button"
                             onClick={() => {
-                              setCanvaFontFamily(f.id);
+                              loadFont(f.value);
+                              setCanvaFontFamily(f.value);
                               triggerToast(`Police ${f.name} appliquée`);
                             }}
                             className={`p-2 rounded-xl text-left border text-xs transition cursor-pointer ${
-                              canvaFontFamily === f.id
+                              canvaFontFamily === f.value
                                 ? "bg-blue-600/20 border-blue-500 text-white font-bold"
                                 : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
                             }`}
@@ -4270,15 +4301,18 @@ Laisse vide les champs non trouvés.`;
                 {/* Font selector */}
                 <select
                   value={canvaFontFamily}
-                  onChange={(e) => setCanvaFontFamily(e.target.value)}
+                  onChange={(e) => {
+                    loadFont(e.target.value);
+                    setCanvaFontFamily(e.target.value);
+                  }}
                   className="bg-gray-100 hover:bg-gray-200 border-0 rounded-lg px-2 py-1 text-xs font-bold text-gray-800 cursor-pointer focus:outline-hidden"
                 >
-                  <option value="font-sans">Public Sans</option>
-                  <option value="font-inter">Inter</option>
-                  <option value="font-outfit">Outfit</option>
-                  <option value="font-montserrat">Montserrat</option>
-                  <option value="font-roboto">Roboto</option>
-                  <option value="font-serif">Playfair</option>
+                  <option value="Public Sans">Public Sans</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Outfit">Outfit</option>
+                  <option value="Montserrat">Montserrat</option>
+                  <option value="Roboto">Roboto</option>
+                  <option value="Playfair Display">Playfair</option>
                 </select>
 
                 {/* Font Size - / + */}
@@ -4441,7 +4475,8 @@ Laisse vide les champs non trouvés.`;
               {/* The CV Document Sheet to print/view */}
               <div
                 id="cv-preview-sheet"
-                className="bg-white shadow-2xl relative w-[595px] min-h-[842px] h-[842px] max-w-[595px] max-h-[842px] min-w-[595px] overflow-hidden text-gray-900 border border-gray-300 rounded-sm flex flex-col font-sans transition-all duration-305"
+                className="bg-white shadow-2xl relative w-[595px] min-h-[842px] h-[842px] max-w-[595px] max-h-[842px] min-w-[595px] overflow-hidden text-gray-900 border border-gray-300 rounded-sm flex flex-col transition-all duration-305"
+                style={{ fontFamily: canvaFontFamily ? `"${canvaFontFamily}", sans-serif` : "Inter, sans-serif" }}
               >
                 
                 {/* --- TEMPLATE 1: MODERNE (Two columns: Left sidebar colored, Right body white) --- */}

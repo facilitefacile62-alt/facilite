@@ -23,8 +23,16 @@ const isDev = process.env.NODE_ENV !== "production";
 const cspReportOnly = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
-  "font-src 'self' data: https://cdnjs.cloudflare.com",
+  // fonts.googleapis.com : feuilles de style chargées dynamiquement par
+  // loadFont() (creer-cv/page.js) pour les polices Google Fonts choisies
+  // dans le sélecteur de style CV (Outfit, Montserrat, Roboto, Playfair
+  // Display, Public Sans) — Inter reste hors CDN, servie par next/font.
+  "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+  // fonts.gstatic.com : fichiers de police référencés par les feuilles de
+  // style ci-dessus (@font-face url()) — sans cette entrée, la feuille de
+  // style Google Fonts chargerait mais les fichiers .woff2 resteraient
+  // bloqués.
+  "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
   // *.googleusercontent.com : photo de profil Google, copiée dans
   // profiles.avatar_url à l'inscription par le trigger handle_new_user
   // (raw_user_meta_data->>'avatar_url') pour les comptes connectés via
