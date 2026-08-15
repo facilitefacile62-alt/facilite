@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
 import TemplatePreviewModal from "@/components/TemplatePreviewModal";
 import { cvTemplates, resolveTemplateId, DEFAULT_TEMPLATE_ID } from "@/lib/cvModels";
+import CanvaStyleImporter from "@/components/CanvaStyleImporter";
 
 export { cvTemplates };
 
@@ -670,6 +671,17 @@ export default function CreerCv() {
   const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0, element: null });
   const contextMenuRef = useRef(null);
   const [isMagicLoading, setIsMagicLoading] = useState(false);
+  const [deletedTemplateIds, setDeletedTemplateIds] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("facilite_deleted_templates");
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
   
   // Mobile tab switcher: "edit" (form) or "preview" (document sheet)
   const [mobileTab, setMobileTab] = useState("edit");
@@ -1521,67 +1533,157 @@ export default function CreerCv() {
     triggerToast(cvPages[pageIndex]?.isLocked ? "Page déverrouillée" : "Page verrouillée");
   };
 
-  // --- ÉTAPE 4 : FONCTION D'APPEL ÉCRITURE MAGIQUE IA GEMINI ---
-  const utiliserEcritureMagique = async (texteSelectionne) => {
+  // --- GESTION DES MODÈLES (Suppression & Restauration) ---
+  const handleDeleteTemplate = (e, tplId, tplName) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    const remainingAfterDelete = cvTemplates.filter(t => t.id !== tplId && !deletedTemplateIds.includes(t.id));
+    if (remainingAfterDelete.length === 0) {
+      triggerToast("Impossible de supprimer le dernier modèle disponible.", "fa-circle-exclamation");
+      return;
+    }
+
+    setDeletedTemplateIds(prev => {
+      const updated = [...new Set([...prev, tplId])];
+      try {
+        localStorage.setItem("facilite_deleted_templates", JSON.stringify(updated));
+      } catch (err) {
+        console.warn("Erreur stockage deleted_templates:", err);
+      }
+      return updated;
+    });
+
+    if (selectedTemplate === tplId && remainingAfterDelete.length > 0) {
+      setSelectedTemplate(remainingAfterDelete[0].id);
+      if (remainingAfterDelete[0].accentColor) {
+        setAccentColor(remainingAfterDelete[0].accentColor);
+      }
+    }
+
+    triggerToast(`Modèle "${tplName || tplId}" supprimé de votre liste`, "fa-trash-can");
+  };
+
+  const handleRestoreTemplates = () => {
+    setDeletedTemplateIds([]);
+    try {
+      localStorage.removeItem("facilite_deleted_templates");
+    } catch (err) {
+      console.warn("Erreur suppression localStorage deleted_templates:", err);
+    }
+    triggerToast("Tous les modèles ont été restaurés !", "fa-rotate-left");
+  };
+
+  // --- ÉTAPE 4 : FONCTION D'APPEL FRONT-END DU STUDIO IA (/api/magique) ---
+  const gererEcritureMagique = async (texteSelectionne, typeAction = "reformulation", options = {}) => {
     if (!texteSelectionne || !texteSelectionne.trim()) {
-      triggerToast("Le texte à améliorer est vide.", "fa-circle-exclamation");
+      triggerToast("Veuillez fournir un texte à améliorer.", "fa-circle-exclamation");
       return texteSelectionne;
     }
+
     try {
       setIsMagicLoading(true);
-      console.log("L'IA réfléchit..."); 
-      triggerToast("✨ L'IA Gemini améliore votre texte...", "fa-wand-magic-sparkles");
+      console.log(`[Studio IA] Requête en cours (${typeAction})...`);
+      triggerToast("✨ L'IA Gemini analyse et optimise votre texte...", "fa-wand-magic-sparkles");
 
-      const reponse = await fetch('/api/magique', {
+      const response = await fetch('/api/magique', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ texteInitial: texteSelectionne }),
+        body: JSON.stringify({
+          texteInitial: texteSelectionne.trim(),
+          type: typeAction,
+          jobTitle: options.jobTitle || cvData.jobTitle || "",
+        }),
       });
 
-      const data = await reponse.json();
+      const data = await response.json().catch(() => ({}));
 
-      if (data.success && data.texteAmeliore) {
-        console.log("Texte amélioré :", data.texteAmeliore);
+      if (response.ok && data.success && data.texteAmeliore) {
+        console.log("[Studio IA] Texte optimisé :", data.texteAmeliore);
         triggerToast("✨ Texte optimisé avec succès par l'IA !", "fa-circle-check");
-        return data.texteAmeliore; 
+        return data.texteAmeliore;
       } else {
-        alert("Erreur lors de l'amélioration du texte.");
-        return texteSelectionne; // Fallback
+        const messageErreur =
+          data?.message ||
+          data?.error ||
+          (response.status === 429
+            ? "Quota IA dépassé. Veuillez patienter un instant."
+            : response.status === 400
+            ? "Données invalides pour l'IA."
+            : "Impossible de joindre le Studio IA pour le moment.");
+
+        console.error(`[Studio IA Error ${response.status}]`, data);
+        triggerToast(messageErreur, "fa-triangle-exclamation");
+        return texteSelectionne; // Fallback sécurisé
       }
     } catch (error) {
-      console.error("Problème de connexion", error);
-      triggerToast("Problème de connexion avec l'IA.", "fa-triangle-exclamation");
+      console.error("[Studio IA] Erreur de connexion :", error);
+      triggerToast("Erreur de connexion avec l'IA. Vérifiez votre réseau.", "fa-triangle-exclamation");
       return texteSelectionne;
     } finally {
       setIsMagicLoading(false);
     }
   };
 
+  // Alias pour la compatibilité
+  const utiliserEcritureMagique = gererEcritureMagique;
+
   const handleAiRewriteSummary = async () => {
     const job = cvData.jobTitle || "Professionnel";
-    const initialText = cvData.profile || cvData.profileSummary || `Professionnel dynamique et orienté résultats avec une solide expertise en ${job}. Reconnu(e) pour ma rigueur, ma capacité d'adaptation rapide et mon engagement vers l'excellence opérationnelle.`;
-    const texteAmeliore = await utiliserEcritureMagique(initialText);
-    if (texteAmeliore) {
+    const initialText =
+      cvData.profile ||
+      cvData.profileSummary ||
+      `Professionnel dynamique et orienté résultats avec une solide expertise en ${job}. Reconnu(e) pour ma rigueur, ma capacité d'adaptation rapide et mon engagement vers l'excellence opérationnelle.`;
+    
+    const texteAmeliore = await gererEcritureMagique(initialText, "reformulation", { jobTitle: job });
+    if (texteAmeliore && texteAmeliore !== initialText) {
       setCvData(prev => ({
         ...prev,
         profile: texteAmeliore,
-        profileSummary: texteAmeliore
+        profileSummary: texteAmeliore,
       }));
     }
   };
 
-  const handleAiAddKeywords = () => {
-    setCvData(prev => ({
-      ...prev,
-      skills: [
-        ...prev.skills,
-        { id: Date.now(), name: "Gestion de projet & Rigueur", level: "Avancé" },
-        { id: Date.now() + 1, name: "Leadership & Collaboration", level: "Expert" }
-      ]
-    }));
-    triggerToast("Mots-clés clés ajoutés au CV !");
+  const handleAiAddKeywords = async () => {
+    const job = cvData.jobTitle || "Professionnel";
+    const currentSkills = cvData.skills?.map(s => s.name).join(", ") || "";
+    const baseText = currentSkills
+      ? `Poste visé : ${job}. Compétences actuelles : ${currentSkills}. Propose 3 compétences et mots-clés ATS percutants sous forme de liste courte séparée par des virgules.`
+      : `Poste visé : ${job}. Propose 3 compétences clés et mots-clés ATS percutants sous forme de liste courte séparée par des virgules.`;
+
+    const resultatsAts = await gererEcritureMagique(baseText, "ats", { jobTitle: job });
+    if (resultatsAts) {
+      const extractedKeywords = resultatsAts
+        .split(/[\n,;•\-]+/)
+        .map(kw => kw.replace(/^\d+[\.\)]\s*/, '').trim())
+        .filter(kw => kw.length > 2 && kw.length < 45 && !kw.toLowerCase().startsWith('voici') && !kw.toLowerCase().startsWith('poste'));
+
+      if (extractedKeywords.length > 0) {
+        const newSkills = extractedKeywords.slice(0, 3).map((name, idx) => ({
+          id: Date.now() + idx,
+          name,
+          level: "Avancé"
+        }));
+
+        setCvData(prev => ({
+          ...prev,
+          skills: [...prev.skills, ...newSkills]
+        }));
+        triggerToast("✨ Mots-clés ATS ajoutés aux compétences !", "fa-circle-check");
+      } else {
+        setCvData(prev => ({
+          ...prev,
+          skills: [
+            ...prev.skills,
+            { id: Date.now(), name: `Expertise ${job}`, level: "Avancé" },
+            { id: Date.now() + 1, name: "Gestion de projet & Performance", level: "Expert" }
+          ]
+        }));
+        triggerToast("Mots-clés clés ajoutés au CV !", "fa-circle-check");
+      }
+    }
   };
 
   // --- GESTIONNAIRES INTERACTIFS CANVA STUDIO (Déplacer, Dupliquer, Supprimer, Grouper, Verrouiller) ---
@@ -1845,8 +1947,11 @@ Laisse vide les champs non trouvés.`;
           nextData.profile = extracted.profil.trim();
         }
 
-        // 3. Expériences
+        // 3. Expériences & Titre de poste
         if (Array.isArray(extracted.experiences) && extracted.experiences.length > 0) {
+          if (extracted.experiences[0]?.poste && (!nextData.jobTitle || nextData.jobTitle === "Professionnel" || nextData.jobTitle === "Titre professionnel")) {
+            nextData.jobTitle = extracted.experiences[0].poste;
+          }
           nextData.experiences = extracted.experiences.map((exp, idx) => {
             const dateStr = exp.date || "";
             const parts = dateStr.includes("-") ? dateStr.split("-").map(d => d.trim()) : [dateStr, ""];
@@ -1995,6 +2100,11 @@ Laisse vide les champs non trouvés.`;
 
   return (
     <CanvaStudioContext.Provider value={studioContextValue}>
+      {/* Étape 2A — diagnostic d'import de style Canva (collage hors champ
+          de formulaire). N'applique rien au CV, affiche seulement ce qui a
+          été détecté — voir src/components/CanvaStyleImporter.jsx. */}
+      <CanvaStyleImporter />
+
       {/* Toast Notification Top Floating */}
       <div
         className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
@@ -2252,40 +2362,65 @@ Laisse vide les champs non trouvés.`;
                     </div>
 
                     <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between pt-1">
-                      <span>Tous les modèles ({cvTemplates.length})</span>
-                      <span className="text-blue-400 text-[10px]">Actif: {selectedTemplate}</span>
+                      <span>Modèles disponibles ({cvTemplates.filter(t => !deletedTemplateIds.includes(t.id)).length}/{cvTemplates.length})</span>
+                      <div className="flex items-center gap-2">
+                        {deletedTemplateIds.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleRestoreTemplates}
+                            className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer font-semibold transition"
+                            title="Restaurer tous les modèles supprimés"
+                          >
+                            <i className="fa-solid fa-rotate-left text-[9px]"></i>
+                            <span>Restaurer ({deletedTemplateIds.length})</span>
+                          </button>
+                        )}
+                        <span className="text-blue-400 text-[10px]">Actif: {selectedTemplate}</span>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5">
                       {cvTemplates
+                        .filter(t => !deletedTemplateIds.includes(t.id))
                         .filter(t => !canvaSearchQuery || t.name.toLowerCase().includes(canvaSearchQuery.toLowerCase()) || t.category.toLowerCase().includes(canvaSearchQuery.toLowerCase()))
                         .map((tpl) => {
                           const isCur = selectedTemplate === tpl.id;
                           return (
-                            <button
-                              key={tpl.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedTemplate(tpl.id);
-                                triggerToast(`Modèle ${tpl.name} appliqué !`);
-                              }}
-                              className={`relative rounded-xl p-2 text-left transition border cursor-pointer group flex flex-col justify-between h-28 ${
-                                isCur
-                                  ? "bg-blue-950/60 border-blue-500 shadow-md ring-2 ring-blue-500/30"
-                                  : "bg-slate-850 border-slate-750 hover:border-slate-600 hover:bg-slate-800"
-                              }`}
-                            >
-                              <div>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-[10px] font-extrabold text-white truncate block">{tpl.name}</span>
-                                  {isCur && <i className="fa-solid fa-circle-check text-blue-400 text-xs"></i>}
+                            <div key={tpl.id} className="relative group">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTemplate(tpl.id);
+                                  triggerToast(`Modèle ${tpl.name} appliqué !`);
+                                }}
+                                className={`w-full relative rounded-xl p-2 text-left transition border cursor-pointer flex flex-col justify-between h-28 ${
+                                  isCur
+                                    ? "bg-blue-950/60 border-blue-500 shadow-md ring-2 ring-blue-500/30"
+                                    : "bg-slate-850 border-slate-750 hover:border-slate-600 hover:bg-slate-800"
+                                }`}
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between mb-1 pr-5">
+                                    <span className="text-[10px] font-extrabold text-white truncate block">{tpl.name}</span>
+                                    {isCur && <i className="fa-solid fa-circle-check text-blue-400 text-xs"></i>}
+                                  </div>
+                                  <span className="text-[9px] text-slate-400 block">{tpl.category}</span>
                                 </div>
-                                <span className="text-[9px] text-slate-400 block">{tpl.category}</span>
-                              </div>
-                              <div className="w-full h-1.5 rounded-full bg-slate-700 overflow-hidden">
-                                <div className="h-full" style={{ backgroundColor: tpl.accentColor, width: "100%" }}></div>
-                              </div>
-                            </button>
+                                <div className="w-full h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                                  <div className="h-full" style={{ backgroundColor: tpl.accentColor, width: "100%" }}></div>
+                                </div>
+                              </button>
+
+                              {/* Bouton de suppression du modèle */}
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteTemplate(e, tpl.id, tpl.name)}
+                                className="absolute top-1.5 right-1.5 w-5 h-5 rounded-md bg-slate-900/90 hover:bg-rose-600 text-slate-400 hover:text-white flex items-center justify-center text-[9px] transition opacity-0 group-hover:opacity-100 z-20 cursor-pointer shadow-md border border-slate-700 hover:border-rose-500"
+                                title={`Supprimer le modèle ${tpl.name}`}
+                              >
+                                <i className="fa-regular fa-trash-can"></i>
+                              </button>
+                            </div>
                           );
                         })}
                     </div>
@@ -2658,11 +2793,20 @@ Laisse vide les champs non trouvés.`;
 
                     <button
                       type="button"
+                      disabled={isMagicLoading}
                       onClick={() => handleAiRewriteSummary()}
-                      className="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-left transition flex items-center gap-3 cursor-pointer group"
+                      className={`w-full p-3 rounded-xl border text-left transition flex items-center gap-3 cursor-pointer group ${
+                        isMagicLoading 
+                          ? "bg-slate-850 border-slate-750 opacity-60 cursor-not-allowed" 
+                          : "bg-slate-800 hover:bg-slate-750 border-slate-700"
+                      }`}
                     >
                       <div className="w-8 h-8 rounded-lg bg-purple-900/60 text-purple-300 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                        {isMagicLoading ? (
+                          <i className="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        ) : (
+                          <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                        )}
                       </div>
                       <div>
                         <span className="text-xs font-bold text-white block group-hover:text-purple-300">Reformuler le profil</span>
@@ -2672,11 +2816,20 @@ Laisse vide les champs non trouvés.`;
 
                     <button
                       type="button"
+                      disabled={isMagicLoading}
                       onClick={() => handleAiAddKeywords()}
-                      className="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-left transition flex items-center gap-3 cursor-pointer group"
+                      className={`w-full p-3 rounded-xl border text-left transition flex items-center gap-3 cursor-pointer group ${
+                        isMagicLoading 
+                          ? "bg-slate-850 border-slate-750 opacity-60 cursor-not-allowed" 
+                          : "bg-slate-800 hover:bg-slate-750 border-slate-700"
+                      }`}
                     >
                       <div className="w-8 h-8 rounded-lg bg-blue-900/60 text-blue-300 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-key text-xs"></i>
+                        {isMagicLoading ? (
+                          <i className="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                        ) : (
+                          <i className="fa-solid fa-key text-xs"></i>
+                        )}
                       </div>
                       <div>
                         <span className="text-xs font-bold text-white block group-hover:text-blue-300">Enrichir mots-clés ATS</span>
