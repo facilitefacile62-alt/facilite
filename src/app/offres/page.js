@@ -360,88 +360,74 @@ function OffresContent() {
                   key={offer.id}
                   className="bg-white rounded-2xl border border-gray-200 shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col p-5 group hover:border-emerald-300"
                 >
-                  {/* Header Offre */}
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-start space-x-3 min-w-0 flex-1">
-                      {/* Logo Entreprise */}
-                      <div className={`w-11 h-11 rounded-xl ${logoColor} flex items-center justify-center text-white font-extrabold text-sm shadow-xs flex-shrink-0`}>
-                        {initials}
-                      </div>
-
-                      <div className="flex-grow min-w-0">
-                        <Link
-                          href={`/offres/${offer.id}`}
-                          className="text-sm font-extrabold text-gray-900 leading-snug hover:text-emerald-700 transition-colors block truncate"
-                          title={offer.title}
-                        >
-                          {offer.title}
-                        </Link>
-                        <p className="text-xs text-gray-700 font-bold mt-0.5 truncate">
-                          {offer.company || "Recruteur Confidentiel"}
-                        </p>
-                        <div className="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5 flex-wrap">
-                          <span className="text-emerald-700 font-extrabold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
-                            <i className="fa-solid fa-location-dot text-[10px]"></i>
-                            {offer.location || "Sénégal"}
-                          </span>
-                          <span className="font-extrabold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
-                            {offer.contract_type || "CDI"}
-                          </span>
-                        </div>
-                      </div>
+                  {/* En-tête façon post Facebook : avatar + nom de la page (entreprise) +
+                      horodatage — pas de badges colorés ici, juste texte gris discret
+                      comme sur un vrai post (nom de page en gras, "27 min" en dessous). */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-full ${logoColor} flex items-center justify-center text-white font-extrabold text-xs shadow-xs flex-shrink-0`}>
+                      {initials}
                     </div>
-
-                    {/* Date en haut à droite pour gagner de l'espace */}
-                    <div className="flex-shrink-0 text-right mt-0.5">
-                      <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
-                        {dateFormatted}
-                      </span>
+                    <div className="flex-grow min-w-0">
+                      <p className="text-sm font-extrabold text-gray-900 truncate">
+                        {offer.company || "Recruteur Confidentiel"}
+                      </p>
+                      <div className="text-[11px] text-gray-500 font-medium flex items-center gap-1">
+                        <span>{dateFormatted}</span>
+                        <span aria-hidden="true">·</span>
+                        <i className="fa-solid fa-earth-africa text-[9px]" title="Offre publique"></i>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Description Rapide */}
-                  <p className="text-xs text-gray-600 line-clamp-2 mb-3 leading-relaxed">
-                    {offer.description}
-                  </p>
-
-                  {/* Tags Date limite, Niveau d'études & Match sémantique */}
-                  <div className="flex items-center gap-1.5 flex-wrap mb-3 text-[11px]">
-                    {offer.deadline && (
-                      <span className="bg-red-50 text-red-700 border border-red-200/80 px-2.5 py-0.5 rounded-md font-extrabold flex items-center gap-1">
-                        <i className="fa-regular fa-calendar-xmark text-[10px] text-red-600"></i>
-                        Date limite : {new Date(offer.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                      </span>
-                    )}
-                    {offer.required_education_level && (
-                      <span className="bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-md font-bold flex items-center gap-1">
-                        <i className="fa-solid fa-graduation-cap text-emerald-600 text-[10px]"></i>
-                        Niveau : {offer.required_education_level}
-                      </span>
-                    )}
-                    {semanticResults && offer.id in semanticResults && (
-                      <span className="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md font-black text-[10px]">
-                        ⚡ {Math.round(semanticResults[offer.id] * 100)}% pertinence
-                      </span>
-                    )}
+                  {/* Légende façon post : titre + description en texte simple, puis les
+                      infos (lieu, contrat, date limite, niveau) sur une seule ligne grise
+                      séparée par des points — même contenu qu'avant, sans les pastilles
+                      colorées qui cassaient le look sobre d'un post Facebook. */}
+                  <div className="mb-3">
+                    <Link
+                      href={`/offres/${offer.id}`}
+                      className="text-sm font-extrabold text-gray-900 leading-snug hover:text-emerald-700 transition-colors block"
+                      title={offer.title}
+                    >
+                      {offer.title}
+                    </Link>
+                    <p className="text-xs text-gray-600 line-clamp-2 mt-1 leading-relaxed">
+                      {offer.description}
+                    </p>
+                    <p className="text-[11px] text-gray-500 font-medium mt-1.5 flex items-center gap-1.5 flex-wrap">
+                      <span>{offer.location || "Sénégal"}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{offer.contract_type || "CDI"}</span>
+                      {offer.deadline && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span>Jusqu'au {new Date(offer.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                        </>
+                      )}
+                      {offer.required_education_level && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span>Niveau {offer.required_education_level}</span>
+                        </>
+                      )}
+                      {semanticResults && offer.id in semanticResults && (
+                        <span className="text-amber-700 font-bold">
+                          ⚡ {Math.round(semanticResults[offer.id] * 100)}% pertinence
+                        </span>
+                      )}
+                    </p>
                   </div>
 
-                  {/* Visuel Haute Définition de Recrutement (Double couche cinématographique) */}
+                  {/* Visuel Haute Définition de Recrutement (Style Facebook Net & Épuré) */}
                   <div
-                    className="relative w-full h-52 sm:h-60 rounded-xl overflow-hidden bg-gray-100 mb-3 border border-gray-200/90 group/img cursor-pointer"
+                    className="relative w-full rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 mb-3 border border-gray-200/90 dark:border-gray-800 group/img cursor-pointer flex items-center justify-center min-h-[200px] sm:min-h-[260px] max-h-[480px]"
                     onClick={() => setViewImageModal({ isOpen: true, url: offerImg })}
-                    title="Cliquer pour agrandir l'affiche"
+                    title="Cliquer pour voir l'affiche en plein écran"
                   >
-                    {/* Fond flouté pour combler l'espace */}
-                    <img
-                      src={offerImg}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none transition-transform duration-300 group-hover/img:scale-125"
-                    />
                     {/* Overlay au survol */}
-                    <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/15 transition-colors duration-300 z-10 flex items-center justify-center">
-                      <div className="opacity-0 group-hover/img:opacity-100 bg-white/95 text-gray-900 rounded-full p-2.5 shadow-xl transform scale-90 group-hover/img:scale-100 transition-all duration-300 flex items-center gap-1.5 px-3.5">
-                        <i className="fa-solid fa-expand text-xs text-emerald-600"></i>
+                    <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors duration-200 z-10 flex items-center justify-center">
+                      <div className="opacity-0 group-hover/img:opacity-100 bg-black/75 text-white rounded-full py-1.5 px-3.5 shadow-xl transform scale-95 group-hover/img:scale-100 transition-all duration-200 flex items-center gap-1.5">
+                        <i className="fa-solid fa-expand text-xs text-emerald-400"></i>
                         <span className="text-xs font-black">Agrandir</span>
                       </div>
                     </div>
@@ -449,7 +435,7 @@ function OffresContent() {
                     <img
                       src={offerImg}
                       alt={offer.title}
-                      className="relative z-10 w-full h-full object-contain mx-auto block animate-fade-in pointer-events-none"
+                      className="w-full h-auto max-h-[480px] object-contain mx-auto block animate-fade-in transition-transform duration-200 group-hover/img:scale-[1.01]"
                       loading="lazy"
                     />
                   </div>
