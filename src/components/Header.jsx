@@ -114,6 +114,26 @@ const QUICK_SECTIONS_INDEX = [
     keywords: "dépôts physiques stations services journalier recrutement présentiel dakar adresse téléphone",
   },
   {
+    id: "sec_concours",
+    title: "Concours & Examens Directs",
+    type: "Opportunité",
+    subtitle: "Avis de concours d'entrée et recrutements publics",
+    targetUrl: "/offres?q=Concours",
+    icon: "fa-award",
+    badgeColor: "purple",
+    keywords: "concours examen direct fonction publique recrutement état ministère sénégal avis",
+  },
+  {
+    id: "sec_formation",
+    title: "Formations & Certifications Pro",
+    type: "Formation",
+    subtitle: "Programmes certifiants et diplômes professionnels",
+    targetUrl: "/offres?q=Formation",
+    icon: "fa-graduation-cap",
+    badgeColor: "emerald",
+    keywords: "formation certifiante diplôme apprentissage cours atelier compétences",
+  },
+  {
     id: "sec_messagerie",
     title: "Messagerie & Conversations en Direct",
     type: "Communication",
@@ -1135,6 +1155,42 @@ export default function Header() {
                   </div>
                 </Link>
 
+                <Link
+                  href="/offres?q=Concours"
+                  onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Concours")
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-award text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Concours</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Avis & examens de la fonction publique</div>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/offres?q=Formation"
+                  onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Formation")
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-graduation-cap text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Formation</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Formations & certifications professionnelles</div>
+                  </div>
+                </Link>
+
                 <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
 
                 <Link
@@ -1569,6 +1625,42 @@ export default function Header() {
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Dépôts Physiques</h4>
                     <p className="text-[10px] text-gray-500 font-medium truncate">Stations & Adresses</p>
+                  </div>
+                </Link>
+
+                {/* Concours */}
+                <Link
+                  href="/offres?q=Concours"
+                  onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-award"></i>
+                    </div>
+                    <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-md">Public</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Concours</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Avis & Examens</p>
+                  </div>
+                </Link>
+
+                {/* Formation */}
+                <Link
+                  href="/offres?q=Formation"
+                  onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <span className="px-1.5 py-0.5 bg-teal-500 text-white text-[9px] font-black rounded-md">Pro</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Formation</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Certifications & Cours</p>
                   </div>
                 </Link>
 
