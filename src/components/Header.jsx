@@ -1617,35 +1617,7 @@ export default function Header() {
                   </div>
                 </Link>
 
-                {/* 9. Espace Recruteur */}
-                <Link
-                  href="/recruteur"
-                  onClick={(e) => handleNavClick(e, "/recruteur", "nav_recruteur", "Recruteur")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-950 text-orange-600 flex items-center justify-center text-sm shadow-2xs">
-                    <i className="fa-solid fa-bullhorn"></i>
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Espace Recruteur</h4>
-                    <p className="text-[10px] text-gray-500 font-medium truncate">Publier une annonce</p>
-                  </div>
-                </Link>
 
-                {/* 10. Badge Candidat Vérifié */}
-                <Link
-                  href="/profil?tab=badge"
-                  onClick={(e) => handleNavClick(e, "/profil?tab=badge", "nav_badge", "Badge")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-sm shadow-2xs">
-                    <i className="fa-solid fa-certificate"></i>
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Badge Vérifié</h4>
-                    <p className="text-[10px] text-gray-500 font-medium truncate">Certifier mon profil</p>
-                  </div>
-                </Link>
 
                 {/* 11. Boîte à idées & Suggestions */}
                 <Link
