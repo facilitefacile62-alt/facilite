@@ -2078,7 +2078,7 @@ export default function ProfilPage() {
       </nav>
 
       {/* Main Profile Page Container */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-16 pb-16 px-4 md:px-6" suppressHydrationWarning>
+      <main className="min-h-screen bg-[#F4F2EE] dark:bg-[#0B0F17] pt-4 md:pt-6 pb-16 px-4 md:px-6" suppressHydrationWarning>
         <div className="max-w-[1180px] mx-auto flex flex-col lg:flex-row gap-6 items-start justify-center">
           
           {/* COLONNE GAUCHE & CENTRALE COMBINÉE : Carte Profil Principale & Sections */}
@@ -2118,8 +2118,8 @@ export default function ProfilPage() {
               </div>
             )}
 
-            {/* CARTE HERO PROFIL STYLE LINKEDIN */}
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs relative">
+            {/* CARTE HERO PROFIL STYLE LINKEDIN (UNIFIÉE) */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs relative">
               {/* Inputs de fichiers masqués pour Avatar & Couverture */}
               <input
                 type="file"
@@ -2136,10 +2136,8 @@ export default function ProfilPage() {
                 className="hidden"
               />
 
-              {/* Image de couverture spatiale stellaire / personnalisée — un
-                  skeleton remplace le fond tant que le profil charge, pour
-                  ne jamais afficher le placeholder par défaut à sa place. */}
-              <div className="h-44 md:h-56 relative group overflow-hidden">
+              {/* Image de couverture */}
+              <div className="h-36 sm:h-44 md:h-52 relative group overflow-hidden">
                 {profileLoading ? (
                   <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse" />
                 ) : (
