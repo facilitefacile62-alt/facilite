@@ -23,7 +23,8 @@ export const CV_MODEL_LABELS = {
   creatif: "Modèle Créatif",
   technique: "Modèle Technique",
   professionnel: "Modèle Professionnel Canva",
-  elegance: "Modèle Élégance"
+  elegance: "Modèle Élégance",
+  timeline: "Modèle Frise Chronologique"
 };
 
 // Aliases mapping pour URLs (?template=1, ?template=s1, ?template=minimal, ?template=elegance...)
@@ -63,7 +64,12 @@ export const TEMPLATE_ALIASES = {
   "9": "elegance",
   "s9": "elegance",
   "elegance": "elegance",
-  "élégance": "elegance"
+  "élégance": "elegance",
+  "10": "timeline",
+  "s10": "timeline",
+  "timeline": "timeline",
+  "frise": "timeline",
+  "chronologique": "timeline"
 };
 
 /**

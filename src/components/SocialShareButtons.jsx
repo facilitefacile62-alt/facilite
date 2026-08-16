@@ -253,20 +253,22 @@ export default function SocialShareButtons({
           </button>
         </div>
 
-        {/* Ligne Footer Statistiques : 👁 2.4k vues   💬 327 */}
-        <div className="pt-2.5 mt-2 border-t border-gray-100 flex items-center gap-4 text-xs text-gray-400 font-medium select-none">
-          <span className="flex items-center gap-1.5">
-            <i className="fa-regular fa-eye text-xs text-gray-400"></i>
-            <span>{viewsFormatted} vues</span>
-          </span>
-          <Link
-            href={offerId ? `/offres/${offerId}` : "/messagerie"}
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1.5 hover:text-gray-600 transition"
+        {/* Ligne Footer : Bouton d'aide */}
+        <div className="pt-2 mt-1 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 font-medium">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("facilite:open-job-help", { detail: { offer } }));
+              }
+            }}
+            className="flex items-center gap-1.5 text-gray-700 hover:text-emerald-700 transition cursor-pointer text-xs font-bold py-1 px-2.5 rounded-lg hover:bg-emerald-50 active:scale-95 border border-gray-200/80 bg-gray-50/60"
+            title="Besoin d'aide pour cette offre ?"
           >
-            <i className="fa-regular fa-comment text-xs text-gray-400"></i>
-            <span>{commentsCount}</span>
-          </Link>
+            <i className="fa-solid fa-circle-question text-emerald-600 text-xs"></i>
+            <span>Besoin d'aide ?</span>
+          </button>
         </div>
 
         {/* Modal de Partage Social Universel */}
