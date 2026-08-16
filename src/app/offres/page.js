@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import ApplyModal from "@/components/ApplyModal";
 import SocialShareButtons from "@/components/SocialShareButtons";
+import OfferImageWatermark from "@/components/OfferImageWatermark";
 
 export const dynamic = "force-dynamic";
 
@@ -438,6 +439,7 @@ function OffresContent() {
                       className="w-full h-auto max-h-[480px] object-contain mx-auto block animate-fade-in transition-transform duration-200 group-hover/img:scale-[1.01]"
                       loading="lazy"
                     />
+                    <OfferImageWatermark />
                   </div>
 
                   {/* Barre d'Actions Réseau Social & Postuler */}

@@ -185,6 +185,8 @@ export default function Header() {
   const { session: userSession, profile: authProfile, loading: authLoading, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [fonctionnalitesDropdownOpen, setFonctionnalitesDropdownOpen] = useState(false);
+  const fonctionnalitesDropdownRef = useRef(null);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const plusDropdownRef = useRef(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -485,6 +487,7 @@ export default function Header() {
     setMobileMenuOpen(false);
     setIsMobileSearchOpen(false);
     setIsOpen(false);
+    setFonctionnalitesDropdownOpen(false);
     setPlusDropdownOpen(false);
 
     // À chaque fois que l'utilisateur clique sur la page courante ou sur le logo/accueil, on actualise la page !
@@ -749,6 +752,12 @@ export default function Header() {
       ) {
         setIsOpen(false);
         setIsMobileSearchOpen(false);
+      }
+      if (
+        fonctionnalitesDropdownRef.current &&
+        !fonctionnalitesDropdownRef.current.contains(event.target)
+      ) {
+        setFonctionnalitesDropdownOpen(false);
       }
       if (
         plusDropdownRef.current &&
@@ -1047,24 +1056,27 @@ export default function Header() {
             <i className="fa-solid fa-briefcase text-sm"></i>
             <span>Offres d&apos;emploi</span>
           </Link>
-          {/* Menu déroulant "Fonctionnalités" contenant Extracteur, Boîte à idées, Services, etc. */}
-          <div className="relative" ref={plusDropdownRef}>
+          {/* Menu déroulant "Fonctionnalités" (Extracteur, Boîte à idées, Services & Modèles) */}
+          <div className="relative" ref={fonctionnalitesDropdownRef}>
             <button
               type="button"
-              onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
+              onClick={() => {
+                setFonctionnalitesDropdownOpen(!fonctionnalitesDropdownOpen);
+                setPlusDropdownOpen(false);
+              }}
               className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                plusDropdownOpen || pathname === "/service" || pathname === "/candidat/extracteur" || pathname === "/boite-a-idees" || pathname === "/modeles" || pathname.startsWith("/recrutement-")
+                fonctionnalitesDropdownOpen || pathname === "/service" || pathname === "/candidat/extracteur" || pathname === "/boite-a-idees"
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
             >
               <i className="fa-solid fa-wand-magic-sparkles text-sm text-indigo-500"></i>
               <span>Fonctionnalités</span>
-              <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+              <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${fonctionnalitesDropdownOpen ? "rotate-180" : ""}`}></i>
             </button>
 
-            {plusDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+            {fonctionnalitesDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
                 {/* 1. Extracteur */}
                 <Link
                   href="/candidat/extracteur"
@@ -1120,8 +1132,45 @@ export default function Header() {
                     <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada, Anglais & Lettres</div>
                   </div>
                 </Link>
+              </div>
+            )}
+          </div>
 
-                {/* 4. Recrutement Spontané */}
+          <Link
+            href="/messagerie"
+            onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              pathname === "/messagerie"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+            }`}
+          >
+            <i className="fa-solid fa-comments text-sm"></i>
+            <span>Messagerie</span>
+          </Link>
+
+          {/* Menu déroulant "Plus" */}
+          <div className="relative" ref={plusDropdownRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setPlusDropdownOpen(!plusDropdownOpen);
+                setFonctionnalitesDropdownOpen(false);
+              }}
+              className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                plusDropdownOpen || pathname.startsWith("/recrutement-") || pathname === "/faq"
+                  ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                  : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+              }`}
+            >
+              <i className="fa-solid fa-layer-group text-sm"></i>
+              <span>Plus</span>
+              <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+            </button>
+
+            {plusDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+                {/* 1. Recrutement Spontané */}
                 <Link
                   href="/recrutement-spontane"
                   onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
@@ -1138,7 +1187,7 @@ export default function Header() {
                   </div>
                 </Link>
 
-                {/* 5. Dépôts Physiques */}
+                {/* 2. Dépôts Physiques */}
                 <Link
                   href="/recrutement-journalier"
                   onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
@@ -1155,7 +1204,7 @@ export default function Header() {
                   </div>
                 </Link>
 
-                {/* 6. Concours */}
+                {/* 3. Concours */}
                 <Link
                   href="/offres?q=Concours"
                   onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
@@ -1174,7 +1223,7 @@ export default function Header() {
                   </div>
                 </Link>
 
-                {/* 7. Formation */}
+                {/* 4. Formation */}
                 <Link
                   href="/offres?q=Formation"
                   onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
@@ -1195,7 +1244,7 @@ export default function Header() {
 
                 <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
 
-                {/* 8. FAQ & Aide */}
+                {/* 5. FAQ & Aide */}
                 <Link
                   href="/faq"
                   onClick={(e) => handleNavClick(e, "/faq", "nav_faq", "FAQ & Aide")}
@@ -1214,19 +1263,6 @@ export default function Header() {
               </div>
             )}
           </div>
-
-          <Link
-            href="/messagerie"
-            onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              pathname === "/messagerie"
-                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-            }`}
-          >
-            <i className="fa-solid fa-comments text-sm"></i>
-            <span>Messagerie</span>
-          </Link>
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}

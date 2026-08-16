@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import OffreApplySection from "@/components/OffreApplySection";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import SocialShareButtons from "@/components/SocialShareButtons";
+import OfferImageWatermark from "@/components/OfferImageWatermark";
 
 export default function OffreDetailClient({ initialOffer }) {
   const router = useRouter();
@@ -217,6 +218,7 @@ export default function OffreDetailClient({ initialOffer }) {
                 className="w-full h-auto max-h-[580px] object-contain mx-auto block"
                 loading="lazy"
               />
+              <OfferImageWatermark />
             </div>
           )}
 
