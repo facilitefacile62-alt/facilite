@@ -654,6 +654,8 @@ export default function CreerCv() {
   const [canvaColorFeedback, setCanvaColorFeedback] = useState(null); // { type: "warning", message }
   const [savedStylePrefs, setSavedStylePrefs] = useState(null); // { accentColor, fontFamily } chargé depuis profiles.preferred_cv_style
   const [showStyleBanner, setShowStyleBanner] = useState(false);
+  const [isFaciliteLoggedIn, setIsFaciliteLoggedIn] = useState(false);
+  const [canvaConnected, setCanvaConnected] = useState(false);
   const [canvaFontSize, setCanvaFontSize] = useState(14);
   const [canvaScale, setCanvaScale] = useState(1);
   const [canvaSectionSpacing, setCanvaSectionSpacing] = useState(1);
@@ -922,6 +924,16 @@ export default function CreerCv() {
       if (urlColor && /^#[0-9A-Fa-f]{6}$/.test(urlColor)) {
         setAccentColor(urlColor);
       }
+
+      // ?canva=connected|error&reason=... depuis /api/canva/callback
+      const canvaStatus = params.get("canva");
+      if (canvaStatus === "connected") {
+        setCanvaConnected(true);
+        triggerToast("Canva connecté avec succès !", "fa-circle-check");
+      } else if (canvaStatus === "error") {
+        const reason = params.get("reason") || "inconnue";
+        triggerToast(`Échec de connexion à Canva (${reason}).`, "fa-triangle-exclamation");
+      }
     }
   }, []);
 
@@ -946,6 +958,29 @@ export default function CreerCv() {
         setSavedStylePrefs(saved);
         setShowStyleBanner(true);
       }
+    })();
+  }, []);
+
+  // Bouton "Connecter Canva" — visible seulement pour un utilisateur
+  // Facilite connecté ; affiche "Canva connecté ✓" à la place si une ligne
+  // existe déjà dans canva_tokens (RLS owner-only, cf. migration
+  // 20260815120000_canva_tokens.sql). Un token existant suffit à afficher
+  // "connecté" même expiré : /api/canva/refresh le rafraîchit en silence
+  // au prochain besoin réel (génération), inutile de vérifier expires_at
+  // ici juste pour l'affichage.
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+      setIsFaciliteLoggedIn(true);
+
+      const { data } = await supabase
+        .from("canva_tokens")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (data) setCanvaConnected(true);
     })();
   }, []);
 
@@ -2808,6 +2843,26 @@ Laisse vide les champs non trouvés.`;
                         <p className="text-[10px] text-amber-400 mt-1 font-semibold">{canvaColorFeedback.message}</p>
                       )}
                     </div>
+
+                    {isFaciliteLoggedIn && (
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Intégration Canva</label>
+                        {canvaConnected ? (
+                          <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 text-xs font-bold">
+                            <i className="fa-solid fa-circle-check"></i>
+                            <span>Canva connecté ✓</span>
+                          </div>
+                        ) : (
+                          <a
+                            href="/api/canva/auth"
+                            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-white text-xs font-bold transition cursor-pointer"
+                          >
+                            <i className="fa-solid fa-plug"></i>
+                            <span>Connecter Canva</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
