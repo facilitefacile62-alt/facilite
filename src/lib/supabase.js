@@ -35,34 +35,24 @@ export const supabase = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY);
  * est renvoyée telle quelle, sans tentative de signature.
  */
 export async function getSignedCvUrl(pathOrUrl, expiresInSeconds = 3600) {
-  if (!pathOrUrl) return null;
-  if (pathOrUrl.startsWith("http") || pathOrUrl.startsWith("data:")) {
-    return pathOrUrl;
+  if (!pathOrUrl || typeof pathOrUrl !== "string") return null;
+  const cleanPath = pathOrUrl.trim();
+  if (!cleanPath) return null;
+  if (cleanPath.startsWith("http") || cleanPath.startsWith("data:") || cleanPath.startsWith("blob:")) {
+    return cleanPath;
   }
 
   try {
     const { data, error } = await supabase.storage
       .from("resumes")
-      .createSignedUrl(pathOrUrl, expiresInSeconds);
+      .createSignedUrl(cleanPath, expiresInSeconds);
 
     if (error) {
-      console.warn("Impossible de générer l'URL signée du document via createSignedUrl (bascule vers public URL):", error.message);
-      const { data: pubData } = supabase.storage
-        .from("resumes")
-        .getPublicUrl(pathOrUrl);
-      return pubData?.publicUrl || null;
+      return null;
     }
     return data?.signedUrl || null;
   } catch (err) {
-    console.warn("Exception lors de la génération de l'URL signée (bascule vers public URL):", err);
-    try {
-      const { data: pubData } = supabase.storage
-        .from("resumes")
-        .getPublicUrl(pathOrUrl);
-      return pubData?.publicUrl || null;
-    } catch (e) {
-      return null;
-    }
+    return null;
   }
 }
 
@@ -80,22 +70,22 @@ export async function getSignedCvUrl(pathOrUrl, expiresInSeconds = 3600) {
  *   voir 20260813180000_avatars_covers_policies.sql).
  */
 async function resolveProfilePhotoUrl(bucket, pathOrUrl, expiresInSeconds) {
-  if (!pathOrUrl) return null;
-  if (pathOrUrl.startsWith("data:image") || pathOrUrl.startsWith("http") || pathOrUrl.startsWith("/")) {
-    return pathOrUrl;
+  if (!pathOrUrl || typeof pathOrUrl !== "string") return null;
+  const cleanPath = pathOrUrl.trim();
+  if (!cleanPath) return null;
+  if (cleanPath.startsWith("data:image") || cleanPath.startsWith("http") || cleanPath.startsWith("/") || cleanPath.startsWith("blob:")) {
+    return cleanPath;
   }
 
   try {
     const { data, error } = await supabase.storage
       .from(bucket)
-      .createSignedUrl(pathOrUrl, expiresInSeconds);
+      .createSignedUrl(cleanPath, expiresInSeconds);
     if (error) {
-      console.warn(`Impossible de générer l'URL signée (${bucket}):`, error.message);
       return null;
     }
     return data?.signedUrl || null;
   } catch (err) {
-    console.warn(`Exception lors de la génération de l'URL signée (${bucket}):`, err);
     return null;
   }
 }

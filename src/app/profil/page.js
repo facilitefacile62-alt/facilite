@@ -228,11 +228,17 @@ export default function ProfilPage() {
   // Régénère une URL signée dès que le document courant change
   useEffect(() => {
     let annule = false;
-    // Résolution asynchrone dans les deux cas : évite un setState synchrone
-    // dans le corps de l'effet (cascade de rendus).
-    Promise.resolve(cvUrl ? getSignedCvUrl(cvUrl) : null).then((url) => {
-      if (!annule) setCvDisplayUrl(url);
-    });
+    if (!cvUrl) {
+      setCvDisplayUrl(null);
+      return;
+    }
+    getSignedCvUrl(cvUrl)
+      .then((url) => {
+        if (!annule) setCvDisplayUrl(url);
+      })
+      .catch(() => {
+        if (!annule) setCvDisplayUrl(null);
+      });
     return () => {
       annule = true;
     };
