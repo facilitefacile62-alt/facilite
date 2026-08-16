@@ -777,11 +777,10 @@ export default function CreerCv() {
   const [canvaPhotoBorderWidth, setCanvaPhotoBorderWidth] = useState(4);
   const [canvaPhotoBorderColor, setCanvaPhotoBorderColor] = useState("#1B2B3A");
   const [canvaPhotoShape, setCanvaPhotoShape] = useState("circle");
+  // canvaTextAlign : alignement global du texte (onglet "Texte"), distinct
+  // du nouvel alignement PAR ÉLÉMENT (elementStyles[id].align) de la barre
+  // contextuelle ci-dessous — deux mécanismes différents, ne pas fusionner.
   const [canvaTextAlign, setCanvaTextAlign] = useState("left");
-  const [canvaBold, setCanvaBold] = useState(false);
-  const [canvaItalic, setCanvaItalic] = useState(false);
-  const [canvaUnderline, setCanvaUnderline] = useState(false);
-  const [canvaUppercase, setCanvaUppercase] = useState(false);
   const [canvaSearchQuery, setCanvaSearchQuery] = useState("");
   const [canvaZoom, setCanvaZoom] = useState(1);
   const [elementOffsets, setElementOffsets] = useState({});

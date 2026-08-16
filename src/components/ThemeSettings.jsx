@@ -8,13 +8,24 @@ export default function ThemeSettings() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Pattern standard de détection de montage client : ne peut pas être
-    // calculé pendant le rendu par définition, l'objectif est justement de
-    // distinguer le premier rendu serveur/client du suivant (next-themes
-    // dépend de localStorage, absent côté serveur).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
+
+  const handleSelectTheme = (newTheme) => {
+    setTheme(newTheme);
+    if (typeof document !== "undefined") {
+      const root = document.documentElement;
+      if (newTheme === "dark") {
+        root.classList.add("dark");
+      } else if (newTheme === "light") {
+        root.classList.remove("dark");
+      } else {
+        const isSystemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (isSystemDark) root.classList.add("dark");
+        else root.classList.remove("dark");
+      }
+    }
+  };
 
   if (!mounted) {
     return null;
@@ -41,7 +52,7 @@ export default function ThemeSettings() {
 
           <div className="flex bg-gray-200 dark:bg-gray-900 p-1 rounded-xl">
             <button
-              onClick={() => setTheme("system")}
+              onClick={() => handleSelectTheme("system")}
               className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 theme === "system"
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
@@ -52,7 +63,7 @@ export default function ThemeSettings() {
               <span className="hidden sm:inline">Système</span>
             </button>
             <button
-              onClick={() => setTheme("light")}
+              onClick={() => handleSelectTheme("light")}
               className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 theme === "light"
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
@@ -63,7 +74,7 @@ export default function ThemeSettings() {
               <span className="hidden sm:inline">Clair</span>
             </button>
             <button
-              onClick={() => setTheme("dark")}
+              onClick={() => handleSelectTheme("dark")}
               className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 theme === "dark"
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"

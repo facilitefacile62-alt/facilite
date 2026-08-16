@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #1F2937;
+}
+
+.dark {
+  --background: #0B0F17;
+  --foreground: #F9FAFB;
+  color-scheme: dark;
 }
 
 @theme {
@@ -28,6 +36,43 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Prise en charge automatique du mode sombre sur les éléments principaux */
+html.dark body {
+  background-color: #0B0F17;
+  color: #F9FAFB;
+}
+
+html.dark main.bg-\[\#F4F2EE\],
+html.dark main.bg-\[\#FAF6F1\] {
+  background-color: #0B0F17 !important;
+}
+
+html.dark .bg-white {
+  background-color: #111827 !important;
+  color: #F9FAFB !important;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #1F2937 !important;
+}
+
+html.dark .border-gray-200,
+html.dark .border-gray-100 {
+  border-color: #374151 !important;
+}
+
+html.dark .text-gray-900 {
+  color: #F9FAFB !important;
+}
+
+html.dark .text-gray-700 {
+  color: #E5E7EB !important;
+}
+
+html.dark .text-gray-500 {
+  color: #9CA3AF !important;
 }
 
 /* Conteneur principal */
