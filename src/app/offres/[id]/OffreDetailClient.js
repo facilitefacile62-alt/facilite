@@ -491,6 +491,14 @@ export default function OffreDetailClient({ initialOffer }) {
                     <i className="fa-solid fa-location-dot text-emerald-600 w-4 text-center"></i>
                     <span>{offer.location}</span>
                   </div>
+                  {offer.deadline && (
+                    <div className="flex items-center gap-2 text-red-600 font-bold">
+                      <i className="fa-regular fa-calendar-xmark text-red-600 w-4 text-center"></i>
+                      <span>
+                        Date limite : {new Date(offer.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                      </span>
+                    </div>
+                  )}
                   {offer.contact_email && (
                     <div className="flex items-center gap-2">
                       <i className="fa-solid fa-envelope text-emerald-600 w-4 text-center"></i>

@@ -170,6 +170,55 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "9b125270-1234-4567-89ab-cdef25272026",
+    titleFR: "Concours de Recrutement Spécial de 2 527 Enseignants (Préscolaire, Élémentaire, Moyen-Secondaire)",
+    titleEN: "Special Recruitment Competition for 2,527 Teachers",
+    company: "Ministère de l'Éducation Nationale (MEN - DRH / MIRADOR)",
+    logoColor: "bg-emerald-700",
+    initials: "MEN",
+    location: "Sénégal (National)",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Concours / Fonction Publique",
+    descFR: `Dans le cadre de la mise en œuvre du plan de résorption du déficit en personnel enseignant, le Gouvernement a autorisé un recrutement spécial complémentaire de 2 527 ENSEIGNANTS pour le Préscolaire, l'Élémentaire et le Moyen-Secondaire général.
+
+🎯 CORPS & POSTES CONCERNÉS :
+• Préscolaire et Élémentaire : Titulaires du Baccalauréat, diplôme professionnel CEAP ou CAP.
+• Moyen et Secondaire général : Titulaires du Bac S1/S2, niveau Bac+2, Licence, Maîtrise ou Master d'enseignement (CAE-CEM, CAEM, CAES, CAPEPS, CAMEPS).
+
+📋 CONDITIONS À REMPLIR :
+1. Être de nationalité sénégalaise ;
+2. Âge : 18 à 33 ans au plus au 31/12/2026 (né entre le 31/12/1993 et le 31/12/2008) pour les non-titulaires de diplômes professionnels ;
+3. Âge : 18 à 34 ans au plus au 31/12/2026 (né entre le 31/12/1992 et le 31/12/2008) pour les titulaires de diplômes professionnels d'enseignement ;
+4. Être prêt à servir partout sur le territoire national.
+
+📅 CALENDRIER DU CONCOURS :
+• Candidatures en ligne : Du 15 au 28 août 2026 (Date limite : 28 août 2026) sur https://mirador.education.gouv.sn/recr26
+• Dépôt physique des dossiers des présélectionnés : Du 01 au 04 septembre 2026 à l'IEF choisie lors de la candidature.
+
+📁 DOSSIER À FOURNIR POUR LES PRÉSÉLECTIONNÉS :
+1. Demande adressée à Monsieur le Ministre
+2. Copie légalisée du diplôme académique requis
+3. Copie légalisée du diplôme professionnel ou arrêté d'admission
+4. Certificat médical d'aptitude à l'Enseignement
+5. Copie légalisée de la Carte Nationale d'Identité
+6. Copie légalisée du certificat de nationalité
+7. Certificat de bonne vie et mœurs
+8. Attestation d'exercice signée par l'IA ou l'IEF (au besoin)
+
+🌐 Lien officiel de postulation : https://mirador.education.gouv.sn/recr26`,
+    descEN: `As part of the teacher shortage absorption plan, the Government has authorized a special recruitment of 2,527 TEACHERS for Preschool, Elementary, and General Middle-Secondary education.
+
+📅 Online Application: August 15 to 28, 2026 (Deadline: August 28, 2026)
+🔗 Official Application Link: https://mirador.education.gouv.sn/recr26`,
+    tags: ["Concours", "Enseignement", "Fonction Publique", "Éducation Nationale"],
+    recruiterEmail: "contact@education.sn",
+    externalLink: "https://mirador.education.gouv.sn/recr26",
+    image: "/concours_enseignants_2026.png",
+    deadline: "2026-08-28",
+    pinned: true
+  },
+  {
     id: 101,
     titleFR: "Chargé(e) de Communication & d'Animation du Réseau France Alumni",
     titleEN: "Communication & Alumni Network Animation Officer",
@@ -563,14 +612,13 @@ export default function Home() {
 
   // Search and Filter States for Job Board
   const [dynamicJobs, setDynamicJobs] = useState([]);
-  // Entièrement dérivé de dynamicJobs (fusion avec le fil statique) : calculé
-  // directement au rendu plutôt que synchronisé via un effet séparé, qui
-  // ajoutait un aller-retour de rendu superflu à chaque changement.
-  const allJobs = useMemo(() => [
-    ...dynamicJobs,
-    ...initialJobs.filter((job) => job.pinned),
-    ...initialJobs.filter((job) => !job.pinned),
-  ], [dynamicJobs]);
+  // Entièrement dérivé de dynamicJobs (fusion avec le fil statique) sans doublons
+  const allJobs = useMemo(() => {
+    const dynamicIds = new Set(dynamicJobs.map((j) => String(j.id)));
+    const staticPinned = initialJobs.filter((job) => job.pinned && !dynamicIds.has(String(job.id)));
+    const staticUnpinned = initialJobs.filter((job) => !job.pinned && !dynamicIds.has(String(job.id)));
+    return [...dynamicJobs, ...staticPinned, ...staticUnpinned];
+  }, [dynamicJobs]);
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
@@ -624,6 +672,7 @@ export default function Home() {
             image: offer.image_url || null,
             recruiterEmail: offer.contact_email || null,
             externalLink: offer.external_link || null,
+            deadline: offer.deadline || null,
           }));
           setDynamicJobs(formatted);
         }
@@ -1789,7 +1838,7 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Badges / Pilules (Localisation + Secteur/Projet + Postes/Contrat) */}
+                    {/* Badges / Pilules (Localisation + Secteur/Projet + Postes/Contrat + Date limite) */}
                     <div className="flex items-center gap-2 flex-wrap text-xs">
                       {job.location && (
                         <span className="flex items-center gap-1 text-gray-600 font-medium">
@@ -1797,8 +1846,14 @@ export default function Home() {
                           <span>{job.location}</span>
                         </span>
                       )}
+                      {job.deadline && (
+                        <span className="bg-red-50 text-red-700 border border-red-200/80 text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+                          <i className="fa-regular fa-calendar-xmark text-[10px] text-red-600"></i>
+                          <span>Date limite : {new Date(job.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        </span>
+                      )}
                       <span className="bg-blue-100 text-blue-800 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
-                        {job.sector || job.category || job.project || job.domain || "Projet minier"}
+                        {job.sector || job.category || job.project || job.domain || "Opportunité"}
                       </span>
                       <span className="bg-green-100 text-green-800 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
                         {job.positions_count ? `${job.positions_count} postes` : (job.contract || "12 postes")}

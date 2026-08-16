@@ -404,8 +404,14 @@ function OffresContent() {
                     {offer.description}
                   </p>
 
-                  {/* Tags Niveau d'études & Match sémantique */}
+                  {/* Tags Date limite, Niveau d'études & Match sémantique */}
                   <div className="flex items-center gap-1.5 flex-wrap mb-3 text-[11px]">
+                    {offer.deadline && (
+                      <span className="bg-red-50 text-red-700 border border-red-200/80 px-2.5 py-0.5 rounded-md font-extrabold flex items-center gap-1">
+                        <i className="fa-regular fa-calendar-xmark text-[10px] text-red-600"></i>
+                        Date limite : {new Date(offer.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    )}
                     {offer.required_education_level && (
                       <span className="bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-md font-bold flex items-center gap-1">
                         <i className="fa-solid fa-graduation-cap text-emerald-600 text-[10px]"></i>

@@ -77,14 +77,36 @@ export default function OffreApplySection({ offer }) {
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={() => setApplyOpen(true)}
-        disabled={blocked}
-        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-300 disabled:bg-gray-300"
-      >
-        {blocked ? "Niveau insuffisant" : "Postuler"}
-      </button>
+      {offer.external_link ? (
+        <div className="space-y-2">
+          <a
+            href={offer.external_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+          >
+            <i className="fa-solid fa-arrow-up-right-from-square"></i>
+            <span>Postuler sur le site officiel</span>
+          </a>
+          <button
+            type="button"
+            onClick={() => setApplyOpen(true)}
+            disabled={blocked}
+            className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl transition cursor-pointer"
+          >
+            Postuler via Facilité
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setApplyOpen(true)}
+          disabled={blocked}
+          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-300 disabled:bg-gray-300"
+        >
+          {blocked ? "Niveau insuffisant" : "Postuler"}
+        </button>
+      )}
 
       <ApplyModal
         isOpen={applyOpen}
