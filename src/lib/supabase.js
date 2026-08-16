@@ -38,8 +38,13 @@ export async function getSignedCvUrl(pathOrUrl, expiresInSeconds = 3600) {
   if (!pathOrUrl || typeof pathOrUrl !== "string") return null;
   const cleanPath = pathOrUrl.trim();
   if (!cleanPath) return null;
-  if (cleanPath.startsWith("http") || cleanPath.startsWith("data:") || cleanPath.startsWith("blob:")) {
+  if (cleanPath.startsWith("http") || cleanPath.startsWith("data:") || cleanPath.startsWith("blob:") || cleanPath.startsWith("/")) {
     return cleanPath;
+  }
+  // Tout chemin valide dans le bucket Supabase privé "resumes" comporte un slash ({user_id}/...)
+  // Évite d'envoyer une requête POST infructueuse provoquant un 400 Bad Request
+  if (!cleanPath.includes("/")) {
+    return null;
   }
 
   try {
@@ -75,6 +80,11 @@ async function resolveProfilePhotoUrl(bucket, pathOrUrl, expiresInSeconds) {
   if (!cleanPath) return null;
   if (cleanPath.startsWith("data:image") || cleanPath.startsWith("http") || cleanPath.startsWith("/") || cleanPath.startsWith("blob:")) {
     return cleanPath;
+  }
+
+  // Si c'est un fichier sans slash (ex: "logo.jpeg", "stellar-cover.png"), c'est un asset statique public
+  if (!cleanPath.includes("/")) {
+    return `/${cleanPath}`;
   }
 
   try {

@@ -495,7 +495,7 @@ export default function ProfilPage() {
       } else if (typeof window !== "undefined") {
         const localUrl = localStorage.getItem("user_cv_url");
         const localName = localStorage.getItem("user_cv_name");
-        if (localUrl) {
+        if (localUrl && (localUrl.startsWith("http") || localUrl.startsWith("data:") || localUrl.startsWith("blob:") || localUrl.startsWith("/") || localUrl.includes("/"))) {
           profileCvUrl = localUrl;
           profileCvName = localName;
           setUserDocuments([{
