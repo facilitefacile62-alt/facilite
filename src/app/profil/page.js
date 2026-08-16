@@ -2627,44 +2627,71 @@ export default function ProfilPage() {
                   })}
                 </div>
 
-                {/* BARRE D'ONGLETS HORIZONTALE MOBILE : Accès direct & Vue intégrale de tous les éléments */}
-                <div className="flex md:hidden overflow-x-auto scrollbar-none gap-2 pb-2 -mx-1 px-1 border-b border-gray-100 mb-4 w-full">
-                  {[
-                    { id: "info_perso", label: "Infos perso", icon: "fa-regular fa-id-card" },
-                    { id: "intro", label: "Intro", icon: "fa-solid fa-hand" },
-                    { id: "formation", label: "Formation", icon: "fa-solid fa-graduation-cap" },
-                    { id: "competences", label: "Compétences", icon: "fa-solid fa-lightbulb" },
-                    { id: "langues", label: "Langues", icon: "fa-solid fa-language" },
-                    { id: "experiences", label: "Expériences", icon: "fa-solid fa-user-tie" },
-                    { id: "interets", label: "Centres d'intérêt", icon: "fa-solid fa-heart" },
-                    { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
-                    { id: "confidentialite", label: "Confidentialité", icon: "fa-solid fa-shield-halved" },
-                    { id: "securite", label: "Sécurité", icon: "fa-solid fa-lock" },
-                  ].map((section) => {
-                    const isActive = activeSection === section.id;
-                    return (
+                {/* MOBILE VIEW LEVEL 1 : LIST OF SECTIONS (TikTok style) */}
+                {selectedSection === null && (
+                  <div className="flex flex-col md:hidden w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+                    {[
+                      { id: "intro", label: "Intro", icon: "fa-solid fa-hand" },
+                      { id: "info_perso", label: "Informations personnelles", icon: "fa-regular fa-id-card" },
+                      { id: "langues", label: "Langues", icon: "fa-solid fa-language" },
+                      { id: "experiences", label: "Expériences professionnelles", icon: "fa-solid fa-user-tie" },
+                      { id: "formation", label: "Formation", icon: "fa-solid fa-graduation-cap" },
+                      { id: "competences", label: "Compétences", icon: "fa-solid fa-lightbulb" },
+                      { id: "interets", label: "Centres d'intérêt", icon: "fa-solid fa-heart" },
+                      { id: "coordonnees", label: "Coordonnées", icon: "fa-solid fa-address-book" },
+                      { id: "confidentialite", label: "Confidentialité et informations juridiques", icon: "fa-solid fa-shield-halved" },
+                      { id: "securite", label: "Sécurité & Connexion", icon: "fa-solid fa-lock" },
+                    ].map((section) => (
                       <button
                         key={section.id}
                         type="button"
                         onClick={() => {
-                          setActiveSection(section.id);
                           setSelectedSection(section.id);
+                          setActiveSection(section.id);
                         }}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black whitespace-nowrap transition cursor-pointer flex-shrink-0 shadow-2xs ${
-                          isActive
-                            ? "bg-[#1D4ED8] text-white shadow-xs"
-                            : "bg-gray-100 hover:bg-gray-200 text-gray-700 active:scale-95"
-                        }`}
+                        className="w-full px-4 py-3.5 flex items-center justify-between bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer text-left"
                       >
-                        <i className={`${section.icon} text-xs ${isActive ? "text-white" : "text-gray-500"}`}></i>
-                        <span>{section.label}</span>
+                        <div className="flex items-center space-x-3.5 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-gray-50 text-gray-500 flex items-center justify-center flex-shrink-0">
+                            <i className={`${section.icon} text-sm`}></i>
+                          </div>
+                          <span className="text-xs font-bold text-gray-800 truncate">{section.label}</span>
+                        </div>
+                        <i className="fa-solid fa-chevron-right text-gray-400 text-[10px]"></i>
                       </button>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
 
-                {/* ZONE DE CONTENU DÉTAILLÉE (VISIBLE SUR PC ET MOBILE SANS ÉCRAN MASQUÉ) */}
-                <div className="flex-1 w-full min-w-0 pl-0 md:pl-2 space-y-6 block">
+                {/* ZONE DE CONTENU DÉTAILLÉE À DROITE / MOBILE LEVEL 2 */}
+                <div className={`flex-1 w-full min-w-0 pl-0 md:pl-2 space-y-6 ${selectedSection === null ? "hidden md:block" : "block"}`}>
+                  
+                  {/* Fixed en-tête de retour sur mobile uniquement */}
+                  {selectedSection !== null && (
+                    <div className="flex items-center space-x-3.5 pb-4 border-b border-gray-150 md:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSection(null)}
+                        className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center cursor-pointer transition"
+                      >
+                        <i className="fa-solid fa-arrow-left text-sm"></i>
+                      </button>
+                      <span className="text-sm font-black text-gray-900">
+                        {[
+                          { id: "intro", label: "Intro" },
+                          { id: "info_perso", label: "Informations personnelles" },
+                          { id: "langues", label: "Langues" },
+                          { id: "experiences", label: "Expériences professionnelles" },
+                          { id: "formation", label: "Formation" },
+                          { id: "competences", label: "Compétences" },
+                          { id: "interets", label: "Centres d'intérêt" },
+                          { id: "coordonnees", label: "Coordonnées" },
+                          { id: "confidentialite", label: "Confidentialité et informations juridiques" },
+                          { id: "securite", label: "Sécurité & Connexion" },
+                        ].find((s) => s.id === selectedSection)?.label || "Retour"}
+                      </span>
+                    </div>
+                  )}
                   
                   {/* ONGLET: INFORMATIONS PERSONNELLES */}
                   {activeSection === "info_perso" && (
