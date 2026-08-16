@@ -32,59 +32,77 @@ export default function ThemeSettings() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-xs space-y-4">
-      <h2 className="text-xl md:text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight pb-3 border-b border-gray-100 dark:border-gray-800 flex items-center space-x-2">
-        <i className="fa-solid fa-gear text-gray-500 dark:text-gray-400"></i>
-        <span>Paramètres</span>
-      </h2>
-      
-      <div className="flex flex-col space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800/60">
-          <div className="flex items-center space-x-3 min-w-0">
-            <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
-              <i className="fa-solid fa-circle-half-stroke"></i>
-            </div>
-            <div className="min-w-0">
-              <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">Thème de l'application</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Personnalisez l'apparence de Facilite</p>
-            </div>
-          </div>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-xs transition-all duration-300">
+      {/* Label de catégorie en haut */}
+      <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase mb-3">
+        APPARENCE
+      </p>
 
-          <div className="flex bg-gray-200 dark:bg-gray-900 p-1 rounded-xl">
-            <button
-              onClick={() => handleSelectTheme("system")}
-              className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                theme === "system"
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-              }`}
+      {/* Ligne Thème */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center space-x-3.5 min-w-0">
+          {/* Icône carrée avec division diagonale conforme 1:1 à la capture */}
+          <div className="w-10 h-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 flex items-center justify-center text-gray-800 dark:text-gray-200 shrink-0">
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <i className="fa-solid fa-desktop"></i>
-              <span className="hidden sm:inline">Système</span>
-            </button>
-            <button
-              onClick={() => handleSelectTheme("light")}
-              className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                theme === "light"
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-              }`}
-            >
-              <i className="fa-regular fa-sun"></i>
-              <span className="hidden sm:inline">Clair</span>
-            </button>
-            <button
-              onClick={() => handleSelectTheme("dark")}
-              className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                theme === "dark"
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-              }`}
-            >
-              <i className="fa-regular fa-moon"></i>
-              <span className="hidden sm:inline">Sombre</span>
-            </button>
+              <rect x="3" y="3" width="18" height="18" rx="4" />
+              <line x1="3" y1="21" x2="21" y2="3" />
+            </svg>
           </div>
+          <div className="min-w-0">
+            <p className="font-extrabold text-gray-900 dark:text-gray-100 text-sm">Thème</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Apparence de Facilite</p>
+          </div>
+        </div>
+
+        {/* Sélecteur d'icônes Système / Clair / Sombre */}
+        <div className="flex items-center bg-gray-100/90 dark:bg-gray-800/90 p-1 rounded-xl border border-gray-200/60 dark:border-gray-700/60 shrink-0">
+          <button
+            type="button"
+            onClick={() => handleSelectTheme("system")}
+            title="Thème Système"
+            aria-label="Thème Système"
+            className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all duration-200 cursor-pointer ${
+              theme === "system"
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs font-bold"
+                : "text-gray-400 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100"
+            }`}
+          >
+            <i className="fa-solid fa-desktop text-xs"></i>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSelectTheme("light")}
+            title="Thème Clair"
+            aria-label="Thème Clair"
+            className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all duration-200 cursor-pointer ${
+              theme === "light"
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs font-bold"
+                : "text-gray-400 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100"
+            }`}
+          >
+            <i className="fa-regular fa-sun text-xs"></i>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSelectTheme("dark")}
+            title="Thème Sombre"
+            aria-label="Thème Sombre"
+            className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all duration-200 cursor-pointer ${
+              theme === "dark"
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs font-bold"
+                : "text-gray-400 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100"
+            }`}
+          >
+            <i className="fa-regular fa-moon text-xs"></i>
+          </button>
         </div>
       </div>
     </div>

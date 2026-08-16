@@ -2421,25 +2421,25 @@ export default function ProfilPage() {
             </div>
             {/* NOUVELLE SECTION PARAMÈTRES (THEME) */}
             {activeTab === "settings" && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6 animate-fade-in">
-                <div>
+              <div className="space-y-3.5 animate-fade-in">
+                <div className="px-1">
                   <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
                     <button
                       type="button"
                       onClick={() => setSectionTitleMenuOpen(!sectionTitleMenuOpen)}
-                      className="flex items-center space-x-2 text-xl md:text-2xl font-black text-gray-900 tracking-tight cursor-pointer hover:text-blue-600 transition"
+                      className="flex items-center space-x-2 text-xl md:text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition"
                     >
                       <span>Paramètres</span>
                       <i className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 ${sectionTitleMenuOpen ? "rotate-180" : ""}`}></i>
                     </button>
                     {sectionTitleMenuOpen && (
-                      <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm">
+                      <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm">
                         <button
                           onClick={() => {
                             setActiveTab("about");
                             setSectionTitleMenuOpen(false);
                           }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
                         >
                           <i className="fa-regular fa-user text-gray-400"></i>
                           <span>À propos</span>
@@ -2449,7 +2449,7 @@ export default function ProfilPage() {
                             setActiveTab("documents");
                             setSectionTitleMenuOpen(false);
                           }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
                         >
                           <i className="fa-regular fa-file-lines text-gray-400"></i>
                           <span>Mes documents</span>
@@ -2459,7 +2459,7 @@ export default function ProfilPage() {
                             setActiveTab("settings");
                             setSectionTitleMenuOpen(false);
                           }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
                         >
                           <i className="fa-solid fa-gear text-gray-400"></i>
                           <span>Paramètres</span>
@@ -2467,7 +2467,7 @@ export default function ProfilPage() {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs md:text-sm text-gray-500 font-medium mt-1">Personnalisez votre expérience visuelle et vos préférences.</p>
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Personnalisez votre expérience visuelle et vos préférences.</p>
                 </div>
                 <ThemeSettings />
               </div>
