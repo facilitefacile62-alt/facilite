@@ -3840,23 +3840,15 @@ export default function ProfilPage() {
 
             {/* Carte 2 : Lien d'invitation vers le site */}
             {(() => {
-              const rawName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profileName || (userSession?.user?.email ? userSession.user.email.split("@")[0] : "facilite"));
-              const userRef = rawName
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "") || "facilite";
-              const displayUrl = `facilite.sn`;
-              const relativeUrl = `/?ref=${userRef}`;
-              const fullUrl = typeof window !== "undefined" ? `${window.location.origin}${relativeUrl}` : `https://facilite.sn`;
+              const displayUrl = `https://ffacilite.com`;
+              const fullUrl = `https://ffacilite.com`;
 
               return (
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <h3 className="text-xs text-gray-500 dark:text-gray-400 font-medium">Lien d'invitation</h3>
                     <a
-                      href={relativeUrl}
+                      href={fullUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 truncate block hover:underline mt-0.5"

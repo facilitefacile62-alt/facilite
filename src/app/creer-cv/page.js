@@ -1028,6 +1028,13 @@ export default function CreerCv() {
     const resumeId = params.get("resumeId");
     if (!resumeId) return;
 
+    // Synchronise depuis un système externe (Supabase, via l'id lu dans
+    // l'URL) au montage — même situation que la lecture localStorage
+    // supprimée plus haut dans ce fichier, pas un enchaînement de renders à
+    // éviter. loadResumeById n'est volontairement pas dans le tableau de
+    // dépendances : ce n'est pas ici une resynchronisation continue, juste
+    // le chargement initial déclenché par ce seul paramètre d'URL.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadResumeById(resumeId, { isDownload: params.get("download") === "1" });
   }, []);
 
