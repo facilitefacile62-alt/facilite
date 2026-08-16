@@ -17,21 +17,10 @@ const PUBLIC_ROUTES = [
   "/login",
   "/register",
   "/forgot-password",
-  "/in", // profils publics
-  "/service",
-  "/offres",
-  "/recruteurs", // vitrines publiques recruteur (/recruteurs/[id])
-  "/recrutement-spontane",
-  "/recrutement-journalier",
-  "/modeles", // vitrine publique des modèles de CV
-  "/boite-a-idees",
   "/faq",
 ];
 
-// Comparaison par segment de chemin plutôt que préfixe brut : pathname.startsWith("/recruteur")
-// matche aussi "/recruteurs/xxx" (vitrine publique), pas seulement "/recruteur"
-// (dashboard recruteur) — un vrai bug trouvé via le test E2E, qui redirigeait
-// n'importe quel candidat hors des vitrines publiques.
+// Comparaison par segment de chemin plutôt que préfixe brut
 function pathnameMatchesRoute(pathname, route) {
   return pathname === route || pathname.startsWith(`${route}/`);
 }
@@ -64,7 +53,7 @@ export default async function proxy(req) {
   }
 
   // 2. Vérification rapide des cookies pour les utilisateurs anonymes
-  // Si aucun cookie Supabase n'est présent, on évite tout appel Supabase réseau
+  // Si aucun cookie Supabase n'est présent, on redirige vers /register pour convertir le visiteur
   const cookies = req.cookies.getAll();
   const hasSupabaseCookie = cookies.some(
     (c) => c.name.startsWith("sb-") || c.name.includes("auth-token")
@@ -72,7 +61,7 @@ export default async function proxy(req) {
 
   if (!hasSupabaseCookie) {
     const url = req.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/register";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
@@ -100,14 +89,12 @@ export default async function proxy(req) {
       "[Middleware] Timeout ou échec de récupération Supabase user (accès toléré) :",
       err.message
     );
-    // En cas d'erreur réseau / timeout, on laisse passer la requête. 
-    // Les règles RLS au niveau de la base de données sécuriseront l'accès.
     return res;
   }
 
   if (!user) {
     const url = req.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/register";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }

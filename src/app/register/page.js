@@ -1,27 +1,27 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import PhoneAuthForm from "@/components/PhoneAuthForm";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState("candidat");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  // Méthode d'inscription sélectionnée : 'email' ou 'phone'
   const [registerMethod, setRegisterMethod] = useState("email");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/profil";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,14 +49,6 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // role n'est plus envoyé : depuis le chantier RBAC (2026-08-02),
-      // public.profiles n'a plus de colonne "role" (déplacée vers
-      // public.user_roles, jamais écrite par le client) et
-      // handle_new_user() attribue 'user' à tout nouveau compte sans
-      // exception, quoi que le client envoie ici — envoyer role dans
-      // raw_user_meta_data n'aurait de toute façon jamais eu d'effet sur
-      // l'autorisation réelle (déjà vrai avant ce nettoyage), voir
-      // 20260729232500_profiles_multi_roles.sql.
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -74,11 +66,6 @@ export default function RegisterPage() {
       }
 
       if (data?.user) {
-        // handle_new_user() (trigger serveur) a déjà créé les lignes
-        // profiles + user_roles pour ce compte au moment du signUp()
-        // ci-dessus — cet upsert redondant échouait silencieusement depuis
-        // la suppression de profiles.role (erreur jamais vérifiée), sans
-        // jamais avoir été nécessaire au bon fonctionnement de l'inscription.
         await supabase.from("profiles").upsert({
           id: data.user.id,
           email: email.trim(),
@@ -96,17 +83,15 @@ export default function RegisterPage() {
   };
 
   const handleOAuthSignUp = async (provider) => {
-    if (oauthLoading) return; // évite un double déclenchement de la redirection OAuth
+    if (oauthLoading) return;
     setOauthLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}/profil`,
+          redirectTo: `${window.location.origin}${redirectUrl.startsWith("/") ? redirectUrl : "/profil"}`,
         },
       });
-      // Succès : le navigateur est redirigé vers Google, pas besoin de
-      // réinitialiser l'état — la page est sur le point d'être déchargée.
       if (error) throw error;
     } catch (err) {
       setErrorMessage(`Erreur lors de l'inscription via ${provider}`);
@@ -133,7 +118,7 @@ export default function RegisterPage() {
         </Link>
 
         <Link
-          href="/login"
+          href={`/login${redirectUrl && redirectUrl !== "/profil" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
           className="text-xs font-bold text-gray-600 hover:text-gray-900 bg-white border border-gray-200 px-4 py-2 rounded-full shadow-xs hover:shadow-sm transition flex items-center space-x-1.5"
         >
           <i className="fa-solid fa-arrow-left text-[11px]"></i>
@@ -153,7 +138,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Titre & Sous-titre */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
               Sign Up
             </h1>
@@ -161,6 +146,17 @@ export default function RegisterPage() {
               Create your account to get started.
             </p>
           </div>
+
+          {/* Bannière d'incitation quand l'utilisateur vient d'une redirection */}
+          {redirectUrl && redirectUrl !== "/profil" && !isSuccess && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 mb-6 flex items-start gap-2.5 text-xs text-emerald-900 font-bold animate-fade-in shadow-2xs">
+              <i className="fa-solid fa-sparkles text-emerald-600 text-sm mt-0.5 flex-shrink-0"></i>
+              <div>
+                <p className="font-black text-emerald-950">Créez votre compte gratuit en 30 secondes</p>
+                <p className="text-[11px] text-emerald-800 font-normal mt-0.5">Pour accéder à toutes les offres d&apos;emploi et postuler directement sur Facilité.</p>
+              </div>
+            </div>
+          )}
 
           {isSuccess ? (
             <div className="text-center py-6 animate-fade-in">
@@ -172,10 +168,10 @@ export default function RegisterPage() {
                 Vos informations ont bien été enregistrées sur Supabase. Vous pouvez maintenant vous connecter.
               </p>
               <Link
-                href="/login"
+                href={`/login${redirectUrl && redirectUrl !== "/profil" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
                 className="inline-block w-full py-3.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md transition-all duration-200"
               >
-                Se connecter
+                Se connecter et continuer
               </Link>
             </div>
           ) : (
@@ -319,7 +315,7 @@ export default function RegisterPage() {
                 <p className="text-xs text-gray-500 font-medium">
                   Already have an account?{" "}
                   <Link
-                    href="/login"
+                    href={`/login${redirectUrl && redirectUrl !== "/profil" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
                     className="font-extrabold text-gray-900 hover:underline cursor-pointer"
                   >
                     Log In
@@ -336,5 +332,13 @@ export default function RegisterPage() {
         © 2026 Facilite. All rights reserved.
       </footer>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FAF6F1] flex items-center justify-center"><i className="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-600"></i></div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

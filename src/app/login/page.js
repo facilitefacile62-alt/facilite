@@ -197,18 +197,23 @@ export default function LoginPage() {
           console.warn("Impossible de lire le rôle:", pErr);
         }
 
-        // Redirection dynamique selon le rôle
-        let redirectUrl = "/messagerie";
-        if (targetRole === "admin" || targetRole === "publisher") {
-          redirectUrl = "/admin";
-        } else if (targetRole === "user") {
-          try {
-            const { data: hasVerifiedBadge } = await supabase.rpc("has_badge", { check_user_id: userId, badge_name: "verified_recruiter" });
-            if (hasVerifiedBadge === true) {
-              redirectUrl = "/recruteur";
+        // Redirection dynamique selon le rôle ou le paramètre redirect
+        const searchParams = new URLSearchParams(window.location.search);
+        const targetRedirect = searchParams.get("redirect");
+        let redirectUrl = targetRedirect || "/messagerie";
+
+        if (!targetRedirect) {
+          if (targetRole === "admin" || targetRole === "publisher") {
+            redirectUrl = "/admin";
+          } else if (targetRole === "user") {
+            try {
+              const { data: hasVerifiedBadge } = await supabase.rpc("has_badge", { check_user_id: userId, badge_name: "verified_recruiter" });
+              if (hasVerifiedBadge === true) {
+                redirectUrl = "/recruteur";
+              }
+            } catch (e) {
+              console.warn("Impossible de vérifier le badge recruteur:", e);
             }
-          } catch (e) {
-            console.warn("Impossible de vérifier le badge recruteur:", e);
           }
         }
 
@@ -234,7 +239,7 @@ export default function LoginPage() {
       if (error) {
         setErrorMessage(error.message || "Impossible de renvoyer l'email de confirmation.");
       } else {
-        setErrorMessage("Un nouvel email de confirmation vient d'être envoyé.");
+        setErrorMessage("Un nouvel email de confirmation a été envoyé. Vérifiez vos spams.");
         setNeedsConfirmation(false);
       }
     } catch (err) {
@@ -248,10 +253,12 @@ export default function LoginPage() {
     if (oauthLoading) return; // évite un double déclenchement de la redirection OAuth
     setOauthLoading(true);
     try {
+      const params = new URLSearchParams(window.location.search);
+      const targetRedirect = params.get("redirect") || "/profil";
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}/profil`,
+          redirectTo: `${window.location.origin}${targetRedirect.startsWith("/") ? targetRedirect : "/profil"}`,
         },
       });
       // Succès : le navigateur est redirigé vers Google, pas besoin de
