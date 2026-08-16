@@ -771,6 +771,11 @@ export default function CreerCv() {
   const [showStyleBanner, setShowStyleBanner] = useState(false);
   const [isFaciliteLoggedIn, setIsFaciliteLoggedIn] = useState(false);
   const [canvaConnected, setCanvaConnected] = useState(false);
+  // Onglet "Projets" : CV déjà enregistrés par l'utilisateur, chargés à la
+  // demande (pas au montage) — évite une requête inutile tant que l'onglet
+  // n'a jamais été ouvert.
+  const [savedResumes, setSavedResumes] = useState([]);
+  const [savedResumesLoading, setSavedResumesLoading] = useState(false);
   const [canvaFontSize, setCanvaFontSize] = useState(14);
   const [canvaScale, setCanvaScale] = useState(1);
   const [canvaSectionSpacing, setCanvaSectionSpacing] = useState(1);
@@ -978,6 +983,41 @@ export default function CreerCv() {
     }
   }, []);
 
+  // Charge un CV enregistré par son id — sorti de l'effet ?resumeId= ci-dessous
+  // pour être aussi appelable depuis l'onglet "Projets" (bouton "Charger").
+  const loadResumeById = async (resumeId, { isDownload = false } = {}) => {
+    const { data, error } = await supabase.from("resumes").select("content").eq("id", resumeId).single();
+
+    if (error || !data?.content) {
+      console.error("Erreur chargement CV existant:", error?.message);
+      triggerToast("Échec du chargement du CV.", "fa-triangle-exclamation");
+      return;
+    }
+
+    setCvData(data.content);
+    // selectedTemplate/accentColor sont embarqués dans content depuis
+    // saveCvDraftAndOpenPricing (des clés en plus des champs cvData
+    // habituels) — absents sur les brouillons enregistrés avant cet ajout,
+    // les valeurs par défaut du composant s'appliquent alors normalement.
+    if (data.content.selectedTemplate) setSelectedTemplate(data.content.selectedTemplate);
+    if (data.content.accentColor) setAccentColor(data.content.accentColor);
+    // elementStyles/elementOffsets/lockedElementIds : embarqués aux côtés
+    // de selectedTemplate/accentColor depuis saveCvDraftAndOpenPricing —
+    // absents sur les brouillons enregistrés avant cet ajout, les valeurs
+    // par défaut (useState({})/useState([])) s'appliquent alors normalement.
+    if (data.content.elementStyles) setElementStyles(data.content.elementStyles);
+    if (data.content.elementOffsets) setElementOffsets(data.content.elementOffsets);
+    if (data.content.lockedElementIds) setLockedElementIds(data.content.lockedElementIds);
+
+    setSavedResumeId(resumeId);
+    if (isDownload) {
+      setDownloadMode(true);
+      setActiveStep(7);
+    } else {
+      triggerToast("CV chargé pour modification.", "fa-file-import");
+    }
+  };
+
   // Rechargement pour édition depuis /candidat/mes-cvs (?resumeId=...). Lecture
   // de window.location.search dans un effet (jamais pendant le rendu, pour
   // éviter un hydration mismatch — même raison que isRecoveryMode dans
@@ -988,41 +1028,7 @@ export default function CreerCv() {
     const resumeId = params.get("resumeId");
     if (!resumeId) return;
 
-    const isDownload = params.get("download") === "1";
-
-    async function loadExistingResume() {
-      const { data, error } = await supabase.from("resumes").select("content").eq("id", resumeId).single();
-
-      if (error || !data?.content) {
-        console.error("Erreur chargement CV existant:", error?.message);
-        return;
-      }
-
-      setCvData(data.content);
-      // selectedTemplate/accentColor sont embarqués dans content depuis
-      // saveCvDraftAndOpenPricing (des clés en plus des champs cvData
-      // habituels) — absents sur les brouillons enregistrés avant cet ajout,
-      // les valeurs par défaut du composant s'appliquent alors normalement.
-      if (data.content.selectedTemplate) setSelectedTemplate(data.content.selectedTemplate);
-      if (data.content.accentColor) setAccentColor(data.content.accentColor);
-      // elementStyles/elementOffsets/lockedElementIds : embarqués aux côtés
-      // de selectedTemplate/accentColor depuis saveCvDraftAndOpenPricing —
-      // absents sur les brouillons enregistrés avant cet ajout, les valeurs
-      // par défaut (useState({})/useState([])) s'appliquent alors normalement.
-      if (data.content.elementStyles) setElementStyles(data.content.elementStyles);
-      if (data.content.elementOffsets) setElementOffsets(data.content.elementOffsets);
-      if (data.content.lockedElementIds) setLockedElementIds(data.content.lockedElementIds);
-
-      setSavedResumeId(resumeId);
-      if (isDownload) {
-        setDownloadMode(true);
-        setActiveStep(7);
-      } else {
-        triggerToast("CV chargé pour modification.", "fa-file-import");
-      }
-    }
-
-    loadExistingResume();
+    loadResumeById(resumeId, { isDownload: params.get("download") === "1" });
   }, []);
 
   // Synchronize template and color check from URL search parameter
@@ -1109,6 +1115,28 @@ export default function CreerCv() {
       await checkCanvaStatus(session.access_token);
     })();
   }, []);
+
+  // Onglet "Projets" : liste des CV déjà enregistrés — même requête que
+  // /candidat/mes-cvs/page.js. Chargée à l'ouverture de l'onglet, pas au
+  // montage du composant.
+  useEffect(() => {
+    if (activeCanvaTab !== "projects") return;
+    (async () => {
+      setSavedResumesLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        setSavedResumesLoading(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("resumes")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (!error) setSavedResumes(data || []);
+      setSavedResumesLoading(false);
+    })();
+  }, [activeCanvaTab]);
 
   const handleDisconnectCanva = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -2169,6 +2197,48 @@ export default function CreerCv() {
     setContextMenu({ show: false, x: 0, y: 0, element: null });
   };
 
+  // Duplique une section-TABLEAU entière (pas un item isolé — voir
+  // handleDuplicateElement ci-dessus). Onglet "Créer en bloc". Copie aussi
+  // elementStyles/lockedElementIds de chaque item source vers son clone :
+  // sans ça, un bloc dupliqué perdrait silencieusement la mise en forme
+  // (Phase B) déjà appliquée à l'original.
+  const SECTION_ARRAY_KEY_BY_TYPE = { experience: "experiences", education: "educations", skill: "skills", itSkill: "itSkills", language: "languages", hobby: "hobbies" };
+  const handleDuplicateSection = (sectionType) => {
+    const arrayKey = SECTION_ARRAY_KEY_BY_TYPE[sectionType];
+    if (!arrayKey) return;
+
+    const source = cvData[arrayKey] || [];
+    if (source.length === 0) {
+      triggerToast("Rien à dupliquer dans cette section.", "fa-triangle-exclamation");
+      return;
+    }
+
+    let nextId = nextIdFor(source);
+    const idMap = {};
+    const clones = source.map((item) => {
+      const newId = nextId++;
+      idMap[item.id] = newId;
+      return { ...item, id: newId };
+    });
+
+    setCvData(prev => ({ ...prev, [arrayKey]: [...prev[arrayKey], ...clones] }));
+    setElementStyles(prev => {
+      const next = { ...prev };
+      Object.entries(idMap).forEach(([oldId, newId]) => {
+        if (prev[oldId]) next[newId] = prev[oldId];
+      });
+      return next;
+    });
+    setLockedElementIds(prev => {
+      const additions = Object.entries(idMap)
+        .filter(([oldId]) => prev.includes(Number(oldId)))
+        .map(([, newId]) => newId);
+      return additions.length ? [...prev, ...additions] : prev;
+    });
+
+    triggerToast("Section dupliquée avec succès !", "fa-clone");
+  };
+
   const handleDeleteElement = (elem) => {
     if (!elem) return;
     if (elem.type === "experience") {
@@ -2707,7 +2777,8 @@ Laisse vide les champs non trouvés.`;
                   <span className="text-[9px] font-extrabold">Importer</span>
                 </button>
 
-                {/* IA Studio */}
+                {/* Outils (valeur interne "ai" conservée pour ne pas toucher aux
+                    conditionnels existants — seul le libellé affiché change) */}
                 <button
                   type="button"
                   onClick={() => setActiveCanvaTab("ai")}
@@ -2716,10 +2787,55 @@ Laisse vide les champs non trouvés.`;
                       ? "bg-purple-600/25 text-purple-300 border border-purple-500/40"
                       : "hover:bg-slate-800/70 hover:text-purple-300"
                   }`}
-                  title="Assistant IA Facilité"
+                  title="Outils d'assistance IA (reformulation, mots-clés ATS)"
                 >
                   <i className="fa-solid fa-wand-magic-sparkles text-sm mb-1 text-purple-400"></i>
-                  <span className="text-[9px] font-extrabold">IA Studio</span>
+                  <span className="text-[9px] font-extrabold">Outils</span>
+                </button>
+
+                {/* Projets */}
+                <button
+                  type="button"
+                  onClick={() => setActiveCanvaTab("projects")}
+                  className={`w-full py-2 rounded-xl flex flex-col items-center justify-center transition cursor-pointer ${
+                    activeCanvaTab === "projects"
+                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
+                      : "hover:bg-slate-800/70 hover:text-white"
+                  }`}
+                  title="Vos CV enregistrés"
+                >
+                  <i className="fa-solid fa-folder-open text-sm mb-1"></i>
+                  <span className="text-[9px] font-extrabold">Projets</span>
+                </button>
+
+                {/* Applis */}
+                <button
+                  type="button"
+                  onClick={() => setActiveCanvaTab("apps")}
+                  className={`w-full py-2 rounded-xl flex flex-col items-center justify-center transition cursor-pointer ${
+                    activeCanvaTab === "apps"
+                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
+                      : "hover:bg-slate-800/70 hover:text-white"
+                  }`}
+                  title="Applications connectées"
+                >
+                  <i className="fa-solid fa-grip text-sm mb-1"></i>
+                  <span className="text-[9px] font-extrabold">Applis</span>
+                </button>
+
+                {/* Créer en bloc */}
+                <button
+                  type="button"
+                  onClick={() => setActiveCanvaTab("bulk")}
+                  className={`w-full py-2 rounded-xl flex flex-col items-center justify-center transition cursor-pointer ${
+                    activeCanvaTab === "bulk"
+                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
+                      : "hover:bg-slate-800/70 hover:text-white"
+                  }`}
+                  title="Dupliquer une section entière"
+                >
+                  <i className="fa-solid fa-clone text-sm mb-1"></i>
+                  <span className="text-[9px] font-extrabold">Créer en bloc</span>
                 </button>
               </div>
 
@@ -2749,7 +2865,10 @@ Laisse vide les champs non trouvés.`;
                     {activeCanvaTab === "text" && "Texte & Typographie"}
                     {activeCanvaTab === "colors" && "Couleurs & Charte"}
                     {activeCanvaTab === "photo" && "Photo & Médias"}
-                    {activeCanvaTab === "ai" && "Studio IA Facilité"}
+                    {activeCanvaTab === "ai" && "Outils IA"}
+                    {activeCanvaTab === "projects" && "Vos Projets"}
+                    {activeCanvaTab === "apps" && "Applications"}
+                    {activeCanvaTab === "bulk" && "Créer en bloc"}
                   </span>
                 </div>
                 <button
@@ -3060,36 +3179,6 @@ Laisse vide les champs non trouvés.`;
                         <p className="text-[10px] text-amber-400 mt-1 font-semibold">{canvaColorFeedback.message}</p>
                       )}
                     </div>
-
-                    {isFaciliteLoggedIn && (
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Intégration Canva</label>
-                        {canvaConnected ? (
-                          <div className="flex items-center gap-2">
-                            <div className="flex-grow flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 text-xs font-bold">
-                              <i className="fa-solid fa-circle-check"></i>
-                              <span>Canva connecté ✓</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={handleDisconnectCanva}
-                              className="p-3 rounded-xl bg-slate-800 hover:bg-red-950 border border-slate-700 hover:border-red-500 text-slate-400 hover:text-red-400 text-xs font-bold transition cursor-pointer flex-shrink-0"
-                              title="Déconnecter Canva"
-                            >
-                              <i className="fa-solid fa-link-slash"></i>
-                            </button>
-                          </div>
-                        ) : (
-                          <a
-                            href="/api/canva/auth"
-                            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-white text-xs font-bold transition cursor-pointer"
-                          >
-                            <i className="fa-solid fa-plug"></i>
-                            <span>Connecter Canva</span>
-                          </a>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -3370,6 +3459,127 @@ Laisse vide les champs non trouvés.`;
                         <span className="text-[9px] text-slate-400">Optimiser pour passer les filtres de recrutement</span>
                       </div>
                     </button>
+                  </div>
+                )}
+
+                {/* TAB: PROJETS */}
+                {activeCanvaTab === "projects" && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/80">
+                      <div className="flex items-center gap-2 text-slate-200 font-black text-xs mb-1">
+                        <i className="fa-solid fa-folder-open text-blue-400"></i>
+                        <span>Vos CV enregistrés</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400">Reprenez un brouillon déjà sauvegardé.</p>
+                    </div>
+
+                    {savedResumesLoading ? (
+                      <div className="text-center py-6 text-slate-400 text-xs">
+                        <i className="fa-solid fa-circle-notch fa-spin mr-1.5"></i>Chargement...
+                      </div>
+                    ) : savedResumes.length === 0 ? (
+                      <div className="text-center py-6 text-slate-500 text-xs">Aucun CV enregistré pour l'instant.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {savedResumes.map((resume) => (
+                          <div key={resume.id} className="p-3 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-white truncate">{resume.title || "CV sans titre"}</div>
+                              <div className="text-[9px] text-slate-400">{new Date(resume.created_at).toLocaleDateString("fr-FR")}</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => loadResumeById(resume.id)}
+                              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer transition flex-shrink-0"
+                            >
+                              Charger
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB: APPLIS (bloc de connexion Canva relocalisé depuis l'onglet Marque) */}
+                {activeCanvaTab === "apps" && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/80">
+                      <div className="flex items-center gap-2 text-slate-200 font-black text-xs mb-1">
+                        <i className="fa-solid fa-grip text-blue-400"></i>
+                        <span>Applications connectées</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400">Intégrations tierces disponibles pour votre CV.</p>
+                    </div>
+
+                    {isFaciliteLoggedIn ? (
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Intégration Canva</label>
+                        {canvaConnected ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-grow flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 text-xs font-bold">
+                              <i className="fa-solid fa-circle-check"></i>
+                              <span>Canva connecté ✓</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleDisconnectCanva}
+                              className="p-3 rounded-xl bg-slate-800 hover:bg-red-950 border border-slate-700 hover:border-red-500 text-slate-400 hover:text-red-400 text-xs font-bold transition cursor-pointer flex-shrink-0"
+                              title="Déconnecter Canva"
+                            >
+                              <i className="fa-solid fa-link-slash"></i>
+                            </button>
+                          </div>
+                        ) : (
+                          <a
+                            href="/api/canva/auth"
+                            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-white text-xs font-bold transition cursor-pointer"
+                          >
+                            <i className="fa-solid fa-plug"></i>
+                            <span>Connecter Canva</span>
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 text-slate-500 text-xs">Connectez-vous à Facilité pour gérer vos applications.</div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB: CRÉER EN BLOC */}
+                {activeCanvaTab === "bulk" && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/80">
+                      <div className="flex items-center gap-2 text-slate-200 font-black text-xs mb-1">
+                        <i className="fa-solid fa-clone text-blue-400"></i>
+                        <span>Dupliquer une section</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400">Duplique toute la section dans ce CV, en conservant la mise en forme déjà appliquée.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      {[
+                        { type: "experience", label: "Expériences Professionnelles", icon: "fa-briefcase" },
+                        { type: "education", label: "Formations", icon: "fa-graduation-cap" },
+                        { type: "skill", label: "Compétences", icon: "fa-star" },
+                        { type: "itSkill", label: "Informatique", icon: "fa-laptop-code" },
+                        { type: "language", label: "Langues", icon: "fa-language" },
+                        { type: "hobby", label: "Centres d'intérêt", icon: "fa-heart" },
+                      ].map((sec) => (
+                        <button
+                          key={sec.type}
+                          type="button"
+                          onClick={() => handleDuplicateSection(sec.type)}
+                          className="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-left transition flex items-center gap-3 cursor-pointer group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-blue-900/60 text-blue-300 flex items-center justify-center flex-shrink-0">
+                            <i className={`fa-solid ${sec.icon} text-xs`}></i>
+                          </div>
+                          <span className="text-xs font-bold text-white group-hover:text-blue-300">{sec.label}</span>
+                        </button>
+                      ))}
+                      <p className="text-[9px] text-slate-500 pt-1">En-tête, Coordonnées et Profil sont uniques et ne se dupliquent pas dans un même CV.</p>
+                    </div>
                   </div>
                 )}
 

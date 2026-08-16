@@ -3838,29 +3838,29 @@ export default function ProfilPage() {
           {/* COLONNE DROITE / CARTES ACTIONS (Conforme 1:1 à la capture) */}
           <div className="w-full lg:w-[326px] flex flex-col space-y-4 sticky top-[76px] self-start transition-all z-10">
 
-            {/* Carte 2 : Profil public & URL */}
+            {/* Carte 2 : Lien d'invitation vers le site */}
             {(() => {
-              const rawName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profileName || (userSession?.user?.email ? userSession.user.email.split("@")[0] : "facile-demo"));
-              const profileSlug = rawName
+              const rawName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profileName || (userSession?.user?.email ? userSession.user.email.split("@")[0] : "facilite"));
+              const userRef = rawName
                 .toLowerCase()
                 .normalize("NFD")
                 .replace(/[\u0300-\u036f]/g, "")
                 .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "") || "facile-demo";
-              const displayUrl = `facilite.sn/in/${profileSlug}`;
-              const relativeUrl = `/in/${profileSlug}`;
-              const fullUrl = typeof window !== "undefined" ? `${window.location.origin}${relativeUrl}` : `https://${displayUrl}`;
+                .replace(/^-+|-+$/g, "") || "facilite";
+              const displayUrl = `facilite.sn`;
+              const relativeUrl = `/?ref=${userRef}`;
+              const fullUrl = typeof window !== "undefined" ? `${window.location.origin}${relativeUrl}` : `https://facilite.sn`;
 
               return (
-                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs flex items-center justify-between gap-3">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-xs text-gray-500 font-medium">Profil public</h3>
+                    <h3 className="text-xs text-gray-500 dark:text-gray-400 font-medium">Lien d'invitation</h3>
                     <a
                       href={relativeUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs sm:text-sm font-bold text-blue-600 truncate block hover:underline mt-0.5"
-                      title="Cliquer pour voir votre profil public"
+                      className="text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 truncate block hover:underline mt-0.5"
+                      title="Cliquer pour visiter le site"
                     >
                       {displayUrl}
                     </a>
@@ -3872,7 +3872,7 @@ export default function ProfilPage() {
                         navigator.clipboard.writeText(fullUrl);
                       }
                       setIsCopiedLink(true);
-                      triggerToast(`Lien copié dans le presse-papier !`, "fa-check");
+                      triggerToast(`Lien d'invitation copié dans le presse-papier !`, "fa-check");
                       setTimeout(() => setIsCopiedLink(false), 2500);
                     }}
                     className={`flex-shrink-0 font-bold px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-100 shadow-2xs ${
