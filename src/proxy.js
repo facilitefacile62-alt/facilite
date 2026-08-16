@@ -53,7 +53,7 @@ export default async function proxy(req) {
   }
 
   // 2. Vérification rapide des cookies pour les utilisateurs anonymes
-  // Si aucun cookie Supabase n'est présent, on redirige vers /register pour convertir le visiteur
+  // Si aucun cookie Supabase n'est présent, on redirige vers /login
   const cookies = req.cookies.getAll();
   const hasSupabaseCookie = cookies.some(
     (c) => c.name.startsWith("sb-") || c.name.includes("auth-token")
@@ -61,7 +61,7 @@ export default async function proxy(req) {
 
   if (!hasSupabaseCookie) {
     const url = req.nextUrl.clone();
-    url.pathname = "/register";
+    url.pathname = "/login";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
@@ -94,7 +94,7 @@ export default async function proxy(req) {
 
   if (!user) {
     const url = req.nextUrl.clone();
-    url.pathname = "/register";
+    url.pathname = "/login";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }

@@ -82,6 +82,36 @@ function computeCanvaInlineStyle(styleObj) {
   return out;
 }
 
+// Rend une valeur texte brut (lignes séparées par \n) en liste à puces HTML.
+// Échappe chaque ligne (contrairement au rendu texte normal de CanvaText,
+// celui-ci passe par innerHTML, donc un "<"/"&" tapé par l'utilisateur ne
+// doit jamais être interprété comme du balisage). cvData continue de ne
+// stocker que du texte brut \n-joint — voir CanvaText, la relecture se fait
+// toujours via innerText, jamais innerHTML.
+function escapeHtmlForBulletList(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function buildBulletListHtml(text) {
+  const lines = (text || "").split("\n");
+  const items = lines.map((line) => `<li>${escapeHtmlForBulletList(line) || "&nbsp;"}</li>`).join("");
+  return `<ul class="list-disc pl-4">${items}</ul>`;
+}
+
+// Classes Tailwind RÉELLEMENT enregistrées uniquement (vérifié dans
+// src/app/globals.css) — "animate-fadeIn", utilisée ailleurs dans ce
+// fichier, n'est PAS une classe enregistrée et ne doit pas être reprise ici.
+// Purement cosmétique à l'écran : une capture html2canvas-pro (export PDF,
+// export d'élément) est une image statique, ces animations n'y apparaissent
+// jamais — limite acceptée, pas un bug à corriger.
+const ANIMATION_CLASS_BY_KEY = {
+  none: "",
+  pulse: "animate-pulse",
+  bounce: "animate-bounce",
+  spin: "animate-spin",
+  fadeInUp: "animate-fade-in-up",
+};
+
 // --- DICTIONNAIRE DE TRADUCTION POUR LE CREATEUR DE CV ---
 const translations = {
   FR: {
@@ -386,19 +416,33 @@ function CanvaText({
   const isLocked = lockedElementIds?.includes(id);
   const isSelected = selectedCanvasElement?.id === id;
   const computedStyle = computeCanvaInlineStyle(elementStyles?.[id]);
+  const isBulletList = elementStyles?.[id]?.listStyle === "bullet";
   const elementRef = useRef(null);
   const isFocusedRef = useRef(false);
 
-  // Synchronise la valeur venant du parent uniquement lorsque l'utilisateur n'a PAS le focus actif de frappe
+  // Synchronise la valeur venant du parent uniquement lorsque l'utilisateur n'a PAS le focus actif de frappe.
+  // Mode puces (isBulletList) : reconstruit <ul><li> via innerHTML (échappé — voir
+  // buildBulletListHtml) plutôt que d'assigner innerText. handleInput/handleBlur
+  // continuent de lire innerText sans changement : un <li> est block-level, donc
+  // son rendu insère toujours un saut de ligne dans innerText, qu'importe le
+  // white-space du conteneur — le texte relu reste "ligne1\nligne2" en clair,
+  // jamais de HTML persisté dans cvData.
   useEffect(() => {
     if (elementRef.current && !isFocusedRef.current) {
-      const currentVal = elementRef.current.innerText;
       const targetVal = value || (isAdvancedEditOpen ? placeholder : "");
-      if (currentVal !== targetVal) {
-        elementRef.current.innerText = targetVal;
+      if (isBulletList) {
+        const targetHtml = buildBulletListHtml(targetVal);
+        if (elementRef.current.innerHTML !== targetHtml) {
+          elementRef.current.innerHTML = targetHtml;
+        }
+      } else {
+        const currentVal = elementRef.current.innerText;
+        if (currentVal !== targetVal) {
+          elementRef.current.innerText = targetVal;
+        }
       }
     }
-  }, [value, isAdvancedEditOpen, placeholder]);
+  }, [value, isAdvancedEditOpen, placeholder, isBulletList]);
 
   const handleInput = (e) => {
     const newText = e.currentTarget.innerText;
@@ -457,7 +501,12 @@ function CanvaText({
       } ${className}`}
       style={computedStyle}
       data-placeholder={placeholder}
-      dangerouslySetInnerHTML={{ __html: value || (isAdvancedEditOpen ? placeholder : "") }}
+      data-canva-element-id={id}
+      dangerouslySetInnerHTML={{
+        __html: isBulletList
+          ? buildBulletListHtml(value || (isAdvancedEditOpen ? placeholder : ""))
+          : (value || (isAdvancedEditOpen ? placeholder : ""))
+      }}
     />
   );
 }
@@ -485,6 +534,7 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
   const isLocked = lockedElementIds?.includes(id);
   const offset = elementOffsets?.[id] || { x: 0, y: 0 };
   const computedStyle = computeCanvaInlineStyle(elementStyles?.[id]);
+  const animationClass = ANIMATION_CLASS_BY_KEY[elementStyles?.[id]?.animation] || "";
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
 
@@ -567,7 +617,8 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
   if (!isAdvancedEditOpen) {
     return (
       <div
-        className={className}
+        className={`${className} ${animationClass}`}
+        data-canva-element-id={id}
         style={{
           ...style,
           ...(transformStyle ? { transform: transformStyle } : {}),
@@ -594,11 +645,12 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
           openContextMenu(e, { id, type, name });
         }
       }}
+      data-canva-element-id={id}
       className={`relative transition-all ${
         isSelected
           ? "ring-2 ring-[#8B3DFF] ring-offset-1 z-30 shadow-md rounded-lg"
           : "hover:outline hover:outline-1 hover:outline-purple-400/80 hover:outline-dashed cursor-pointer group/canva-elem"
-      } ${className}`}
+      } ${className} ${animationClass}`}
       style={{
         ...style,
         ...(transformStyle ? { transform: transformStyle } : {}),
@@ -1608,6 +1660,56 @@ export default function CreerCv() {
     setShowPricingModal(true);
   };
 
+  // Export PNG d'un seul élément sélectionné (barre d'outils contextuelle,
+  // Modification Avancée). Réutilise html2canvas-pro (pas html2canvas — voir
+  // src/lib/pdfExport.js, requis pour les couleurs oklch()/lab() de Tailwind
+  // v4) : capture la feuille entière une fois, puis recadre sur le
+  // rectangle de l'élément visé (retrouvé via data-canva-element-id, seul
+  // moyen de le localiser dans le DOM hors de React).
+  const handleExportSelectedElement = async () => {
+    if (!selectedCanvasElement) return;
+    try {
+      const sheet = document.getElementById("cv-preview-sheet");
+      const target = sheet?.querySelector(`[data-canva-element-id="${selectedCanvasElement.id}"]`);
+      if (!sheet || !target) {
+        triggerToast("Élément introuvable pour l'export.", "fa-triangle-exclamation");
+        return;
+      }
+
+      const { default: html2canvas } = await import("html2canvas-pro");
+      const fullCanvas = await html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+
+      const sheetRect = sheet.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const captureScale = fullCanvas.width / sheetRect.width;
+
+      const cropX = Math.max(0, (targetRect.left - sheetRect.left) * captureScale);
+      const cropY = Math.max(0, (targetRect.top - sheetRect.top) * captureScale);
+      const cropW = Math.max(1, Math.round(targetRect.width * captureScale));
+      const cropH = Math.max(1, Math.round(targetRect.height * captureScale));
+
+      const cropCanvas = document.createElement("canvas");
+      cropCanvas.width = cropW;
+      cropCanvas.height = cropH;
+      cropCanvas.getContext("2d").drawImage(fullCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+      cropCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `element-${selectedCanvasElement.name || selectedCanvasElement.id}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }, "image/png");
+
+      triggerToast("Élément exporté en PNG !", "fa-image");
+    } catch (e) {
+      console.error("Erreur export élément:", e);
+      triggerToast("Échec de l'export de l'élément.", "fa-triangle-exclamation");
+    }
+  };
+
   // Génération réelle du PDF — n'existe qu'en mode téléchargement
   // (?resumeId=...&download=1, atteint uniquement depuis un lien "Télécharger
   // mon CV" sur une commande déjà payée dans /candidat/facturation). Capture
@@ -2390,6 +2492,19 @@ Laisse vide les champs non trouvés.`;
       return () => window.removeEventListener("resize", onResize);
     }
   }, [isPreviewOpen]);
+
+  // Barre d'outils contextuelle (Modification Avancée) : lit/écrit le style
+  // de l'élément actuellement sélectionné (selectedCanvasElement), pas un
+  // état global — chaque élément garde son propre style indépendant.
+  const currentElemId = selectedCanvasElement?.id || null;
+  const currentElementStyle = { ...DEFAULT_ELEMENT_STYLE, ...(elementStyles[currentElemId] || {}) };
+  const updateElementStyle = (patch) => {
+    if (!currentElemId) return;
+    setElementStyles(prev => ({
+      ...prev,
+      [currentElemId]: { ...DEFAULT_ELEMENT_STYLE, ...prev[currentElemId], ...patch }
+    }));
+  };
 
   const studioContextValue = {
     lockedElementIds,
@@ -4725,74 +4840,208 @@ Laisse vide les champs non trouvés.`;
                   </button>
                 </div>
 
-                {/* Text Color A */}
-                <label className="flex items-center gap-1 px-1.5 py-1 hover:bg-gray-100 rounded-lg cursor-pointer" title="Changer la couleur principale">
-                  <span className="font-serif font-black text-sm text-gray-900">A</span>
-                  <span className="w-3.5 h-3.5 rounded-full border border-gray-300 shadow-2xs" style={{ backgroundColor: accentColor }}></span>
-                  <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="hidden" />
-                </label>
+                {/* --- CONTRÔLES PAR ÉLÉMENT (barre contextuelle) --- */}
+                {/* Actifs seulement quand un élément du CV est sélectionné : lisent/écrivent
+                    elementStyles[selectedCanvasElement.id] via currentElementStyle/updateElementStyle,
+                    pas un état global — chaque élément garde son propre style. */}
+                <div
+                  className={`flex items-center gap-1 border-l border-gray-200 pl-1.5 flex-wrap ${
+                    !currentElemId ? "opacity-40 pointer-events-none select-none" : ""
+                  }`}
+                >
+                  {!currentElemId && (
+                    <span className="text-[10px] text-gray-400 font-semibold italic pr-1 whitespace-nowrap">Sélectionnez un élément</span>
+                  )}
 
-                {/* Format buttons B, I, U, aA */}
-                <div className="flex items-center gap-0.5 border-l border-gray-200 pl-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setCanvaBold(prev => !prev)}
-                    className={`w-6 h-6 rounded flex items-center justify-center font-black cursor-pointer transition ${canvaBold ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
-                    title="Gras"
-                  >
-                    B
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCanvaItalic(prev => !prev)}
-                    className={`w-6 h-6 rounded flex items-center justify-center italic font-serif cursor-pointer transition ${canvaItalic ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
-                    title="Italique"
-                  >
-                    I
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCanvaUnderline(prev => !prev)}
-                    className={`w-6 h-6 rounded flex items-center justify-center underline cursor-pointer transition ${canvaUnderline ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
-                    title="Souligné"
-                  >
-                    U
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCanvaUppercase(prev => !prev)}
-                    className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold cursor-pointer transition ${canvaUppercase ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
-                    title="Majuscules"
-                  >
-                    aA
-                  </button>
-                </div>
+                  {/* Couleur du texte */}
+                  <label className="relative flex items-center justify-center w-6 h-6 hover:bg-gray-100 rounded cursor-pointer" title="Couleur du texte">
+                    <span className="font-serif font-black text-xs text-gray-900">A</span>
+                    <span className="absolute bottom-0.5 left-1 right-1 h-0.5 rounded-full" style={{ backgroundColor: currentElementStyle.textColor || "#111827" }}></span>
+                    <input type="color" value={currentElementStyle.textColor || "#111827"} onChange={(e) => updateElementStyle({ textColor: e.target.value })} className="hidden" />
+                  </label>
 
-                {/* Alignment */}
-                <div className="flex items-center gap-0.5 border-l border-gray-200 pl-1.5">
+                  {/* Couleur de remplissage — PAS gatée par FIXED_ACCENT_COLOR_TEMPLATES :
+                      ce garde-fou ne concerne que la couleur globale accentColor (Marque), pas
+                      un style par élément, orthogonal. Ne pas le reprendre ici par réflexe. */}
+                  <label className="flex items-center justify-center w-6 h-6 hover:bg-gray-100 rounded cursor-pointer" title="Couleur de remplissage">
+                    <i className="fa-solid fa-fill-drip text-[11px]" style={{ color: currentElementStyle.fillColor || "#9CA3AF" }}></i>
+                    <input type="color" value={currentElementStyle.fillColor || "#ffffff"} onChange={(e) => updateElementStyle({ fillColor: e.target.value })} className="hidden" />
+                  </label>
+
+                  {/* Contour : couleur + style + épaisseur (n'apparaît que si un style de contour est choisi) */}
+                  <label className="flex items-center justify-center w-6 h-6 hover:bg-gray-100 rounded cursor-pointer" title="Couleur du contour">
+                    <i className="fa-regular fa-square text-[11px]" style={{ color: currentElementStyle.borderColor || "#9CA3AF" }}></i>
+                    <input type="color" value={currentElementStyle.borderColor || "#111827"} onChange={(e) => updateElementStyle({ borderColor: e.target.value })} className="hidden" />
+                  </label>
+                  <select
+                    value={currentElementStyle.borderStyle}
+                    onChange={(e) => updateElementStyle({ borderStyle: e.target.value, borderWidth: e.target.value === "none" ? 0 : (currentElementStyle.borderWidth || 1) })}
+                    className="bg-gray-100 hover:bg-gray-200 border-0 rounded px-1 py-1 text-[10px] font-bold text-gray-800 cursor-pointer focus:outline-hidden"
+                    title="Style du contour"
+                  >
+                    <option value="none">Sans contour</option>
+                    <option value="solid">Plein</option>
+                    <option value="dashed">Tirets</option>
+                    <option value="dotted">Points</option>
+                  </select>
+                  {currentElementStyle.borderStyle !== "none" && (
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={currentElementStyle.borderWidth || 1}
+                      onChange={(e) => updateElementStyle({ borderWidth: parseInt(e.target.value) })}
+                      className="w-10 accent-blue-600 h-1.5 cursor-pointer"
+                      title={`Épaisseur du contour : ${currentElementStyle.borderWidth || 1}px`}
+                    />
+                  )}
+
+                  {/* Gras / Italique / Souligné / Barré / Majuscules */}
+                  <div className="flex items-center gap-0.5 border-l border-gray-200 pl-1.5">
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ bold: !currentElementStyle.bold })}
+                      className={`w-6 h-6 rounded flex items-center justify-center font-black cursor-pointer transition ${currentElementStyle.bold ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
+                      title="Gras"
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ italic: !currentElementStyle.italic })}
+                      className={`w-6 h-6 rounded flex items-center justify-center italic font-serif cursor-pointer transition ${currentElementStyle.italic ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
+                      title="Italique"
+                    >
+                      I
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ underline: !currentElementStyle.underline })}
+                      className={`w-6 h-6 rounded flex items-center justify-center underline cursor-pointer transition ${currentElementStyle.underline ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
+                      title="Souligné"
+                    >
+                      U
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ strikethrough: !currentElementStyle.strikethrough })}
+                      className={`w-6 h-6 rounded flex items-center justify-center line-through cursor-pointer transition ${currentElementStyle.strikethrough ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
+                      title="Barré"
+                    >
+                      S
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ uppercase: !currentElementStyle.uppercase })}
+                      className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold cursor-pointer transition ${currentElementStyle.uppercase ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-800"}`}
+                      title="Majuscules"
+                    >
+                      aA
+                    </button>
+                  </div>
+
+                  {/* Alignement */}
+                  <div className="flex items-center gap-0.5 border-l border-gray-200 pl-1.5">
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ align: "left" })}
+                      className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${currentElementStyle.align === "left" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                      title="Aligner à gauche"
+                    >
+                      <i className="fa-solid fa-align-left text-[11px]"></i>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ align: "center" })}
+                      className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${currentElementStyle.align === "center" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                      title="Centrer"
+                    >
+                      <i className="fa-solid fa-align-center text-[11px]"></i>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ align: "right" })}
+                      className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${currentElementStyle.align === "right" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                      title="Aligner à droite"
+                    >
+                      <i className="fa-solid fa-align-right text-[11px]"></i>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ align: "justify" })}
+                      className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${currentElementStyle.align === "justify" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                      title="Justifier"
+                    >
+                      <i className="fa-solid fa-align-justify text-[11px]"></i>
+                    </button>
+                  </div>
+
+                  {/* Puces */}
                   <button
                     type="button"
-                    onClick={() => setCanvaTextAlign("left")}
-                    className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${canvaTextAlign === "left" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
-                    title="Aligner à gauche"
+                    onClick={() => updateElementStyle({ listStyle: currentElementStyle.listStyle === "bullet" ? "none" : "bullet" })}
+                    className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition border-l border-gray-200 pl-1.5 ml-1 ${currentElementStyle.listStyle === "bullet" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                    title="Liste à puces"
                   >
-                    <i className="fa-solid fa-align-left text-[11px]"></i>
+                    <i className="fa-solid fa-list-ul text-[11px]"></i>
                   </button>
+
+                  {/* Opacité */}
+                  <div className="flex items-center gap-1 border-l border-gray-200 pl-1.5" title={`Opacité : ${Math.round(currentElementStyle.opacity * 100)}%`}>
+                    <i className="fa-regular fa-eye text-[10px] text-gray-500"></i>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1"
+                      step="0.05"
+                      value={currentElementStyle.opacity}
+                      onChange={(e) => updateElementStyle({ opacity: parseFloat(e.target.value) })}
+                      className="w-12 accent-blue-600 h-1.5 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Animation — cosmétique à l'écran uniquement, invisible dans l'export PDF (capture statique) */}
+                  <select
+                    value={currentElementStyle.animation}
+                    onChange={(e) => updateElementStyle({ animation: e.target.value })}
+                    className="bg-gray-100 hover:bg-gray-200 border-0 rounded px-1 py-1 text-[10px] font-bold text-gray-800 cursor-pointer focus:outline-hidden border-l border-gray-200 pl-1.5 ml-1"
+                    title="Animation à l'écran (non visible dans le PDF exporté)"
+                  >
+                    <option value="none">Sans animation</option>
+                    <option value="pulse">Pulsation</option>
+                    <option value="bounce">Rebond</option>
+                    <option value="spin">Rotation</option>
+                    <option value="fadeInUp">Apparition</option>
+                  </select>
+
+                  {/* Avant-plan / Arrière-plan */}
+                  <div className="flex items-center gap-0.5 border-l border-gray-200 pl-1.5">
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ zIndex: (currentElementStyle.zIndex ?? 0) + 1 })}
+                      className="w-6 h-6 rounded flex items-center justify-center hover:bg-gray-100 text-gray-700 cursor-pointer transition"
+                      title="Avancer (avant-plan)"
+                    >
+                      <i className="fa-solid fa-arrow-up text-[11px]"></i>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateElementStyle({ zIndex: (currentElementStyle.zIndex ?? 0) - 1 })}
+                      className="w-6 h-6 rounded flex items-center justify-center hover:bg-gray-100 text-gray-700 cursor-pointer transition"
+                      title="Reculer (arrière-plan)"
+                    >
+                      <i className="fa-solid fa-arrow-down text-[11px]"></i>
+                    </button>
+                  </div>
+
+                  {/* Export de l'élément sélectionné */}
                   <button
                     type="button"
-                    onClick={() => setCanvaTextAlign("center")}
-                    className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${canvaTextAlign === "center" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
-                    title="Centrer"
+                    onClick={handleExportSelectedElement}
+                    className="w-6 h-6 rounded flex items-center justify-center hover:bg-gray-100 text-gray-700 cursor-pointer transition border-l border-gray-200 pl-1.5 ml-1"
+                    title="Exporter cet élément en PNG"
                   >
-                    <i className="fa-solid fa-align-center text-[11px]"></i>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCanvaTextAlign("justify")}
-                    className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition ${canvaTextAlign === "justify" ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"}`}
-                    title="Justifier"
-                  >
-                    <i className="fa-solid fa-align-justify text-[11px]"></i>
+                    <i className="fa-solid fa-file-arrow-down text-[11px]"></i>
                   </button>
                 </div>
 
