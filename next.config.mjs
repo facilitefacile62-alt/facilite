@@ -69,6 +69,14 @@ const contentSecurityPolicy = [
 const nextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["unpdf", "mammoth", "tesseract.js", "@napi-rs/canvas", "canvas"],
+  // Dev uniquement : Next.js bloque par défaut les chunks JS/HMR d'une
+  // origine différente de celle sur laquelle `next dev` a démarré — accéder
+  // au serveur via 127.0.0.1 alors qu'il tourne "sur localhost" casse toute
+  // l'hydratation React (page servie mais totalement inerte). Nécessaire
+  // pour tester le flux OAuth Canva localement avec CANVA_REDIRECT_URI=
+  // http://127.0.0.1:3000/... (Canva exige une correspondance exacte).
+  // Sans effet en production (Vercel).
+  allowedDevOrigins: ["127.0.0.1"],
   // Domaines externes réellement chargés par <Image> de next/image — mêmes 4
   // domaines déjà documentés dans img-src de la CSP ci-dessus (Storage
   // Supabase pour les photos de profil/couverture migrées, avatars Google
