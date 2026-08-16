@@ -39,14 +39,19 @@ function readSignedCookie(req, name) {
  * ici et ajouté à l'échange de code, en plus de canva_oauth_state.
  */
 export async function GET(req) {
-  // DIAGNOSTIC TEMPORAIRE — à retirer après investigation missing_params.
-  console.log("[Canva Callback] URL complète reçue:", req.url);
-  console.log("[Canva Callback] SearchParams:", Object.fromEntries(req.nextUrl.searchParams));
-  console.log("[Canva Callback] Cookies présents:", req.cookies.getAll().map((c) => c.name));
+  const { searchParams } = new URL(req.url);
+  const code = searchParams.get("code");
+  const returnedState = searchParams.get("state");
 
-  const url = new URL(req.url);
-  const code = url.searchParams.get("code");
-  const returnedState = url.searchParams.get("state");
+  // DIAGNOSTIC TEMPORAIRE — à retirer après investigation missing_params.
+  // Dérivés de la même instance URL que code/returnedState ci-dessus (plus
+  // req.nextUrl nulle part dans ce fichier) pour exclure toute divergence
+  // entre les deux façons de parser req.url selon l'origine 127.0.0.1 vs
+  // localhost.
+  console.log("[Canva Callback] URL:", req.url);
+  console.log("[Canva Callback] code:", code);
+  console.log("[Canva Callback] state:", returnedState);
+  console.log("[Canva Callback] cookies:", req.cookies.getAll().map((c) => c.name));
 
   // Toujours supprimer les deux cookies après lecture, succès ou échec —
   // un state/verifier à usage unique qui traîne au-delà de cette
@@ -60,8 +65,8 @@ export async function GET(req) {
   const errorRedirect = (reason) =>
     clearOauthCookies(NextResponse.redirect(new URL(`/creer-cv?canva=error&reason=${reason}`, req.url)));
 
-  const oauthError = url.searchParams.get("error");
-  const errorDescription = url.searchParams.get("error_description");
+  const oauthError = searchParams.get("error");
+  const errorDescription = searchParams.get("error_description");
   if (oauthError) {
     console.error(`[Canva OAuth Callback Error] ${oauthError}: ${errorDescription || "aucun détail"}`);
     return errorRedirect(encodeURIComponent(oauthError));
@@ -69,12 +74,22 @@ export async function GET(req) {
 
   if (!code || !returnedState) return errorRedirect("missing_params");
 
+  const stateCookieRaw = req.cookies.get("canva_oauth_state");
+  if (!stateCookieRaw) {
+    console.error("[Canva Callback] Cookie canva_oauth_state absent.");
+    return errorRedirect("missing_state_cookie");
+  }
   const cookieState = readSignedCookie(req, "canva_oauth_state");
-  if (!cookieState) return errorRedirect("missing_or_invalid_state_cookie");
+  if (!cookieState) return errorRedirect("invalid_state_signature");
   if (!timingSafeEqualStrings(cookieState, returnedState)) return errorRedirect("state_mismatch");
 
+  const pkceCookieRaw = req.cookies.get("canva_pkce_verifier");
+  if (!pkceCookieRaw) {
+    console.error("[Canva Callback] Cookie canva_pkce_verifier absent.");
+    return errorRedirect("missing_pkce_cookie");
+  }
   const codeVerifier = readSignedCookie(req, "canva_pkce_verifier");
-  if (!codeVerifier) return errorRedirect("missing_pkce_verifier");
+  if (!codeVerifier) return errorRedirect("invalid_pkce_signature");
 
   const user = await getUserFromCookies();
   if (!user) return errorRedirect("not_authenticated");
