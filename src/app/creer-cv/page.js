@@ -4984,43 +4984,6 @@ Laisse vide les champs non trouvés.`;
                   </button>
                 </div>
 
-                {/* CANVA ZOOM TOOLBAR CONTROL */}
-                <div className="flex items-center bg-white border border-gray-200 rounded-xl px-2.5 py-1 shadow-2xs gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setCanvaZoom(z => Math.max(0.2, +(z - 0.05).toFixed(2)))}
-                    className="w-5 h-5 flex items-center justify-center hover:bg-gray-100 rounded text-gray-700 font-black cursor-pointer text-xs"
-                    title="Zoom arrière (-)"
-                  >
-                    –
-                  </button>
-                  <input
-                    type="range"
-                    min="0.2"
-                    max="1.8"
-                    step="0.05"
-                    value={canvaZoom}
-                    onChange={(e) => setCanvaZoom(parseFloat(e.target.value))}
-                    className="w-16 sm:w-24 accent-blue-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setCanvaZoom(z => Math.min(2.0, +(z + 0.05).toFixed(2)))}
-                    className="w-5 h-5 flex items-center justify-center hover:bg-gray-100 rounded text-gray-700 font-black cursor-pointer text-xs"
-                    title="Zoom avant (+)"
-                  >
-                    +
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAutoFit}
-                    className="text-[11px] font-black text-blue-600 hover:text-blue-800 cursor-pointer min-w-[40px] text-center"
-                    title="Ajuster à l'écran"
-                  >
-                    {Math.round(canvaZoom * 100)} %
-                  </button>
-                </div>
-
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-gray-500 font-semibold capitalize hidden sm:inline">
                     Modèle <strong className="text-gray-800">{selectedTemplate}</strong>
@@ -5295,56 +5258,6 @@ Laisse vide les champs non trouvés.`;
                   <i className="fa-solid fa-wand-magic-sparkles text-[10px] text-purple-600"></i>
                   <span>IA</span>
                 </button>
-              </div>
-
-              {/* CANVA TOP FLOATING PAGE 1 BAR */}
-              <div className="w-full max-w-[595px] flex items-center justify-between py-1.5 px-3 mb-2 bg-slate-900/80 backdrop-blur-xs border border-slate-750 rounded-xl text-white text-xs font-bold shadow-xs no-print">
-                <div className="flex items-center space-x-2">
-                  <span className="text-[11px] font-black text-slate-200">Page 1 sur {cvPages.length}</span>
-                  {cvPages[0]?.isLocked && (
-                    <span className="text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded flex items-center gap-1 border border-amber-500/30">
-                      <i className="fa-solid fa-lock text-[8px]"></i> Verrouillée
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center space-x-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleLockPage(0)}
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition cursor-pointer ${
-                      cvPages[0]?.isLocked ? "bg-amber-500/30 text-amber-300 border border-amber-500/40" : "hover:bg-slate-800 text-slate-300 hover:text-white"
-                    }`}
-                    title={cvPages[0]?.isLocked ? "Déverrouiller la page 1" : "Verrouiller la page 1"}
-                  >
-                    <i className={`fa-solid ${cvPages[0]?.isLocked ? "fa-lock" : "fa-lock-open"} text-xs`}></i>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDuplicatePage(0)}
-                    className="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
-                    title="Dupliquer la page 1"
-                  >
-                    <i className="fa-regular fa-copy text-xs"></i>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAddPage("blank")}
-                    className="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
-                    title="Ajouter une page blanche vide"
-                  >
-                    <i className="fa-solid fa-file-circle-plus text-xs text-blue-400"></i>
-                  </button>
-                  {cvPages.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePage(0)}
-                      className="w-7 h-7 rounded-lg hover:bg-red-500/30 hover:text-red-300 text-slate-400 flex items-center justify-center transition cursor-pointer"
-                      title="Supprimer la page 1"
-                    >
-                      <i className="fa-solid fa-trash text-xs"></i>
-                    </button>
-                  )}
-                </div>
               </div>
 
               {/* The CV Document Sheet to print/view */}
@@ -7346,52 +7259,6 @@ Laisse vide les champs non trouvés.`;
                 const actualIdx = pageIdx + 1;
                 return (
                   <div key={page.id} className="mt-8 flex flex-col items-center w-full">
-                    {/* Top Floating Page Bar (Canva Style) */}
-                    <div className="w-full max-w-[595px] flex items-center justify-between py-1.5 px-3 mb-2 bg-slate-900/80 backdrop-blur-xs border border-slate-750 rounded-xl text-white text-xs font-bold shadow-xs no-print">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[11px] font-black text-slate-200">Page {actualIdx + 1} sur {cvPages.length}</span>
-                        <span className="text-[10px] text-blue-300 bg-blue-900/40 px-2 py-0.5 rounded-md border border-blue-500/30">
-                          {page.type === "blank" ? "Page Blanche" : page.type === "cover_letter" ? "Lettre de motivation" : "Suite du CV"}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleLockPage(actualIdx)}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center transition cursor-pointer ${
-                            page.isLocked ? "bg-amber-500/30 text-amber-300 border border-amber-500/40" : "hover:bg-slate-800 text-slate-300 hover:text-white"
-                          }`}
-                          title={page.isLocked ? "Déverrouiller la page" : "Verrouiller la page"}
-                        >
-                          <i className={`fa-solid ${page.isLocked ? "fa-lock" : "fa-lock-open"} text-xs`}></i>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDuplicatePage(actualIdx)}
-                          className="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
-                          title="Dupliquer cette page"
-                        >
-                          <i className="fa-regular fa-copy text-xs"></i>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleAddPage("blank")}
-                          className="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
-                          title="Ajouter une page blanche vide"
-                        >
-                          <i className="fa-solid fa-file-circle-plus text-xs text-blue-400"></i>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePage(actualIdx)}
-                          className="w-7 h-7 rounded-lg hover:bg-red-500/30 hover:text-red-300 text-slate-400 flex items-center justify-center transition cursor-pointer"
-                          title="Supprimer cette page"
-                        >
-                          <i className="fa-solid fa-trash text-xs"></i>
-                        </button>
-                      </div>
-                    </div>
-
                     {/* Page Sheet Container */}
                     <div
                       id={`cv-page-${actualIdx + 1}-sheet`}
@@ -7619,6 +7486,111 @@ Laisse vide les champs non trouvés.`;
               </div>
 
             </div>
+
+            {/* --- BANDE DE PAGES EN BAS --- */}
+            {/* Fusion des anciennes barres "Page X sur N" (une par page, retirées
+                ci-dessus) et du contrôle de zoom (retiré de la ligne d'outils du
+                haut) en une seule bande fixée en bas de la zone d'aperçu. Vignettes
+                icône+titre, pas d'aperçu miniature réellement rendu : seule la
+                page 1 affiche un contenu distinct aujourd'hui (cvPages ne stocke
+                que titre/type/verrou pour les autres) — construire un vrai rendu
+                multi-page est hors périmètre de ce point. */}
+            <div className="sticky bottom-0 z-20 w-full bg-white/95 backdrop-blur-xs border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] no-print">
+              <div className="max-w-[900px] mx-auto flex items-center gap-3 px-4 py-2">
+                <div className="flex items-center gap-2 overflow-x-auto flex-1 py-1">
+                  {cvPages.map((page, idx) => {
+                    const sheetId = idx === 0 ? "cv-preview-sheet" : `cv-page-${idx + 1}-sheet`;
+                    const icon = page.type === "blank" ? "fa-file" : page.type === "cover_letter" ? "fa-envelope-open-text" : page.type === "cv_duplicate" ? "fa-copy" : "fa-file-lines";
+                    return (
+                      <div key={page.id} className="flex items-center gap-1 flex-shrink-0 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 pl-2 pr-1 py-1 transition">
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById(sheetId)?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                          className="flex items-center gap-1.5 cursor-pointer"
+                          title={`Aller à : ${page.title}`}
+                        >
+                          <i className={`fa-solid ${icon} text-[11px] text-gray-500`}></i>
+                          <span className="text-[10px] font-bold text-gray-700 max-w-[90px] truncate">{page.title}</span>
+                          {page.isLocked && <i className="fa-solid fa-lock text-[9px] text-amber-500"></i>}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleLockPage(idx)}
+                          className="w-5 h-5 rounded flex items-center justify-center hover:bg-gray-200 text-gray-400 hover:text-gray-700 cursor-pointer transition"
+                          title={page.isLocked ? "Déverrouiller" : "Verrouiller"}
+                        >
+                          <i className={`fa-solid ${page.isLocked ? "fa-lock" : "fa-lock-open"} text-[9px]`}></i>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicatePage(idx)}
+                          className="w-5 h-5 rounded flex items-center justify-center hover:bg-gray-200 text-gray-400 hover:text-gray-700 cursor-pointer transition"
+                          title="Dupliquer"
+                        >
+                          <i className="fa-regular fa-copy text-[9px]"></i>
+                        </button>
+                        {cvPages.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePage(idx)}
+                            className="w-5 h-5 rounded flex items-center justify-center hover:bg-red-100 text-gray-400 hover:text-red-600 cursor-pointer transition"
+                            title="Supprimer"
+                          >
+                            <i className="fa-solid fa-trash text-[9px]"></i>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => handleAddPage("blank")}
+                    className="w-7 h-7 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition flex-shrink-0"
+                    title="Ajouter une page blanche"
+                  >
+                    <i className="fa-solid fa-plus text-xs"></i>
+                  </button>
+                </div>
+
+                {/* Zoom (fusionné depuis l'ancienne barre d'outils du haut) */}
+                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1 gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setCanvaZoom(z => Math.max(0.2, +(z - 0.05).toFixed(2)))}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-gray-200 rounded text-gray-700 font-black cursor-pointer text-xs"
+                    title="Zoom arrière (-)"
+                  >
+                    –
+                  </button>
+                  <input
+                    type="range"
+                    min="0.2"
+                    max="1.8"
+                    step="0.05"
+                    value={canvaZoom}
+                    onChange={(e) => setCanvaZoom(parseFloat(e.target.value))}
+                    className="w-16 sm:w-24 accent-blue-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCanvaZoom(z => Math.min(2.0, +(z + 0.05).toFixed(2)))}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-gray-200 rounded text-gray-700 font-black cursor-pointer text-xs"
+                    title="Zoom avant (+)"
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAutoFit}
+                    className="text-[11px] font-black text-blue-600 hover:text-blue-800 cursor-pointer min-w-[40px] text-center"
+                    title="Ajuster à l'écran"
+                  >
+                    {Math.round(canvaZoom * 100)} %
+                  </button>
+                </div>
+              </div>
+            </div>
+
           </section>
 
         </div>
