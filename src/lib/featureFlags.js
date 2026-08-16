@@ -53,6 +53,15 @@ export const DEFAULT_FEATURE_TREE = [
         description: "Bouton dans le menu Plus pour l'import et l'analyse IA de CV",
       },
       {
+        id: "nav_plus_fonctionnalites",
+        name: "Fonctionnalités (Outils IA, Modèles & Recrutement)",
+        path: "/service",
+        icon: "✨",
+        enabled: true,
+        roles: { user: true, recruiter: true, visitor: true },
+        description: "Bouton dans le menu Plus vers la vue d'ensemble des fonctionnalités",
+      },
+      {
         id: "nav_plus_service",
         name: "Services & Modèles (CVs Pro, Canada, Anglais & Lettres)",
         path: "/service",

@@ -1935,6 +1935,28 @@ export default function MessagerieClient() {
               <i className="fa-solid fa-house text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
             </Link>
+
+            {/* Offres */}
+            <Link
+              href="/offres"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/offres" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-list-check text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">Offres</span>
+            </Link>
+
+            {/* Fonctionnalités */}
+            <Link
+              href="/service"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-wand-magic-sparkles text-xl text-indigo-500"></i>
+              <span className="text-[11px] font-bold tracking-tight">{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+            </Link>
             
             {/* Messagerie (Actif sur la page de messagerie) */}
             {userSession && (
@@ -1995,6 +2017,14 @@ export default function MessagerieClient() {
                     onClick={() => setPlusDropdownOpen(false)}
                     className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
                   >
+                    <i className="fa-solid fa-wand-magic-sparkles text-lg text-gray-600 w-5 text-center"></i>
+                    <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+                  </Link>
+                  <Link
+                    href="/service"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                  >
                     <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
                     <span>Service</span>
                   </Link>
@@ -2014,18 +2044,17 @@ export default function MessagerieClient() {
                     <i className="fa-solid fa-person-digging text-lg text-gray-600 w-5 text-center"></i>
                     <span>{selectedLang === "FR" ? "Travail journalier (Dépôt)" : "Daily Worker Jobs (In-person)"}</span>
                   </Link>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
+                  <button
+                    type="button"
+                    onClick={() => {
                       setPlusDropdownOpen(false);
                       handleOpenContactModal();
                     }}
-                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                    className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100 cursor-pointer text-left"
                   >
                     <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
                     <span>Contact</span>
-                  </a>
+                  </button>
                 </div>
               )}
             </div>
@@ -2224,11 +2253,21 @@ export default function MessagerieClient() {
                 <span>Offres</span>
               </Link>
 
-              {/* Service (même lien que le dropdown "Plus" desktop) */}
+              {/* Fonctionnalités */}
               <Link
                 href="/service"
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-wand-magic-sparkles text-gray-400 text-lg"></i>
+                <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+              </Link>
+
+              {/* Service (même lien que le dropdown "Plus" desktop) */}
+              <Link
+                href="/service"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer border-t border-gray-100"
               >
                 <i className="fa-solid fa-briefcase text-gray-400 text-lg"></i>
                 <span>Service</span>

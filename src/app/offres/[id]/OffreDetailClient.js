@@ -208,19 +208,13 @@ export default function OffreDetailClient({ initialOffer }) {
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8">
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
-          {/* S'il n'est pas en cours d'édition, on affiche l'image de l'offre */}
+          {/* S'il n'est pas en cours d'édition, on affiche l'image de l'offre (Style Facebook propre) */}
           {!isEditing && offer.image_url && (
-            <div className="relative w-full h-[380px] sm:h-[480px] max-h-[550px] overflow-hidden bg-gray-100">
-              <img
-                src={offer.image_url}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none"
-              />
+            <div className="relative w-full rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 flex items-center justify-center min-h-[260px] sm:min-h-[380px] max-h-[580px]">
               <img
                 src={offer.image_url}
                 alt={offer.title}
-                className="relative z-10 w-full h-full object-contain mx-auto block"
+                className="w-full h-auto max-h-[580px] object-contain mx-auto block"
                 loading="lazy"
               />
             </div>

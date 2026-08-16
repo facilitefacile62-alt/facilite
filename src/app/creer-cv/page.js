@@ -2666,14 +2666,14 @@ Laisse vide les champs non trouvés.`;
               <i className="fa-solid fa-briefcase text-base"></i>
               <span>{t.navService}</span>
             </Link>
-            <a
-              href="#"
+            <button
+              type="button"
               onClick={handleOpenContactModal}
-              className="flex items-center space-x-1.5 text-sm font-bold text-gray-500 hover:text-gray-800 transition"
+              className="flex items-center space-x-1.5 text-sm font-bold text-gray-500 hover:text-gray-800 transition cursor-pointer"
             >
               <i className="fa-regular fa-comment-dots text-base"></i>
               <span>{t.navContact}</span>
-            </a>
+            </button>
           </div>
 
           {/* Right Group */}
@@ -3705,9 +3705,9 @@ Laisse vide les champs non trouvés.`;
             {/* Sidebar Footer links */}
             <div className="p-4 border-t border-slate-800/80 bg-slate-950/40 text-center space-y-2">
               <div className="flex justify-center space-x-3 text-[10px] text-slate-400 font-bold">
-                <a href="#" onClick={handleOpenContactModal} className="hover:text-white transition">{t.sidebarFooter3}</a>
+                <button type="button" onClick={handleOpenContactModal} className="hover:text-white transition cursor-pointer">{t.sidebarFooter3}</button>
                 <span>•</span>
-                <a href="#" className="hover:text-white transition">{t.sidebarFooter1}</a>
+                <Link href="/service" className="hover:text-white transition">{t.sidebarFooter1}</Link>
               </div>
               <p className="text-[9px] text-slate-500">{t.sidebarFooterCopyright} All rights reserved.</p>
             </div>

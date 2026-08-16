@@ -67,6 +67,7 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig = {
+  devIndicators: false,
   poweredByHeader: false,
   serverExternalPackages: ["unpdf", "mammoth", "tesseract.js", "@napi-rs/canvas", "canvas"],
   // Dev uniquement : Next.js bloque par défaut les chunks JS/HMR d'une

@@ -1045,6 +1045,17 @@ export default function Home() {
               <span className="text-[11px] font-bold tracking-tight">Offres</span>
             </Link>
 
+            {/* Fonctionnalités */}
+            <Link
+              href="/service"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-wand-magic-sparkles text-xl text-indigo-500"></i>
+              <span className="text-[11px] font-bold tracking-tight">{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+            </Link>
+
             {/* Messagerie (Visible uniquement pour les utilisateurs connectés) */}
             {userSession && (
               <Link
@@ -1104,6 +1115,14 @@ export default function Home() {
                     href="/service"
                     onClick={() => setPlusDropdownOpen(false)}
                     className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles text-lg text-gray-600 w-5 text-center"></i>
+                    <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+                  </Link>
+                  <Link
+                    href="/service"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
                   >
                     <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
                     <span>Service</span>
@@ -1432,11 +1451,21 @@ export default function Home() {
                 <span>Offres</span>
               </Link>
 
-              {/* Service (même lien que le dropdown "Plus" desktop) */}
+              {/* Fonctionnalités */}
               <Link
                 href="/service"
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-wand-magic-sparkles text-gray-400 text-lg"></i>
+                <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+              </Link>
+
+              {/* Service (même lien que le dropdown "Plus" desktop) */}
+              <Link
+                href="/service"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer border-t border-gray-100"
               >
                 <i className="fa-solid fa-briefcase text-gray-400 text-lg"></i>
                 <span>Service</span>
@@ -1813,51 +1842,53 @@ export default function Home() {
                     key={job.loopId || job.id}
                     className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-xs hover:shadow-md transition duration-300 flex flex-col space-y-3"
                   >
-                    {/* Header Offre (Logo + Titre + Entreprise/Sous-titre) */}
-                    <div className="flex items-start gap-3">
-                      {/* Logo Entreprise (Initiale dans un carré de couleur) */}
+                    {/* En-tête façon post Facebook : avatar + nom de la page (entreprise)
+                        + horodatage — pas de badges colorés ici, comme sur /offres. */}
+                    <div className="flex items-center gap-3">
                       {job.logo ? (
                         <img
                           src={job.logo}
                           alt={job.company}
-                          className="w-11 h-11 rounded-xl object-contain p-1 border border-gray-200 bg-white shadow-2xs flex-shrink-0"
+                          className="w-10 h-10 rounded-full object-contain p-1 border border-gray-200 bg-white shadow-2xs flex-shrink-0"
                         />
                       ) : (
-                        <div className={`w-11 h-11 rounded-xl ${job.logoColor || "bg-blue-100 text-blue-700"} flex items-center justify-center font-extrabold text-sm shadow-2xs flex-shrink-0`}>
+                        <div className={`w-10 h-10 rounded-full ${job.logoColor || "bg-blue-100 text-blue-700"} flex items-center justify-center font-extrabold text-xs shadow-2xs flex-shrink-0`}>
                           {job.initials || (job.company ? job.company.substring(0, 3).toUpperCase() : "C2K")}
                         </div>
                       )}
-                      
+
                       <div className="flex-grow min-w-0">
-                        <h4 className="text-sm sm:text-base font-extrabold text-gray-900 leading-snug break-words">
-                          {selectedLang === "FR" ? job.titleFR : job.titleEN}
-                        </h4>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">
-                          {job.subtitle || job.company}
+                        <p className="text-sm font-extrabold text-gray-900 truncate">
+                          {job.company}
                         </p>
+                        <div className="text-[11px] text-gray-500 font-medium flex items-center gap-1">
+                          <span>{selectedLang === "FR" ? job.timeFR : job.timeEN}</span>
+                          <span aria-hidden="true">·</span>
+                          <i className="fa-solid fa-earth-africa text-[9px]" title="Offre publique"></i>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Badges / Pilules (Localisation + Secteur/Projet + Postes/Contrat + Date limite) */}
-                    <div className="flex items-center gap-2 flex-wrap text-xs">
-                      {job.location && (
-                        <span className="flex items-center gap-1 text-gray-600 font-medium">
-                          <i className="fa-solid fa-location-dot text-[11px] text-gray-400"></i>
-                          <span>{job.location}</span>
-                        </span>
-                      )}
-                      {job.deadline && (
-                        <span className="bg-red-50 text-red-700 border border-red-200/80 text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg flex items-center gap-1">
-                          <i className="fa-regular fa-calendar-xmark text-[10px] text-red-600"></i>
-                          <span>Date limite : {new Date(job.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</span>
-                        </span>
-                      )}
-                      <span className="bg-blue-100 text-blue-800 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
-                        {job.sector || job.category || job.project || job.domain || "Opportunité"}
-                      </span>
-                      <span className="bg-green-100 text-green-800 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
-                        {job.positions_count ? `${job.positions_count} postes` : (job.contract || "12 postes")}
-                      </span>
+                    {/* Légende façon post : titre en gras, puis les infos (lieu, secteur,
+                        postes/contrat, date limite) sur une seule ligne grise séparée par
+                        des points — même contenu qu'avant, sans les pastilles colorées. */}
+                    <div>
+                      <h4 className="text-sm sm:text-base font-extrabold text-gray-900 leading-snug break-words">
+                        {selectedLang === "FR" ? job.titleFR : job.titleEN}
+                      </h4>
+                      <p className="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5 flex-wrap">
+                        {job.location && <span>{job.location}</span>}
+                        <span aria-hidden="true">·</span>
+                        <span>{job.sector || job.category || job.project || job.domain || "Opportunité"}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{job.positions_count ? `${job.positions_count} postes` : (job.contract || "12 postes")}</span>
+                        {job.deadline && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span>Jusqu'au {new Date(job.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                          </>
+                        )}
+                      </p>
                     </div>
 
                     {/* Description */}
@@ -1886,26 +1917,21 @@ export default function Home() {
                       })()}
                     </div>
 
-                    {/* Visuel de l'offre — avec bouton Agrandir en haut à droite */}
+                    {/* Visuel de l'offre (Style Facebook : Image nette 100% propre, sans côtés floutés) */}
                     {job.image && (
                       <div
-                        className="relative w-full h-[240px] sm:h-[380px] md:h-[440px] max-h-[500px] rounded-2xl overflow-hidden bg-gray-100 border border-gray-200/90 group cursor-pointer"
+                        className="relative w-full rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 border border-gray-200/80 dark:border-gray-800 group cursor-pointer flex items-center justify-center min-h-[220px] sm:min-h-[320px] max-h-[560px]"
                         onClick={() => setViewImageModal({ isOpen: true, url: job.image })}
+                        title="Cliquer pour voir l'affiche en plein écran"
                       >
-                        <img
-                          src={job.image}
-                          alt=""
-                          aria-hidden="true"
-                          className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none transition-transform duration-300 group-hover:scale-125"
-                        />
-                        <div className="absolute top-2.5 right-2.5 bg-white/90 text-gray-900 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1.5 z-20 pointer-events-none">
-                          <i className="fa-solid fa-magnifying-glass-plus text-xs text-gray-600"></i>
+                        <div className="absolute top-2.5 right-2.5 bg-black/60 hover:bg-black/80 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1.5 z-20 pointer-events-none transition opacity-90 group-hover:opacity-100">
+                          <i className="fa-solid fa-magnifying-glass-plus text-xs"></i>
                           <span>Agrandir</span>
                         </div>
                         <img
                           src={job.image}
-                          alt="Affiche de recrutement"
-                          className="relative z-10 w-full h-full object-contain mx-auto block animate-fade-in pointer-events-none"
+                          alt={selectedLang === "FR" ? job.titleFR : job.titleEN || "Affiche de recrutement"}
+                          className="w-full h-auto max-h-[560px] object-contain mx-auto block animate-fade-in transition-transform duration-200 group-hover:scale-[1.01]"
                           loading="lazy"
                         />
                       </div>
@@ -1939,8 +1965,8 @@ export default function Home() {
 
           </section>
 
-          {/* --- COLONNE DE DROITE : Offres recommandées & Publicité --- */}
-          <aside className="w-full md:w-[260px] flex-shrink-0 flex flex-col space-y-3 md:pr-0.5 md:sticky md:top-[72px] md:h-fit md:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
+          {/* --- COLONNE DE DROITE : Offres recommandées & Publicité (Visible uniquement sur Desktop) --- */}
+          <aside className="hidden md:flex md:w-[260px] flex-shrink-0 flex-col space-y-3 md:pr-0.5 md:sticky md:top-[72px] md:h-fit md:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
             
             {/* Offres Recommandées */}
             <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
@@ -2007,7 +2033,7 @@ export default function Home() {
       </main>
 
       {/* Footer Éléments Sombre & Informations */}
-      <footer className="bg-[#080E1E] text-gray-400 py-16 px-6 md:px-12 border-t border-gray-800">
+      <footer className="bg-[#080E1E] text-gray-400 pt-12 md:pt-16 pb-28 md:pb-16 px-6 md:px-12 border-t border-gray-800">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Colonne 1 : À Propos */}
           <div className="flex flex-col">
@@ -2093,22 +2119,33 @@ export default function Home() {
             <p className="text-sm mb-6 text-gray-400 font-medium leading-relaxed">{t.footerFollowUs}</p>
             <div className="flex space-x-4">
               <a
-                href="#"
+                href="https://www.facebook.com/facilitenumerique"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-11 h-11 bg-gray-900 rounded-2xl flex items-center justify-center text-white hover:bg-[#10E688] hover:text-black transition-all border border-gray-800 shadow-md"
-                aria-label="Facebook"
+                aria-label="Facebook Facilité"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M9 8H7v3h2v9h4v-9h3.61L17 8h-3V6.23c0-.85.34-1.23 1.08-1.23H17V1H14.12C11.53 1 10 2.5 10 5v3z" />
                 </svg>
               </a>
               <a
-                href="#"
+                href="https://www.linkedin.com/company/facilite-digital"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-11 h-11 bg-gray-900 rounded-2xl flex items-center justify-center text-white hover:bg-[#10E688] hover:text-black transition-all border border-gray-800 shadow-md"
-                aria-label="YouTube"
+                aria-label="LinkedIn Facilité"
               >
-                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                  <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.52 3.5 12 3.5 12 3.5s-7.52 0-9.388.555a3.002 3.002 0 0 0-2.11 2.108C0 8.03 0 12 0 12s0 3.97.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.48 20.5 12 20.5 12 20.5s7.52 0 9.388-.555a3.003 3.003 0 0 0 2.11-2.108C24 15.97 24 12 24 12s0-3.97-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                </svg>
+                <i className="fa-brands fa-linkedin-in text-lg"></i>
+              </a>
+              <a
+                href="https://wa.me/221771400832"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-11 h-11 bg-gray-900 rounded-2xl flex items-center justify-center text-white hover:bg-[#10E688] hover:text-black transition-all border border-gray-800 shadow-md"
+                aria-label="WhatsApp Facilité"
+              >
+                <i className="fa-brands fa-whatsapp text-xl text-[#25D366]"></i>
               </a>
             </div>
           </div>

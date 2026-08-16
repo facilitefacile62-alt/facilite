@@ -659,6 +659,28 @@ export default function ImporterCvPage() {
               <i className="fa-solid fa-house text-xl"></i>
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
             </Link>
+
+            {/* Offres */}
+            <Link
+              href="/offres"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/offres" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-list-check text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">Offres</span>
+            </Link>
+
+            {/* Fonctionnalités */}
+            <Link
+              href="/service"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-wand-magic-sparkles text-xl text-indigo-500"></i>
+              <span className="text-[11px] font-bold tracking-tight">{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+            </Link>
             
             {/* Messagerie */}
             {userSession && (
@@ -718,6 +740,14 @@ export default function ImporterCvPage() {
                     href="/service"
                     onClick={() => setPlusDropdownOpen(false)}
                     className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles text-lg text-gray-600 w-5 text-center"></i>
+                    <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+                  </Link>
+                  <Link
+                    href="/service"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
                   >
                     <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
                     <span>Service</span>
@@ -1405,7 +1435,7 @@ export default function ImporterCvPage() {
             <span>•</span>
             <Link href="/service" className="hover:text-white transition">Service</Link>
             <span>•</span>
-            <a href="#" onClick={handleOpenContactModal} className="hover:text-white transition">Contact</a>
+            <button type="button" onClick={handleOpenContactModal} className="hover:text-white transition cursor-pointer">Contact</button>
           </div>
         </div>
       </footer>

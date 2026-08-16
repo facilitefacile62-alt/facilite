@@ -10,7 +10,6 @@ import NextImage from "next/image";
 import { usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import AIAssistantModal from "@/components/AIAssistantModal";
 import RoleBadge from "@/components/RoleBadge";
 import RoleNavLink from "@/components/RoleNavLink";
 import BadgeDisplay from "@/components/BadgeDisplay";
@@ -1674,6 +1673,28 @@ export default function ProfilPage() {
               <span className="text-[11px] font-bold tracking-tight">Accueil</span>
             </Link>
 
+            {/* Offres */}
+            <Link
+              href="/offres"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/offres" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-list-check text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">Offres</span>
+            </Link>
+
+            {/* Fonctionnalités */}
+            <Link
+              href="/service"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-wand-magic-sparkles text-xl text-indigo-500"></i>
+              <span className="text-[11px] font-bold tracking-tight">{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+            </Link>
+
             {/* Messagerie */}
             {userSession && (
               <Link
@@ -1746,6 +1767,14 @@ export default function ProfilPage() {
                     onClick={() => setPlusDropdownOpen(false)}
                     className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
                   >
+                    <i className="fa-solid fa-wand-magic-sparkles text-lg text-gray-600 w-5 text-center"></i>
+                    <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+                  </Link>
+                  <Link
+                    href="/service"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                  >
                     <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
                     <span>Service</span>
                   </Link>
@@ -1765,18 +1794,17 @@ export default function ProfilPage() {
                     <i className="fa-solid fa-person-digging text-lg text-gray-600 w-5 text-center"></i>
                     <span>{selectedLang === "FR" ? "Travail journalier (Dépôt)" : "Daily Worker Jobs (In-person)"}</span>
                   </Link>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
+                  <button
+                    type="button"
+                    onClick={() => {
                       setPlusDropdownOpen(false);
                       handleOpenModal();
                     }}
-                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                    className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100 cursor-pointer text-left"
                   >
                     <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
                     <span>Contact</span>
-                  </a>
+                  </button>
                 </div>
               )}
             </div>
@@ -1926,14 +1954,14 @@ export default function ProfilPage() {
           </Link>
 
           {/* Contact */}
-          <a
-            href="#"
+          <button
+            type="button"
             onClick={handleOpenModal}
             className="flex flex-col items-center justify-center text-center text-gray-500 hover:text-gray-800 space-y-0.5 cursor-pointer w-14"
           >
             <i className="fa-regular fa-comment-dots text-lg"></i>
             <span className="text-[9px] font-bold tracking-tight">Contact</span>
-          </a>
+          </button>
         </div>
 
         {/* Menu Déroulant Mobile Plein Écran */}
@@ -2003,6 +2031,16 @@ export default function ProfilPage() {
 
             {/* Bas du Menu (Options fixes au bas) */}
             <div className="bg-white border-t border-gray-200 divide-y divide-gray-150 mt-auto">
+              {/* Fonctionnalités */}
+              <Link
+                href="/service"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-wand-magic-sparkles text-gray-400 text-lg"></i>
+                <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+              </Link>
+
               {/* Recrutement Spontané (même modale que la barre d'onglets et le dropdown "Plus" desktop) */}
               <Link
                 href="/recrutement-spontane"

@@ -200,10 +200,10 @@ export default function FaqPage() {
               <i className="fa-solid fa-file-lines mr-1.5"></i> Créer mon CV Pro
             </Link>
             <Link
-              href="/recrutement"
+              href="/offres"
               className="px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-black text-xs rounded-xl transition"
             >
-              <i className="fa-solid fa-briefcase mr-1.5"></i> Espace Recrutement
+              <i className="fa-solid fa-briefcase mr-1.5"></i> Espace Offres & Recrutement
             </Link>
             <Link
               href="/service"

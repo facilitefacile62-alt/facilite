@@ -811,6 +811,28 @@ export default function Home() {
               <span className="text-[11px] font-bold tracking-tight">{t.navHome}</span>
             </Link>
 
+            {/* Offres */}
+            <Link
+              href="/offres"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/offres" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-list-check text-xl"></i>
+              <span className="text-[11px] font-bold tracking-tight">Offres</span>
+            </Link>
+
+            {/* Fonctionnalités */}
+            <Link
+              href="/service"
+              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
+                pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-wand-magic-sparkles text-xl text-indigo-500"></i>
+              <span className="text-[11px] font-bold tracking-tight">{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+            </Link>
+
             {/* Messagerie (Visible uniquement pour les utilisateurs connectés) */}
             {userSession && (
               <Link
@@ -873,7 +895,20 @@ export default function Home() {
                       const section = document.getElementById("section-models");
                       if (section) section.scrollIntoView({ behavior: "smooth" });
                     }}
-                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-[#10E688] hover:bg-gray-50 transition"
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles text-lg text-gray-600 w-5 text-center"></i>
+                    <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+                  </a>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPlusDropdownOpen(false);
+                      const section = document.getElementById("section-models");
+                      if (section) section.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-[#10E688] hover:bg-gray-50 transition border-t border-gray-100"
                   >
                     <i className="fa-solid fa-briefcase text-lg w-5 text-center"></i>
                     <span>Service</span>
@@ -1106,11 +1141,25 @@ export default function Home() {
                 <span>Offres</span>
               </Link>
 
+              {/* Fonctionnalités */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  const section = document.getElementById("section-models");
+                  if (section) section.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+              >
+                <i className="fa-solid fa-wand-magic-sparkles text-gray-400 text-lg"></i>
+                <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+              </button>
+
               {/* Recrutement Spontané (même modale que le dropdown "Plus" desktop) */}
               <Link
                 href="/recrutement-spontane"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer border-t border-gray-100"
               >
                 <i className="fa-solid fa-user-tie text-gray-400 text-lg"></i>
                 <span>{t.navRecruitment}</span>
@@ -1627,25 +1676,25 @@ export default function Home() {
             </p>
             <h4 className="text-white text-base font-bold mb-3">Liens utiles</h4>
             <div className="flex flex-col space-y-2.5 text-sm font-semibold">
-              <a
-                href="#"
+              <button
+                type="button"
                 onClick={handleOpenModal}
-                className="hover:text-[#10E688] transition-colors"
+                className="text-left hover:text-[#10E688] transition-colors cursor-pointer"
               >
                 Contact
-              </a>
-              <a
+              </button>
+              <Link
                 href="/boite-a-idees"
                 className="hover:text-[#10E688] transition-colors"
               >
                 Boîte à idées
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/faq"
                 className="hover:text-[#10E688] transition-colors"
               >
                 Foire Aux Questions (FAQ)
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -1717,22 +1766,33 @@ export default function Home() {
             <p className="text-sm mb-6 text-gray-400 font-medium leading-relaxed">{t.footerFollowUs}</p>
             <div className="flex space-x-4">
               <a
-                href="#"
+                href="https://www.facebook.com/facilitenumerique"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-11 h-11 bg-gray-900 rounded-2xl flex items-center justify-center text-white hover:bg-[#10E688] hover:text-black transition-all border border-gray-800 shadow-md"
-                aria-label="Facebook"
+                aria-label="Facebook Facilité"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M9 8H7v3h2v9h4v-9h3.61L17 8h-3V6.23c0-.85.34-1.23 1.08-1.23H17V1H14.12C11.53 1 10 2.5 10 5v3z" />
                 </svg>
               </a>
               <a
-                href="#"
+                href="https://www.linkedin.com/company/facilite-digital"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-11 h-11 bg-gray-900 rounded-2xl flex items-center justify-center text-white hover:bg-[#10E688] hover:text-black transition-all border border-gray-800 shadow-md"
-                aria-label="YouTube"
+                aria-label="LinkedIn Facilité"
               >
-                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                  <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.52 3.5 12 3.5 12 3.5s-7.52 0-9.388.555a3.002 3.002 0 0 0-2.11 2.108C0 8.03 0 12 0 12s0 3.97.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.48 20.5 12 20.5 12 20.5s7.52 0 9.388-.555a3.003 3.003 0 0 0 2.11-2.108C24 15.97 24 12 24 12s0-3.97-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                </svg>
+                <i className="fa-brands fa-linkedin-in text-lg"></i>
+              </a>
+              <a
+                href="https://wa.me/221771400832"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-11 h-11 bg-gray-900 rounded-2xl flex items-center justify-center text-white hover:bg-[#10E688] hover:text-black transition-all border border-gray-800 shadow-md"
+                aria-label="WhatsApp Facilité"
+              >
+                <i className="fa-brands fa-whatsapp text-xl text-[#25D366]"></i>
               </a>
             </div>
           </div>

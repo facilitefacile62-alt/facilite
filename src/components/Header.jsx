@@ -1048,6 +1048,18 @@ export default function Header() {
             <span>Offres d&apos;emploi</span>
           </Link>
           <Link
+            href="/service"
+            onClick={(e) => handleNavClick(e, "/service", "nav_plus_fonctionnalites", "Fonctionnalités")}
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              pathname === "/service"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+            }`}
+          >
+            <i className="fa-solid fa-wand-magic-sparkles text-sm text-indigo-500"></i>
+            <span>Fonctionnalités</span>
+          </Link>
+          <Link
             href="/candidat/extracteur"
             onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
@@ -1091,6 +1103,22 @@ export default function Header() {
 
             {plusDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+                <Link
+                  href="/service"
+                  onClick={(e) => handleNavClick(e, "/service", "nav_plus_fonctionnalites", "Fonctionnalités")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname === "/service" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Fonctionnalités</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Outils IA, Modèles & Recrutement</div>
+                  </div>
+                </Link>
+
                 <Link
                   href="/service"
                   onClick={(e) => handleNavClick(e, "/service", "nav_plus_service", "Services & Modèles")}
@@ -1546,6 +1574,24 @@ export default function Header() {
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
+                {/* 0. Fonctionnalités */}
+                <Link
+                  href="/service"
+                  onClick={(e) => handleNavClick(e, "/service", "nav_plus_fonctionnalites", "Fonctionnalités")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black rounded-md">Tous</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Fonctionnalités</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Tous les outils & modèles</p>
+                  </div>
+                </Link>
+
                 {/* 1. Messages */}
                 <Link
                   href="/messagerie"
