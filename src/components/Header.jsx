@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -172,6 +173,22 @@ export default function Header() {
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const [mobileHelpOpen, setMobileHelpOpen] = useState(false);
   const [mobileLang, setMobileLang] = useState("FR");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     try {
@@ -1311,45 +1328,47 @@ export default function Header() {
         </div>
       )}
 
-      {/* Mobile Drawer Menu (Menu Hub Facebook 1:1 Pixel-Perfect avec toutes les fonctionnalités) */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 top-[52px] z-[850] bg-[#F0F2F5] dark:bg-gray-950 overflow-y-auto pb-24 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="px-3.5 pt-3 pb-8 space-y-3.5 max-w-lg mx-auto">
-            
-            {/* 1. Header du Menu (Style Facebook : < Menu + Recherche rapide) */}
-            <div className="flex items-center justify-between px-1 pb-1">
+      {/* Mobile Drawer Menu (Menu Hub Facebook 1:1 via React Portal pour défilement plein écran 100% natif) */}
+      {mounted && mobileMenuOpen && typeof document !== "undefined" && createPortal(
+        <div className="lg:hidden fixed inset-0 z-[99999] bg-[#F0F2F5] dark:bg-gray-950 flex flex-col h-[100dvh] w-screen overflow-hidden animate-in fade-in duration-200">
+          
+          {/* 1. Header fixe du Menu (Style Facebook : < Menu + Recherche rapide + Fermer) */}
+          <div className="bg-white dark:bg-gray-900 border-b border-gray-200/80 dark:border-gray-800 px-4 py-3 flex items-center justify-between flex-shrink-0 shadow-2xs z-10">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 text-gray-900 dark:text-white font-black text-lg cursor-pointer"
+            >
+              <i className="fa-solid fa-chevron-left text-base text-gray-700 dark:text-gray-300"></i>
+              <span>Menu</span>
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setIsMobileSearchOpen(true);
+                }}
+                className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center shadow-xs border border-gray-200/80 dark:border-gray-700 cursor-pointer active:scale-95 transition"
+                title="Rechercher"
+              >
+                <i className="fa-solid fa-magnifying-glass text-sm"></i>
+              </button>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 text-gray-900 dark:text-white font-black text-lg cursor-pointer"
+                className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center shadow-xs border border-gray-200/80 dark:border-gray-700 cursor-pointer active:scale-95 transition"
+                title="Fermer le menu"
               >
-                <i className="fa-solid fa-chevron-left text-base text-gray-700 dark:text-gray-300"></i>
-                <span>Menu</span>
+                <i className="fa-solid fa-xmark text-base"></i>
               </button>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setIsMobileSearchOpen(true);
-                  }}
-                  className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center shadow-xs border border-gray-200/80 dark:border-gray-700 cursor-pointer active:scale-95 transition"
-                  title="Rechercher"
-                >
-                  <i className="fa-solid fa-magnifying-glass text-sm"></i>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center shadow-xs border border-gray-200/80 dark:border-gray-700 cursor-pointer active:scale-95 transition"
-                  title="Fermer le menu"
-                >
-                  <i className="fa-solid fa-xmark text-base"></i>
-                </button>
-              </div>
             </div>
+          </div>
 
-            {/* 2. Carte Profil Utilisateur (Style Facebook 1:1) */}
+          {/* 2. Corps Défilable Plein Écran (Scroll fluide natif avec tous les éléments) */}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-3.5 py-4 space-y-3.5 max-w-lg mx-auto w-full pb-36">
+            
+            {/* Carte Profil Utilisateur (Style Facebook 1:1) */}
             {userSession ? (
               <div className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs">
                 <Link
@@ -1415,7 +1434,7 @@ export default function Header() {
               </div>
             )}
 
-            {/* 3. Les 2 Cartes En Vedette (Widgets Desktop portés sur Mobile 1:1) */}
+            {/* Les 2 Cartes En Vedette (Widgets Desktop portés sur Mobile 1:1) */}
             <div className="space-y-3">
               {/* Carte 1 : Diagnostic CV Gratuit */}
               <div className="bg-gradient-to-br from-[#161d31] via-[#1b254b] to-[#0f172a] rounded-3xl p-5 border border-emerald-500/30 shadow-xl text-white relative overflow-hidden">
@@ -1465,7 +1484,7 @@ export default function Header() {
               </div>
             </div>
 
-            {/* 4. Grille de Raccourcis 2 Colonnes (Style Facebook Mobile Menu Hub 1:1) */}
+            {/* Grille de Raccourcis 2 Colonnes (Style Facebook Mobile Menu Hub 1:1) */}
             <div className="space-y-2">
               <div className="px-1 text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                 Tous les raccourcis
@@ -1660,7 +1679,7 @@ export default function Header() {
               </div>
             </div>
 
-            {/* 5. Accordéons de Paramètres & Assistance (Style Facebook) */}
+            {/* Accordéons de Paramètres & Assistance (Style Facebook) */}
             <div className="pt-2 border-t border-gray-200/80 dark:border-gray-800 space-y-1.5">
               
               {/* Accordéon 1 : Paramètres et langue */}
@@ -1769,7 +1788,8 @@ export default function Header() {
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 🔔 POPUP DE NOTIFICATIONS 1:1 FACEBOOK PIXEL-PERFECT */}
