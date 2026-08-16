@@ -253,22 +253,17 @@ export default function SocialShareButtons({
           </button>
         </div>
 
-        {/* Ligne Footer : Bouton d'aide */}
+        {/* Ligne Footer : Bouton d'aide vers la page vidéo */}
         <div className="pt-2 mt-1 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 font-medium">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("facilite:open-job-help", { detail: { offer } }));
-              }
-            }}
-            className="flex items-center gap-1.5 text-gray-700 hover:text-emerald-700 transition cursor-pointer text-xs font-bold py-1 px-2.5 rounded-lg hover:bg-emerald-50 active:scale-95 border border-gray-200/80 bg-gray-50/60"
-            title="Besoin d'aide pour cette offre ?"
+          <Link
+            href={offerId ? `/aide-candidature?offre=${encodeURIComponent(offerId)}&titre=${encodeURIComponent(title)}` : "/aide-candidature"}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 text-gray-700 hover:text-emerald-700 transition cursor-pointer text-xs font-bold py-1 px-2.5 rounded-lg hover:bg-emerald-50 active:scale-95 border border-gray-200/80 bg-gray-50/60 shadow-2xs"
+            title="Besoin d'aide pour cette offre ? Regarder la vidéo d'explication"
           >
             <i className="fa-solid fa-circle-question text-emerald-600 text-xs"></i>
             <span>Besoin d'aide ?</span>
-          </button>
+          </Link>
         </div>
 
         {/* Modal de Partage Social Universel */}

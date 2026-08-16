@@ -21,6 +21,7 @@ const TEMPLATES = [
   { id: "technique", number: 7, title: "Modèle 7 — Technique & Développeur", previewImage: "/model7.png", isRecommended: false, hasPhoto: true, columns: 2, category: "technique", accentColor: true },
   { id: "professionnel", number: 8, title: "Modèle 8 — Professionnel Canva Stylisé", previewImage: "/model8.png", isRecommended: true, hasPhoto: true, columns: 2, category: "pro", accentColor: true },
   { id: "elegance", number: 9, title: "Modèle 9 — Élégance & Sombre", previewImage: "/model9.png", isRecommended: false, hasPhoto: false, columns: 2, category: "pro", accentColor: false },
+  { id: "timeline", number: 10, title: "Modèle 10 — Frise Chronologique", previewImage: "/model10.png", isRecommended: false, hasPhoto: true, columns: 2, category: "pro", accentColor: false },
 ];
 
 export default function ModelesPage() {
