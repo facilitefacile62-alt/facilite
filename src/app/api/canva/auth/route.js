@@ -57,12 +57,14 @@ export async function GET(req) {
   // (canva.dev/docs/connect/appendix/scopes/ — l'URL initialement donnée,
   // .../authentication/scopes/, renvoyait 404 ; celle-ci est la bonne).
   // Aucun préfixe "canva:" — vérifié sur la page elle-même.
+  // design:content:write et brandtemplate:content:write retirés : le
+  // Developer Portal Canva ne permet pas de les cocher en même temps que
+  // leurs équivalents *:read pour ce compte (limitation de plan constatée
+  // directement dans le portail) — Read seul pour l'instant.
   const scopes = [
     "design:content:read",
-    "design:content:write",
     "design:meta:read",
     "brandtemplate:content:read",
-    "brandtemplate:content:write",
     "brandtemplate:meta:read",
   ].join(" ");
   const finalAuthorizeUrl = `${authorizeUrl.toString()}&scope=${encodeURIComponent(scopes)}`;
