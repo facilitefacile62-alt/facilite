@@ -1731,79 +1731,101 @@ export default function ProfilPage() {
             {/* Rendu dynamique des liens Admin et Recruteur via le composant RoleNavLink */}
             <RoleNavLink session={userSession} />
 
-            {/* L'Extracteur 1-Click pour Candidat */}
-            <Link
-              href="/candidat/extracteur"
-              className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
-                pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-emerald-700 hover:text-emerald-800"
-              }`}
-              title="Postuler en 1 clic grâce à l'OCR"
-            >
-              <i className="fa-solid fa-bolt text-xl text-amber-500"></i>
-              <span className="text-[11px] font-extrabold tracking-tight text-emerald-700 truncate max-w-[76px]">Extracteur</span>
-            </Link>
-
-            {/* Plus Dropdown Menu (Service & Contact) */}
+            {/* Menu Déroulant "Fonctionnalités" (Extracteur, Boîte à idées, Services, etc.) */}
             <div className="relative" ref={plusDropdownRef}>
               <button
                 type="button"
                 onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
-                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-16 transition ${
-                  plusDropdownOpen || pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                className={`flex flex-col items-center justify-center text-center space-y-1 cursor-pointer w-20 transition ${
+                  plusDropdownOpen || pathname === "/service" || pathname === "/candidat/extracteur" || pathname === "/boite-a-idees" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
                 }`}
               >
-                <i className="fa-solid fa-bars text-xl"></i>
+                <i className="fa-solid fa-wand-magic-sparkles text-xl"></i>
                 <div className="flex items-center space-x-1 text-[11px] font-bold tracking-tight">
-                  <span>Plus</span>
+                  <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
                   <i className={`fa-solid fa-caret-down text-[9px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
                 </div>
               </button>
 
-              {/* Menu Déroulant "Plus" Overlay */}
+              {/* Menu Déroulant "Fonctionnalités" Overlay */}
               {plusDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl border border-gray-200 shadow-2xl py-1.5 z-[600] animate-fade-in-up">
+                <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-[600] animate-fade-in-up">
+                  {/* 1. Extracteur */}
+                  <Link
+                    href="/candidat/extracteur"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition"
+                  >
+                    <i className="fa-solid fa-bolt text-lg text-amber-500 w-5 text-center"></i>
+                    <div>
+                      <div className="font-extrabold text-xs">Extracteur 1-Click</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Postulez depuis une affiche</div>
+                    </div>
+                  </Link>
+
+                  {/* 2. Boîte à idées */}
+                  <Link
+                    href="/boite-a-idees"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-solid fa-lightbulb text-lg text-yellow-500 w-5 text-center"></i>
+                    <div>
+                      <div className="font-extrabold text-xs">Boîte à idées</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
+                    </div>
+                  </Link>
+
+                  {/* 3. Services & Modèles */}
                   <Link
                     href="/service"
                     onClick={() => setPlusDropdownOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition"
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
                   >
-                    <i className="fa-solid fa-wand-magic-sparkles text-lg text-gray-600 w-5 text-center"></i>
-                    <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
+                    <i className="fa-solid fa-briefcase text-lg text-emerald-600 w-5 text-center"></i>
+                    <div>
+                      <div className="font-extrabold text-xs">Services & Modèles</div>
+                      <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
+                    </div>
                   </Link>
-                  <Link
-                    href="/service"
-                    onClick={() => setPlusDropdownOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
-                  >
-                    <i className="fa-solid fa-briefcase text-lg text-gray-600 w-5 text-center"></i>
-                    <span>Service</span>
-                  </Link>
+
+                  {/* 4. Recrutement Spontané */}
                   <Link
                     href="/recrutement-spontane"
                     onClick={() => setPlusDropdownOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
                   >
-                    <i className="fa-solid fa-user-tie text-lg text-gray-600 w-5 text-center"></i>
-                    <span>Recrutement spontané</span>
+                    <i className="fa-solid fa-building-user text-lg text-blue-600 w-5 text-center"></i>
+                    <div>
+                      <div className="font-extrabold text-xs">Recrutement spontané</div>
+                      <div className="text-[10px] text-gray-500 font-normal">77 entreprises</div>
+                    </div>
                   </Link>
+
+                  {/* 5. Travail journalier / Dépôts */}
                   <Link
                     href="/recrutement-journalier"
                     onClick={() => setPlusDropdownOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100"
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
                   >
-                    <i className="fa-solid fa-person-digging text-lg text-gray-600 w-5 text-center"></i>
-                    <span>{selectedLang === "FR" ? "Travail journalier (Dépôt)" : "Daily Worker Jobs (In-person)"}</span>
+                    <i className="fa-solid fa-gas-pump text-lg text-purple-600 w-5 text-center"></i>
+                    <div>
+                      <div className="font-extrabold text-xs">{selectedLang === "FR" ? "Dépôts Physiques" : "In-person Dropoffs"}</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Stations & contacts</div>
+                    </div>
                   </Link>
+
+                  {/* 6. Contact */}
                   <button
                     type="button"
                     onClick={() => {
                       setPlusDropdownOpen(false);
                       handleOpenModal();
                     }}
-                    className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition border-t border-gray-100 cursor-pointer text-left"
+                    className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100 cursor-pointer text-left"
                   >
                     <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
-                    <span>Contact</span>
+                    <span className="font-extrabold text-xs">Contact</span>
                   </button>
                 </div>
               )}

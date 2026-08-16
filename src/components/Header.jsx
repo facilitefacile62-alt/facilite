@@ -1047,78 +1047,64 @@ export default function Header() {
             <i className="fa-solid fa-briefcase text-sm"></i>
             <span>Offres d&apos;emploi</span>
           </Link>
-          <Link
-            href="/service"
-            onClick={(e) => handleNavClick(e, "/service", "nav_plus_fonctionnalites", "Fonctionnalités")}
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              pathname === "/service"
-                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-            }`}
-          >
-            <i className="fa-solid fa-wand-magic-sparkles text-sm text-indigo-500"></i>
-            <span>Fonctionnalités</span>
-          </Link>
-          <Link
-            href="/candidat/extracteur"
-            onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              pathname === "/candidat/extracteur"
-                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-            }`}
-            title="L'Extracteur 1-Click"
-          >
-            <i className="fa-solid fa-bolt text-amber-500 text-sm"></i>
-            <span>Extracteur</span>
-          </Link>
-          <Link
-            href="/messagerie"
-            onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              pathname === "/messagerie"
-                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-            }`}
-          >
-            <i className="fa-solid fa-comments text-sm"></i>
-            <span>Messagerie</span>
-          </Link>
-
-          {/* Menu déroulant "Plus" pour regrouper les rubriques secondaires sans saturer */}
+          {/* Menu déroulant "Fonctionnalités" contenant Extracteur, Boîte à idées, Services, etc. */}
           <div className="relative" ref={plusDropdownRef}>
             <button
               type="button"
               onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
               className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                plusDropdownOpen || pathname === "/modeles" || pathname === "/importer-cv" || pathname.startsWith("/recrutement-") || pathname === "/boite-a-idees"
+                plusDropdownOpen || pathname === "/service" || pathname === "/candidat/extracteur" || pathname === "/boite-a-idees" || pathname === "/modeles" || pathname.startsWith("/recrutement-")
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
             >
-              <i className="fa-solid fa-layer-group text-sm"></i>
-              <span>Plus</span>
+              <i className="fa-solid fa-wand-magic-sparkles text-sm text-indigo-500"></i>
+              <span>Fonctionnalités</span>
               <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
             </button>
 
             {plusDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+                {/* 1. Extracteur */}
                 <Link
-                  href="/service"
-                  onClick={(e) => handleNavClick(e, "/service", "nav_plus_fonctionnalites", "Fonctionnalités")}
+                  href="/candidat/extracteur"
+                  onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/service" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    pathname === "/candidat/extracteur" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-500 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-bolt text-sm"></i>
                   </div>
                   <div>
-                    <div className="font-extrabold">Fonctionnalités</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Outils IA, Modèles & Recrutement</div>
+                    <div className="font-extrabold flex items-center gap-1.5">
+                      <span>Extracteur</span>
+                      <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[9px] font-black rounded-md">1-Click</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-normal">Postulez en 1 clic depuis une affiche</div>
                   </div>
                 </Link>
 
+                {/* 2. Boîte à idées */}
+                <Link
+                  href="/boite-a-idees"
+                  onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname === "/boite-a-idees" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-yellow-50 dark:bg-yellow-950 text-yellow-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-lightbulb text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Boîte à idées</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
+                  </div>
+                </Link>
+
+                <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
+
+                {/* 3. Services & Modèles */}
                 <Link
                   href="/service"
                   onClick={(e) => handleNavClick(e, "/service", "nav_plus_service", "Services & Modèles")}
@@ -1135,6 +1121,7 @@ export default function Header() {
                   </div>
                 </Link>
 
+                {/* 4. Recrutement Spontané */}
                 <Link
                   href="/recrutement-spontane"
                   onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
@@ -1151,6 +1138,7 @@ export default function Header() {
                   </div>
                 </Link>
 
+                {/* 5. Dépôts Physiques */}
                 <Link
                   href="/recrutement-journalier"
                   onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
@@ -1167,6 +1155,7 @@ export default function Header() {
                   </div>
                 </Link>
 
+                {/* 6. Concours */}
                 <Link
                   href="/offres?q=Concours"
                   onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
@@ -1185,6 +1174,7 @@ export default function Header() {
                   </div>
                 </Link>
 
+                {/* 7. Formation */}
                 <Link
                   href="/offres?q=Formation"
                   onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
@@ -1205,22 +1195,7 @@ export default function Header() {
 
                 <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
 
-                <Link
-                  href="/boite-a-idees"
-                  onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/boite-a-idees" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-lightbulb text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Boîte à idées</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
-                  </div>
-                </Link>
-
+                {/* 8. FAQ & Aide */}
                 <Link
                   href="/faq"
                   onClick={(e) => handleNavClick(e, "/faq", "nav_faq", "FAQ & Aide")}
@@ -1239,6 +1214,19 @@ export default function Header() {
               </div>
             )}
           </div>
+
+          <Link
+            href="/messagerie"
+            onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              pathname === "/messagerie"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+            }`}
+          >
+            <i className="fa-solid fa-comments text-sm"></i>
+            <span>Messagerie</span>
+          </Link>
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
