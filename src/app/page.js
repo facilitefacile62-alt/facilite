@@ -1106,45 +1106,75 @@ export default function Home() {
 
               {/* Menu Déroulant "Plus" Overlay */}
               {plusDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-[600] animate-fade-in-up">
-                  {/* 1. Extracteur */}
-                  <Link
-                    href="/candidat/extracteur"
-                    onClick={() => setPlusDropdownOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition"
-                  >
-                    <i className="fa-solid fa-bolt text-lg text-amber-500 w-5 text-center"></i>
-                    <div>
-                      <div className="font-extrabold text-xs">Extracteur 1-Click</div>
-                      <div className="text-[10px] text-gray-500 font-normal">Postulez depuis une affiche</div>
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-[600] animate-fade-in-up">
+                  {/* Section Fonctionnalités bien visible */}
+                  <div className="mx-2 mb-2 p-2 bg-gradient-to-br from-emerald-50/80 via-white to-indigo-50/80 rounded-xl border border-emerald-200/70 shadow-xs">
+                    <div className="flex items-center justify-between px-2 py-1 mb-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-md bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-xs">
+                          <i className="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <span className="text-[11px] font-black text-emerald-800 uppercase tracking-wide">
+                          Fonctionnalités
+                        </span>
+                      </div>
+                      <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-extrabold rounded-md">
+                        Outils IA
+                      </span>
                     </div>
-                  </Link>
 
-                  {/* 2. Boîte à idées */}
-                  <Link
-                    href="/boite-a-idees"
-                    onClick={() => setPlusDropdownOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
-                  >
-                    <i className="fa-solid fa-lightbulb text-lg text-yellow-500 w-5 text-center"></i>
-                    <div>
-                      <div className="font-extrabold text-xs">Boîte à idées</div>
-                      <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
-                    </div>
-                  </Link>
+                    {/* 1. Extracteur */}
+                    <Link
+                      href="/candidat/extracteur"
+                      onClick={() => setPlusDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/80"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
+                        <i className="fa-solid fa-bolt text-xs"></i>
+                      </div>
+                      <div>
+                        <div className="font-extrabold flex items-center gap-1.5 text-xs">
+                          <span>Extracteur</span>
+                          <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[8px] font-black rounded-md">1-Click</span>
+                        </div>
+                        <div className="text-[10px] text-gray-500 font-normal">Postulez depuis une affiche</div>
+                      </div>
+                    </Link>
 
-                  {/* 3. Services & Modèles */}
-                  <Link
-                    href="/service"
-                    onClick={() => setPlusDropdownOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
-                  >
-                    <i className="fa-solid fa-briefcase text-lg text-emerald-600 w-5 text-center"></i>
-                    <div>
-                      <div className="font-extrabold text-xs">Services & Modèles</div>
-                      <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
-                    </div>
-                  </Link>
+                    {/* 2. Boîte à idées */}
+                    <Link
+                      href="/boite-a-idees"
+                      onClick={() => setPlusDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/80"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center flex-shrink-0">
+                        <i className="fa-solid fa-lightbulb text-xs"></i>
+                      </div>
+                      <div>
+                        <div className="font-extrabold text-xs">Boîte à idées</div>
+                        <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
+                      </div>
+                    </Link>
+
+                    {/* 3. Services & Modèles */}
+                    <Link
+                      href="/service"
+                      onClick={() => setPlusDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/80"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                        <i className="fa-solid fa-briefcase text-xs"></i>
+                      </div>
+                      <div>
+                        <div className="font-extrabold text-xs">Services & Modèles</div>
+                        <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
+                      </div>
+                    </Link>
+                  </div>
+
+                  <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    Autres opportunités
+                  </div>
 
                   {/* 4. Recrutement Spontané */}
                   <Link
