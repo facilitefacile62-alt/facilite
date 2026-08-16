@@ -281,15 +281,18 @@ Deadline: August 31, 2026`,
   },
   {
     id: 100,
-    titleFR: "RECRUTEMENT MASSIF – MINE D'OR UNDERGROUND (Sabodala)",
-    titleEN: "MASS RECRUITMENT – UNDERGROUND GOLD MINE (Sabodala)",
-    company: "C2K Staffing (Endeavour Mining)",
-    logoColor: "bg-blue-800",
+    titleFR: "Recrutement massif — mine d'or underground",
+    titleEN: "Mass recruitment — underground gold mine",
+    company: "C2K Staffing",
+    subtitle: "C2K Staffing pour Endeavour Mining",
+    logoColor: "bg-blue-100 text-blue-700",
     initials: "C2K",
-    location: "Sabodala / Thiès",
+    location: "Sabodala, Thiès",
+    sector: "Projet minier",
+    positions_count: "12",
     timeFR: "À l'instant",
     timeEN: "Just now",
-    contract: "Projet Minier",
+    contract: "12 postes",
     descFR: `🚨 C2K STAFFING, leader du recrutement, de l'intérim et du placement de personnel hautement qualifié au Sénégal, recrute pour le compte d'une multinationale de renommée internationale exploitant le projet de la mine underground d'Endeavour Mining – Sabodala Gold Operations.
 📍 Démarrage du projet : Début juillet 2026
 
@@ -1758,46 +1761,55 @@ export default function Home() {
               {getLoopedJobs().length > 0 ? (
                 getLoopedJobs().map((job) => (
                   <div
-                    key={job.loopId}
-                    className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-xs hover:shadow-md transition duration-300 flex flex-col space-y-3.5"
+                    key={job.loopId || job.id}
+                    className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-xs hover:shadow-md transition duration-300 flex flex-col space-y-3"
                   >
-                    {/* Header Offre */}
-                    <div className="flex items-start justify-between gap-2.5">
-                      <div className="flex items-start space-x-3 min-w-0 flex-1">
-                        {/* Logo Entreprise (Initiale dans un carré de couleur) */}
-                        <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl ${job.logoColor} flex items-center justify-center text-white font-extrabold text-sm shadow-xs flex-shrink-0 mt-0.5`}>
-                          {job.initials}
+                    {/* Header Offre (Logo + Titre + Entreprise/Sous-titre) */}
+                    <div className="flex items-start gap-3">
+                      {/* Logo Entreprise (Initiale dans un carré de couleur) */}
+                      {job.logo ? (
+                        <img
+                          src={job.logo}
+                          alt={job.company}
+                          className="w-11 h-11 rounded-xl object-contain p-1 border border-gray-200 bg-white shadow-2xs flex-shrink-0"
+                        />
+                      ) : (
+                        <div className={`w-11 h-11 rounded-xl ${job.logoColor || "bg-blue-100 text-blue-700"} flex items-center justify-center font-extrabold text-sm shadow-2xs flex-shrink-0`}>
+                          {job.initials || (job.company ? job.company.substring(0, 3).toUpperCase() : "C2K")}
                         </div>
-                        
-                        <div className="flex-grow min-w-0">
-                          <h4 className="text-sm sm:text-base font-extrabold text-gray-900 leading-snug break-words">
-                            {selectedLang === "FR" ? job.titleFR : job.titleEN}
-                          </h4>
-                          <p className="text-xs text-gray-700 font-bold mt-0.5">{job.company}</p>
-                          <div className="text-[11px] text-gray-500 font-medium mt-1.5 flex items-center gap-1.5 flex-wrap">
-                            <span className="text-emerald-700 font-extrabold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
-                              <i className="fa-solid fa-location-dot text-[10px]"></i>
-                              {job.location}
-                            </span>
-                            <span className="font-extrabold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
-                              {job.contract}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Date en haut à droite pour gagner de l'espace */}
-                      <div className="flex-shrink-0 text-right mt-0.5">
-                        <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
-                          {selectedLang === "FR" ? job.timeFR : job.timeEN}
-                        </span>
+                      )}
+                      
+                      <div className="flex-grow min-w-0">
+                        <h4 className="text-sm sm:text-base font-extrabold text-gray-900 leading-snug break-words">
+                          {selectedLang === "FR" ? job.titleFR : job.titleEN}
+                        </h4>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">
+                          {job.subtitle || job.company}
+                        </p>
                       </div>
                     </div>
 
+                    {/* Badges / Pilules (Localisation + Secteur/Projet + Postes/Contrat) */}
+                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                      {job.location && (
+                        <span className="flex items-center gap-1 text-gray-600 font-medium">
+                          <i className="fa-solid fa-location-dot text-[11px] text-gray-400"></i>
+                          <span>{job.location}</span>
+                        </span>
+                      )}
+                      <span className="bg-blue-100 text-blue-800 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
+                        {job.sector || job.category || job.project || job.domain || "Projet minier"}
+                      </span>
+                      <span className="bg-green-100 text-green-800 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
+                        {job.positions_count ? `${job.positions_count} postes` : (job.contract || "12 postes")}
+                      </span>
+                    </div>
+
                     {/* Description */}
-                    <div className="text-xs text-gray-600 font-semibold leading-relaxed whitespace-pre-line">
+                    <div className="text-xs sm:text-sm text-gray-700 font-normal leading-relaxed whitespace-pre-line">
                       {(() => {
                         const descText = selectedLang === "FR" ? job.descFR : job.descEN;
+                        if (!descText) return null;
                         const isExpanded = expandedJobs[job.loopId || job.id];
                         const shouldTruncate = descText.length > 250;
                         const displayText = shouldTruncate && !isExpanded ? descText.substring(0, 250) + "..." : descText;
@@ -1819,25 +1831,21 @@ export default function Home() {
                       })()}
                     </div>
 
-                    {/* Visuel de l'offre — double couche façon Facebook : le
-                        recruteur peut envoyer une affiche dans n'importe quel
-                        ratio (A4 vertical, carré, horizontal) ; object-cover
-                        seul coupait systématiquement le texte en haut/bas
-                        d'une affiche verticale. Le fond flouté comble
-                        l'espace vide sans bandes noires, l'image au premier
-                        plan reste intégralement visible via object-contain. */}
+                    {/* Visuel de l'offre — avec bouton Agrandir en haut à droite */}
                     {job.image && (
-                      <div className="relative w-full h-[260px] sm:h-[420px] md:h-[480px] max-h-[520px] rounded-xl overflow-hidden bg-gray-100 mt-2 border border-gray-150 group cursor-pointer" onClick={() => setViewImageModal({ isOpen: true, url: job.image })}>
+                      <div
+                        className="relative w-full h-[240px] sm:h-[380px] md:h-[440px] max-h-[500px] rounded-2xl overflow-hidden bg-gray-100 border border-gray-200/90 group cursor-pointer"
+                        onClick={() => setViewImageModal({ isOpen: true, url: job.image })}
+                      >
                         <img
                           src={job.image}
                           alt=""
                           aria-hidden="true"
                           className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none select-none transition-transform duration-300 group-hover:scale-125"
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 z-10 flex items-center justify-center">
-                          <div className="opacity-0 group-hover:opacity-100 bg-white/90 text-gray-900 rounded-full p-3 shadow-lg transform scale-90 group-hover:scale-100 transition-all duration-300">
-                            <i className="fa-solid fa-expand text-xl"></i>
-                          </div>
+                        <div className="absolute top-2.5 right-2.5 bg-white/90 text-gray-900 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1.5 z-20 pointer-events-none">
+                          <i className="fa-solid fa-magnifying-glass-plus text-xs text-gray-600"></i>
+                          <span>Agrandir</span>
                         </div>
                         <img
                           src={job.image}
@@ -1848,7 +1856,7 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Barre d'Actions Réseau Social (Style LinkedIn : J'aime, Partager, Envoyer) */}
+                    {/* Barre d'Actions & Stats (Style Demandé 1:1 : [ Postuler ] [ 🔖 ] [ 🔗 ] + 👁 2.4k vues 💬 327) */}
                     <SocialShareButtons
                       offer={{
                         id: job.id,
@@ -1857,11 +1865,12 @@ export default function Home() {
                         location: job.location,
                         contract: job.contract,
                       }}
-                      variant="compact"
+                      variant="feed"
                       onApply={() => handleApplyClick(job)}
                       externalLink={job.externalLink}
                       externalButtonLabel={job.externalButtonLabel}
-                      className="mt-3"
+                      onToast={(msg) => showToast(msg, "fa-circle-check")}
+                      className="mt-1"
                     />
                   </div>
                 ))

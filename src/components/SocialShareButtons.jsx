@@ -147,6 +147,35 @@ export default function SocialShareButtons({
     }, 350);
   };
 
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("facilite_saved_jobs") || "[]");
+      if (Array.isArray(saved) && offerId) {
+        setIsSaved(saved.includes(offerId) || saved.includes(Number(offerId)));
+      }
+    } catch {}
+  }, [offerId]);
+
+  const handleToggleSave = () => {
+    if (!offerId) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem("facilite_saved_jobs") || "[]");
+      const numId = Number(offerId);
+      const isAlready = saved.includes(offerId) || saved.includes(numId);
+      const next = isAlready
+        ? saved.filter((id) => id !== offerId && id !== numId)
+        : [...saved, offerId];
+      localStorage.setItem("facilite_saved_jobs", JSON.stringify(next));
+      setIsSaved(!isAlready);
+      if (onToast) onToast(!isAlready ? "Offre enregistrée dans vos favoris !" : "Offre retirée des favoris");
+    } catch {}
+  };
+
+  const viewsRaw = (hash * 43) % 4600 + 350;
+  const viewsFormatted = viewsRaw >= 1000 ? `${(viewsRaw / 1000).toFixed(1)}k` : `${viewsRaw}`;
+
   const shareLinks = {
     whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + " " + shareUrl)}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
@@ -154,6 +183,242 @@ export default function SocialShareButtons({
     twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
     telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
   };
+
+  // 1. Rendu Fil d'Actualité / Feed (Style Exact Demandé : Postuler noir + Bookmark + Share + Stats)
+  if (variant === "feed") {
+    return (
+      <div className={`relative w-full pt-1 ${className}`} ref={dropdownRef}>
+        {/* Ligne d'actions 3 boutons : [ Postuler ] [ 🔖 Bookmark ] [ 🔗 Share ] */}
+        <div className="flex items-center gap-2 pt-1">
+          {/* Bouton 1 : Postuler (Gros bouton noir plein) */}
+          {externalLink ? (
+            <a
+              href={externalLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 bg-black hover:bg-gray-800 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs"
+            >
+              {externalButtonLabel || "Postuler"}
+            </a>
+          ) : onApply ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onApply(offer);
+              }}
+              className="flex-1 bg-black hover:bg-gray-800 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs"
+            >
+              Postuler
+            </button>
+          ) : (
+            <Link
+              href={`/offres/${offerId}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 bg-black hover:bg-gray-800 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs"
+            >
+              Postuler
+            </Link>
+          )}
+
+          {/* Bouton 2 : Enregistrer / Bookmark (Carré blanc avec contour) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleSave();
+            }}
+            className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl border transition cursor-pointer active:scale-95 shadow-2xs ${
+              isSaved
+                ? "bg-emerald-50 border-emerald-300 text-emerald-600"
+                : "bg-white hover:bg-gray-50 border-gray-200/90 text-gray-700"
+            }`}
+            title={isSaved ? "Offre enregistrée" : "Enregistrer l'offre"}
+          >
+            <i className={isSaved ? "fa-solid fa-bookmark text-emerald-600 text-sm" : "fa-regular fa-bookmark text-gray-700 text-sm"}></i>
+          </button>
+
+          {/* Bouton 3 : Partager (Carré blanc avec icône partage) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDropdownOpen(true);
+            }}
+            className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-white hover:bg-gray-50 border border-gray-200/90 text-gray-700 transition cursor-pointer active:scale-95 shadow-2xs"
+            title="Partager l'offre sur tous les réseaux"
+          >
+            <i className="fa-solid fa-share-nodes text-gray-700 text-sm"></i>
+          </button>
+        </div>
+
+        {/* Ligne Footer Statistiques : 👁 2.4k vues   💬 327 */}
+        <div className="pt-2.5 mt-2 border-t border-gray-100 flex items-center gap-4 text-xs text-gray-400 font-medium select-none">
+          <span className="flex items-center gap-1.5">
+            <i className="fa-regular fa-eye text-xs text-gray-400"></i>
+            <span>{viewsFormatted} vues</span>
+          </span>
+          <Link
+            href={offerId ? `/offres/${offerId}` : "/messagerie"}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 hover:text-gray-600 transition"
+          >
+            <i className="fa-regular fa-comment text-xs text-gray-400"></i>
+            <span>{commentsCount}</span>
+          </Link>
+        </div>
+
+        {/* Modal de Partage Social Universel */}
+        {dropdownOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-[940] bg-black/50 backdrop-blur-2xs transition-opacity animate-in fade-in"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdownOpen(false);
+              }}
+            />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-24px)] sm:w-96 max-w-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-2xl p-5 z-[950] animate-in fade-in zoom-in-95 duration-150"
+            >
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-share-nodes"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Partager cette offre</h3>
+                    <p className="text-[10px] text-gray-500 font-medium">Faites rayonner cette opportunité</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen(false)}
+                  className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center text-xs transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={shareLinks.whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50/70 hover:bg-[#25D366] text-gray-900 hover:text-white transition group text-left border border-emerald-100 dark:border-gray-700 cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#25D366] text-white flex items-center justify-center text-sm shadow-xs group-hover:bg-white group-hover:text-[#25D366] transition-colors flex-shrink-0">
+                    <i className="fa-brands fa-whatsapp font-bold"></i>
+                  </div>
+                  <span className="text-xs font-bold truncate">WhatsApp</span>
+                </a>
+
+                <a
+                  href={shareLinks.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/70 hover:bg-[#0A66C2] text-gray-900 hover:text-white transition group text-left border border-blue-100 dark:border-gray-700 cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#0A66C2] text-white flex items-center justify-center text-sm shadow-xs group-hover:bg-white group-hover:text-[#0A66C2] transition-colors flex-shrink-0">
+                    <i className="fa-brands fa-linkedin-in font-bold"></i>
+                  </div>
+                  <span className="text-xs font-bold truncate">LinkedIn</span>
+                </a>
+
+                <a
+                  href={shareLinks.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/70 hover:bg-[#1877F2] text-gray-900 hover:text-white transition group text-left border border-blue-100 dark:border-gray-700 cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#1877F2] text-white flex items-center justify-center text-sm shadow-xs group-hover:bg-white group-hover:text-[#1877F2] transition-colors flex-shrink-0">
+                    <i className="fa-brands fa-facebook-f font-bold"></i>
+                  </div>
+                  <span className="text-xs font-bold truncate">Facebook</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof navigator !== "undefined" && navigator.share) {
+                      handleNativeShare();
+                    } else {
+                      handleCopyLink("TikTok");
+                    }
+                  }}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-gray-100 hover:bg-black text-gray-900 hover:text-white transition group text-left border border-gray-200 dark:border-gray-700 cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center text-sm shadow-xs group-hover:bg-white group-hover:text-black transition-colors flex-shrink-0">
+                    <i className="fa-brands fa-tiktok font-bold"></i>
+                  </div>
+                  <span className="text-xs font-bold truncate">TikTok</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof navigator !== "undefined" && navigator.share) {
+                      handleNativeShare();
+                    } else {
+                      handleCopyLink("Instagram");
+                    }
+                  }}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-rose-50/70 hover:bg-gradient-to-tr hover:from-[#F58529] hover:via-[#DD2A7B] hover:to-[#8134AF] text-gray-900 hover:text-white transition group text-left border border-rose-100 dark:border-gray-700 cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white flex items-center justify-center text-sm shadow-xs group-hover:bg-white group-hover:text-[#DD2A7B] transition-colors flex-shrink-0">
+                    <i className="fa-brands fa-instagram font-bold"></i>
+                  </div>
+                  <span className="text-xs font-bold truncate">Instagram</span>
+                </button>
+
+                <a
+                  href={shareLinks.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-gray-100 hover:bg-gray-900 text-gray-900 hover:text-white transition group text-left border border-gray-200 dark:border-gray-700 cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm shadow-xs group-hover:bg-white group-hover:text-gray-900 transition-colors flex-shrink-0">
+                    <i className="fa-brands fa-x-twitter font-bold"></i>
+                  </div>
+                  <span className="text-xs font-bold truncate">X / Twitter</span>
+                </a>
+
+                <a
+                  href={shareLinks.telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-sky-50/70 hover:bg-[#229ED9] text-gray-900 hover:text-white transition group text-left border border-sky-100 dark:border-gray-700 cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#229ED9] text-white flex items-center justify-center text-sm shadow-xs group-hover:bg-white group-hover:text-[#229ED9] transition-colors flex-shrink-0">
+                    <i className="fa-brands fa-telegram font-bold"></i>
+                  </div>
+                  <span className="text-xs font-bold truncate">Telegram</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => handleCopyLink()}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-900 hover:text-white transition group text-left border border-emerald-200 dark:border-emerald-700 cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-sm shadow-xs group-hover:bg-white group-hover:text-emerald-600 transition-colors flex-shrink-0">
+                    <i className={`fa-solid ${copied ? "fa-check" : "fa-link"} font-bold`}></i>
+                  </div>
+                  <span className="text-xs font-bold truncate">{copied ? "Copié !" : "Copier"}</span>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   // 1. Rendu Compact pour le Flux d'Accueil et Listes (Style 1:1 Facebook Footer)
   if (variant === "compact") {

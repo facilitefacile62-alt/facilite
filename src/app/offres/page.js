@@ -458,7 +458,7 @@ function OffresContent() {
                         location: offer.location || "Sénégal",
                         contract: offer.contract_type || "CDI",
                       }}
-                      variant="compact"
+                      variant="feed"
                       onApply={() => {
                         if (userSession && !eligible && !offer.is_spontaneous) {
                           triggerToast("Niveau d'études requis insuffisant pour cette offre.");
