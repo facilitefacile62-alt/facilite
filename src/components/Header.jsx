@@ -1602,18 +1602,18 @@ export default function Header() {
                   </div>
                 </Link>
 
-                {/* 8. Scanner & Analyseur IA */}
+                {/* 8. Prêt pour votre candidature ? */}
                 <Link
-                  href="/importer-cv"
-                  onClick={(e) => handleNavClick(e, "/importer-cv", "nav_plus_importer", "Scanner IA")}
+                  href="/creer-cv"
+                  onClick={(e) => handleNavClick(e, "/creer-cv", "nav_creer_cv", "Prêt pour votre candidature")}
                   className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-600 flex items-center justify-center text-sm shadow-2xs">
-                    <i className="fa-solid fa-robot"></i>
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-lightbulb"></i>
                   </div>
                   <div>
-                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Scanner IA de CV</h4>
-                    <p className="text-[10px] text-gray-500 font-medium truncate">Audit & Score ATS</p>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Prêt pour votre candidature ?</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Concevoir mon CV</p>
                   </div>
                 </Link>
 

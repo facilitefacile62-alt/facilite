@@ -34,7 +34,14 @@ export default function ModelesPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPosterModalOpen, setAdminPosterModalOpen] = useState(false);
-  const [posterRefreshKey, setPosterRefreshKey] = useState(Date.now());
+  // 0, pas Date.now() : cette valeur initiale est évaluée séparément au
+  // rendu serveur et à l'hydratation client (deux vrais instants distincts),
+  // donc un timestamp ici cassait l'hydratation sur les 9 cartes à chaque
+  // chargement. onPosterUpdated ci-dessous (déclenché uniquement par un vrai
+  // clic admin, jamais pendant le rendu serveur) peut lui garder Date.now()
+  // sans risque — le cache-busting continue de fonctionner après une mise à
+  // jour réelle, seule la valeur de départ doit être stable.
+  const [posterRefreshKey, setPosterRefreshKey] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
