@@ -1092,22 +1092,6 @@ export default function Header() {
             {plusDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
                 <Link
-                  href="/importer-cv"
-                  onClick={(e) => handleNavClick(e, "/importer-cv", "nav_plus_importer", "Importer CV")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/importer-cv" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-file-arrow-up text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Importer CV</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Analyse IA et recommandations</div>
-                  </div>
-                </Link>
-
-                <Link
                   href="/service"
                   onClick={(e) => handleNavClick(e, "/service", "nav_plus_service", "Services & Modèles")}
                   className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
