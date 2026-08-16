@@ -580,9 +580,8 @@ export default function Home() {
 
   // Spontaneous Recruitment Modal
   const [recruitmentModalOpen, setRecruitmentModalOpen] = useState(false);
-  const [fonctionnalitesDropdownOpen, setFonctionnalitesDropdownOpen] = useState(false);
-  const fonctionnalitesDropdownRef = useRef(null);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
+  const [fonctionnalitesExpanded, setFonctionnalitesExpanded] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
   const [isRecruitmentSubmitting, setIsRecruitmentSubmitting] = useState(false);
@@ -922,7 +921,6 @@ export default function Home() {
         if (contactModalOpen) handleCloseModal();
         if (recruitmentModalOpen) handleCloseRecruitmentModal();
         if (noCvModalOpen) setNoCvModalOpen(false);
-        if (fonctionnalitesDropdownOpen) setFonctionnalitesDropdownOpen(false);
         if (plusDropdownOpen) setPlusDropdownOpen(false);
         if (notificationsModalOpen) setNotificationsModalOpen(false);
         if (userMenuOpen) setUserMenuOpen(false);
@@ -930,9 +928,6 @@ export default function Home() {
       }
     };
     const handleClickOutside = (e) => {
-      if (fonctionnalitesDropdownRef.current && !fonctionnalitesDropdownRef.current.contains(e.target)) {
-        setFonctionnalitesDropdownOpen(false);
-      }
       if (plusDropdownRef.current && !plusDropdownRef.current.contains(e.target)) {
         setPlusDropdownOpen(false);
       }
@@ -946,7 +941,7 @@ export default function Home() {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [contactModalOpen, recruitmentModalOpen, noCvModalOpen, fonctionnalitesDropdownOpen, plusDropdownOpen, notificationsModalOpen, userMenuOpen, mobileSearchOpen]);
+  }, [contactModalOpen, recruitmentModalOpen, noCvModalOpen, plusDropdownOpen, notificationsModalOpen, userMenuOpen, mobileSearchOpen]);
 
   return (
     <>
@@ -1107,69 +1102,86 @@ export default function Home() {
               {/* Menu Déroulant "Plus" Overlay */}
               {plusDropdownOpen && (
                 <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-[600] animate-fade-in-up">
-                  {/* Section Fonctionnalités bien visible */}
-                  <div className="mx-2 mb-2 p-2 bg-gradient-to-br from-emerald-50/80 via-white to-indigo-50/80 rounded-xl border border-emerald-200/70 shadow-xs">
-                    <div className="flex items-center justify-between px-2 py-1 mb-1">
+                  {/* Section / Bouton Fonctionnalités Cliquable */}
+                  <div className="mx-2 mb-2 p-1.5 bg-gradient-to-br from-emerald-50/90 via-white to-indigo-50/90 rounded-xl border border-emerald-200/80 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setFonctionnalitesExpanded(!fonctionnalitesExpanded);
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-emerald-100/60 transition-colors cursor-pointer text-left group"
+                    >
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-md bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-xs">
+                        <div className="w-6 h-6 rounded-md bg-emerald-500 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform">
                           <i className="fa-solid fa-wand-magic-sparkles"></i>
                         </div>
-                        <span className="text-[11px] font-black text-emerald-800 uppercase tracking-wide">
-                          Fonctionnalités
-                        </span>
-                      </div>
-                      <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-extrabold rounded-md">
-                        Outils IA
-                      </span>
-                    </div>
-
-                    {/* 1. Extracteur */}
-                    <Link
-                      href="/candidat/extracteur"
-                      onClick={() => setPlusDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/80"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-bolt text-xs"></i>
-                      </div>
-                      <div>
-                        <div className="font-extrabold flex items-center gap-1.5 text-xs">
-                          <span>Extracteur</span>
-                          <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[8px] font-black rounded-md">1-Click</span>
+                        <div>
+                          <div className="text-[11px] font-black text-emerald-900 uppercase tracking-wide flex items-center gap-1.5">
+                            <span>Fonctionnalités</span>
+                            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-black rounded-md">
+                              Outils IA
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-[10px] text-gray-500 font-normal">Postulez depuis une affiche</div>
                       </div>
-                    </Link>
+                      <div className="flex items-center text-emerald-700">
+                        <i className={`fa-solid fa-chevron-down text-[11px] transition-transform duration-200 ${fonctionnalitesExpanded ? "rotate-180" : ""}`}></i>
+                      </div>
+                    </button>
 
-                    {/* 2. Boîte à idées */}
-                    <Link
-                      href="/boite-a-idees"
-                      onClick={() => setPlusDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/80"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-lightbulb text-xs"></i>
-                      </div>
-                      <div>
-                        <div className="font-extrabold text-xs">Boîte à idées</div>
-                        <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
-                      </div>
-                    </Link>
+                    {/* Sous-éléments visibles quand déplié */}
+                    {fonctionnalitesExpanded && (
+                      <div className="mt-1 space-y-0.5 pt-1 border-t border-emerald-100/80 animate-in fade-in slide-in-from-top-1 duration-150">
+                        {/* 1. Extracteur */}
+                        <Link
+                          href="/candidat/extracteur"
+                          onClick={() => setPlusDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/90"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
+                            <i className="fa-solid fa-bolt text-xs"></i>
+                          </div>
+                          <div>
+                            <div className="font-extrabold flex items-center gap-1.5 text-xs">
+                              <span>Extracteur</span>
+                              <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[8px] font-black rounded-md">1-Click</span>
+                            </div>
+                            <div className="text-[10px] text-gray-500 font-normal">Postulez depuis une affiche</div>
+                          </div>
+                        </Link>
 
-                    {/* 3. Services & Modèles */}
-                    <Link
-                      href="/service"
-                      onClick={() => setPlusDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/80"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-briefcase text-xs"></i>
+                        {/* 2. Boîte à idées */}
+                        <Link
+                          href="/boite-a-idees"
+                          onClick={() => setPlusDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/90"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center flex-shrink-0">
+                            <i className="fa-solid fa-lightbulb text-xs"></i>
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-xs">Boîte à idées</div>
+                            <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
+                          </div>
+                        </Link>
+
+                        {/* 3. Services & Modèles */}
+                        <Link
+                          href="/service"
+                          onClick={() => setPlusDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/90"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                            <i className="fa-solid fa-briefcase text-xs"></i>
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-xs">Services & Modèles</div>
+                            <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
+                          </div>
+                        </Link>
                       </div>
-                      <div>
-                        <div className="font-extrabold text-xs">Services & Modèles</div>
-                        <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
-                      </div>
-                    </Link>
+                    )}
                   </div>
 
                   <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">

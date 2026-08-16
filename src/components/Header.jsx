@@ -185,9 +185,8 @@ export default function Header() {
   const { session: userSession, profile: authProfile, loading: authLoading, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [fonctionnalitesDropdownOpen, setFonctionnalitesDropdownOpen] = useState(false);
-  const fonctionnalitesDropdownRef = useRef(null);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
+  const [fonctionnalitesExpanded, setFonctionnalitesExpanded] = useState(true);
   const plusDropdownRef = useRef(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
@@ -1087,75 +1086,92 @@ export default function Header() {
 
             {plusDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
-                {/* Section Fonctionnalités bien visible */}
-                <div className="mx-2 mb-2 p-2 bg-gradient-to-br from-emerald-50/80 via-white to-indigo-50/80 dark:from-emerald-950/40 dark:via-gray-800 dark:to-indigo-950/40 rounded-xl border border-emerald-200/70 dark:border-emerald-800/40 shadow-xs">
-                  <div className="flex items-center justify-between px-2 py-1 mb-1">
+                {/* Section / Bouton Fonctionnalités Cliquable */}
+                <div className="mx-2 mb-2 p-1.5 bg-gradient-to-br from-emerald-50/90 via-white to-indigo-50/90 dark:from-emerald-950/40 dark:via-gray-800 dark:to-indigo-950/40 rounded-xl border border-emerald-200/80 dark:border-emerald-800/40 shadow-xs">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setFonctionnalitesExpanded(!fonctionnalitesExpanded);
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer text-left group"
+                  >
                     <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-md bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-xs">
+                      <div className="w-6 h-6 rounded-md bg-emerald-500 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform">
                         <i className="fa-solid fa-wand-magic-sparkles"></i>
                       </div>
-                      <span className="text-[11px] font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wide">
-                        Fonctionnalités
-                      </span>
-                    </div>
-                    <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-[9px] font-extrabold rounded-md">
-                      Outils IA
-                    </span>
-                  </div>
-
-                  {/* 1. Extracteur */}
-                  <Link
-                    href="/candidat/extracteur"
-                    onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
-                    className={`flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                      pathname === "/candidat/extracteur" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-700/50"
-                    }`}
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-500 flex items-center justify-center flex-shrink-0">
-                      <i className="fa-solid fa-bolt text-xs"></i>
-                    </div>
-                    <div>
-                      <div className="font-extrabold flex items-center gap-1.5 text-xs">
-                        <span>Extracteur</span>
-                        <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[8px] font-black rounded-md">1-Click</span>
+                      <div>
+                        <div className="text-[11px] font-black text-emerald-900 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
+                          <span>Fonctionnalités</span>
+                          <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-[9px] font-black rounded-md">
+                            Outils IA
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-gray-500 font-normal">Postulez depuis une affiche</div>
                     </div>
-                  </Link>
+                    <div className="flex items-center text-emerald-700 dark:text-emerald-400">
+                      <i className={`fa-solid fa-chevron-down text-[11px] transition-transform duration-200 ${fonctionnalitesExpanded ? "rotate-180" : ""}`}></i>
+                    </div>
+                  </button>
 
-                  {/* 2. Boîte à idées */}
-                  <Link
-                    href="/boite-a-idees"
-                    onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
-                    className={`flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                      pathname === "/boite-a-idees" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300" : "text-gray-700 dark:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-700/50"
-                    }`}
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-yellow-50 dark:bg-yellow-950 text-yellow-600 flex items-center justify-center flex-shrink-0">
-                      <i className="fa-solid fa-lightbulb text-xs"></i>
-                    </div>
-                    <div>
-                      <div className="font-extrabold text-xs">Boîte à idées</div>
-                      <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
-                    </div>
-                  </Link>
+                  {/* Sous-éléments visibles quand déplié */}
+                  {fonctionnalitesExpanded && (
+                    <div className="mt-1 space-y-0.5 pt-1 border-t border-emerald-100/80 dark:border-emerald-900/40 animate-in fade-in slide-in-from-top-1 duration-150">
+                      {/* 1. Extracteur */}
+                      <Link
+                        href="/candidat/extracteur"
+                        onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
+                        className={`flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                          pathname === "/candidat/extracteur" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200 hover:bg-white/90 dark:hover:bg-gray-700/50"
+                        }`}
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-500 flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-bolt text-xs"></i>
+                        </div>
+                        <div>
+                          <div className="font-extrabold flex items-center gap-1.5 text-xs">
+                            <span>Extracteur</span>
+                            <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[8px] font-black rounded-md">1-Click</span>
+                          </div>
+                          <div className="text-[10px] text-gray-500 font-normal">Postulez depuis une affiche</div>
+                        </div>
+                      </Link>
 
-                  {/* 3. Services & Modèles */}
-                  <Link
-                    href="/service"
-                    onClick={(e) => handleNavClick(e, "/service", "nav_plus_service", "Services & Modèles")}
-                    className={`flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                      pathname === "/service" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-700/50"
-                    }`}
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                      <i className="fa-solid fa-briefcase text-xs"></i>
+                      {/* 2. Boîte à idées */}
+                      <Link
+                        href="/boite-a-idees"
+                        onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
+                        className={`flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                          pathname === "/boite-a-idees" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300" : "text-gray-700 dark:text-gray-200 hover:bg-white/90 dark:hover:bg-gray-700/50"
+                        }`}
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-yellow-50 dark:bg-yellow-950 text-yellow-600 flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-lightbulb text-xs"></i>
+                        </div>
+                        <div>
+                          <div className="font-extrabold text-xs">Boîte à idées</div>
+                          <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
+                        </div>
+                      </Link>
+
+                      {/* 3. Services & Modèles */}
+                      <Link
+                        href="/service"
+                        onClick={(e) => handleNavClick(e, "/service", "nav_plus_service", "Services & Modèles")}
+                        className={`flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                          pathname === "/service" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200 hover:bg-white/90 dark:hover:bg-gray-700/50"
+                        }`}
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-briefcase text-xs"></i>
+                        </div>
+                        <div>
+                          <div className="font-extrabold text-xs">Services & Modèles</div>
+                          <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
+                        </div>
+                      </Link>
                     </div>
-                    <div>
-                      <div className="font-extrabold text-xs">Services & Modèles</div>
-                      <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
-                    </div>
-                  </Link>
+                  )}
                 </div>
 
                 <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">

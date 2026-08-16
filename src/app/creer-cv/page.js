@@ -112,6 +112,51 @@ const ANIMATION_CLASS_BY_KEY = {
   fadeInUp: "animate-fade-in-up",
 };
 
+// Catalogue de polices de l'onglet "Texte" — uniquement des polices
+// réellement présentes sur Google Fonts (chargées dynamiquement via
+// loadFont, qui pointe sur fonts.googleapis.com) : contrairement à Canva,
+// dont le sélecteur mélange des polices exclusives (Canva Sans, Glacial
+// Indifference...) jamais disponibles en dehors de son éditeur, chaque nom
+// ci-dessous a été vérifié comme existant réellement sur Google Fonts avant
+// d'être ajouté.
+const AVAILABLE_FONTS = [
+  { name: "Public Sans", category: "Sans-serif" },
+  { name: "Inter", category: "Sans-serif" },
+  { name: "Outfit", category: "Sans-serif" },
+  { name: "Montserrat", category: "Sans-serif" },
+  { name: "Roboto", category: "Sans-serif" },
+  { name: "Poppins", category: "Sans-serif" },
+  { name: "Open Sans", category: "Sans-serif" },
+  { name: "Raleway", category: "Sans-serif" },
+  { name: "DM Sans", category: "Sans-serif" },
+  { name: "Quicksand", category: "Sans-serif" },
+  { name: "Nunito", category: "Sans-serif" },
+  { name: "Work Sans", category: "Sans-serif" },
+  { name: "Lato", category: "Sans-serif" },
+  { name: "Rubik", category: "Sans-serif" },
+  { name: "League Spartan", category: "Sans-serif" },
+  { name: "Arimo", category: "Sans-serif" },
+  { name: "Karla", category: "Sans-serif" },
+  { name: "Playfair Display", category: "Serif" },
+  { name: "Merriweather", category: "Serif" },
+  { name: "Lora", category: "Serif" },
+  { name: "Libre Baskerville", category: "Serif" },
+  { name: "Cormorant Garamond", category: "Serif" },
+  { name: "Bitter", category: "Serif" },
+  { name: "PT Serif", category: "Serif" },
+  { name: "Belleza", category: "Serif" },
+  { name: "Bebas Neue", category: "Display" },
+  { name: "Anton", category: "Display" },
+  { name: "Oswald", category: "Display" },
+  { name: "Archivo Black", category: "Display" },
+  { name: "Pacifico", category: "Script" },
+  { name: "Caveat", category: "Script" },
+  { name: "Dancing Script", category: "Script" },
+  { name: "Shrikhand", category: "Script" },
+  { name: "Chewy", category: "Script" },
+];
+const FONT_CATEGORIES = ["Tout", "Sans-serif", "Serif", "Display", "Script"];
+
 // --- DICTIONNAIRE DE TRADUCTION POUR LE CREATEUR DE CV ---
 const translations = {
   FR: {
@@ -765,6 +810,8 @@ export default function CreerCv() {
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(true);
   const [activeCanvaTab, setActiveCanvaTab] = useState("models");
   const [canvaFontFamily, setCanvaFontFamily] = useState("Inter");
+  const [canvaFontSearchQuery, setCanvaFontSearchQuery] = useState("");
+  const [canvaFontCategoryFilter, setCanvaFontCategoryFilter] = useState("Tout");
   const [canvaColorPasteInput, setCanvaColorPasteInput] = useState("");
   const [canvaColorFeedback, setCanvaColorFeedback] = useState(null); // { type: "warning", message }
   const [savedStylePrefs, setSavedStylePrefs] = useState(null); // { accentColor, fontFamily } chargé depuis profiles.preferred_cv_style
@@ -1938,6 +1985,17 @@ export default function CreerCv() {
     document.head.appendChild(link);
   }, []);
 
+  // Charge les aperçus de toutes les polices du catalogue (AVAILABLE_FONTS)
+  // dès l'ouverture de l'onglet "Texte", pour que la liste de recherche
+  // affiche chaque nom directement rendu dans sa propre police — même
+  // principe que le sélecteur de polices de Canva. Un seul <link> par
+  // police (loadFont déduplique déjà via son id), ~30 polices au total :
+  // négligeable en coût réseau face au confort de prévisualisation.
+  useEffect(() => {
+    if (activeCanvaTab !== "text") return;
+    AVAILABLE_FONTS.forEach((f) => loadFont(f.name));
+  }, [activeCanvaTab, loadFont]);
+
   // --- COULEUR D'ACCENT COLLÉE DEPUIS CANVA ---
   const normalizeCanvaHex = (raw) => {
     if (!raw) return null;
@@ -3029,32 +3087,73 @@ Laisse vide les champs non trouvés.`;
                   <div className="space-y-4">
                     <div>
                       <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Police de caractères</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { value: "Public Sans", name: "Public Sans" },
-                          { value: "Inter", name: "Inter" },
-                          { value: "Outfit", name: "Outfit" },
-                          { value: "Montserrat", name: "Montserrat" },
-                          { value: "Roboto", name: "Roboto" },
-                          { value: "Playfair Display", name: "Playfair" },
-                        ].map(f => (
+
+                      {/* Recherche */}
+                      <div className="relative mb-2">
+                        <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input
+                          type="text"
+                          value={canvaFontSearchQuery}
+                          onChange={(e) => setCanvaFontSearchQuery(e.target.value)}
+                          placeholder="Rechercher une police..."
+                          className="w-full bg-slate-800/90 border border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-hidden focus:border-blue-500"
+                        />
+                      </div>
+
+                      {/* Filtres de catégorie */}
+                      <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                        {FONT_CATEGORIES.map((cat) => (
                           <button
-                            key={f.value}
+                            key={cat}
                             type="button"
-                            onClick={() => {
-                              loadFont(f.value);
-                              setCanvaFontFamily(f.value);
-                              triggerToast(`Police ${f.name} appliquée`);
-                            }}
-                            className={`p-2 rounded-xl text-left border text-xs transition cursor-pointer ${
-                              canvaFontFamily === f.value
-                                ? "bg-blue-600/20 border-blue-500 text-white font-bold"
-                                : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
+                            onClick={() => setCanvaFontCategoryFilter(cat)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                              canvaFontCategoryFilter === cat
+                                ? "bg-blue-600 text-white"
+                                : "bg-slate-800 text-slate-300 hover:bg-slate-750"
                             }`}
                           >
-                            {f.name}
+                            {cat}
                           </button>
                         ))}
+                      </div>
+
+                      {/* Liste de polices — chaque nom rendu dans sa propre police, comme
+                          l'aperçu "AaBbCc" du sélecteur Canva. */}
+                      <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
+                        {AVAILABLE_FONTS
+                          .filter((f) => canvaFontCategoryFilter === "Tout" || f.category === canvaFontCategoryFilter)
+                          .filter((f) => !canvaFontSearchQuery.trim() || f.name.toLowerCase().includes(canvaFontSearchQuery.trim().toLowerCase()))
+                          .map((f) => (
+                            <button
+                              key={f.name}
+                              type="button"
+                              onClick={() => {
+                                loadFont(f.name);
+                                setCanvaFontFamily(f.name);
+                                triggerToast(`Police ${f.name} appliquée`);
+                              }}
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left border transition cursor-pointer ${
+                                canvaFontFamily === f.name
+                                  ? "bg-blue-600/20 border-blue-500"
+                                  : "bg-slate-800 border-slate-700 hover:bg-slate-750"
+                              }`}
+                            >
+                              <span
+                                className={`text-sm truncate ${canvaFontFamily === f.name ? "text-white font-bold" : "text-slate-200"}`}
+                                style={{ fontFamily: `"${f.name}", sans-serif` }}
+                              >
+                                {f.name}
+                              </span>
+                              <span className="text-[9px] text-slate-500 font-semibold flex-shrink-0 ml-2">{f.category}</span>
+                            </button>
+                          ))}
+                        {AVAILABLE_FONTS
+                          .filter((f) => canvaFontCategoryFilter === "Tout" || f.category === canvaFontCategoryFilter)
+                          .filter((f) => !canvaFontSearchQuery.trim() || f.name.toLowerCase().includes(canvaFontSearchQuery.trim().toLowerCase()))
+                          .length === 0 && (
+                          <p className="text-center text-[11px] text-slate-500 py-4">Aucune police ne correspond à cette recherche.</p>
+                        )}
                       </div>
                     </div>
 
@@ -5002,21 +5101,23 @@ Laisse vide les champs non trouvés.`;
 
               {/* CANVA CONTEXTUAL TOP FORMATTING BAR (Style Canva Top Menu) */}
               <div className="w-full max-w-[595px] flex items-center justify-between py-1.5 px-3 mb-2 bg-white/95 backdrop-blur-xs border border-gray-200 shadow-sm rounded-2xl text-xs text-gray-700 font-bold overflow-x-auto no-print gap-2">
-                {/* Font selector */}
+                {/* Font selector — toutes les polices du catalogue (AVAILABLE_FONTS,
+                    même liste que l'onglet Texte) : un <select> natif ne s'élargit
+                    jamais fermé selon son nombre d'options, donc aucun coût visuel à
+                    en lister 30 plutôt que 6 — et ça évite que ce sélecteur affiche
+                    un nom différent de la police réellement appliquée quand elle a
+                    été choisie depuis la liste enrichie de l'onglet Texte. */}
                 <select
                   value={canvaFontFamily}
                   onChange={(e) => {
                     loadFont(e.target.value);
                     setCanvaFontFamily(e.target.value);
                   }}
-                  className="bg-gray-100 hover:bg-gray-200 border-0 rounded-lg px-2 py-1 text-xs font-bold text-gray-800 cursor-pointer focus:outline-hidden"
+                  className="bg-gray-100 hover:bg-gray-200 border-0 rounded-lg px-2 py-1 text-xs font-bold text-gray-800 cursor-pointer focus:outline-hidden max-w-[110px]"
                 >
-                  <option value="Public Sans">Public Sans</option>
-                  <option value="Inter">Inter</option>
-                  <option value="Outfit">Outfit</option>
-                  <option value="Montserrat">Montserrat</option>
-                  <option value="Roboto">Roboto</option>
-                  <option value="Playfair Display">Playfair</option>
+                  {AVAILABLE_FONTS.map((f) => (
+                    <option key={f.name} value={f.name}>{f.name}</option>
+                  ))}
                 </select>
 
                 {/* Font Size - / + */}
