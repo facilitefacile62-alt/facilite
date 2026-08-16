@@ -1056,27 +1056,37 @@ export default function Header() {
             <i className="fa-solid fa-briefcase text-sm"></i>
             <span>Offres d&apos;emploi</span>
           </Link>
-          {/* Menu déroulant "Fonctionnalités" (Extracteur, Boîte à idées, Services & Modèles) */}
-          <div className="relative" ref={fonctionnalitesDropdownRef}>
+          <Link
+            href="/messagerie"
+            onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              pathname === "/messagerie"
+                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+            }`}
+          >
+            <i className="fa-solid fa-comments text-sm"></i>
+            <span>Messagerie</span>
+          </Link>
+
+          {/* Menu déroulant "Plus" (contenant Fonctionnalités : Extracteur, Boîte à idées, Services & Modèles, etc.) */}
+          <div className="relative" ref={plusDropdownRef}>
             <button
               type="button"
-              onClick={() => {
-                setFonctionnalitesDropdownOpen(!fonctionnalitesDropdownOpen);
-                setPlusDropdownOpen(false);
-              }}
+              onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
               className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                fonctionnalitesDropdownOpen || pathname === "/service" || pathname === "/candidat/extracteur" || pathname === "/boite-a-idees"
+                plusDropdownOpen || pathname === "/service" || pathname === "/candidat/extracteur" || pathname === "/boite-a-idees" || pathname.startsWith("/recrutement-") || pathname === "/faq"
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
             >
-              <i className="fa-solid fa-wand-magic-sparkles text-sm text-indigo-500"></i>
-              <span>Fonctionnalités</span>
-              <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${fonctionnalitesDropdownOpen ? "rotate-180" : ""}`}></i>
+              <i className="fa-solid fa-layer-group text-sm"></i>
+              <span>Plus</span>
+              <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
             </button>
 
-            {fonctionnalitesDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+            {plusDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
                 {/* 1. Extracteur */}
                 <Link
                   href="/candidat/extracteur"
@@ -1114,8 +1124,6 @@ export default function Header() {
                   </div>
                 </Link>
 
-                <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
-
                 {/* 3. Services & Modèles */}
                 <Link
                   href="/service"
@@ -1132,45 +1140,10 @@ export default function Header() {
                     <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada, Anglais & Lettres</div>
                   </div>
                 </Link>
-              </div>
-            )}
-          </div>
 
-          <Link
-            href="/messagerie"
-            onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              pathname === "/messagerie"
-                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-            }`}
-          >
-            <i className="fa-solid fa-comments text-sm"></i>
-            <span>Messagerie</span>
-          </Link>
+                <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
 
-          {/* Menu déroulant "Plus" */}
-          <div className="relative" ref={plusDropdownRef}>
-            <button
-              type="button"
-              onClick={() => {
-                setPlusDropdownOpen(!plusDropdownOpen);
-                setFonctionnalitesDropdownOpen(false);
-              }}
-              className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                plusDropdownOpen || pathname.startsWith("/recrutement-") || pathname === "/faq"
-                  ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                  : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-              }`}
-            >
-              <i className="fa-solid fa-layer-group text-sm"></i>
-              <span>Plus</span>
-              <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
-            </button>
-
-            {plusDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
-                {/* 1. Recrutement Spontané */}
+                {/* 4. Recrutement Spontané */}
                 <Link
                   href="/recrutement-spontane"
                   onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
