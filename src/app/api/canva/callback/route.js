@@ -39,6 +39,11 @@ function readSignedCookie(req, name) {
  * ici et ajouté à l'échange de code, en plus de canva_oauth_state.
  */
 export async function GET(req) {
+  // DIAGNOSTIC TEMPORAIRE — à retirer après investigation missing_params.
+  console.log("[Canva Callback] URL complète reçue:", req.url);
+  console.log("[Canva Callback] SearchParams:", Object.fromEntries(req.nextUrl.searchParams));
+  console.log("[Canva Callback] Cookies présents:", req.cookies.getAll().map((c) => c.name));
+
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const returnedState = url.searchParams.get("state");
@@ -54,6 +59,13 @@ export async function GET(req) {
 
   const errorRedirect = (reason) =>
     clearOauthCookies(NextResponse.redirect(new URL(`/creer-cv?canva=error&reason=${reason}`, req.url)));
+
+  const oauthError = url.searchParams.get("error");
+  const errorDescription = url.searchParams.get("error_description");
+  if (oauthError) {
+    console.error(`[Canva OAuth Callback Error] ${oauthError}: ${errorDescription || "aucun détail"}`);
+    return errorRedirect(encodeURIComponent(oauthError));
+  }
 
   if (!code || !returnedState) return errorRedirect("missing_params");
 

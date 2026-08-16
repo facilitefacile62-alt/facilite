@@ -49,7 +49,7 @@ export async function GET(req) {
   authorizeUrl.searchParams.set("response_type", "code");
   authorizeUrl.searchParams.set("client_id", process.env.CANVA_CLIENT_ID);
   authorizeUrl.searchParams.set("redirect_uri", process.env.CANVA_REDIRECT_URI);
-  authorizeUrl.searchParams.set("scope", "design:content:read design:content:write");
+  authorizeUrl.searchParams.set("scope", "canva:design:content canva:asset:private canva:brandtemplate");
   authorizeUrl.searchParams.set("state", state);
   authorizeUrl.searchParams.set("code_challenge", codeChallenge);
   authorizeUrl.searchParams.set("code_challenge_method", "S256");
