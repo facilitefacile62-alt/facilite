@@ -1372,16 +1372,6 @@ export default function RecruteurDashboardPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Salaire (optionnel)</label>
-                  <input
-                    type="text"
-                    value={offerForm.salary_range}
-                    onChange={(e) => handleOfferFieldChange("salary_range", e.target.value)}
-                    placeholder="Ex. 300 000 - 450 000 FCFA / mois"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
-                  />
-                </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">Date limite de candidature (optionnel)</label>

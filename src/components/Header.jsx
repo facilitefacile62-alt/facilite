@@ -169,6 +169,26 @@ export default function Header() {
   const plusDropdownRef = useRef(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  const [mobileHelpOpen, setMobileHelpOpen] = useState(false);
+  const [mobileLang, setMobileLang] = useState("FR");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("lang");
+      if (saved && (saved === "FR" || saved === "EN")) {
+        setMobileLang(saved);
+      }
+    } catch {}
+  }, []);
+
+  const handleMobileChangeLang = (lang) => {
+    setMobileLang(lang);
+    try {
+      localStorage.setItem("lang", lang);
+    } catch {}
+    window.location.reload();
+  };
 
   // Centre de notifications Facebook 1:1 : deux flux distincts fusionnés à
   // l'affichage — dbNotifications (table notifications réelle, is_read
@@ -1291,115 +1311,464 @@ export default function Header() {
         </div>
       )}
 
-      {/* Mobile Drawer Menu (Menu hamburger parfaitement utilisable sur 320px de large) */}
+      {/* Mobile Drawer Menu (Menu Hub Facebook 1:1 Pixel-Perfect avec toutes les fonctionnalités) */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 pt-3 pb-6 space-y-1.5 shadow-xl max-h-[85vh] overflow-y-auto">
-          {/* Action principale en vedette au sommet du tiroir tactile */}
-          <div className="space-y-2 pb-2 border-b border-gray-100 dark:border-gray-800">
-            <Link
-              href="/importer-cv"
-              onClick={(e) => handleNavClick(e, "/importer-cv", "nav_plus_importer", "Importer CV")}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-extrabold transition text-emerald-600 dark:text-emerald-400 bg-emerald-50/60 dark:bg-gray-800 hover:bg-emerald-100 cursor-pointer"
-            >
-              <i className="fa-solid fa-file-arrow-up text-base"></i>
-              <span>Importer CV (Scanner IA)</span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setNotificationsModalOpen(true);
-              }}
-              className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <i className="fa-solid fa-bell w-5 text-center text-emerald-600"></i>
-                <span>Notifications</span>
+        <div className="lg:hidden fixed inset-0 top-[52px] z-[850] bg-[#F0F2F5] dark:bg-gray-950 overflow-y-auto pb-24 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="px-3.5 pt-3 pb-8 space-y-3.5 max-w-lg mx-auto">
+            
+            {/* 1. Header du Menu (Style Facebook : < Menu + Recherche rapide) */}
+            <div className="flex items-center justify-between px-1 pb-1">
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 text-gray-900 dark:text-white font-black text-lg cursor-pointer"
+              >
+                <i className="fa-solid fa-chevron-left text-base text-gray-700 dark:text-gray-300"></i>
+                <span>Menu</span>
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setIsMobileSearchOpen(true);
+                  }}
+                  className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center shadow-xs border border-gray-200/80 dark:border-gray-700 cursor-pointer active:scale-95 transition"
+                  title="Rechercher"
+                >
+                  <i className="fa-solid fa-magnifying-glass text-sm"></i>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 flex items-center justify-center shadow-xs border border-gray-200/80 dark:border-gray-700 cursor-pointer active:scale-95 transition"
+                  title="Fermer le menu"
+                >
+                  <i className="fa-solid fa-xmark text-base"></i>
+                </button>
               </div>
-              {unreadNotificationsCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-red-500 text-white shadow-xs animate-pulse">
-                  {unreadNotificationsCount} non lue{unreadNotificationsCount > 1 ? "s" : ""}
-                </span>
+            </div>
+
+            {/* 2. Carte Profil Utilisateur (Style Facebook 1:1) */}
+            {userSession ? (
+              <div className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs">
+                <Link
+                  href="/profil"
+                  onClick={(e) => handleNavClick(e, "/profil", "nav_profil", "Profil")}
+                  className="flex items-center gap-3 group"
+                >
+                  <div className="relative">
+                    {userSession.user?.user_metadata?.avatar_url ? (
+                      <img
+                        src={userSession.user.user_metadata.avatar_url}
+                        alt="Photo de profil"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-xs"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-lg flex items-center justify-center shadow-xs border-2 border-white dark:border-gray-800">
+                        {(userSession.user?.user_metadata?.full_name || userSession.user?.email || "U").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-black text-gray-900 dark:text-white truncate group-hover:text-emerald-600 transition">
+                      {userSession.user?.user_metadata?.full_name || userSession.user?.email?.split("@")[0] || "Mon Profil"}
+                    </h3>
+                    <p className="text-xs text-gray-500 font-bold flex items-center gap-1">
+                      <span>Voir votre profil</span>
+                      <i className="fa-solid fa-chevron-right text-[10px] text-gray-400 group-hover:translate-x-0.5 transition-transform"></i>
+                    </p>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300">
+                    <i className="fa-solid fa-chevron-down text-xs"></i>
+                  </div>
+                </Link>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg shadow-xs">
+                    <i className="fa-solid fa-user-plus"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-gray-900 dark:text-white">Bienvenue sur Facilité</h3>
+                    <p className="text-xs text-gray-500 font-medium">Connectez-vous pour accéder à tous vos outils</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl text-center shadow-xs transition"
+                  >
+                    Connexion
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-900 dark:text-white font-black text-xs rounded-xl text-center border border-gray-200/80 dark:border-gray-700 transition"
+                  >
+                    Inscription
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Les 2 Cartes En Vedette (Widgets Desktop portés sur Mobile 1:1) */}
+            <div className="space-y-3">
+              {/* Carte 1 : Diagnostic CV Gratuit */}
+              <div className="bg-gradient-to-br from-[#161d31] via-[#1b254b] to-[#0f172a] rounded-3xl p-5 border border-emerald-500/30 shadow-xl text-white relative overflow-hidden">
+                <div className="flex items-start justify-between gap-3 mb-2.5">
+                  <div className="w-11 h-11 rounded-2xl bg-purple-500/20 border border-purple-400/30 text-purple-300 flex items-center justify-center text-xl shadow-inner">
+                    <i className="fa-solid fa-stethoscope"></i>
+                  </div>
+                  <span className="px-2.5 py-1 bg-[#10E688] text-gray-950 text-[10px] font-black uppercase tracking-wider rounded-full shadow-xs">
+                    GRATUIT
+                  </span>
+                </div>
+                <h4 className="text-base font-black text-white mb-1.5">
+                  Diagnostic CV Gratuit
+                </h4>
+                <p className="text-xs text-gray-300 font-medium leading-relaxed mb-4">
+                  Importez ou prenez une photo de votre CV pour obtenir une analyse IA complète de votre design, vos mots-clés et votre score ATS.
+                </p>
+                <Link
+                  href="/importer-cv"
+                  onClick={(e) => handleNavClick(e, "/importer-cv", "nav_plus_importer", "Diagnostic CV")}
+                  className="w-full py-3 bg-[#10E688] hover:bg-[#0fd07b] text-gray-950 font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer"
+                >
+                  <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                  <span>Diagnostiquer mon CV</span>
+                </Link>
+              </div>
+
+              {/* Carte 2 : Prêt pour votre candidature ? */}
+              <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200/90 dark:border-gray-800 shadow-md text-gray-900 dark:text-white">
+                <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl shadow-inner mb-2.5">
+                  <i className="fa-solid fa-lightbulb"></i>
+                </div>
+                <h4 className="text-base font-black text-gray-900 dark:text-white mb-1.5">
+                  Prêt pour votre candidature ?
+                </h4>
+                <p className="text-xs text-gray-600 dark:text-gray-300 font-medium leading-relaxed mb-4">
+                  Utilisez nos services de création pour générer des CV percutants optimisés pour les recruteurs.
+                </p>
+                <Link
+                  href="/creer-cv"
+                  onClick={(e) => handleNavClick(e, "/creer-cv", "nav_creer_cv", "Créateur de CV")}
+                  className="w-full py-3 bg-[#E4B8F9] hover:bg-[#d896f5] text-gray-950 font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer"
+                >
+                  <i className="fa-solid fa-pen-nib text-xs"></i>
+                  <span>Concevoir mon CV</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* 4. Grille de Raccourcis 2 Colonnes (Style Facebook Mobile Menu Hub 1:1) */}
+            <div className="space-y-2">
+              <div className="px-1 text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                Tous les raccourcis
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {/* 1. Tableau de bord */}
+                <Link
+                  href="/profil"
+                  onClick={(e) => handleNavClick(e, "/profil", "nav_profil", "Tableau de bord")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-chart-pie"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Tableau de bord</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Candidatures & CVs</p>
+                  </div>
+                </Link>
+
+                {/* 2. Messages */}
+                <Link
+                  href="/messagerie"
+                  onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-comments"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Messages</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Échanges directs</p>
+                  </div>
+                </Link>
+
+                {/* 3. Offres d'emploi */}
+                <Link
+                  href="/offres"
+                  onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-briefcase"></i>
+                    </div>
+                    <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black rounded-md">Live</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Offres d'emploi</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Postuler en 1 clic</p>
+                  </div>
+                </Link>
+
+                {/* 4. Créateur de CV & Canva */}
+                <Link
+                  href="/creer-cv"
+                  onClick={(e) => handleNavClick(e, "/creer-cv", "nav_creer_cv", "Créateur CV")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-wand-magic-sparkles"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Créateur CV</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Éditeur & Canva</p>
+                  </div>
+                </Link>
+
+                {/* 5. Services & Modèles CV */}
+                <Link
+                  href="/service"
+                  onClick={(e) => handleNavClick(e, "/service", "nav_plus_service", "Modèles")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-palette"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Modèles de CV</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Catalogue complet</p>
+                  </div>
+                </Link>
+
+                {/* 6. Recrutement Spontané (77 entr.) */}
+                <Link
+                  href="/recrutement-spontane"
+                  onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Spontané")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-building-user"></i>
+                    </div>
+                    <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-md">77 entr.</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Candidature Spontanée</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Grandes entreprises</p>
+                  </div>
+                </Link>
+
+                {/* 7. Dépôts Physiques & Stations */}
+                <Link
+                  href="/recrutement-journalier"
+                  onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-gas-pump"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Dépôts Physiques</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Stations & Adresses</p>
+                  </div>
+                </Link>
+
+                {/* 8. Scanner & Analyseur IA */}
+                <Link
+                  href="/importer-cv"
+                  onClick={(e) => handleNavClick(e, "/importer-cv", "nav_plus_importer", "Scanner IA")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-robot"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Scanner IA de CV</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Audit & Score ATS</p>
+                  </div>
+                </Link>
+
+                {/* 9. Espace Recruteur */}
+                <Link
+                  href="/recruteur"
+                  onClick={(e) => handleNavClick(e, "/recruteur", "nav_recruteur", "Recruteur")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-950 text-orange-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-bullhorn"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Espace Recruteur</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Publier une annonce</p>
+                  </div>
+                </Link>
+
+                {/* 10. Badge Candidat Vérifié */}
+                <Link
+                  href="/profil?tab=badge"
+                  onClick={(e) => handleNavClick(e, "/profil?tab=badge", "nav_badge", "Badge")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-certificate"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Badge Vérifié</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Certifier mon profil</p>
+                  </div>
+                </Link>
+
+                {/* 11. Boîte à idées & Suggestions */}
+                <Link
+                  href="/boite-a-idees"
+                  onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Idées")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-yellow-100 dark:bg-yellow-950 text-yellow-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-lightbulb"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Boîte à idées</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Vos suggestions</p>
+                  </div>
+                </Link>
+
+                {/* 12. FAQ & Centre d'aide */}
+                <Link
+                  href="/faq"
+                  onClick={(e) => handleNavClick(e, "/faq", "nav_faq", "FAQ")}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-600 flex items-center justify-center text-sm shadow-2xs">
+                    <i className="fa-solid fa-circle-question"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">FAQ & Aide</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Questions fréquentes</p>
+                  </div>
+                </Link>
+              </div>
+            </div>
+
+            {/* 5. Accordéons de Paramètres & Assistance (Style Facebook) */}
+            <div className="pt-2 border-t border-gray-200/80 dark:border-gray-800 space-y-1.5">
+              
+              {/* Accordéon 1 : Paramètres et langue */}
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setMobileSettingsOpen(!mobileSettingsOpen)}
+                  className="w-full px-4 py-3.5 flex items-center justify-between text-left text-sm font-bold text-gray-900 dark:text-white cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300 text-xs">
+                      <i className="fa-solid fa-gear"></i>
+                    </div>
+                    <span>Paramètres et langue</span>
+                  </div>
+                  <i className={`fa-solid fa-chevron-down text-xs text-gray-400 transition-transform ${mobileSettingsOpen ? "rotate-180" : ""}`}></i>
+                </button>
+                {mobileSettingsOpen && (
+                  <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-2 text-xs">
+                    <div className="font-bold text-gray-600 dark:text-gray-300 mb-1.5">Langue de l'application :</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleMobileChangeLang("FR")}
+                        className={`py-2 px-3 rounded-xl font-black flex items-center justify-center gap-2 border transition ${
+                          mobileLang === "FR"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                            : "bg-gray-50 text-gray-700 border-gray-200"
+                        }`}
+                      >
+                        <img src="/francais.avif" alt="FR" className="w-4 h-4 rounded-full object-cover" />
+                        <span>Français</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMobileChangeLang("EN")}
+                        className={`py-2 px-3 rounded-xl font-black flex items-center justify-center gap-2 border transition ${
+                          mobileLang === "EN"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                            : "bg-gray-50 text-gray-700 border-gray-200"
+                        }`}
+                      >
+                        <img src="/anglais.jpeg" alt="EN" className="w-4 h-4 rounded-full object-cover" />
+                        <span>English</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Accordéon 2 : Aide et assistance */}
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setMobileHelpOpen(!mobileHelpOpen)}
+                  className="w-full px-4 py-3.5 flex items-center justify-between text-left text-sm font-bold text-gray-900 dark:text-white cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300 text-xs">
+                      <i className="fa-solid fa-circle-question"></i>
+                    </div>
+                    <span>Aide et assistance</span>
+                  </div>
+                  <i className={`fa-solid fa-chevron-down text-xs text-gray-400 transition-transform ${mobileHelpOpen ? "rotate-180" : ""}`}></i>
+                </button>
+                {mobileHelpOpen && (
+                  <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-2 text-xs">
+                    <a
+                      href="https://wa.me/221771400832"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-emerald-50 text-emerald-900 font-bold border border-emerald-200"
+                    >
+                      <i className="fa-brands fa-whatsapp text-lg text-emerald-600"></i>
+                      <span>Assistance direct WhatsApp (24/7)</span>
+                    </a>
+                    <Link
+                      href="/faq"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 text-gray-800 font-bold hover:bg-gray-100"
+                    >
+                      <i className="fa-solid fa-book-open text-base text-gray-500"></i>
+                      <span>Centre d'aide & Questions fréquentes</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Bouton de Déconnexion (si connecté) */}
+              {userSession && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full px-4 py-3.5 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-2xl border border-gray-200/80 dark:border-gray-800 flex items-center gap-3 text-red-600 font-black text-sm transition cursor-pointer"
+                >
+                  <div className="w-7 h-7 rounded-full bg-red-100 dark:bg-red-950 text-red-600 flex items-center justify-center text-xs">
+                    <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                  </div>
+                  <span>Déconnexion</span>
+                </button>
               )}
-            </button>
-          </div>
 
-          <div className="py-1">
-            <div className="px-3 text-[11px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
-              Plus d'outils & services
             </div>
-            <Link
-              href="/service"
-              onClick={(e) => handleNavClick(e, "/service", "nav_plus_service", "Services & Modèles")}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              <i className="fa-solid fa-file-lines w-5 text-center text-emerald-600"></i>
-              <span>Services & Modèles CV</span>
-            </Link>
-            <Link
-              href="/recrutement-spontane"
-              onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              <i className="fa-solid fa-building-user w-5 text-center text-blue-600"></i>
-              <span>Recrutement Spontané (77 entr.)</span>
-            </Link>
-            <Link
-              href="/recrutement-journalier"
-              onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              <i className="fa-solid fa-gas-pump w-5 text-center text-purple-600"></i>
-              <span>Dépôts Physiques & Stations</span>
-            </Link>
-            <Link
-              href="/boite-a-idees"
-              onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              <i className="fa-solid fa-lightbulb w-5 text-center text-amber-500"></i>
-              <span>Boîte à idées & Suggestions</span>
-            </Link>
-            <Link
-              href="/faq"
-              onClick={(e) => handleNavClick(e, "/faq", "nav_faq", "FAQ & Aide")}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-            >
-              <i className="fa-solid fa-circle-question w-5 text-center text-teal-600"></i>
-              <span>FAQ & Questions Fréquentes</span>
-            </Link>
-          </div>
 
-          {userSession ? (
-            <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-              <Link
-                href="/profil"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition justify-center"
-              >
-                <i className="fa-solid fa-user-check"></i>
-                <span>Mon Profil Candidat</span>
-              </Link>
-            </div>
-          ) : (
-            <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex gap-2">
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 text-center py-2.5 bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-xs"
-              >
-                Connexion
-              </Link>
-              <Link
-                href="/register"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 text-center py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-extrabold text-xs rounded-xl border border-gray-200 dark:border-gray-700"
-              >
-                Inscription
-              </Link>
-            </div>
-          )}
+          </div>
         </div>
       )}
 

@@ -203,7 +203,6 @@ You will pilot the digital communication strategy of Campus France Senegal (webs
 📩 CV and cover letter: recrutement@ifs.sn
 🔗 Full job description: https://lnkd.in/dp9s3CFt`,
     tags: ["Communication", "Marketing Digital", "CDD"],
-    salary: "Niveau 6",
     recruiterEmail: "recrutement@ifs.sn",
     externalLink: "https://lnkd.in/dp9s3CFt",
     image: "",
@@ -237,7 +236,6 @@ The scholarship covers tuition fees, accommodation, meals, transport, and health
 Young women, people living with disabilities, and refugees are strongly encouraged to apply.
 Deadline: August 31, 2026`,
     tags: ["Bourse", "Études", "STEM"],
-    salary: "Entièrement financée",
     recruiterEmail: "",
     image: "/pub4.jpg",
     pinned: true
@@ -278,7 +276,6 @@ Deadline: August 31, 2026`,
 - Comfortable with tracking tools
 - Real estate experience appreciated, not required`,
     tags: ["Dakar", "Temps Plein", "Télévente"],
-    salary: "Selon profil",
     recruiterEmail: "recrutement@cpi.sn",
     image: "/cpi-call.jpg"
   },
@@ -347,7 +344,6 @@ Merci de transmettre vos DEUX versions de CV (Français et Anglais) à : recrute
 Please send BOTH versions of your CV (French and English) to: recrutement@c2kstaffing.com
 ⚠️ Email Subject: Title of desired position`,
     tags: ["Sabodala", "Mines", "HSE", "Logistique", "Intérim"],
-    salary: "Selon grille minière",
     recruiterEmail: "recrutement@c2kstaffing.com",
     image: "/c2k_sabodala.jpg",
     pinned: true
@@ -384,7 +380,6 @@ What we offer:
 - Stimulating and caring work environment
 - Meal benefits and other perks`,
     tags: ["Dakar", "CDD", "Formation"],
-    salary: "Selon profil",
     recruiterEmail: "recrutement@kfcsenegal.com",
     image: "/kfc.jpeg"
   },
@@ -412,7 +407,6 @@ We are actively recruiting for the following positions:
 - 📞 Teleconsultants: Interpersonal skills for customer service, sales, and telephone assistance. Good communication skills required.
 - 🍳 Cook: Solid experience in catering for meal preparation, kitchen management, and food service.`,
     tags: ["Abidjan", "CDI", "Full-time"],
-    salary: "À débattre",
     recruiterEmail: "facilitefacile@gmail.com",
     image: "/affichedoffre.jpeg"
   },
@@ -429,8 +423,7 @@ We are actively recruiting for the following positions:
     contract: "CDI",
     descFR: "Gérer le portefeuille client, répondre aux requêtes téléphoniques et par chat, et promouvoir les nouveaux forfaits mobiles et offres internet en français et wolof.",
     descEN: "Manage customer portfolio, answer calls and chats, and promote new mobile plans and internet packages in French and Wolof.",
-    tags: ["Dakar", "CDI", "Full-time"],
-    salary: "320 000 FCFA / mois"
+    tags: ["Dakar", "CDI", "Full-time"]
   },
   {
     id: 2,
@@ -445,8 +438,7 @@ We are actively recruiting for the following positions:
     contract: "Stage",
     descFR: "Participer à la conception et à l'optimisation de nos interfaces de CV interactifs. Collaboration étroite avec l'équipe design pour un rendu Pixel-Perfect.",
     descEN: "Participate in designing and optimizing our interactive CV interfaces. Work closely with the design team for a Pixel-Perfect rendering.",
-    tags: ["Pikine", "Stage", "Hybride"],
-    salary: "150 000 FCFA / mois"
+    tags: ["Pikine", "Stage", "Hybride"]
   },
   {
     id: 3,
@@ -461,8 +453,7 @@ We are actively recruiting for the following positions:
     contract: "CDI",
     descFR: "Supervision des écritures comptables mensuelles, traitement de la paie du personnel sénégalais, établissement des déclarations fiscales et sociales.",
     descEN: "Supervision of monthly accounting entries, payroll processing for Senegalese staff, preparation of tax and social security declarations.",
-    tags: ["Dakar", "CDI", "On-site"],
-    salary: "450 000 FCFA / mois"
+    tags: ["Dakar", "CDI", "On-site"]
   },
   {
     id: 4,
@@ -477,8 +468,7 @@ We are actively recruiting for the following positions:
     contract: "CDD",
     descFR: "Fournir une assistance téléphonique rapide et claire aux agents et utilisateurs de l'application Wave. Résolution d'incidents techniques de niveau 1.",
     descEN: "Provide quick and clear phone assistance to agents and users of the Wave app. Resolution of level 1 technical incidents.",
-    tags: ["Thies", "CDD", "Plein temps"],
-    salary: "280 000 FCFA / mois"
+    tags: ["Thies", "CDD", "Plein temps"]
   },
   {
     id: 5,
@@ -493,8 +483,7 @@ We are actively recruiting for the following positions:
     contract: "CDD",
     descFR: "Secrétariat classique, accueil des partenaires, gestion de l'agenda de la direction générale et organisation logistique des déplacements d'affaires.",
     descEN: "Classic secretarial duties, welcoming partners, managing executive schedule, and logistical organization of business travel.",
-    tags: ["Dakar", "CDD", "Office"],
-    salary: "250 000 FCFA / mois"
+    tags: ["Dakar", "CDD", "Office"]
   }
 ];
 
@@ -629,7 +618,6 @@ export default function Home() {
             descFR: offer.description || "",
             descEN: offer.description || "",
             tags: [offer.location, offer.contract_type].filter(Boolean),
-            salary: offer.salary_range || "Non spécifié",
             image: offer.image_url || null,
             recruiterEmail: offer.contact_email || null,
             externalLink: offer.external_link || null,
@@ -1860,7 +1848,7 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Barre d'Actions Réseau Social (Style LinkedIn : J'aime, Non renseigné / Salaire, Partager, Envoyer) */}
+                    {/* Barre d'Actions Réseau Social (Style LinkedIn : J'aime, Partager, Envoyer) */}
                     <SocialShareButtons
                       offer={{
                         id: job.id,
@@ -1868,7 +1856,6 @@ export default function Home() {
                         company: job.company,
                         location: job.location,
                         contract: job.contract,
-                        salary: job.salary,
                       }}
                       variant="compact"
                       onApply={() => handleApplyClick(job)}

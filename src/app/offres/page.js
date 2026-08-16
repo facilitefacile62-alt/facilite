@@ -457,7 +457,6 @@ function OffresContent() {
                         company: offer.company || "Recruteur Confidentiel",
                         location: offer.location || "Sénégal",
                         contract: offer.contract_type || "CDI",
-                        salary: offer.salary_range,
                       }}
                       variant="compact"
                       onApply={() => {

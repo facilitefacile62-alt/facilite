@@ -268,16 +268,6 @@ export default function OffreDetailClient({ initialOffer }) {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Salaire (optionnel)</label>
-                    <input
-                      type="text"
-                      value={salaryRange}
-                      onChange={(e) => setSalaryRange(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
-                      placeholder="Ex. 500 000 FCFA / mois"
-                    />
-                  </div>
 
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1.5">Type de contrat</label>
