@@ -161,9 +161,8 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Session/rôle chargés une seule fois pour toute l'app par AuthContext
-  // (Point F1) — plus de getSession() propre à ce composant.
-  const { session: userSession, loading: authLoading } = useAuth();
+  // Session/rôle/profil chargés une seule fois pour toute l'app par AuthContext
+  const { session: userSession, profile: authProfile, loading: authLoading, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
@@ -1215,30 +1214,68 @@ export default function Header() {
               <button
                 type="button"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="px-2 sm:px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition flex items-center gap-1 sm:gap-1.5 flex-shrink-0 cursor-pointer"
+                className="px-2 sm:px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer shadow-2xs"
               >
-                <i className="fa-solid fa-user-check text-xs sm:text-sm"></i>
-                <span>Profil</span>
+                {authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
+                  <img
+                    src={authProfile.avatar_url}
+                    alt="Photo de profil"
+                    className="w-5 h-5 rounded-full object-cover border border-emerald-500 shrink-0"
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                    {authProfile?.full_name ? authProfile.full_name.charAt(0).toUpperCase() : "👤"}
+                  </div>
+                )}
+                <span className="max-w-[90px] truncate">{authProfile?.full_name || "Profil"}</span>
               </button>
 
               {profileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50 animate-fade-in-up">
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-sans">
+                  <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2.5">
+                    {authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
+                      <img
+                        src={authProfile.avatar_url}
+                        alt="Photo de profil"
+                        className="w-9 h-9 rounded-full object-cover border border-emerald-500 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-black shrink-0">
+                        {authProfile?.full_name ? authProfile.full_name.charAt(0).toUpperCase() : "👤"}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-black text-gray-900 dark:text-white truncate">
+                        {authProfile?.full_name || "Mon Profil"}
+                      </p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                        {userSession?.user?.email}
+                      </p>
+                    </div>
+                  </div>
                   <Link
                     href="/profil"
                     onClick={() => setProfileDropdownOpen(false)}
-                    className="block px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800 hover:text-emerald-700 transition cursor-pointer"
                   >
-                    <i className="fa-solid fa-user-circle mr-2"></i> Mon Profil
+                    <i className="fa-solid fa-user text-emerald-600 text-sm"></i>
+                    <span>Mon Profil</span>
                   </Link>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setProfileDropdownOpen(false);
-                      handleLogout();
+                      if (signOut) {
+                        await signOut();
+                      } else {
+                        await supabase.auth.signOut();
+                      }
+                      window.location.href = "/login";
                     }}
-                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition"
+                    className="w-full flex items-center gap-2.5 text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-gray-800 transition cursor-pointer"
                   >
-                    <i className="fa-solid fa-arrow-right-from-bracket mr-2"></i> Se déconnecter
+                    <i className="fa-solid fa-arrow-right-from-bracket text-red-500 text-sm"></i>
+                    <span>Se déconnecter</span>
                   </button>
                 </div>
               )}
@@ -1377,22 +1414,22 @@ export default function Header() {
                   className="flex items-center gap-3 group"
                 >
                   <div className="relative">
-                    {userSession.user?.user_metadata?.avatar_url ? (
+                    {authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
                       <img
-                        src={userSession.user.user_metadata.avatar_url}
+                        src={authProfile.avatar_url}
                         alt="Photo de profil"
                         className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-xs"
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-lg flex items-center justify-center shadow-xs border-2 border-white dark:border-gray-800">
-                        {(userSession.user?.user_metadata?.full_name || userSession.user?.email || "U").charAt(0).toUpperCase()}
+                        {(authProfile?.full_name || userSession.user?.email || "U").charAt(0).toUpperCase()}
                       </div>
                     )}
                     <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-black text-gray-900 dark:text-white truncate group-hover:text-emerald-600 transition">
-                      {userSession.user?.user_metadata?.full_name || userSession.user?.email?.split("@")[0] || "Mon Profil"}
+                      {authProfile?.full_name || userSession.user?.email?.split("@")[0] || "Mon Profil"}
                     </h3>
                     <p className="text-xs text-gray-500 font-bold flex items-center gap-1">
                       <span>Voir votre profil</span>
