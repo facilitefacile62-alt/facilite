@@ -2415,67 +2415,66 @@ export default function ProfilPage() {
                   >
                     <span>Paramètres</span>
                   </button>
-
                 </div>
               </div>
-            </div>
-            {/* NOUVELLE SECTION PARAMÈTRES (THEME) */}
-            {activeTab === "settings" && (
-              <div className="space-y-3.5 animate-fade-in">
-                <div className="px-1">
-                  <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
-                    <button
-                      type="button"
-                      onClick={() => setSectionTitleMenuOpen(!sectionTitleMenuOpen)}
-                      className="flex items-center space-x-2 text-xl md:text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition"
-                    >
-                      <span>Paramètres</span>
-                      <i className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 ${sectionTitleMenuOpen ? "rotate-180" : ""}`}></i>
-                    </button>
-                    {sectionTitleMenuOpen && (
-                      <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm">
-                        <button
-                          onClick={() => {
-                            setActiveTab("about");
-                            setSectionTitleMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
-                        >
-                          <i className="fa-regular fa-user text-gray-400"></i>
-                          <span>À propos</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveTab("documents");
-                            setSectionTitleMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
-                        >
-                          <i className="fa-regular fa-file-lines text-gray-400"></i>
-                          <span>Mes documents</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveTab("settings");
-                            setSectionTitleMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
-                        >
-                          <i className="fa-solid fa-gear text-gray-400"></i>
-                          <span>Paramètres</span>
-                        </button>
-                      </div>
-                    )}
+
+              {/* NOUVELLE SECTION PARAMÈTRES (THEME) DIRECTEMENT DANS LA MÊME CARTE */}
+              {activeTab === "settings" && (
+                <div className="p-6 md:p-8 space-y-4 animate-fade-in border-t border-gray-150 dark:border-gray-800">
+                  <div>
+                    <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
+                      <button
+                        type="button"
+                        onClick={() => setSectionTitleMenuOpen(!sectionTitleMenuOpen)}
+                        className="flex items-center space-x-2 text-xl md:text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition"
+                      >
+                        <span>Paramètres</span>
+                        <i className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 ${sectionTitleMenuOpen ? "rotate-180" : ""}`}></i>
+                      </button>
+                      {sectionTitleMenuOpen && (
+                        <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm">
+                          <button
+                            onClick={() => {
+                              setActiveTab("about");
+                              setSectionTitleMenuOpen(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
+                          >
+                            <i className="fa-regular fa-user text-gray-400"></i>
+                            <span>À propos</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveTab("documents");
+                              setSectionTitleMenuOpen(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
+                          >
+                            <i className="fa-regular fa-file-lines text-gray-400"></i>
+                            <span>Mes documents</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveTab("settings");
+                              setSectionTitleMenuOpen(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
+                          >
+                            <i className="fa-solid fa-gear text-gray-400"></i>
+                            <span>Paramètres</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Personnalisez votre expérience visuelle et vos préférences.</p>
                   </div>
-                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Personnalisez votre expérience visuelle et vos préférences.</p>
+                  <ThemeSettings />
                 </div>
-                <ThemeSettings />
-              </div>
-            )}
+              )}
 
-            {/* SECTION À PROPOS MULTI-ONGLETS (CENTRALISÉE & UNIFIÉE) */}
-            {activeTab === "about" && (
-              <div id="section-about-profile" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4 animate-fade-in">
+              {/* SECTION À PROPOS MULTI-ONGLETS (DIRECTEMENT DANS LA MÊME CARTE) */}
+              {activeTab === "about" && (
+                <div id="section-about-profile" className="p-6 md:p-8 space-y-4 animate-fade-in border-t border-gray-150 dark:border-gray-800">
                 <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight pb-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
                   <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
                     <button
@@ -3599,9 +3598,9 @@ export default function ProfilPage() {
             </div>
             )}
 
-            {/* SECTION MES DOCUMENTS */}
+            {/* SECTION MES DOCUMENTS (DIRECTEMENT DANS LA MÊME CARTE) */}
             {activeTab === "documents" && (
-              <div id="section-mon-profil-cv" className="space-y-3 pt-2 scroll-mt-24 animate-fade-in">
+              <div id="section-mon-profil-cv" className="p-6 md:p-8 space-y-4 animate-fade-in border-t border-gray-150 dark:border-gray-800">
                 <div>
                   <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
                     <button
@@ -3833,6 +3832,7 @@ export default function ProfilPage() {
             </div>
             )}
 
+            </div>
           </div>
 
           {/* COLONNE DROITE / CARTES ACTIONS (Conforme 1:1 à la capture) */}
