@@ -962,27 +962,52 @@ export default function CreerCv() {
   }, []);
 
   // Bouton "Connecter Canva" — visible seulement pour un utilisateur
-  // Facilite connecté ; affiche "Canva connecté ✓" à la place si une ligne
-  // existe déjà dans canva_tokens (RLS owner-only, cf. migration
-  // 20260815120000_canva_tokens.sql). Un token existant suffit à afficher
-  // "connecté" même expiré : /api/canva/refresh le rafraîchit en silence
-  // au prochain besoin réel (génération), inutile de vérifier expires_at
-  // ici juste pour l'affichage.
+  // Facilite connecté. /api/canva/status (pas un SELECT client direct sur
+  // canva_tokens) : une ligne peut exister mais être révoquée côté Canva
+  // sans que expires_at ait bougé — constaté en conditions réelles, un
+  // simple "la ligne existe" affichait "connecté ✓" avec un token mort et
+  // aucun moyen de se reconnecter (le bouton disparaissait).
+  const checkCanvaStatus = async (accessToken) => {
+    try {
+      const res = await fetch("/api/canva/status", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json().catch(() => null);
+      setCanvaConnected(!!data?.connected);
+    } catch (err) {
+      console.error("[Canva Status] Échec de la vérification :", err.message);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) return;
       setIsFaciliteLoggedIn(true);
-
-      const { data } = await supabase
-        .from("canva_tokens")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-
-      if (data) setCanvaConnected(true);
+      await checkCanvaStatus(session.access_token);
     })();
   }, []);
+
+  const handleDisconnectCanva = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    try {
+      const res = await fetch("/api/canva/disconnect", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (data?.success) {
+        setCanvaConnected(false);
+        triggerToast("Canva déconnecté.", "fa-circle-check");
+      } else {
+        triggerToast("Échec de la déconnexion Canva.", "fa-triangle-exclamation");
+      }
+    } catch (err) {
+      console.error("[Canva Disconnect] Échec :", err.message);
+      triggerToast("Échec de la déconnexion Canva.", "fa-triangle-exclamation");
+    }
+  };
 
   // Point 3.2 — sauvegarde silencieuse du style CV préféré (debounce 2s)
   // pour un utilisateur connecté.
@@ -2848,9 +2873,19 @@ Laisse vide les champs non trouvés.`;
                       <div>
                         <label className="text-[11px] font-bold text-slate-300 block mb-1.5">Intégration Canva</label>
                         {canvaConnected ? (
-                          <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 text-xs font-bold">
-                            <i className="fa-solid fa-circle-check"></i>
-                            <span>Canva connecté ✓</span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-grow flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 text-xs font-bold">
+                              <i className="fa-solid fa-circle-check"></i>
+                              <span>Canva connecté ✓</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleDisconnectCanva}
+                              className="p-3 rounded-xl bg-slate-800 hover:bg-red-950 border border-slate-700 hover:border-red-500 text-slate-400 hover:text-red-400 text-xs font-bold transition cursor-pointer flex-shrink-0"
+                              title="Déconnecter Canva"
+                            >
+                              <i className="fa-solid fa-link-slash"></i>
+                            </button>
                           </div>
                         ) : (
                           <a
