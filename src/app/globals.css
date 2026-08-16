@@ -40,8 +40,12 @@ body {
 
 /* Prise en charge automatique du mode sombre sur les éléments principaux */
 html.dark body {
-  background-color: #0B0F17;
-  color: #F9FAFB;
+  background-color: #0B0F17 !important;
+  color: #F9FAFB !important;
+}
+
+html.dark main {
+  background-color: #0B0F17 !important;
 }
 
 html.dark main.bg-\[\#F4F2EE\],
@@ -54,25 +58,45 @@ html.dark .bg-white {
   color: #F9FAFB !important;
 }
 
-html.dark .bg-gray-50 {
-  background-color: #1F2937 !important;
+html.dark .bg-gray-50,
+html.dark .bg-gray-50\/70 {
+  background-color: #1A2234 !important;
 }
 
+html.dark .bg-gray-100,
+html.dark .bg-gray-100\/90 {
+  background-color: #1F2937 !important;
+  color: #F3F4F6 !important;
+}
+
+html.dark .bg-gray-200 {
+  background-color: #374151 !important;
+}
+
+html.dark .border-gray-300,
 html.dark .border-gray-200,
+html.dark .border-gray-150,
 html.dark .border-gray-100 {
   border-color: #374151 !important;
 }
 
-html.dark .text-gray-900 {
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
   color: #F9FAFB !important;
 }
 
-html.dark .text-gray-700 {
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
   color: #E5E7EB !important;
 }
 
-html.dark .text-gray-500 {
+html.dark .text-gray-500,
+html.dark .text-gray-400 {
   color: #9CA3AF !important;
+}
+
+html.dark .divide-gray-100 > * + * {
+  border-color: #1F2937 !important;
 }
 
 /* Conteneur principal */
