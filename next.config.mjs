@@ -28,7 +28,7 @@ const isDev = process.env.NODE_ENV !== "production";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""}`,
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   // fonts.googleapis.com : feuilles de style chargées dynamiquement par
   // loadFont() (creer-cv/page.js) pour les polices Google Fonts choisies
   // dans le sélecteur de style CV (Outfit, Montserrat, Roboto, Playfair

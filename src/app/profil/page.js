@@ -2128,6 +2128,8 @@ export default function ProfilPage() {
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs relative">
               {/* Inputs de fichiers masqués pour Avatar & Couverture */}
               <input
+                id="profil-avatar-file-input"
+                name="profil_avatar_file_input"
                 type="file"
                 ref={avatarInputRef}
                 onChange={(e) => handleSelectImageForCrop(e, "avatar")}
@@ -2135,6 +2137,8 @@ export default function ProfilPage() {
                 className="hidden"
               />
               <input
+                id="profil-cover-file-input"
+                name="profil_cover_file_input"
                 type="file"
                 ref={coverInputRef}
                 onChange={(e) => handleSelectImageForCrop(e, "cover")}
