@@ -1,8 +1,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
-import AIAssistantModal from "@/components/AIAssistantModal";
-import FeatureDisabledModal from "@/components/FeatureDisabledModal";
+import GlobalModals from "@/components/GlobalModals";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -216,8 +215,7 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <Header />
             {children}
-            <AIAssistantModal />
-            <FeatureDisabledModal />
+            <GlobalModals />
           </AuthProvider>
         </ThemeProvider>
       </body>
