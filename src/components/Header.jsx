@@ -1462,26 +1462,7 @@ export default function Header() {
                 </Link>
               </div>
 
-              {/* Carte 2 : Prêt pour votre candidature ? */}
-              <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-200/90 dark:border-gray-800 shadow-md text-gray-900 dark:text-white">
-                <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl shadow-inner mb-2.5">
-                  <i className="fa-solid fa-lightbulb"></i>
-                </div>
-                <h4 className="text-base font-black text-gray-900 dark:text-white mb-1.5">
-                  Prêt pour votre candidature ?
-                </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-300 font-medium leading-relaxed mb-4">
-                  Utilisez nos services de création pour générer des CV percutants optimisés pour les recruteurs.
-                </p>
-                <Link
-                  href="/creer-cv"
-                  onClick={(e) => handleNavClick(e, "/creer-cv", "nav_creer_cv", "Créateur de CV")}
-                  className="w-full py-3 bg-[#E4B8F9] hover:bg-[#d896f5] text-gray-950 font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer"
-                >
-                  <i className="fa-solid fa-pen-nib text-xs"></i>
-                  <span>Concevoir mon CV</span>
-                </Link>
-              </div>
+
             </div>
 
             {/* Grille de Raccourcis 2 Colonnes (Style Facebook Mobile Menu Hub 1:1) */}
