@@ -3376,7 +3376,7 @@ export default function MessagerieClient() {
                   
                   <div className="flex flex-col sm:flex-row gap-3 p-3 bg-gray-50 border border-gray-150 rounded-2xl">
                     <a
-                      href="https://wa.me/message/KQERLEMIO7LKL1"
+                      href="https://wa.me/221771400832"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 flex items-center justify-center space-x-2.5 bg-white border border-gray-200 hover:border-green-500 hover:shadow-xs p-2.5 rounded-xl transition cursor-pointer"

@@ -52,8 +52,8 @@ const contentSecurityPolicy = [
   // *.daily.co : signalisation WebRTC de VideoInterviewModal.jsx (daily-js).
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co",
   // *.daily.co : iframe Daily Prebuilt embarquée par VideoInterviewModal.jsx
-  // (DailyIframe.createFrame() pointe vers room_url, un sous-domaine daily.co).
-  "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co",
+  // youtube.com : vidéos explicatives et tutoriels pour postuler (/aide-candidature).
+  "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co https://www.youtube.com https://www.youtube-nocookie.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

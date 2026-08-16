@@ -1666,7 +1666,7 @@ export default function Home() {
             {/* WhatsApp */}
             <div className="flex items-center space-x-3">
               <a
-                href="https://wa.me/message/KQERLEMIO7LKL1"
+                href="https://wa.me/221771400832"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 bg-gray-900 rounded-xl border border-gray-800 w-11 h-11 flex items-center justify-center hover:border-green-500 transition-colors"
@@ -1674,7 +1674,7 @@ export default function Home() {
                 <img src="/whtsapp.jpeg" alt="WhatsApp" className="w-full h-full object-cover rounded-lg" />
               </a>
               <a
-                href="https://wa.me/message/KQERLEMIO7LKL1"
+                href="https://wa.me/221771400832"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white text-base font-bold hover:text-green-500 transition-colors"
@@ -1882,7 +1882,7 @@ export default function Home() {
                   {/* Liens de contact direct avec images personnalisées */}
                   <div className="flex flex-col sm:flex-row gap-3 p-3 bg-gray-50 border border-gray-150 rounded-2xl">
                     <a
-                      href="https://wa.me/message/KQERLEMIO7LKL1"
+                      href="https://wa.me/221771400832"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 flex items-center justify-center space-x-2.5 bg-white border border-gray-200 hover:border-green-500 hover:shadow-xs p-2.5 rounded-xl transition cursor-pointer"
