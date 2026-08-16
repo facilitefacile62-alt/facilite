@@ -53,14 +53,19 @@ export async function GET(req) {
   authorizeUrl.searchParams.set("code_challenge", codeChallenge);
   authorizeUrl.searchParams.set("code_challenge_method", "S256");
 
-  // scope ajouté à la main avec encodeURIComponent, PAS via
-  // searchParams.set : URLSearchParams encode les espaces en "+" (convention
-  // application/x-www-form-urlencoded), alors qu'un paramètre de requête
-  // classique attend %20 (RFC 3986). invalid_scope persistait malgré des
-  // noms de scope exacts — signe probable que Canva ne décode pas "+" comme
-  // un espace ici et voit un seul scope malformé au lieu de 3 séparés.
-  const scope = "canva:design:content canva:asset:private canva:brandtemplate";
-  const finalAuthorizeUrl = `${authorizeUrl.toString()}&scope=${encodeURIComponent(scope)}`;
+  // Scopes confirmés depuis la documentation officielle Canva
+  // (canva.dev/docs/connect/appendix/scopes/ — l'URL initialement donnée,
+  // .../authentication/scopes/, renvoyait 404 ; celle-ci est la bonne).
+  // Aucun préfixe "canva:" — vérifié sur la page elle-même.
+  const scopes = [
+    "design:content:read",
+    "design:content:write",
+    "design:meta:read",
+    "brandtemplate:content:read",
+    "brandtemplate:content:write",
+    "brandtemplate:meta:read",
+  ].join(" ");
+  const finalAuthorizeUrl = `${authorizeUrl.toString()}&scope=${encodeURIComponent(scopes)}`;
 
   const response = NextResponse.redirect(finalAuthorizeUrl);
   const cookieOptions = {
