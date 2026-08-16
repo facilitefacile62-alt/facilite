@@ -2229,17 +2229,38 @@ export default function CreerCv() {
     });
 
     setCvData(prev => ({ ...prev, [arrayKey]: [...prev[arrayKey], ...clones] }));
+    // Chaque champ d'un item (titre, dates, employeur, description...) a son
+    // propre CanvaText avec un id COMPOSITE (ex. "exp-title-<id>",
+    // "exp-desc-<id>"), distinct de l'id brut du wrapper de la carte — voir
+    // les CanvaText de ce template. Une simple correspondance oldId->newId
+    // n'aurait recopié que le style du wrapper lui-même, jamais celui de ses
+    // sous-champs. On recopie donc toute clé qui SE TERMINE par l'ancien id
+    // (ancrée par "-" ou début de chaîne pour ne jamais confondre id 1 et
+    // id 21), en substituant uniquement ce suffixe numérique par le nouvel id.
     setElementStyles(prev => {
       const next = { ...prev };
-      Object.entries(idMap).forEach(([oldId, newId]) => {
-        if (prev[oldId]) next[newId] = prev[oldId];
+      Object.entries(idMap).forEach(([oldIdStr, newId]) => {
+        const suffixPattern = new RegExp(`(^|-)${oldIdStr}$`);
+        Object.keys(prev).forEach((key) => {
+          if (suffixPattern.test(key)) {
+            next[key.replace(new RegExp(`${oldIdStr}$`), String(newId))] = prev[key];
+          }
+        });
       });
       return next;
     });
     setLockedElementIds(prev => {
-      const additions = Object.entries(idMap)
-        .filter(([oldId]) => prev.includes(Number(oldId)))
-        .map(([, newId]) => newId);
+      const additions = [];
+      Object.entries(idMap).forEach(([oldIdStr, newId]) => {
+        const suffixPattern = new RegExp(`(^|-)${oldIdStr}$`);
+        prev.forEach((lockedId) => {
+          const lockedIdStr = String(lockedId);
+          if (suffixPattern.test(lockedIdStr)) {
+            const newKeyStr = lockedIdStr.replace(new RegExp(`${oldIdStr}$`), String(newId));
+            additions.push(typeof lockedId === "number" ? Number(newKeyStr) : newKeyStr);
+          }
+        });
+      });
       return additions.length ? [...prev, ...additions] : prev;
     });
 

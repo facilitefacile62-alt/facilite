@@ -3878,81 +3878,16 @@ export default function ProfilPage() {
               );
             })()}
 
-            {/* Carte 3 : CV et lettres de motivation */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs space-y-3.5">
-              {/* En-tête avec macaron vert */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 flex items-center justify-center text-lg flex-shrink-0">
-                  <i className="fa-regular fa-file-lines"></i>
-                </div>
-                <div>
-                  <h3 className="text-sm font-extrabold text-gray-900 dark:text-white leading-snug">CV et lettres de motivation</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{userDocuments.length} document{userDocuments.length > 1 ? "s" : ""} réutilisable{userDocuments.length > 1 ? "s" : ""}</p>
-                </div>
-              </div>
-
-              {/* Liste des documents */}
-              {userDocuments.length > 0 ? (
-                <div className="divide-y divide-gray-100 dark:divide-gray-800 pt-1">
-                  {userDocuments.map((doc) => (
-                    <div key={doc.id} className="py-2.5 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <i className="fa-solid fa-file-pdf text-red-500 text-lg flex-shrink-0"></i>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{doc.title || "CV - Candidat"}</p>
-                          <p className="text-[11px] text-gray-400 font-medium">Créé le {new Date(doc.created_at || Date.now()).toLocaleDateString("fr-FR")}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCvUrl(doc.file_url);
-                            setUploadedCvFileName(doc.title);
-                            setCvPreviewModalOpen(true);
-                          }}
-                          className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300 transition cursor-pointer"
-                          title="Aperçu"
-                        >
-                          <i className="fa-regular fa-eye text-xs"></i>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteDocument(doc.id, doc.file_url, doc.title)}
-                          className="w-8 h-8 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center text-red-500 transition cursor-pointer"
-                          title="Supprimer"
-                        >
-                          <i className="fa-regular fa-trash-can text-xs"></i>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-400 text-center py-2">Aucun document ajouté</p>
-              )}
-
-              {/* Bouton Ajouter un document */}
-              <button
-                type="button"
-                onClick={() => cvFileInputRef.current?.click()}
-                className="w-full py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
-              >
-                <i className="fa-solid fa-plus text-xs"></i>
-                <span>Ajouter un document</span>
-              </button>
-            </div>
-
-            {/* Carte 4 : Navigation & Déconnexion */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs space-y-3">
+            {/* Carte 2 : Navigation & Déconnexion */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs space-y-3">
               <Link
                 href="/"
-                className="flex items-center gap-2 text-xs font-bold text-gray-900 hover:underline transition"
+                className="flex items-center gap-2 text-xs font-bold text-gray-900 dark:text-gray-100 hover:underline transition"
               >
                 <i className="fa-solid fa-arrow-left text-xs"></i>
                 <span className="underline">Retour à l'accueil des offres</span>
               </Link>
-              <div className="border-t border-gray-100 my-1"></div>
+              <div className="border-t border-gray-100 dark:border-gray-800 my-1"></div>
               <button
                 type="button"
                 onClick={async () => {
@@ -3962,7 +3897,7 @@ export default function ProfilPage() {
                     window.location.href = "/login";
                   }, 800);
                 }}
-                className="flex items-center gap-2 text-xs font-bold text-red-600 hover:underline transition cursor-pointer"
+                className="flex items-center gap-2 text-xs font-bold text-red-600 dark:text-red-400 hover:underline transition cursor-pointer"
               >
                 <i className="fa-solid fa-arrow-right-from-bracket text-xs"></i>
                 <span className="underline">Déconnexion</span>
