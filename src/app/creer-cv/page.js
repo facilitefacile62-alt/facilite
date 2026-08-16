@@ -29,6 +29,59 @@ const nextIdFor = (list) => list.reduce((max, item) => Math.max(max, typeof item
 // 2026-08-16), même logique.
 const FIXED_ACCENT_COLOR_TEMPLATES = ["entrepreneur", "elegance", "professionnel", "timeline"];
 
+// Style par défaut d'un élément du studio Canva (clé = id d'élément dans
+// elementStyles). Toute valeur laissée au défaut ci-dessous n'émet aucune
+// propriété CSS dans computeCanvaInlineStyle — un élément jamais stylé par
+// l'utilisateur reste donc visuellement identique à avant l'ajout de ce
+// système (hérite entièrement du Tailwind du template).
+const DEFAULT_ELEMENT_STYLE = {
+  bold: false,
+  italic: false,
+  underline: false,
+  strikethrough: false,
+  uppercase: false,
+  align: null, // null = hérite de l'alignement du template ; sinon "left"|"center"|"right"|"justify"
+  textColor: null,
+  fillColor: null,
+  borderColor: null,
+  borderStyle: "none", // "none" | "solid" | "dashed" | "dotted"
+  borderWidth: 0,
+  opacity: 1,
+  zIndex: null, // null = empilement DOM normal ; sinon un entier (avant-plan/arrière-plan)
+  listStyle: "none", // "none" | "bullet" — consommé par CanvaText (Phase B)
+  animation: "none", // classe cosmétique — consommé par CanvaElementWrapper/CanvaText (Phase B)
+};
+
+// Fonction pure : une entrée de elementStyles (ou undefined) -> objet de
+// style inline React. N'émet une propriété que si elle diffère du défaut,
+// pour ne jamais écraser silencieusement le style Tailwind du template avec
+// une valeur "neutre". Réutilisée par CanvaText, CanvaElementWrapper et la
+// barre d'outils contextuelle (Phase B) pour lire l'état courant affiché.
+function computeCanvaInlineStyle(styleObj) {
+  if (!styleObj) return {};
+  const s = { ...DEFAULT_ELEMENT_STYLE, ...styleObj };
+  const out = {};
+
+  if (s.bold) out.fontWeight = 700;
+  if (s.italic) out.fontStyle = "italic";
+  const decorations = [s.underline && "underline", s.strikethrough && "line-through"].filter(Boolean);
+  if (decorations.length) out.textDecorationLine = decorations.join(" ");
+  if (s.uppercase) out.textTransform = "uppercase";
+  if (s.align) out.textAlign = s.align;
+  if (s.textColor) out.color = s.textColor;
+  if (s.fillColor) out.backgroundColor = s.fillColor;
+  if (s.borderStyle !== "none" && s.borderWidth > 0) {
+    out.border = `${s.borderWidth}px ${s.borderStyle} ${s.borderColor || "#000000"}`;
+  }
+  if (s.opacity !== 1) out.opacity = s.opacity;
+  if (s.zIndex !== null && s.zIndex !== undefined) {
+    out.zIndex = s.zIndex;
+    out.position = "relative"; // z-index n'a d'effet que sur un élément positionné
+  }
+
+  return out;
+}
+
 // --- DICTIONNAIRE DE TRADUCTION POUR LE CREATEUR DE CV ---
 const translations = {
   FR: {
@@ -305,6 +358,7 @@ const CanvaStudioContext = createContext({
   handleDeleteElement: () => {},
   elementOffsets: {},
   setElementOffsets: () => {},
+  elementStyles: {},
   canvaZoom: 1
 });
 
@@ -325,11 +379,13 @@ function CanvaText({
     selectedCanvasElement,
     isAdvancedEditOpen,
     setSelectedCanvasElement,
-    openContextMenu
+    openContextMenu,
+    elementStyles
   } = useContext(CanvaStudioContext);
 
   const isLocked = lockedElementIds?.includes(id);
   const isSelected = selectedCanvasElement?.id === id;
+  const computedStyle = computeCanvaInlineStyle(elementStyles?.[id]);
   const elementRef = useRef(null);
   const isFocusedRef = useRef(false);
 
@@ -399,6 +455,7 @@ function CanvaText({
           ? "hover:ring-1 hover:ring-purple-400/60 rounded-xs cursor-text"
           : "cursor-text hover:outline-dashed hover:outline-1 hover:outline-gray-300"
       } ${className}`}
+      style={computedStyle}
       data-placeholder={placeholder}
       dangerouslySetInnerHTML={{ __html: value || (isAdvancedEditOpen ? placeholder : "") }}
     />
@@ -420,12 +477,14 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
     handleDeleteElement,
     elementOffsets = {},
     setElementOffsets,
+    elementStyles,
     canvaZoom = 1
   } = useContext(CanvaStudioContext);
 
   const isSelected = selectedCanvasElement?.id === id;
   const isLocked = lockedElementIds?.includes(id);
   const offset = elementOffsets?.[id] || { x: 0, y: 0 };
+  const computedStyle = computeCanvaInlineStyle(elementStyles?.[id]);
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
 
@@ -511,7 +570,8 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
         className={className}
         style={{
           ...style,
-          ...(transformStyle ? { transform: transformStyle } : {})
+          ...(transformStyle ? { transform: transformStyle } : {}),
+          ...computedStyle
         }}
       >
         {children}
@@ -542,6 +602,7 @@ function CanvaElementWrapper({ id, type, name, children, className = "", style =
       style={{
         ...style,
         ...(transformStyle ? { transform: transformStyle } : {}),
+        ...computedStyle,
         transition: isDragging ? "none" : "box-shadow 0.2s, outline 0.2s, transform 0.1s ease-out"
       }}
     >
@@ -672,6 +733,7 @@ export default function CreerCv() {
   const [canvaSearchQuery, setCanvaSearchQuery] = useState("");
   const [canvaZoom, setCanvaZoom] = useState(1);
   const [elementOffsets, setElementOffsets] = useState({});
+  const [elementStyles, setElementStyles] = useState({});
   const [cvPages, setCvPages] = useState([
     { id: 1, type: "cv_p1", title: "Page 1 — CV Principal", isLocked: false }
   ]);
@@ -892,6 +954,13 @@ export default function CreerCv() {
       // les valeurs par défaut du composant s'appliquent alors normalement.
       if (data.content.selectedTemplate) setSelectedTemplate(data.content.selectedTemplate);
       if (data.content.accentColor) setAccentColor(data.content.accentColor);
+      // elementStyles/elementOffsets/lockedElementIds : embarqués aux côtés
+      // de selectedTemplate/accentColor depuis saveCvDraftAndOpenPricing —
+      // absents sur les brouillons enregistrés avant cet ajout, les valeurs
+      // par défaut (useState({})/useState([])) s'appliquent alors normalement.
+      if (data.content.elementStyles) setElementStyles(data.content.elementStyles);
+      if (data.content.elementOffsets) setElementOffsets(data.content.elementOffsets);
+      if (data.content.lockedElementIds) setLockedElementIds(data.content.lockedElementIds);
 
       setSavedResumeId(resumeId);
       if (isDownload) {
@@ -1513,7 +1582,13 @@ export default function CreerCv() {
           // selectedTemplate/accentColor embarqués aux côtés des champs
           // cvData habituels : régénérer le PDF après paiement (voir
           // pdfExport.js) a besoin des trois pour reconstruire le même rendu.
-          content: { ...cvData, selectedTemplate, accentColor },
+          // elementStyles/elementOffsets/lockedElementIds ajoutés en même
+          // temps : ces deux derniers existaient déjà (glisser-déposer,
+          // verrouillage) mais n'étaient jamais persistés avant ce point —
+          // les laisser de côté alors qu'on persiste désormais elementStyles
+          // aurait produit un résultat incohérent au rechargement (le style
+          // d'un élément survit, sa position/son verrou non).
+          content: { ...cvData, selectedTemplate, accentColor, elementStyles, elementOffsets, lockedElementIds },
           ats_score: 95,
         })
         .select("id")
@@ -2329,6 +2404,7 @@ Laisse vide les champs non trouvés.`;
     handleDeleteElement,
     elementOffsets,
     setElementOffsets,
+    elementStyles,
     canvaZoom
   };
 

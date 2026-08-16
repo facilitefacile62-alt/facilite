@@ -3835,35 +3835,36 @@ export default function ProfilPage() {
 
           </div>
 
-          {/* COLONNE DROITE : Paramètres de confidentialité & Action rapides (Fixe / Sticky au Scroll) */}
+          {/* COLONNE DROITE / CARTES ACTIONS (Conforme 1:1 à la capture) */}
           <div className="w-full lg:w-[326px] flex flex-col space-y-4 sticky top-[76px] self-start transition-all z-10">
 
-            {/* Carte URL du profil public (Génération Dynamique & Interactive) */}
+            {/* Carte 2 : Profil public & URL */}
             {(() => {
-              const rawName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profileName || (userSession?.user?.email ? userSession.user.email.split("@")[0] : "facilite-user"));
+              const rawName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profileName || (userSession?.user?.email ? userSession.user.email.split("@")[0] : "facile-demo"));
               const profileSlug = rawName
                 .toLowerCase()
                 .normalize("NFD")
                 .replace(/[\u0300-\u036f]/g, "")
                 .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "") || "facilite-user";
+                .replace(/^-+|-+$/g, "") || "facile-demo";
               const displayUrl = `facilite.sn/in/${profileSlug}`;
               const relativeUrl = `/in/${profileSlug}`;
               const fullUrl = typeof window !== "undefined" ? `${window.location.origin}${relativeUrl}` : `https://${displayUrl}`;
 
               return (
-                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-3">
-                  <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Profil public et URL</h3>
-                  <a
-                    href={relativeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] text-gray-600 hover:text-blue-600 font-extrabold truncate block hover:underline flex items-center space-x-1"
-                    title="Cliquer pour voir votre profil public"
-                  >
-                    <span className="truncate">{displayUrl}</span>
-                    <i className="fa-solid fa-arrow-up-right-from-square text-[9px] text-blue-500"></i>
-                  </a>
+                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-xs text-gray-500 font-medium">Profil public</h3>
+                    <a
+                      href={relativeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs sm:text-sm font-bold text-blue-600 truncate block hover:underline mt-0.5"
+                      title="Cliquer pour voir votre profil public"
+                    >
+                      {displayUrl}
+                    </a>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
@@ -3874,36 +3875,92 @@ export default function ProfilPage() {
                       triggerToast(`Lien copié dans le presse-papier !`, "fa-check");
                       setTimeout(() => setIsCopiedLink(false), 2500);
                     }}
-                    className={`w-full font-extrabold py-2 rounded-xl text-xs transition cursor-pointer flex items-center justify-center space-x-2 ${
-                      isCopiedLink
-                        ? "bg-emerald-600 text-white shadow-sm"
-                        : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+                    className={`flex-shrink-0 font-bold px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 shadow-2xs ${
+                      isCopiedLink ? "bg-emerald-50 border-emerald-300 text-emerald-700" : ""
                     }`}
                   >
-                    <i className={`fa-solid ${isCopiedLink ? "fa-check" : "fa-copy"} text-xs`}></i>
-                    <span>{isCopiedLink ? "Copié !" : "Copier le lien du profil"}</span>
+                    <i className={`fa-regular ${isCopiedLink ? "fa-circle-check" : "fa-copy"} text-xs text-gray-700`}></i>
+                    <span>{isCopiedLink ? "Copié" : "Copier"}</span>
                   </button>
                 </div>
               );
             })()}
 
-            {/* Carte Mes documents (Mint Green style conforme à la capture) */}
-            <div
-              className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl p-4 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-3 group"
-              onClick={() => {
-                const el = document.getElementById("section-mon-profil-cv");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-                triggerToast("Section Mes documents affichée !", "fa-circle-check");
-              }}
-            >
-              <i className="fa-regular fa-file-lines text-lg text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
-              <span className="text-sm font-extrabold text-[#047857] tracking-tight">
-                Mes documents (Actif)
-              </span>
+            {/* Carte 3 : CV et lettres de motivation */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs space-y-3.5">
+              {/* En-tête avec macaron vert */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center text-lg flex-shrink-0">
+                  <i className="fa-regular fa-file-lines"></i>
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-gray-900 leading-snug">CV et lettres de motivation</h3>
+                  <p className="text-xs text-gray-500 font-medium">{userDocuments.length} document{userDocuments.length > 1 ? "s" : ""} réutilisable{userDocuments.length > 1 ? "s" : ""}</p>
+                </div>
+              </div>
+
+              {/* Liste des documents */}
+              {userDocuments.length > 0 ? (
+                <div className="divide-y divide-gray-100 pt-1">
+                  {userDocuments.map((doc) => (
+                    <div key={doc.id} className="py-2.5 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <i className="fa-solid fa-file-pdf text-red-500 text-lg flex-shrink-0"></i>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-gray-900 truncate">{doc.title || "CV - Candidat"}</p>
+                          <p className="text-[11px] text-gray-400 font-medium">Créé le {new Date(doc.created_at || Date.now()).toLocaleDateString("fr-FR")}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCvUrl(doc.file_url);
+                            setUploadedCvFileName(doc.title);
+                            setCvPreviewModalOpen(true);
+                          }}
+                          className="w-8 h-8 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-gray-600 transition cursor-pointer"
+                          title="Aperçu"
+                        >
+                          <i className="fa-regular fa-eye text-xs"></i>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDocument(doc.id, doc.file_url, doc.title)}
+                          className="w-8 h-8 rounded-lg border border-gray-200 hover:bg-red-50 flex items-center justify-center text-red-500 transition cursor-pointer"
+                          title="Supprimer"
+                        >
+                          <i className="fa-regular fa-trash-can text-xs"></i>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 text-center py-2">Aucun document ajouté</p>
+              )}
+
+              {/* Bouton Ajouter un document */}
+              <button
+                type="button"
+                onClick={() => cvFileInputRef.current?.click()}
+                className="w-full py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-800 hover:bg-gray-50 flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
+              >
+                <i className="fa-solid fa-plus text-xs"></i>
+                <span>Ajouter un document</span>
+              </button>
             </div>
 
-            {/* Boutons d'Action Profil & Déconnexion */}
-            <div className="space-y-2 pt-1">
+            {/* Carte 4 : Navigation & Déconnexion */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs space-y-3">
+              <Link
+                href="/"
+                className="flex items-center gap-2 text-xs font-bold text-gray-900 hover:underline transition"
+              >
+                <i className="fa-solid fa-arrow-left text-xs"></i>
+                <span className="underline">Retour à l'accueil des offres</span>
+              </Link>
+              <div className="border-t border-gray-100 my-1"></div>
               <button
                 type="button"
                 onClick={async () => {
@@ -3913,18 +3970,11 @@ export default function ProfilPage() {
                     window.location.href = "/login";
                   }, 800);
                 }}
-                className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-extrabold py-3 rounded-2xl text-xs text-center transition border border-red-200 cursor-pointer flex items-center justify-center space-x-2"
+                className="flex items-center gap-2 text-xs font-bold text-red-600 hover:underline transition cursor-pointer"
               >
-                <i className="fa-solid fa-right-from-bracket text-sm"></i>
-                <span>Déconnexion</span>
+                <i className="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                <span className="underline">Déconnexion</span>
               </button>
-
-              <Link
-                href="/"
-                className="w-full bg-gray-900 hover:bg-black text-white font-extrabold py-3 rounded-2xl text-xs text-center transition shadow-md cursor-pointer block"
-              >
-                ← Retour à l'accueil des offres
-              </Link>
             </div>
 
           </div>
