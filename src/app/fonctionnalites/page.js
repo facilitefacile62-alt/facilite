@@ -23,6 +23,10 @@ const SIDEBAR_ITEMS = [
     link: "/candidat/extracteur",
     tagline: "Extraction intelligente des coordonnées & génération de candidature express",
     description: "Téléversez une image ou affiche d'emploi. L'intelligence artificielle extrait instantanément le titre du poste, l'entreprise et l'adresse email RH pour générer votre candidature clé en main.",
+    dropLabel: "Glissez-déposez votre affiche d'offre ici ou",
+    dropSubtext: "Images PNG, JPG, captures d'écran et PDF acceptés",
+    acceptFiles: "image/*,.pdf,application/pdf",
+    allowMultiple: false,
     steps: [
       { num: "1", title: "Téléversement", desc: "Glissez votre affiche ou capture d'offre", icon: "fa-solid fa-cloud-arrow-up" },
       { num: "2", title: "Extraction IA", desc: "Détection OCR des contacts et du profil", icon: "fa-solid fa-microchip" },
@@ -35,7 +39,7 @@ const SIDEBAR_ITEMS = [
       { title: "Rédaction assistée de votre lettre de motivation", desc: "Génération sur-mesure pour le poste ciblé", icon: "fa-solid fa-wand-magic-sparkles" }
     ],
     actionLabel: "Lancer l'Extracteur 1-Click",
-    footerHint: "100% Automatisé • Compatible images PNG, JPG et captures d'écran"
+    footerHint: "100% Automatisé • Traitement IA sécurisé et immédiat"
   },
   {
     id: "boite-a-idees",
@@ -48,6 +52,8 @@ const SIDEBAR_ITEMS = [
     link: "/boite-a-idees",
     tagline: "Espace communautaire pour proposer, voter et co-créer les futures fonctionnalités",
     description: "Partagez vos suggestions pour enrichir la plateforme Facilité, découvrez les propositions des autres membres et votez pour celles que vous souhaitez voir développées en priorité.",
+    dropLabel: "Proposez une nouvelle fonctionnalité ou votez pour les idées en cours",
+    dropSubtext: "Espace de co-création libre et ouvert à toute la communauté",
     steps: [
       { num: "1", title: "Proposition", desc: "Soumettez votre idée ou suggestion", icon: "fa-solid fa-pen-fancy" },
       { num: "2", title: "Vote Communautaire", desc: "Les membres votent pour les meilleures idées", icon: "fa-solid fa-thumbs-up" },
@@ -73,6 +79,8 @@ const SIDEBAR_ITEMS = [
     link: "/service",
     tagline: "Modèles de CVs et lettres aux normes internationales et conformes aux filtres ATS",
     description: "Accédez à un catalogue exclusif de modèles professionnels (Formats Sénégal, Canadien, Anglais et Lettres de motivation) créés avec des experts RH pour maximiser vos chances de décrocher des entretiens.",
+    dropLabel: "Découvrez notre catalogue de modèles et tarifs sur-mesure",
+    dropSubtext: "Formats Sénégal / UEMOA, Canada, Anglais & Lettres de motivation",
     steps: [
       { num: "1", title: "Sélection", desc: "Choisissez le modèle adapté à votre cible", icon: "fa-solid fa-cubes" },
       { num: "2", title: "Personnalisation", desc: "Éditez vos informations sur Canva", icon: "fa-solid fa-sliders" },
@@ -97,10 +105,12 @@ const SIDEBAR_ITEMS = [
     tagColor: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border-red-200 dark:border-red-800",
     icon: "fa-solid fa-file-circle-plus",
     iconColor: "text-red-500 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-900/50",
-    link: "#fusionner",
-    isToolModal: true,
     tagline: "Combinez plusieurs fichiers PDF en un seul document ordonné",
     description: "Fusionner et combiner des fichiers PDF et les mettre dans l'ordre que vous voulez. C'est très facile et rapide !",
+    dropLabel: "Glissez-déposez vos fichiers ici ou",
+    dropSubtext: "Documents PDF acceptés",
+    acceptFiles: ".pdf,application/pdf",
+    allowMultiple: true,
     steps: [
       { num: "1", title: "Sélectionner", desc: "Glissez vos fichiers PDF dans l'outil", icon: "fa-solid fa-folder-open" },
       { num: "2", title: "Organiser", desc: "Glissez-déposez pour définir l'ordre exact", icon: "fa-solid fa-arrow-down-up-across-line" },
@@ -123,10 +133,12 @@ const SIDEBAR_ITEMS = [
     tagColor: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border-orange-200 dark:border-orange-800",
     icon: "fa-solid fa-scissors",
     iconColor: "text-orange-500 bg-orange-50 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-900/50",
-    link: "#diviser",
-    isToolModal: true,
     tagline: "Extrayez des pages spécifiques ou séparez chaque page en PDF distinct",
     description: "Sélectionner la portée de pages, séparer une page, ou convertir chaque page du document en fichier PDF indépendant.",
+    dropLabel: "Glissez-déposez vos fichiers ici ou",
+    dropSubtext: "Documents PDF acceptés",
+    acceptFiles: ".pdf,application/pdf",
+    allowMultiple: false,
     steps: [
       { num: "1", title: "Importer", desc: "Déposez votre fichier PDF à diviser", icon: "fa-solid fa-file-import" },
       { num: "2", title: "Découper", desc: "Indiquez les pages ou plages à extraire", icon: "fa-solid fa-scissors" },
@@ -149,10 +161,12 @@ const SIDEBAR_ITEMS = [
     tagColor: "bg-lime-100 text-lime-800 dark:bg-lime-950 dark:text-lime-300 border-lime-200 dark:border-lime-800",
     icon: "fa-solid fa-compress",
     iconColor: "text-lime-600 bg-lime-50 dark:bg-lime-950/60 border border-lime-200 dark:border-lime-900/50",
-    link: "#compresser",
-    isToolModal: true,
     tagline: "Diminuez le poids de vos fichiers PDF tout en conservant une netteté maximale",
     description: "Diminuer la taille de votre fichier PDF, tout en conservant la meilleure qualité possible. Optimisez vos fichiers PDF.",
+    dropLabel: "Glissez-déposez vos fichiers ici ou",
+    dropSubtext: "Documents PDF acceptés",
+    acceptFiles: ".pdf,application/pdf",
+    allowMultiple: false,
     steps: [
       { num: "1", title: "Téléverser", desc: "Importez le PDF à optimiser et alléger", icon: "fa-solid fa-cloud-arrow-up" },
       { num: "2", title: "Compression", desc: "Optimisation automatique des images et polices", icon: "fa-solid fa-sliders" },
@@ -175,10 +189,12 @@ const SIDEBAR_ITEMS = [
     tagColor: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800",
     icon: "fa-solid fa-arrow-down-up-across-line",
     iconColor: "text-rose-500 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/50",
-    link: "#organiser",
-    isToolModal: true,
     tagline: "Triez, supprimez, faites pivoter ou réordonnez les pages d'un PDF",
     description: "Triez les pages de votre fichier PDF comme bon vous semble. Supprimez ou ajoutez des pages PDF à votre document à votre guise.",
+    dropLabel: "Glissez-déposez vos fichiers ici ou",
+    dropSubtext: "Documents PDF acceptés",
+    acceptFiles: ".pdf,application/pdf",
+    allowMultiple: false,
     steps: [
       { num: "1", title: "Charger", desc: "Visualisez les vignettes de toutes les pages", icon: "fa-solid fa-eye" },
       { num: "2", title: "Organiser", desc: "Déplacez, supprimez ou pivotez les pages", icon: "fa-solid fa-shuffle" },
@@ -201,10 +217,12 @@ const SIDEBAR_ITEMS = [
     tagColor: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800",
     icon: "fa-regular fa-file-image",
     iconColor: "text-amber-600 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900/50",
-    link: "#pdf-en-jpg",
-    isToolModal: true,
     tagline: "Convertissez chaque page d'un document PDF en image JPG haute définition",
     description: "Extraire toutes les images contenues dans un fichier PDF ou convertir chaque page dans un fichier JPG.",
+    dropLabel: "Glissez-déposez vos fichiers ici ou",
+    dropSubtext: "Documents PDF acceptés",
+    acceptFiles: ".pdf,application/pdf",
+    allowMultiple: false,
     steps: [
       { num: "1", title: "Déposer", desc: "Téléversez le document PDF à convertir", icon: "fa-solid fa-file-pdf" },
       { num: "2", title: "Conversion", desc: "Transformation automatique en images HD", icon: "fa-solid fa-arrows-rotate" },
@@ -227,10 +245,12 @@ const SIDEBAR_ITEMS = [
     tagColor: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
     icon: "fa-solid fa-file-pdf",
     iconColor: "text-yellow-600 bg-yellow-50 dark:bg-yellow-950/60 border border-yellow-200 dark:border-yellow-900/50",
-    link: "#jpg-en-pdf",
-    isToolModal: true,
     tagline: "Transformez vos photos, scans et images JPG en un document PDF propre",
     description: "Convertissez vos images en PDF. Ajustez l'orientation et les marges.",
+    dropLabel: "Glissez-déposez vos fichiers ici ou",
+    dropSubtext: "Images JPG, PNG, WebP acceptées",
+    acceptFiles: "image/*",
+    allowMultiple: true,
     steps: [
       { num: "1", title: "Ajouter", desc: "Sélectionnez vos images (JPG, PNG, WebP)", icon: "fa-solid fa-photo-film" },
       { num: "2", title: "Ajuster", desc: "Définissez l'orientation (Portrait/Paysage) et marges", icon: "fa-solid fa-sliders" },
@@ -336,7 +356,7 @@ export default function FonctionnalitesPage() {
               ))}
             </div>
 
-            {/* Boutons de la sidebar groupés */}
+            {/* Boutons de la sidebar */}
             <div className="space-y-1">
               {filteredItems.map((item) => {
                 const isActive = item.id === activeTabId;
@@ -379,7 +399,7 @@ export default function FonctionnalitesPage() {
         </aside>
 
         {/* =========================================================================
-            ESPACE DE CONTENU PRINCIPAL (ÉPURÉ & FLUIDE)
+            ESPACE DE CONTENU PRINCIPAL (AVEC LE BOUTON DIRECTEMENT DANS LA ZONE D'ACTION)
            ========================================================================= */}
         <main className="flex-grow min-w-0">
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/80 dark:border-gray-800 p-6 sm:p-8 shadow-xs flex flex-col justify-between min-h-[520px]">
@@ -411,48 +431,79 @@ export default function FonctionnalitesPage() {
                 {activeItem.description}
               </p>
 
-              {/* Module Interactif de Drag & Drop pour les outils PDF */}
-              {activeItem.category === "pdf" && (
-                <div className="mb-6">
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                    onDragLeave={() => setDragOver(false)}
-                    onDrop={handleFileDrop}
-                    className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer ${
-                      dragOver
-                        ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40"
-                        : "border-gray-200 dark:border-gray-800 hover:border-emerald-400 bg-gray-50/50 dark:bg-gray-800/20"
-                    }`}
-                  >
-                    <input
-                      type="file"
-                      id="pdf-tool-input"
-                      className="hidden"
-                      multiple={activeItem.id === "fusionner-pdf" || activeItem.id === "jpg-en-pdf"}
-                      accept={activeItem.id === "jpg-en-pdf" ? "image/*" : ".pdf,application/pdf"}
-                      onChange={handleFileInput}
-                    />
-                    <label htmlFor="pdf-tool-input" className="cursor-pointer block">
-                      <div className={`w-12 h-12 rounded-2xl mx-auto mb-2 flex items-center justify-center text-lg ${activeItem.iconColor}`}>
-                        <i className={activeItem.icon}></i>
-                      </div>
-                      <div className="text-xs font-black text-gray-900 dark:text-white mb-1">
-                        Glissez-déposez vos fichiers ici ou <span className="text-emerald-600 dark:text-emerald-400 underline">parcourez</span>
-                      </div>
-                      <div className="text-[10px] text-gray-400 font-medium">
-                        {activeItem.id === "jpg-en-pdf" ? "Images JPG, PNG, WebP acceptées" : "Documents PDF acceptés"}
-                      </div>
-                    </label>
+              {/* =========================================================================
+                  ZONE DE TÉLÉVERSEMENT / INTERACTION CENTRALE AVEC LE BOUTON DEDANS
+                 ========================================================================= */}
+              <div className="mb-7">
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleFileDrop}
+                  className={`border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center transition-all ${
+                    dragOver
+                      ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40"
+                      : "border-gray-200 dark:border-gray-800 hover:border-emerald-400/80 bg-gray-50/40 dark:bg-gray-800/20"
+                  }`}
+                >
+                  <input
+                    type="file"
+                    id="tool-file-input"
+                    className="hidden"
+                    multiple={Boolean(activeItem.allowMultiple)}
+                    accept={activeItem.acceptFiles || "*"}
+                    onChange={handleFileInput}
+                  />
 
-                    {processingStatus && (
-                      <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-black">
-                        <i className="fa-solid fa-circle-check"></i>
-                        <span>{processingStatus}</span>
-                      </div>
+                  {/* Icône centrale */}
+                  <div className={`w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center text-2xl shadow-xs ${activeItem.iconColor}`}>
+                    <i className={activeItem.icon}></i>
+                  </div>
+
+                  {/* Texte de l'action */}
+                  <div className="text-xs sm:text-sm font-black text-gray-900 dark:text-white mb-1">
+                    {activeItem.dropLabel}{" "}
+                    <label htmlFor="tool-file-input" className="text-emerald-600 dark:text-emerald-400 underline cursor-pointer hover:text-emerald-700">
+                      parcourez
+                    </label>
+                  </div>
+                  <div className="text-[11px] text-gray-400 font-medium mb-5">
+                    {activeItem.dropSubtext}
+                  </div>
+
+                  {/* Statut de fichier déposé le cas échéant */}
+                  {processingStatus && (
+                    <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-black">
+                      <i className="fa-solid fa-circle-check"></i>
+                      <span>{processingStatus}</span>
+                    </div>
+                  )}
+
+                  {/* LE BOUTON D'ACTION POSITIONNÉ DIRECTEMENT ICI DANS LA ZONE */}
+                  <div className="flex justify-center">
+                    {activeItem.link ? (
+                      <Link
+                        href={activeItem.link}
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gray-950 dark:bg-white hover:bg-emerald-600 dark:hover:bg-emerald-500 text-white dark:text-gray-950 hover:text-white dark:hover:text-gray-950 text-xs font-black shadow-md transition-all transform hover:scale-[1.02] cursor-pointer"
+                      >
+                        <i className={`${activeItem.icon} text-amber-400 dark:text-amber-500`}></i>
+                        <span>{activeItem.actionLabel}</span>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.getElementById("tool-file-input");
+                          if (input) input.click();
+                        }}
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gray-950 dark:bg-white hover:bg-emerald-600 dark:hover:bg-emerald-500 text-white dark:text-gray-950 hover:text-white dark:hover:text-gray-950 text-xs font-black shadow-md transition-all transform hover:scale-[1.02] cursor-pointer"
+                      >
+                        <i className={`${activeItem.icon} text-amber-400 dark:text-amber-500`}></i>
+                        <span>{activeItem.actionLabel}</span>
+                      </button>
                     )}
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Workflow en 3 étapes */}
               <div className="mb-6">
@@ -482,7 +533,7 @@ export default function FonctionnalitesPage() {
               </div>
 
               {/* Atouts clés */}
-              <div className="mb-8">
+              <div className="mb-6">
                 <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
                   Ce que cet outil vous apporte
                 </div>
@@ -509,34 +560,13 @@ export default function FonctionnalitesPage() {
               </div>
             </div>
 
-            {/* SEUL ET UNIQUE BOUTON D'ACTION EN BAS */}
-            <div className="pt-5 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+            {/* Pied de page informatif et rassurant */}
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-1.5">
                 <i className="fa-solid fa-circle-check text-emerald-500 text-xs"></i>
                 <span>{activeItem.footerHint}</span>
               </div>
-
-              {activeItem.link.startsWith("/") ? (
-                <Link
-                  href={activeItem.link}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gray-950 dark:bg-white hover:bg-emerald-600 dark:hover:bg-emerald-500 text-white dark:text-gray-950 hover:text-white dark:hover:text-gray-950 text-xs font-black shadow-md transition-all transform hover:scale-[1.02] cursor-pointer"
-                >
-                  <i className="fa-solid fa-bolt text-amber-400 dark:text-amber-500"></i>
-                  <span>{activeItem.actionLabel}</span>
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const input = document.getElementById("pdf-tool-input");
-                    if (input) input.click();
-                  }}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gray-950 dark:bg-white hover:bg-emerald-600 dark:hover:bg-emerald-500 text-white dark:text-gray-950 hover:text-white dark:hover:text-gray-950 text-xs font-black shadow-md transition-all transform hover:scale-[1.02] cursor-pointer"
-                >
-                  <i className="fa-solid fa-file-arrow-up text-amber-400 dark:text-amber-500"></i>
-                  <span>{activeItem.actionLabel}</span>
-                </button>
-              )}
+              <span className="text-[10px] font-bold text-gray-400">Plateforme Facilité 2026</span>
             </div>
 
           </div>
