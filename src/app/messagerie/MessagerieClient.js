@@ -153,7 +153,7 @@ const translations = {
 const DEFAULT_AI_WELCOME = {
   id: 'welcome-msg',
   sender: 'bot',
-  text: "Bonjour ! 👋 Bienvenue sur l'Assistance IA Facilite.\n\nPosez-moi votre question : rédaction de CV, préparation à un entretien, orientation professionnelle... je suis là pour vous aider.",
+  text: "Bonjour ! 👋 Bienvenue sur le Support RH Facilité.\n\nPosez-moi votre question : rédaction et optimisation de CV, préparation d'entretien, orientation ou assistance... je suis à votre écoute 24/7.",
   time: "12:00",
   status: "read",
   isPinned: false,
@@ -166,15 +166,16 @@ const AI_WELCOME_MESSAGE = {
   content: DEFAULT_AI_WELCOME.text
 };
 
-// Discussion IA épinglée permanente
+// Discussion Support RH unifiée (Assistée par IA)
 const AI_PINNED_CHAT = {
   id: 'ai-assistant',
-  name: 'Assistance IA Facilite',
-  title: 'IA & Orientation Pro',
-  company: 'Facilite Bot',
-  avatar: '/ouvrier.jpg',
-  avatarInitials: <img src="/ouvrier.jpg" alt="IA" className="w-full h-full object-cover rounded-full bg-white" />,
-  avatarColor: 'bg-transparent',
+  name: 'Support RH Facilité',
+  title: 'Assistance & Support RH',
+  company: 'Facilite Corporation',
+  avatar: '/logo.jpeg',
+  avatarInitials: 'FC',
+  avatarColor: 'bg-[#10E688]',
+  logo: '/logo.jpeg',
   lastMessage: 'Disponible 24/7 pour vos CV et démarches',
   time: "Disponible",
   unreadCount: 0,
@@ -182,10 +183,11 @@ const AI_PINNED_CHAT = {
   isAI: true,
   online: true,
   favorite: true,
+  typeDiscussion: "SUPPORT",
   messages: [DEFAULT_AI_WELCOME]
 };
 
-// Initialisation avec la discussion IA épinglée permanente
+// Initialisation avec la discussion Support RH épinglée permanente
 const initialConversations = [AI_PINNED_CHAT];
 
 function isSameDay(a, b) {
@@ -976,25 +978,22 @@ export default function MessagerieClient() {
 
         setConversations(prev => {
           const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
-          const next = [aiConv];
-          if (supportMsgs.length > 0) {
-            next.push({
-              id: 1,
-              name: "Support RH Facilité",
-              title: "Assistance & Support",
-              company: "Facilite Corporation",
-              avatarColor: "bg-[#10E688]",
-              avatarInitials: "FC",
-              logo: "/logo.jpeg",
-              lastMessage: supportMsgs[supportMsgs.length - 1].text,
-              time: supportMsgs[supportMsgs.length - 1].time,
-              unreadCount: 0,
-              online: true,
-              favorite: true,
-              typeDiscussion: "SUPPORT",
-              messages: supportMsgs,
-            });
-          }
+          // Fusionner les messages historiques du Support RH dans le fil unique
+          const mergedSupportMessages = supportMsgs.length > 0 ? supportMsgs : aiConv.messages;
+          const updatedAiConv = {
+            ...aiConv,
+            name: "Support RH Facilité",
+            title: "Assistance & Support RH",
+            company: "Facilite Corporation",
+            avatarColor: "bg-[#10E688]",
+            avatarInitials: "FC",
+            logo: "/logo.jpeg",
+            lastMessage: supportMsgs.length > 0 ? supportMsgs[supportMsgs.length - 1].text : aiConv.lastMessage,
+            time: supportMsgs.length > 0 ? supportMsgs[supportMsgs.length - 1].time : aiConv.time,
+            typeDiscussion: "SUPPORT",
+            messages: mergedSupportMessages,
+          };
+          const next = [updatedAiConv];
           for (const card of candidatureCards) {
             const alreadyPresent = prev.some((c) => c.id === card.id) || next.some((c) => c.id === card.id);
             if (!alreadyPresent) next.push(card);
@@ -1494,57 +1493,9 @@ export default function MessagerieClient() {
       return;
     }
 
-    setDiscussionTypeFilter("SUPPORT");
-    setActiveConvId(1);
+    setDiscussionTypeFilter("ALL");
+    setActiveConvId("ai-assistant");
     setMobileChatView(true);
-
-    const existingConv = conversations.find(c => c.id === 1);
-    const hasSupportThread = existingConv?.messages?.some(
-      m => (m.typeDiscussion || "ECHANGE") === "SUPPORT"
-    );
-    if (hasSupportThread) return;
-
-    const { data: savedRow, error } = await sendMessage({
-      senderId: userSession.user.id,
-      content: "Bonjour, j'ai besoin d'assistance sur la plateforme Facilite.",
-      typeDiscussion: "SUPPORT"
-    });
-
-    if (error || !savedRow) {
-      triggerToast("Impossible de contacter le support pour le moment.", "fa-triangle-exclamation");
-      return;
-    }
-
-    const formatted = formatMessageRow(savedRow, userSession.user.id);
-    setConversations(prev => {
-      if (prev.some(c => c.id === 1)) {
-        return prev.map(c => {
-          if (c.id !== 1) return c;
-          if (c.messages.some(m => m.id === formatted.id)) return c;
-          return { ...c, lastMessage: formatted.text, time: formatted.time, messages: [...c.messages, formatted] };
-        });
-      }
-      return [
-        ...prev,
-        {
-          id: 1,
-          name: "Support RH Facilité",
-          title: "Assistance & Recrutement",
-          company: "Facilite Corporation",
-          avatarColor: "bg-[#10E688]",
-          avatarInitials: "FC",
-          logo: "/logo.jpeg",
-          lastMessage: formatted.text,
-          time: formatted.time,
-          unreadCount: 0,
-          online: true,
-          favorite: true,
-          messages: [formatted]
-        }
-      ];
-    });
-
-    triggerToast("Le support Facilite a été contacté !", "fa-headset");
   };
 
   // Bot response simulator
