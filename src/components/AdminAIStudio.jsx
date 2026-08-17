@@ -229,6 +229,57 @@ export default function AdminAIStudio() {
     }
   };
 
+  // Vider complètement la page de formation (Page blanche / Saisie libre)
+  const handleClearAllTraining = () => {
+    const confirmClear = window.confirm(
+      "Voulez-vous vider complètement la page de formation pour partir d'une page blanche ?"
+    );
+    if (!confirmClear) return;
+
+    setPromptText("");
+    setKnowledgeText("");
+    setDiagnosticRulesText("");
+    setProductsList([]);
+    setChatMessages([]);
+    setInputText("");
+    setSelectedAttachment(null);
+    setDiagResult(null);
+    setDiagTestFile(null);
+
+    try {
+      localStorage.setItem(
+        "FACILITE_AI_STUDIO_V2",
+        JSON.stringify({
+          promptText: "",
+          knowledgeText: "",
+          diagnosticRulesText: "",
+          commStyle: "normal",
+          selectedModel: "deepseek-chat",
+          productsList: [],
+          updatedAt: new Date().toISOString(),
+        })
+      );
+      localStorage.removeItem("FACILITE_DIAGNOSTIC_RULES");
+      localStorage.removeItem("FACILITE_AI_STUDIO_CHAT_HISTORY");
+    } catch {}
+
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 3000);
+  };
+
+  // Restaurer les valeurs par défaut de formation de Facilité
+  const handleResetDefaultTraining = () => {
+    const confirmReset = window.confirm("Restaurer les directives d'entraînement par défaut de Facilité ?");
+    if (!confirmReset) return;
+
+    setPromptText(DEFAULT_MAIN_PROMPT);
+    setKnowledgeText(DEFAULT_KNOWLEDGE);
+    setDiagnosticRulesText(DEFAULT_DIAGNOSTIC_RULES);
+    setProductsList(DEFAULT_PRODUCTS);
+    setCommStyle("normal");
+    handleSaveConfig();
+  };
+
   // Gestion du fichier de test de diagnostic CV
   const handleDiagFileChange = (e, forcedType = null) => {
     const file = e.target.files?.[0];
@@ -487,12 +538,27 @@ ${productsContext}
             <span className="w-1.5 h-1.5 rounded-full bg-[#10E688] animate-ping"></span>
           </div>
 
-          {/* Solde & Jetons (Top Right) */}
-          <div className="flex items-center space-x-2">
-            <div className="bg-[#222730] border border-[#333A48] px-2 py-1 rounded-xl flex items-center space-x-1 text-xs font-bold text-emerald-400">
-              <i className="fa-solid fa-bolt text-amber-400 text-xs"></i>
-              <span className="text-[11px]">100% Opérationnel</span>
-            </div>
+          {/* Solde & Jetons & Actions (Top Right) */}
+          <div className="flex items-center space-x-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={handleClearAllTraining}
+              className="px-2.5 py-1 bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/60 rounded-xl text-[11px] font-extrabold transition flex items-center gap-1 cursor-pointer shadow-xs"
+              title="Vider tous les textes de formation pour partir d'une page blanche"
+            >
+              <i className="fa-solid fa-eraser text-[10px]"></i>
+              <span>Vider la page</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResetDefaultTraining}
+              className="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 rounded-xl text-[11px] font-extrabold transition flex items-center gap-1 cursor-pointer shadow-xs"
+              title="Rétablir les textes de formation par défaut de Facilité"
+            >
+              <i className="fa-solid fa-rotate-left text-[10px]"></i>
+              <span className="hidden sm:inline">Modèle par défaut</span>
+            </button>
 
             <button
               type="button"

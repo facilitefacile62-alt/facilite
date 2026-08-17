@@ -673,9 +673,9 @@ export default function ImporterCvPage() {
 
             {/* Fonctionnalités */}
             <Link
-              href="/service"
+              href="/fonctionnalites"
               className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
-                pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                pathname === "/fonctionnalites" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
               }`}
             >
               <i className="fa-solid fa-wand-magic-sparkles text-xl text-indigo-500"></i>

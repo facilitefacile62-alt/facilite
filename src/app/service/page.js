@@ -824,9 +824,9 @@ export default function Home() {
 
             {/* Fonctionnalités */}
             <Link
-              href="/service"
+              href="/fonctionnalites"
               className={`flex flex-col items-center justify-center text-center transition space-y-1 cursor-pointer w-16 ${
-                pathname === "/service" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
+                pathname === "/fonctionnalites" ? "text-[#10E688] font-extrabold" : "text-gray-500 hover:text-gray-800"
               }`}
             >
               <i className="fa-solid fa-wand-magic-sparkles text-xl text-indigo-500"></i>
@@ -1171,18 +1171,14 @@ export default function Home() {
               </Link>
 
               {/* Fonctionnalités */}
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  const section = document.getElementById("section-models");
-                  if (section) section.scrollIntoView({ behavior: "smooth" });
-                }}
+              <Link
+                href="/fonctionnalites"
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
               >
                 <i className="fa-solid fa-wand-magic-sparkles text-gray-400 text-lg"></i>
                 <span>{selectedLang === "FR" ? "Fonctionnalités" : "Features"}</span>
-              </button>
+              </Link>
 
               {/* Recrutement Spontané (même modale que le dropdown "Plus" desktop) */}
               <Link

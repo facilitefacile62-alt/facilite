@@ -1459,7 +1459,7 @@ export default function Home() {
 
               {/* Fonctionnalités */}
               <Link
-                href="/service"
+                href="/fonctionnalites"
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
               >

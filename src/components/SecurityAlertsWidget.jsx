@@ -68,9 +68,24 @@ export default function SecurityAlertsWidget({ onVoirTout }) {
   }
   if (alerts.length === 0) {
     return (
-      <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-700 font-bold flex items-center gap-2">
-        <i className="fa-solid fa-shield-check"></i>
-        <span>Aucune alerte de sécurité sur les dernières 24h.</span>
+      <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-bold flex items-center justify-between gap-3 flex-wrap shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <i className="fa-solid fa-shield-check text-emerald-600 text-base"></i>
+          <div>
+            <span>Aucune alerte de sécurité sur les dernières 24h.</span>
+            <p className="text-[11px] text-emerald-600 font-normal">Toutes les protections RLS, buckets et invariants sont actifs.</p>
+          </div>
+        </div>
+        {onVoirTout && (
+          <button
+            type="button"
+            onClick={onVoirTout}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center gap-2 cursor-pointer"
+          >
+            <span>🛡️ Ouvrir le Lab & Scanner les Failles</span>
+            <i className="fa-solid fa-arrow-right text-[10px]"></i>
+          </button>
+        )}
       </div>
     );
   }

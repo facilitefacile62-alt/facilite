@@ -1,7 +1,6 @@
-"use strict";
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { PDFDocument, degrees } from "pdf-lib";
 import JSZip from "jszip";
@@ -315,6 +314,7 @@ const SIDEBAR_ITEMS = [
 export default function FonctionnalitesPage() {
   const [activeTabId, setActiveTabId] = useState("compresser-pdf");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [mobileView, setMobileView] = useState("list"); // 'list' | 'tool'
   const [dragOver, setDragOver] = useState(false);
 
   // État des fichiers et traitement
@@ -334,6 +334,23 @@ export default function FonctionnalitesPage() {
 
   const fileInputRef = useRef(null);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const toolParam = params.get("tool");
+    if (toolParam) {
+      const match = SIDEBAR_ITEMS.find((item) => item.id === toolParam);
+      if (match) {
+        if (match.link) {
+          window.location.href = match.link;
+          return;
+        }
+        setActiveTabId(match.id);
+        setMobileView("tool");
+      }
+    }
+  }, []);
+
   const filteredItems = SIDEBAR_ITEMS.filter((item) => {
     if (selectedCategory === "all") return true;
     return item.category === selectedCategory;
@@ -351,9 +368,17 @@ export default function FonctionnalitesPage() {
     setPageCount(1);
   };
 
-  const handleSelectTab = (tabId) => {
-    setActiveTabId(tabId);
+  const handleSelectTab = (item) => {
+    if (item.link) {
+      window.location.href = item.link;
+      return;
+    }
+    setActiveTabId(item.id);
     resetToolState();
+    setMobileView("tool");
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleFilesAdded = async (filesList) => {
@@ -728,13 +753,13 @@ export default function FonctionnalitesPage() {
       <header className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800 px-4 sm:px-6 py-3.5 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base shadow-sm">
-              <i className="fa-solid fa-wand-magic-sparkles"></i>
+            <div className="w-9 h-9 rounded-xl bg-[#E3DBCC] border border-[#d3c7b3] text-gray-900 flex items-center justify-center text-base shadow-xs">
+              <i className="fa-solid fa-wand-magic-sparkles text-gray-850"></i>
             </div>
             <div>
               <h1 className="text-sm sm:text-base font-black tracking-tight flex items-center gap-2">
                 <span>Fonctionnalités</span>
-                <span className="px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-black uppercase">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#E3DBCC] text-gray-900 border border-[#d3c7b3] text-[10px] font-black uppercase">
                   Outils Actifs
                 </span>
               </h1>
@@ -755,19 +780,19 @@ export default function FonctionnalitesPage() {
       <div className="max-w-7xl mx-auto w-full flex-grow flex flex-col md:flex-row p-4 sm:p-6 gap-6">
         
         {/* =========================================================================
-            MENU LATÉRAL (SIDEBAR)
+            MENU LATÉRAL (SIDEBAR / LISTE DES OUTILS)
            ========================================================================= */}
-        <aside className="w-full md:w-80 flex-shrink-0">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/80 dark:border-gray-800 p-3.5 shadow-xs md:sticky md:top-20">
+        <aside className={`w-full md:w-80 flex-shrink-0 ${mobileView === "tool" ? "hidden md:block" : "block"}`}>
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/80 dark:border-gray-800 p-3.5 sm:p-4 shadow-xs md:sticky md:top-20">
             
             {/* Filtres par catégorie */}
-            <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl mb-3">
+            <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl mb-3.5">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`flex-1 py-1.5 text-[10px] font-black rounded-xl transition cursor-pointer text-center ${
+                  className={`flex-1 py-2 text-[10px] sm:text-[11px] font-black rounded-xl transition cursor-pointer text-center ${
                     selectedCategory === cat.id
                       ? "bg-white dark:bg-gray-900 text-emerald-700 dark:text-emerald-400 shadow-xs"
                       : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
@@ -779,35 +804,35 @@ export default function FonctionnalitesPage() {
             </div>
 
             {/* Boutons de la sidebar */}
-            <div className="space-y-1">
+            <div className="space-y-2">
               {filteredItems.map((item) => {
                 const isActive = item.id === activeTabId;
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => handleSelectTab(item.id)}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left transition-all cursor-pointer group ${
+                    onClick={() => handleSelectTab(item)}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all cursor-pointer group ${
                       isActive
-                        ? "bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-500 text-gray-950 dark:text-white shadow-xs font-black"
-                        : "hover:bg-gray-50 dark:hover:bg-gray-800/60 border border-transparent text-gray-700 dark:text-gray-300 font-bold"
+                        ? "bg-emerald-50/80 dark:bg-emerald-950/50 border-2 border-emerald-500 text-gray-950 dark:text-white shadow-xs font-black"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/60 border border-gray-100 dark:border-gray-800/60 text-gray-800 dark:text-gray-200 font-bold"
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 transition-transform group-hover:scale-105 ${item.iconColor}`}>
+                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base flex-shrink-0 transition-transform group-hover:scale-105 ${item.iconColor}`}>
                         <i className={item.icon}></i>
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs truncate">
+                        <div className="text-xs sm:text-sm font-extrabold truncate">
                           {item.name}
                         </div>
-                        <div className="text-[10px] text-gray-400 font-normal truncate hidden sm:block">
+                        <div className="text-[10px] text-gray-400 font-medium truncate">
                           {item.tag}
                         </div>
                       </div>
                     </div>
 
-                    <i className={`fa-solid fa-chevron-right text-[10px] transition-transform ${isActive ? "text-emerald-600 translate-x-0.5" : "text-gray-300 dark:text-gray-600 group-hover:text-gray-400"}`}></i>
+                    <i className={`fa-solid fa-chevron-right text-xs transition-transform ${isActive ? "text-emerald-600 translate-x-1" : "text-gray-300 dark:text-gray-600 group-hover:text-gray-400 group-hover:translate-x-0.5"}`}></i>
                   </button>
                 );
               })}
@@ -819,10 +844,29 @@ export default function FonctionnalitesPage() {
         {/* =========================================================================
             ESPACE DE TRAVAIL INTERACTIF (100% FONCTIONNEL & OPÉRATIONNEL)
            ========================================================================= */}
-        <main className="flex-grow min-w-0">
+        <main className={`flex-grow min-w-0 ${mobileView === "list" ? "hidden md:block" : "block"}`}>
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/80 dark:border-gray-800 p-6 sm:p-8 shadow-xs flex flex-col justify-between min-h-[550px]">
             
             <div>
+              {/* Barre de retour et tag */}
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileView("list");
+                    resetToolState();
+                  }}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-black transition cursor-pointer shadow-xs group"
+                >
+                  <i className="fa-solid fa-arrow-left text-sm text-[#E5322D] group-hover:-translate-x-1 transition-transform"></i>
+                  <span>← Retour aux outils</span>
+                </button>
+
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${activeItem.tagColor}`}>
+                  {activeItem.tag}
+                </span>
+              </div>
+
               {/* En-tête de l'outil */}
               <div className="text-center max-w-xl mx-auto mb-6">
                 <h2 className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white tracking-tight mb-2">
@@ -1080,7 +1124,7 @@ export default function FonctionnalitesPage() {
                     className={`border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all ${
                       dragOver
                         ? "border-[#E5322D] bg-red-50/40 dark:bg-red-950/20"
-                        : "border-gray-200 dark:border-gray-800 hover:border-red-400/80 bg-gray-50/30 dark:bg-gray-800/10"
+                        : "border-[#E3DBCC] dark:border-gray-800 hover:border-red-400/80 bg-[#FAF6F1]/50 dark:bg-gray-800/10"
                     }`}
                   >
                     <input
@@ -1094,8 +1138,8 @@ export default function FonctionnalitesPage() {
                       }}
                     />
 
-                    {/* Gros Bouton Rouge de Sélection de Fichier avec icônes drive / dropbox */}
-                    <div className="flex items-center justify-center gap-2 mb-3">
+                    {/* Bouton Principal de Sélection de Fichier */}
+                    <div className="flex items-center justify-center mb-3">
                       {activeItem.link ? (
                         <Link
                           href={activeItem.link}
@@ -1104,35 +1148,13 @@ export default function FonctionnalitesPage() {
                           <span>{activeItem.selectLabel}</span>
                         </Link>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="inline-flex items-center justify-center px-8 sm:px-12 py-4 sm:py-5 rounded-2xl bg-[#E5322D] hover:bg-[#C92520] text-white text-base sm:text-lg font-black shadow-xl shadow-red-600/25 transition-all transform hover:scale-[1.02] cursor-pointer"
-                          >
-                            <span>{activeItem.selectLabel}</span>
-                          </button>
-
-                          {/* Boutons d'importation cloud */}
-                          <div className="flex flex-col gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="w-8 h-8 rounded-full bg-[#E5322D] text-white flex items-center justify-center text-xs shadow-md hover:scale-105 transition cursor-pointer"
-                              title="Google Drive"
-                            >
-                              <i className="fa-brands fa-google-drive"></i>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="w-8 h-8 rounded-full bg-[#E5322D] text-white flex items-center justify-center text-xs shadow-md hover:scale-105 transition cursor-pointer"
-                              title="Dropbox"
-                            >
-                              <i className="fa-brands fa-dropbox"></i>
-                            </button>
-                          </div>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center justify-center px-8 sm:px-12 py-4 sm:py-5 rounded-2xl bg-[#E5322D] hover:bg-[#C92520] text-white text-base sm:text-lg font-black shadow-xl shadow-red-600/25 transition-all transform hover:scale-[1.02] cursor-pointer"
+                        >
+                          <span>{activeItem.selectLabel}</span>
+                        </button>
                       )}
                     </div>
 

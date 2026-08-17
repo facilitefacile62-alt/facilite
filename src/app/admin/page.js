@@ -13,15 +13,16 @@ import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityA
 import { getFeatureFlagsTreeAsync, persistFeatureFlagsOverrides, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import AvatarImage from "@/components/AvatarImage";
 import AdminAIStudio from "@/components/AdminAIStudio";
+import AdminSecurityLab from "@/components/AdminSecurityLab";
 
 // "Utilisateurs", "Tarification" et "Messagerie Support" ont migré dans
 // NAV_SECTIONS (sidebar catégorisée) — les garder ici aurait recréé le
 // doublon d'accès trouvé en B0 (deux chemins vers /admin/messages).
 const TABS = [
   { id: "dashboard", label: "Tableau de bord", icon: "📊" },
+  { id: "securite", label: "Sécurité & Failles", icon: "🛡️" },
   { id: "fonctionnalites", label: "Fonctionnalités", icon: "✨" },
   { id: "ia_studio", label: "Entraînement IA", icon: "🧠" },
-  { id: "securite", label: "Sécurité", icon: "🛡️" },
   { id: "badges", label: "Demandes de badge", icon: "🎖️" },
   { id: "offres", label: "Offres d'emploi", icon: "💼" },
   { id: "ia", label: "Assistant IA & CV", icon: "🤖" },
@@ -62,6 +63,7 @@ const NAV_SECTIONS = [
     items: [
       { type: "tab", id: "fonctionnalites", icon: "✨", label: "Fonctionnalités" },
       { type: "tab", id: "ia_studio", icon: "🧠", label: "Entraînement IA", badge: "Studio" },
+      { type: "tab", id: "securite", icon: "🛡️", label: "Sécurité & Failles", badge: "Live" },
       { type: "tab", id: "utilisateurs", icon: "👥", label: "Utilisateurs" },
       { type: "tab", id: "tarification", icon: "💳", label: "Tarification" },
       { type: "link", href: "/admin/dashboard", icon: "💰", label: "Facturation & Transactions" },
@@ -69,15 +71,18 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: "Données",
+    label: "Administration & Sécurité",
+    items: [
+      { type: "tab", id: "securite", icon: "🛡️", label: "Lab Sécurité & Failles", badge: "Audit" },
+      { type: "tab", id: "badges", icon: "🎖️", label: "Demandes de badge" },
+    ],
+  },
+  {
+    label: "Données & Statistiques",
     items: [
       { type: "link", href: "/admin/scraping", icon: "🤖", label: "Agrégation & Scraping" },
       { type: "tab", id: "dashboard", icon: "📊", label: "Statistiques" },
     ],
-  },
-  {
-    label: "Administration",
-    items: [{ type: "static", icon: "🛡️", label: "Admin" }],
   },
 ];
 
@@ -729,6 +734,57 @@ export default function AdminDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, myRole]);
 
+  // --- Touche Console DevTools (F12) & Raccourci Clavier (Alt+S) ---
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleKeyDown = (e) => {
+      if ((e.altKey && e.key.toLowerCase() === "s") || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "s")) {
+        e.preventDefault();
+        handleTabChange("securite");
+        triggerToast("Lab Sécurité & Failles activé !", "fa-shield-check");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    // Fonction d'audit appelable directement dans la console DevTools (F12)
+    window.scanFailles = window.auditSecurite = window.scanSecurite = async () => {
+      console.log("%c🛡️ [Facilité Security Lab] Lancement du diagnostic de sécurité...", "color: #f97316; font-weight: bold; font-size: 14px;");
+      if (!userSession?.access_token) {
+        console.warn("Session admin requise.");
+        return;
+      }
+      try {
+        const res = await fetch("/api/admin/security-scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${userSession.access_token}` },
+        });
+        const data = await res.json();
+        console.log(`%cScore Global de Sécurité : ${data.score}/100 (${data.scoreRating})`, "color: #10b981; font-weight: bold; font-size: 16px;");
+        console.log("%c1. Protection RLS des Tables :", "font-weight: bold; color: #3b82f6;");
+        console.table(data.categories.tables);
+        console.log("%c2. Étanchéité des Buckets :", "font-weight: bold; color: #8b5cf6;");
+        console.table(data.categories.storage);
+        console.log("%c3. 13 Invariants de Sécurité :", "font-weight: bold; color: #ec4899;");
+        console.table(data.categories.invariants);
+        console.log("%c4. Secrets & Environnement :", "font-weight: bold; color: #f59e0b;");
+        console.table(data.categories.environment);
+        return data;
+      } catch (err) {
+        console.error("Erreur scan sécurité:", err);
+      }
+    };
+
+    console.log("%c🛡️ [Facilité Security Lab] Console Active. Tapez scanFailles() ou auditSecurite() pour inspecter toutes les failles en direct !", "color: #10b981; font-weight: bold; font-size: 12px; background: #064e3b; padding: 4px 8px; border-radius: 4px;");
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      delete window.scanFailles;
+      delete window.auditSecurite;
+      delete window.scanSecurite;
+    };
+  }, [userSession]);
+
   const handleResolveAlert = async (alertId, action) => {
     setResolvingAlertId(alertId);
     const { data: ok, error } = await supabase.rpc("resolve_security_alert", { p_log_id: alertId, p_action: action });
@@ -929,10 +985,17 @@ export default function AdminDashboardPage() {
           handleTabChange(item.id);
           onNavigate?.();
         }}
-        className={`${baseClass} w-full text-left cursor-pointer`}
+        className={`${baseClass} w-full text-left cursor-pointer flex items-center justify-between`}
       >
-        <span>{item.icon}</span>
-        <span>{item.label}</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="shrink-0">{item.icon}</span>
+          <span className="truncate">{item.label}</span>
+        </div>
+        {item.badge && (
+          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 shrink-0">
+            {item.badge}
+          </span>
+        )}
       </button>
     );
   };
@@ -1084,7 +1147,20 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleTabChange("securite")}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold flex items-center gap-1.5 transition cursor-pointer shadow-xs ${
+                    activeTab === "securite"
+                      ? "bg-emerald-600 text-white shadow-emerald-500/20"
+                      : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
+                  }`}
+                  title="Ouvrir le Lab Sécurité & Failles (Raccourci: Alt+S)"
+                >
+                  <i className="fa-solid fa-shield-check text-xs"></i>
+                  <span>Lab Sécurité & Failles</span>
+                </button>
                 <span>Connecté en tant que {userSession?.user?.email}</span>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-orange-100 text-orange-700">
                   Admin
@@ -1337,188 +1413,14 @@ export default function AdminDashboardPage() {
           )}
 
           {activeTab === "securite" && (
-            <div className="space-y-6">
-              {/* Encart Invariants de sécurité */}
-              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-lg font-extrabold text-gray-900">Invariants de sécurité</h2>
-                    <p className="text-xs text-gray-500 font-medium">
-                      Résultat réel de la dernière exécution (CI ou manuelle) — jamais recalculé depuis cette page.
-                    </p>
-                  </div>
-                  <span className="text-xs font-extrabold text-gray-500">
-                    {invariantStatuses.filter((i) => i.status === "pass").length} / {invariantStatuses.length} au vert
-                  </span>
-                </div>
-                {invariantStatuses.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic">Aucune exécution enregistrée pour l'instant.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {invariantStatuses.map((inv) => (
-                      <div
-                        key={inv.invariant_key}
-                        title={inv.error_summary || inv.label}
-                        className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold ${
-                          inv.status === "pass" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
-                        }`}
-                      >
-                        <i className={`fa-solid ${inv.status === "pass" ? "fa-circle-check" : "fa-circle-xmark"}`}></i>
-                        <div className="min-w-0">
-                          <div className="truncate">{inv.label}</div>
-                          <div className="text-[10px] opacity-60 font-medium">
-                            {new Date(inv.last_run_at).toLocaleString("fr-FR")}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Alertes actives non résolues */}
-              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-extrabold text-gray-900">Alertes actives ({openSecurityAlerts.length})</h2>
-                  <p className="text-xs text-gray-500 font-medium">Triées par gravité puis par date, temps réel</p>
-                </div>
-                {securityLoading ? (
-                  <div className="p-8 text-center text-gray-400 text-xs">Chargement...</div>
-                ) : openSecurityAlerts.length === 0 ? (
-                  <div className="p-8 text-center text-gray-400 italic text-xs">Aucune alerte active.</div>
-                ) : (
-                  <div className="divide-y divide-gray-100">
-                    {openSecurityAlerts.map((a) => {
-                      const style = securityEventStyle(a.event_type);
-                      return (
-                        <div key={a.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="min-w-0 flex items-start gap-3">
-                            <span className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${style.dot}`}></span>
-                            <div className="min-w-0">
-                              <span className="text-sm font-extrabold text-gray-900 block">{a.event_type}</span>
-                              <span className="text-xs text-gray-500 font-medium">
-                                {a.actor_email || "compte non identifié"}
-                                {a.ip_address ? ` — ${a.ip_address}` : ""}
-                                {a.details?.route ? ` — ${a.details.route}` : ""}
-                              </span>
-                              <p className="text-[10px] text-gray-400 mt-1">{new Date(a.created_at).toLocaleString("fr-FR")}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                            {a.actor_id && (
-                              <button
-                                type="button"
-                                onClick={() => handleSuspendFromAlert(a)}
-                                disabled={resolvingAlertId === a.id}
-                                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
-                              >
-                                Suspendre le compte
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleResolveAlert(a.id, "ignored")}
-                              disabled={resolvingAlertId === a.id}
-                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
-                            >
-                              Ignorer
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleResolveAlert(a.id, "resolved")}
-                              disabled={resolvingAlertId === a.id}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
-                            >
-                              Marquer comme résolu
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Historique 30 jours + filtres */}
-              <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
-                <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-extrabold text-gray-900">Historique (30 derniers jours)</h2>
-                    <p className="text-xs text-gray-500 font-medium">{securityAlerts.length} événement(s)</p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <select
-                      value={securityFilterType}
-                      onChange={(e) => setSecurityFilterType(e.target.value)}
-                      className="px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-orange-500"
-                    >
-                      <option value="all">Tous les types</option>
-                      <option value="access_denied">access_denied</option>
-                      <option value="repeated_access_denial">repeated_access_denial</option>
-                      <option value="cv_quota_exceeded">cv_quota_exceeded</option>
-                    </select>
-                    <select
-                      value={securityFilterSeverity}
-                      onChange={(e) => setSecurityFilterSeverity(e.target.value)}
-                      className="px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-orange-500"
-                    >
-                      <option value="all">Toutes gravités</option>
-                      <option value="critical">critical</option>
-                      <option value="warning">warning</option>
-                      <option value="info">info</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-gray-50">
-                      <tr className="border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
-                        <th className="py-3 px-6">Type</th>
-                        <th className="py-3 px-6">Compte</th>
-                        <th className="py-3 px-6">IP</th>
-                        <th className="py-3 px-6">Date</th>
-                        <th className="py-3 px-6">Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 text-xs font-medium">
-                      {securityAlerts.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="py-8 text-center text-gray-400 italic">
-                            Aucun événement sur cette période.
-                          </td>
-                        </tr>
-                      ) : (
-                        securityAlerts.map((a) => {
-                          const style = securityEventStyle(a.event_type);
-                          return (
-                            <tr key={a.id} className="hover:bg-gray-50/50 transition">
-                              <td className="py-3 px-6">
-                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${style.row}`}>
-                                  <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`}></span>
-                                  {a.event_type}
-                                </span>
-                              </td>
-                              <td className="py-3 px-6 text-gray-600">{a.actor_email || "compte non identifié"}</td>
-                              <td className="py-3 px-6 text-gray-500 font-mono text-[11px]">{a.ip_address || "—"}</td>
-                              <td className="py-3 px-6 text-gray-500">{new Date(a.created_at).toLocaleString("fr-FR")}</td>
-                              <td className="py-3 px-6">
-                                {a.resolved_status === "open" ? (
-                                  <span className="text-amber-700 font-bold">Ouverte</span>
-                                ) : a.resolved_status === "resolved" ? (
-                                  <span className="text-emerald-700 font-bold">Résolue{a.resolved_by_email ? ` — ${a.resolved_by_email}` : ""}</span>
-                                ) : (
-                                  <span className="text-gray-400 font-bold">Ignorée</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+            <AdminSecurityLab
+              userSession={userSession}
+              securityAlerts={securityAlerts}
+              invariantStatuses={invariantStatuses}
+              onResolveAlert={handleResolveAlert}
+              onSuspendUser={handleSuspendFromAlert}
+              triggerToast={triggerToast}
+            />
           )}
 
           {activeTab === "utilisateurs" && (

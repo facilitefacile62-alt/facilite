@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { isCallerAdmin } from "@/lib/rbac";
 import fs from "fs/promises";
 import path from "path";
 
@@ -27,14 +28,7 @@ export async function POST(req) {
 
     // 2. Vérification RBAC Admin
     const admin = getSupabaseAdmin();
-    const { data: roleRow } = await admin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const isAdmin = roleRow?.role === "admin" || user.email === "facilitefacile62@gmail.com";
-    if (!isAdmin) {
+    if (!(await isCallerAdmin(admin, user.id))) {
       return NextResponse.json({ error: "Action réservée aux administrateurs." }, { status: 403 });
     }
 

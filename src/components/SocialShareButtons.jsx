@@ -62,6 +62,16 @@ export default function SocialShareButtons({
   const shareUrl = offerId ? `${getBaseUrl()}/offres/${offerId}` : getBaseUrl();
   const shareText = `🚀 Recrutement : ${title} chez ${company} (${contract} - ${location}) sur Facilite.\nDécouvrez l'offre et postulez ici :`;
 
+  const effectiveLink =
+    externalLink ||
+    offer?.external_link ||
+    offer?.apply_url ||
+    offer?.source_url ||
+    offer?.url ||
+    (offer?.recruiter_email || offer?.contact_email
+      ? `mailto:${(offer?.recruiter_email || offer?.contact_email).trim()}?subject=${encodeURIComponent(`Candidature - ${title}`)}`
+      : null);
+
   // Fermer les menus lors d'un clic extérieur
   useEffect(() => {
     function handleClickOutside(event) {
@@ -255,18 +265,19 @@ export default function SocialShareButtons({
           </div>
         </div>
 
-        {/* Ligne d'actions 3 boutons : [ Postuler ] [ 🔖 Bookmark ] [ 🔗 Share ] */}
+        {/* Ligne d'actions 3 boutons : [ Postuler sur le site officiel ] [ 🔖 Bookmark ] [ 🔗 Share ] */}
         <div className="flex items-center gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
-          {/* Bouton 1 : Postuler (Gros bouton noir plein) */}
-          {externalLink ? (
+          {/* Bouton 1 : Postuler sur le site officiel (Gros bouton bleu) */}
+          {effectiveLink ? (
             <a
-              href={externalLink}
-              target="_blank"
+              href={effectiveLink}
+              target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-black hover:bg-gray-800 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
-              {externalButtonLabel || "Postuler"}
+              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+              <span>{externalButtonLabel || "Postuler sur le site officiel"}</span>
             </a>
           ) : onApply ? (
             <button
@@ -275,17 +286,19 @@ export default function SocialShareButtons({
                 e.stopPropagation();
                 onApply(offer);
               }}
-              className="flex-1 bg-black hover:bg-gray-800 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
-              Postuler
+              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+              <span>Postuler sur le site officiel</span>
             </button>
           ) : (
             <Link
               href={`/offres/${offerId}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-black hover:bg-gray-800 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
-              Postuler
+              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+              <span>Postuler sur le site officiel</span>
             </Link>
           )}
 
@@ -624,19 +637,19 @@ export default function SocialShareButtons({
             </button>
           </div>
 
-          {/* Action 3 : Envoyer */}
+          {/* Action 3 : Postuler sur le site officiel */}
           <div className="flex-1 min-w-0">
-            {externalLink ? (
+            {effectiveLink ? (
               <a
-                href={externalLink}
-                target="_blank"
+                href={effectiveLink}
+                target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd07b] text-gray-950 font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 truncate"
-                title="Postuler à cette offre"
+                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 cursor-pointer truncate"
+                title="Postuler sur le site officiel"
               >
-                <i className="fa-solid fa-paper-plane text-xs flex-shrink-0"></i>
-                <span className="truncate">{externalButtonLabel || "Envoyer"}</span>
+                <i className="fa-solid fa-arrow-up-right-from-square text-xs flex-shrink-0"></i>
+                <span className="truncate">{externalButtonLabel || "Postuler sur le site officiel"}</span>
               </a>
             ) : onApply ? (
               <button
@@ -645,21 +658,21 @@ export default function SocialShareButtons({
                   e.stopPropagation();
                   onApply(offer);
                 }}
-                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd07b] text-gray-950 font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 cursor-pointer truncate"
-                title="Postuler à cette offre"
+                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 cursor-pointer truncate"
+                title="Postuler sur le site officiel"
               >
-                <i className="fa-solid fa-paper-plane text-xs flex-shrink-0"></i>
-                <span className="truncate">Envoyer</span>
+                <i className="fa-solid fa-arrow-up-right-from-square text-xs flex-shrink-0"></i>
+                <span className="truncate">Postuler sur le site officiel</span>
               </button>
             ) : (
               <Link
                 href={`/offres/${offerId}`}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-[#10E688] hover:bg-[#0fd07b] text-gray-950 font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 truncate"
-                title="Consulter et postuler"
+                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 truncate"
+                title="Postuler sur le site officiel"
               >
-                <i className="fa-solid fa-paper-plane text-xs flex-shrink-0"></i>
-                <span className="truncate">Envoyer</span>
+                <i className="fa-solid fa-arrow-up-right-from-square text-xs flex-shrink-0"></i>
+                <span className="truncate">Postuler sur le site officiel</span>
               </Link>
             )}
           </div>

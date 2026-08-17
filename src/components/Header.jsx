@@ -1553,8 +1553,8 @@ export default function Header() {
               <div className="grid grid-cols-2 gap-2.5">
                 {/* 0. Fonctionnalités */}
                 <Link
-                  href="/service"
-                  onClick={(e) => handleNavClick(e, "/service", "nav_plus_fonctionnalites", "Fonctionnalités")}
+                  href="/fonctionnalites"
+                  onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_plus_fonctionnalites", "Fonctionnalités")}
                   className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
                 >
                   <div className="flex items-center justify-between">

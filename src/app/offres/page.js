@@ -461,7 +461,7 @@ function OffresContent() {
                         setApplyingOffer(offer);
                       }}
                       externalLink={offer.external_link}
-                      externalButtonLabel={offer.external_link ? "Voir l'offre" : "Envoyer"}
+                      externalButtonLabel="Postuler sur le site officiel"
                       onToast={triggerToast}
                     />
 

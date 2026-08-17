@@ -60,6 +60,18 @@ export default function OffreApplySection({ offer }) {
     [offer.id, offer.title, offer.company]
   );
 
+  const targetUrl = useMemo(() => {
+    if (offer.external_link && offer.external_link.trim()) return offer.external_link.trim();
+    if (offer.apply_url && offer.apply_url.trim()) return offer.apply_url.trim();
+    if (offer.source_url && offer.source_url.trim()) return offer.source_url.trim();
+    if (offer.url && offer.url.trim()) return offer.url.trim();
+    const email = offer.recruiter_email || offer.contact_email;
+    if (email && email.trim()) {
+      return `mailto:${email.trim()}?subject=${encodeURIComponent(`Candidature - ${offer.title || "Offre d'emploi"}`)}`;
+    }
+    return null;
+  }, [offer]);
+
   return (
     <>
       <div
@@ -77,34 +89,25 @@ export default function OffreApplySection({ offer }) {
         </p>
       )}
 
-      {offer.external_link ? (
-        <div className="space-y-2">
-          <a
-            href={offer.external_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-          >
-            <i className="fa-solid fa-arrow-up-right-from-square"></i>
-            <span>Postuler sur le site officiel</span>
-          </a>
-          <button
-            type="button"
-            onClick={() => setApplyOpen(true)}
-            disabled={blocked}
-            className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl transition cursor-pointer"
-          >
-            Postuler via Facilité
-          </button>
-        </div>
+      {targetUrl ? (
+        <a
+          href={targetUrl}
+          target={targetUrl.startsWith("mailto:") ? "_self" : "_blank"}
+          rel="noopener noreferrer"
+          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer"
+        >
+          <i className="fa-solid fa-arrow-up-right-from-square text-base"></i>
+          <span>Postuler sur le site officiel</span>
+        </a>
       ) : (
         <button
           type="button"
           onClick={() => setApplyOpen(true)}
           disabled={blocked}
-          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-300 disabled:bg-gray-300"
+          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {blocked ? "Niveau insuffisant" : "Postuler"}
+          <i className="fa-solid fa-arrow-up-right-from-square text-base"></i>
+          <span>{blocked ? "Niveau insuffisant" : "Postuler sur le site officiel"}</span>
         </button>
       )}
 

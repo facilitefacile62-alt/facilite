@@ -57,7 +57,7 @@ export const DEFAULT_FEATURE_TREE = [
       {
         id: "nav_plus_fonctionnalites",
         name: "Fonctionnalités (Outils IA, Modèles & Recrutement)",
-        path: "/service",
+        path: "/fonctionnalites",
         icon: "✨",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
