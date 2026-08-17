@@ -636,47 +636,14 @@ export default function SocialShareButtons({
               <span>Partager</span>
             </button>
           </div>
-
-          {/* Action 3 : Postuler sur le site officiel */}
-          <div className="flex-1 min-w-0">
-            {effectiveLink ? (
-              <a
-                href={effectiveLink}
-                target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 cursor-pointer truncate"
-                title="Postuler sur le site officiel"
-              >
-                <i className="fa-solid fa-arrow-up-right-from-square text-xs flex-shrink-0"></i>
-                <span className="truncate">{externalButtonLabel || "Postuler sur le site officiel"}</span>
-              </a>
-            ) : onApply ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onApply(offer);
-                }}
-                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 cursor-pointer truncate"
-                title="Postuler sur le site officiel"
-              >
-                <i className="fa-solid fa-arrow-up-right-from-square text-xs flex-shrink-0"></i>
-                <span className="truncate">Postuler sur le site officiel</span>
-              </button>
-            ) : (
-              <Link
-                href={`/offres/${offerId}`}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] sm:text-xs transition-all shadow-xs active:scale-95 truncate"
-                title="Postuler sur le site officiel"
-              >
-                <i className="fa-solid fa-arrow-up-right-from-square text-xs flex-shrink-0"></i>
-                <span className="truncate">Postuler sur le site officiel</span>
-              </Link>
-            )}
-          </div>
         </div>
+
+        {/* Pas d'action "Postuler" ici (variant="compact", utilisé uniquement
+            sur la page détail d'une offre) : OffreApplySection, affiché juste
+            en dessous sur cette même page, gère déjà le bouton Postuler —
+            avec la vérification du niveau d'études requis et le formulaire
+            de candidature interne (ApplyModal) en plus, que ce variant ne
+            gérait pas. Le garder ici doublait le bouton à l'écran. */}
 
         {/* Modal de Partage Social 100% visible et non tronqué */}
         {dropdownOpen && (

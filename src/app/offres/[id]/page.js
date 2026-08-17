@@ -95,35 +95,95 @@ function mapEmploymentType(contractType) {
   return "FULL_TIME";
 }
 
+function formatJobDescriptionToHtml(text) {
+  if (!text) return "";
+  const lines = text.split("\n");
+  let html = "";
+  let inList = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      continue;
+    }
+
+    if (trimmed.startsWith("•") || trimmed.startsWith("-") || /^\d+\./.test(trimmed)) {
+      if (!inList) {
+        html += "<ul>";
+        inList = true;
+      }
+      const itemContent = trimmed.replace(/^[•\-\d\.]+\s*/, "");
+      html += `<li>${itemContent}</li>`;
+    } else {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += `<p>${trimmed}</p>`;
+    }
+  }
+
+  if (inList) {
+    html += "</ul>";
+  }
+
+  return html || `<p>${text}</p>`;
+}
+
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const offer = await fetchOffer(id);
 
   if (!offer) {
-    return { title: "Offre introuvable — Facilite" };
+    return { title: "Offre d'emploi introuvable | Facilité" };
   }
 
-  const title = `${offer.title} — ${offer.company} | Facilite`;
-  const description = (offer.description || "").slice(0, 160) || `Offre d'emploi ${offer.title} chez ${offer.company} à ${offer.location}, publiée sur Facilite.`;
+  const title = `${offer.title} - ${offer.company} | Offre d'emploi Facilité`;
+  const cleanDesc = (offer.description || "")
+    .replace(/[#*•_]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const description =
+    cleanDesc.slice(0, 160) ||
+    `Découvrez l'offre d'emploi ${offer.title} chez ${offer.company} à ${offer.location}. Postulez directement en ligne sur Facilité.`;
   const url = `${SITE_URL}/offres/${offer.id}`;
+  const imageUrl = offer.image_url
+    ? offer.image_url.startsWith("http")
+      ? offer.image_url
+      : `${SITE_URL}${offer.image_url}`
+    : `${SITE_URL}/logo.jpeg`;
 
   return {
     title,
     description,
+    keywords: [
+      offer.title,
+      offer.company,
+      offer.location || "Sénégal",
+      "Offre d'emploi Sénégal",
+      "Recrutement Dakar",
+      "Concours Sénégal",
+      "Facilité",
+    ],
     alternates: { canonical: url },
     openGraph: {
       title,
       description,
       url,
-      type: "website",
+      type: "article",
       locale: "fr_SN",
-      images: offer.image_url ? [{ url: offer.image_url }] : undefined,
+      siteName: "Facilité",
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: offer.title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: offer.image_url ? [offer.image_url] : undefined,
+      images: [imageUrl],
     },
   };
 }
@@ -136,25 +196,53 @@ export default async function OffreDetailPage({ params }) {
     notFound();
   }
 
+  const formattedDescription = formatJobDescriptionToHtml(offer.description || offer.title);
+  const datePosted = offer.created_at ? new Date(offer.created_at).toISOString() : new Date().toISOString();
+  const validThrough = offer.deadline
+    ? new Date(offer.deadline).toISOString()
+    : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+
+  const logoUrl = offer.image_url
+    ? offer.image_url.startsWith("http")
+      ? offer.image_url
+      : `${SITE_URL}${offer.image_url}`
+    : `${SITE_URL}/logo.jpeg`;
+
   const jobPostingSchema = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: offer.title,
-    description: offer.description || offer.title,
-    datePosted: offer.created_at,
+    description: formattedDescription,
+    datePosted: datePosted,
+    validThrough: validThrough,
     employmentType: mapEmploymentType(offer.contract_type),
     hiringOrganization: {
       "@type": "Organization",
-      name: offer.company,
+      name: offer.company || "Facilité",
+      sameAs: offer.external_link || SITE_URL,
+      logo: logoUrl,
     },
     jobLocation: {
       "@type": "Place",
       address: {
         "@type": "PostalAddress",
-        addressLocality: offer.location || undefined,
+        streetAddress: offer.location || "Sénégal",
+        addressLocality: offer.location || "Dakar",
+        addressRegion: offer.location || "Dakar",
         addressCountry: "SN",
       },
     },
+    applicantLocationRequirements: {
+      "@type": "Country",
+      name: "Sénégal",
+    },
+    directApply: true,
+    identifier: {
+      "@type": "PropertyValue",
+      name: "Facilité",
+      value: offer.id,
+    },
+    url: `${SITE_URL}/offres/${offer.id}`,
     ...(offer.salary_range
       ? {
           baseSalary: {
