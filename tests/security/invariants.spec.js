@@ -297,7 +297,24 @@ test.describe("Invariants de sécurité", () => {
 
     const AUTH_MARKERS = ["requireUser", "getUserFromCookies", "CRON_SECRET", "signature", "Signature", "isCallerAdmin"];
 
+    // Liste blanche pour les endpoints délibérément publics par nature (pas
+    // un oubli) — décision écrite, jamais un faux marqueur d'autorisation
+    // ajouté juste pour faire taire ce test. Format : chemin relatif depuis
+    // la racine du dépôt.
+    const JUSTIFIED = new Set([
+      // Point d'échange du code OAuth PKCE (Google, via signInWithOAuth) —
+      // atteint AVANT qu'une session existe, par construction : c'est cette
+      // route qui CRÉE la session (exchangeCodeForSession), elle ne peut
+      // donc pas exiger un utilisateur déjà authentifié. Le "code" fourni
+      // en query string, vérifié côté serveur par Supabase lui-même
+      // (auth.exchangeCodeForSession), est le contrôle réel ici — pas un
+      // cookie de session préexistant. Décision écrite le 2026-08-17.
+      "src/app/auth/callback/route.js",
+    ]);
+
     const unprotected = [...serverActionFiles, ...routeHandlerFiles].filter((f) => {
+      const relPath = path.relative(path.resolve(__dirname, "../.."), f).replace(/\\/g, "/");
+      if (JUSTIFIED.has(relPath)) return false;
       const content = fs.readFileSync(f, "utf-8");
       return !AUTH_MARKERS.some((marker) => content.includes(marker));
     });

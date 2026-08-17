@@ -86,10 +86,14 @@ function RegisterForm() {
     if (oauthLoading) return;
     setOauthLoading(true);
     try {
+      const safeRedirect = redirectUrl.startsWith("/") ? redirectUrl : "/profil";
+      // /auth/callback échange le code CÔTÉ SERVEUR avant de rediriger vers
+      // safeRedirect — voir la note détaillée dans login/page.js (même
+      // correctif, même cause : double aller-retour avant sans cette route).
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}${redirectUrl.startsWith("/") ? redirectUrl : "/profil"}`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
         },
       });
       if (error) throw error;

@@ -18,6 +18,10 @@ const PUBLIC_ROUTES = [
   "/register",
   "/forgot-password",
   "/faq",
+  // Échange du code OAuth (voir src/app/auth/callback/route.js) : atteint
+  // AVANT qu'un cookie de session existe, par construction — doit rester
+  // public pour ne pas se bloquer lui-même.
+  "/auth/callback",
 ];
 
 // Comparaison par segment de chemin plutôt que préfixe brut

@@ -255,10 +255,16 @@ export default function LoginPage() {
     try {
       const params = new URLSearchParams(window.location.search);
       const targetRedirect = params.get("redirect") || "/profil";
+      const safeRedirect = targetRedirect.startsWith("/") ? targetRedirect : "/profil";
+      // /auth/callback échange le code CÔTÉ SERVEUR avant de rediriger vers
+      // safeRedirect — sans ça, le navigateur atteint safeRedirect (protégée)
+      // avant que la session existe, rebondit sur /login via le middleware,
+      // et le SDK client n'échange le code qu'à ce moment-là : d'où le
+      // double aller-retour observé avant d'atteindre la plateforme.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}${targetRedirect.startsWith("/") ? targetRedirect : "/profil"}`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
         },
       });
       // Succès : le navigateur est redirigé vers Google, pas besoin de
