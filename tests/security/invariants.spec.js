@@ -367,6 +367,16 @@ test.describe("Invariants de sécurité", () => {
       // 2026-08-06, docs/incident-2026-08-06.md) : seule la LECTURE reste
       // ouverte, ce qui est le but d'un annuaire.
       "public.establishments:Lecture publique de l'annuaire",
+      // Indicateurs de fonctionnalités (panneau admin /admin) : enabled/roles
+      // par route, lus par le middleware (src/proxy.js) et Header.jsx pour
+      // décider si une fonctionnalité est disponible — doit être lisible par
+      // TOUT visiteur (authentifié ou non) pour que le contrôle d'accès
+      // fonctionne avant même la connexion. Aucune donnée personnelle
+      // (id/path/enabled/roles sont des métadonnées de configuration, pas des
+      // données utilisateur). Écriture verrouillée à l'admin via
+      // current_user_role() (policy UPDATE séparée). Décision écrite le
+      // 2026-08-17, migration 20260817000000_feature_flags_table.sql.
+      "public.feature_flags:Lecture publique des indicateurs de fonctionnalites",
     ]);
 
     const rows = await runIntrospectionSql(`

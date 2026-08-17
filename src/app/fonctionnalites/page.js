@@ -273,6 +273,8 @@ export default function FonctionnalitesPage() {
   const [dragOver, setDragOver] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [processingStatus, setProcessingStatus] = useState(null);
+  const [openSteps, setOpenSteps] = useState(false);
+  const [openHighlights, setOpenHighlights] = useState(false);
 
   const filteredItems = SIDEBAR_ITEMS.filter((item) => {
     if (selectedCategory === "all") return true;
@@ -505,58 +507,115 @@ export default function FonctionnalitesPage() {
                 </div>
               </div>
 
-              {/* Workflow en 3 étapes */}
-              <div className="mb-6">
-                <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
-                  Comment ça fonctionne
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {activeItem.steps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3.5 rounded-2xl bg-gray-50/80 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800"
-                    >
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-[11px] font-black shadow-xs">
-                          {step.num}
-                        </div>
-                        <div className="text-xs font-black text-gray-900 dark:text-white">
-                          {step.title}
-                        </div>
+              {/* =========================================================================
+                  MENUS DÉROULANTS / ACCORDÉONS (POUR GAGNER DE L'ESPACE)
+                 ========================================================================= */}
+              <div className="space-y-2.5 mb-6">
+                
+                {/* Menu Déroulant 1 : Comment ça fonctionne */}
+                <div className="border border-gray-200/80 dark:border-gray-800 rounded-2xl overflow-hidden bg-gray-50/50 dark:bg-gray-800/20 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSteps(!openSteps)}
+                    className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100/60 dark:hover:bg-gray-800/40 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">
+                        <i className="fa-solid fa-list-ol"></i>
                       </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-                        {step.desc}
-                      </p>
+                      <span className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider group-hover:text-emerald-600 transition-colors">
+                        Comment ça fonctionne
+                      </span>
+                      <span className="text-[10px] font-bold text-gray-400">
+                        (3 étapes simples)
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        {openSteps ? "Masquer" : "Afficher"}
+                      </span>
+                      <i className={`fa-solid fa-chevron-down text-xs text-gray-400 transition-transform duration-200 ${openSteps ? "rotate-180 text-emerald-600" : ""}`}></i>
+                    </div>
+                  </button>
 
-              {/* Atouts clés */}
-              <div className="mb-6">
-                <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
-                  Ce que cet outil vous apporte
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {activeItem.highlights.map((point, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-3 p-3 rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-800"
-                    >
-                      <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
-                        <i className={point.icon}></i>
-                      </div>
-                      <div>
-                        <div className="text-xs font-black text-gray-900 dark:text-white">
-                          {point.title}
-                        </div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">
-                          {point.desc}
-                        </div>
+                  {openSteps && (
+                    <div className="p-4 pt-1 border-t border-gray-200/60 dark:border-gray-800 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                        {activeItem.steps.map((step, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3.5 rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-800 shadow-xs"
+                          >
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-[11px] font-black shadow-xs">
+                                {step.num}
+                              </div>
+                              <div className="text-xs font-black text-gray-900 dark:text-white">
+                                {step.title}
+                              </div>
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                              {step.desc}
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
+
+                {/* Menu Déroulant 2 : Ce que cet outil vous apporte */}
+                <div className="border border-gray-200/80 dark:border-gray-800 rounded-2xl overflow-hidden bg-gray-50/50 dark:bg-gray-800/20 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setOpenHighlights(!openHighlights)}
+                    className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:bg-gray-100/60 dark:hover:bg-gray-800/40 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs">
+                        <i className="fa-solid fa-wand-magic-sparkles"></i>
+                      </div>
+                      <span className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider group-hover:text-indigo-600 transition-colors">
+                        Ce que cet outil vous apporte
+                      </span>
+                      <span className="text-[10px] font-bold text-gray-400">
+                        (4 atouts clés)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                        {openHighlights ? "Masquer" : "Afficher"}
+                      </span>
+                      <i className={`fa-solid fa-chevron-down text-xs text-gray-400 transition-transform duration-200 ${openHighlights ? "rotate-180 text-indigo-600" : ""}`}></i>
+                    </div>
+                  </button>
+
+                  {openHighlights && (
+                    <div className="p-4 pt-1 border-t border-gray-200/60 dark:border-gray-800 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        {activeItem.highlights.map((point, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-start gap-3 p-3 rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-800 shadow-xs"
+                          >
+                            <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
+                              <i className={point.icon}></i>
+                            </div>
+                            <div>
+                              <div className="text-xs font-black text-gray-900 dark:text-white">
+                                {point.title}
+                              </div>
+                              <div className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">
+                                {point.desc}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
               </div>
             </div>
 
