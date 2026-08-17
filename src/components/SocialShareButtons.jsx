@@ -265,19 +265,79 @@ export default function SocialShareButtons({
           </div>
         </div>
 
-        {/* Ligne d'actions 3 boutons : [ Postuler sur le site officiel ] [ 🔖 Bookmark ] [ 🔗 Share ] */}
-        <div className="flex items-center gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
-          {/* Bouton 1 : Postuler sur le site officiel (Gros bouton bleu) */}
+        {/* Ligne d'actions 3 boutons alignés au même endroit : [ 👍 J'aime ] [ 📤 Partager ] [ ↗ Postuler sur le site officiel ] [ 🔖 Bookmark ] */}
+        <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+          {/* Bouton 1 : J'aime avec Barre de Réactions Flottante */}
+          <div
+            className="relative"
+            onMouseEnter={handleMouseEnterLike}
+            onMouseLeave={handleMouseLeaveLike}
+          >
+            {/* Barre flottante des réactions emojis au survol (👍 ❤️ 🥰 👏 💡 🚀) */}
+            {reactionsOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-full mb-2 left-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full shadow-2xl px-2.5 py-1.5 flex items-center gap-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+              >
+                {REACTIONS.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={(e) => handleReactionClick(r, e)}
+                    title={r.label}
+                    className="text-xl sm:text-2xl transform hover:scale-135 hover:-translate-y-1 transition-all duration-150 cursor-pointer active:scale-110 select-none"
+                  >
+                    {r.emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Bouton J'aime */}
+            <button
+              type="button"
+              onClick={handleLikeButtonClick}
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-3 sm:px-4 rounded-xl text-xs font-black transition-all cursor-pointer border select-none ${
+                activeReaction
+                  ? `${activeReaction.color} ${activeReaction.bg} border-transparent shadow-xs`
+                  : "text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700"
+              }`}
+              title="J'aime"
+            >
+              {activeReaction ? (
+                <span className="text-sm select-none">{activeReaction.emoji}</span>
+              ) : (
+                <i className="fa-regular fa-thumbs-up text-sm"></i>
+              )}
+              <span className="hidden xs:inline">{activeReaction ? activeReaction.label : "J'aime"}</span>
+            </button>
+          </div>
+
+          {/* Bouton 2 : Partager */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDropdownOpen(true);
+            }}
+            className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-3 sm:px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-[#10E688] font-black text-xs transition-all border border-emerald-200 dark:border-emerald-800 shadow-2xs cursor-pointer active:scale-95"
+            title="Partager cette annonce sur tous les réseaux"
+          >
+            <i className="fa-solid fa-arrow-up-from-bracket text-xs"></i>
+            <span className="hidden xs:inline">Partager</span>
+          </button>
+
+          {/* Bouton 3 : Postuler sur le site officiel (Gros bouton bleu principal) */}
           {effectiveLink ? (
             <a
               href={effectiveLink}
               target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
               <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span>{externalButtonLabel || "Postuler sur le site officiel"}</span>
+              <span className="truncate">{externalButtonLabel || "Postuler sur le site officiel"}</span>
             </a>
           ) : onApply ? (
             <button
@@ -286,23 +346,23 @@ export default function SocialShareButtons({
                 e.stopPropagation();
                 onApply(offer);
               }}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
               <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span>Postuler sur le site officiel</span>
+              <span className="truncate">Postuler sur le site officiel</span>
             </button>
           ) : (
             <Link
               href={`/offres/${offerId}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
               <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span>Postuler sur le site officiel</span>
+              <span className="truncate">Postuler sur le site officiel</span>
             </Link>
           )}
 
-          {/* Bouton 2 : Enregistrer / Bookmark (Carré blanc avec contour) */}
+          {/* Bouton 4 : Enregistrer / Bookmark */}
           <button
             type="button"
             onClick={(e) => {
@@ -311,25 +371,12 @@ export default function SocialShareButtons({
             }}
             className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl border transition cursor-pointer active:scale-95 shadow-2xs ${
               isSaved
-                ? "bg-emerald-50 border-emerald-300 text-emerald-600"
-                : "bg-white hover:bg-gray-50 border-gray-200/90 text-gray-700"
+                ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-[#10E688]"
+                : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200/90 dark:border-gray-700 text-gray-700 dark:text-gray-300"
             }`}
             title={isSaved ? "Offre enregistrée" : "Enregistrer l'offre"}
           >
-            <i className={isSaved ? "fa-solid fa-bookmark text-emerald-600 text-sm" : "fa-regular fa-bookmark text-gray-700 text-sm"}></i>
-          </button>
-
-          {/* Bouton 3 : Partager (Carré blanc avec icône partage) */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setDropdownOpen(true);
-            }}
-            className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-white hover:bg-gray-50 border border-gray-200/90 text-gray-700 transition cursor-pointer active:scale-95 shadow-2xs"
-            title="Partager l'offre sur tous les réseaux"
-          >
-            <i className="fa-solid fa-share-nodes text-gray-700 text-sm"></i>
+            <i className={isSaved ? "fa-solid fa-bookmark text-emerald-600 dark:text-[#10E688] text-sm" : "fa-regular fa-bookmark text-gray-700 dark:text-gray-300 text-sm"}></i>
           </button>
         </div>
 
@@ -562,11 +609,11 @@ export default function SocialShareButtons({
           </div>
         </div>
 
-        {/* Boutons d'Action Principaux */}
-        <div className="flex items-center justify-between gap-1.5 sm:gap-2 pt-1 border-t border-gray-100/80">
+        {/* Boutons d'Action Principaux Alignés : [ 👍 J'aime ] [ 📤 Partager ] [ ↗ Postuler sur le site officiel ] [ 🔖 Bookmark ] */}
+        <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
           {/* Action 1 : J'aime avec Barre de Réactions Flottante */}
           <div
-            className="relative flex-1 min-w-0"
+            className="relative"
             onMouseEnter={handleMouseEnterLike}
             onMouseLeave={handleMouseLeaveLike}
           >
@@ -594,48 +641,87 @@ export default function SocialShareButtons({
             <button
               type="button"
               onClick={handleLikeButtonClick}
-              className={`w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer border truncate ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-3 sm:px-4 rounded-xl text-xs font-black transition-all cursor-pointer border select-none ${
                 activeReaction
                   ? `${activeReaction.color} ${activeReaction.bg} border-transparent shadow-xs`
-                  : "text-gray-700 bg-gray-50/90 hover:bg-gray-100 border-gray-200/80 hover:border-gray-300"
+                  : "text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700"
               }`}
+              title="J'aime"
             >
               {activeReaction ? (
-                <span className="text-xs sm:text-sm select-none">{activeReaction.emoji}</span>
+                <span className="text-sm select-none">{activeReaction.emoji}</span>
               ) : (
-                <i className="fa-regular fa-thumbs-up text-xs sm:text-sm"></i>
+                <i className="fa-regular fa-thumbs-up text-sm"></i>
               )}
-              <span className="truncate">{activeReaction ? activeReaction.label : "J'aime"}</span>
+              <span className="hidden xs:inline">{activeReaction ? activeReaction.label : "J'aime"}</span>
             </button>
           </div>
 
-          {/* Action 2 : Partager (Ouvre le modal avec tous les liens) */}
-          <div className="relative flex-1 min-w-0">
+          {/* Action 2 : Partager */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDropdownOpen(true);
+            }}
+            className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-3 sm:px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-[#10E688] font-black text-xs transition-all border border-emerald-200 dark:border-emerald-800 shadow-2xs cursor-pointer active:scale-95"
+            title="Partager cette annonce sur tous les réseaux"
+          >
+            <i className="fa-solid fa-arrow-up-from-bracket text-xs"></i>
+            <span className="hidden xs:inline">Partager</span>
+          </button>
+
+          {/* Action 3 : Postuler sur le site officiel (Gros bouton bleu principal) */}
+          {effectiveLink ? (
+            <a
+              href={effectiveLink}
+              target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+              <span className="truncate">{externalButtonLabel || "Postuler sur le site officiel"}</span>
+            </a>
+          ) : onApply ? (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setDropdownOpen(true);
+                onApply(offer);
               }}
-              className="w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl bg-emerald-50/80 hover:bg-emerald-100 text-emerald-800 font-extrabold text-[11px] sm:text-xs transition-all border border-emerald-200/90 shadow-2xs cursor-pointer active:scale-95 truncate"
-              title="Partager cette annonce sur tous les réseaux"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
-              <svg
-                className="w-3.5 h-3.5 text-emerald-800"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                <polyline points="16 6 12 2 8 6" />
-                <line x1="12" y1="2" x2="12" y2="15" />
-              </svg>
-              <span>Partager</span>
+              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+              <span className="truncate">Postuler sur le site officiel</span>
             </button>
-          </div>
+          ) : (
+            <Link
+              href={`/offres/${offerId}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+              <span className="truncate">Postuler sur le site officiel</span>
+            </Link>
+          )}
+
+          {/* Action 4 : Enregistrer / Bookmark */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleSave();
+            }}
+            className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl border transition cursor-pointer active:scale-95 shadow-2xs ${
+              isSaved
+                ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-[#10E688]"
+                : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200/90 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+            }`}
+            title={isSaved ? "Offre enregistrée" : "Enregistrer l'offre"}
+          >
+            <i className={isSaved ? "fa-solid fa-bookmark text-emerald-600 dark:text-[#10E688] text-sm" : "fa-regular fa-bookmark text-gray-700 dark:text-gray-300 text-sm"}></i>
+          </button>
         </div>
 
         {/* Pas d'action "Postuler" ici (variant="compact", utilisé uniquement
