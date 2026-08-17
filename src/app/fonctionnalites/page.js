@@ -13,17 +13,29 @@ async function getPdfJsEngine() {
 
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    script.src = "/pdfjs/pdf.min.js";
     script.onload = () => {
       if (window.pdfjsLib) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.js";
         resolve(window.pdfjsLib);
       } else {
         reject(new Error("Moteur PDF.js introuvable après chargement"));
       }
     };
-    script.onerror = () => reject(new Error("Échec du chargement du moteur PDF.js"));
+    script.onerror = () => {
+      const cdnScript = document.createElement("script");
+      cdnScript.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      cdnScript.onload = () => {
+        if (window.pdfjsLib) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          resolve(window.pdfjsLib);
+        } else {
+          reject(new Error("Moteur PDF.js introuvable après chargement CDN"));
+        }
+      };
+      cdnScript.onerror = () => reject(new Error("Échec du chargement du moteur PDF.js"));
+      document.head.appendChild(cdnScript);
+    };
     document.head.appendChild(script);
   });
 }
