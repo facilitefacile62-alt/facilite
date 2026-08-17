@@ -1278,6 +1278,17 @@ export default function Home() {
       {/* Contenu Principal avec Marge = hauteur exacte du nav fixe (h-16) */}
       <main className="flex-grow flex flex-col pt-16 pb-8 md:pb-0">
         
+        {/* Bouton Retour aux Fonctionnalités */}
+        <div className="max-w-[1128px] mx-auto w-full px-4 pt-4 -mb-4">
+          <Link
+            href="/fonctionnalites"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 font-extrabold text-xs rounded-xl shadow-xs border border-gray-200 transition-all hover:-translate-x-0.5"
+          >
+            <i className="fa-solid fa-arrow-left text-xs text-emerald-600"></i>
+            <span>Retour aux fonctionnalités</span>
+          </Link>
+        </div>
+
         {/* Section Hero */}
         <section className="flex-grow flex flex-col md:flex-row items-center justify-center px-4 py-12 md:py-16 max-w-[1128px] mx-auto gap-12 lg:gap-20 w-full overflow-x-hidden">
           {/* Contenu Texte */}

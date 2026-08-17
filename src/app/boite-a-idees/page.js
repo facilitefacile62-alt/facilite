@@ -864,22 +864,37 @@ export default function BoiteAIdees() {
       <main className="flex-grow pt-16 bg-white">
         
         {/* Banner Section */}
-        <section className="w-full bg-[#E2ECE9]/70 py-12 px-4 border-b border-gray-200/50 relative overflow-hidden">
-          <div className="max-w-[1128px] mx-auto flex justify-between items-center relative z-10">
-            <div className="flex flex-col space-y-2">
-              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Boîte à idées</h1>
-              <div className="flex items-center space-x-2 text-xs md:text-sm text-gray-500 font-semibold">
-                <Link href="/" className="hover:text-gray-800 transition">🏠</Link>
-                <span>&gt;</span>
-                <span className="text-gray-800 font-bold">Boîte à idées</span>
-              </div>
+        <section className="w-full bg-[#E2ECE9]/70 py-8 md:py-10 px-4 border-b border-gray-200/50 relative overflow-hidden">
+          <div className="max-w-[1128px] mx-auto flex flex-col space-y-4 relative z-10">
+            {/* Bouton Retour aux Fonctionnalités */}
+            <div>
+              <Link
+                href="/fonctionnalites"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 font-extrabold text-xs rounded-xl shadow-xs border border-gray-200 transition-all hover:-translate-x-0.5"
+              >
+                <i className="fa-solid fa-arrow-left text-xs text-yellow-600"></i>
+                <span>Retour aux fonctionnalités</span>
+              </Link>
             </div>
+
+            <div className="flex justify-between items-center">
+              <div className="flex flex-col space-y-2">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Boîte à idées</h1>
+                <div className="flex items-center space-x-2 text-xs md:text-sm text-gray-500 font-semibold">
+                  <Link href="/" className="hover:text-gray-800 transition">🏠</Link>
+                  <span>&gt;</span>
+                  <Link href="/fonctionnalites" className="hover:text-gray-800 transition">Fonctionnalités</Link>
+                  <span>&gt;</span>
+                  <span className="text-gray-800 font-bold">Boîte à idées</span>
+                </div>
+              </div>
             
-            {/* Question Marks Icon Decoration */}
-            <div className="hidden md:flex items-center justify-center opacity-85 translate-x-8">
-              <div className="relative w-28 h-28 flex items-center justify-center">
-                <i className="fa-solid fa-question text-6xl text-[#10E688]/30 font-black absolute transform -rotate-12 -translate-x-6 -translate-y-4"></i>
-                <i className="fa-solid fa-question text-7xl text-purple-300/40 font-black absolute transform rotate-12 translate-x-6 translate-y-4"></i>
+              {/* Question Marks Icon Decoration */}
+              <div className="hidden md:flex items-center justify-center opacity-85 translate-x-8">
+                <div className="relative w-28 h-28 flex items-center justify-center">
+                  <i className="fa-solid fa-question text-6xl text-[#10E688]/30 font-black absolute transform -rotate-12 -translate-x-6 -translate-y-4"></i>
+                  <i className="fa-solid fa-question text-7xl text-purple-300/40 font-black absolute transform rotate-12 translate-x-6 translate-y-4"></i>
+                </div>
               </div>
             </div>
           </div>

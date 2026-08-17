@@ -328,7 +328,18 @@ function ExtracteurContent() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8 flex-1 w-full">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 flex-1 w-full">
+        {/* Bouton Retour aux Fonctionnalités */}
+        <div className="mb-4">
+          <Link
+            href="/fonctionnalites"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 font-extrabold text-xs rounded-xl shadow-xs border border-gray-200 transition-all hover:-translate-x-0.5"
+          >
+            <i className="fa-solid fa-arrow-left text-xs text-emerald-600"></i>
+            <span>Retour aux fonctionnalités</span>
+          </Link>
+        </div>
+
         {/* Banner Section */}
         <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-8 text-white mb-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
