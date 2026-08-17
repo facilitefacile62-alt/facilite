@@ -1724,6 +1724,18 @@ export default function Home() {
               >
                 Foire Aux Questions (FAQ)
               </Link>
+              <Link
+                href="/politique-de-confidentialite"
+                className="hover:text-[#10E688] transition-colors"
+              >
+                Politique de confidentialité
+              </Link>
+              <Link
+                href="/conditions-utilisation"
+                className="hover:text-[#10E688] transition-colors"
+              >
+                Conditions d'utilisation (CGU)
+              </Link>
             </div>
           </div>
 
@@ -1827,8 +1839,17 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-800/80 text-center text-xs text-gray-500 font-medium">
+        <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-800/80 flex flex-col sm:flex-row items-center justify-between text-center sm:text-left text-xs text-gray-500 font-medium gap-4">
           <p>{t.footerCopyright}</p>
+          <div className="flex items-center space-x-4 text-[11px] font-semibold text-gray-400">
+            <Link href="/politique-de-confidentialite" className="hover:text-[#10E688] transition-colors">
+              Politique de confidentialité
+            </Link>
+            <span>•</span>
+            <Link href="/conditions-utilisation" className="hover:text-[#10E688] transition-colors">
+              Conditions d'utilisation
+            </Link>
+          </div>
         </div>
       </footer>
 
