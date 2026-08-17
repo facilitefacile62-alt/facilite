@@ -1144,106 +1144,23 @@ export default function Home() {
 
                   <div className="my-1.5 border-t border-gray-100"></div>
 
-                  {/* Section / Bouton Fonctionnalités Cliquable (menant à la page /fonctionnalites) */}
-                  <div className="mx-2 mt-1 p-1.5 bg-gradient-to-br from-emerald-50/90 via-white to-indigo-50/90 rounded-xl border border-emerald-200/80 shadow-xs">
-                    <div className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-emerald-100/60 transition-colors">
-                      <Link
-                        href="/fonctionnalites"
-                        onClick={() => setPlusDropdownOpen(false)}
-                        className="flex items-center gap-2 flex-grow cursor-pointer group"
-                      >
-                        <div className="w-6 h-6 rounded-md bg-emerald-500 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform">
-                          <i className="fa-solid fa-wand-magic-sparkles"></i>
-                        </div>
-                        <div>
-                          <div className="text-[11px] font-black text-emerald-900 uppercase tracking-wide flex items-center gap-1.5">
-                            <span className="group-hover:underline">Fonctionnalités</span>
-                            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-black rounded-md">
-                              Page & Outils
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setFonctionnalitesExpanded(!fonctionnalitesExpanded);
-                        }}
-                        className="p-1 text-emerald-700 hover:bg-emerald-200/50 rounded-md cursor-pointer transition-colors"
-                        title="Déplier / Replier"
-                      >
-                        <i className={`fa-solid fa-chevron-down text-[11px] transition-transform duration-200 ${fonctionnalitesExpanded ? "rotate-180" : ""}`}></i>
-                      </button>
+                  {/* 6. Fonctionnalités - Touche directe vers la page /fonctionnalites */}
+                  <Link
+                    href="/fonctionnalites"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer text-gray-700 hover:bg-gray-50"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
                     </div>
-
-                    {/* Sous-éléments visibles quand déplié */}
-                    {fonctionnalitesExpanded && (
-                      <div className="mt-1 space-y-0.5 pt-1 border-t border-emerald-100/80 animate-in fade-in slide-in-from-top-1 duration-150">
-                        {/* 1. Extracteur */}
-                        <Link
-                          href="/candidat/extracteur"
-                          onClick={() => setPlusDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/90"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
-                            <i className="fa-solid fa-bolt text-xs"></i>
-                          </div>
-                          <div>
-                            <div className="font-extrabold flex items-center gap-1.5 text-xs">
-                              <span>Extracteur</span>
-                              <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[8px] font-black rounded-md">1-Click</span>
-                            </div>
-                            <div className="text-[10px] text-gray-500 font-normal">Postulez depuis une affiche</div>
-                          </div>
-                        </Link>
-
-                        {/* 2. Boîte à idées */}
-                        <Link
-                          href="/boite-a-idees"
-                          onClick={() => setPlusDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/90"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center flex-shrink-0">
-                            <i className="fa-solid fa-lightbulb text-xs"></i>
-                          </div>
-                          <div>
-                            <div className="font-extrabold text-xs">Boîte à idées</div>
-                            <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
-                          </div>
-                        </Link>
-
-                        {/* 3. Services & Modèles */}
-                        <Link
-                          href="/service"
-                          onClick={() => setPlusDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-700 hover:bg-white/90"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                            <i className="fa-solid fa-briefcase text-xs"></i>
-                          </div>
-                          <div>
-                            <div className="font-extrabold text-xs">Services & Modèles</div>
-                            <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
-                          </div>
-                        </Link>
-
-                        {/* 4. Lien vers la page Hub Fonctionnalités */}
-                        <Link
-                          href="/fonctionnalites"
-                          onClick={() => setPlusDropdownOpen(false)}
-                          className="flex items-center justify-between px-3 py-2 text-[11px] font-black rounded-lg bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all cursor-pointer mt-1"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                            <span>Voir la page Fonctionnalités</span>
-                          </span>
-                          <i className="fa-solid fa-chevron-right text-[9px]"></i>
-                        </Link>
+                    <div>
+                      <div className="font-extrabold flex items-center gap-1.5">
+                        <span>Fonctionnalités</span>
+                        <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[8px] font-black rounded-md">Page & Outils</span>
                       </div>
-                    )}
-                  </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Outils PDF, IA & Modèles</div>
+                    </div>
+                  </Link>
                 </div>
               )}
             </div>

@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import RoleNavLink from "@/components/RoleNavLink";
-import { isFeatureAllowed } from "@/lib/featureFlags";
+import { isFeatureAllowed, getFeatureFlagsTreeAsync, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
@@ -182,7 +182,12 @@ export default function Header() {
   const router = useRouter();
 
   // Session/rôle/profil chargés une seule fois pour toute l'app par AuthContext
-  const { session: userSession, profile: authProfile, loading: authLoading, signOut } = useAuth();
+  const { session: userSession, profile: authProfile, loading: authLoading, signOut, isAdmin, isRecruiter } = useAuth();
+  // Arbre des indicateurs de fonctionnalités (panneau admin /admin) — chargé
+  // au montage depuis Supabase, tenu à jour par Realtime (voir l'effet plus
+  // bas). Défaut fail-open : DEFAULT_FEATURE_TREE (tout activé) pendant le
+  // chargement ou en cas d'erreur réseau.
+  const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
@@ -197,6 +202,26 @@ export default function Header() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Charge les indicateurs de fonctionnalités au montage, puis reste à jour
+  // via Realtime (même patron que l'abonnement job_offers de
+  // src/app/offres/page.js) — quand un admin bascule une fonctionnalité
+  // depuis /admin, tous les onglets déjà ouverts d'autres utilisateurs le
+  // voient sans avoir besoin de recharger la page.
+  useEffect(() => {
+    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+
+    const channel = supabase
+      .channel("public-feature-flags-header")
+      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
+        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
@@ -465,10 +490,8 @@ export default function Header() {
   const isDashboard = pathname.startsWith("/admin") || pathname.startsWith("/recruteur");
 
   const handleGuardedClick = (e, featureKey, featureName) => {
-    const role = userSession
-      ? (userSession.user?.email === "facilitefacile62@gmail.com" ? "admin" : "user")
-      : "visitor";
-    if (!isFeatureAllowed(featureKey, role)) {
+    const role = !userSession ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
+    if (!isFeatureAllowed(featureFlagsTree, featureKey, role)) {
       e.preventDefault();
       triggerFeatureDisabledModal(
         `Module "${featureName}" temporairement indisponible`,
@@ -486,7 +509,6 @@ export default function Header() {
     setMobileMenuOpen(false);
     setIsMobileSearchOpen(false);
     setIsOpen(false);
-    setFonctionnalitesDropdownOpen(false);
     setPlusDropdownOpen(false);
 
     // À chaque fois que l'utilisateur clique sur la page courante ou sur le logo/accueil, on actualise la page !
@@ -1172,112 +1194,25 @@ export default function Header() {
 
                 <div className="my-1.5 border-t border-gray-100 dark:border-gray-800"></div>
 
-                {/* Section / Bouton Fonctionnalités Cliquable (menant à la page /fonctionnalites) */}
-                <div className="mx-2 mt-1 p-1.5 bg-gradient-to-br from-emerald-50/90 via-white to-indigo-50/90 dark:from-emerald-950/40 dark:via-gray-800 dark:to-indigo-950/40 rounded-xl border border-emerald-200/80 dark:border-emerald-800/40 shadow-xs">
-                  <div className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 transition-colors">
-                    <Link
-                      href="/fonctionnalites"
-                      onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_fonctionnalites_hub", "Fonctionnalités")}
-                      className="flex items-center gap-2 flex-grow cursor-pointer group"
-                    >
-                      <div className="w-6 h-6 rounded-md bg-emerald-500 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform">
-                        <i className="fa-solid fa-wand-magic-sparkles"></i>
-                      </div>
-                      <div>
-                        <div className="text-[11px] font-black text-emerald-900 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
-                          <span className="group-hover:underline">Fonctionnalités</span>
-                          <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-[9px] font-black rounded-md">
-                            Page & Outils
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setFonctionnalitesExpanded(!fonctionnalitesExpanded);
-                      }}
-                      className="p-1 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200/50 dark:hover:bg-emerald-800/50 rounded-md cursor-pointer transition-colors"
-                      title="Déplier / Replier"
-                    >
-                      <i className={`fa-solid fa-chevron-down text-[11px] transition-transform duration-200 ${fonctionnalitesExpanded ? "rotate-180" : ""}`}></i>
-                    </button>
+                {/* 6. Fonctionnalités - Touche directe vers la page /fonctionnalites */}
+                <Link
+                  href="/fonctionnalites"
+                  onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_fonctionnalites_hub", "Fonctionnalités")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname === "/fonctionnalites" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
                   </div>
-
-                  {/* Sous-éléments visibles quand déplié */}
-                  {fonctionnalitesExpanded && (
-                    <div className="mt-1 space-y-0.5 pt-1 border-t border-emerald-100/80 dark:border-emerald-900/40 animate-in fade-in slide-in-from-top-1 duration-150">
-                      {/* 1. Extracteur */}
-                      <Link
-                        href="/candidat/extracteur"
-                        onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
-                        className={`flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                          pathname === "/candidat/extracteur" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200 hover:bg-white/90 dark:hover:bg-gray-700/50"
-                        }`}
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-500 flex items-center justify-center flex-shrink-0">
-                          <i className="fa-solid fa-bolt text-xs"></i>
-                        </div>
-                        <div>
-                          <div className="font-extrabold flex items-center gap-1.5 text-xs">
-                            <span>Extracteur</span>
-                            <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[8px] font-black rounded-md">1-Click</span>
-                          </div>
-                          <div className="text-[10px] text-gray-500 font-normal">Postulez depuis une affiche</div>
-                        </div>
-                      </Link>
-
-                      {/* 2. Boîte à idées */}
-                      <Link
-                        href="/boite-a-idees"
-                        onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
-                        className={`flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                          pathname === "/boite-a-idees" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300" : "text-gray-700 dark:text-gray-200 hover:bg-white/90 dark:hover:bg-gray-700/50"
-                        }`}
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-yellow-50 dark:bg-yellow-950 text-yellow-600 flex items-center justify-center flex-shrink-0">
-                          <i className="fa-solid fa-lightbulb text-xs"></i>
-                        </div>
-                        <div>
-                          <div className="font-extrabold text-xs">Boîte à idées</div>
-                          <div className="text-[10px] text-gray-500 font-normal">Suggestions & innovation</div>
-                        </div>
-                      </Link>
-
-                      {/* 3. Services & Modèles */}
-                      <Link
-                        href="/service"
-                        onClick={(e) => handleNavClick(e, "/service", "nav_plus_service", "Services & Modèles")}
-                        className={`flex items-center gap-2.5 px-2 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                          pathname === "/service" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200 hover:bg-white/90 dark:hover:bg-gray-700/50"
-                        }`}
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                          <i className="fa-solid fa-briefcase text-xs"></i>
-                        </div>
-                        <div>
-                          <div className="font-extrabold text-xs">Services & Modèles</div>
-                          <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
-                        </div>
-                      </Link>
-
-                      {/* 4. Lien vers la page Hub Fonctionnalités */}
-                      <Link
-                        href="/fonctionnalites"
-                        onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_plus_fonctionnalites_page", "Toutes les fonctionnalités")}
-                        className="flex items-center justify-between px-3 py-2 text-[11px] font-black rounded-lg bg-emerald-600/10 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white transition-all cursor-pointer mt-1"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                          <span>Voir la page Fonctionnalités</span>
-                        </span>
-                        <i className="fa-solid fa-chevron-right text-[9px]"></i>
-                      </Link>
+                  <div>
+                    <div className="font-extrabold flex items-center gap-1.5">
+                      <span>Fonctionnalités</span>
+                      <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8px] font-black rounded-md">Page & Outils</span>
                     </div>
-                  )}
-                </div>
+                    <div className="text-[10px] text-gray-500 font-normal">Outils PDF, IA & Modèles</div>
+                  </div>
+                </Link>
               </div>
             )}
           </div>
