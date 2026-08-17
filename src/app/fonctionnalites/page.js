@@ -1,541 +1,372 @@
 "use strict";
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-const CATEGORIES = [
-  { id: "all", label: "Toutes les fonctionnalités", icon: "fa-solid fa-layer-group" },
-  { id: "ai", label: "Outils IA & Candidature", icon: "fa-solid fa-wand-magic-sparkles" },
-  { id: "cv", label: "Modèles & Studio CV", icon: "fa-solid fa-file-invoice" },
-  { id: "network", label: "Réseau & Recrutement", icon: "fa-solid fa-building-user" },
-  { id: "opportunity", label: "Concours & Formations", icon: "fa-solid fa-graduation-cap" },
-];
-
-const FEATURES = [
+const SIDEBAR_ITEMS = [
   {
     id: "extracteur",
-    category: "ai",
-    badge: "1-Click IA",
-    badgeColor: "bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border-amber-200 dark:border-amber-800/50",
+    name: "Extracteur 1-Click",
+    tag: "Outil IA",
+    tagColor: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
     icon: "fa-solid fa-bolt",
-    iconBg: "bg-amber-500 text-white shadow-amber-500/20",
-    title: "Extracteur 1-Click d'Affiches",
-    subtitle: "Postulez en quelques secondes depuis une simple image d'offre",
-    description: "Téléversez n'importe quelle affiche, photo ou capture d'écran d'offre d'emploi. Notre intelligence artificielle extrait instantanément le poste, les coordonnées RH et prépare votre dossier de candidature clé en main.",
+    iconColor: "text-amber-500 bg-amber-50 dark:bg-amber-950/60",
+    link: "/candidat/extracteur",
+    shortDesc: "Postulez en 1 clic depuis une affiche ou capture d'offre",
+    fullDesc: "Téléversez une image ou affiche d'emploi. L'intelligence artificielle extrait instantanément le titre du poste, l'entreprise et l'adresse email RH pour générer votre candidature clé en main.",
+    actionLabel: "Ouvrir l'Extracteur 1-Click",
     highlights: [
-      "Reconnaissance optique (OCR) ultra-précise",
-      "Détection automatique de l'email et du téléphone",
-      "Génération assistée de lettre de motivation",
-      "Gain de temps moyen de 85% par candidature"
-    ],
-    ctaText: "Lancer l'Extracteur",
-    ctaLink: "/candidat/extracteur",
-    isPopular: true
+      "Reconnaissance optique de caractères (OCR) instantanée",
+      "Extraction automatique de l'adresse email et du téléphone RH",
+      "Pré-remplissage automatique du formulaire de candidature",
+      "Rédaction assistée de votre lettre de motivation"
+    ]
   },
   {
-    id: "boite-idees",
-    category: "ai",
-    badge: "Collaboratif",
-    badgeColor: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/70 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800/50",
+    id: "boite-a-idees",
+    name: "Boîte à idées",
+    tag: "Communauté",
+    tagColor: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300",
     icon: "fa-solid fa-lightbulb",
-    iconBg: "bg-yellow-500 text-white shadow-yellow-500/20",
-    title: "Boîte à Idées & Innovation",
-    subtitle: "Co-construisez le futur de la plateforme Facilité",
-    description: "Un espace d'expression communautaire où vous pouvez suggérer de nouvelles fonctionnalités, voter pour les meilleures propositions et suivre les innovations en cours de développement par notre équipe.",
+    iconColor: "text-yellow-600 bg-yellow-50 dark:bg-yellow-950/60",
+    link: "/boite-a-idees",
+    shortDesc: "Suggestions, votes et innovations partagées",
+    fullDesc: "Espace d'échange et d'innovation collective. Proposez de nouvelles idées pour améliorer Facilité, votez pour les meilleures fonctionnalités et suivez en direct leur déploiement.",
+    actionLabel: "Accéder à la Boîte à idées",
     highlights: [
-      "Soumission d'idées ouverte à tous les membres",
-      "Système de vote et de popularité en temps réel",
-      "Statuts de déploiement transparents (En étude, En cours, Livré)",
-      "Récompenses et valorisation des meilleurs contributeurs"
-    ],
-    ctaText: "Déposer une idée",
-    ctaLink: "/boite-a-idees",
-    isPopular: false
+      "Dépôt d'idées libre et accessible à tous les membres",
+      "Système de vote et d'appréciation en direct",
+      "Suivi de l'état des suggestions (En étude, En cours, Validé)",
+      "Transparence totale sur l'évolution de la plateforme"
+    ]
   },
   {
     id: "services-modeles",
-    category: "cv",
-    badge: "Catalogue Premium",
-    badgeColor: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50",
+    name: "Services & Modèles",
+    tag: "Catalogue",
+    tagColor: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
     icon: "fa-solid fa-briefcase",
-    iconBg: "bg-emerald-500 text-white shadow-emerald-500/20",
-    title: "Studio Services & Modèles 360°",
-    subtitle: "Des modèles de CVs et lettres conçus pour décrocher des entretiens",
-    description: "Accédez à une collection complète de modèles professionnels adaptés aux standards internationaux : formats Sénégal / UEMOA, CV Canadien, Version Anglaise et lettres de motivation percutantes.",
+    iconColor: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60",
+    link: "/service",
+    shortDesc: "CVs Professionnels, Canada, Anglais & Lettres",
+    fullDesc: "Catalogue complet de modèles de CV et lettres de motivation professionnels, conformes aux exigences ATS et adaptés aux standards nationaux et internationaux.",
+    actionLabel: "Voir les Services & Modèles",
     highlights: [
-      "Conformité garantie avec les logiciels ATS des recruteurs",
+      "Modèles adaptés au format Sénégal, UEMOA, Canada & Anglais",
+      "Conception 100% conforme aux filtres de tri ATS",
       "Carrousel 360° interactif pour tester les designs",
-      "Édition ultra-rapide sur Canva et formats exportables",
-      "Recommandé par des spécialistes en recrutement RH"
-    ],
-    ctaText: "Découvrir les modèles",
-    ctaLink: "/service",
-    isPopular: true
+      "Tarifs transparents et accompagnement sur-mesure"
+    ]
   },
   {
     id: "recrutement-spontane",
-    category: "network",
-    badge: "77 Entreprises",
-    badgeColor: "bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300 border-blue-200 dark:border-blue-800/50",
+    name: "Recrutement Spontané",
+    tag: "77 Entreprises",
+    tagColor: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
     icon: "fa-solid fa-building-user",
-    iconBg: "bg-blue-600 text-white shadow-blue-600/20",
-    title: "Répertoire Recrutement Spontané",
-    subtitle: "Accédez directement aux directions des ressources humaines",
-    description: "Ne vous limitez pas aux offres publiées. Explorez notre répertoire qualifié de plus de 77 grandes entreprises leaders au Sénégal pour envoyer vos candidatures spontanées aux bons interlocuteurs.",
+    iconColor: "text-blue-600 bg-blue-50 dark:bg-blue-950/60",
+    link: "/recrutement-spontane",
+    shortDesc: "Répertoire officiel des 77 grandes entreprises",
+    fullDesc: "Annuaire sélectif des principales entreprises qui recrutent au Sénégal avec coordonnées RH vérifiées pour envoyer vos candidatures spontanées sans intermédiaire.",
+    actionLabel: "Consulter le Répertoire Spontané",
     highlights: [
-      "Coordonnées RH et adresses emails professionnelles vérifiées",
+      "Contacts RH et adresses emails vérifiées",
       "Classement thématique par secteur d'activité",
-      "Conseils personnalisés pour capter l'attention des recruteurs",
-      "Mise à jour permanente des entreprises partenaires"
-    ],
-    ctaText: "Explorer le répertoire",
-    ctaLink: "/recrutement-spontane",
-    isPopular: false
+      "Fiches de présentation détaillée pour chaque entreprise",
+      "Modèles de candidature spontanée recommandés"
+    ]
   },
   {
     id: "depots-physiques",
-    category: "network",
-    badge: "Terrain & Proximité",
-    badgeColor: "bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300 border-purple-200 dark:border-purple-800/50",
+    name: "Dépôts Physiques",
+    tag: "Terrain",
+    tagColor: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300",
     icon: "fa-solid fa-gas-pump",
-    iconBg: "bg-purple-600 text-white shadow-purple-600/20",
-    title: "Dépôts Physiques & Terrain",
-    subtitle: "Localisez les points stratégiques pour déposer votre dossier papier",
-    description: "Pour les opportunités de proximité et les emplois terrain, découvrez les stations-services, commerces et entreprises qui acceptent les dépôts physiques de CV en main propre.",
+    iconColor: "text-purple-600 bg-purple-50 dark:bg-purple-950/60",
+    link: "/recrutement-journalier",
+    shortDesc: "Stations-services & points de dépôt physique de CV",
+    fullDesc: "Guide des points de contact sur le terrain, stations-services et entreprises locales qui acceptent les dossiers de candidature déposés en main propre.",
+    actionLabel: "Voir les Dépôts Physiques",
     highlights: [
-      "Cartographie des stations et points de dépôt locaux",
-      "Conseils pratiques pour réussir son premier contact direct",
-      "Horaires et modalités recommandées pour se présenter",
-      "Opportunités pour profils opérationnels et débutants"
-    ],
-    ctaText: "Consulter les points de dépôt",
-    ctaLink: "/recrutement-journalier",
-    isPopular: false
+      "Liste des stations et points de dépôt locaux",
+      "Conseils pour réussir votre premier contact physique",
+      "Créneaux et moments propices pour déposer",
+      "Opportunités terrain et débutants bienvenues"
+    ]
   },
   {
-    id: "diagnostic-ia",
-    category: "ai",
-    badge: "Scanner ATS",
-    badgeColor: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/50",
+    id: "scanner-ia",
+    name: "Scanner & Audit IA",
+    tag: "Diagnostic",
+    tagColor: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300",
     icon: "fa-solid fa-robot",
-    iconBg: "bg-indigo-600 text-white shadow-indigo-600/20",
-    title: "Analyseur & Scanner IA de CV",
-    subtitle: "Évaluez votre score de performance face aux algorithmes",
-    description: "Importez votre CV (PDF / DOCX) pour bénéficier d'un audit complet en direct : détection des mots-clés manquants, clarté structurelle, compatibilité ATS et conseils d'optimisation immédiats.",
+    iconColor: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60",
+    link: "/importer-cv",
+    shortDesc: "Analyse ATS et diagnostic instantané de votre CV",
+    fullDesc: "Passez votre CV au scanner IA pour détecter les points de blocage ATS, vérifier la pertinence des mots-clés et obtenir un score d'impact avant d'envoyer vos candidatures.",
+    actionLabel: "Lancer le Scanner IA",
     highlights: [
-      "Score de lisibilité ATS sur 100",
-      "Détection des points forts et axes d'amélioration",
-      "Suggestions d'accroches professionnelles percutantes",
-      "Recommandations de modèles adaptés à votre profil"
-    ],
-    ctaText: "Analyser mon CV",
-    ctaLink: "/importer-cv",
-    isPopular: false
+      "Calcul immédiat du score de compatibilité ATS",
+      "Recommandations de structure et de mots-clés",
+      "Analyse de lisibilité pour les recruteurs",
+      "Rapport complet en quelques secondes"
+    ]
   },
   {
-    id: "messagerie-directe",
-    category: "network",
-    badge: "Temps Réel",
-    badgeColor: "bg-teal-100 text-teal-800 dark:bg-teal-950/70 dark:text-teal-300 border-teal-200 dark:border-teal-800/50",
+    id: "messagerie",
+    name: "Messagerie Directe",
+    tag: "Temps Réel",
+    tagColor: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300",
     icon: "fa-solid fa-comments",
-    iconBg: "bg-teal-600 text-white shadow-teal-600/20",
-    title: "Messagerie Candidat-Recruteur",
-    subtitle: "Échangez en direct et planifiez vos entretiens",
-    description: "Une messagerie fluide et sécurisée intégrée à la plateforme pour converser avec les recruteurs, répondre aux invitations d'entretien et transmettre vos documents complémentaires.",
+    iconColor: "text-teal-600 bg-teal-50 dark:bg-teal-950/60",
+    link: "/messagerie",
+    shortDesc: "Échanges en direct avec les recruteurs",
+    fullDesc: "Espace de messagerie intégré pour dialoguer en temps réel avec les employeurs, recevoir des réponses à vos candidatures et transmettre des pièces justificatives.",
+    actionLabel: "Ouvrir la Messagerie",
     highlights: [
-      "Notifications instantanées lors de réponses recruteurs",
-      "Partage sécurisé de fichiers et pièces jointes",
-      "Filtres de conversations et statut de lecture",
-      "Confidentialité garantie de bout en bout"
-    ],
-    ctaText: "Ouvrir la messagerie",
-    ctaLink: "/messagerie",
-    isPopular: false
+      "Discussion instantanée et notifications en temps réel",
+      "Envoi sécurisé de pièces jointes et documents",
+      "Suivi des statuts de lecture et de réponse",
+      "Historique unifié de vos échanges professionnels"
+    ]
   },
   {
-    id: "concours-fonction-publique",
-    category: "opportunity",
-    badge: "Fonction Publique",
-    badgeColor: "bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 border-rose-200 dark:border-rose-800/50",
+    id: "concours",
+    name: "Concours Publics",
+    tag: "Officiel",
+    tagColor: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300",
     icon: "fa-solid fa-award",
-    iconBg: "bg-rose-600 text-white shadow-rose-600/20",
-    title: "Avis de Concours Nationaux",
-    subtitle: "Toutes les dates et conditions des concours d'État",
-    description: "Centralisation quotidienne de tous les avis officiels de concours, examens professionnels et opportunités d'intégration dans la fonction publique et les grands corps de l'État.",
+    iconColor: "text-rose-600 bg-rose-50 dark:bg-rose-950/60",
+    link: "/offres?q=Concours",
+    shortDesc: "Avis et examens de la fonction publique",
+    fullDesc: "Centralisation des avis officiels de concours administratifs, examens professionnels et opportunités d'intégration dans la fonction publique.",
+    actionLabel: "Voir les Concours",
     highlights: [
-      "Calendrier des dates limites d'inscription",
-      "Conditions d'éligibilité et pièces requises détaillées",
-      "Accès direct aux formulaires officiels",
-      "Alertes pour ne manquer aucune date clé"
-    ],
-    ctaText: "Voir les concours",
-    ctaLink: "/offres?q=Concours",
-    isPopular: false
+      "Dates limites de candidature et calendrier officiel",
+      "Conditions d'éligibilité et pièces obligatoires",
+      "Mises à jour régulières des avis d'ouverture",
+      "Accès direct aux fiches d'instructions"
+    ]
   },
   {
-    id: "formations-certifiantes",
-    category: "opportunity",
-    badge: "Compétences Pro",
-    badgeColor: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800/50",
+    id: "formation",
+    name: "Formations & Certifications",
+    tag: "E-learning",
+    tagColor: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300",
     icon: "fa-solid fa-graduation-cap",
-    iconBg: "bg-cyan-600 text-white shadow-cyan-600/20",
-    title: "Formations & Certifications",
-    subtitle: "Montez en compétences sur les métiers porteurs",
-    description: "Accédez à un catalogue ciblé de formations certifiantes et programmes e-learning pour booster votre employabilité dans le numérique, la gestion de projet, les langues et le commerce.",
+    iconColor: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/60",
+    link: "/offres?q=Formation",
+    shortDesc: "Formations certifiantes & compétences d'avenir",
+    fullDesc: "Accédez à une sélection de formations professionnelles certifiantes pour développer vos compétences numériques, managériales et linguistiques.",
+    actionLabel: "Explorer les Formations",
     highlights: [
-      "Programmes axés sur la pratique et l'insertion",
-      "Certificats reconnus valorisables sur votre CV",
-      "Formations accessibles à distance ou en présentiel",
-      "Modules adaptés aux besoins actuels des employeurs"
-    ],
-    ctaText: "Découvrir les formations",
-    ctaLink: "/offres?q=Formation",
-    isPopular: false
+      "Programmes orientés compétences et pratique",
+      "Certifications reconnues sur le marché",
+      "Formations accessibles en ligne ou en présentiel",
+      "Valorisation directe sur votre profil Facilité"
+    ]
   }
 ];
 
 export default function FonctionnalitesPage() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
+  const [activeTabId, setActiveTabId] = useState("extracteur");
 
-  const filteredFeatures = useMemo(() => {
-    return FEATURES.filter((item) => {
-      const matchCategory = selectedCategory === "all" || item.category === selectedCategory;
-      const matchSearch =
-        searchQuery.trim() === "" ||
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.subtitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.highlights.some((h) => h.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchCategory && matchSearch;
-    });
-  }, [selectedCategory, searchQuery]);
+  const activeItem = SIDEBAR_ITEMS.find((item) => item.id === activeTabId) || SIDEBAR_ITEMS[0];
 
   return (
-    <div className="min-h-screen bg-[#FAF6F1] dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div className="min-h-screen bg-[#FAF6F1] dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex flex-col transition-colors duration-200">
       
-      {/* 1. HERO SECTION CINÉMATIQUE */}
-      <section className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden border-b border-gray-200/70 dark:border-gray-800/80 bg-gradient-to-b from-white/90 via-[#FAF6F1] to-white/60 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
-        {/* Cercles de fond décoratifs */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-400/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
-        <div className="absolute top-1/3 right-10 w-96 h-96 bg-indigo-400/10 dark:bg-indigo-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          {/* Badge en-tête */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800/50 text-xs font-black uppercase tracking-wider mb-6 shadow-xs animate-fade-in-up">
-            <i className="fa-solid fa-wand-magic-sparkles text-emerald-600 dark:text-emerald-400"></i>
-            <span>Écosystème Tout-en-Un Facilité</span>
-          </div>
-
-          {/* Titre Principal */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-gray-950 dark:text-white max-w-4xl mx-auto leading-[1.15] mb-6">
-            Toutes les fonctionnalités réunies pour{" "}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 dark:from-emerald-400 dark:via-teal-300 dark:to-indigo-400">
-              propulser votre carrière.
-            </span>
-          </h1>
-
-          {/* Sous-titre */}
-          <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed mb-8">
-            De la création de CV assistée par IA à la candidature en 1-Click depuis une affiche, découvrez la suite complète d&apos;outils conçus pour maximiser vos opportunités et accélérer vos recrutements.
-          </p>
-
-          {/* Boutons d'action rapides */}
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-12">
-            <Link
-              href="/candidat/extracteur"
-              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/25 transition-all transform hover:-translate-y-0.5 cursor-pointer"
-            >
-              <i className="fa-solid fa-bolt text-amber-300"></i>
-              <span>Tester l&apos;Extracteur 1-Click</span>
-            </Link>
-            <Link
-              href="/service"
-              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold text-sm border border-gray-200 dark:border-gray-700 shadow-sm transition-all transform hover:-translate-y-0.5 cursor-pointer"
-            >
-              <i className="fa-solid fa-briefcase text-emerald-600 dark:text-emerald-400"></i>
-              <span>Explorer les Modèles & Tarifs</span>
-            </Link>
-          </div>
-
-          {/* Barre de statistiques clés */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm">
-            <div className="p-3 text-center">
-              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">1-Click</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-bold mt-0.5">Candidature IA Express</div>
+      {/* HEADER DE LA PAGE FONCTIONNALITÉS */}
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800 px-4 sm:px-6 py-4 sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-lg shadow-md shadow-emerald-500/20">
+              <i className="fa-solid fa-wand-magic-sparkles"></i>
             </div>
-            <div className="p-3 text-center border-l border-gray-200/60 dark:border-gray-800">
-              <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400">+77</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-bold mt-0.5">Entreprises Répertoriées</div>
-            </div>
-            <div className="p-3 text-center border-l border-gray-200/60 dark:border-gray-800">
-              <div className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400">98%</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-bold mt-0.5">Conformité ATS</div>
-            </div>
-            <div className="p-3 text-center border-l border-gray-200/60 dark:border-gray-800">
-              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400">100%</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-bold mt-0.5">Accessible & Évolutif</div>
+            <div>
+              <h1 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+                <span>Fonctionnalités</span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-black uppercase tracking-wider">
+                  Suite Outils
+                </span>
+              </h1>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                Sélectionnez une fonctionnalité dans le menu latéral pour la découvrir ou la lancer
+              </p>
             </div>
           </div>
+
+          {/* Bouton retour / Accueil */}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold transition cursor-pointer"
+          >
+            <i className="fa-solid fa-house text-xs"></i>
+            <span className="hidden sm:inline">Accueil</span>
+          </Link>
         </div>
-      </section>
+      </header>
 
-      {/* 2. FILTRES & BARRE DE RECHERCHE */}
-      <section className="py-8 bg-[#FAF6F1] dark:bg-gray-950 sticky top-16 z-30 border-b border-gray-200/80 dark:border-gray-800/80 backdrop-blur-md bg-opacity-95 dark:bg-opacity-95">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* CONTENEUR PRINCIPAL AVEC MENU LATÉRAL */}
+      <div className="max-w-7xl mx-auto w-full flex-grow flex flex-col md:flex-row p-4 sm:p-6 gap-6">
+        
+        {/* =========================================================================
+            MENU LATÉRAL (SIDEBAR)
+           ========================================================================= */}
+        <aside className="w-full md:w-80 flex-shrink-0">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/80 dark:border-gray-800 p-3 sm:p-4 shadow-sm md:sticky md:top-24">
             
-            {/* Pilules de catégories */}
-            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-none">
-              {CATEGORIES.map((cat) => {
-                const isActive = selectedCategory === cat.id;
+            <div className="px-3 py-2 mb-2 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
+              <span className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                Menu des fonctionnalités
+              </span>
+              <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
+                {SIDEBAR_ITEMS.length} outils
+              </span>
+            </div>
+
+            {/* Liste des boutons latéraux */}
+            <div className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 scrollbar-none">
+              {SIDEBAR_ITEMS.map((item) => {
+                const isActive = item.id === activeTabId;
                 return (
                   <button
-                    key={cat.id}
+                    key={item.id}
                     type="button"
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    onClick={() => setActiveTabId(item.id)}
+                    className={`w-full flex items-center justify-between p-2.5 sm:p-3 rounded-2xl text-left transition-all cursor-pointer whitespace-nowrap md:whitespace-normal group ${
                       isActive
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20 scale-[1.02]"
-                        : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800"
+                        ? "bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-500 text-gray-950 dark:text-white shadow-sm"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/60 border border-transparent text-gray-700 dark:text-gray-300"
                     }`}
                   >
-                    <i className={`${cat.icon} text-xs`}></i>
-                    <span>{cat.label}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0 transition-transform group-hover:scale-105 ${item.iconColor}`}>
+                        <i className={item.icon}></i>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-black truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          {item.name}
+                        </div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 font-normal truncate hidden sm:block">
+                          {item.shortDesc}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="hidden md:flex items-center gap-1.5 ml-2 flex-shrink-0">
+                      <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${item.tagColor}`}>
+                        {item.tag}
+                      </span>
+                      <i className={`fa-solid fa-chevron-right text-[10px] transition-transform ${isActive ? "text-emerald-600 translate-x-0.5" : "text-gray-300 dark:text-gray-600 group-hover:text-gray-400"}`}></i>
+                    </div>
                   </button>
                 );
               })}
             </div>
 
-            {/* Champ de recherche rapide */}
-            <div className="relative w-full md:w-72">
-              <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher un outil..."
-                className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs font-bold text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs"
-                >
-                  <i className="fa-solid fa-xmark"></i>
-                </button>
-              )}
+            {/* Note en bas du menu latéral */}
+            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 px-2 text-center hidden md:block">
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                Plateforme Facilité • Outils professionnels & IA
+              </p>
             </div>
 
           </div>
-        </div>
-      </section>
+        </aside>
 
-      {/* 3. GRILLE DES FONCTIONNALITÉS */}
-      <section className="py-12 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {filteredFeatures.length === 0 ? (
-          <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-8">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-400 flex items-center justify-center mx-auto mb-4 text-2xl">
-              <i className="fa-solid fa-filter"></i>
-            </div>
-            <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">Aucune fonctionnalité ne correspond à votre recherche</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
-              Essayez de modifier votre mot-clé ou réinitialisez les filtres pour découvrir l&apos;ensemble des services.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCategory("all");
-                setSearchQuery("");
-              }}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer"
-            >
-              Réinitialiser les filtres
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredFeatures.map((feat) => (
-              <div
-                key={feat.id}
-                className="group relative bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/80 dark:border-gray-800 p-6 sm:p-7 flex flex-col justify-between hover:shadow-xl hover:border-emerald-300 dark:hover:border-emerald-700/60 transition-all duration-200 transform hover:-translate-y-1"
-              >
-                {/* Badge populaire si applicable */}
-                {feat.isPopular && (
-                  <div className="absolute top-4 right-4 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider">
-                    <i className="fa-solid fa-star text-[9px]"></i>
-                    <span>Populaire</span>
+        {/* =========================================================================
+            ESPACE PRINCIPAL DE CONTENU (ZONE DE TRAVAIL / DÉTAIL DE LA FONCTIONNALITÉ)
+           ========================================================================= */}
+        <main className="flex-grow min-w-0">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/80 dark:border-gray-800 p-6 sm:p-8 lg:p-10 shadow-sm flex flex-col justify-between min-h-[500px]">
+            
+            {/* Haut de la fiche fonctionnalité */}
+            <div>
+              {/* En-tête avec badge et titre */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-6 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-md ${activeItem.iconColor}`}>
+                    <i className={activeItem.icon}></i>
                   </div>
-                )}
-
-                <div>
-                  {/* Icône et Badge Catégorie */}
-                  <div className="flex items-center justify-between mb-5">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg shadow-md ${feat.iconBg}`}>
-                      <i className={feat.icon}></i>
-                    </div>
-                    {!feat.isPopular && (
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border ${feat.badgeColor}`}>
-                        {feat.badge}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Titre & Sous-titre */}
-                  <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-1.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                    {feat.title}
-                  </h2>
-                  <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-3">
-                    {feat.subtitle}
-                  </p>
-
-                  {/* Description */}
-                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-5">
-                    {feat.description}
-                  </p>
-
-                  {/* Points forts */}
-                  <div className="space-y-2 mb-6 pt-4 border-t border-gray-100 dark:border-gray-800/80">
-                    {feat.highlights.map((highlight, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
-                        <i className="fa-solid fa-circle-check text-emerald-500 text-xs mt-0.5 flex-shrink-0"></i>
-                        <span className="font-medium">{highlight}</span>
-                      </div>
-                    ))}
+                  <div>
+                    <span className={`inline-block text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md mb-1.5 ${activeItem.tagColor}`}>
+                      {activeItem.tag}
+                    </span>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-gray-950 dark:text-white tracking-tight">
+                      {activeItem.name}
+                    </h2>
                   </div>
                 </div>
 
-                {/* Bouton d'action direct */}
+                {/* Bouton de lancement direct */}
                 <Link
-                  href={feat.ctaLink}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-emerald-600 dark:hover:bg-emerald-600 text-gray-900 dark:text-white hover:text-white font-extrabold text-xs border border-gray-200 dark:border-gray-700 hover:border-emerald-600 transition-all cursor-pointer shadow-xs group-hover:shadow-md"
+                  href={activeItem.link}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-lg shadow-emerald-600/25 transition-all transform hover:scale-[1.02] cursor-pointer"
                 >
-                  <span>{feat.ctaText}</span>
-                  <i className="fa-solid fa-arrow-right text-[10px] transform group-hover:translate-x-1 transition-transform"></i>
+                  <span>{activeItem.actionLabel}</span>
+                  <i className="fa-solid fa-arrow-up-right-from-square text-[11px]"></i>
                 </Link>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
 
-      {/* 4. COMPARATIF BENTO : SANS vs AVEC FACILITÉ */}
-      <section className="py-16 bg-white dark:bg-gray-900 border-y border-gray-200/80 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-900/60">
-              L&apos;Avantage Compétitif
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-gray-950 dark:text-white mt-3 mb-4">
-              Pourquoi choisir l&apos;écosystème Facilité ?
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-              Découvrez comment notre suite d&apos;outils intégrés transforme une démarche de candidature fastidieuse en un processus fluide et valorisant.
-            </p>
-          </div>
+              {/* Description complète */}
+              <div className="mb-8">
+                <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">
+                  Description de la fonctionnalité
+                </h3>
+                <p className="text-sm sm:text-base text-gray-700 dark:text-gray-200 leading-relaxed font-normal bg-gray-50 dark:bg-gray-800/40 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-800">
+                  {activeItem.fullDesc}
+                </p>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
-            {/* Sans Facilité */}
-            <div className="bg-red-50/50 dark:bg-red-950/20 border border-red-200/70 dark:border-red-900/40 rounded-3xl p-6 sm:p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center text-base">
-                  <i className="fa-solid fa-circle-xmark"></i>
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base text-red-950 dark:text-red-300">Méthodes Traditionnelles</h3>
-                  <div className="text-xs text-red-700/80 dark:text-red-400">Sans les outils Facilité</div>
+              {/* Atouts clés & Points forts */}
+              <div className="mb-8">
+                <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
+                  Ce que cet outil vous apporte
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {activeItem.highlights.map((point, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-3 p-3.5 rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-800"
+                    >
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
+                        <i className="fa-solid fa-check"></i>
+                      </div>
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                        {point}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <ul className="space-y-3.5 text-xs text-gray-700 dark:text-gray-300">
-                <li className="flex items-start gap-2.5">
-                  <i className="fa-solid fa-xmark text-red-500 mt-0.5"></i>
-                  <span>Heures passées à recopier manuellement les informations d&apos;une affiche d&apos;offre.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <i className="fa-solid fa-xmark text-red-500 mt-0.5"></i>
-                  <span>CVs rejetés par les filtres automatiques ATS en raison de structures inadaptées.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <i className="fa-solid fa-xmark text-red-500 mt-0.5"></i>
-                  <span>Difficulté à obtenir les coordonnées directes des responsables recrutement.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <i className="fa-solid fa-xmark text-red-500 mt-0.5"></i>
-                  <span>Aucun retour ni feedback sur les points d&apos;amélioration du profil.</span>
-                </li>
-              </ul>
             </div>
 
-            {/* Avec Facilité */}
-            <div className="bg-emerald-50/70 dark:bg-emerald-950/20 border-2 border-emerald-500/80 rounded-3xl p-6 sm:p-8 relative shadow-lg shadow-emerald-500/5">
-              <div className="absolute top-4 right-4 px-2.5 py-0.5 bg-emerald-600 text-white rounded-full text-[10px] font-black uppercase tracking-wide">
-                Recommandé
+            {/* Zone d'action basse */}
+            <div className="pt-6 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <i className="fa-solid fa-circle-info text-emerald-500"></i>
+                <span>Disponible et actif sur la plateforme Facilité</span>
               </div>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base shadow-sm">
-                  <i className="fa-solid fa-circle-check"></i>
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base text-emerald-950 dark:text-emerald-300">Avec la Suite Facilité</h3>
-                  <div className="text-xs text-emerald-700 dark:text-emerald-400 font-bold">100% Digital & Intelligent</div>
-                </div>
-              </div>
-              <ul className="space-y-3.5 text-xs text-gray-800 dark:text-gray-200">
-                <li className="flex items-start gap-2.5">
-                  <i className="fa-solid fa-check text-emerald-600 dark:text-emerald-400 font-bold mt-0.5"></i>
-                  <span>Postulez en 1 clic grâce à l&apos;analyse intelligente d&apos;affiche par IA.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <i className="fa-solid fa-check text-emerald-600 dark:text-emerald-400 font-bold mt-0.5"></i>
-                  <span>Modèles de CVs et lettres validés conformes ATS et testés sur les marchés internationaux.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <i className="fa-solid fa-check text-emerald-600 dark:text-emerald-400 font-bold mt-0.5"></i>
-                  <span>Annuaire qualifié de 77+ grandes entreprises pour candidatures spontanées ciblées.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <i className="fa-solid fa-check text-emerald-600 dark:text-emerald-400 font-bold mt-0.5"></i>
-                  <span>Diagnostic IA immédiat et messagerie directe en temps réel avec les recruteurs.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* 5. BANNIÈRE D'APPEL À L'ACTION (CTA FINAL) */}
-      <section className="py-16 md:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative rounded-3xl bg-gradient-to-br from-gray-900 via-gray-950 to-emerald-950 p-8 sm:p-12 lg:p-16 text-center text-white overflow-hidden shadow-2xl border border-emerald-800/40">
-          <div className="relative z-10 max-w-3xl mx-auto">
-            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider mb-6">
-              <i className="fa-solid fa-rocket"></i>
-              Prêt à booster votre avenir ?
-            </span>
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-6">
-              Rejoignez des milliers de talents et recruteurs sur Facilité.
-            </h2>
-            <p className="text-xs sm:text-base text-gray-300 mb-8 leading-relaxed">
-              Explorez nos outils dès aujourd&apos;hui et commencez à postuler avec un impact maximal.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link
-                href="/candidat/extracteur"
-                className="px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-black text-xs sm:text-sm transition-all transform hover:scale-105 cursor-pointer shadow-lg shadow-emerald-500/25"
-              >
-                Tester l&apos;Extracteur 1-Click
-              </Link>
-              <Link
-                href="/offres"
-                className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 transition-all cursor-pointer"
-              >
-                Consulter les offres d&apos;emploi
-              </Link>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <Link
+                  href={activeItem.link}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-rocket"></i>
+                  <span>Lancer {activeItem.name}</span>
+                </Link>
+              </div>
             </div>
+
           </div>
-        </div>
-      </section>
+        </main>
+
+      </div>
 
     </div>
   );

@@ -753,12 +753,6 @@ export default function Header() {
         setIsMobileSearchOpen(false);
       }
       if (
-        fonctionnalitesDropdownRef.current &&
-        !fonctionnalitesDropdownRef.current.contains(event.target)
-      ) {
-        setFonctionnalitesDropdownOpen(false);
-      }
-      if (
         plusDropdownRef.current &&
         !plusDropdownRef.current.contains(event.target)
       ) {
