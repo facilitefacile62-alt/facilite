@@ -142,6 +142,32 @@ const SIDEBAR_ITEMS = [
     footerHint: "Pratique pour extraire une attestation ou un certificat précis"
   },
   {
+    id: "compresser-pdf",
+    category: "pdf",
+    name: "Compresser PDF",
+    tag: "Optimisation",
+    tagColor: "bg-lime-100 text-lime-800 dark:bg-lime-950 dark:text-lime-300 border-lime-200 dark:border-lime-800",
+    icon: "fa-solid fa-compress",
+    iconColor: "text-lime-600 bg-lime-50 dark:bg-lime-950/60 border border-lime-200 dark:border-lime-900/50",
+    link: "#compresser",
+    isToolModal: true,
+    tagline: "Diminuez le poids de vos fichiers PDF tout en conservant une netteté maximale",
+    description: "Diminuer la taille de votre fichier PDF, tout en conservant la meilleure qualité possible. Optimisez vos fichiers PDF.",
+    steps: [
+      { num: "1", title: "Téléverser", desc: "Importez le PDF à optimiser et alléger", icon: "fa-solid fa-cloud-arrow-up" },
+      { num: "2", title: "Compression", desc: "Optimisation automatique des images et polices", icon: "fa-solid fa-sliders" },
+      { num: "3", title: "Télécharger", desc: "Récupérez votre document prêt à être envoyé", icon: "fa-solid fa-file-circle-check" }
+    ],
+    highlights: [
+      { title: "Réduction jusqu'à 80%", desc: "Idéal pour respecter les limites imposées par email", icon: "fa-solid fa-gauge-high" },
+      { title: "Qualité HD préservée", desc: "Textes et logos restent parfaitement nets et lisibles", icon: "fa-solid fa-gem" },
+      { title: "Conforme aux portails RH", desc: "Passe sans problème les limites de 2 Mo et 5 Mo", icon: "fa-solid fa-circle-check" },
+      { title: "Traitement ultra-rapide", desc: "Compression instantanée en 1 clic", icon: "fa-solid fa-bolt" }
+    ],
+    actionLabel: "Compresser mon fichier PDF",
+    footerHint: "Optimisation recommandée pour les envois par email et formulaires de candidature"
+  },
+  {
     id: "organiser-pdf",
     category: "pdf",
     name: "Organiser PDF",
