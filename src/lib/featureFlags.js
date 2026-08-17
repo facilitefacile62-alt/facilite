@@ -28,7 +28,7 @@ export const DEFAULT_FEATURE_TREE = [
       {
         id: "nav_extracteur",
         name: "Extracteur / Importer CV",
-        path: "/importer-cv",
+        path: "/candidat/extracteur",
         icon: "⚡",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
