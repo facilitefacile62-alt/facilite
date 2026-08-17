@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 
-export const runtime = "nodejs";
+// Edge (pas nodejs) : cette route n'utilise aucune API Node spécifique
+// (contrairement à /api/canva/callback, qui a besoin de crypto) — l'Edge
+// Runtime s'exécute au plus proche géographique de la requête au lieu d'une
+// seule région fixe, ce qui réduit la latence de l'appel réseau vers
+// Supabase (exchangeCodeForSession) pour des utilisateurs loin de la région
+// par défaut de la fonction Node.
+export const runtime = "edge";
 
 /**
  * GET /auth/callback — point d'échange PKCE pour l'OAuth Google (et tout
