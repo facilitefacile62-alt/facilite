@@ -1,5 +1,7 @@
 "use client";
 
+import { supabase } from "@/lib/supabase";
+
 export const DEFAULT_FEATURE_TREE = [
   {
     id: "branch_nav",
@@ -242,68 +244,94 @@ export const DEFAULT_FEATURE_TREE = [
   },
 ];
 
-const STORAGE_KEY = "facilite_feature_flags_tree";
+const TABLE = "feature_flags";
 
 /**
- * Récupère l'arbre des fonctionnalités depuis localStorage ou la valeur par défaut
+ * Lit les overrides (enabled/roles) depuis Supabase — source commune à tous
+ * les navigateurs, contrairement à l'ancien localStorage. Fail-open : une
+ * Map vide en cas d'erreur réseau (mergeFeatureFlagsTree retombe alors sur
+ * DEFAULT_FEATURE_TREE, tout activé — jamais un blocage sur panne Supabase).
+ * @returns {Promise<Map<string, {enabled: boolean, roles: object}>>}
  */
-export function getFeatureFlagsTree() {
-  if (typeof window === "undefined") return DEFAULT_FEATURE_TREE;
+export async function fetchFeatureFlagsOverrides() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return DEFAULT_FEATURE_TREE;
-    const parsed = JSON.parse(saved);
+    const { data, error } = await supabase.from(TABLE).select("id, enabled, roles");
+    if (error) throw error;
+    return new Map((data || []).map((r) => [r.id, { enabled: r.enabled, roles: r.roles }]));
+  } catch (err) {
+    console.warn("[FeatureFlags] Erreur lecture Supabase (repli sur défauts activés) :", err.message);
+    return new Map();
+  }
+}
 
-    // Fusion intelligente pour conserver les labels et icônes à jour tout en gardant les statuts activés/désactivés
-    return DEFAULT_FEATURE_TREE.map((branch) => {
-      const savedBranch = parsed.find((b) => b.id === branch.id);
-      if (!savedBranch) return branch;
+/**
+ * Fusion pure DEFAULT_FEATURE_TREE + overrides Supabase — même logique de
+ * fusion que l'ancienne version localStorage, juste paramétrée pour être
+ * testable/réutilisable indépendamment de la source des overrides.
+ * @param {Map<string, {enabled: boolean, roles: object}>} overridesMap
+ */
+export function mergeFeatureFlagsTree(overridesMap) {
+  return DEFAULT_FEATURE_TREE.map((branch) => ({
+    ...branch,
+    children: branch.children.map((feat) => {
+      const o = overridesMap.get(feat.id);
+      if (!o) return feat;
       return {
-        ...branch,
-        children: branch.children.map((feat) => {
-          const savedFeat = savedBranch.children?.find((f) => f.id === feat.id);
-          if (!savedFeat) return feat;
-          return {
-            ...feat,
-            enabled: typeof savedFeat.enabled === "boolean" ? savedFeat.enabled : feat.enabled,
-            roles: savedFeat.roles ? { ...feat.roles, ...savedFeat.roles } : feat.roles,
-          };
-        }),
+        ...feat,
+        enabled: typeof o.enabled === "boolean" ? o.enabled : feat.enabled,
+        roles: o.roles ? { ...feat.roles, ...o.roles } : feat.roles,
       };
-    });
-  } catch (err) {
-    console.warn("[FeatureFlags] Erreur lecture localStorage:", err);
-    return DEFAULT_FEATURE_TREE;
-  }
+    }),
+  }));
 }
 
 /**
- * Sauvegarde l'arbre des fonctionnalités et déclenche un événement de mise à jour instantanée
+ * Raccourci fetch + fusion — l'arbre complet prêt à l'affichage/au contrôle.
  */
-export function saveFeatureFlagsTree(newTree) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newTree));
-    window.dispatchEvent(new CustomEvent("feature_flags_updated", { detail: newTree }));
-  } catch (err) {
-    console.error("[FeatureFlags] Erreur sauvegarde localStorage:", err);
-  }
+export async function getFeatureFlagsTreeAsync() {
+  return mergeFeatureFlagsTree(await fetchFeatureFlagsOverrides());
 }
 
 /**
- * Vérifie si une fonctionnalité est autorisée pour un rôle donné
- * @param {string} featureId - ID de la fonctionnalité ou chemin (ex: 'nav_plus_service' ou '/service')
+ * Écrit un lot d'overrides — une requête UPDATE par ligne (jamais upsert :
+ * les 23 lignes existent déjà depuis le seed de la migration, l'app ne crée
+ * jamais de nouvelle ligne ; upsert() émet un INSERT ... ON CONFLICT côté
+ * PostgREST, qui exige un GRANT INSERT même quand la ligne existe déjà — la
+ * policy/GRANT de cette table n'autorisent délibérément qu'UPDATE, moindre
+ * privilège). RLS restreint déjà l'écriture aux admins — un appel par un
+ * non-admin renvoie une erreur (0 ligne affectée), jamais d'exception.
+ * @param {Array<{id: string, enabled: boolean, roles: object}>} rows
+ */
+export async function persistFeatureFlagsOverrides(rows) {
+  const results = await Promise.all(
+    rows.map((r) =>
+      supabase
+        .from(TABLE)
+        .update({ enabled: r.enabled, roles: r.roles, updated_at: new Date().toISOString() })
+        .eq("id", r.id)
+    )
+  );
+  const failed = results.find((res) => res.error);
+  return { error: failed?.error || null };
+}
+
+/**
+ * Vérifie si une fonctionnalité est autorisée pour un rôle donné — PURE et
+ * SYNCHRONE : prend l'arbre déjà chargé en paramètre au lieu de le relire
+ * depuis un stockage interne, pour permettre un contrôle instantané à
+ * chaque clic (Header.jsx) sans aller-retour réseau.
+ * @param {Array} flagsTree - arbre déjà chargé (getFeatureFlagsTreeAsync)
+ * @param {string} featureIdOrPath - ID de la fonctionnalité ou chemin (ex: 'nav_plus_service' ou '/service')
  * @param {string} userRole - 'admin' | 'publisher' | 'recruiter' | 'user' | 'visitor'
  * @returns {boolean}
  */
-export function isFeatureAllowed(featureIdOrPath, userRole = "visitor") {
+export function isFeatureAllowed(flagsTree, featureIdOrPath, userRole = "visitor") {
   // L'administrateur a TOUJOURS accès à tout
   if (userRole === "admin") return true;
 
-  const tree = getFeatureFlagsTree();
   let found = null;
 
-  for (const branch of tree) {
+  for (const branch of flagsTree) {
     for (const feat of branch.children) {
       if (feat.id === featureIdOrPath || feat.path === featureIdOrPath) {
         found = feat;

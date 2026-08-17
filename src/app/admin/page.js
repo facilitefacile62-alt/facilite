@@ -10,7 +10,7 @@ import BadgeDisplay from "@/components/BadgeDisplay";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityAlertsWidget";
-import { getFeatureFlagsTree, saveFeatureFlagsTree, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { getFeatureFlagsTreeAsync, persistFeatureFlagsOverrides, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import AvatarImage from "@/components/AvatarImage";
 import AdminAIStudio from "@/components/AdminAIStudio";
 
@@ -223,14 +223,20 @@ export default function AdminDashboardPage() {
   });
 
   useEffect(() => {
-    setFeatureTree(getFeatureFlagsTree());
+    getFeatureFlagsTreeAsync().then(setFeatureTree).catch(() => {});
   }, []);
 
   const toggleBranch = (branchId) => {
     setExpandedBranches((prev) => ({ ...prev, [branchId]: !prev[branchId] }));
   };
 
-  const handleToggleFeatureMaster = (branchId, featId) => {
+  // Chaque handler garde le même calcul pur qu'avant (état optimiste
+  // immédiat, pas de changement d'UX), puis persiste sur Supabase — source
+  // commune à tous les visiteurs, plus du localStorage par navigateur. En
+  // cas d'échec (ex: RLS refuse — pas admin), on revient à l'état précédent
+  // et on prévient par toast, même patron que handleRoleChange plus bas.
+  const handleToggleFeatureMaster = async (branchId, featId) => {
+    const previous = featureTree;
     const updated = featureTree.map((b) => {
       if (b.id !== branchId) return b;
       return {
@@ -242,15 +248,21 @@ export default function AdminDashboardPage() {
       };
     });
     setFeatureTree(updated);
-    saveFeatureFlagsTree(updated);
     const targetFeat = updated.find((b) => b.id === branchId)?.children.find((f) => f.id === featId);
+    const { error } = await persistFeatureFlagsOverrides([{ id: featId, enabled: targetFeat.enabled, roles: targetFeat.roles }]);
+    if (error) {
+      setFeatureTree(previous);
+      triggerToast("Échec de la mise à jour : " + error.message, "fa-triangle-exclamation");
+      return;
+    }
     triggerToast(
       targetFeat?.enabled ? `Module "${targetFeat.name}" activé.` : `Module "${targetFeat.name}" désactivé.`,
       targetFeat?.enabled ? "fa-circle-check" : "fa-circle-xmark"
     );
   };
 
-  const handleToggleFeatureRole = (branchId, featId, roleKey) => {
+  const handleToggleFeatureRole = async (branchId, featId, roleKey) => {
+    const previous = featureTree;
     const updated = featureTree.map((b) => {
       if (b.id !== branchId) return b;
       return {
@@ -266,11 +278,18 @@ export default function AdminDashboardPage() {
       };
     });
     setFeatureTree(updated);
-    saveFeatureFlagsTree(updated);
+    const targetFeat = updated.find((b) => b.id === branchId)?.children.find((f) => f.id === featId);
+    const { error } = await persistFeatureFlagsOverrides([{ id: featId, enabled: targetFeat.enabled, roles: targetFeat.roles }]);
+    if (error) {
+      setFeatureTree(previous);
+      triggerToast("Échec de la mise à jour : " + error.message, "fa-triangle-exclamation");
+      return;
+    }
     triggerToast("Permissions du rôle mises à jour.", "fa-circle-check");
   };
 
-  const handleToggleBranchAll = (branchId, enableVal) => {
+  const handleToggleBranchAll = async (branchId, enableVal) => {
+    const previous = featureTree;
     const updated = featureTree.map((b) => {
       if (b.id !== branchId) return b;
       return {
@@ -279,17 +298,30 @@ export default function AdminDashboardPage() {
       };
     });
     setFeatureTree(updated);
-    saveFeatureFlagsTree(updated);
+    const changedRows = (updated.find((b) => b.id === branchId)?.children || []).map((f) => ({ id: f.id, enabled: f.enabled, roles: f.roles }));
+    const { error } = await persistFeatureFlagsOverrides(changedRows);
+    if (error) {
+      setFeatureTree(previous);
+      triggerToast("Échec de la mise à jour : " + error.message, "fa-triangle-exclamation");
+      return;
+    }
     triggerToast(enableVal ? "Branche activée." : "Branche désactivée.", "fa-circle-check");
   };
 
-  const handleToggleAllGlobal = (enableVal) => {
+  const handleToggleAllGlobal = async (enableVal) => {
+    const previous = featureTree;
     const updated = featureTree.map((b) => ({
       ...b,
       children: b.children.map((f) => ({ ...f, enabled: enableVal })),
     }));
     setFeatureTree(updated);
-    saveFeatureFlagsTree(updated);
+    const changedRows = updated.flatMap((b) => b.children.map((f) => ({ id: f.id, enabled: f.enabled, roles: f.roles })));
+    const { error } = await persistFeatureFlagsOverrides(changedRows);
+    if (error) {
+      setFeatureTree(previous);
+      triggerToast("Échec de la mise à jour : " + error.message, "fa-triangle-exclamation");
+      return;
+    }
     triggerToast(enableVal ? "Toutes les fonctionnalités activées." : "Toutes les fonctionnalités désactivées.", "fa-circle-check");
   };
 
