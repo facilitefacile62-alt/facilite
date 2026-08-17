@@ -401,41 +401,7 @@ Please send BOTH versions of your CV (French and English) to: recrutement@c2ksta
     image: "/c2k_sabodala.jpg",
     pinned: true
   },
-  {
-    id: 99,
-    titleFR: "Équipiers Polyvalents de Restauration",
-    titleEN: "Polyvalent Team Members",
-    company: "KFC Sénégal",
-    logoColor: "bg-red-600",
-    initials: "KFC",
-    location: "Dakar",
-    timeFR: "À l'instant",
-    timeEN: "Just now",
-    contract: "CDD",
-    descFR: `KFC Sénégal recrute des ÉQUIPIERS POLYVALENTS DE RESTAURATION pour accompagner ses prochaines ouvertures de restaurants.
 
-Ce que nous offrons :
-- Une formation d'intégration complète et accompagnée
-- Des opportunités d'évolution rapides
-- Un environnement de travail stimulant et bienveillant
-- Avantages repas et autres bénéfices
-
-Profil recherché :
-- Souriant(e) et motivé(e)
-- Dynamique et esprit d'équipe
-- Ponctuel(le) et engagé(e)
-- Sens du service client`,
-    descEN: `KFC Senegal is recruiting POLYVALENT TEAM MEMBERS to support its upcoming restaurant openings.
-
-What we offer:
-- Full onboard training and support
-- Rapid career growth opportunities
-- Stimulating work environment
-- Meal benefits and other perks`,
-    tags: ["Dakar", "CDD", "Restauration"],
-    recruiterEmail: "recrutement@kfcsenegal.com",
-    image: "/kfc.jpeg"
-  },
   {
     id: 6,
     titleFR: "FACILITE BUSINESS RECRUTE !",
