@@ -29,6 +29,28 @@ function pathnameMatchesRoute(pathname, route) {
   return pathname === route || pathname.startsWith(`${route}/`);
 }
 
+// Certaines entrées feature_flags stockent un chemin AVEC query string (ex.
+// nav_plus_formation: "/offres?q=Formation") — req.nextUrl.pathname ne
+// contient jamais de query string, donc pathnameMatchesRoute seule ne peut
+// jamais les faire correspondre : une visite directe de l'URL contournait
+// le blocage (trouvé le 2026-08-17, un utilisateur visitant directement
+// /offres?q=Formation passait alors que le clic depuis le menu était bien
+// bloqué). Comparaison par pathname + valeur de(s) paramètre(s) de la query
+// stockée, insensible à la casse — pas une égalité de chaîne stricte, pour
+// qu'un ?q=formation (casse différente) ou un paramètre supplémentaire ne
+// suffise pas à contourner le blocage.
+function matchesFlagPath(nextUrl, flagPath) {
+  if (!flagPath) return false;
+  const [flagPathname, flagQuery] = flagPath.split("?");
+  if (!flagQuery) return pathnameMatchesRoute(nextUrl.pathname, flagPath);
+  if (nextUrl.pathname !== flagPathname) return false;
+  const flagParams = new URLSearchParams(flagQuery);
+  for (const [key, value] of flagParams.entries()) {
+    if ((nextUrl.searchParams.get(key) || "").toLowerCase() !== value.toLowerCase()) return false;
+  }
+  return true;
+}
+
 function estRoutePublique(pathname) {
   return PUBLIC_ROUTES.some((route) => pathnameMatchesRoute(pathname, route));
 }
@@ -183,7 +205,7 @@ export default async function proxy(req) {
         .select("path, enabled, roles")
         .then((r) => r.data || []);
       const rows = await withTimeout(flagsPromise, 1500);
-      const matches = rows.filter((r) => r.path && pathnameMatchesRoute(pathname, r.path));
+      const matches = rows.filter((r) => matchesFlagPath(req.nextUrl, r.path));
 
       if (matches.length > 0) {
         // Statut recruteur : profiles.badges contient 'verified_recruiter',

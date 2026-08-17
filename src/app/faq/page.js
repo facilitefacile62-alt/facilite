@@ -180,46 +180,26 @@ export default function FaqPage() {
                       {faq.id === "q2" && (
                         <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-800">
                           <h4 className="text-center text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-[#10E688] mb-4">
-                            Équipe & Fondateurs Facilité
+                            Fondateur de Facilité
                           </h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto text-center">
-                            {/* Carte 1 : Cheikh Ahmed Tidiane Dieng */}
-                            <div className="bg-[#0A0D14] text-white border border-gray-800/90 rounded-3xl p-5 sm:p-6 flex flex-col items-center shadow-xl hover:border-emerald-500/40 transition-all">
-                              <div className="w-20 h-20 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_15px_rgba(16,230,136,0.3)] mb-3 overflow-hidden flex-shrink-0">
+                          <div className="flex justify-center max-w-sm mx-auto text-center">
+                            {/* Carte Unique du Fondateur */}
+                            <div className="w-full bg-[#0A0D14] text-white border border-gray-800/90 rounded-3xl p-6 flex flex-col items-center shadow-xl hover:border-emerald-500/40 transition-all">
+                              <div className="w-24 h-24 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_20px_rgba(16,230,136,0.3)] mb-4 overflow-hidden flex-shrink-0">
                                 <img
                                   src="/fondateur.png"
-                                  alt="Cheikh Ahmed Tidiane Dieng"
+                                  alt="Fondateur Facilité"
                                   className="w-full h-full object-cover rounded-full"
                                 />
                               </div>
-                              <h5 className="text-sm sm:text-base font-extrabold text-white mb-1">
-                                Cheikh Ahmed Tidiane Dieng
+                              <h5 className="text-base sm:text-lg font-extrabold text-white mb-1">
+                                Macoumba Samake
                               </h5>
-                              <span className="inline-block bg-[#10E688]/10 text-[#10E688] border border-[#10E688]/30 rounded-full px-3 py-0.5 text-[10px] font-bold mb-2">
-                                Co-fondateur & CEO
+                              <span className="inline-block bg-[#10E688]/10 text-[#10E688] border border-[#10E688]/30 rounded-full px-4 py-1 text-xs font-bold mb-2">
+                                Fondateur & Créateur
                               </span>
-                              <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
-                                Développeur et coach personnel passionné par le fitness.
-                              </p>
-                            </div>
-
-                            {/* Carte 2 : Mohamed Lamine Badji */}
-                            <div className="bg-[#0A0D14] text-white border border-gray-800/90 rounded-3xl p-5 sm:p-6 flex flex-col items-center shadow-xl hover:border-emerald-500/40 transition-all">
-                              <div className="w-20 h-20 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_15px_rgba(16,230,136,0.3)] mb-3 overflow-hidden flex-shrink-0">
-                                <img
-                                  src="/c2k_sabodala.jpg"
-                                  alt="Mohamed Lamine Badji"
-                                  className="w-full h-full object-cover rounded-full"
-                                />
-                              </div>
-                              <h5 className="text-sm sm:text-base font-extrabold text-white mb-1">
-                                Mohamed Lamine Badji
-                              </h5>
-                              <span className="inline-block bg-[#10E688]/10 text-[#10E688] border border-[#10E688]/30 rounded-full px-3 py-0.5 text-[10px] font-bold mb-2">
-                                Co-fondateur & CTO
-                              </span>
-                              <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
-                                Développeur FullStack avec une appétence Produit.
+                              <p className="text-xs text-gray-400 leading-relaxed font-medium">
+                                Développeur FullStack & Fondateur de la plateforme Facilité.
                               </p>
                             </div>
                           </div>
