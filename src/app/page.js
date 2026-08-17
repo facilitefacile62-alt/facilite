@@ -2039,6 +2039,63 @@ export default function Home() {
         </div>
       </main>
 
+      {/* =========================================================================
+          SECTION FONDATEURS (DESIGN EXCLUSIF 1:1 CAPTURE UTILISATEUR)
+         ========================================================================= */}
+      <section className="w-full bg-[#0A0D14] text-white py-14 px-4 sm:px-8 border-t border-b border-gray-800/80 shadow-2xl my-4">
+        <div className="max-w-5xl mx-auto">
+          
+          <div className="text-center mb-10">
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white/90">
+              Fondateurs
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
+            {/* Carte 1 : Cheikh Ahmed Tidiane Dieng / Fondateur */}
+            <div className="bg-[#121722] border border-gray-800/80 rounded-3xl p-8 sm:p-10 flex flex-col items-center text-center shadow-xl hover:border-emerald-500/40 transition-all group">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_20px_rgba(16,230,136,0.3)] mb-5 overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
+                <img
+                  src="/fondateur.png"
+                  alt="Cheikh Ahmed Tidiane Dieng"
+                  className="w-full h-full object-cover rounded-full"
+                />
+              </div>
+              <h4 className="text-lg sm:text-xl font-extrabold text-white mb-2">
+                Cheikh Ahmed Tidiane Dieng
+              </h4>
+              <span className="inline-block bg-[#10E688]/10 text-[#10E688] border border-[#10E688]/30 rounded-full px-4 py-1 text-xs font-bold mb-4 shadow-2xs">
+                Co-fondateur & CEO
+              </span>
+              <p className="text-xs sm:text-sm text-gray-400 font-medium leading-relaxed max-w-xs">
+                Développeur et coach personnel passionné par le fitness.
+              </p>
+            </div>
+
+            {/* Carte 2 : Mohamed Lamine Badji */}
+            <div className="bg-[#121722] border border-gray-800/80 rounded-3xl p-8 sm:p-10 flex flex-col items-center text-center shadow-xl hover:border-emerald-500/40 transition-all group">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_20px_rgba(16,230,136,0.3)] mb-5 overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
+                <img
+                  src="/c2k_sabodala.jpg"
+                  alt="Mohamed Lamine Badji"
+                  className="w-full h-full object-cover rounded-full"
+                />
+              </div>
+              <h4 className="text-lg sm:text-xl font-extrabold text-white mb-2">
+                Mohamed Lamine Badji
+              </h4>
+              <span className="inline-block bg-[#10E688]/10 text-[#10E688] border border-[#10E688]/30 rounded-full px-4 py-1 text-xs font-bold mb-4 shadow-2xs">
+                Co-fondateur & CTO
+              </span>
+              <p className="text-xs sm:text-sm text-gray-400 font-medium leading-relaxed max-w-xs">
+                Développeur FullStack avec une appétence Produit.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* Footer Éléments Sombre & Informations */}
       <footer className="bg-[#080E1E] text-gray-400 pt-12 md:pt-16 pb-28 md:pb-16 px-6 md:px-12 border-t border-gray-800">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
