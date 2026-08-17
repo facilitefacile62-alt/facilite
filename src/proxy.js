@@ -163,6 +163,65 @@ export default async function proxy(req) {
     }
   }
 
+  // 6. Contrôle d'accès par fonctionnalité (feature flags, table
+  // public.feature_flags) — bloque la navigation DIRECTE vers une route
+  // désactivée depuis /admin. Header.jsx ne couvre que le clic sur un lien
+  // du menu ; ceci couvre l'URL tapée, un favori, ou tout autre chemin qui
+  // ne passe pas par ce clic. Bypass admin d'abord, même sémantique que
+  // isFeatureAllowed() côté client (src/lib/featureFlags.js). Fail-open sur
+  // toute erreur/timeout Supabase — même philosophie que le reste de ce
+  // fichier, jamais un blocage sur panne.
+  const userRoleForFlags = userRoleRow?.role || "user";
+  if (userRoleForFlags !== "admin") {
+    try {
+      const flagsPromise = supabase
+        .from("feature_flags")
+        .select("path, enabled, roles")
+        .then((r) => r.data || []);
+      const rows = await withTimeout(flagsPromise, 1500);
+      const matches = rows.filter((r) => r.path && pathnameMatchesRoute(pathname, r.path));
+
+      if (matches.length > 0) {
+        // Statut recruteur : profiles.badges contient 'verified_recruiter',
+        // JAMAIS user_roles.role ("recruiter" n'existe pas dans sa
+        // contrainte CHECK — voir AuthContext.jsx:196-198). Requête
+        // seulement si une des entrées correspondantes distingue vraiment
+        // user/recruteur, pour ne pas ajouter un aller-retour Supabase sur
+        // chaque page protégée du site.
+        let isRecruiter = false;
+        if (matches.some((m) => m.roles?.user !== m.roles?.recruiter)) {
+          const profilePromise = supabase
+            .from("profiles")
+            .select("badges")
+            .eq("id", user.id)
+            .single()
+            .then((r) => r.data);
+          const profileRow = await withTimeout(profilePromise, 1500).catch(() => null);
+          isRecruiter = Array.isArray(profileRow?.badges) && profileRow.badges.includes("verified_recruiter");
+        }
+        const roleKey = isRecruiter ? "recruiter" : "user";
+
+        // Le plus restrictif gagne quand plusieurs entrées partagent le
+        // même chemin physique (ex. /importer-cv, /service ont chacune 2-3
+        // entrées distinctes) : si l'admin en désactive UNE seule, la
+        // navigation directe est bloquée — choix délibéré, pas la seule
+        // lecture possible.
+        const blocked = matches.find((m) => !(m.enabled && m.roles?.[roleKey] !== false));
+        if (blocked) {
+          const url = req.nextUrl.clone();
+          url.pathname = "/fonctionnalite-indisponible";
+          url.searchParams.set("from", pathname);
+          return NextResponse.redirect(url);
+        }
+      }
+    } catch (err) {
+      console.warn(
+        "[Middleware] Vérification feature flags échouée (accès toléré) :",
+        err.message
+      );
+    }
+  }
+
   return res;
 }
 

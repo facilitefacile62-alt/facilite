@@ -372,6 +372,31 @@ export default function MessagerieClient() {
   // Toast System
   const [toast, setToast] = useState({ show: false, message: "", icon: "" });
 
+  // Contrôle des réponses IA automatiques (activées par défaut pour chaque fil)
+  const [aiAutoResponseMap, setAiAutoResponseMap] = useState({});
+  const [aiResponseModalOpen, setAiResponseModalOpen] = useState(false);
+  const [menu3DotsOpen, setMenu3DotsOpen] = useState(false);
+
+  const isAiAutoResponseEnabled = (convId) => {
+    if (convId === undefined || convId === null) return true;
+    return aiAutoResponseMap[convId] !== false; // Actif par défaut
+  };
+
+  const toggleAiAutoResponse = (convId) => {
+    if (!convId) return;
+    setAiAutoResponseMap((prev) => {
+      const current = prev[convId] !== false;
+      const nextVal = !current;
+      triggerToast(
+        nextVal ? "Réponses automatiques de l'IA activées !" : "Réponses de l'IA suspendues. Vous avez la main.",
+        nextVal ? "fa-wand-magic-sparkles" : "fa-pause"
+      );
+      return { ...prev, [convId]: nextVal };
+    });
+    setAiResponseModalOpen(false);
+    setMenu3DotsOpen(false);
+  };
+
   const triggerToast = (msg, icon = "fa-check") => {
     setToast({ show: true, message: msg, icon });
     setTimeout(() => setToast({ show: false, message: "", icon: "" }), 3000);
@@ -1500,6 +1525,9 @@ export default function MessagerieClient() {
 
   // Bot response simulator
   const triggerBotResponse = (convId, userMsg) => {
+    // Si l'IA a été mise en pause / interrompue par l'humain sur cette discussion
+    if (!isAiAutoResponseEnabled(convId)) return;
+
     const activeConv = conversations.find(c => c.id === convId);
     if (!activeConv) return;
 
@@ -2650,10 +2678,26 @@ export default function MessagerieClient() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 sm:space-x-1.5 relative">
+                      {/* Badge d'état de l'IA pour cette discussion */}
+                      <button
+                        type="button"
+                        onClick={() => setAiResponseModalOpen(true)}
+                        className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
+                          isAiAutoResponseEnabled(activeConversation.id)
+                            ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                            : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                        }`}
+                        title="Configurer les réponses automatiques de l'IA"
+                      >
+                        <i className={`fa-solid ${isAiAutoResponseEnabled(activeConversation.id) ? "fa-wand-magic-sparkles text-emerald-600" : "fa-pause text-amber-600"} text-xs`}></i>
+                        <span>{isAiAutoResponseEnabled(activeConversation.id) ? "IA Active" : "IA en pause"}</span>
+                      </button>
+
+                      {/* Favori */}
                       <button
                         onClick={() => toggleFavorite(activeConversation.id)}
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition ${
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center cursor-pointer transition ${
                           activeConversation.favorite
                             ? "text-red-500 bg-red-50 hover:bg-red-100"
                             : "text-gray-500 hover:text-red-500 hover:bg-red-50"
@@ -2662,88 +2706,97 @@ export default function MessagerieClient() {
                       >
                         <i className={`${activeConversation.favorite ? "fa-solid fa-heart" : "fa-regular fa-heart"}`}></i>
                       </button>
-                      {!activeConversation.isAI && (
-                        <>
-                          <button
-                            onClick={() => triggerToast(`Appel simulé vers ${activeConversation.name}...`, "fa-phone")}
-                            className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
-                            title="Appel vocal"
-                          >
-                            <i className="fa-solid fa-phone"></i>
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (isRecruiterAccount) {
-                                // La création d'un entretien exige de savoir à quelle
-                                // candidature précise le rattacher (application_id,
-                                // NOT NULL) — cette page ne porte pas cette info de
-                                // façon fiable pour une conversation quelconque.
-                                // L'onglet "Candidatures reçues" est le seul point
-                                // d'entrée qui la connaît avec certitude.
-                                triggerToast("Démarrez l'entretien depuis l'onglet Candidatures reçues.", "fa-video");
-                                router.push("/recruteur");
-                              } else {
-                                triggerToast(`Appel vidéo simulé vers ${activeConversation.name}...`, "fa-video");
-                              }
-                            }}
-                            className="hidden sm:flex text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl items-center justify-center cursor-pointer"
-                            title="Appel vidéo"
-                          >
-                            <i className="fa-solid fa-video"></i>
-                          </button>
-                        </>
-                      )}
+
+                      {/* Appel vocal */}
                       <button
-                        onClick={() => setConversationInfoOpen(true)}
-                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
-                        title="Infos sur la discussion"
+                        onClick={() => triggerToast(`Appel simulé vers ${activeConversation.name}...`, "fa-phone")}
+                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center cursor-pointer"
+                        title="Appel vocal"
                       >
-                        <i className="fa-solid fa-circle-info"></i>
+                        <i className="fa-solid fa-phone text-sm"></i>
                       </button>
-                      {activeConversation.isAI && (
-                        <div className="flex items-center space-x-1.5 pl-1 border-l border-gray-200">
-                          <button
-                            type="button"
-                            onClick={handleNewAiConversation}
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer font-bold"
-                            title="Nouvelle discussion (+)"
-                          >
-                            <i className="fa-solid fa-plus text-base"></i>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (userSession?.user?.id) fetchAllAiConversations(userSession.user.id);
-                              setAiHistoryModalOpen(true);
-                            }}
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-600 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
-                            title="Historique des discussions"
-                          >
-                            <i className="fa-solid fa-clock-rotate-left text-sm"></i>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleExportAiConversation}
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer"
-                            title="Exporter la discussion (TXT)"
-                          >
-                            <i className="fa-solid fa-file-arrow-down text-sm"></i>
-                          </button>
-                        </div>
-                      )}
+
+                      {/* Appel vidéo */}
+                      <button
+                        onClick={() => {
+                          if (isRecruiterAccount) {
+                            triggerToast("Démarrez l'entretien depuis l'onglet Candidatures reçues.", "fa-video");
+                            router.push("/recruteur");
+                          } else {
+                            triggerToast(`Appel vidéo simulé vers ${activeConversation.name}...`, "fa-video");
+                          }
+                        }}
+                        className="hidden sm:flex text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-8 h-8 sm:w-9 sm:h-9 rounded-xl items-center justify-center cursor-pointer"
+                        title="Appel vidéo"
+                      >
+                        <i className="fa-solid fa-video text-sm"></i>
+                      </button>
+
+                      {/* Recherche dans la discussion */}
+                      <button
+                        type="button"
+                        onClick={() => triggerToast("Recherche dans les messages", "fa-magnifying-glass")}
+                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center cursor-pointer"
+                        title="Rechercher dans la discussion"
+                      >
+                        <i className="fa-solid fa-magnifying-glass text-sm"></i>
+                      </button>
+
+                      {/* Bouton Menu 3-Points (Exact Screenshot) */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setMenu3DotsOpen(!menu3DotsOpen)}
+                          className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center cursor-pointer"
+                          title="Options de la discussion"
+                        >
+                          <i className="fa-solid fa-ellipsis-vertical text-base"></i>
+                        </button>
+
+                        {/* Menu contextuel 3-Points */}
+                        {menu3DotsOpen && (
+                          <div className="absolute right-0 top-11 z-50 w-56 bg-white rounded-2xl shadow-xl border border-gray-200 py-1.5 animate-in fade-in zoom-in-95 duration-100">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenu3DotsOpen(false);
+                                setAiResponseModalOpen(true);
+                              }}
+                              className="w-full px-4 py-2.5 flex items-center gap-3 text-xs font-bold text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 transition cursor-pointer text-left"
+                            >
+                              <i className="fa-solid fa-wand-magic-sparkles text-emerald-600 text-sm"></i>
+                              <span>Réponses de l'IA</span>
+                            </button>
+                            
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenu3DotsOpen(false);
+                                setConversationInfoOpen(true);
+                              }}
+                              className="w-full px-4 py-2 flex items-center gap-3 text-xs font-medium text-gray-600 hover:bg-gray-50 transition cursor-pointer text-left"
+                            >
+                              <i className="fa-solid fa-circle-info text-blue-500 text-sm"></i>
+                              <span>Infos sur la discussion</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bouton Message Épinglé */}
                       <button
                         onClick={() => {
                           if (pinnedMessage) scrollToPinnedMessage(pinnedMessage.id);
                           else triggerToast(t.noPinnedMessage, "fa-thumbtack");
                         }}
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition ${
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center cursor-pointer transition ${
                           pinnedMessage
                             ? "text-amber-600 bg-amber-50 hover:bg-amber-100"
                             : "text-gray-500 hover:text-amber-600 hover:bg-amber-50"
                         }`}
                         title={pinnedMessage ? t.jumpToPinned : t.noPinnedMessage}
                       >
-                        <i className="fa-solid fa-thumbtack"></i>
+                        <i className="fa-solid fa-thumbtack text-sm"></i>
                       </button>
                     </div>
                   </div>
@@ -3789,6 +3842,42 @@ export default function MessagerieClient() {
               >
                 <i className="fa-solid fa-plus"></i>
                 <span>Nouvelle discussion</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE EXACTE "RÉPONSES DE L'IA" (Capture utilisateur 1:1) */}
+      {aiResponseModalOpen && (
+        <div className="fixed inset-0 z-[900] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl border border-gray-100 relative animate-in zoom-in-95 duration-150">
+            <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">
+              Réponses de l’IA
+            </h3>
+            
+            <p className="text-[13px] text-gray-700 font-normal leading-relaxed mb-8">
+              L’IA répondra automatiquement aux messages de cette discussion. Vous recevrez une notification de message non lu si l’IA ne sait pas comment répondre.
+            </p>
+
+            <div className="flex items-center justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => setAiResponseModalOpen(false)}
+                className="px-4 py-2 text-sm font-bold text-[#147953] hover:text-[#0f6041] transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleAiAutoResponse(activeConversation?.id)}
+                className={`px-6 py-2.5 rounded-full text-sm font-bold text-white transition shadow-sm cursor-pointer ${
+                  isAiAutoResponseEnabled(activeConversation?.id)
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-[#18181B] hover:bg-black"
+                }`}
+              >
+                {isAiAutoResponseEnabled(activeConversation?.id) ? "Mettre en pause" : "Activer"}
               </button>
             </div>
           </div>
