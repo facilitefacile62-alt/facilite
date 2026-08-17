@@ -33,6 +33,16 @@ export default function OffreDetailClient({ initialOffer }) {
   const [externalLink, setExternalLink] = useState(initialOffer.external_link || "");
 
   const [accessToken, setAccessToken] = useState(null);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+
+  const effectiveLink =
+    offer?.external_link ||
+    offer?.apply_url ||
+    offer?.source_url ||
+    offer?.url ||
+    (offer?.contact_email || offer?.recruiter_email
+      ? `mailto:${(offer?.contact_email || offer?.recruiter_email).trim()}?subject=${encodeURIComponent(`Candidature - ${offer?.title}`)}`
+      : null);
 
   useEffect(() => {
     async function loadSession() {
@@ -516,8 +526,46 @@ export default function OffreDetailClient({ initialOffer }) {
                 {/* Barre d'Engagement & Partage Réseau Social (Style Facebook Compact) */}
                 <SocialShareButtons offer={offer} variant="compact" className="my-6" />
 
-                <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line leading-relaxed mb-8">
-                  {offer.description}
+                {/* Description avec Tronquage / Voir plus */}
+                <div className="relative my-6">
+                  <div
+                    className={`prose prose-sm max-w-none text-gray-700 dark:text-gray-200 whitespace-pre-line leading-relaxed transition-all duration-300 ${
+                      !isDescriptionExpanded && (offer.description || "").length > 350
+                        ? "max-h-48 overflow-hidden"
+                        : "max-h-none"
+                    }`}
+                  >
+                    {offer.description}
+                  </div>
+
+                  {/* Bouton Voir Plus / Voir Moins avec Dégradé */}
+                  {(offer.description || "").length > 350 && (
+                    <>
+                      {!isDescriptionExpanded ? (
+                        <div className="absolute bottom-0 inset-x-0 h-28 bg-gradient-to-t from-white via-white/85 to-transparent dark:from-gray-900 dark:via-gray-900/85 flex items-end justify-center pb-1">
+                          <button
+                            type="button"
+                            onClick={() => setIsDescriptionExpanded(true)}
+                            className="px-5 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-blue-600 dark:text-blue-400 font-black text-xs rounded-full shadow-md border border-gray-200 dark:border-gray-700 flex items-center gap-1.5 transition transform hover:scale-105 cursor-pointer"
+                          >
+                            <span>... Voir plus</span>
+                            <i className="fa-solid fa-chevron-down text-[10px]"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="pt-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setIsDescriptionExpanded(false)}
+                            className="px-5 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-600 dark:text-gray-300 font-extrabold text-xs rounded-full shadow-xs border border-gray-200 dark:border-gray-700 flex items-center gap-1.5 transition cursor-pointer mx-auto"
+                          >
+                            <span>Voir moins</span>
+                            <i className="fa-solid fa-chevron-up text-[10px]"></i>
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 <div className="max-w-sm">
@@ -529,7 +577,41 @@ export default function OffreDetailClient({ initialOffer }) {
         </div>
       </main>
 
-      <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs font-medium text-gray-500">
+      {/* Barre d'Action Fixe / Sticky en Bas (Toujours accessible pendant le scroll) */}
+      <div className="fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 py-3 px-4 shadow-[0_-6px_25px_rgba(0,0,0,0.12)]">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+          {/* Résumé de l'offre */}
+          <div className="hidden sm:flex flex-col min-w-0">
+            <span className="text-xs font-black text-gray-900 dark:text-white truncate">{offer.title}</span>
+            <span className="text-[10px] font-bold text-gray-500 truncate">{offer.company} • {offer.location}</span>
+          </div>
+
+          {/* Action Postuler Fixe & Directe */}
+          <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+            {effectiveLink ? (
+              <a
+                href={effectiveLink}
+                target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 text-center"
+              >
+                <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                <span>Postuler sur le site officiel</span>
+              </a>
+            ) : (
+              <a
+                href={`mailto:${offer.contact_email || 'contact@ffacilite.com'}?subject=${encodeURIComponent(`Candidature - ${offer.title}`)}`}
+                className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 text-center"
+              >
+                <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                <span>Postuler sur le site officiel</span>
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <footer className="bg-white border-t border-gray-200 py-4 pb-20 sm:pb-4 text-center text-xs font-medium text-gray-500">
         © 2026 Facilite. Toutes les offres d'emploi.
       </footer>
     </div>

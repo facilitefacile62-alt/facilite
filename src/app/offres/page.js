@@ -216,6 +216,17 @@ function OffresContent() {
     });
   }
 
+  // Catégorie "Formation" : pas un vrai catalogue de formations, juste une
+  // recherche texte qui remonte des offres d'emploi normales sans rapport
+  // (le mot apparaît par coïncidence dans leur texte). Calculé ici (pas
+  // seulement dans la bannière ci-dessous) pour aussi masquer la grille de
+  // résultats — accessible en tapant "formation" dans la recherche, ce que
+  // ni le clic sur le lien du menu ni la navigation directe (tous deux déjà
+  // bloqués via feature_flags) ne peuvent intercepter : c'est un filtrage
+  // texte côté client, pas une navigation.
+  const isFormationCategory =
+    searchQuery?.toLowerCase()?.includes("formation") || queryParam?.toLowerCase()?.includes("formation");
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900 font-sans pb-16">
       {/* Toast Notification */}
@@ -230,8 +241,6 @@ function OffresContent() {
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6 pb-12 flex-1 w-full">
         {/* Hero Banner - Dynamique selon la catégorie (Formation, Concours, Emploi) */}
         {(() => {
-          const isFormationCategory =
-            searchQuery?.toLowerCase()?.includes("formation") || queryParam?.toLowerCase()?.includes("formation");
           const isConcoursCategory =
             searchQuery?.toLowerCase()?.includes("concours") || queryParam?.toLowerCase()?.includes("concours");
 
@@ -343,7 +352,23 @@ function OffresContent() {
         </div>
 
         {/* Grille des Offres d'Emploi */}
-        {loading ? (
+        {isFormationCategory ? (
+          <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center max-w-lg mx-auto shadow-sm">
+            <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
+              <i className="fa-solid fa-graduation-cap"></i>
+            </div>
+            <h3 className="text-lg font-extrabold text-gray-900 mb-1">Formation non disponible</h3>
+            <p className="text-xs text-gray-500 mb-6">
+              Le catalogue de formations n'est pas encore disponible. Revenez bientôt !
+            </p>
+            <button
+              onClick={handleResetSearch}
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
+            >
+              Afficher toutes les offres
+            </button>
+          </div>
+        ) : loading ? (
           <div className="py-20 text-center">
             <i className="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-600 mb-3"></i>
             <p className="text-sm font-bold text-gray-500">Chargement des offres d'emploi...</p>
