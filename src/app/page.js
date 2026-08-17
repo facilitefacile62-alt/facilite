@@ -1102,8 +1102,50 @@ export default function Home() {
               {/* Menu Déroulant "Plus" Overlay */}
               {plusDropdownOpen && (
                 <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-[600] animate-fade-in-up">
-                  {/* Section / Bouton Fonctionnalités Cliquable */}
-                  <div className="mx-2 mb-2 p-1.5 bg-gradient-to-br from-emerald-50/90 via-white to-indigo-50/90 rounded-xl border border-emerald-200/80 shadow-xs">
+                  {/* 1. Recrutement Spontané */}
+                  <Link
+                    href="/recrutement-spontane"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition"
+                  >
+                    <i className="fa-solid fa-building-user text-lg text-blue-600 w-5 text-center"></i>
+                    <div>
+                      <div className="font-extrabold text-xs">Recrutement spontané</div>
+                      <div className="text-[10px] text-gray-500 font-normal">77 entreprises</div>
+                    </div>
+                  </Link>
+
+                  {/* 2. Travail journalier / Dépôts */}
+                  <Link
+                    href="/recrutement-journalier"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-solid fa-gas-pump text-lg text-purple-600 w-5 text-center"></i>
+                    <div>
+                      <div className="font-extrabold text-xs">{selectedLang === "FR" ? "Dépôts Physiques" : "In-person Dropoffs"}</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Stations & contacts</div>
+                    </div>
+                  </Link>
+
+                  {/* 3. Contact */}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPlusDropdownOpen(false);
+                      handleOpenModal();
+                    }}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
+                    <span className="font-extrabold text-xs">Contact</span>
+                  </a>
+
+                  <div className="my-1.5 border-t border-gray-100"></div>
+
+                  {/* Section / Bouton Fonctionnalités Cliquable (à la fin de la liste) */}
+                  <div className="mx-2 mt-1 p-1.5 bg-gradient-to-br from-emerald-50/90 via-white to-indigo-50/90 rounded-xl border border-emerald-200/80 shadow-xs">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1183,50 +1225,6 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-
-                  <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                    Autres opportunités
-                  </div>
-
-                  {/* 4. Recrutement Spontané */}
-                  <Link
-                    href="/recrutement-spontane"
-                    onClick={() => setPlusDropdownOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
-                  >
-                    <i className="fa-solid fa-building-user text-lg text-blue-600 w-5 text-center"></i>
-                    <div>
-                      <div className="font-extrabold text-xs">Recrutement spontané</div>
-                      <div className="text-[10px] text-gray-500 font-normal">77 entreprises</div>
-                    </div>
-                  </Link>
-
-                  {/* 5. Travail journalier / Dépôts */}
-                  <Link
-                    href="/recrutement-journalier"
-                    onClick={() => setPlusDropdownOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
-                  >
-                    <i className="fa-solid fa-gas-pump text-lg text-purple-600 w-5 text-center"></i>
-                    <div>
-                      <div className="font-extrabold text-xs">{selectedLang === "FR" ? "Dépôts Physiques" : "In-person Dropoffs"}</div>
-                      <div className="text-[10px] text-gray-500 font-normal">Stations & contacts</div>
-                    </div>
-                  </Link>
-
-                  {/* 6. Contact */}
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPlusDropdownOpen(false);
-                      handleOpenModal();
-                    }}
-                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-emerald-600 transition border-t border-gray-100"
-                  >
-                    <i className="fa-regular fa-comment-dots text-lg text-gray-600 w-5 text-center"></i>
-                    <span className="font-extrabold text-xs">Contact</span>
-                  </a>
                 </div>
               )}
             </div>

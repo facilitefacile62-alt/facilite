@@ -1086,8 +1086,100 @@ export default function Header() {
 
             {plusDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
-                {/* Section / Bouton Fonctionnalités Cliquable */}
-                <div className="mx-2 mb-2 p-1.5 bg-gradient-to-br from-emerald-50/90 via-white to-indigo-50/90 dark:from-emerald-950/40 dark:via-gray-800 dark:to-indigo-950/40 rounded-xl border border-emerald-200/80 dark:border-emerald-800/40 shadow-xs">
+                
+                {/* 1. Recrutement Spontané */}
+                <Link
+                  href="/recrutement-spontane"
+                  onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname.startsWith("/recrutement-spontane") ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-building-user text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Recrutement Spontané</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Répertoire des 77 entreprises</div>
+                  </div>
+                </Link>
+
+                {/* 2. Dépôts Physiques */}
+                <Link
+                  href="/recrutement-journalier"
+                  onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname === "/recrutement-journalier" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-gas-pump text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Dépôts Physiques</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Stations-services & contacts</div>
+                  </div>
+                </Link>
+
+                {/* 3. Concours */}
+                <Link
+                  href="/offres?q=Concours"
+                  onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Concours")
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-award text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Concours</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Avis & examens de la fonction publique</div>
+                  </div>
+                </Link>
+
+                {/* 4. Formation */}
+                <Link
+                  href="/offres?q=Formation"
+                  onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Formation")
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-graduation-cap text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">Formation</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Formations & certifications professionnelles</div>
+                  </div>
+                </Link>
+
+                {/* 5. FAQ & Aide */}
+                <Link
+                  href="/faq"
+                  onClick={(e) => handleNavClick(e, "/faq", "nav_faq", "FAQ & Aide")}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                    pathname === "/faq" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-circle-question text-sm"></i>
+                  </div>
+                  <div>
+                    <div className="font-extrabold">FAQ & Aide</div>
+                    <div className="text-[10px] text-gray-500 font-normal">Questions fréquentes & réponses</div>
+                  </div>
+                </Link>
+
+                <div className="my-1.5 border-t border-gray-100 dark:border-gray-800"></div>
+
+                {/* Section / Bouton Fonctionnalités Cliquable (à la fin de la liste) */}
+                <div className="mx-2 mt-1 p-1.5 bg-gradient-to-br from-emerald-50/90 via-white to-indigo-50/90 dark:from-emerald-950/40 dark:via-gray-800 dark:to-indigo-950/40 rounded-xl border border-emerald-200/80 dark:border-emerald-800/40 shadow-xs">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1173,101 +1265,6 @@ export default function Header() {
                     </div>
                   )}
                 </div>
-
-                <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
-                  Autres opportunités
-                </div>
-
-                {/* 4. Recrutement Spontané */}
-                <Link
-                  href="/recrutement-spontane"
-                  onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname.startsWith("/recrutement-spontane") ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-building-user text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Recrutement Spontané</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Répertoire des 77 entreprises</div>
-                  </div>
-                </Link>
-
-                {/* 2. Dépôts Physiques */}
-                <Link
-                  href="/recrutement-journalier"
-                  onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/recrutement-journalier" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-gas-pump text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Dépôts Physiques</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Stations-services & contacts</div>
-                  </div>
-                </Link>
-
-                {/* 3. Concours */}
-                <Link
-                  href="/offres?q=Concours"
-                  onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Concours")
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-award text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Concours</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Avis & examens de la fonction publique</div>
-                  </div>
-                </Link>
-
-                {/* 4. Formation */}
-                <Link
-                  href="/offres?q=Formation"
-                  onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Formation")
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-graduation-cap text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Formation</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Formations & certifications professionnelles</div>
-                  </div>
-                </Link>
-
-                <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
-
-                {/* 5. FAQ & Aide */}
-                <Link
-                  href="/faq"
-                  onClick={(e) => handleNavClick(e, "/faq", "nav_faq", "FAQ & Aide")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/faq" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-circle-question text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">FAQ & Aide</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Questions fréquentes & réponses</div>
-                  </div>
-                </Link>
               </div>
             )}
           </div>
