@@ -2006,29 +2006,33 @@ export default function Home() {
       </main>
 
       {/* =========================================================================
-          SECTION FONDATEUR (DESIGN ÉPURÉ SANS CADRE NOIR)
+          SECTION FONDATEUR (DESIGN INSPIRATION HAUTE FIDÉLITÉ)
          ========================================================================= */}
-      <section className="w-full bg-[#FAF6F1] py-14 px-4 sm:px-8 border-t border-gray-200">
-        <div className="max-w-xl mx-auto text-center flex flex-col items-center">
-          <h3 className="text-xs font-black uppercase tracking-wider text-emerald-600 mb-6">
-            Fondateur de Facilité
-          </h3>
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_20px_rgba(16,230,136,0.35)] mb-4 overflow-hidden flex-shrink-0">
-            <img
-              src="/fondateur.png"
-              alt="Fondateur Facilité"
-              className="w-full h-full object-cover rounded-full"
-            />
+      <section className="w-full bg-[#FAF6F1] dark:bg-gray-950 py-16 px-4 sm:px-8 border-t border-gray-200 dark:border-gray-800">
+        <div className="max-w-xl mx-auto flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#10E688]/20 border border-[#10E688]/40 text-emerald-800 dark:text-[#10E688] text-xs font-black tracking-wide mb-6">
+            <span>Fondateur de Facilité</span>
           </div>
-          <h4 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">
-            Macoumba Samake
-          </h4>
-          <span className="inline-block bg-[#10E688]/15 text-emerald-800 border border-[#10E688]/30 rounded-full px-5 py-1 text-xs font-bold mb-3 shadow-2xs">
-            Fondateur & Créateur
-          </span>
-          <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed max-w-sm">
-            Développeur FullStack & Fondateur de la plateforme Facilité.
-          </p>
+
+          {/* Carte Inspiration Exacte */}
+          <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-4 sm:p-5 shadow-2xl border border-gray-100 dark:border-gray-800 max-w-[320px] w-full text-left transition-all duration-300 hover:shadow-emerald-500/10 hover:-translate-y-1">
+            <div className="w-full aspect-[4/5] rounded-2xl overflow-hidden bg-gray-900 shadow-md">
+              <img
+                src="/fondateur.png"
+                alt="Macoumba Samake - Fondateur de Facilité"
+                className="w-full h-full object-cover object-top"
+              />
+            </div>
+            <h4 className="text-xl font-black text-gray-950 dark:text-white uppercase tracking-tight mt-4 mb-0.5">
+              MACOUMBA SAMAKE
+            </h4>
+            <p className="text-[11px] font-black uppercase tracking-wider text-pink-600 dark:text-pink-400 mb-2.5">
+              FONDATEUR & CRÉATEUR
+            </p>
+            <p className="text-xs text-gray-600 dark:text-gray-300 font-medium leading-relaxed">
+              Il pilote l&apos;innovation technologique, le développement et la vision stratégique de la plateforme Facilité.
+            </p>
+          </div>
         </div>
       </section>
 

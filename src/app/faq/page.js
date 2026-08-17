@@ -179,26 +179,29 @@ export default function FaqPage() {
                       
                       {faq.id === "q2" && (
                         <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-800">
-                          <h4 className="text-center text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-[#10E688] mb-4">
+                          <h4 className="text-center text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-[#10E688] mb-5">
                             Fondateur de Facilité
                           </h4>
-                          <div className="flex flex-col items-center text-center max-w-sm mx-auto py-2">
-                            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_20px_rgba(16,230,136,0.3)] mb-3 overflow-hidden flex-shrink-0">
-                              <img
-                                src="/fondateur.png"
-                                alt="Fondateur Facilité"
-                                className="w-full h-full object-cover rounded-full"
-                              />
+                          <div className="flex justify-center max-w-sm mx-auto">
+                            {/* Carte Inspiration */}
+                            <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-4 sm:p-5 shadow-xl border border-gray-100 dark:border-gray-800 max-w-[300px] w-full text-left transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                              <div className="w-full aspect-[4/5] rounded-2xl overflow-hidden bg-gray-900 shadow-md">
+                                <img
+                                  src="/fondateur.png"
+                                  alt="Macoumba Samake - Fondateur de Facilité"
+                                  className="w-full h-full object-cover object-top"
+                                />
+                              </div>
+                              <h5 className="text-lg sm:text-xl font-black text-gray-950 dark:text-white uppercase tracking-tight mt-4 mb-0.5">
+                                MACOUMBA SAMAKE
+                              </h5>
+                              <p className="text-[11px] font-black uppercase tracking-wider text-pink-600 dark:text-pink-400 mb-2.5">
+                                FONDATEUR & CRÉATEUR
+                              </p>
+                              <p className="text-xs text-gray-600 dark:text-gray-300 font-medium leading-relaxed">
+                                Il pilote l&apos;innovation technologique, le développement et la vision stratégique de la plateforme Facilité.
+                              </p>
                             </div>
-                            <h5 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white mb-1">
-                              Macoumba Samake
-                            </h5>
-                            <span className="inline-block bg-[#10E688]/15 text-emerald-700 dark:text-[#10E688] border border-[#10E688]/30 rounded-full px-4 py-1 text-xs font-bold mb-2">
-                              Fondateur & Créateur
-                            </span>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-                              Développeur FullStack & Fondateur de la plateforme Facilité.
-                            </p>
                           </div>
                         </div>
                       )}
