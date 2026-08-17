@@ -24,6 +24,23 @@ const PUBLIC_ROUTES = [
   "/auth/callback",
 ];
 
+// Routes visibles SANS connexion (pour Googlebot et les visiteurs anonymes)
+// mais qui restent soumises au contrôle par fonctionnalité (section 6
+// ci-dessous) — contrairement à PUBLIC_ROUTES qui court-circuite tout,
+// contrôle par fonctionnalité inclus. Un visiteur anonyme y est résolu avec
+// le rôle "visitor" (jamais "user" par défaut, résolution de rôle qui
+// serait incorrecte).
+const PUBLIC_BROWSABLE_ROUTES = [
+  // Liste et détail des offres : doivent être crawlables par Googlebot pour
+  // que le JSON-LD JobPosting (src/app/offres/[id]/page.js) et le sitemap
+  // (src/app/sitemap.js) aient un effet réel — sinon le travail SEO reste
+  // invisible pour Google quelle que soit sa qualité. Postuler reste
+  // protégé séparément par OffreApplySection, pas par ce mur de connexion.
+  // Ne couvre que /offres et /offres/[id] (seules pages sous ce préfixe) —
+  // la publication d'offres vit sous /recruteur, non touchée.
+  "/offres",
+];
+
 // Comparaison par segment de chemin plutôt que préfixe brut
 function pathnameMatchesRoute(pathname, route) {
   return pathname === route || pathname.startsWith(`${route}/`);
@@ -78,6 +95,13 @@ export default async function proxy(req) {
     return NextResponse.next();
   }
 
+  // Route "browsable publiquement" (ex. /offres) : pas de mur de connexion,
+  // mais le contrôle par fonctionnalité (section 6) reste appliqué plus bas
+  // avec le rôle "visitor" si aucune session n'est trouvée.
+  const isPublicBrowsable = PUBLIC_BROWSABLE_ROUTES.some((route) =>
+    pathnameMatchesRoute(pathname, route)
+  );
+
   // 2. Vérification rapide des cookies pour les utilisateurs anonymes
   // Si aucun cookie Supabase n'est présent, on redirige vers /login
   const cookies = req.cookies.getAll();
@@ -85,7 +109,7 @@ export default async function proxy(req) {
     (c) => c.name.startsWith("sb-") || c.name.includes("auth-token")
   );
 
-  if (!hasSupabaseCookie) {
+  if (!hasSupabaseCookie && !isPublicBrowsable) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", pathname);
@@ -118,57 +142,61 @@ export default async function proxy(req) {
     return res;
   }
 
-  if (!user) {
+  if (!user && !isPublicBrowsable) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  // 4. Récupération du rôle et du statut avec timeout résilient
+  // 4. Récupération du rôle et du statut avec timeout résilient — inutile
+  // pour un visiteur anonyme sur une route browsable, il n'a pas de ligne
+  // user_roles à lire.
   let userRoleRow = null;
-  try {
-    const rolePromise = supabase
-      .from("user_roles")
-      .select("role, status, suspended_by")
-      .eq("user_id", user.id)
-      .single()
-      .then((r) => r.data);
+  if (user) {
+    try {
+      const rolePromise = supabase
+        .from("user_roles")
+        .select("role, status, suspended_by")
+        .eq("user_id", user.id)
+        .single()
+        .then((r) => r.data);
 
-    userRoleRow = await withTimeout(rolePromise, 1500);
-  } catch (err) {
-    console.warn(
-      "[Middleware] Timeout ou échec de récupération du rôle Supabase (accès toléré) :",
-      err.message
-    );
-    return res;
-  }
-
-  // Un compte suspendu perd l'accès à toute page protégée immédiatement —
-  // sauf s'il s'agit d'une auto-désactivation (suspended_by NULL, section
-  // "Désactiver le compte" du profil) : dans ce cas la reconnexion elle-même
-  // réactive le compte au lieu de le déconnecter à nouveau. Une suspension
-  // admin (suspended_by rempli) garde le comportement existant, jamais levée
-  // automatiquement.
-  if (userRoleRow?.status === "suspended") {
-    if (userRoleRow.suspended_by === null) {
-      try {
-        await withTimeout(supabase.rpc("reactivate_own_account_if_self_suspended"), 1500);
-      } catch (e) {
-        console.error("[Middleware] Échec réactivation auto-désactivation :", e.message);
-      }
+      userRoleRow = await withTimeout(rolePromise, 1500);
+    } catch (err) {
+      console.warn(
+        "[Middleware] Timeout ou échec de récupération du rôle Supabase (accès toléré) :",
+        err.message
+      );
       return res;
     }
 
-    try {
-      await withTimeout(supabase.auth.signOut(), 1000);
-    } catch (e) {
-      console.error("[Middleware] Échec signOut pour compte suspendu :", e.message);
+    // Un compte suspendu perd l'accès à toute page protégée immédiatement —
+    // sauf s'il s'agit d'une auto-désactivation (suspended_by NULL, section
+    // "Désactiver le compte" du profil) : dans ce cas la reconnexion elle-même
+    // réactive le compte au lieu de le déconnecter à nouveau. Une suspension
+    // admin (suspended_by rempli) garde le comportement existant, jamais levée
+    // automatiquement.
+    if (userRoleRow?.status === "suspended") {
+      if (userRoleRow.suspended_by === null) {
+        try {
+          await withTimeout(supabase.rpc("reactivate_own_account_if_self_suspended"), 1500);
+        } catch (e) {
+          console.error("[Middleware] Échec réactivation auto-désactivation :", e.message);
+        }
+        return res;
+      }
+
+      try {
+        await withTimeout(supabase.auth.signOut(), 1000);
+      } catch (e) {
+        console.error("[Middleware] Échec signOut pour compte suspendu :", e.message);
+      }
+      const url = req.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("suspended", "true");
+      return NextResponse.redirect(url);
     }
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("suspended", "true");
-    return NextResponse.redirect(url);
   }
 
   // 5. Autorisation d'accès par espaces
@@ -197,7 +225,7 @@ export default async function proxy(req) {
   // isFeatureAllowed() côté client (src/lib/featureFlags.js). Fail-open sur
   // toute erreur/timeout Supabase — même philosophie que le reste de ce
   // fichier, jamais un blocage sur panne.
-  const userRoleForFlags = userRoleRow?.role || "user";
+  const userRoleForFlags = userRoleRow?.role || (user ? "user" : "visitor");
   if (userRoleForFlags !== "admin") {
     try {
       const flagsPromise = supabase
@@ -213,9 +241,10 @@ export default async function proxy(req) {
         // contrainte CHECK — voir AuthContext.jsx:196-198). Requête
         // seulement si une des entrées correspondantes distingue vraiment
         // user/recruteur, pour ne pas ajouter un aller-retour Supabase sur
-        // chaque page protégée du site.
+        // chaque page protégée du site. Un visiteur anonyme (pas de user)
+        // n'a pas de profil à interroger — reste "visitor" directement.
         let isRecruiter = false;
-        if (matches.some((m) => m.roles?.user !== m.roles?.recruiter)) {
+        if (user && matches.some((m) => m.roles?.user !== m.roles?.recruiter)) {
           const profilePromise = supabase
             .from("profiles")
             .select("badges")
@@ -225,7 +254,7 @@ export default async function proxy(req) {
           const profileRow = await withTimeout(profilePromise, 1500).catch(() => null);
           isRecruiter = Array.isArray(profileRow?.badges) && profileRow.badges.includes("verified_recruiter");
         }
-        const roleKey = isRecruiter ? "recruiter" : "user";
+        const roleKey = !user ? "visitor" : isRecruiter ? "recruiter" : "user";
 
         // Le plus restrictif gagne quand plusieurs entrées partagent le
         // même chemin physique (ex. /importer-cv, /service ont chacune 2-3

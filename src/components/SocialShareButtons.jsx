@@ -196,77 +196,12 @@ export default function SocialShareButtons({
     telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
   };
 
-  // 1. Rendu Fil d'Actualité / Feed (Style Exact Facebook : Stats 👍 💬 ↪️ + Postuler + Bookmark + Share)
+  // 1. Rendu Fil d'Actualité / Feed (Style Exact Facebook : [ 👍 J'aime ] [ 📤 Partager ] [ ↗ Postuler sur le site officiel ] [ 🔖 Bookmark ])
   if (variant === "feed") {
     return (
-      <div className={`relative w-full pt-2 ${className}`} ref={dropdownRef}>
-        {/* Barre de Stats Facebook (👍 376, 💬 5, ↪️ 4, et badges 👍 ❤️ à droite) */}
-        <div className="flex items-center justify-between px-1 pb-2 text-xs text-gray-500 font-semibold select-none">
-          <div className="flex items-center gap-4 sm:gap-6">
-            {/* 👍 Likes */}
-            <button
-              type="button"
-              onClick={handleLikeButtonClick}
-              className={`flex items-center gap-1.5 hover:text-[#1877F2] transition cursor-pointer ${
-                activeReaction ? "text-[#1877F2] font-bold" : "text-gray-500"
-              }`}
-              title="J'aime"
-            >
-              <i className={`fa-regular fa-thumbs-up text-sm ${activeReaction ? "text-[#1877F2] fa-solid" : ""}`}></i>
-              <span>{likesCount}</span>
-            </button>
-
-            {/* 💬 Commentaires / Messagerie */}
-            <Link
-              href="/messagerie"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 hover:text-emerald-600 transition cursor-pointer text-gray-500"
-              title="Commentaires et messages"
-            >
-              <i className="fa-regular fa-comment text-sm"></i>
-              <span>{commentsCount}</span>
-            </Link>
-
-            {/* ↪️ Partages */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDropdownOpen(true);
-              }}
-              className="flex items-center gap-1.5 hover:text-emerald-600 transition cursor-pointer text-gray-500"
-              title="Partager sur tous les réseaux"
-            >
-              <svg
-                className="w-4 h-4 text-gray-500 hover:text-emerald-600"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                <polyline points="16 6 12 2 8 6" />
-                <line x1="12" y1="2" x2="12" y2="15" />
-              </svg>
-              <span>{sharesCount}</span>
-            </button>
-          </div>
-
-          {/* Pastilles rondes Facebook (👍 ❤️) */}
-          <div className="flex items-center -space-x-1">
-            <div className="w-4 h-4 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-[9px] shadow-2xs">
-              <i className="fa-solid fa-thumbs-up"></i>
-            </div>
-            <div className="w-4 h-4 rounded-full bg-[#FA3E3E] text-white flex items-center justify-center text-[9px] shadow-2xs">
-              <i className="fa-solid fa-heart"></i>
-            </div>
-          </div>
-        </div>
-
+      <div className={`relative w-full ${className}`} ref={dropdownRef}>
         {/* Ligne d'actions 3 boutons alignés au même endroit : [ 👍 J'aime ] [ 📤 Partager ] [ ↗ Postuler sur le site officiel ] [ 🔖 Bookmark ] */}
-        <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Bouton 1 : J'aime avec Barre de Réactions Flottante */}
           <div
             className="relative"
@@ -547,70 +482,9 @@ export default function SocialShareButtons({
   // 1. Rendu Compact pour le Flux d'Accueil et Listes (Style 1:1 Facebook Footer)
   if (variant === "compact") {
     return (
-      <div className={`relative w-full pt-2 border-t border-gray-100 ${className}`} ref={dropdownRef}>
-        {/* Barre de Stats Facebook (👍 796, 💬 395, ↪️ 29, 🔵👍) */}
-        <div className="flex items-center justify-between px-1 pb-2 text-xs text-gray-600 font-semibold select-none">
-          <div className="flex items-center gap-4 sm:gap-6">
-            {/* 👍 Likes */}
-            <button
-              type="button"
-              onClick={handleLikeButtonClick}
-              className={`flex items-center gap-1.5 hover:text-[#1877F2] transition cursor-pointer ${
-                activeReaction ? "text-[#1877F2] font-bold" : "text-gray-600"
-              }`}
-              title="J'aime"
-            >
-              <i className={`fa-regular fa-thumbs-up text-sm ${activeReaction ? "text-[#1877F2] fa-solid" : ""}`}></i>
-              <span>{likesCount}</span>
-            </button>
-
-            {/* 💬 Commentaires / Messagerie */}
-            <Link
-              href="/messagerie"
-              className="flex items-center gap-1.5 hover:text-emerald-600 transition cursor-pointer text-gray-600"
-              title="Commentaires et messages"
-            >
-              <i className="fa-regular fa-comment text-sm"></i>
-              <span>{commentsCount}</span>
-            </Link>
-
-            {/* ↪️ Partages (Ouvre tous les liens au clic) */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDropdownOpen(true);
-              }}
-              className="flex items-center gap-1.5 hover:text-emerald-600 transition cursor-pointer text-gray-600"
-              title="Partager sur tous les réseaux"
-            >
-              <svg
-                className="w-4 h-4 text-gray-600 hover:text-emerald-600"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                <polyline points="16 6 12 2 8 6" />
-                <line x1="12" y1="2" x2="12" y2="15" />
-              </svg>
-              <span>{sharesCount}</span>
-            </button>
-          </div>
-
-          {/* Pastille ronde bleue Facebook */}
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-[9px] shadow-2xs">
-              <i className="fa-solid fa-thumbs-up"></i>
-            </div>
-          </div>
-        </div>
-
+      <div className={`relative w-full ${className}`} ref={dropdownRef}>
         {/* Boutons d'Action Principaux Alignés : [ 👍 J'aime ] [ 📤 Partager ] [ ↗ Postuler sur le site officiel ] [ 🔖 Bookmark ] */}
-        <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Action 1 : J'aime avec Barre de Réactions Flottante */}
           <div
             className="relative"
