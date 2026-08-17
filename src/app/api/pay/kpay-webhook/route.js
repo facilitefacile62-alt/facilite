@@ -143,6 +143,109 @@ async function handleCvOrderPayment(supabaseAdmin, event, orderId, kpayPaymentId
   return { handled: true, response: NextResponse.json({ received: true }) };
 }
 
+// --- Échecs et annulations (statuts finaux FAILED / CANCELLED documentés
+// par KPay, voir https://kpay.site/documentation/webhooks : "Final status.
+// COMPLETED FAILED CANCELLED") — jusqu'ici ignorés silencieusement,
+// laissant la commande bloquée en "pending" indéfiniment même quand KPay
+// confirme un échec réel (ex. solde insuffisant, paiement annulé par le
+// client). Fonctions séparées des handlers COMPLETED ci-dessus plutôt que
+// fusionnées : pas de facture, pas d'email, pas de crédit à accorder ici,
+// seulement refléter fidèlement l'état réel de la commande/transaction.
+// Idempotence identique au flux COMPLETED : UPDATE conditionné sur
+// payment_status/status = 'pending', un webhook d'échec arrivé en retard ne
+// peut jamais écraser une commande déjà marquée payée.
+async function handleCvOrderFailure(supabaseAdmin, event, orderId, kpayPaymentId) {
+  const orderQuery = supabaseAdmin.from("orders").select("*");
+  const { data: order, error: orderError } = orderId
+    ? await orderQuery.eq("id", orderId).single()
+    : await orderQuery.eq("payment_reference", kpayPaymentId).single();
+
+  if (orderError || !order) return { handled: false };
+
+  const { error: updateError } = await supabaseAdmin
+    .from("orders")
+    .update({
+      payment_status: "failed",
+      payment_reference: kpayPaymentId || order.payment_reference,
+    })
+    .eq("id", order.id)
+    .eq("payment_status", "pending");
+
+  if (updateError) {
+    console.error("[Webhook KPay] Échec mise à jour (statut d'échec) de la commande :", updateError.message);
+    return { handled: true, response: NextResponse.json({ error: "Échec de la mise à jour de la commande." }, { status: 500 }) };
+  }
+
+  return { handled: true, response: NextResponse.json({ received: true }) };
+}
+
+async function handleCreditTopupFailure(supabaseAdmin, event, transactionId, kpayPaymentId) {
+  const transactionQuery = supabaseAdmin.from("transactions").select("*");
+  const { data: transaction, error: transactionError } = transactionId
+    ? await transactionQuery.eq("id", transactionId).single()
+    : await transactionQuery.eq("provider_reference", kpayPaymentId).single();
+
+  if (transactionError || !transaction) return { handled: false };
+
+  const { error: updateError } = await supabaseAdmin
+    .from("transactions")
+    .update({
+      status: "failed",
+      provider_reference: kpayPaymentId || transaction.provider_reference,
+    })
+    .eq("id", transaction.id)
+    .eq("status", "pending");
+
+  if (updateError) {
+    console.error("[Webhook KPay] Échec mise à jour (statut d'échec) de la transaction :", updateError.message);
+    return { handled: true, response: NextResponse.json({ error: "Échec de la mise à jour de la transaction." }, { status: 500 }) };
+  }
+
+  return { handled: true, response: NextResponse.json({ received: true }) };
+}
+
+// --- Journalisation append-only (table "kpay_webhook_logs") ---
+// Chaque webhook signé valide est journalisé avec son payload brut, quel
+// que soit son statut — avant même le traitement métier. Sans ça,
+// impossible de distinguer a posteriori "KPay n'a jamais notifié" de "KPay
+// a notifié un échec qu'on a raté" (constat du 2026-08-17 : commandes
+// pending sans aucune trace de ce que KPay avait réellement envoyé).
+// Best-effort : un souci d'écriture du journal ne doit jamais empêcher le
+// traitement réel du paiement.
+async function findMatchingRecord(supabaseAdmin, externalId, kpayPaymentId) {
+  const orderQuery = supabaseAdmin.from("orders").select("id");
+  const { data: order } = externalId
+    ? await orderQuery.eq("id", externalId).maybeSingle()
+    : await orderQuery.eq("payment_reference", kpayPaymentId).maybeSingle();
+  if (order) return { type: "order", id: order.id };
+
+  const transactionQuery = supabaseAdmin.from("transactions").select("id");
+  const { data: transaction } = externalId
+    ? await transactionQuery.eq("id", externalId).maybeSingle()
+    : await transactionQuery.eq("provider_reference", kpayPaymentId).maybeSingle();
+  if (transaction) return { type: "transaction", id: transaction.id };
+
+  return { type: null, id: null };
+}
+
+async function logKpayWebhook(supabaseAdmin, event, externalId, kpayPaymentId) {
+  try {
+    const matched = await findMatchingRecord(supabaseAdmin, externalId, kpayPaymentId);
+    await supabaseAdmin.from("kpay_webhook_logs").insert({
+      status: event?.status || null,
+      amount: typeof event?.amount === "number" ? event.amount : null,
+      currency: event?.currency || null,
+      kpay_payment_id: kpayPaymentId || null,
+      external_id: externalId || null,
+      matched_type: matched.type,
+      matched_id: matched.id,
+      raw_payload: event,
+    });
+  } catch (err) {
+    console.error("[Webhook KPay] Échec journalisation :", err.message);
+  }
+}
+
 // --- Flux 2 : recharge de crédits générique (table "transactions") ---
 async function handleCreditTopupPayment(supabaseAdmin, event, transactionId, kpayPaymentId) {
   const transactionQuery = supabaseAdmin.from("transactions").select("*");
@@ -286,10 +389,6 @@ export async function POST(req) {
     return NextResponse.json({ error: "Corps de requête invalide." }, { status: 400 });
   }
 
-  if (event?.status !== "COMPLETED") {
-    return NextResponse.json({ received: true });
-  }
-
   let supabaseAdmin;
   try {
     supabaseAdmin = getSupabaseAdmin();
@@ -306,17 +405,47 @@ export async function POST(req) {
   const externalId = event.externalId;
   const kpayPaymentId = event.paymentId;
 
-  try {
-    const orderResult = await handleCvOrderPayment(supabaseAdmin, event, externalId, kpayPaymentId);
-    if (orderResult.handled) return orderResult.response;
+  // Journalisation de CHAQUE webhook signé valide, avant tout traitement
+  // métier — voir logKpayWebhook ci-dessus.
+  await logKpayWebhook(supabaseAdmin, event, externalId, kpayPaymentId);
 
-    const transactionResult = await handleCreditTopupPayment(supabaseAdmin, event, externalId, kpayPaymentId);
-    if (transactionResult.handled) return transactionResult.response;
+  if (event?.status === "COMPLETED") {
+    try {
+      const orderResult = await handleCvOrderPayment(supabaseAdmin, event, externalId, kpayPaymentId);
+      if (orderResult.handled) return orderResult.response;
 
-    console.error("[Webhook KPay] Ni commande ni transaction introuvable pour externalId/paymentId", externalId, kpayPaymentId);
-    return NextResponse.json({ received: true, warning: "not_found" });
-  } catch (error) {
-    console.error("[Webhook KPay] Erreur interne :", error);
-    return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
+      const transactionResult = await handleCreditTopupPayment(supabaseAdmin, event, externalId, kpayPaymentId);
+      if (transactionResult.handled) return transactionResult.response;
+
+      console.error("[Webhook KPay] Ni commande ni transaction introuvable pour externalId/paymentId", externalId, kpayPaymentId);
+      return NextResponse.json({ received: true, warning: "not_found" });
+    } catch (error) {
+      console.error("[Webhook KPay] Erreur interne :", error);
+      return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
+    }
   }
+
+  // Statuts finaux d'échec documentés par KPay (FAILED, CANCELLED) —
+  // reflète l'état réel de la commande/transaction au lieu de la laisser
+  // bloquée en "pending" indéfiniment.
+  if (event?.status === "FAILED" || event?.status === "CANCELLED") {
+    try {
+      const orderResult = await handleCvOrderFailure(supabaseAdmin, event, externalId, kpayPaymentId);
+      if (orderResult.handled) return orderResult.response;
+
+      const transactionResult = await handleCreditTopupFailure(supabaseAdmin, event, externalId, kpayPaymentId);
+      if (transactionResult.handled) return transactionResult.response;
+
+      console.error("[Webhook KPay] Ni commande ni transaction introuvable pour externalId/paymentId (échec)", externalId, kpayPaymentId);
+      return NextResponse.json({ received: true, warning: "not_found" });
+    } catch (error) {
+      console.error("[Webhook KPay] Erreur interne (échec) :", error);
+      return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
+    }
+  }
+
+  // Statut inconnu/non documenté par KPay : accusé de réception, déjà
+  // journalisé ci-dessus pour investigation, aucune écriture de statut à
+  // l'aveugle sur la commande/transaction.
+  return NextResponse.json({ received: true });
 }
