@@ -1144,33 +1144,39 @@ export default function Home() {
 
                   <div className="my-1.5 border-t border-gray-100"></div>
 
-                  {/* Section / Bouton Fonctionnalités Cliquable (à la fin de la liste) */}
+                  {/* Section / Bouton Fonctionnalités Cliquable (menant à la page /fonctionnalites) */}
                   <div className="mx-2 mt-1 p-1.5 bg-gradient-to-br from-emerald-50/90 via-white to-indigo-50/90 rounded-xl border border-emerald-200/80 shadow-xs">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setFonctionnalitesExpanded(!fonctionnalitesExpanded);
-                      }}
-                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-emerald-100/60 transition-colors cursor-pointer text-left group"
-                    >
-                      <div className="flex items-center gap-2">
+                    <div className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-emerald-100/60 transition-colors">
+                      <Link
+                        href="/fonctionnalites"
+                        onClick={() => setPlusDropdownOpen(false)}
+                        className="flex items-center gap-2 flex-grow cursor-pointer group"
+                      >
                         <div className="w-6 h-6 rounded-md bg-emerald-500 text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-105 transition-transform">
                           <i className="fa-solid fa-wand-magic-sparkles"></i>
                         </div>
                         <div>
                           <div className="text-[11px] font-black text-emerald-900 uppercase tracking-wide flex items-center gap-1.5">
-                            <span>Fonctionnalités</span>
+                            <span className="group-hover:underline">Fonctionnalités</span>
                             <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-black rounded-md">
-                              Outils IA
+                              Page & Outils
                             </span>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center text-emerald-700">
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setFonctionnalitesExpanded(!fonctionnalitesExpanded);
+                        }}
+                        className="p-1 text-emerald-700 hover:bg-emerald-200/50 rounded-md cursor-pointer transition-colors"
+                        title="Déplier / Replier"
+                      >
                         <i className={`fa-solid fa-chevron-down text-[11px] transition-transform duration-200 ${fonctionnalitesExpanded ? "rotate-180" : ""}`}></i>
-                      </div>
-                    </button>
+                      </button>
+                    </div>
 
                     {/* Sous-éléments visibles quand déplié */}
                     {fonctionnalitesExpanded && (
@@ -1221,6 +1227,19 @@ export default function Home() {
                             <div className="font-extrabold text-xs">Services & Modèles</div>
                             <div className="text-[10px] text-gray-500 font-normal">CVs Pro, Canada & Lettres</div>
                           </div>
+                        </Link>
+
+                        {/* 4. Lien vers la page Hub Fonctionnalités */}
+                        <Link
+                          href="/fonctionnalites"
+                          onClick={() => setPlusDropdownOpen(false)}
+                          className="flex items-center justify-between px-3 py-2 text-[11px] font-black rounded-lg bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all cursor-pointer mt-1"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            <span>Voir la page Fonctionnalités</span>
+                          </span>
+                          <i className="fa-solid fa-chevron-right text-[9px]"></i>
                         </Link>
                       </div>
                     )}
