@@ -2006,39 +2006,29 @@ export default function Home() {
       </main>
 
       {/* =========================================================================
-          SECTION FONDATEUR (DESIGN EXCLUSIF 1:1)
+          SECTION FONDATEUR (DESIGN ÉPURÉ SANS CADRE NOIR)
          ========================================================================= */}
-      <section className="w-full bg-[#0A0D14] text-white py-14 px-4 sm:px-8 border-t border-b border-gray-800/80 shadow-2xl my-4">
-        <div className="max-w-4xl mx-auto">
-          
-          <div className="text-center mb-8">
-            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white/90">
-              Fondateur
-            </h3>
+      <section className="w-full bg-[#FAF6F1] py-14 px-4 sm:px-8 border-t border-gray-200">
+        <div className="max-w-xl mx-auto text-center flex flex-col items-center">
+          <h3 className="text-xs font-black uppercase tracking-wider text-emerald-600 mb-6">
+            Fondateur de Facilité
+          </h3>
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_20px_rgba(16,230,136,0.35)] mb-4 overflow-hidden flex-shrink-0">
+            <img
+              src="/fondateur.png"
+              alt="Fondateur Facilité"
+              className="w-full h-full object-cover rounded-full"
+            />
           </div>
-
-          <div className="flex justify-center max-w-md mx-auto">
-            {/* Carte Unique du Fondateur */}
-            <div className="w-full bg-[#121722] border border-gray-800/80 rounded-3xl p-8 sm:p-10 flex flex-col items-center text-center shadow-xl hover:border-emerald-500/40 transition-all group">
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_25px_rgba(16,230,136,0.35)] mb-5 overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
-                <img
-                  src="/fondateur.png"
-                  alt="Fondateur Facilité"
-                  className="w-full h-full object-cover rounded-full"
-                />
-              </div>
-              <h4 className="text-xl sm:text-2xl font-extrabold text-white mb-2">
-                Macoumba Samake
-              </h4>
-              <span className="inline-block bg-[#10E688]/10 text-[#10E688] border border-[#10E688]/30 rounded-full px-5 py-1.5 text-xs font-black mb-4 shadow-2xs">
-                Fondateur & Créateur
-              </span>
-              <p className="text-xs sm:text-sm text-gray-400 font-medium leading-relaxed max-w-xs">
-                Développeur FullStack & Fondateur de la plateforme Facilité.
-              </p>
-            </div>
-          </div>
-
+          <h4 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">
+            Macoumba Samake
+          </h4>
+          <span className="inline-block bg-[#10E688]/15 text-emerald-800 border border-[#10E688]/30 rounded-full px-5 py-1 text-xs font-bold mb-3 shadow-2xs">
+            Fondateur & Créateur
+          </span>
+          <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed max-w-sm">
+            Développeur FullStack & Fondateur de la plateforme Facilité.
+          </p>
         </div>
       </section>
 

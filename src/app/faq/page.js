@@ -182,26 +182,23 @@ export default function FaqPage() {
                           <h4 className="text-center text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-[#10E688] mb-4">
                             Fondateur de Facilité
                           </h4>
-                          <div className="flex justify-center max-w-sm mx-auto text-center">
-                            {/* Carte Unique du Fondateur */}
-                            <div className="w-full bg-[#0A0D14] text-white border border-gray-800/90 rounded-3xl p-6 flex flex-col items-center shadow-xl hover:border-emerald-500/40 transition-all">
-                              <div className="w-24 h-24 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_20px_rgba(16,230,136,0.3)] mb-4 overflow-hidden flex-shrink-0">
-                                <img
-                                  src="/fondateur.png"
-                                  alt="Fondateur Facilité"
-                                  className="w-full h-full object-cover rounded-full"
-                                />
-                              </div>
-                              <h5 className="text-base sm:text-lg font-extrabold text-white mb-1">
-                                Macoumba Samake
-                              </h5>
-                              <span className="inline-block bg-[#10E688]/10 text-[#10E688] border border-[#10E688]/30 rounded-full px-4 py-1 text-xs font-bold mb-2">
-                                Fondateur & Créateur
-                              </span>
-                              <p className="text-xs text-gray-400 leading-relaxed font-medium">
-                                Développeur FullStack & Fondateur de la plateforme Facilité.
-                              </p>
+                          <div className="flex flex-col items-center text-center max-w-sm mx-auto py-2">
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-[#10E688] p-1 shadow-[0_0_20px_rgba(16,230,136,0.3)] mb-3 overflow-hidden flex-shrink-0">
+                              <img
+                                src="/fondateur.png"
+                                alt="Fondateur Facilité"
+                                className="w-full h-full object-cover rounded-full"
+                              />
                             </div>
+                            <h5 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white mb-1">
+                              Macoumba Samake
+                            </h5>
+                            <span className="inline-block bg-[#10E688]/15 text-emerald-700 dark:text-[#10E688] border border-[#10E688]/30 rounded-full px-4 py-1 text-xs font-bold mb-2">
+                              Fondateur & Créateur
+                            </span>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                              Développeur FullStack & Fondateur de la plateforme Facilité.
+                            </p>
                           </div>
                         </div>
                       )}
