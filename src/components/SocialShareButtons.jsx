@@ -280,17 +280,22 @@ export default function SocialShareButtons({
           {/* Bouton 3 : Double Candidature (Email + WhatsApp) OU Bouton Unique */}
           {contactMethods.hasBoth ? (
             <div className="flex-1 flex items-center gap-1.5 min-w-0">
-              <a
-                href={contactMethods.emailUrl || contactMethods.portalUrl}
-                target={(contactMethods.emailUrl || "").startsWith("mailto:") ? "_self" : "_blank"}
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onApply) {
+                    onApply(offer);
+                  } else if (contactMethods.emailUrl) {
+                    window.location.href = contactMethods.emailUrl;
+                  }
+                }}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-2 sm:px-3 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-1.5 min-w-0"
-                title="Postuler par Email"
+                title="Postuler directement via Facilité ou par Email"
               >
                 <i className="fa-solid fa-envelope text-xs sm:text-sm"></i>
                 <span className="truncate">Par E-mail</span>
-              </a>
+              </button>
               <a
                 href={contactMethods.waUrl}
                 target="_blank"
