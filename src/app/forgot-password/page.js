@@ -52,13 +52,13 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4F8]/80 font-sans flex flex-col justify-center items-center py-8 px-4 relative select-none">
+    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/50 font-sans flex flex-col justify-center items-center py-4 px-3 sm:px-4 relative select-none">
       {/* Carte Centrale */}
-      <div className="w-full max-w-[380px] mx-auto bg-white rounded-3xl p-6 sm:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-gray-100 transition-all">
+      <div className="w-full max-w-[340px] sm:max-w-[350px] mx-auto bg-white rounded-2xl p-5 sm:p-6 shadow-[0_6px_24px_rgba(0,0,0,0.06)] border border-gray-100/90 transition-all">
         
         {/* Badge Clé Officielle */}
-        <div className="flex justify-center mb-1">
-          <div className="w-14 h-14 rounded-full bg-white border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-center justify-center p-2.5">
+        <div className="flex justify-center mb-0.5">
+          <div className="w-11 h-11 rounded-full bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex items-center justify-center p-2">
             <img
               src="/login_key.png"
               alt="Clé de réinitialisation"
@@ -68,35 +68,35 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Titre & Sous-titre */}
-        <div className="text-center mb-5">
-          <h1 className="text-2xl font-black text-[#0F172A] tracking-tight">
+        <div className="text-center mb-4">
+          <h1 className="text-xl sm:text-[22px] font-black text-[#0F172A] tracking-tight">
             Réinitialiser le mot de passe
           </h1>
-          <p className="text-xs text-gray-500 font-medium mt-1">
+          <p className="text-[11px] text-gray-500 font-medium mt-0.5">
             Entrez votre e-mail pour recevoir un lien de réinitialisation.
           </p>
         </div>
 
         {isSuccess ? (
-          <div className="text-center py-4 space-y-3 animate-fade-in">
-            <div className="w-14 h-14 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-2xl font-bold border border-emerald-200">
+          <div className="text-center py-4 space-y-2.5 animate-fade-in">
+            <div className="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-xl font-bold border border-emerald-200">
               ✓
             </div>
             <h2 className="text-base font-bold text-gray-900">E-mail envoyé !</h2>
-            <p className="text-xs text-gray-600">
+            <p className="text-[11px] text-gray-600">
               Si un compte existe pour <span className="font-semibold text-gray-900">{email}</span>, vous recevrez un lien d'ici quelques instants.
             </p>
             <div className="pt-2">
               <Link
                 href="/login"
-                className="inline-block w-full py-3 bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-bold text-xs rounded-xl shadow-xs transition text-center"
+                className="inline-block w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition text-center"
               >
                 Retour à la connexion
               </Link>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <input
               type="text"
               name="address"
@@ -109,7 +109,7 @@ export default function ForgotPasswordPage() {
 
             {/* Champ Adresse e-mail */}
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label className="block text-[11px] font-bold text-gray-700 mb-1">
                 Adresse e-mail
               </label>
               <input
@@ -122,10 +122,10 @@ export default function ForgotPasswordPage() {
                 required
                 autoFocus
                 placeholder="Saisissez votre e-mail enregistré"
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black transition"
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
               />
               {errorMessage && (
-                <p className="mt-2 text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                <p className="mt-1.5 text-[11px] font-bold text-red-600 bg-red-50 p-2 rounded-xl border border-red-200">
                   {errorMessage}
                 </p>
               )}
@@ -135,24 +135,24 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center space-x-2 mt-1"
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center space-x-2 mt-1"
             >
               {isLoading ? (
-                <span className="inline-block w-4 h-4 border-2 border-gray-950 border-t-transparent rounded-full animate-spin"></span>
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               ) : (
                 <span>Envoyer le lien</span>
               )}
             </button>
 
             {/* Ligne fine */}
-            <div className="border-t border-gray-100 my-4"></div>
+            <div className="border-t border-gray-100 my-3"></div>
 
             {/* Lien retour */}
             <div className="text-center">
               <Link
                 href="/login"
                 style={{ textDecoration: "none" }}
-                className="text-xs font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline cursor-pointer inline-flex items-center gap-1.5 transition"
+                className="text-[11px] font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline cursor-pointer inline-flex items-center gap-1.5 transition"
               >
                 <span>← Retour à la connexion</span>
               </Link>
@@ -162,7 +162,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       {/* Footer minimaliste */}
-      <footer className="text-center py-3 text-xs text-gray-400">
+      <footer className="text-center py-2 text-[11px] text-gray-400">
         © 2026 Facilite · Tous droits réservés.
       </footer>
     </div>

@@ -296,54 +296,50 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4F8]/80 font-sans flex flex-col justify-center items-center py-8 px-4 relative select-none">
+    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/50 font-sans flex flex-col justify-center items-center py-4 px-3 sm:px-4 relative select-none">
       
       {/* CARTE DE CONNEXION PRINCIPALE */}
-      <div className="w-full max-w-[380px] mx-auto bg-white rounded-3xl p-6 sm:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-gray-100 transition-all">
+      <div className="w-full max-w-[340px] sm:max-w-[350px] mx-auto bg-white rounded-2xl p-5 sm:p-6 shadow-[0_6px_24px_rgba(0,0,0,0.06)] border border-gray-100/90 transition-all">
         
         {/* Mode Réinitialisation de mot de passe */}
         {isRecoveryMode ? (
-          <div className="space-y-4">
-            <div className="text-center mb-2">
-              <h1 className="text-2xl font-black text-[#111827]">Nouveau mot de passe</h1>
-              <p className="text-xs text-gray-500 mt-1">Définissez votre nouveau mot de passe.</p>
+          <div className="space-y-3.5">
+            <div className="text-center mb-1">
+              <h1 className="text-xl font-black text-[#111827]">Nouveau mot de passe</h1>
+              <p className="text-[11px] text-gray-500 mt-0.5">Définissez votre nouveau mot de passe.</p>
             </div>
 
             {recoverySuccess ? (
-              <div className="text-center py-4 space-y-2">
-                <div className="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-xl font-bold border border-emerald-200">
-                  ✓
-                </div>
-                <p className="text-sm font-bold text-gray-900">Mot de passe mis à jour !</p>
-                <p className="text-xs text-gray-500">Redirection vers la connexion...</p>
+              <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-center text-xs font-semibold">
+                ✓ Mot de passe mis à jour ! Redirection...
               </div>
             ) : (
-              <form onSubmit={handleResetPasswordSubmit} className="space-y-3.5">
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Nouveau mot de passe</label>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Nouveau mot de passe</label>
                   <input
                     type="password"
                     required
                     placeholder="Au moins 6 caractères"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black transition"
+                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Confirmer le mot de passe</label>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Confirmer le mot de passe</label>
                   <input
                     type="password"
                     required
                     placeholder="Confirmez le mot de passe"
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black transition"
+                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 transition"
                   />
                 </div>
 
                 {recoveryError && (
-                  <p className="text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                  <p className="text-[11px] font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
                     {recoveryError}
                   </p>
                 )}
@@ -351,7 +347,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={recoveryLoading}
-                  className="w-full py-3 bg-black hover:bg-neutral-900 text-white text-sm font-semibold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
                 >
                   {recoveryLoading ? "Mise à jour..." : "Enregistrer le mot de passe"}
                 </button>
@@ -360,32 +356,32 @@ export default function LoginPage() {
           </div>
         ) : isSuccess ? (
           /* Succès de Connexion */
-          <div className="text-center py-6 space-y-3 animate-fade-in">
-            <div className="w-14 h-14 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-2xl font-bold border border-emerald-200">
+          <div className="text-center py-5 space-y-2.5 animate-fade-in">
+            <div className="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-xl font-bold border border-emerald-200">
               ✓
             </div>
-            <h2 className="text-lg font-bold text-gray-900">Connexion réussie !</h2>
-            <p className="text-xs text-gray-500">Bienvenue sur Facilité. Redirection en cours...</p>
+            <h2 className="text-base font-bold text-gray-900">Connexion réussie !</h2>
+            <p className="text-[11px] text-gray-500">Bienvenue sur Facilité. Redirection en cours...</p>
           </div>
         ) : authMethod === "phone" ? (
           /* Mode Authentification par Téléphone */
-          <div className="space-y-4">
+          <div className="space-y-3.5">
             <PhoneAuthForm />
             <button
               type="button"
               onClick={() => setAuthMethod("email")}
-              className="w-full text-center text-xs font-bold text-gray-600 hover:text-black py-2 cursor-pointer transition"
+              className="w-full text-center text-[11px] font-bold text-gray-600 hover:text-black py-1.5 cursor-pointer transition"
             >
               ← Retour à la connexion par e-mail
             </button>
           </div>
         ) : (
-          /* Mode Principal : Icône Clé + Login + Google en Haut + OU + Saisie Email + Bouton Noir */
-          <div className="space-y-4">
+          /* Mode Principal : Icône Clé + Login + Google en Haut + OU + Saisie Email + Bouton Vert */
+          <div className="space-y-3">
             
             {/* Icône Clé Officielle */}
-            <div className="flex justify-center mb-1">
-              <div className="w-14 h-14 rounded-full bg-white border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-center justify-center p-2.5">
+            <div className="flex justify-center mb-0.5">
+              <div className="w-11 h-11 rounded-full bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex items-center justify-center p-2">
                 <img
                   src="/login_key.png"
                   alt="Clé de connexion"
@@ -395,17 +391,17 @@ export default function LoginPage() {
             </div>
 
             {/* Titre & Sous-titre */}
-            <div className="text-center mb-4">
-              <h1 className="text-2xl font-black text-[#0F172A] tracking-tight">
+            <div className="text-center mb-3">
+              <h1 className="text-xl sm:text-[22px] font-black text-[#0F172A] tracking-tight">
                 Connexion
               </h1>
-              <p className="text-xs text-gray-500 font-medium mt-1">
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
                 Saisissez vos identifiants pour vous connecter.
               </p>
             </div>
 
             {showSuspendedNotice && (
-              <p className="text-xs font-bold text-red-700 bg-red-50 p-3 rounded-xl border border-red-200">
+              <p className="text-[11px] font-bold text-red-700 bg-red-50 p-2.5 rounded-xl border border-red-200">
                 ⚠️ Ce compte a été suspendu. Contactez le support.
               </p>
             )}
@@ -415,7 +411,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => handleOAuthLogin("google")}
               disabled={oauthLoading}
-              className="w-full py-3 px-4 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 text-sm font-medium rounded-xl transition flex items-center justify-center gap-2.5 shadow-2xs cursor-pointer disabled:opacity-60"
+              className="w-full py-2.5 px-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 text-xs sm:text-sm font-medium rounded-xl transition flex items-center justify-center gap-2 shadow-2xs cursor-pointer disabled:opacity-60"
             >
               <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
                 <path
@@ -439,15 +435,15 @@ export default function LoginPage() {
             </button>
 
             {/* 2. SÉPARATEUR OU AU CENTRE */}
-            <div className="flex items-center justify-center my-3">
-              <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+            <div className="flex items-center justify-center my-2">
+              <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">
                 OU
               </span>
             </div>
 
-            {/* 3. EN BAS : SAISIE E-MAIL + BOUTON NOIR CONTINUER AVEC L'E-MAIL */}
+            {/* 3. EN BAS : SAISIE E-MAIL + BOUTON VERT CONTINUER AVEC L'E-MAIL */}
             {step === 1 ? (
-              <form onSubmit={handleEmailStepSubmit} className="space-y-3">
+              <form onSubmit={handleEmailStepSubmit} className="space-y-2.5">
                 <input
                   type="text"
                   name="website"
@@ -468,12 +464,12 @@ export default function LoginPage() {
                       if (errorMessage) setErrorMessage("");
                     }}
                     placeholder="Saisissez votre e-mail"
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+                    className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
                   />
                 </div>
 
                 {errorMessage && (
-                  <p className="text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                  <p className="text-[11px] font-bold text-red-600 bg-red-50 p-2 rounded-xl border border-red-200">
                     {errorMessage}
                   </p>
                 )}
@@ -481,17 +477,17 @@ export default function LoginPage() {
                 {/* Bouton Vert "Continuer avec l'e-mail" */}
                 <button
                   type="submit"
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
                 >
                   Continuer avec l'e-mail
                 </button>
 
                 {/* Lien Mot de passe oublié ? */}
-                <div className="flex justify-end pt-1">
+                <div className="flex justify-end pt-0.5">
                   <Link
                     href="/forgot-password"
                     style={{ textDecoration: "none" }}
-                    className="text-xs font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline transition"
+                    className="text-[11px] font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline transition"
                   >
                     Mot de passe oublié ?
                   </Link>
@@ -499,9 +495,9 @@ export default function LoginPage() {
               </form>
             ) : (
               /* Étape 2 : Saisie du Mot de Passe */
-              <form onSubmit={handlePasswordSubmit} className="space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs">
-                  <span className="font-semibold text-gray-800 truncate max-w-[220px]">{email}</span>
+              <form onSubmit={handlePasswordSubmit} className="space-y-2.5 animate-fade-in">
+                <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl border border-gray-200 text-xs">
+                  <span className="font-semibold text-gray-800 truncate max-w-[200px]">{email}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -511,14 +507,14 @@ export default function LoginPage() {
                       setMagicLinkSent(false);
                     }}
                     style={{ textDecoration: "none" }}
-                    className="text-xs font-semibold text-gray-500 hover:text-black no-underline hover:no-underline cursor-pointer"
+                    className="text-[11px] font-semibold text-gray-500 hover:text-black no-underline hover:no-underline cursor-pointer"
                   >
                     Modifier
                   </button>
                 </div>
 
                 {magicLinkSent ? (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 space-y-1">
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 space-y-0.5">
                     <p className="font-bold">✉️ Lien de connexion envoyé !</p>
                     <p>Vérifiez votre boîte de réception pour vous connecter en 1 clic.</p>
                   </div>
@@ -535,18 +531,18 @@ export default function LoginPage() {
                           if (errorMessage) setErrorMessage("");
                         }}
                         placeholder="Saisissez votre mot de passe"
-                        className="w-full pl-3.5 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 transition"
+                        className="w-full pl-3.5 pr-9 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 transition"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-black cursor-pointer"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-black cursor-pointer"
                       >
                         <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"} text-xs`}></i>
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-[11px]">
                       <button
                         type="button"
                         onClick={handleSendMagicLink}
@@ -554,20 +550,20 @@ export default function LoginPage() {
                         style={{ textDecoration: "none" }}
                         className="text-gray-500 hover:text-black no-underline hover:no-underline cursor-pointer"
                       >
-                        {magicLinkLoading ? "Envoi du lien..." : "M'envoyer un lien magique"}
+                        {magicLinkLoading ? "Envoi..." : "Lien magique"}
                       </button>
 
                       <Link
                         href="/forgot-password"
                         style={{ textDecoration: "none" }}
-                        className="text-xs font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline"
+                        className="font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline"
                       >
                         Mot de passe oublié ?
                       </Link>
                     </div>
 
                     {errorMessage && (
-                      <p className="text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                      <p className="text-[11px] font-bold text-red-600 bg-red-50 p-2 rounded-xl border border-red-200">
                         {errorMessage}
                       </p>
                     )}
@@ -578,7 +574,7 @@ export default function LoginPage() {
                         onClick={handleResendConfirmation}
                         disabled={isResending}
                         style={{ textDecoration: "none" }}
-                        className="w-full text-xs font-bold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline py-1 cursor-pointer"
+                        className="w-full text-[11px] font-bold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline py-0.5 cursor-pointer"
                       >
                         {isResending ? "Envoi en cours..." : "Renvoyer l'email de confirmation"}
                       </button>
@@ -588,7 +584,7 @@ export default function LoginPage() {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-2"
                     >
                       {isLoading ? (
                         <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -602,11 +598,11 @@ export default function LoginPage() {
             )}
 
             {/* Séparateur Fin */}
-            <div className="border-t border-gray-100 my-4"></div>
+            <div className="border-t border-gray-100 my-3"></div>
 
             {/* 4. FOOTER : Pas encore de compte ? Inscrivez-vous */}
-            <div className="text-center pt-1">
-              <p className="text-xs text-gray-700 font-normal">
+            <div className="text-center pt-0.5">
+              <p className="text-[11px] text-gray-700 font-normal">
                 Pas encore de compte ?{" "}
                 <Link
                   href="/register"
@@ -622,7 +618,7 @@ export default function LoginPage() {
       </div>
 
       {/* Footer Minimaliste */}
-      <footer className="text-center py-3 text-xs text-gray-400">
+      <footer className="text-center py-2 text-[11px] text-gray-400">
         © 2026 Facilite · Tous droits réservés.
       </footer>
     </div>
