@@ -478,10 +478,10 @@ export default function LoginPage() {
                   </p>
                 )}
 
-                {/* Bouton Noir "Continuer avec l'e-mail" */}
+                {/* Bouton Vert "Continuer avec l'e-mail" */}
                 <button
                   type="submit"
-                  className="w-full py-3 bg-black hover:bg-neutral-900 text-white text-sm font-semibold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
                 >
                   Continuer avec l'e-mail
                 </button>
@@ -535,7 +535,7 @@ export default function LoginPage() {
                           if (errorMessage) setErrorMessage("");
                         }}
                         placeholder="Saisissez votre mot de passe"
-                        className="w-full pl-3.5 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black transition"
+                        className="w-full pl-3.5 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 transition"
                       />
                       <button
                         type="button"
@@ -584,11 +584,11 @@ export default function LoginPage() {
                       </button>
                     )}
 
-                    {/* Bouton Se Connecter */}
+                    {/* Bouton Se Connecter Vert */}
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full py-3 bg-black hover:bg-neutral-900 text-white text-sm font-semibold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-2"
                     >
                       {isLoading ? (
                         <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
