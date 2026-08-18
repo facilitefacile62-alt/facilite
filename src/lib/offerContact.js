@@ -218,6 +218,7 @@ export function resolveOfferAction(offer = {}, options = {}) {
       return {
         type: "whatsapp",
         isWhatsApp: true,
+        isEmail: false,
         url: cleanExt,
         phoneNumber: normalizePhoneNumber(cleanExt),
         label: customLabel || "Postuler sur WhatsApp",
@@ -226,21 +227,27 @@ export function resolveOfferAction(offer = {}, options = {}) {
       };
     }
 
+    // Si le lien externe est un mailto:, l'offre est une offre par e-mail qui doit ouvrir la candidature directe Facilité
     if (cleanExt.startsWith("mailto:")) {
+      const emailRaw = cleanExt.replace(/^mailto:/i, "").split("?")[0];
       return {
         type: "email",
         isWhatsApp: false,
-        url: cleanExt,
+        isEmail: true,
+        email: emailRaw,
+        mailtoUrl: cleanExt,
+        url: null, // url null déclenche ApplyModal (candidature directe Facilité)
         phoneNumber: null,
-        label: customLabel || "Postuler par Email",
+        label: customLabel || "Postuler via Facilité",
         buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
-        iconClass: "fa-solid fa-envelope",
+        iconClass: "fa-solid fa-paper-plane",
       };
     }
 
     return {
       type: "external",
       isWhatsApp: false,
+      isEmail: false,
       url: cleanExt,
       phoneNumber: null,
       label: customLabel || "Postuler sur le site officiel",
@@ -249,25 +256,29 @@ export function resolveOfferAction(offer = {}, options = {}) {
     };
   }
 
-  // 3. Email recruteur
+  // 3. Email recruteur explicite (candidature directe par e-mail via Facilité)
   const email = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
   if (email && typeof email === "string" && email.includes("@")) {
     const title = offer?.title || offer?.titleFR || "Offre d'emploi";
     return {
       type: "email",
       isWhatsApp: false,
-      url: `mailto:${email.trim()}?subject=${encodeURIComponent(`Candidature - ${title}`)}`,
+      isEmail: true,
+      email: email.trim(),
+      mailtoUrl: `mailto:${email.trim()}?subject=${encodeURIComponent(`Candidature - ${title}`)}`,
+      url: null, // url null déclenche ApplyModal (candidature directe Facilité)
       phoneNumber: null,
-      label: customLabel || "Postuler par Email",
+      label: customLabel || "Postuler via Facilité",
       buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
-      iconClass: "fa-solid fa-envelope",
+      iconClass: "fa-solid fa-paper-plane",
     };
   }
 
-  // 4. Candidature interne
+  // 4. Candidature interne Facilité standard
   return {
     type: "internal",
     isWhatsApp: false,
+    isEmail: false,
     url: null,
     phoneNumber: null,
     label: customLabel || "Postuler sur Facilite",

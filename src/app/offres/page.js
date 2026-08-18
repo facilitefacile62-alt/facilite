@@ -522,6 +522,10 @@ function OffresContent() {
                         company: offer.company || "Recruteur Confidentiel",
                         location: offer.location || "Sénégal",
                         contract: offer.contract_type || "CDI",
+                        contact_email: offer.contact_email || offer.recruiterEmail,
+                        recruiterEmail: offer.contact_email || offer.recruiterEmail,
+                        recruiterPhone: offer.contact_whatsapp || offer.recruiterPhone,
+                        whatsapp: offer.contact_whatsapp || offer.whatsapp,
                       }}
                       variant="feed"
                       onApply={() => {
@@ -532,7 +536,7 @@ function OffresContent() {
                         setApplyingOffer(offer);
                       }}
                       externalLink={offer.external_link}
-                      externalButtonLabel={offer.external_button_label || "Postuler sur le site officiel"}
+                      externalButtonLabel={offer.external_button_label}
                       onToast={triggerToast}
                     />
 

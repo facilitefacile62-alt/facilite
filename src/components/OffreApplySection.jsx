@@ -49,11 +49,13 @@ export default function OffreApplySection({ offer }) {
   const stableJob = useMemo(
     () => ({
       id: offer.id,
-      titleFR: offer.title,
-      titleEN: offer.title,
+      titleFR: offer.title || offer.titleFR,
+      titleEN: offer.title || offer.titleEN,
       company: offer.company,
+      recruiterEmail: offer.contact_email || offer.recruiter_email || offer.recruiterEmail || "",
+      contact_email: offer.contact_email || offer.recruiter_email || offer.recruiterEmail || "",
     }),
-    [offer.id, offer.title, offer.company]
+    [offer]
   );
 
   // Extraction complète de tous les moyens de contact
@@ -70,7 +72,7 @@ export default function OffreApplySection({ offer }) {
   const isWhatsApp = offerAction.isWhatsApp;
   const buttonColorClass = offerAction.buttonColorClass || "bg-blue-600 hover:bg-blue-700 text-white";
   const buttonIconClass = offerAction.iconClass || "fa-solid fa-arrow-up-right-from-square";
-  const buttonLabel = offerAction.label;
+  const buttonLabel = offerAction.label || "Postuler via Facilité";
 
   return (
     <>
@@ -91,15 +93,15 @@ export default function OffreApplySection({ offer }) {
 
       {contactMethods.hasBoth ? (
         <div className="w-full flex flex-col sm:flex-row gap-3">
-          <a
-            href={contactMethods.emailUrl || contactMethods.portalUrl}
-            target={(contactMethods.emailUrl || "").startsWith("mailto:") ? "_self" : "_blank"}
-            rel="noopener noreferrer"
-            className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer"
+          <button
+            type="button"
+            onClick={() => setApplyOpen(true)}
+            disabled={blocked}
+            className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50"
           >
-            <i className="fa-solid fa-envelope text-base sm:text-lg"></i>
-            <span>Postuler par E-mail</span>
-          </a>
+            <i className="fa-solid fa-paper-plane text-base sm:text-lg"></i>
+            <span>Postuler via Facilité</span>
+          </button>
           <a
             href={contactMethods.waUrl}
             target="_blank"
@@ -113,7 +115,7 @@ export default function OffreApplySection({ offer }) {
       ) : targetUrl ? (
         <a
           href={targetUrl}
-          target={targetUrl.startsWith("mailto:") ? "_self" : "_blank"}
+          target="_blank"
           rel="noopener noreferrer"
           className={`w-full py-3.5 ${buttonColorClass} active:scale-98 font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg ${
             isWhatsApp ? "shadow-emerald-500/25" : "shadow-blue-600/25"
@@ -130,7 +132,7 @@ export default function OffreApplySection({ offer }) {
           className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <i className="fa-solid fa-paper-plane text-base"></i>
-          <span>{blocked ? "Niveau insuffisant" : "Postuler sur Facilite"}</span>
+          <span>{blocked ? "Niveau insuffisant" : buttonLabel}</span>
         </button>
       )}
 

@@ -1280,13 +1280,12 @@ export default function Home() {
       window.open(action.url, "_blank", "noopener,noreferrer");
       return;
     }
-    setSelectedJobToApply(job);
-    if (!userSession) {
-      // Si déconnecté, bloquer la candidature et afficher le modal de création de compte
-      setAuthRequiredModalOpen(true);
-    } else {
-      setApplyModalOpen(true);
-    }
+    setSelectedJobToApply({
+      ...job,
+      recruiterEmail: job.contact_email || job.recruiterEmail || job.email || (job.externalLink?.startsWith("mailto:") ? job.externalLink.replace(/^mailto:/i, "").split("?")[0] : ""),
+      contact_email: job.contact_email || job.recruiterEmail || job.email || (job.externalLink?.startsWith("mailto:") ? job.externalLink.replace(/^mailto:/i, "").split("?")[0] : ""),
+    });
+    setApplyModalOpen(true);
   };
 
   const handleConfirmApply = () => {
