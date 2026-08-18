@@ -517,46 +517,42 @@ export default function OffreDetailClient({ initialOffer }) {
                 {/* Barre d'Engagement & Partage Réseau Social (Style Facebook Compact) */}
                 <SocialShareButtons offer={offer} variant="compact" className="my-6" />
 
-                {/* Description avec Tronquage / Voir plus */}
-                <div className="relative my-6">
-                  <div
-                    className={`prose prose-sm max-w-none text-gray-700 dark:text-gray-200 whitespace-pre-line leading-relaxed transition-all duration-300 ${
-                      !isDescriptionExpanded && (offer.description || "").length > 350
-                        ? "max-h-48 overflow-hidden"
-                        : "max-h-none"
-                    }`}
-                  >
-                    {offer.description}
-                  </div>
+                {/* Description de l'offre (Lisibilité 100% nette sans dégradé masquant) */}
+                <div className="my-6 bg-gray-50/70 dark:bg-gray-800/40 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-700">
+                  <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i className="fa-solid fa-file-lines text-emerald-600"></i>
+                    <span>Détails & Description du poste</span>
+                  </h3>
+                  
+                  <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line leading-relaxed font-normal">
+                    {(() => {
+                      const fullText = offer.description || "";
+                      const shouldTruncate = fullText.length > 400;
+                      const displayText = shouldTruncate && !isDescriptionExpanded
+                        ? fullText.substring(0, 400) + "..."
+                        : fullText;
 
-                  {/* Bouton Voir Plus / Voir Moins avec Dégradé */}
-                  {(offer.description || "").length > 350 && (
-                    <>
-                      {!isDescriptionExpanded ? (
-                        <div className="absolute bottom-0 inset-x-0 h-28 bg-gradient-to-t from-white via-white/85 to-transparent dark:from-gray-900 dark:via-gray-900/85 flex items-end justify-center pb-1">
-                          <button
-                            type="button"
-                            onClick={() => setIsDescriptionExpanded(true)}
-                            className="px-5 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-blue-600 dark:text-blue-400 font-black text-xs rounded-full shadow-md border border-gray-200 dark:border-gray-700 flex items-center gap-1.5 transition transform hover:scale-105 cursor-pointer"
-                          >
-                            <span>... Voir plus</span>
-                            <i className="fa-solid fa-chevron-down text-[10px]"></i>
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="pt-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => setIsDescriptionExpanded(false)}
-                            className="px-5 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-600 dark:text-gray-300 font-extrabold text-xs rounded-full shadow-xs border border-gray-200 dark:border-gray-700 flex items-center gap-1.5 transition cursor-pointer mx-auto"
-                          >
-                            <span>Voir moins</span>
-                            <i className="fa-solid fa-chevron-up text-[10px]"></i>
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
+                      return (
+                        <>
+                          <div className="text-gray-900 dark:text-gray-100 leading-relaxed">
+                            {displayText}
+                          </div>
+                          {shouldTruncate && (
+                            <div className="pt-3">
+                              <button
+                                type="button"
+                                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 dark:text-blue-400 font-extrabold text-xs rounded-xl shadow-xs border border-gray-200 dark:border-gray-700 transition cursor-pointer"
+                              >
+                                <span>{isDescriptionExpanded ? "Voir moins" : "... Voir plus"}</span>
+                                <i className={`fa-solid ${isDescriptionExpanded ? "fa-chevron-up" : "fa-chevron-down"} text-[10px]`}></i>
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 <div className="max-w-sm">
