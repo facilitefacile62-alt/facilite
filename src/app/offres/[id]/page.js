@@ -60,26 +60,41 @@ Envoyez votre dossier de candidature par e-mail à : crewcoordinator@icsindustri
   },
   "962a37cc-55ff-422f-87d4-402f096483f4": {
     id: "962a37cc-55ff-422f-87d4-402f096483f4",
-    title: "Offre d'emploi : Agent Livreur / Coursier (H/F)",
-    company: "Mobilité Sénégal (Solutions de mobilité)",
+    title: "AFRI-MOOV recrute un(e) Agent Livreur / Coursier (H/F)",
+    company: "AFRI-MOOV (Mobilité & Logistique)",
     location: "Dakar, Sénégal",
-    contract_type: "CDI / Plein temps",
-    salary_range: "Fixe attractif + Primes de livraison",
-    description: `Entreprise spécialisée dans les solutions de mobilité au Sénégal recrute un(e) Agent Livreur / Coursier (H/F) pour ses opérations à Dakar.
+    contract_type: "Stage puis CDD",
+    salary_range: "Indemnité de stage + primes puis salaire CDD",
+    description: `AFRI-MOOV est une entreprise sénégalaise spécialisée dans les solutions de mobilité, de transport et de logistique. Nous accompagnons les particuliers, les entreprises et les administrations avec des services fiables, rapides et disponibles 24h/24, 7j/7.
 
-🎯 MISSIONS & QUALIFICATIONS :
-• Connaissance approfondie des quartiers et itinéraires de Dakar.
-• Maîtrise de la conduite de deux-roues et permis de conduire valide obligatoire.
-• Sens aigu de la ponctualité, rigueur et orientation client.
-• Gestion des livraisons et tracking en temps réel sur smartphone.
+📌 MISSIONS DU POSTE :
+• Assurer la collecte et la livraison de colis et de marchandises dans les délais convenus.
+• Vérifier la conformité des colis (état, quantité, destinataire) avant et après livraison.
+• Communiquer avec le service client sur l’avancement des livraisons.
+• Entretenir et utiliser correctement le véhicule ou l’engin confié (moto / utilitaire).
+• Respecter le code de la route et les consignes de sécurité.
 
-🔗 COMMENT POSTULER :
-Déposez votre candidature en ligne :
-https://lnkd.in/dtvb_nU9`,
+🎯 PROFIL RECHERCHÉ :
+• Permis de conduire valide (catégorie adaptée) apprécié.
+• Bonne connaissance de Dakar et de ses environs.
+• Sens de l’organisation, ponctualité et rigueur.
+• Aisance avec un smartphone (application de suivi, GPS).
+• Sens du service client et présentation soignée.
+• Expérience appréciée, débutants motivés acceptés.
+
+📅 HORAIRES & CONDITIONS :
+• Type de contrat : Stage ensuite CDD
+• Horaires flexibles (y compris samedis)
+
+📩 COMMENT POSTULER :
+Envoyez votre CV à : Afrimoovsn@gmail.com
+📌 Objet du mail : Candidature – Agent Livreur / Coursier
+Ou postulez directement via Facilité avec votre CV !`,
     image_url: "/mobilite_senegal_livreur_coursier.jpg",
     min_education_level: "Permis 2 roues valide",
     deadline: "2026-09-15",
-    external_link: "https://lnkd.in/dtvb_nU9",
+    contact_email: "Afrimoovsn@gmail.com",
+    external_link: "mailto:Afrimoovsn@gmail.com?subject=Candidature%20%E2%80%93%20Agent%20Livreur%20%2F%20Coursier",
     is_active: true,
     created_at: new Date().toISOString(),
   },

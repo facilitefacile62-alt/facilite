@@ -209,32 +209,47 @@ Envoyez votre dossier de candidature par e-mail : crewcoordinator@icsindustrial.
   },
   {
     id: "962a37cc-55ff-422f-87d4-402f096483f4",
-    titleFR: "Offre d'emploi : Agent Livreur / Coursier (H/F)",
-    titleEN: "Delivery Agent / Dispatch Rider (M/F)",
-    company: "Mobilité Sénégal (Solutions de mobilité)",
+    titleFR: "AFRI-MOOV recrute un(e) Agent Livreur / Coursier (H/F)",
+    titleEN: "AFRI-MOOV recruits a Delivery Agent / Courier (M/F)",
+    company: "AFRI-MOOV (Mobilité & Logistique)",
     logoColor: "bg-blue-600 text-white",
-    initials: "MOB",
+    initials: "AFRI",
     location: "Dakar, Sénégal",
     timeFR: "À l'instant",
     timeEN: "Just now",
-    contract: "CDI / Plein temps",
-    descFR: `Entreprise spécialisée dans les solutions de mobilité au Sénégal recrute un(e) Agent Livreur / Coursier (H/F).
+    contract: "Stage puis CDD",
+    descFR: `AFRI-MOOV est une entreprise sénégalaise spécialisée dans les solutions de mobilité, de transport et de logistique (disponible 24h/24, 7j/7).
 
-🎯 MISSIONS & QUALIFICATIONS :
-• Connaissance approfondie des itinéraires et quartiers de Dakar.
-• Maîtrise de la conduite de deux-roues et permis de conduire valide.
-• Sens de la ponctualité, courtoisie et rigueur client.
-• Gestion et suivi des livraisons en temps réel.
+📌 MISSIONS DU POSTE :
+• Assurer la collecte et la livraison de colis et marchandises dans les délais convenus.
+• Vérifier la conformité des colis (état, quantité, destinataire) avant et après livraison.
+• Communiquer avec le service client sur l’avancement des livraisons.
+• Entretenir et utiliser correctement le véhicule ou l’engin confié (moto / utilitaire).
+• Respecter le code de la route et les consignes de sécurité.
 
-🔗 COMMENT POSTULER :
-Déposez votre candidature directement en ligne :
-https://lnkd.in/dtvb_nU9`,
-    descEN: `Mobilité Sénégal is recruiting a Delivery Agent / Courier in Dakar with strong city knowledge and a valid motorcycle license.
+🎯 PROFIL RECHERCHÉ :
+• Permis de conduire valide (catégorie adaptée) apprécié.
+• Bonne connaissance de Dakar et de ses environs.
+• Sens de l’organisation, ponctualité et rigueur.
+• Aisance avec un smartphone (application de suivi, GPS).
+• Sens du service client et présentation soignée.
+• Expérience appréciée, débutants motivés acceptés.
 
-🔗 Apply online: https://lnkd.in/dtvb_nU9`,
-    tags: ["Mobilité Sénégal", "Livreur", "Coursier", "Transport", "Dakar"],
-    externalLink: "https://lnkd.in/dtvb_nU9",
-    externalButtonLabel: "Postuler sur le portail de recrutement",
+📅 HORAIRES & CONDITIONS :
+• Type de contrat : Stage ensuite CDD
+• Horaires flexibles (y compris samedis)
+
+📩 COMMENT POSTULER :
+Envoyez votre CV à : Afrimoovsn@gmail.com
+Ou postulez directement via Facilité avec votre CV !`,
+    descEN: `AFRI-MOOV is recruiting a Delivery Agent / Courier in Dakar. Internship leading to Fixed-term contract (CDD).
+
+📩 Send your CV to: Afrimoovsn@gmail.com
+📌 Or apply directly via Facilité!`,
+    tags: ["AFRI-MOOV", "Livreur", "Coursier", "Transport", "Logistique", "Dakar"],
+    recruiterEmail: "Afrimoovsn@gmail.com",
+    contact_email: "Afrimoovsn@gmail.com",
+    externalLink: "mailto:Afrimoovsn@gmail.com?subject=Candidature%20%E2%80%93%20Agent%20Livreur%20%2F%20Coursier",
     image: "/mobilite_senegal_livreur_coursier.jpg",
     image_url: "/mobilite_senegal_livreur_coursier.jpg",
     deadline: "2026-09-15",
