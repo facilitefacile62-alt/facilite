@@ -8,6 +8,39 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "7c9a2814-6ef1-42e7-9104-d54b83ea1902": {
+    id: "7c9a2814-6ef1-42e7-9104-d54b83ea1902",
+    title: "ODS recrute un(e) Business Analyst (Pôle Gestion de Projets)",
+    company: "ODS (Orbus Digital Services)",
+    location: "Dakar, Sénégal",
+    contract_type: "CDI / Plein temps",
+    salary_range: "Selon profil & expérience",
+    description: `ODS, au cœur de la révolution numérique et éditeur de plateformes SaaS B2B pour faciliter l’échange d’informations certifiées, recrute un(e) Business Analyst pour son Pôle Gestion de projets, poste basé à Dakar.
+
+📌 MISSIONS & RESPONSABILITÉS :
+• Appuyer la cellule projets dans l’organisation, le suivi documentaire, l’exécution et la préparation des supports.
+• Assurer la mise à jour des informations nécessaires au bon déroulement des projets.
+• Sécuriser la planification et le suivi des projets numériques.
+• Recueillir, analyser et formaliser les besoins des clients et utilisateurs.
+• Coordonner les acteurs internes (techniques, design, produit) et externes.
+• Produire des informations et reportings fiables pour la prise de décision.
+• Garantir la traçabilité des actions, livrables et alertes projet.
+
+📅 CANDIDATURES :
+• Date limite : 20 août 2026
+• Dépôt e-mail : recrutement+ba@orbusdigital.com
+• Site web : https://orbusdigital.com
+
+📩 Postulez par e-mail ou directement via Facilité !`,
+    image_url: "/ods_business_analyst_dakar.jpg",
+    min_education_level: "Bac+4/5 en Gestion de Projet / Informatique / SI ou équivalent",
+    deadline: "2026-08-20",
+    contact_email: "recrutement+ba@orbusdigital.com",
+    contact_phone: "+221 33 839 16 00",
+    external_link: "https://orbusdigital.com",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "4d9b3e21-789a-4c2e-8123-bc9a1f284901": {
     id: "4d9b3e21-789a-4c2e-8123-bc9a1f284901",
     title: "AGEROUTE SÉNÉGAL recrute un Comptable (Projet PCZA / Banque Mondiale)",

@@ -172,6 +172,52 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "7c9a2814-6ef1-42e7-9104-d54b83ea1902",
+    titleFR: "ODS recrute un(e) Business Analyst (Pôle Gestion de Projets)",
+    titleEN: "ODS recruits a Business Analyst (Project Management)",
+    company: "ODS (Orbus Digital Services)",
+    logoColor: "bg-amber-600 text-white",
+    initials: "ODS",
+    location: "Dakar, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI / Plein temps",
+    descFR: `ODS, au cœur de la révolution numérique et éditeur de plateformes SaaS B2B pour faciliter l’échange d’informations certifiées, recrute un(e) Business Analyst pour son Pôle Gestion de projets, poste basé à Dakar.
+
+📌 MISSIONS & RESPONSABILITÉS :
+• Appuyer la cellule projets dans l’organisation, le suivi documentaire, l’exécution et la préparation des supports.
+• Assurer la mise à jour des informations nécessaires au bon déroulement des projets.
+• Sécuriser la planification et le suivi des projets numériques.
+• Recueillir, analyser et formaliser les besoins des clients et utilisateurs.
+• Coordonner les acteurs internes (techniques, design, produit) et externes.
+• Produire des informations et reportings fiables pour la prise de décision.
+• Garantir la traçabilité des actions, livrables et alertes projet.
+
+📅 CANDIDATURES :
+• Date limite : 20 août 2026
+• Dépôt e-mail : recrutement+ba@orbusdigital.com
+• Site web : https://orbusdigital.com
+
+📩 Postulez par e-mail ou directement via Facilité !`,
+    descEN: `ODS is hiring a Business Analyst based in Dakar for the Project Management team. Document follow-up, requirements gathering and project coordination.
+
+📩 Email: recrutement+ba@orbusdigital.com
+📅 Deadline: August 20, 2026`,
+    tags: ["ODS", "Business Analyst", "Gestion de Projet", "SaaS", "Dakar", "Agile"],
+    recruiterEmail: "recrutement+ba@orbusdigital.com",
+    contact_email: "recrutement+ba@orbusdigital.com",
+    recruiterPhone: "+221 33 839 16 00",
+    contact_phone: "+221 33 839 16 00",
+    externalLink: "https://orbusdigital.com",
+    externalButtonLabel: "Site officiel ODS",
+    image: "/ods_business_analyst_dakar.jpg",
+    image_url: "/ods_business_analyst_dakar.jpg",
+    deadline: "2026-08-20",
+    pinned: true,
+    is_sponsored: true,
+    sponsor_priority: 21,
+  },
+  {
     id: "4d9b3e21-789a-4c2e-8123-bc9a1f284901",
     titleFR: "AGEROUTE SÉNÉGAL recrute un Comptable (Projet PCZA / Banque Mondiale)",
     titleEN: "AGEROUTE SENEGAL recruits an Accountant (PCZA / World Bank)",
