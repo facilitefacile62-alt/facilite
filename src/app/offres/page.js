@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import ApplyModal from "@/components/ApplyModal";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
+import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 
 export const dynamic = "force-dynamic";
 
@@ -216,6 +217,11 @@ function OffresContent() {
     });
   }
 
+  // Entrelace 1 offre sponsorisée active toutes les 5 offres standard —
+  // interleaveSponsoredOffers revérifie elle-même is_sponsored/sponsored_until,
+  // ne dépend jamais du contenu de filteredOffers pour cette garantie.
+  const feedOffers = interleaveSponsoredOffers(filteredOffers, { everyN: 5 });
+
   // Catégorie "Formation" : pas un vrai catalogue de formations, juste une
   // recherche texte qui remonte des offres d'emploi normales sans rapport
   // (le mot apparaît par coïncidence dans leur texte). Calculé ici (pas
@@ -391,7 +397,7 @@ function OffresContent() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredOffers.map((offer, idx) => {
+            {feedOffers.map((offer, idx) => {
               const reqRank = levelRank(offer.required_education_level);
               const candRank = levelRank(candidateEducationLevel);
               const eligible = candRank >= reqRank;
@@ -402,14 +408,24 @@ function OffresContent() {
                 ? new Date(offer.created_at).toLocaleDateString("fr-FR")
                 : "Récent";
 
+              // Une offre sponsorisée peut apparaître plusieurs fois dans feedOffers
+              // (injection round-robin) — offer.id seul comme clé React
+              // provoquerait une collision, d'où l'index de position en plus.
+              // Revérification indépendante de l'expiration réelle : le badge ne
+              // doit jamais s'afficher sur la seule foi de is_sponsored, même si
+              // interleaveSponsoredOffers a déjà filtré en amont.
+              const isActivelySponsored = isOfferActivelySponsored(offer);
+
               return (
                 <div
-                  key={offer.id}
+                  key={`${offer.id}-${idx}`}
                   className="bg-white rounded-2xl border border-gray-200 shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col p-5 group hover:border-emerald-300"
                 >
                   {/* En-tête façon post Facebook : avatar + nom de la page (entreprise) +
                       horodatage — pas de badges colorés ici, juste texte gris discret
-                      comme sur un vrai post (nom de page en gras, "27 min" en dessous). */}
+                      comme sur un vrai post (nom de page en gras, "27 min" en dessous).
+                      "Sponsorisé" suit la même convention : texte gris discret à côté
+                      de l'horodatage, comme un vrai post sponsorisé Facebook. */}
                   <div className="flex items-center gap-3 mb-2">
                     <div className={`w-10 h-10 rounded-full ${logoColor} flex items-center justify-center text-white font-extrabold text-xs shadow-xs flex-shrink-0`}>
                       {initials}
@@ -420,6 +436,14 @@ function OffresContent() {
                       </p>
                       <div className="text-[11px] text-gray-500 font-medium flex items-center gap-1">
                         <span>{dateFormatted}</span>
+                        {isActivelySponsored && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span className="font-bold text-amber-600">
+                              <i className="fa-solid fa-star text-[9px] mr-0.5"></i>Sponsorisé
+                            </span>
+                          </>
+                        )}
                         <span aria-hidden="true">·</span>
                         <i className="fa-solid fa-earth-africa text-[9px]" title="Offre publique"></i>
                       </div>

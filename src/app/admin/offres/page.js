@@ -9,6 +9,7 @@ import RoleBadge from "@/components/RoleBadge";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
+import { isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 
 const EMPTY_OFFER = {
   title: "",
@@ -51,6 +52,13 @@ export default function AdminOffresPage() {
 
   // Modal d'agrandissement d'image
   const [viewImageModal, setViewImageModal] = useState({ isOpen: false, url: null });
+
+  // Sponsoring — activation manuelle admin uniquement (pas de webhook de
+  // paiement pour l'instant), voir set_offer_sponsorship() en base.
+  const [sponsoringOfferId, setSponsoringOfferId] = useState(null);
+  const [sponsorDurationDays, setSponsorDurationDays] = useState(7);
+  const [sponsorPriorityDraft, setSponsorPriorityDraft] = useState(0);
+  const [savingSponsorship, setSavingSponsorship] = useState(false);
 
   // Toast
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-check" });
@@ -328,6 +336,63 @@ export default function AdminOffresPage() {
     }
     setAllOffers((prev) => prev.map((o) => (o.id === offer.id ? { ...o, is_active: nextActive } : o)));
     triggerToast(nextActive ? "Offre activée et visible sur le fil." : "Offre masquée du fil d'actualité.");
+  };
+
+  // Seul chemin d'écriture pour is_sponsored/sponsored_until/sponsor_priority
+  // — un .update() direct est bloqué par trg_prevent_sponsorship_self_edit
+  // pour quiconque n'est pas admin ; ici l'appel passe par la fonction
+  // SECURITY DEFINER dédiée (set_offer_sponsorship), qui revérifie
+  // elle-même le rôle admin côté base plutôt que de faire confiance à
+  // l'UI seule.
+  const handleActivateSponsorship = async (offerId) => {
+    const days = Number(sponsorDurationDays);
+    if (!days || days <= 0) {
+      triggerToast("Durée invalide.", "fa-circle-xmark");
+      return;
+    }
+    setSavingSponsorship(true);
+    const sponsoredUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    const { data: ok, error } = await supabase.rpc("set_offer_sponsorship", {
+      p_offer_id: offerId,
+      p_is_sponsored: true,
+      p_sponsored_until: sponsoredUntil,
+      p_sponsor_priority: Number(sponsorPriorityDraft) || 0,
+    });
+    setSavingSponsorship(false);
+
+    if (error || !ok) {
+      triggerToast("Échec de l'activation : " + (error?.message || "offre introuvable"), "fa-circle-xmark");
+      return;
+    }
+
+    setAllOffers((prev) =>
+      prev.map((o) =>
+        o.id === offerId
+          ? { ...o, is_sponsored: true, sponsored_until: sponsoredUntil, sponsor_priority: Number(sponsorPriorityDraft) || 0 }
+          : o
+      )
+    );
+    setSponsoringOfferId(null);
+    triggerToast(`Offre sponsorisée pour ${days} jour(s).`, "fa-star");
+  };
+
+  const handleDeactivateSponsorship = async (offerId) => {
+    setSavingSponsorship(true);
+    const { data: ok, error } = await supabase.rpc("set_offer_sponsorship", {
+      p_offer_id: offerId,
+      p_is_sponsored: false,
+    });
+    setSavingSponsorship(false);
+
+    if (error || !ok) {
+      triggerToast("Échec de la désactivation : " + (error?.message || "offre introuvable"), "fa-circle-xmark");
+      return;
+    }
+
+    setAllOffers((prev) =>
+      prev.map((o) => (o.id === offerId ? { ...o, is_sponsored: false, sponsored_until: null, sponsor_priority: 0 } : o))
+    );
+    triggerToast("Sponsoring désactivé.");
   };
 
   const handleDeleteOffer = async (offerId) => {
@@ -881,11 +946,14 @@ export default function AdminOffresPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {filteredOffers.map((offer) => (
+              {filteredOffers.map((offer) => {
+                const isActivelySponsored = isOfferActivelySponsored(offer);
+                return (
                 <div
                   key={offer.id}
-                  className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/80 rounded-2xl px-3 transition"
+                  className="py-4 sm:py-5 hover:bg-gray-50/80 rounded-2xl px-3 transition"
                 >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-start space-x-3.5">
                     {offer.image_url ? (
                       <img
@@ -910,6 +978,12 @@ export default function AdminOffresPage() {
                         {offer.status === "archived" && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-200 text-gray-700">
                             Archivée
+                          </span>
+                        )}
+                        {isActivelySponsored && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700">
+                            <i className="fa-solid fa-star text-[9px] mr-0.5"></i>
+                            Sponsorisée jusqu'au {new Date(offer.sponsored_until).toLocaleDateString("fr-FR")} (priorité {offer.sponsor_priority})
                           </span>
                         )}
                       </div>
@@ -958,9 +1032,70 @@ export default function AdminOffresPage() {
                     >
                       <i className="fa-regular fa-trash-can text-xs"></i>
                     </button>
+                    {isActivelySponsored ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDeactivateSponsorship(offer.id)}
+                        disabled={savingSponsorship}
+                        className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200 flex items-center justify-center transition disabled:opacity-40"
+                        title="Désactiver le sponsoring"
+                      >
+                        <i className="fa-solid fa-star text-xs"></i>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setSponsoringOfferId(sponsoringOfferId === offer.id ? null : offer.id)}
+                        className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-amber-50 text-gray-700 hover:text-amber-700 border border-gray-200 flex items-center justify-center transition"
+                        title="Sponsoriser cette offre"
+                      >
+                        <i className="fa-regular fa-star text-xs"></i>
+                      </button>
+                    )}
                   </div>
                 </div>
-              ))}
+
+                  {sponsoringOfferId === offer.id && (
+                    <div className="w-full flex flex-wrap items-end gap-3 bg-amber-50/60 border border-amber-200 rounded-2xl p-3.5 mt-1">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Durée (jours)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={sponsorDurationDays}
+                          onChange={(e) => setSponsorDurationDays(e.target.value)}
+                          className="w-24 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Priorité</label>
+                        <input
+                          type="number"
+                          value={sponsorPriorityDraft}
+                          onChange={(e) => setSponsorPriorityDraft(e.target.value)}
+                          className="w-20 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleActivateSponsorship(offer.id)}
+                        disabled={savingSponsorship}
+                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold rounded-xl transition disabled:opacity-50 cursor-pointer"
+                      >
+                        {savingSponsorship ? "..." : "Activer le sponsoring"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSponsoringOfferId(null)}
+                        className="px-3 py-2 text-gray-500 hover:text-gray-700 text-xs font-bold cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  )}
+                </div>
+                );
+              })}
             </div>
           )}
         </div>
