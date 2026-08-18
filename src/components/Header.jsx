@@ -1077,6 +1077,20 @@ export default function Header() {
           </Link>
           {userSession && (
             <Link
+              href="/candidat/extracteur"
+              onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
+              className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                pathname === "/candidat/extracteur"
+                  ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                  : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+              }`}
+            >
+              <i className="fa-solid fa-bolt text-amber-500 text-sm"></i>
+              <span>Extracteur</span>
+            </Link>
+          )}
+          {userSession && (
+            <Link
               href="/messagerie"
               onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
               className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
