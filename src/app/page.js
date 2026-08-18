@@ -172,6 +172,54 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "5e869719-79a6-4a4e-9b2f-90e633d7b420",
+    titleFR: "Simplon Sénégal recrute un(e) Chauffeur à Kédougou",
+    titleEN: "Simplon Senegal recruits a Driver in Kédougou",
+    company: "Simplon Sénégal (Projet Yaakaar - CJS)",
+    logoColor: "bg-red-600 text-white",
+    initials: "SMP",
+    location: "Kédougou, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDD / Plein temps",
+    descFR: `Simplon Sénégal recrute un(e) Chauffeur à Kédougou dans le cadre du programme Yaakaar Jeunesse & Citoyenneté, en collaboration avec le Consortium Jeunesse Sénégal (CJS).
+
+📌 MISSIONS & PROFIL RECHERCHÉ :
+• Permis de conduire catégorie B minimum obligatoire.
+• Au moins 3 ans d’expérience confirmée en tant que chauffeur.
+• Bonne connaissance du territoire national et des axes régionaux.
+• Maîtrise des règles de sécurité routière et de conduite défensive.
+• Ponctualité, discrétion et sens aigu de l’organisation.
+• Disponibilité pour des déplacements interrégionaux fréquents.
+
+📅 MODALITÉS & CANDIDATURES :
+• Date limite : 20 août 2026
+• Dépôt e-mail : cyk@simplon.co
+• Dépôt physique : Centre Yaakaar Kédougou, à côté de l’Hôtel Bedik
+• Téléphones : (+221) 78 468 34 34 / 33 824 05 15
+• Fiche de poste : https://simplon-co.odoo.com/jobs/detail/chauffeur-kedougou-108
+
+📩 Envoyez votre CV ou postulez directement via Facilité !`,
+    descEN: `Simplon Senegal is hiring a Driver based in Kédougou under the Yaakaar Youth & Citizenship program with CJS. Valid Category B license & 3+ years experience required.
+
+📩 Email: cyk@simplon.co
+📍 Location: Kédougou, Senegal
+📅 Deadline: August 20, 2026`,
+    tags: ["Simplon Sénégal", "Chauffeur", "Kédougou", "Yaakaar", "Permis B", "Transport"],
+    recruiterEmail: "cyk@simplon.co",
+    contact_email: "cyk@simplon.co",
+    recruiterPhone: "+221 78 468 34 34",
+    contact_phone: "+221 78 468 34 34",
+    externalLink: "https://simplon-co.odoo.com/jobs/detail/chauffeur-kedougou-108",
+    externalButtonLabel: "Consulter la fiche officielle",
+    image: "/simplon_senegal_chauffeur_kedougou.jpg",
+    image_url: "/simplon_senegal_chauffeur_kedougou.jpg",
+    deadline: "2026-08-20",
+    pinned: true,
+    is_sponsored: true,
+    sponsor_priority: 20,
+  },
+  {
     id: "30e060ee-6c17-48f8-b3bf-5e744d03e911",
     titleFR: "Youth Linguists Programme (YLP) – JOJ Dakar 2026 / ONFP",
     titleEN: "Youth Linguists Programme (YLP) – Dakar 2026 Youth Olympic Games / ONFP",
