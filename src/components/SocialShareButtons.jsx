@@ -277,7 +277,7 @@ export default function SocialShareButtons({
             <span className="hidden xs:inline">Partager</span>
           </button>
 
-          {/* Bouton 3 : Double Candidature (Email + WhatsApp) OU Bouton Unique */}
+          {/* Bouton 3 : Action de Candidature Principale & Fidèle */}
           {contactMethods.hasBoth ? (
             <div className="flex-1 flex items-center gap-1.5 min-w-0">
               <button
@@ -291,10 +291,10 @@ export default function SocialShareButtons({
                   }
                 }}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-2 sm:px-3 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-1.5 min-w-0"
-                title="Postuler directement via Facilité ou par Email"
+                title="Postuler directement via Facilité"
               >
-                <i className="fa-solid fa-envelope text-xs sm:text-sm"></i>
-                <span className="truncate">Par E-mail</span>
+                <i className="fa-solid fa-paper-plane text-xs"></i>
+                <span className="truncate">Postuler via Facilité</span>
               </button>
               <a
                 href={contactMethods.waUrl}
@@ -308,7 +308,22 @@ export default function SocialShareButtons({
                 <span className="truncate">Sur WhatsApp</span>
               </a>
             </div>
+          ) : (offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail) ? (
+            /* Offre avec E-mail : L'action unique et exclusive est 'Postuler via Facilité' */
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onApply) onApply(offer);
+              }}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              title="Postuler via Facilité"
+            >
+              <i className="fa-solid fa-paper-plane text-xs"></i>
+              <span className="truncate">Postuler via Facilité</span>
+            </button>
           ) : effectiveLink ? (
+            /* Offre avec lien externe officiel sans e-mail */
             <a
               href={effectiveLink}
               target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
@@ -330,7 +345,7 @@ export default function SocialShareButtons({
               className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
               <i className="fa-solid fa-paper-plane text-xs"></i>
-              <span className="truncate">{buttonLabel || "Postuler"}</span>
+              <span className="truncate">Postuler via Facilité</span>
             </button>
           ) : (
             <Link
@@ -591,8 +606,8 @@ export default function SocialShareButtons({
             <span className="hidden xs:inline">Partager</span>
           </button>
 
-          {/* Action 3 : Postuler sur WhatsApp / Site officiel / Facilité */}
-          {effectiveLink ? (
+          {/* Action 3 : Action Externe ou Postuler si fourni */}
+          {effectiveLink && !offer?.contact_email ? (
             <a
               href={effectiveLink}
               target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
@@ -614,18 +629,9 @@ export default function SocialShareButtons({
               className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
               <i className="fa-solid fa-paper-plane text-xs"></i>
-              <span className="truncate">{buttonLabel || "Postuler"}</span>
+              <span className="truncate">Postuler via Facilité</span>
             </button>
-          ) : (
-            <Link
-              href={`/offres/${offerId}`}
-              onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
-            >
-              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span className="truncate">Voir l'offre</span>
-            </Link>
-          )}
+          ) : null}
 
           {/* Action 4 : Enregistrer / Bookmark */}
           <button
