@@ -172,6 +172,53 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "df1477a7-88df-4817-a130-25b681c32413",
+    titleFR: "SEMI SARL recrute un(e) Chef(fe) de Chantier (BTP & Construction)",
+    titleEN: "SEMI SARL recruits a Site Manager / Construction Lead (M/F)",
+    company: "SEMI SARL",
+    logoColor: "bg-amber-500 text-slate-950",
+    initials: "SEMI",
+    location: "Sénégal (Pôles aquacoles)",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI / Plein temps",
+    descFR: `Dans le cadre de son projet de construction de pôles aquacoles, SEMI SARL recrute un(e) Chef(fe) de Chantier pour le suivi opérationnel et la supervision des travaux.
+
+📌 MISSIONS PRINCIPALES :
+• Organiser et superviser les travaux sur le chantier.
+• Coordonner les équipes et assurer la bonne exécution des activités.
+• Suivre quotidiennement l’avancement et veiller au respect des plans et délais.
+• Contrôler la qualité des travaux et faire respecter les règles HSE.
+• Assurer le reporting auprès de la Direction des Travaux.
+
+🎯 PROFIL RECHERCHÉ :
+• Expérience confirmée en tant que Chef de Chantier (BTP / Génie Civil).
+• Forte capacité d'organisation, de coordination et de gestion d'équipe.
+• Sens des responsabilités, rigueur et autonomie.
+• Disponibilité pour mobilité sur les différents sites du projet.
+
+📩 COMMENT POSTULER :
+Envoyez votre CV à : sarrsoda@semisenegal.sn
+📌 Objet du mail : « Candidature – Chef de Chantier »`,
+    descEN: `For the construction of aquaculture hubs, SEMI SARL is hiring a Construction Site Manager (M/F) for operational supervision.
+
+📌 MISSIONS:
+• Supervise on-site works, coordinate teams and monitor progress.
+• Ensure compliance with technical plans, deadlines and HSE standards.
+• Experience: Confirmed track record as Site Manager / Civil Works Lead.
+
+📩 Send your CV to: sarrsoda@semisenegal.sn
+📌 Subject: "Candidature – Chef de Chantier"`,
+    tags: ["SEMI SARL", "Chef de Chantier", "BTP", "Génie Civil", "Construction", "Sénégal"],
+    recruiterEmail: "sarrsoda@semisenegal.sn",
+    contact_email: "sarrsoda@semisenegal.sn",
+    externalLink: "mailto:sarrsoda@semisenegal.sn?subject=Candidature%20%E2%80%93%20Chef%20de%20Chantier",
+    image: "/semi_sarl_chef_chantier.jpg",
+    image_url: "/semi_sarl_chef_chantier.jpg",
+    deadline: "2026-09-15",
+    pinned: true
+  },
+  {
     id: "72ce49fa-efa7-4aa4-95ec-b1f73e6c581f",
     titleFR: "Le Terrou-Bi Dakar recrute un(e) Agent de Réservation Individuelle (H/F)",
     titleEN: "Terrou-Bi Dakar recruits an Individual Reservation Agent (M/F)",

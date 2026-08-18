@@ -7,6 +7,39 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "df1477a7-88df-4817-a130-25b681c32413": {
+    id: "df1477a7-88df-4817-a130-25b681c32413",
+    title: "SEMI SARL recrute un(e) Chef(fe) de Chantier (BTP & Construction)",
+    company: "SEMI SARL",
+    location: "Sénégal (Pôles aquacoles)",
+    contract_type: "CDI / Plein temps",
+    salary_range: "Selon profil & expérience BTP",
+    description: `Dans le cadre de son projet de construction de pôles aquacoles, SEMI SARL recrute un(e) Chef(fe) de Chantier pour le suivi opérationnel et la supervision des travaux.
+
+📌 MISSIONS PRINCIPALES :
+• Organiser et superviser les travaux sur le chantier.
+• Coordonner les équipes et assurer la bonne exécution des activités.
+• Suivre quotidiennement l’avancement et veiller au respect des plans et délais.
+• Contrôler la qualité des travaux et faire respecter les règles HSE.
+• Assurer le reporting auprès de la Direction des Travaux.
+
+🎯 PROFIL RECHERCHÉ :
+• Expérience confirmée en tant que Chef de Chantier (BTP / Génie Civil).
+• Forte capacité d'organisation, de coordination et de gestion d'équipe.
+• Sens des responsabilités, rigueur et autonomie.
+• Disponibilité pour mobilité sur les différents sites du projet.
+
+📩 COMMENT POSTULER :
+Envoyez votre CV à : sarrsoda@semisenegal.sn
+📌 Objet du mail : « Candidature – Chef de Chantier »`,
+    image_url: "/semi_sarl_chef_chantier.jpg",
+    min_education_level: "Bac+2 à Bac+5 (Génie Civil / BTP)",
+    deadline: "2026-09-15",
+    contact_email: "sarrsoda@semisenegal.sn",
+    external_link: "mailto:sarrsoda@semisenegal.sn?subject=Candidature%20%E2%80%93%20Chef%20de%20Chantier",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "72ce49fa-efa7-4aa4-95ec-b1f73e6c581f": {
     id: "72ce49fa-efa7-4aa4-95ec-b1f73e6c581f",
     title: "Le Terrou-Bi Dakar recrute un(e) Agent de Réservation Individuelle (H/F)",
