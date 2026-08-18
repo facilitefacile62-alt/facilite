@@ -172,6 +172,51 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "8119367c-e0e0-4279-ba9f-ec1a6063bae0",
+    titleFR: "Cadre infirmier(ère) référent(e) senior en prévention et contrôle des infections",
+    titleEN: "Senior Infection Prevention & Control (IPC) Lead Nurse",
+    company: "Établissement de Santé (Secteur Hospitalier)",
+    logoColor: "bg-sky-700 text-white",
+    initials: "SANTE",
+    location: "Dakar, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI / Plein temps",
+    descFR: `Un établissement de santé de référence recrute un(e) Cadre infirmier(ère) référent(e) senior pour piloter son programme de prévention et contrôle des infections (PCI).
+
+🎯 PRINCIPALES RESPONSABILITÉS :
+• Prévenir et surveiller les infections associées aux soins (IAS).
+• Superviser les audits, les procédures et les plans d’amélioration qualité.
+• Coordonner la réponse aux épidémies et risques infectieux avec le laboratoire.
+• Suivre la résistance aux antimicrobiens et micro-organismes multirésistants.
+• Former et accompagner les équipes de soins et démarches d'accréditation.
+
+📌 PROFIL RECHERCHÉ :
+• Diplôme d’infirmier(ère) et autorisation d'exercer valide.
+• Formation / certification spécialisée en prévention et contrôle des infections (PCI).
+• Au moins 7 à 10 ans d’expérience clinique en milieu hospitalier.
+• Solides compétences en leadership, épidémiologie et analyse des données.
+
+🔗 COMMENT POSTULER :
+Déposez votre candidature directement en ligne :
+https://lnkd.in/gv6pvNJq`,
+    descEN: `A healthcare institution is recruiting a Senior Lead Nurse for Infection Prevention and Control (IPC).
+
+📌 REQUIREMENTS:
+• Registered Nurse license + IPC specialized certification.
+• 7 to 10+ years of clinical and hospital infection control experience.
+• Strong leadership, microbiology and epidemiological skills.
+
+🔗 Apply online: https://lnkd.in/gv6pvNJq`,
+    tags: ["Santé", "Cadre Infirmier", "Infectiologie", "PCI", "Hôpital", "Dakar"],
+    externalLink: "https://lnkd.in/gv6pvNJq",
+    externalButtonLabel: "Postuler sur le portail de recrutement",
+    image: "/cadre_infirmier_infections.jpg",
+    image_url: "/cadre_infirmier_infections.jpg",
+    deadline: "2026-09-30",
+    pinned: true
+  },
+  {
     id: "df1477a7-88df-4817-a130-25b681c32413",
     titleFR: "SEMI SARL recrute un(e) Chef(fe) de Chantier (BTP & Construction)",
     titleEN: "SEMI SARL recruits a Site Manager / Construction Lead (M/F)",

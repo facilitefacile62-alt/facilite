@@ -7,6 +7,41 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "8119367c-e0e0-4279-ba9f-ec1a6063bae0": {
+    id: "8119367c-e0e0-4279-ba9f-ec1a6063bae0",
+    title: "Cadre infirmier(ère) référent(e) senior en prévention et contrôle des infections",
+    company: "Établissement de Santé (Secteur Hospitalier)",
+    location: "Dakar, Sénégal",
+    contract_type: "CDI / Plein temps",
+    salary_range: "Selon profil & grille cadre hospitalier",
+    description: `Un établissement de santé recrute un(e) Cadre infirmier(ère) référent(e) senior chargé(e) de piloter son programme de prévention et de contrôle des infections (PCI).
+
+🎯 PRINCIPALES RESPONSABILITÉS :
+• Prévenir et surveiller les infections associées aux soins (IAS).
+• Superviser les audits, les procédures et les plans d’amélioration.
+• Coordonner la réponse aux épidémies et aux risques infectieux.
+• Collaborer avec le laboratoire de microbiologie.
+• Suivre la résistance aux antimicrobiens et micro-organismes multirésistants.
+• Former et accompagner les équipes de soins.
+• Contribuer aux démarches de qualité, de gestion des risques et d’accréditation.
+
+📌 PROFIL RECHERCHÉ :
+• Diplôme d’infirmier(ère) et autorisation professionnelle valide.
+• Formation ou certification en prévention et contrôle des infections (PCI).
+• Au moins 7 à 10 ans d’expérience clinique.
+• Expérience confirmée en prévention des infections en milieu hospitalier.
+• Solides compétences en leadership, épidémiologie, microbiologie et analyse des données.
+
+🔗 COMMENT POSTULER :
+Déposez votre candidature directement en ligne :
+https://lnkd.in/gv6pvNJq`,
+    image_url: "/cadre_infirmier_infections.jpg",
+    min_education_level: "Diplôme d'infirmier(ère) + Certification PCI",
+    deadline: "2026-09-30",
+    external_link: "https://lnkd.in/gv6pvNJq",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "df1477a7-88df-4817-a130-25b681c32413": {
     id: "df1477a7-88df-4817-a130-25b681c32413",
     title: "SEMI SARL recrute un(e) Chef(fe) de Chantier (BTP & Construction)",
