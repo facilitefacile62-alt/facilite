@@ -238,16 +238,14 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5 text-left">
             <div className="border-b border-gray-100 pb-3">
-              <h3 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
-                <i className="fa-solid fa-paper-plane text-emerald-500 text-sm"></i>
-                {job.isSpontaneous ? "Candidature Spontanée" : "Candidature Rapide"}
+              <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+                <i className="fa-solid fa-paper-plane text-emerald-600 text-sm"></i>
+                <span>{job.isSpontaneous ? "Candidature Spontanée" : "Candidature Rapide"}</span>
               </h3>
-              <p className="text-[11px] text-gray-500 mt-1 leading-snug">
-                {job.isSpontaneous ? (
-                  <>Envoyez-nous votre profil pour de futures opportunités.</>
-                ) : (
-                  <>Postuler pour le poste de <span className="font-extrabold text-gray-800">{selectedLang === "FR" ? job.titleFR : job.titleEN}</span> chez <span className="font-extrabold text-gray-800">{job.company}</span>.</>
-                )}
+              <p className="text-xs text-gray-500 mt-0.5 truncate">
+                {job.isSpontaneous
+                  ? "Envoyez votre profil pour de futures opportunités"
+                  : `${selectedLang === "FR" ? job.titleFR : job.titleEN} • ${job.company}`}
               </p>
             </div>
 
@@ -259,96 +257,76 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             )}
 
             {/* Section Informations Personnelles */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">Nom complet *</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 block">Nom complet *</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex. Aminata Diallo"
+                  placeholder="Votre nom et prénom"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   disabled={loading}
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">Votre adresse e-mail *</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 block">Votre e-mail *</label>
                 <input
                   type="email"
                   required
-                  placeholder="Ex. diallo@example.com"
+                  placeholder="nom@exemple.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                   disabled={loading}
                 />
               </div>
             </div>
 
-            {/* Case E-mail de réception de l'offre */}
-            <div className="space-y-1.5 bg-emerald-50/50 border border-emerald-200/90 p-3 rounded-2xl">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-black text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <i className="fa-solid fa-envelope-open-text text-emerald-600"></i>
-                  <span>E-mail de l'offre (Destinataire) *</span>
-                </label>
-                <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                  Réception Candidature
-                </span>
-              </div>
+            {/* E-mail destinataire de l'offre */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-700 block">E-mail du recruteur *</label>
               <input
                 type="email"
                 required
-                placeholder="Ex. recrutement@entreprise.com"
                 value={destinationEmail}
                 onChange={(e) => setDestinationEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-2xs"
+                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition font-mono"
                 disabled={loading}
               />
-              <p className="text-[10px] text-gray-500 font-medium">
-                Votre candidature et vos pièces jointes seront transmises directement à cette adresse.
-              </p>
             </div>
 
-            {/* Objet de la candidature / Poste souhaité */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
-                Objet de la candidature (ou Poste souhaité) *
-              </label>
+            {/* Objet du message */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-700 block">Objet *</label>
               <input
                 type="text"
                 required
-                placeholder="Ex. Sauveteur Minier / Conducteur de Chargeuse..."
+                placeholder="Intitulé du poste"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition"
+                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
                 disabled={loading}
               />
-              <p className="text-[10px] text-gray-400 font-medium">
-                Indiquez précisément l'intitulé du poste pour lequel vous postulez.
-              </p>
             </div>
 
-            {/* Section Sélection des CVs & Documents multiples */}
-            <div className="space-y-3">
+            {/* Documents & Pièces jointes */}
+            <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
-                  Pièces jointes (CV Français, CV Anglais, Lettre, etc.) *
-                </label>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                  {selectedExistingCvIds.length + newFiles.length} sélectionné(s)
-                </span>
+                <label className="text-xs font-bold text-gray-700 block">Votre CV ou document *</label>
+                {(selectedExistingCvIds.length + newFiles.length > 0) && (
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                    {selectedExistingCvIds.length + newFiles.length} sélectionné(s)
+                  </span>
+                )}
               </div>
 
               {resumes.length > 0 && (
-                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200/80 space-y-2">
-                  <p className="text-[11px] font-black text-gray-700 flex items-center gap-1.5">
-                    <i className="fa-solid fa-folder-open text-emerald-500"></i>
-                    Mes CVs enregistrés sur Facilité (Cochez pour joindre) :
-                  </p>
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-200 space-y-1.5">
+                  <p className="text-[11px] font-bold text-gray-600">CVs enregistrés sur votre profil :</p>
+                  <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
                     {resumes.map((cv) => {
                       const isChecked = selectedExistingCvIds.includes(cv.id);
                       return (
@@ -360,21 +338,21 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
                           }}
                           className={`flex items-center gap-2 p-2 rounded-xl border transition cursor-pointer text-xs font-bold ${
                             isChecked
-                              ? "bg-emerald-50 border-emerald-400 text-gray-900 shadow-xs"
-                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50/80"
+                              ? "bg-emerald-50 border-emerald-400 text-emerald-950 shadow-2xs"
+                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-100/60"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => {}}
-                            className="accent-emerald-500 rounded"
+                            className="accent-emerald-600 rounded"
                             disabled={loading}
                           />
                           <i className="fa-solid fa-file-pdf text-emerald-600 text-sm"></i>
                           <span className="truncate flex-1">{cv.title}</span>
-                          <span className="text-[9px] text-gray-400 font-normal">
-                            {new Date(cv.created_at).toLocaleDateString()}
+                          <span className="text-[10px] text-gray-400 font-normal">
+                            {new Date(cv.created_at).toLocaleDateString("fr-FR")}
                           </span>
                         </label>
                       );
@@ -387,7 +365,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-300 rounded-2xl p-4 text-center cursor-pointer hover:bg-gray-50 hover:border-emerald-400 transition animate-fade-in relative"
+                className="border-2 border-dashed border-gray-300 hover:border-emerald-500 rounded-2xl p-3.5 text-center cursor-pointer hover:bg-emerald-50/20 transition animate-fade-in"
               >
                 <input
                   type="file"
@@ -398,31 +376,26 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
                   className="hidden"
                   disabled={loading}
                 />
-                <div className="space-y-1 text-gray-500">
-                  <i className="fa-solid fa-cloud-arrow-up text-2xl text-emerald-500"></i>
-                  <p className="text-xs font-extrabold text-gray-700">
-                    Cliquez ici ou glissez pour joindre des documents
+                <div className="space-y-0.5 text-gray-500">
+                  <i className="fa-solid fa-cloud-arrow-up text-xl text-emerald-600"></i>
+                  <p className="text-xs font-bold text-gray-800">
+                    Glissez votre CV ici ou cliquez pour parcourir
                   </p>
-                  <p className="text-[10px] font-bold text-gray-400">
-                    Vous pouvez joindre plusieurs fichiers (CV Français + Anglais, Lettres, Diplômes...)
-                  </p>
+                  <p className="text-[10px] text-gray-400">PDF, DOCX jusqu'à 10 Mo</p>
                 </div>
               </div>
 
               {newFiles.length > 0 && (
-                <div className="space-y-1.5 pt-1 animate-fade-in">
-                  <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
-                    Fichiers à importer ({newFiles.length}) :
-                  </p>
+                <div className="space-y-1 pt-0.5 animate-fade-in">
                   {newFiles.map((file, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-2.5 bg-emerald-50/50 border border-emerald-200 rounded-xl text-xs font-extrabold text-gray-800 animate-fade-in"
+                      className="flex items-center justify-between p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-950"
                     >
                       <div className="flex items-center gap-2 truncate flex-1 pr-2">
                         <i className="fa-solid fa-file-lines text-emerald-600 text-sm"></i>
                         <span className="truncate">{file.name}</span>
-                        <span className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
+                        <span className="text-[10px] text-gray-500 font-normal">
                           ({(file.size / (1024 * 1024)).toFixed(2)} Mo)
                         </span>
                       </div>
@@ -433,10 +406,10 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
                           removeFile(idx);
                         }}
                         disabled={loading}
-                        className="w-6 h-6 rounded-lg bg-rose-100/80 text-rose-600 hover:bg-rose-200 transition flex items-center justify-center cursor-pointer"
-                        title="Retirer ce fichier"
+                        className="w-5 h-5 rounded-md bg-rose-100 text-rose-600 hover:bg-rose-200 transition flex items-center justify-center cursor-pointer"
+                        title="Retirer"
                       >
-                        <i className="fa-solid fa-xmark text-xs"></i>
+                        <i className="fa-solid fa-xmark text-[10px]"></i>
                       </button>
                     </div>
                   ))}
@@ -444,15 +417,15 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               )}
             </div>
 
-            {/* Section Message de motivation */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">Message d'accompagnement (Facultatif)</label>
+            {/* Message d'accompagnement */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-700 block">Message (facultatif)</label>
               <textarea
-                rows="3"
-                placeholder="Parlez-nous brièvement de vos motivations ou ajoutez un message à l'attention du recruteur..."
+                rows="2"
+                placeholder="Ajoutez un message pour le recruteur..."
                 value={coverLetter}
                 onChange={(e) => setCoverLetter(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition resize-none"
+                className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition resize-none leading-relaxed"
                 disabled={loading}
               />
             </div>
@@ -461,7 +434,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black py-3 px-4 rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(16,230,136,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-black py-3 px-4 rounded-xl text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
