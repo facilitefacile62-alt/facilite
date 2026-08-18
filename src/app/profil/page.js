@@ -337,6 +337,72 @@ export default function ProfilPage() {
     }
   };
 
+  // Synchronisation et persistance de l'onglet actif (F5 / Refresh / URL)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      const hash = window.location.hash.replace("#", "");
+      const savedTab = localStorage.getItem("profil_active_tab");
+      
+      const validTabs = ["about", "documents", "settings"];
+      const targetTab = (tabParam && validTabs.includes(tabParam))
+        ? tabParam
+        : (hash && validTabs.includes(hash))
+        ? hash
+        : (savedTab && validTabs.includes(savedTab))
+        ? savedTab
+        : null;
+
+      if (targetTab) {
+        setActiveTab(targetTab);
+      }
+
+      const sectionParam = params.get("section");
+      const savedSection = localStorage.getItem("profil_active_section");
+      const validSections = ["intro", "info_perso", "langues", "experiences", "formation", "competences", "interets", "coordonnees", "confidentialite", "securite"];
+      const targetSection = (sectionParam && validSections.includes(sectionParam))
+        ? sectionParam
+        : (savedSection && validSections.includes(savedSection))
+        ? savedSection
+        : null;
+
+      if (targetSection) {
+        setActiveSection(targetSection);
+        if (window.innerWidth < 768) {
+          setSelectedSection(targetSection);
+        }
+      }
+    } catch (e) {
+      console.warn("Erreur persistance onglet profil:", e);
+    }
+  }, []);
+
+  const handleSelectTab = (tab) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("profil_active_tab", tab);
+        const url = new URL(window.location.href);
+        url.searchParams.set("tab", tab);
+        window.history.replaceState(null, "", url.toString());
+      } catch (e) {}
+    }
+  };
+
+  const handleSelectSection = (sec) => {
+    setActiveSection(sec);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("profil_active_section", sec);
+        const url = new URL(window.location.href);
+        url.searchParams.set("section", sec);
+        window.history.replaceState(null, "", url.toString());
+      } catch (e) {}
+    }
+  };
+
   // Redirection stricte vers /login si le visiteur n'est pas connecté — ne
   // se déclenche qu'une fois AuthContext a fini de résoudre la session
   // (authLoading === false), jamais pendant le court instant où elle est
@@ -2532,7 +2598,7 @@ export default function ProfilPage() {
               <div className="border-t border-gray-150 dark:border-gray-800 px-6 md:px-8 bg-gray-50/70 dark:bg-gray-900/90 flex items-center justify-between">
                 <div className="flex space-x-6 overflow-x-auto scrollbar-none py-3 w-full">
                   <button
-                    onClick={() => setActiveTab("about")}
+                    onClick={() => handleSelectTab("about")}
                     className={`text-sm font-extrabold pb-2.5 pt-1 transition-all relative whitespace-nowrap cursor-pointer ${
                       activeTab === "about" ? "text-blue-500 font-black border-b-2 border-blue-500" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                     }`}
@@ -2540,7 +2606,7 @@ export default function ProfilPage() {
                     <span>À propos</span>
                   </button>
                   <button
-                    onClick={() => setActiveTab("documents")}
+                    onClick={() => handleSelectTab("documents")}
                     className={`text-sm font-extrabold pb-2.5 pt-1 transition-all relative whitespace-nowrap cursor-pointer ${
                       activeTab === "documents" ? "text-blue-500 font-black border-b-2 border-blue-500" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                     }`}
@@ -2548,7 +2614,7 @@ export default function ProfilPage() {
                     <span>Mes documents</span>
                   </button>
                   <button
-                    onClick={() => setActiveTab("settings")}
+                    onClick={() => handleSelectTab("settings")}
                     className={`text-sm font-extrabold pb-2.5 pt-1 transition-all relative whitespace-nowrap cursor-pointer ${
                       activeTab === "settings" ? "text-blue-500 font-black border-b-2 border-blue-500" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                     }`}
@@ -2575,7 +2641,7 @@ export default function ProfilPage() {
                         <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm">
                           <button
                             onClick={() => {
-                              setActiveTab("about");
+                              handleSelectTab("about");
                               setSectionTitleMenuOpen(false);
                             }}
                             className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
@@ -2585,7 +2651,7 @@ export default function ProfilPage() {
                           </button>
                           <button
                             onClick={() => {
-                              setActiveTab("documents");
+                              handleSelectTab("documents");
                               setSectionTitleMenuOpen(false);
                             }}
                             className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
@@ -2595,7 +2661,7 @@ export default function ProfilPage() {
                           </button>
                           <button
                             onClick={() => {
-                              setActiveTab("settings");
+                              handleSelectTab("settings");
                               setSectionTitleMenuOpen(false);
                             }}
                             className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer flex items-center space-x-2"
@@ -2691,7 +2757,7 @@ export default function ProfilPage() {
                               <button
                                 key={section.id}
                                 onClick={() => {
-                                  setActiveSection(section.id);
+                                  handleSelectSection(section.id);
                                   setAboutDropdownOpen(false);
                                 }}
                                 className={`w-full px-4 py-2.5 text-left text-xs transition cursor-pointer flex items-center space-x-2.5 ${
@@ -2751,7 +2817,7 @@ export default function ProfilPage() {
                         key={tab.id}
                         type="button"
                         onClick={() => {
-                          setActiveSection(tab.id);
+                          handleSelectSection(tab.id);
                         }}
                         className={`w-full text-left px-4 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center space-x-2.5 ${
                           isActive
@@ -2786,7 +2852,7 @@ export default function ProfilPage() {
                         type="button"
                         onClick={() => {
                           setSelectedSection(section.id);
-                          setActiveSection(section.id);
+                          handleSelectSection(section.id);
                         }}
                         className="w-full px-4 py-3.5 flex items-center justify-between bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer text-left"
                       >
@@ -3755,7 +3821,7 @@ export default function ProfilPage() {
                       <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm font-sans">
                         <button
                           onClick={() => {
-                            setActiveTab("about");
+                            handleSelectTab("about");
                             setSectionTitleMenuOpen(false);
                           }}
                           className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
@@ -3765,7 +3831,7 @@ export default function ProfilPage() {
                         </button>
                         <button
                           onClick={() => {
-                            setActiveTab("documents");
+                            handleSelectTab("documents");
                             setSectionTitleMenuOpen(false);
                           }}
                           className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
@@ -3775,7 +3841,7 @@ export default function ProfilPage() {
                         </button>
                         <button
                           onClick={() => {
-                            setActiveTab("settings");
+                            handleSelectTab("settings");
                             setSectionTitleMenuOpen(false);
                           }}
                           className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"

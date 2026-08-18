@@ -21,7 +21,7 @@ function RegisterForm() {
   const [registerMethod, setRegisterMethod] = useState("email");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get("redirect") || "/profil";
+  const redirectUrl = searchParams.get("redirect") || "/";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,7 +86,7 @@ function RegisterForm() {
     if (oauthLoading) return;
     setOauthLoading(true);
     try {
-      const safeRedirect = redirectUrl.startsWith("/") ? redirectUrl : "/profil";
+      const safeRedirect = redirectUrl.startsWith("/") ? redirectUrl : "/";
       // /auth/callback échange le code CÔTÉ SERVEUR avant de rediriger vers
       // safeRedirect — voir la note détaillée dans login/page.js (même
       // correctif, même cause : double aller-retour avant sans cette route).
@@ -122,7 +122,7 @@ function RegisterForm() {
         </Link>
 
         <Link
-          href={`/login${redirectUrl && redirectUrl !== "/profil" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
+          href={`/login${redirectUrl && redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
           className="text-xs font-bold text-gray-600 hover:text-gray-900 bg-white border border-gray-200 px-4 py-2 rounded-full shadow-xs hover:shadow-sm transition flex items-center space-x-1.5"
         >
           <i className="fa-solid fa-arrow-left text-[11px]"></i>
@@ -152,7 +152,7 @@ function RegisterForm() {
           </div>
 
           {/* Bannière d'incitation quand l'utilisateur vient d'une redirection */}
-          {redirectUrl && redirectUrl !== "/profil" && !isSuccess && (
+          {redirectUrl && redirectUrl !== "/" && !isSuccess && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 mb-6 flex items-start gap-2.5 text-xs text-emerald-900 font-bold animate-fade-in shadow-2xs">
               <i className="fa-solid fa-sparkles text-emerald-600 text-sm mt-0.5 flex-shrink-0"></i>
               <div>
@@ -172,7 +172,7 @@ function RegisterForm() {
                 Vos informations ont bien été enregistrées sur Supabase. Vous pouvez maintenant vous connecter.
               </p>
               <Link
-                href={`/login${redirectUrl && redirectUrl !== "/profil" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
+                href={`/login${redirectUrl && redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
                 className="inline-block w-full py-3.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md transition-all duration-200"
               >
                 Se connecter et continuer
@@ -319,7 +319,7 @@ function RegisterForm() {
                 <p className="text-xs text-gray-500 font-medium">
                   Already have an account?{" "}
                   <Link
-                    href={`/login${redirectUrl && redirectUrl !== "/profil" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
+                    href={`/login${redirectUrl && redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
                     className="font-extrabold text-gray-900 hover:underline cursor-pointer"
                   >
                     Log In
