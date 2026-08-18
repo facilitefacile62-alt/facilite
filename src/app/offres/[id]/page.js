@@ -8,6 +8,43 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "4d9b3e21-789a-4c2e-8123-bc9a1f284901": {
+    id: "4d9b3e21-789a-4c2e-8123-bc9a1f284901",
+    title: "AGEROUTE SÉNÉGAL recrute un Comptable (Projet PCZA / Banque Mondiale)",
+    company: "AGEROUTE SÉNÉGAL (Projet PCZA - Banque Mondiale)",
+    location: "Dakar & Régions (Nord & Centre), Sénégal",
+    contract_type: "CDD / Projet Banque Mondiale",
+    salary_range: "Selon grille AGEROUTE & Banque Mondiale",
+    description: `Dans le cadre du Projet d’Amélioration de la Connectivité des Zones de Production Agricole (PCZA) du Nord et du Centre initié par le Gouvernement du Sénégal avec l’appui financier de la Banque Mondiale, l’AGEROUTE SÉNÉGAL souhaite recruter, pour disponibilité immédiate, un(e) Comptable.
+
+📌 PRINCIPALES ACTIVITÉS :
+• Effectuer les saisies des différentes pièces comptables.
+• Contrôler et suivre les journaux comptables, suivre et justifier les comptes de tiers.
+• Tenir à jour les comptes de trésorerie du projet et préparer les Demandes de Retrait de Fonds (DRF).
+• Contribuer à l’élaboration des Rapports de Suivi Financier du projet et des PTBA.
+• Préparer les pièces justificatives, chèques, ordres de virement et demandes de décaissement Banque Mondiale.
+• Participer à la gestion des immobilisations et veiller au respect des procédures financières.
+• Établir les états mensuels de paie et déclarations fiscales/sociales.
+
+🎯 QUALIFICATIONS REQUISES :
+• Diplôme : Bac+3 en Comptabilité, Finance ou BTS/DUT ou équivalent.
+• Expérience : Au minimum 3 ans d’expérience pertinente à un poste similaire ou en cabinet d’audit.
+• Maîtrise des logiciels SAARI, TOMPRO et du système SYSCOHADA / SYCEBNL.
+• Expérience en projet Banque Mondiale / IDA vivement appréciée.
+
+📅 CANDIDATURES :
+• Date limite : 31 août 2026
+• Dossier : Demande écrite + CV détaillé + copies légalisées des diplômes
+• Dépôt physique sous pli fermé à : B.P. : 25242 Dakar-Fann (mentionner la référence du poste).`,
+    image_url: "/ageroute_recrutement_comptable_pcza.jpg",
+    min_education_level: "Bac+3 en Comptabilité / Finance ou BTS/DUT + 3 ans d'expérience",
+    deadline: "2026-08-31",
+    contact_email: "recrutement@ageroute.sn",
+    contact_phone: "+221 33 869 07 51",
+    external_link: "https://ageroute.sn",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "5e869719-79a6-4a4e-9b2f-90e633d7b420": {
     id: "5e869719-79a6-4a4e-9b2f-90e633d7b420",
     title: "Simplon Sénégal recrute un(e) Chauffeur à Kédougou",

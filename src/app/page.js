@@ -172,6 +172,56 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "4d9b3e21-789a-4c2e-8123-bc9a1f284901",
+    titleFR: "AGEROUTE SÉNÉGAL recrute un Comptable (Projet PCZA / Banque Mondiale)",
+    titleEN: "AGEROUTE SENEGAL recruits an Accountant (PCZA / World Bank)",
+    company: "AGEROUTE SÉNÉGAL (Projet PCZA - Banque Mondiale)",
+    logoColor: "bg-blue-800 text-white",
+    initials: "AGE",
+    location: "Dakar & Régions (Nord & Centre), Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDD / Projet Banque Mondiale",
+    descFR: `Dans le cadre du Projet d’Amélioration de la Connectivité des Zones de Production Agricole (PCZA) du Nord et du Centre initié par le Gouvernement du Sénégal avec l’appui financier de la Banque Mondiale, l’AGEROUTE SÉNÉGAL souhaite recruter, pour disponibilité immédiate, un(e) Comptable.
+
+📌 PRINCIPALES ACTIVITÉS :
+• Effectuer les saisies des différentes pièces comptables.
+• Contrôler et suivre les journaux comptables, suivre et justifier les comptes de tiers.
+• Tenir à jour les comptes de trésorerie du projet et préparer les Demandes de Retrait de Fonds (DRF).
+• Contribuer à l’élaboration des Rapports de Suivi Financier du projet et des PTBA.
+• Préparer les pièces justificatives, chèques, ordres de virement et demandes de décaissement Banque Mondiale.
+• Participer à la gestion des immobilisations et veiller au respect des procédures financières.
+• Établir les états mensuels de paie et déclarations fiscales/sociales.
+
+🎯 QUALIFICATIONS REQUISES :
+• Diplôme : Bac+3 en Comptabilité, Finance ou BTS/DUT ou équivalent.
+• Expérience : Au minimum 3 ans d’expérience pertinente à un poste similaire ou en cabinet d’audit.
+• Maîtrise des logiciels SAARI, TOMPRO et du système SYSCOHADA / SYCEBNL.
+• Expérience en projet Banque Mondiale / IDA vivement appréciée.
+
+📅 CANDIDATURES :
+• Date limite : 31 août 2026
+• Dossier : Demande écrite + CV détaillé + copies légalisées des diplômes
+• Dépôt physique sous pli fermé à : B.P. : 25242 Dakar-Fann (mentionner la référence du poste).`,
+    descEN: `AGEROUTE SENEGAL is recruiting an Accountant for the PCZA Project supported by the World Bank. Bac+3 in Accounting/Finance or BTS/DUT + 3 years experience required.
+
+📅 Deadline: August 31, 2026
+📮 Address: B.P. 25242 Dakar-Fann`,
+    tags: ["AGEROUTE", "Comptable", "Banque Mondiale", "Finance", "PCZA", "Dakar"],
+    recruiterEmail: "recrutement@ageroute.sn",
+    contact_email: "recrutement@ageroute.sn",
+    recruiterPhone: "+221 33 869 07 51",
+    contact_phone: "+221 33 869 07 51",
+    externalLink: "https://ageroute.sn",
+    externalButtonLabel: "Site officiel AGEROUTE",
+    image: "/ageroute_recrutement_comptable_pcza.jpg",
+    image_url: "/ageroute_recrutement_comptable_pcza.jpg",
+    deadline: "2026-08-31",
+    pinned: true,
+    is_sponsored: true,
+    sponsor_priority: 22,
+  },
+  {
     id: "5e869719-79a6-4a4e-9b2f-90e633d7b420",
     titleFR: "Simplon Sénégal recrute un(e) Chauffeur à Kédougou",
     titleEN: "Simplon Senegal recruits a Driver in Kédougou",
