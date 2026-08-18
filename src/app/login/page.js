@@ -379,14 +379,17 @@ export default function LoginPage() {
           /* Mode Principal : Icône Clé + Login + Google en Haut + OU + Saisie Email + Bouton Vert */
           <div className="space-y-3">
             
-            {/* Icône Clé Officielle */}
+            {/* Icône Clé Officielle avec contour animé */}
             <div className="flex justify-center mb-0.5">
-              <div className="w-11 h-11 rounded-full bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.05)] flex items-center justify-center p-2">
-                <img
-                  src="/login_key.png"
-                  alt="Clé de connexion"
-                  className="w-full h-full object-contain"
-                />
+              <div className="relative group">
+                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 opacity-60 blur-xs animate-pulse"></div>
+                <div className="relative w-11 h-11 rounded-full bg-white border-2 border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.25)] flex items-center justify-center p-2 transition-transform duration-300 group-hover:scale-105">
+                  <img
+                    src="/login_key.png"
+                    alt="Clé de connexion"
+                    className="w-full h-full object-contain drop-shadow-xs"
+                  />
+                </div>
               </div>
             </div>
 
