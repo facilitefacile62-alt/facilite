@@ -464,7 +464,7 @@ export default function LoginPage() {
                       if (errorMessage) setErrorMessage("");
                     }}
                     placeholder="nom@exemple.com"
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
+                    className="w-full px-3.5 py-2.5 bg-white border-2 border-emerald-500 hover:border-emerald-600 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.18)] transition-all duration-300"
                   />
                 </div>
 
@@ -531,7 +531,7 @@ export default function LoginPage() {
                           if (errorMessage) setErrorMessage("");
                         }}
                         placeholder="Saisissez votre mot de passe"
-                        className="w-full pl-3.5 pr-9 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 transition"
+                        className="w-full pl-3.5 pr-9 py-2.5 bg-white border-2 border-emerald-500 hover:border-emerald-600 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.18)] transition-all duration-300"
                       />
                       <button
                         type="button"
