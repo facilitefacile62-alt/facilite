@@ -1314,13 +1314,38 @@ export default function ProfilPage() {
     }
 
     setIsUploadingCv(true);
-    triggerToast("Importation et sauvegarde du document...", "fa-spinner fa-spin");
+    triggerToast("Analyse et vérification du document par l'IA...", "fa-spinner fa-spin");
 
     const ext = file.name.split('.').pop().toLowerCase();
     const type = ext === "pdf" ? "pdf" : (ext === "doc" || ext === "docx" ? "doc" : "pdf");
-    const docCategory = file.name.toLowerCase().includes("lettre") || file.name.toLowerCase().includes("cover") ? "Lettre de motivation" : "CV";
 
     try {
+      // 0. Analyse IA & Contrôle de conformité (CV vs Lettre de motivation vs Invalide) + Règle d'unicité
+      const classifyFormData = new FormData();
+      classifyFormData.append("file", file);
+      
+      const classifyRes = await fetch("/api/documents/classify", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${userSession.access_token}` },
+        body: classifyFormData,
+      });
+
+      const classifyData = await classifyRes.json();
+
+      if (!classifyRes.ok || !classifyData.success) {
+        setIsUploadingCv(false);
+        if (cvFileInputRef.current) cvFileInputRef.current.value = "";
+        triggerToast(
+          classifyData.error || "Ce document n'est pas autorisé. Seuls un CV ou une Lettre de motivation sont acceptés.",
+          "fa-triangle-exclamation"
+        );
+        return;
+      }
+
+      const docCategory = classifyData.documentType; // "CV" | "Lettre de motivation"
+
+      triggerToast(`Document validé (${docCategory}) ! Enregistrement en cours...`, "fa-cloud-arrow-up");
+
       // 1. Sauvegarde dans Supabase Storage (Bucket resumes)
       let finalCvUrl = null;
       // Uniquement exécuté au clic (jamais pendant le rendu) : react-hooks/purity
