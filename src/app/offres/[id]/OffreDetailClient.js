@@ -524,6 +524,25 @@ export default function OffreDetailClient({ initialOffer }) {
                   </div>
                 )}
 
+                {/* Barre d'Actions Alignée : [ 👍 J'aime ] [ 📤 Partager ] [ ✈️ Postuler via Facilité ] [ 🔖 Enregistrer ] */}
+                <SocialShareButtons
+                  offer={{
+                    ...offer,
+                    titleFR: offer.title,
+                    titleEN: offer.title,
+                    description: offer.description,
+                    descFR: offer.description,
+                    contact_email: offer.contact_email,
+                    recruiterEmail: offer.contact_email,
+                    external_link: offer.external_link,
+                    externalLink: offer.external_link,
+                  }}
+                  variant="feed"
+                  onApply={() => setApplyOpen(true)}
+                  onToast={(msg) => setToast(msg)}
+                  className="my-6"
+                />
+
                 {/* Description de l'offre (Lisibilité 100% nette sans dégradé masquant) */}
                 <div className="my-6 bg-gray-50/70 dark:bg-gray-800/40 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-700">
                   <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -561,25 +580,6 @@ export default function OffreDetailClient({ initialOffer }) {
                     })()}
                   </div>
                 </div>
-
-                {/* Barre d'Actions Alignée Positionnée En Bas de l'Écriture */}
-                <SocialShareButtons
-                  offer={{
-                    ...offer,
-                    titleFR: offer.title,
-                    titleEN: offer.title,
-                    description: offer.description,
-                    descFR: offer.description,
-                    contact_email: offer.contact_email,
-                    recruiterEmail: offer.contact_email,
-                    external_link: offer.external_link,
-                    externalLink: offer.external_link,
-                  }}
-                  variant="feed"
-                  onApply={() => setApplyOpen(true)}
-                  onToast={(msg) => setToast(msg)}
-                  className="my-6"
-                />
 
                 {/* Modale de Candidature Rapide Facilité */}
                 <ApplyModal
