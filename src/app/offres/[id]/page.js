@@ -7,6 +7,39 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "72ce49fa-efa7-4aa4-95ec-b1f73e6c581f": {
+    id: "72ce49fa-efa7-4aa4-95ec-b1f73e6c581f",
+    title: "Le Terrou-Bi Dakar recrute un(e) Agent de Réservation Individuelle (H/F)",
+    company: "Hôtel & Resort Terrou-Bi Dakar",
+    location: "Dakar, Sénégal",
+    contract_type: "CDI / Plein temps",
+    salary_range: "Selon profil & grille hôtelière 5 étoiles",
+    description: `L’Hôtel & Resort Terrou-Bi Dakar recherche un(e) Agent de Réservation Individuelle (H/F) dynamique et orienté client pour assurer la gestion optimale des réservations et sublimer l'expérience client avant séjour.
+
+📌 MISSIONS PRINCIPALES :
+• Traitement et confirmation des réservations (téléphone, e-mail, site web, OTA & GDS).
+• Application des techniques d'upselling et valorisation des offres du Resort.
+• Accueil personnalisé, conseil client et respect des standards LQA de luxe.
+• Préparation des confirmations, factures pro forma et réconciliation extranet.
+• Coordination avec la réception, conciergerie et housekeeping.
+
+🎯 PROFIL & QUALIFICATIONS :
+• Formation : Bac+3 en Hôtellerie, Tourisme, Commerce ou Marketing.
+• Expérience : Minimum 2 ans dans une fonction similaire en hôtellerie.
+• Compétences : Maîtrise des PMS, OTA et GDS, gestion tarifaire & facturation.
+• Langues : Très bonne maîtrise du français et de l'anglais.
+• Disponibilité : Flexibilité horaire (travail en soirée, nuit ou week-ends).
+
+🔗 COMMENT POSTULER :
+Remplissez directement le formulaire de candidature officiel en ligne :
+https://docs.google.com/forms/d/e/1FAIpQLScGI6d43s6A-rrjORx8BlwuN_K-gTRYgcYw3MCf_8XAfBM8RQ/viewform`,
+    image_url: "/terrou_bi_reservation.jpg",
+    min_education_level: "Bac+3 (Hôtellerie / Tourisme / Commerce)",
+    deadline: "2026-08-31",
+    external_link: "https://docs.google.com/forms/d/e/1FAIpQLScGI6d43s6A-rrjORx8BlwuN_K-gTRYgcYw3MCf_8XAfBM8RQ/viewform",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "9d28564d-7084-4f71-8a71-f1c8a7796ff9": {
     id: "9d28564d-7084-4f71-8a71-f1c8a7796ff9",
     title: "BCEAO recrute 03 Assistants de direction à Dakar",

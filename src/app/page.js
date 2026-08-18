@@ -172,6 +172,53 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "72ce49fa-efa7-4aa4-95ec-b1f73e6c581f",
+    titleFR: "Le Terrou-Bi Dakar recrute un(e) Agent de Réservation Individuelle (H/F)",
+    titleEN: "Terrou-Bi Dakar recruits an Individual Reservation Agent (M/F)",
+    company: "Hôtel & Resort Terrou-Bi Dakar",
+    logoColor: "bg-emerald-800 text-amber-300",
+    initials: "TER",
+    location: "Dakar, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI / Plein temps",
+    descFR: `L’Hôtel & Resort Terrou-Bi Dakar recherche un(e) Agent de Réservation Individuelle (H/F) dynamique et orienté client pour assurer la gestion optimale des réservations et sublimer l'expérience client avant séjour.
+
+📌 MISSIONS PRINCIPALES :
+• Traitement et confirmation des réservations (téléphone, e-mail, site web, OTA & GDS).
+• Application des techniques d'upselling et valorisation des offres du Resort.
+• Accueil personnalisé, conseil client et respect des standards LQA de luxe.
+• Préparation des confirmations, factures pro forma et réconciliation extranet.
+• Coordination avec la réception, conciergerie et housekeeping.
+
+🎯 PROFIL & QUALIFICATIONS :
+• Formation : Bac+3 en Hôtellerie, Tourisme, Commerce ou Marketing.
+• Expérience : Minimum 2 ans dans une fonction similaire en hôtellerie.
+• Compétences : Maîtrise des PMS, OTA et GDS, gestion tarifaire & facturation.
+• Langues : Très bonne maîtrise du français et de l'anglais.
+• Disponibilité : Flexibilité horaire (travail possible en soirée/week-end).
+
+🔗 COMMENT POSTULER :
+Remplissez directement le formulaire de candidature officiel :
+https://docs.google.com/forms/d/e/1FAIpQLScGI6d43s6A-rrjORx8BlwuN_K-gTRYgcYw3MCf_8XAfBM8RQ/viewform`,
+    descEN: `Terrou-Bi Resort Dakar is hiring an Individual Reservation Agent (M/F) to manage room bookings and deliver exceptional 5-star customer service.
+
+📌 REQUIREMENTS:
+• Degree: Bachelor's (Bac+3) in Hospitality, Tourism, Business or Marketing.
+• Experience: 2+ years of experience in hotel reservation.
+• Skills: PMS, OTA, GDS, revenue management and luxury service.
+• Languages: Fluent French and English.
+
+🔗 Apply online: https://docs.google.com/forms/d/e/1FAIpQLScGI6d43s6A-rrjORx8BlwuN_K-gTRYgcYw3MCf_8XAfBM8RQ/viewform`,
+    tags: ["Terrou-Bi Dakar", "Hôtellerie de Luxe", "Réservation", "Tourisme", "Dakar"],
+    externalLink: "https://docs.google.com/forms/d/e/1FAIpQLScGI6d43s6A-rrjORx8BlwuN_K-gTRYgcYw3MCf_8XAfBM8RQ/viewform",
+    externalButtonLabel: "Postuler sur le formulaire Terrou-Bi",
+    image: "/terrou_bi_reservation.jpg",
+    image_url: "/terrou_bi_reservation.jpg",
+    deadline: "2026-08-31",
+    pinned: true
+  },
+  {
     id: "9d28564d-7084-4f71-8a71-f1c8a7796ff9",
     titleFR: "BCEAO recrute 03 Assistants de direction à Dakar",
     titleEN: "BCEAO recruits 03 Executive Assistants in Dakar",
