@@ -102,25 +102,85 @@ function classifyWithHeuristics(text = "", filename = "") {
 }
 
 /**
- * Classification avec Gemini Flash
+ * Normalisation de chaîne pour comparaison robuste (sans accents, minuscules)
+ */
+function normalizeName(str = "") {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim();
+}
+
+/**
+ * Vérifie si deux noms désignent la même personne (au moins un mot-clé de nom/prénom en commun)
+ */
+function checkNameMatch(nameA = "", nameB = "") {
+  if (!nameA || !nameB) return true; // Si l'un des deux n'a pas pu être extrait, pas de faux positif
+  const normA = normalizeName(nameA);
+  const normB = normalizeName(nameB);
+  
+  if (normA === normB || normA.includes(normB) || normB.includes(normA)) return true;
+
+  const tokensA = normA.split(/\s+/).filter((t) => t.length >= 3);
+  const tokensB = normB.split(/\s+/).filter((t) => t.length >= 3);
+
+  if (tokensA.length === 0 || tokensB.length === 0) return true;
+
+  // Vérifier si au moins 1 token significatif (nom de famille ou prénom) correspond
+  const hasCommonToken = tokensA.some((tA) => tokensB.includes(tA));
+  return hasCommonToken;
+}
+
+/**
+ * Extraction d'identité par heuristique regex locale
+ */
+function extractIdentityHeuristics(text = "", filename = "") {
+  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  const email = emailMatch ? emailMatch[0] : null;
+
+  const phoneMatch = text.match(/(?:\+221|00221)?\s*(?:7[05678]|33)\s*\d{3}\s*\d{2}\s*\d{2}/);
+  const phone = phoneMatch ? phoneMatch[0].replace(/\s+/g, "") : null;
+
+  // Tentative d'extraction de nom depuis le nom du fichier ou les premières lignes
+  let extractedName = null;
+  const cleanFileName = filename.replace(/\.(pdf|docx|doc)$/i, "").replace(/[-_]/g, " ");
+  
+  // Ex: "CV Macoumba Samake" ou "Mouhamet DIA lettre de motivation"
+  const cleanedFileWords = cleanFileName
+    .replace(/\b(cv|curriculum|vitae|lettre|de|motivation|cover|letter|passe|partout|final|v1|v2)\b/gi, "")
+    .trim();
+
+  if (cleanedFileWords.length >= 3) {
+    extractedName = cleanedFileWords;
+  }
+
+  return { fullName: extractedName, email, phone };
+}
+
+/**
+ * Classification et extraction d'identité avec Gemini Flash
  */
 async function classifyWithAI(documentText, filename) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") return null;
 
-  const prompt = `Tu es un expert RH. Analyse le texte de ce document professionnel (nom de fichier: "${filename}").
-Détermine si c'est :
-1. "CV" (Curriculum Vitae détaillant parcours, expériences, compétences, études)
-2. "Lettre de motivation" (Lettre d'accompagnement ou de motivation adressée à un recruteur)
-3. "invalide" (Facture, reçu, pièce d'identité, document sans rapport, texte vide ou non pertinent)
+  const prompt = `Tu es un expert RH et vérificateur d'identité. Analyse le texte de ce document professionnel (nom de fichier: "${filename}").
+Tâches :
+1. Détermine la nature du document : "CV", "Lettre de motivation" ou "invalide" (facture, reçu, pièce d'identité sans rapport, texte hors sujet).
+2. Extrais les coordonnées et l'identité du candidat (nom et prénom complet, email, téléphone, adresse/ville).
 
 Réponds STRICTEMENT en JSON :
 {
   "type": "CV" | "Lettre de motivation" | "invalide",
+  "fullName": "Prénom et Nom complet du candidat ou null",
+  "email": "email ou null",
+  "phone": "numéro de téléphone ou null",
   "reason": "explication concise en français"
 }`;
 
-  const snippet = documentText.slice(0, 3000); // 3000 caractères suffisent largement
+  const snippet = documentText.slice(0, 3500);
 
   for (const model of CANDIDATE_MODELS) {
     try {
@@ -152,7 +212,7 @@ Réponds STRICTEMENT en JSON :
 
       const parsed = JSON.parse(cleaned);
       if (parsed && (parsed.type === "CV" || parsed.type === "Lettre de motivation" || parsed.type === "invalide")) {
-        return parsed.type;
+        return parsed;
       }
     } catch {
       // continuer au modèle suivant
@@ -186,13 +246,22 @@ export async function POST(req) {
     // 1. Extraction du texte
     const extractedText = await extractTextFromFile(buffer, file.name, file.type);
 
-    // 2. Classification IA avec repli heuristique
-    let docType = await classifyWithAI(extractedText, file.name);
+    // 2. Classification IA & Extraction d'identité avec repli heuristique
+    let aiResult = await classifyWithAI(extractedText, file.name);
+    let docType = aiResult?.type;
+    let extractedFullName = aiResult?.fullName;
+    let extractedEmail = aiResult?.email;
+    let extractedPhone = aiResult?.phone;
+
     if (!docType) {
       docType = classifyWithHeuristics(extractedText, file.name);
+      const heurIdentity = extractIdentityHeuristics(extractedText, file.name);
+      extractedFullName = heurIdentity.fullName;
+      extractedEmail = heurIdentity.email;
+      extractedPhone = heurIdentity.phone;
     }
 
-    // 3. Vérification de conformité
+    // 3. Vérification de conformité de type
     if (docType === "invalide") {
       return NextResponse.json(
         {
@@ -204,14 +273,52 @@ export async function POST(req) {
       );
     }
 
-    // 4. Vérification de la règle d'unicité (1 seul CV + 1 seule Lettre de motivation)
     const admin = getSupabaseAdmin();
-    const { data: existingDocs, error: fetchErr } = await admin
-      .from("resumes")
-      .select("id, title, type")
-      .eq("user_id", user.id);
 
-    if (!fetchErr && existingDocs) {
+    // 4. Récupérer le profil et les documents existants de l'utilisateur
+    const [{ data: userProfile }, { data: existingDocs }] = await Promise.all([
+      admin.from("profiles").select("id, full_name, first_name, last_name, email, phone").eq("id", user.id).maybeSingle(),
+      admin.from("resumes").select("id, title, type, content").eq("user_id", user.id),
+    ]);
+
+    // Déterminer l'identité de référence de l'utilisateur
+    const profileFullName = userProfile?.full_name || `${userProfile?.first_name || ""} ${userProfile?.last_name || ""}`.trim() || null;
+    const profileEmail = userProfile?.email || user.email || null;
+
+    // Récupérer le nom extrait ou contenu dans le document existant
+    let existingDocName = null;
+    if (existingDocs && existingDocs.length > 0) {
+      const firstDoc = existingDocs[0];
+      existingDocName = firstDoc.content?.etat_civil?.nom || firstDoc.content?.firstName ? `${firstDoc.content?.firstName} ${firstDoc.content?.lastName}` : null;
+      if (!existingDocName && firstDoc.title) {
+        existingDocName = firstDoc.title
+          .replace(/\.(pdf|docx|doc)$/i, "")
+          .replace(/\b(cv|curriculum|vitae|lettre|de|motivation|cover|letter)\b/gi, "")
+          .replace(/[-_]/g, " ")
+          .trim();
+      }
+    }
+
+    const referenceName = profileFullName || existingDocName;
+
+    // 5. VÉRIFICATION D'IDENTITÉ IDENTIQUE (CV et Lettre de motivation doivent appartenir à la même personne)
+    if (extractedFullName && referenceName) {
+      const isMatch = checkNameMatch(extractedFullName, referenceName);
+      if (!isMatch) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Incohérence d'identité détectée : ce document est au nom de « ${extractedFullName} », alors que votre profil et vos documents existants sont au nom de « ${referenceName} ». Vos documents (CV et Lettre de motivation) doivent appartenir à la même personne.`,
+            detectedIdentity: extractedFullName,
+            expectedIdentity: referenceName,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 6. Vérification de la règle d'unicité (1 seul CV + 1 seule Lettre de motivation)
+    if (existingDocs && existingDocs.length > 0) {
       // Normalisation des types existants
       const hasCv = existingDocs.some((d) => d.type === "CV" || d.type === "created" || d.type === "imported" || (!d.type?.toLowerCase().includes("lettre") && !d.title?.toLowerCase().includes("lettre")));
       const hasLettre = existingDocs.some((d) => d.type === "Lettre de motivation" || d.type?.toLowerCase().includes("lettre") || d.title?.toLowerCase().includes("lettre"));
@@ -244,6 +351,7 @@ export async function POST(req) {
     return NextResponse.json({
       success: true,
       documentType: docType,
+      detectedIdentity: extractedFullName,
       message: `Document identifié avec succès : ${docType}`,
     });
   } catch (error) {
