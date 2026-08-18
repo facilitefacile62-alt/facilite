@@ -172,6 +172,41 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "30e060ee-6c17-48f8-b3bf-5e744d03e911",
+    titleFR: "Youth Linguists Programme (YLP) – JOJ Dakar 2026 / ONFP",
+    titleEN: "Youth Linguists Programme (YLP) – Dakar 2026 Youth Olympic Games / ONFP",
+    company: "Comité d'Organisation JOJ Dakar 2026 & ONFP",
+    logoColor: "bg-emerald-600 text-white",
+    initials: "JOJ",
+    location: "Dakar, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Programme Jeunesse / Mission Internationale",
+    descFR: `🌍🗣️ Tu as entre 21 et 35 ans, tu es Sénégalais(e) et trilingue ?
+
+Le Youth Linguists Programme des JOJ Dakar 2026 recrute en partenariat avec l'ONFP ! Rejoins une équipe de jeunes talents linguistiques (Junior Linguist Operators - JLO) et vis une expérience unique au cœur des premiers Jeux Olympiques de la Jeunesse organisés en Afrique.
+
+📅 Candidatures : du 17 au 23 août 2026
+🔗 Postule en ligne : https://sigof.onfp.sn/ylp
+ℹ️ Plus d'infos : www.dakar2026.org | E-mail : YLP@dakar2026.org`,
+    descEN: `🌍🗣️ Are you between 21 and 35, Senegalese and trilingual?
+
+The Youth Linguists Programme for the Dakar 2026 Youth Olympic Games is now open! Join a team of talented young linguists and be part of a unique experience at the heart of the first Youth Olympic Games hosted in Africa.
+
+📅 Applications: August 17–23, 2026
+🔗 Apply now at https://sigof.onfp.sn/ylp`,
+    tags: ["JOJ Dakar 2026", "ONFP", "Youth Linguists", "Traduction", "Interprétariat", "Dakar 2026"],
+    externalLink: "https://sigof.onfp.sn/ylp",
+    externalButtonLabel: "Postuler sur le portail SIGOF ONFP",
+    contact_email: "YLP@dakar2026.org",
+    image: "/joj_dakar_2026_youth_linguists.jpg",
+    image_url: "/joj_dakar_2026_youth_linguists.jpg",
+    deadline: "2026-08-23",
+    pinned: true,
+    is_sponsored: true,
+    sponsor_priority: 25,
+  },
+  {
     id: "14390fbb-528a-4bd1-bba2-114bead8c2f9",
     titleFR: "Recrutement Massif BTP : 30 Profils Différents pour Un Grand Projet BTP",
     titleEN: "Massive Construction Recruitment: 30 Roles for Major BTP Project",

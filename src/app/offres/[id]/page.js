@@ -7,6 +7,42 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "30e060ee-6c17-48f8-b3bf-5e744d03e911": {
+    id: "30e060ee-6c17-48f8-b3bf-5e744d03e911",
+    title: "Youth Linguists Programme (YLP) – JOJ Dakar 2026 / ONFP",
+    company: "Comité d'Organisation JOJ Dakar 2026 & ONFP",
+    location: "Dakar, Sénégal",
+    contract_type: "Programme Jeunesse / Mission Internationale",
+    salary_range: "Prise en charge & Mission Olympique",
+    description: `🌍🗣️ Tu as entre 21 et 35 ans, tu es Sénégalais(e) et trilingue ?
+
+Le Youth Linguists Programme des Jeux Olympiques de la Jeunesse (JOJ Dakar 2026) recrute en partenariat avec l'ONFP et l'Association Sénégalaise des Traducteurs (Astra) ! Rejoins une équipe de jeunes talents linguistiques (Junior Linguist Operators - JLO) et vis une expérience humaine et professionnelle unique au cœur des premiers Jeux Olympiques organisés en Afrique.
+
+📌 MISSIONS PRINCIPALES :
+• Assurer l'assistance et les services linguistiques multilingues (interprétariat d'accueil, accompagnement des délégations, traduction).
+• Faciliter la communication entre les délégations internationales, les athlètes, les officiels et le comité d'organisation.
+• Participer aux opérations linguistiques sur les sites de compétition et villages olympiques.
+
+🎯 CRITÈRES D'ÉLIGIBILITÉ & PROFIL :
+• Âge : Entre 21 et 35 ans.
+• Nationalité : Être de nationalité sénégalaise.
+• Langues : Maîtrise d'au moins 3 langues (Français, Anglais, Wolof ou autres langues internationales : Espagnol, Arabe, etc.).
+• Excellente aisance relationnelle, diplomatie et sens du protocole.
+
+📅 MODALITÉS & CANDIDATURES :
+• Période d'inscription : Du 17 au 23 août 2026
+• Portail officiel de candidature : https://sigof.onfp.sn/ylp
+• Informations complémentaires : www.dakar2026.org | E-mail : YLP@dakar2026.org
+
+🔗 Postulez en ligne dès maintenant sur la plateforme dédiée SIGOF ONFP !`,
+    image_url: "/joj_dakar_2026_youth_linguists.jpg",
+    min_education_level: "Bac +2 à Bac +5 (Langues / Traduction / Relations Internationales)",
+    deadline: "2026-08-23",
+    external_link: "https://sigof.onfp.sn/ylp",
+    contact_email: "YLP@dakar2026.org",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "14390fbb-528a-4bd1-bba2-114bead8c2f9": {
     id: "14390fbb-528a-4bd1-bba2-114bead8c2f9",
     title: "Recrutement Massif BTP : 30 Profils Différents pour Un Grand Projet BTP",
