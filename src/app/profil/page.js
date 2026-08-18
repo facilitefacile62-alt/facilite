@@ -3761,8 +3761,19 @@ export default function ProfilPage() {
 
                     <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                       <Link
-                        href="/importer-cv"
-                        className="bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center flex-1 sm:flex-none"
+                        href={userDocuments.length >= 2 ? "#" : "/importer-cv"}
+                        onClick={(e) => {
+                          if (userDocuments.length >= 2) {
+                            e.preventDefault();
+                            triggerToast("Limite atteinte : vous avez déjà 2 documents. Supprimez un document existant pour en créer ou rédiger un nouveau.", "fa-triangle-exclamation");
+                          }
+                        }}
+                        title={userDocuments.length >= 2 ? "Limite de 2 documents atteinte" : "Rédiger ou importer un CV"}
+                        className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition justify-center flex-1 sm:flex-none ${
+                          userDocuments.length >= 2
+                            ? "bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-60 pointer-events-auto"
+                            : "bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 cursor-pointer shadow-xs"
+                        }`}
                       >
                         <i className="fa-solid fa-pen-to-square text-xs"></i>
                         <span>Rédaction</span>
@@ -3770,6 +3781,7 @@ export default function ProfilPage() {
 
                       <button
                         type="button"
+                        disabled={userDocuments.length >= 2}
                         onClick={() => {
                           if (userDocuments.length >= 2) {
                             triggerToast("Limite atteinte : vous pouvez conserver au maximum 2 documents (1 CV et 1 lettre de motivation). Supprimez un document pour en ajouter un nouveau.", "fa-triangle-exclamation");
@@ -3777,14 +3789,15 @@ export default function ProfilPage() {
                           }
                           cvFileInputRef.current?.click();
                         }}
-                        className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center flex-1 sm:flex-none ${
+                        title={userDocuments.length >= 2 ? "Limite de 2 documents atteinte (1 CV et 1 lettre de motivation)" : "Ajouter un document"}
+                        className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition justify-center flex-1 sm:flex-none ${
                           userDocuments.length >= 2
-                            ? "bg-gray-200 text-gray-500 hover:bg-gray-300"
-                            : "bg-[#047857] hover:bg-[#036448] text-white"
+                            ? "bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-60 pointer-events-auto shadow-none"
+                            : "bg-[#047857] hover:bg-[#036448] text-white cursor-pointer shadow-xs active:scale-[0.98]"
                         }`}
                       >
-                        <i className="fa-solid fa-plus text-xs"></i>
-                        <span>Ajouter un document</span>
+                        <i className={`text-xs ${userDocuments.length >= 2 ? "fa-solid fa-lock text-gray-400" : "fa-solid fa-plus"}`}></i>
+                        <span>{userDocuments.length >= 2 ? "Ajouter un document (2/2 max)" : "Ajouter un document"}</span>
                       </button>
                     </div>
                   </div>
