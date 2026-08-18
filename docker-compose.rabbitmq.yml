@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: facilite_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"    # Port AMQP standard
+      - "15672:15672"  # Dashboard Web Management UI (http://localhost:15672)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "+P 1048576"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - facilite_network
+
+volumes:
+  rabbitmq_data:
+    driver: local
+
+networks:
+  facilite_network:
+    driver: bridge
