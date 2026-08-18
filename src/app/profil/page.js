@@ -215,8 +215,22 @@ export default function ProfilPage() {
   const [eduEndYear, setEduEndYear] = useState("2026");
   const [eduIsCurrent, setEduIsCurrent] = useState(false);
 
-  // Toast System
-  const [toast, setToast] = useState({ show: false, message: "", icon: "" });
+  // Toast & Identity Mismatch Modal Systems
+  const [toast, setToast] = useState({ show: false, message: "", icon: "", type: "info" });
+  const [identityMismatchModal, setIdentityMismatchModal] = useState({
+    open: false,
+    detectedName: "",
+    expectedName: "",
+    fileName: "",
+    message: "",
+  });
+
+  const triggerToast = (message, icon = "fa-circle-info", type = "info") => {
+    setToast({ show: true, message, icon, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", icon: "", type: "info" });
+    }, 4500);
+  };
 
   const profileData = {
     telephone: phone,
@@ -321,11 +335,6 @@ export default function ProfilPage() {
     } finally {
       setSavingCvVisibility(false);
     }
-  };
-
-  const triggerToast = (msg, icon = "fa-check") => {
-    setToast({ show: true, message: msg, icon });
-    setTimeout(() => setToast({ show: false, message: "", icon: "" }), 3000);
   };
 
   // Redirection stricte vers /login si le visiteur n'est pas connecté — ne
@@ -1335,16 +1344,28 @@ export default function ProfilPage() {
       if (!classifyRes.ok || !classifyData.success) {
         setIsUploadingCv(false);
         if (cvFileInputRef.current) cvFileInputRef.current.value = "";
-        triggerToast(
-          classifyData.error || "Ce document n'est pas autorisé. Seuls un CV ou une Lettre de motivation sont acceptés.",
-          "fa-triangle-exclamation"
-        );
+
+        if (classifyData.detectedIdentity && classifyData.expectedIdentity) {
+          setIdentityMismatchModal({
+            open: true,
+            detectedName: classifyData.detectedIdentity,
+            expectedName: classifyData.expectedIdentity,
+            fileName: file.name,
+            message: classifyData.error,
+          });
+        } else {
+          triggerToast(
+            classifyData.error || "Ce document n'est pas autorisé. Seuls un CV ou une Lettre de motivation sont acceptés.",
+            "fa-triangle-exclamation",
+            "error"
+          );
+        }
         return;
       }
 
       const docCategory = classifyData.documentType; // "CV" | "Lettre de motivation"
 
-      triggerToast(`Document validé (${docCategory}) ! Enregistrement en cours...`, "fa-cloud-arrow-up");
+      triggerToast(`Document validé (${docCategory}) ! Enregistrement en cours...`, "fa-cloud-arrow-up", "success");
 
       // 1. Sauvegarde dans Supabase Storage (Bucket resumes)
       let finalCvUrl = null;
@@ -1654,14 +1675,33 @@ export default function ProfilPage() {
 
   return (
     <>
-      {/* Toast Notification Floating */}
+      {/* Toast Notification Floating Ultra-Design */}
       <div
-        className={`fixed top-20 right-4 z-[700] flex items-center space-x-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 transition-all duration-300 transform ${
+        className={`fixed top-20 right-4 sm:right-8 z-[700] max-w-md w-auto flex items-start space-x-3 px-4.5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md transition-all duration-300 transform border ${
+          toast.type === "error"
+            ? "bg-gray-950/95 text-white border-rose-500/60 shadow-rose-950/30"
+            : toast.type === "success"
+            ? "bg-gray-950/95 text-white border-emerald-500/60 shadow-emerald-950/30"
+            : "bg-gray-950/95 text-white border-gray-700 shadow-black/30"
+        } ${
           toast.show ? "translate-y-0 opacity-100 scale-100" : "-translate-y-4 opacity-0 scale-95 pointer-events-none"
         }`}
       >
-        <i className={`fa-solid ${toast.icon} text-[#10E688] text-xl`}></i>
-        <span className="text-sm font-semibold tracking-wide">{toast.message}</span>
+        <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+          toast.type === "error" ? "bg-rose-500/20 text-rose-400" : "bg-emerald-500/20 text-[#10E688]"
+        }`}>
+          <i className={`fa-solid ${toast.icon} text-sm`}></i>
+        </div>
+        <div className="flex-1 pr-2">
+          <p className="text-xs font-bold leading-snug">{toast.message}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setToast({ show: false, message: "", icon: "", type: "info" })}
+          className="text-gray-400 hover:text-white transition text-xs shrink-0 cursor-pointer pt-0.5"
+        >
+          <i className="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       {/* Navbar Fixée (#FAF6F1) */}
@@ -5212,6 +5252,95 @@ export default function ProfilPage() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* MODALE DE VÉRIFICATION D'IDENTITÉ CINÉMATOGRAPHIQUE */}
+      {identityMismatchModal.open && (
+        <div className="fixed inset-0 z-[800] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-6 relative overflow-hidden animate-scale-up">
+            {/* Dégradé supérieur décoratif */}
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-400 via-rose-500 to-amber-500"></div>
+
+            {/* En-tête avec badge d'alerte */}
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0 shadow-sm">
+                <i className="fa-solid fa-shield-halved text-2xl"></i>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100/80 border border-amber-200 text-[10px] font-black text-amber-800 uppercase tracking-wider mb-1">
+                  <i className="fa-solid fa-triangle-exclamation text-xs"></i>
+                  <span>Contrôle de Sécurité RH</span>
+                </div>
+                <h3 className="text-lg font-black text-gray-900 leading-tight">
+                  Incohérence d'identité détectée
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIdentityMismatchModal({ ...identityMismatchModal, open: false })}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 transition flex items-center justify-center cursor-pointer shrink-0"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            {/* Cartes de Comparaison d'Identité */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Document téléversé */}
+              <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-rose-600 uppercase tracking-wider">Document importé</span>
+                  <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-md">Rejeté</span>
+                </div>
+                <p className="text-sm font-black text-gray-900 truncate" title={identityMismatchModal.detectedName}>
+                  {identityMismatchModal.detectedName || "Nom non concordant"}
+                </p>
+                <p className="text-[11px] text-gray-500 font-medium truncate flex items-center gap-1">
+                  <i className="fa-regular fa-file text-rose-500"></i>
+                  <span className="truncate">{identityMismatchModal.fileName}</span>
+                </p>
+              </div>
+
+              {/* Titulaire du compte / Dossier */}
+              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">Votre Profil</span>
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">Titulaire</span>
+                </div>
+                <p className="text-sm font-black text-gray-900 truncate" title={identityMismatchModal.expectedName}>
+                  {identityMismatchModal.expectedName}
+                </p>
+                <p className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                  <i className="fa-solid fa-circle-check text-emerald-600"></i>
+                  <span>Dossier vérifié</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Note informative */}
+            <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200/80 space-y-1">
+              <p className="text-xs font-extrabold text-gray-800 flex items-center gap-1.5">
+                <i className="fa-solid fa-circle-info text-blue-600"></i>
+                Pourquoi cette vérification ?
+              </p>
+              <p className="text-[11px] text-gray-600 leading-relaxed font-medium">
+                Pour garantir la validité de vos candidatures auprès des recruteurs, votre CV et votre lettre de motivation doivent impérativement appartenir à la même personne.
+              </p>
+            </div>
+
+            {/* Boutons d'action */}
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIdentityMismatchModal({ ...identityMismatchModal, open: false })}
+                className="w-full bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-black py-3 px-5 rounded-xl text-xs transition cursor-pointer shadow-md flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-arrow-rotate-right text-xs"></i>
+                <span>Compris, importer le bon document</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
