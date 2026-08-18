@@ -7,6 +7,39 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "9d28564d-7084-4f71-8a71-f1c8a7796ff9": {
+    id: "9d28564d-7084-4f71-8a71-f1c8a7796ff9",
+    title: "BCEAO recrute 03 Assistants de direction à Dakar",
+    company: "BCEAO (Banque Centrale des États de l'Afrique de l'Ouest)",
+    location: "Dakar, Sénégal",
+    contract_type: "CDI / Plein temps",
+    salary_range: "Grille Institutionnelle BCEAO",
+    description: `La Banque Centrale des États de l'Afrique de l'Ouest (BCEAO) recrute pour son Siège basé à Dakar (Sénégal) 03 Secrétaires / Assistants de direction.
+
+📌 MISSIONS PRINCIPALES :
+• Accueil téléphonique et physique des visiteurs.
+• Gestion du courrier, classement et archivage.
+• Gestion des agendas, réunions et constitution des dossiers.
+• Saisie et mise en forme des documents officiels.
+
+🎯 CRITÈRES D'ÉLIGIBILITÉ & PROFIL :
+• Être ressortissant(e) d’un État membre de l’UMOA (18 à 40 ans).
+• Niveau d'études : Bac +2 à Bac +4 en Assistanat de direction ou domaine connexe.
+• Expérience : 2 ans minimum d’expérience en tant qu'Assistant(e) de direction.
+• Langue : La maîtrise de l’anglais constitue un atout important.
+
+📅 DATE LIMITE : 24 août 2026
+
+🔗 COMMENT POSTULER :
+Postulez directement sur la plateforme officielle de la BCEAO :
+https://bceao2.tzportal.io//fr/jobs/1960-64`,
+    image_url: "/bceao_assistant_direction.jpg",
+    min_education_level: "Bac+2 à Bac+4",
+    deadline: "2026-08-24",
+    external_link: "https://bceao2.tzportal.io//fr/jobs/1960-64",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "ddc8c73d-7d1e-4ff0-a7af-153e5b5aa8a6": {
     id: "ddc8c73d-7d1e-4ff0-a7af-153e5b5aa8a6",
     title: "Recrutement Chantier (12 Profils Engins & BTP) - SECAM S.A.",

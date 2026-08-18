@@ -172,6 +172,53 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "9d28564d-7084-4f71-8a71-f1c8a7796ff9",
+    titleFR: "BCEAO recrute 03 Assistants de direction à Dakar",
+    titleEN: "BCEAO recruits 03 Executive Assistants in Dakar",
+    company: "BCEAO (Banque Centrale des États de l'Afrique de l'Ouest)",
+    logoColor: "bg-slate-900 text-amber-400",
+    initials: "BCEAO",
+    location: "Dakar, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI / Plein temps",
+    descFR: `La Banque Centrale des États de l'Afrique de l'Ouest (BCEAO) recrute pour son Siège basé à Dakar (Sénégal) 03 Secrétaires / Assistants de direction.
+
+📌 MISSIONS PRINCIPALES :
+• Accueil téléphonique et physique des visiteurs.
+• Gestion du courrier, classement et archivage.
+• Gestion des agendas, réunions et constitution des dossiers.
+• Saisie et mise en forme des documents officiels.
+
+🎯 CRITÈRES D'ÉLIGIBILITÉ & PROFIL :
+• Être ressortissant(e) d’un État membre de l’UMOA (18 à 40 ans).
+• Niveau d'études : Bac +2 à Bac +4 en Assistanat de direction ou domaine connexe.
+• Expérience : 2 ans minimum d’expérience en tant qu'Assistant(e) de direction.
+• Langue : La maîtrise de l’anglais constitue un atout important.
+
+📅 DATE LIMITE : 24 août 2026
+
+🔗 COMMENT POSTULER :
+Postulez directement sur la plateforme officielle de la BCEAO :
+https://bceao2.tzportal.io//fr/jobs/1960-64`,
+    descEN: `The Central Bank of West African States (BCEAO) is recruiting 03 Executive Assistants for its Headquarters in Dakar (Senegal).
+
+📌 REQUIREMENTS:
+• Citizen of a WAMU/UMOA member state (18 to 40 years old).
+• Degree: Bac+2 to Bac+4 in Executive Assistantship or related field.
+• Experience: Minimum 2 years as an Executive Assistant.
+
+📅 Deadline: August 24, 2026
+🔗 Apply online: https://bceao2.tzportal.io//fr/jobs/1960-64`,
+    tags: ["BCEAO", "Assistanat de direction", "Secrétariat", "Dakar", "Banque & Finance"],
+    externalLink: "https://bceao2.tzportal.io//fr/jobs/1960-64",
+    externalButtonLabel: "Postuler sur la plateforme BCEAO",
+    image: "/bceao_assistant_direction.jpg",
+    image_url: "/bceao_assistant_direction.jpg",
+    deadline: "2026-08-24",
+    pinned: true
+  },
+  {
     id: "ddc8c73d-7d1e-4ff0-a7af-153e5b5aa8a6",
     titleFR: "Recrutement Chantier (12 Profils Engins & BTP) - SECAM S.A.",
     titleEN: "Construction Site Recruitment (12 Heavy Equipment & Civil Engineering Roles)",
