@@ -468,7 +468,7 @@ export default function LoginPage() {
                       if (errorMessage) setErrorMessage("");
                     }}
                     placeholder="Saisissez votre e-mail"
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black transition"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
                   />
                 </div>
 
