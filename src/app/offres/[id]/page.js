@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { notFound } from "next/navigation";
 import { getSupabasePublicClient } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { safeJsonLdString } from "@/lib/jsonLd";
 import OffreDetailClient from "./OffreDetailClient";
 
@@ -440,22 +441,29 @@ https://youthmedia.net/opportunites/programme-de-stages-unicef-2026`,
 
 async function fetchOffer(id) {
   try {
-    const supabase = getSupabasePublicClient();
+    let supabase;
+    try {
+      supabase = getSupabaseAdmin();
+    } catch {
+      supabase = getSupabasePublicClient();
+    }
+
     const { data, error } = await supabase
       .from("job_offers")
       .select("*")
       .eq("id", id)
-      .eq("is_active", true)
       .single();
 
     if (!error && data) {
       let recruiterVerified = false;
       if (data.recruiter_id) {
-        const { data: verified } = await supabase.rpc("has_badge", {
-          check_user_id: data.recruiter_id,
-          badge_name: "verified_recruiter",
-        });
-        recruiterVerified = verified === true;
+        try {
+          const { data: verified } = await supabase.rpc("has_badge", {
+            check_user_id: data.recruiter_id,
+            badge_name: "verified_recruiter",
+          });
+          recruiterVerified = verified === true;
+        } catch (e) {}
       }
       return { ...data, recruiterVerified };
     }
