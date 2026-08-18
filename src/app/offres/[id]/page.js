@@ -7,6 +7,61 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "f302e044-0ff5-4d60-9b33-b9db11fa2df7": {
+    id: "f302e044-0ff5-4d60-9b33-b9db11fa2df7",
+    title: "Chauffeur (Motor Pool) - Ambassade des États-Unis",
+    company: "Ambassade des États-Unis au Sénégal",
+    location: "Dakar, Sénégal",
+    contract_type: "CDI",
+    salary_range: "7 508 035 FCFA / an (~625 000 FCFA/mois)",
+    description: `L’Ambassade des États-Unis à Dakar recrute un(e) Chauffeur (Motor Pool Chauffeur) pour assurer le transport sécurisé du personnel diplomatique, des visiteurs et du fret.
+
+📌 PROFIL RECHERCHÉ :
+• Expérience : Au moins 3 ans d'expérience continue comme chauffeur.
+• Permis : Permis de conduire valide obligatoire.
+• Connaissances : Excellente maîtrise des itinéraires et du trafic de Dakar.
+• Langues : Français (bon niveau de travail) et notions d'anglais.
+
+💰 SALAIRE & AVANTAGES :
+• Salaire annuel : 7 508 035 FCFA / an (~625 000 FCFA / mois).
+• Avantages : Assurance santé complète et indemnités de la Mission Américaine.
+
+🔗 COMMENT POSTULER :
+Postulez directement en ligne sur le portail officiel ERA de l'Ambassade des États-Unis :
+https://erajobs.state.gov/dos-era/vacancy/viewVacancyDetail.hms?_ref=vtb5rmp3pt0&returnToSearch=true&jnum=76919&orgId=17`,
+    image_url: "/chauffeur_ambassade_usa.jpg",
+    min_education_level: "Primaire",
+    deadline: "2026-09-30",
+    contact_email: "DakarHR@state.gov",
+    external_link: "https://erajobs.state.gov/dos-era/vacancy/viewVacancyDetail.hms?_ref=vtb5rmp3pt0&returnToSearch=true&jnum=76919&orgId=17",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "82dd1b8a-8234-4862-8580-dfe4e47897b0": {
+    id: "82dd1b8a-8234-4862-8580-dfe4e47897b0",
+    title: "Programme de Stages Internationaux - UNICEF 2026",
+    company: "UNICEF",
+    location: "International (Multi-pays)",
+    contract_type: "Stage",
+    salary_range: "Indemnité selon grille UNICEF",
+    description: `L'UNICEF offre à des étudiants et jeunes diplômés du monde entier des opportunités de stage international.
+
+📌 PROFIL & ÉLIGIBILITÉ :
+• Niveau d'études : Bac+1 à Bac+8.
+• Lieux : Divers bureaux internationaux UNICEF.
+• Date limite : Candidatures ouvertes en continu tout au long de l'année.
+
+🔗 CANDIDATURE :
+Retrouvez toutes les informations et postulez sur :
+https://youthmedia.net/opportunites/programme-de-stages-unicef-2026`,
+    image_url: "/unicef_stage_2026.jpg",
+    min_education_level: "Bac+1 à Bac+8",
+    deadline: "2026-12-31",
+    contact_email: "info@youthmedia.net",
+    external_link: "https://youthmedia.net/opportunites/programme-de-stages-unicef-2026",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "9b125270-1234-4567-89ab-cdef25272026": {
     id: "9b125270-1234-4567-89ab-cdef25272026",
     title: "Concours de Recrutement Spécial de 2 527 Enseignants (Préscolaire, Élémentaire, Moyen-Secondaire)",

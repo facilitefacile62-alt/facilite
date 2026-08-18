@@ -172,6 +172,80 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "f302e044-0ff5-4d60-9b33-b9db11fa2df7",
+    titleFR: "Chauffeur (Motor Pool) - Ambassade des États-Unis",
+    titleEN: "Driver (Motor Pool) - US Embassy Dakar",
+    company: "Ambassade des États-Unis au Sénégal",
+    logoColor: "bg-blue-800 text-white",
+    initials: "USA",
+    location: "Dakar, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI",
+    descFR: `L’Ambassade des États-Unis à Dakar recrute un(e) Chauffeur (Motor Pool Chauffeur) pour assurer le transport sécurisé du personnel officiel et des visiteurs.
+
+📌 PROFIL RECHERCHÉ :
+• Expérience : Au moins 3 ans d'expérience comme chauffeur.
+• Permis : Permis de conduire valide obligatoire.
+• Connaissances : Maîtrise des itinéraires et du trafic de Dakar.
+• Langues : Français (bon niveau de travail) et notions d'anglais.
+
+💰 RÉMUNÉRATION :
+• Salaire : 7 508 035 FCFA / an (~625 000 FCFA / mois) + Assurance médicale complète.
+
+🔗 COMMENT POSTULER :
+Postulez directement sur le portail officiel ERA de l'Ambassade des États-Unis :
+https://erajobs.state.gov/dos-era/vacancy/viewVacancyDetail.hms?_ref=vtb5rmp3pt0&returnToSearch=true&jnum=76919&orgId=17`,
+    descEN: `The US Embassy in Dakar is recruiting a Driver (Motor Pool Chauffeur) to provide safe transport for official personnel and visitors.
+
+📌 REQUIREMENTS:
+• Experience: At least 3 years of experience as a chauffeur.
+• License: Valid driver's license.
+• Salary: 7,508,035 CFA / year (~625,000 CFA / month).
+
+🔗 APPLY:
+https://erajobs.state.gov/dos-era/vacancy/viewVacancyDetail.hms?_ref=vtb5rmp3pt0&returnToSearch=true&jnum=76919&orgId=17`,
+    tags: ["Ambassade USA Dakar", "Chauffeur", "CDI", "Permis B", "Dakar"],
+    recruiterEmail: "DakarHR@state.gov",
+    externalLink: "https://erajobs.state.gov/dos-era/vacancy/viewVacancyDetail.hms?_ref=vtb5rmp3pt0&returnToSearch=true&jnum=76919&orgId=17",
+    image: "/chauffeur_ambassade_usa.jpg",
+    image_url: "/chauffeur_ambassade_usa.jpg",
+    deadline: "2026-09-30",
+    pinned: true
+  },
+  {
+    id: "82dd1b8a-8234-4862-8580-dfe4e47897b0",
+    titleFR: "Programme de Stages Internationaux - UNICEF 2026",
+    titleEN: "International Internship Program - UNICEF 2026",
+    company: "UNICEF",
+    logoColor: "bg-cyan-600 text-white",
+    initials: "UNI",
+    location: "International (Multi-pays)",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Stage",
+    descFR: `L'UNICEF offre à des étudiants et jeunes diplômés du monde entier des opportunités de stage international.
+
+📌 PROFIL & ÉLIGIBILITÉ :
+• Niveau d'études : Bac+1 à Bac+8.
+• Lieux : Multiples bureaux internationaux UNICEF.
+• Candidatures ouvertes en continu.
+
+🔗 CANDIDATURE :
+Retrouvez toutes les informations et postulez sur :
+https://youthmedia.net/opportunites/programme-de-stages-unicef-2026`,
+    descEN: `UNICEF offers internship opportunities for students and recent graduates worldwide.
+
+🔗 Apply on: https://youthmedia.net/opportunites/programme-de-stages-unicef-2026`,
+    tags: ["UNICEF", "Stage", "International", "Jeunes Diplômés"],
+    recruiterEmail: "info@youthmedia.net",
+    externalLink: "https://youthmedia.net/opportunites/programme-de-stages-unicef-2026",
+    image: "/unicef_stage_2026.jpg",
+    image_url: "/unicef_stage_2026.jpg",
+    deadline: "2026-12-31",
+    pinned: true
+  },
+  {
     id: "77177373-1111-4444-8888-000000000001",
     titleFR: "CASTING : FAMILLE HALPULAR (EVENPROD)",
     titleEN: "CASTING: HALPULAR FAMILY (EVENPROD)",
