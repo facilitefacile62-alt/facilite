@@ -296,7 +296,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/50 font-sans flex flex-col justify-center items-center py-4 px-3 sm:px-4 relative select-none">
+    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/50 font-sans flex flex-col justify-start items-center pt-6 sm:pt-8 pb-8 px-3 sm:px-4 relative select-none">
       
       {/* CARTE DE CONNEXION PRINCIPALE */}
       <div className="w-full max-w-[340px] sm:max-w-[350px] mx-auto bg-white rounded-2xl p-5 sm:p-6 shadow-[0_6px_24px_rgba(0,0,0,0.06)] border border-gray-100/90 transition-all">
