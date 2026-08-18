@@ -51,7 +51,7 @@ export async function POST(req) {
       );
     }
 
-    // Analyse de l'image de recrutement via Gemini 2.5 Flash
+    // Analyse de l'image de recrutement via Gemini Flash
     const analysis = await extractJobAnnouncementWithGemini(buffer, file.type);
 
     if (analysis?.errorKeyMissing) {
@@ -65,7 +65,7 @@ export async function POST(req) {
     }
 
     if (analysis?.error) {
-      console.error("[Extract Email Error]", analysis.error);
+      console.error("[Extract Channels Error]", analysis.error);
       return NextResponse.json(
         {
           success: false,
@@ -75,23 +75,74 @@ export async function POST(req) {
       );
     }
 
-    if (!analysis?.email) {
+    // Extraction et normalisation des coordonnées
+    const rawEmail = analysis?.email && typeof analysis.email === "string" && analysis.email.includes("@") ? analysis.email.trim().toLowerCase() : null;
+    
+    // Détection Téléphone / WhatsApp via notre helper
+    const rawPhoneCandidate = analysis?.phone || analysis?.whatsapp;
+    let detectedPhone = null;
+    if (rawPhoneCandidate) {
+      const cleaned = String(rawPhoneCandidate).replace(/\D/g, "");
+      if (cleaned.length === 9 && /^(?:70|75|76|77|78|33)\d{7}$/.test(cleaned)) {
+        detectedPhone = `221${cleaned}`;
+      } else if (cleaned.length >= 8 && cleaned.length <= 15) {
+        detectedPhone = cleaned;
+      }
+    }
+    if (!detectedPhone && analysis?.raw_text) {
+      // Fallback regex sur raw_text
+      const snMatch = analysis.raw_text.match(/(?:\+?221|00221)?[\s.-]?(?:7[05678]|33)[\s.-]?[0-9]{2,3}[\s.-]?[0-9]{2}[\s.-]?[0-9]{2}/);
+      if (snMatch) {
+        const digits = snMatch[0].replace(/\D/g, "");
+        if (digits.length === 9) detectedPhone = `221${digits}`;
+        else if (digits.length >= 11) detectedPhone = digits;
+      }
+    }
+
+    // Détection d'URL / Lien de formulaire
+    let detectedUrl = analysis?.apply_url || analysis?.form_url || null;
+    if (!detectedUrl && analysis?.raw_text) {
+      const urlMatch = analysis.raw_text.match(/(https?:\/\/[^\s"'<>]+|forms\.gle\/[^\s"'<>]+|typeform\.com\/to\/[^\s"'<>]+)/i);
+      if (urlMatch) {
+        detectedUrl = urlMatch[0].startsWith("http") ? urlMatch[0] : `https://${urlMatch[0]}`;
+      }
+    }
+
+    // Si AUCUN moyen de contact n'est trouvé
+    if (!rawEmail && !detectedPhone && !detectedUrl) {
       return NextResponse.json(
         {
           success: false,
-          error: "Aucune adresse e-mail détectée sur cette affiche. Essayez une photo plus nette ou mieux cadrée.",
+          error: "Aucun moyen de contact (e-mail, numéro WhatsApp ou formulaire) détecté sur cette affiche. Essayez une photo plus nette ou mieux cadrée.",
           details: analysis,
         },
         { status: 200 }
       );
     }
 
+    const jobTitle = analysis.job_title || null;
+    const company = analysis.company || null;
+    
+    // Génération du lien WhatsApp personnalisé
+    let whatsappUrl = null;
+    if (detectedPhone) {
+      const greetingMsg = `Bonjour${company ? ` ${company}` : ""}, je vous contacte concernant votre offre de recrutement "${jobTitle || "ce poste"}" vue sur Facilité.`;
+      whatsappUrl = `https://wa.me/${detectedPhone}?text=${encodeURIComponent(greetingMsg)}`;
+    }
+
     return NextResponse.json({
       success: true,
-      email: analysis.email.toLowerCase(),
-      job_title: analysis.job_title || null,
-      company: analysis.company || null,
+      email: rawEmail,
+      phone: detectedPhone,
+      whatsapp: detectedPhone,
+      whatsapp_url: whatsappUrl,
+      apply_url: detectedUrl,
+      form_url: detectedUrl,
+      job_title: jobTitle,
+      company: company,
       contract_type: analysis.contract_type || null,
+      instructions: analysis.instructions || null,
+      raw_text: analysis.raw_text || null,
     });
   } catch (error) {
     console.error("[Extract Email Error]", error);

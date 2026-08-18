@@ -52,7 +52,28 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
     };
   }
 
-  const prompt = `Analyse cette affiche d'emploi/recrutement. Extrais l'adresse e-mail du recruteur, le titre du poste, le nom de l'entreprise et le type de contrat. Réponds STRICTEMENT en JSON sous la forme : { "email": "...", "job_title": "...", "company": "...", "contract_type": "...", "raw_text": "..." }.`;
+  const prompt = `Analyse cette affiche d'emploi, recrutement ou casting.
+Extrais précisément les coordonnées et canaux pour postuler :
+1. "email": l'adresse email de contact/recrutement (ou null si absente)
+2. "phone": le numéro de téléphone ou WhatsApp pour postuler ou envoyer sa candidature (ex: "+221 77 717 73 73" ou "77 717 73 73", ou null)
+3. "apply_url": lien de formulaire (Google Forms, Typeform, etc.) ou URL du site web pour postuler (ou null)
+4. "job_title": titre du poste, du casting ou de l'opportunité
+5. "company": nom de l'entreprise, agence ou organisateur
+6. "contract_type": type de contrat ou mission (CDI, CDD, Stage, Freelance, Casting, etc.)
+7. "instructions": consigne spécifique pour postuler (ex: "Envoyer vidéos par WhatsApp", "Envoyer CV par mail", "Remplir le formulaire")
+8. "raw_text": tout le texte lisible sur l'affiche.
+
+Réponds STRICTEMENT en JSON valide sous la forme :
+{
+  "email": "...",
+  "phone": "...",
+  "apply_url": "...",
+  "job_title": "...",
+  "company": "...",
+  "contract_type": "...",
+  "instructions": "...",
+  "raw_text": "..."
+}`;
 
   // buffer.toString("base64") ne contient normalement jamais de préfixe data
   // URI (ce n'est pas un data URI, juste du base64 brut) — retrait défensif
@@ -76,12 +97,6 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
                 role: "user",
                 parts: [
                   { text: prompt },
-                  // Nomenclature REST officielle : inline_data / mime_type en
-                  // snake_case. Le SDK @google/genai accepte inlineData /
-                  // mimeType (camelCase) et les convertit lui-même, mais un
-                  // appel fetch() direct au endpoint REST doit utiliser le
-                  // nommage exact du schéma JSON, sans quoi Google rejette la
-                  // requête (400 invalid argument).
                   {
                     inline_data: {
                       mime_type: mimeType || "image/jpeg",
@@ -128,11 +143,17 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
         parsed = JSON.parse(cleanedJson);
       } catch {
         const emailMatch = responseText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        const phoneMatch = responseText.match(/(?:\+?221|00221)?[\s.-]?(?:7[05678]|33)[\s.-]?[0-9]{2,3}[\s.-]?[0-9]{2}[\s.-]?[0-9]{2}/);
+        const urlMatch = responseText.match(/https?:\/\/[^\s"'<>]+|forms\.gle\/[^\s"'<>]+/i);
+
         parsed = {
           email: emailMatch ? emailMatch[0].toLowerCase() : null,
+          phone: phoneMatch ? phoneMatch[0] : null,
+          apply_url: urlMatch ? urlMatch[0] : null,
           job_title: null,
           company: null,
           contract_type: null,
+          instructions: null,
           raw_text: responseText,
         };
       }

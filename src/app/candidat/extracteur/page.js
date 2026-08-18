@@ -44,6 +44,9 @@ function ExtracteurContent() {
   const [imagePreview, setImagePreview] = useState(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedEmail, setExtractedEmail] = useState(null);
+  const [extractedWhatsApp, setExtractedWhatsApp] = useState(null);
+  const [whatsappUrl, setWhatsappUrl] = useState(null);
+  const [extractedFormUrl, setExtractedFormUrl] = useState(null);
   const [extractedData, setExtractedData] = useState(null);
   const [extractionMessage, setExtractionMessage] = useState(null);
 
@@ -169,6 +172,10 @@ function ExtracteurContent() {
 
     setSelectedFile(file);
     setExtractedEmail(null);
+    setExtractedWhatsApp(null);
+    setWhatsappUrl(null);
+    setExtractedFormUrl(null);
+    setExtractedData(null);
     setExtractionMessage(null);
     setSendSuccess(false);
     setSendErrorMessage(null);
@@ -189,6 +196,9 @@ function ExtracteurContent() {
 
     setIsExtracting(true);
     setExtractedEmail(null);
+    setExtractedWhatsApp(null);
+    setWhatsappUrl(null);
+    setExtractedFormUrl(null);
     setExtractedData(null);
     setExtractionMessage(null);
     setSendSuccess(false);
@@ -210,11 +220,18 @@ function ExtracteurContent() {
 
       const data = await res.json();
 
-      if (data.success && data.email) {
-        setExtractedEmail(data.email);
+      if (data.success && (data.email || data.whatsapp || data.phone || data.apply_url || data.form_url)) {
+        if (data.email) setExtractedEmail(data.email);
+        if (data.whatsapp || data.phone) {
+          setExtractedWhatsApp(data.whatsapp || data.phone);
+          setWhatsappUrl(data.whatsapp_url);
+        }
+        if (data.apply_url || data.form_url) {
+          setExtractedFormUrl(data.apply_url || data.form_url);
+        }
         setExtractedData(data);
       } else {
-        setExtractionMessage(toReadableErrorMessage(data.error) || "Aucune adresse e-mail détectée sur cette affiche.");
+        setExtractionMessage(toReadableErrorMessage(data.error) || "Aucun moyen de contact (WhatsApp, email ou formulaire) détecté sur cette affiche.");
       }
     } catch (err) {
       console.error("Erreur d'extraction Gemini:", err);
@@ -462,10 +479,83 @@ function ExtracteurContent() {
             </div>
           )}
 
-          {/* E-mail détecté (mode photo) / Offre chargée (mode ?posterId=) & Bouton 1-Click */}
-          {(extractedEmail || posterOffer) && (
+          {/* Résultat Détecté : WhatsApp, Formulaire ou Email (mode photo) / Offre chargée (mode ?posterId=) */}
+          {(extractedWhatsApp || extractedFormUrl || extractedEmail || posterOffer) && (
             <div className="space-y-4 animate-fade-in">
-              {/* Encadré vert de détection avec détails Gemini — uniquement en mode photo, l'offre existante a déjà son propre résumé plus haut */}
+              
+              {/* 1. CANAL WHATSAPP */}
+              {extractedWhatsApp && (
+                <div className="p-5 bg-emerald-50 border-2 border-[#25D366]/40 rounded-2xl text-emerald-950 space-y-3.5 shadow-xs animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-11 h-11 bg-[#25D366] text-white rounded-2xl flex items-center justify-center text-2xl shadow-sm flex-shrink-0">
+                        <i className="fa-brands fa-whatsapp"></i>
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-extrabold text-emerald-700 uppercase tracking-wider block">
+                          Candidature WhatsApp Détectée
+                        </span>
+                        <span className="text-base font-black text-gray-900 tracking-wide">
+                          +{extractedWhatsApp}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-[#25D366]/20 text-emerald-800 text-[10px] font-black uppercase tracking-wider rounded-full flex-shrink-0">
+                      WhatsApp 1-Click
+                    </span>
+                  </div>
+
+                  {extractedData?.instructions && (
+                    <div className="p-2.5 bg-white/90 rounded-xl text-xs font-semibold text-gray-700 border border-emerald-100 flex items-start gap-2">
+                      <span className="text-emerald-700 font-black">📋 Consigne :</span>
+                      <span>{extractedData.instructions}</span>
+                    </div>
+                  )}
+
+                  <a
+                    href={whatsappUrl || `https://wa.me/${extractedWhatsApp}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3.5 bg-[#25D366] hover:bg-[#20bd5a] active:scale-[0.99] text-white font-extrabold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2.5 cursor-pointer no-underline"
+                  >
+                    <i className="fa-brands fa-whatsapp text-lg"></i>
+                    <span>Envoyer ma candidature sur WhatsApp (+{extractedWhatsApp})</span>
+                  </a>
+                </div>
+              )}
+
+              {/* 2. CANAL LIEN DE FORMULAIRE */}
+              {extractedFormUrl && (
+                <div className="p-5 bg-blue-50 border-2 border-blue-200 rounded-2xl text-blue-950 space-y-3.5 shadow-xs animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-11 h-11 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-xl shadow-sm flex-shrink-0">
+                        <i className="fa-solid fa-file-signature"></i>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[11px] font-extrabold text-blue-700 uppercase tracking-wider block">
+                          Formulaire de Recrutement Détecté
+                        </span>
+                        <span className="text-xs font-bold text-gray-700 truncate max-w-[260px] block">
+                          {extractedFormUrl}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <a
+                    href={extractedFormUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2.5 cursor-pointer no-underline"
+                  >
+                    <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                    <span>Remplir le formulaire de candidature officiel</span>
+                  </a>
+                </div>
+              )}
+
+              {/* 3. CANAL EMAIL : Encadré de détection E-mail */}
               {extractedEmail && (
                 <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 space-y-3">
                   <div className="flex items-center justify-between">
@@ -479,29 +569,35 @@ function ExtracteurContent() {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
 
-                  {extractedData && (extractedData.job_title || extractedData.company || extractedData.contract_type) && (
-                    <div className="pt-3 border-t border-emerald-200/60 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold text-emerald-950">
-                      {extractedData.job_title && (
-                        <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
-                          <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Poste</span>
-                          <span>{extractedData.job_title}</span>
-                        </div>
-                      )}
-                      {extractedData.company && (
-                        <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
-                          <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Entreprise</span>
-                          <span>{extractedData.company}</span>
-                        </div>
-                      )}
-                      {extractedData.contract_type && (
-                        <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
-                          <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Contrat</span>
-                          <span>{extractedData.contract_type}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+              {/* Détails du Poste & Entreprise détectés */}
+              {extractedData && (extractedData.job_title || extractedData.company || extractedData.contract_type) && (
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+                  <span className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider block">
+                    Détails identifiés sur l'annonce
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold text-gray-900">
+                    {extractedData.job_title && (
+                      <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Poste</span>
+                        <span>{extractedData.job_title}</span>
+                      </div>
+                    )}
+                    {extractedData.company && (
+                      <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Entreprise / Projet</span>
+                        <span>{extractedData.company}</span>
+                      </div>
+                    )}
+                    {extractedData.contract_type && (
+                      <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Type d'opportunité</span>
+                        <span>{extractedData.contract_type}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -516,10 +612,10 @@ function ExtracteurContent() {
                       : `Votre CV et votre demande ont été envoyés à ${extractedEmail}.`}
                   </p>
                 </div>
-              ) : (
+              ) : (extractedEmail || posterOffer) ? (
                 <div ref={applicationFormRef} className="space-y-4 pt-2 scroll-mt-24">
                   <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider">
-                    2. Vos informations de candidature
+                    {extractedWhatsApp || extractedFormUrl ? "Option : Postuler aussi par E-mail" : "2. Vos informations de candidature"}
                   </label>
 
                   {/* Choix du CV */}
@@ -584,46 +680,48 @@ function ExtracteurContent() {
                             <p className="text-[10px] text-gray-400 font-bold">Cliquez pour remplacer</p>
                           </div>
                         ) : (
-                          <div className="space-y-1 text-gray-400">
-                            <i className="fa-solid fa-cloud-arrow-up text-2xl"></i>
-                            <p className="text-xs font-bold text-gray-600">Cliquez pour importer votre CV (PDF, DOCX)</p>
+                          <div className="space-y-1">
+                            <i className="fa-solid fa-cloud-arrow-up text-2xl text-gray-400"></i>
+                            <p className="text-xs font-bold text-gray-700">Cliquez pour importer votre CV (PDF, DOCX)</p>
                           </div>
                         )}
                       </div>
                     )}
                   </div>
 
-                  {/* Objet de la demande */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
-                      Objet de la demande
+                  {/* Objet de l'e-mail */}
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
+                      Objet de votre e-mail
                     </label>
                     <input
                       type="text"
                       value={applicationSubject}
                       onChange={(e) => setApplicationSubject(e.target.value)}
+                      placeholder="Candidature au poste de..."
                       disabled={isSending}
-                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition"
+                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:border-emerald-500 transition"
                     />
                   </div>
 
-                  {/* Message / lettre de motivation */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
-                      Message / Lettre de motivation
+                  {/* Message de motivation */}
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
+                      Message d'accompagnement
                     </label>
                     <textarea
                       rows={5}
                       value={applicationMessage}
                       onChange={(e) => setApplicationMessage(e.target.value)}
+                      placeholder="Votre message au recruteur..."
                       disabled={isSending}
-                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition resize-none"
+                      className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:border-emerald-500 transition leading-relaxed"
                     />
                   </div>
 
                   {sendErrorMessage && (
-                    <div className="p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-xs font-bold text-rose-700 flex items-center gap-2">
-                      <i className="fa-solid fa-triangle-exclamation"></i>
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-center space-x-2">
+                      <span>⚠️</span>
                       <span>{sendErrorMessage}</span>
                     </div>
                   )}
@@ -650,8 +748,6 @@ function ExtracteurContent() {
                     )}
                   </button>
 
-                  {/* Pas d'adresse e-mail brute en mode "offre existante" (la
-                      candidature passe par /api/postuler, pas par mailto:) */}
                   {extractedEmail && (
                     <a
                       href={mailtoHref}
@@ -661,7 +757,7 @@ function ExtracteurContent() {
                     </a>
                   )}
                 </div>
-              )}
+              ) : null}
             </div>
           )}
         </div>
