@@ -7,6 +7,82 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "14390fbb-528a-4bd1-bba2-114bead8c2f9": {
+    id: "14390fbb-528a-4bd1-bba2-114bead8c2f9",
+    title: "Recrutement Massif BTP : 30 Profils Différents pour Un Grand Projet BTP",
+    company: "ICS Industrial (Société de Placement & BTP)",
+    location: "Sénégal (Chantier BTP)",
+    contract_type: "CDD / Plein temps / Chantier",
+    salary_range: "Selon grille BTP & expérience",
+    description: `Une société de placement de personnel de la place recrute pour le compte d’un client, dans le cadre d’un projet d’envergure dans le secteur du Bâtiment et Travaux Publics (BTP), plusieurs profils qualifiés.
+
+🏗️ 30 PROFILS RECHERCHÉS :
+
+🏥 Santé, Sécurité & Administration :
+• Infirmier(ère)s
+• Agent douane / transit
+• Assistant(e) de bureau
+• Superviseur Sécurité (HSE)
+
+📐 Encadrement, Supervision & Ingénierie :
+• Géomètre
+• Chefs d’Équipe & Chef d’Équipe Général
+• Superviseur Génie Civil
+• Superviseur Mécanique
+• Superviseur Électrique
+• Superviseur Soudage
+
+🔧 Logistique, Maintenance & Flotte :
+• Chef Mécanicien & Chef d’Atelier
+• Mécanicien Engins Lourds
+• Coordinateur Équipements
+• Coordinateur Flotte
+
+🚜 Conducteurs d’Engins & Chauffeurs :
+• Chauffeur Camion & Chauffeur Porte-engins
+• Conducteur Pelle, Bulldozer, Sideboom, Chargeuse, Pipe Layer
+• Grutier & Cariste
+
+⚙️ Métiers Techniques & Support Chantier :
+• Tuyauteur, Électricien, Échafaudeur
+• Signaleur (Banksman), Technicien Instrumentation
+
+📩 COMMENT POSTULER :
+Envoyez votre dossier de candidature par e-mail à : crewcoordinator@icsindustrial.com
+📌 Objet du mail : Candidature [Indiquer le poste souhaité]`,
+    image_url: "/recrutement_massif_btp_30_profils.png",
+    min_education_level: "Tous niveaux (Ouvriers, Techniciens, Ingénieurs)",
+    deadline: "2026-09-30",
+    contact_email: "crewcoordinator@icsindustrial.com",
+    external_link: "mailto:crewcoordinator@icsindustrial.com?subject=Candidature%20%5BIndiquer%20le%20poste%20souhait%C3%A9%5D",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "962a37cc-55ff-422f-87d4-402f096483f4": {
+    id: "962a37cc-55ff-422f-87d4-402f096483f4",
+    title: "Offre d'emploi : Agent Livreur / Coursier (H/F)",
+    company: "Mobilité Sénégal (Solutions de mobilité)",
+    location: "Dakar, Sénégal",
+    contract_type: "CDI / Plein temps",
+    salary_range: "Fixe attractif + Primes de livraison",
+    description: `Entreprise spécialisée dans les solutions de mobilité au Sénégal recrute un(e) Agent Livreur / Coursier (H/F) pour ses opérations à Dakar.
+
+🎯 MISSIONS & QUALIFICATIONS :
+• Connaissance approfondie des quartiers et itinéraires de Dakar.
+• Maîtrise de la conduite de deux-roues et permis de conduire valide obligatoire.
+• Sens aigu de la ponctualité, rigueur et orientation client.
+• Gestion des livraisons et tracking en temps réel sur smartphone.
+
+🔗 COMMENT POSTULER :
+Déposez votre candidature en ligne :
+https://lnkd.in/dtvb_nU9`,
+    image_url: "/mobilite_senegal_livreur_coursier.jpg",
+    min_education_level: "Permis 2 roues valide",
+    deadline: "2026-09-15",
+    external_link: "https://lnkd.in/dtvb_nU9",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "000d9a92-0af4-4c51-af40-e748db51c89d": {
     id: "000d9a92-0af4-4c51-af40-e748db51c89d",
     title: "Stagiaire Informaticien(ne) - Connaissances ERP Sage & Odoo",

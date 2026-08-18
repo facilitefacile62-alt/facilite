@@ -172,6 +172,75 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "14390fbb-528a-4bd1-bba2-114bead8c2f9",
+    titleFR: "Recrutement Massif BTP : 30 Profils Différents pour Un Grand Projet BTP",
+    titleEN: "Massive Construction Recruitment: 30 Roles for Major BTP Project",
+    company: "ICS Industrial (Société de Placement & BTP)",
+    logoColor: "bg-orange-600 text-white",
+    initials: "BTP",
+    location: "Sénégal (Chantier BTP)",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDD / Plein temps / Chantier",
+    descFR: `Dans le cadre d’un projet d’envergure dans le secteur du BTP, plusieurs profils qualifiés sont recherchés.
+
+🏗️ 30 POSTES À POURVOIR :
+• Santé & Administration : Infirmier(ère)s, Agent douane/transit, Assistant(e) de bureau, Superviseur HSE.
+• Encadrement & Ingénierie : Géomètre, Chefs d’Équipe, Superviseurs Génie Civil, Mécanique, Électrique, Soudage.
+• Maintenance & Flotte : Chef Mécanicien, Mécanicien Engins Lourds, Chef d’Atelier, Coordinateurs.
+• Conducteurs d'Engins : Camion, Porte-engins, Pelle, Bulldozer, Sideboom, Chargeuse, Grutier, Cariste.
+• Support Technique : Tuyauteur, Signaleur (Banksman), Électricien, Échafaudeur, Technicien Instrumentation.
+
+📩 COMMENT POSTULER :
+Envoyez votre dossier de candidature par e-mail : crewcoordinator@icsindustrial.com
+📌 Objet du mail : Candidature [Indiquer le poste souhaité]`,
+    descEN: `Major BTP Construction project is recruiting 30 skilled profiles: HSE, Site Supervisors, Engineers, Heavy Machinery Operators, Mechanics, Welders, Electricians and Administrative staff.
+
+📩 Apply via email: crewcoordinator@icsindustrial.com
+📌 Subject: "Candidature [Position Name]"`,
+    tags: ["BTP", "Grand Projet", "Conducteur d'engins", "Génie Civil", "HSE", "Sénégal"],
+    recruiterEmail: "crewcoordinator@icsindustrial.com",
+    contact_email: "crewcoordinator@icsindustrial.com",
+    externalLink: "mailto:crewcoordinator@icsindustrial.com?subject=Candidature%20%5BIndiquer%20le%20poste%20souhait%C3%A9%5D",
+    image: "/recrutement_massif_btp_30_profils.png",
+    image_url: "/recrutement_massif_btp_30_profils.png",
+    deadline: "2026-09-30",
+    pinned: true
+  },
+  {
+    id: "962a37cc-55ff-422f-87d4-402f096483f4",
+    titleFR: "Offre d'emploi : Agent Livreur / Coursier (H/F)",
+    titleEN: "Delivery Agent / Dispatch Rider (M/F)",
+    company: "Mobilité Sénégal (Solutions de mobilité)",
+    logoColor: "bg-blue-600 text-white",
+    initials: "MOB",
+    location: "Dakar, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI / Plein temps",
+    descFR: `Entreprise spécialisée dans les solutions de mobilité au Sénégal recrute un(e) Agent Livreur / Coursier (H/F).
+
+🎯 MISSIONS & QUALIFICATIONS :
+• Connaissance approfondie des itinéraires et quartiers de Dakar.
+• Maîtrise de la conduite de deux-roues et permis de conduire valide.
+• Sens de la ponctualité, courtoisie et rigueur client.
+• Gestion et suivi des livraisons en temps réel.
+
+🔗 COMMENT POSTULER :
+Déposez votre candidature directement en ligne :
+https://lnkd.in/dtvb_nU9`,
+    descEN: `Mobilité Sénégal is recruiting a Delivery Agent / Courier in Dakar with strong city knowledge and a valid motorcycle license.
+
+🔗 Apply online: https://lnkd.in/dtvb_nU9`,
+    tags: ["Mobilité Sénégal", "Livreur", "Coursier", "Transport", "Dakar"],
+    externalLink: "https://lnkd.in/dtvb_nU9",
+    externalButtonLabel: "Postuler sur le portail de recrutement",
+    image: "/mobilite_senegal_livreur_coursier.jpg",
+    image_url: "/mobilite_senegal_livreur_coursier.jpg",
+    deadline: "2026-09-15",
+    pinned: true
+  },
+  {
     id: "000d9a92-0af4-4c51-af40-e748db51c89d",
     titleFR: "Stagiaire Informaticien(ne) - Connaissances ERP Sage & Odoo",
     titleEN: "IT Intern - Sage & Odoo ERP Systems Knowledge",
