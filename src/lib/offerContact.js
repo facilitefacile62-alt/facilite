@@ -145,6 +145,47 @@ export function buildWhatsAppLink(phoneNumber, offer = {}) {
 }
 
 /**
+ * Extrait toutes les méthodes de contact disponibles pour une offre donnée :
+ * - Email direct (mailto:)
+ * - WhatsApp direct (wa.me)
+ * - Portail web externe (https://...)
+ */
+export function extractOfferContactMethods(offer = {}) {
+  // 1. Détection WhatsApp
+  const phone = detectWhatsAppNumber(offer);
+  const waUrl = phone ? buildWhatsAppLink(phone, offer) : null;
+
+  // 2. Détection Email
+  let emailUrl = null;
+  const emailCandidate = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
+  if (emailCandidate && typeof emailCandidate === "string" && emailCandidate.includes("@")) {
+    const title = offer?.title || offer?.titleFR || "Offre d'emploi";
+    emailUrl = `mailto:${emailCandidate.trim()}?subject=${encodeURIComponent(`Candidature - ${title}`)}`;
+  } else if (typeof offer?.external_link === "string" && offer.external_link.startsWith("mailto:")) {
+    emailUrl = offer.external_link;
+  } else if (typeof offer?.externalLink === "string" && offer.externalLink.startsWith("mailto:")) {
+    emailUrl = offer.externalLink;
+  }
+
+  // 3. Détection Lien Externe (Plateforme Web - non mailto, non whatsapp)
+  let portalUrl = null;
+  const ext = offer?.external_link || offer?.externalLink || offer?.apply_url || offer?.source_url || offer?.url;
+  if (ext && typeof ext === "string" && ext.trim().length > 0 && !ext.startsWith("mailto:") && !ext.includes("wa.me") && !ext.includes("whatsapp")) {
+    portalUrl = ext.trim();
+  }
+
+  const hasBoth = Boolean((emailUrl || portalUrl) && waUrl);
+
+  return {
+    phone,
+    waUrl,
+    emailUrl,
+    portalUrl,
+    hasBoth,
+  };
+}
+
+/**
  * Analyse une offre et détermine l'action de candidature prioritaire :
  * 1. WhatsApp si un numéro est présent
  * 2. Lien externe officiel
@@ -185,6 +226,18 @@ export function resolveOfferAction(offer = {}, options = {}) {
       };
     }
 
+    if (cleanExt.startsWith("mailto:")) {
+      return {
+        type: "email",
+        isWhatsApp: false,
+        url: cleanExt,
+        phoneNumber: null,
+        label: customLabel || "Postuler par Email",
+        buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
+        iconClass: "fa-solid fa-envelope",
+      };
+    }
+
     return {
       type: "external",
       isWhatsApp: false,
@@ -222,3 +275,4 @@ export function resolveOfferAction(offer = {}, options = {}) {
     iconClass: "fa-solid fa-paper-plane",
   };
 }
+

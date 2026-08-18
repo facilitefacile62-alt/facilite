@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { resolveOfferAction } from "@/lib/offerContact";
+import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
 
 const REACTIONS = [
   { id: "like", emoji: "👍", label: "J'aime", color: "text-blue-600", bg: "bg-blue-50" },
@@ -63,7 +63,15 @@ export default function SocialShareButtons({
   const shareUrl = offerId ? `${getBaseUrl()}/offres/${offerId}` : getBaseUrl();
   const shareText = `🚀 Recrutement : ${title} chez ${company} (${contract} - ${location}) sur Facilite.\nDécouvrez l'offre et postulez ici :`;
 
-  // Résolution intelligente et automatique de l'action de candidature (WhatsApp prioritaire si numéro détecté)
+  // Extraction complète de tous les moyens de contact (Email + WhatsApp + Site)
+  const contactMethods = extractOfferContactMethods({
+    ...offer,
+    external_link: externalLink || offer?.external_link || offer?.externalLink,
+    contact_email: offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail,
+    whatsapp: offer?.whatsapp || offer?.contact_whatsapp || offer?.recruiter_phone || offer?.recruiterPhone,
+  });
+
+  // Résolution intelligente et automatique de l'action de candidature principale
   const offerAction = resolveOfferAction(
     {
       ...offer,
@@ -269,8 +277,33 @@ export default function SocialShareButtons({
             <span className="hidden xs:inline">Partager</span>
           </button>
 
-          {/* Bouton 3 : Postuler sur WhatsApp / Site officiel / Facilité */}
-          {effectiveLink ? (
+          {/* Bouton 3 : Double Candidature (Email + WhatsApp) OU Bouton Unique */}
+          {contactMethods.hasBoth ? (
+            <div className="flex-1 flex items-center gap-1.5 min-w-0">
+              <a
+                href={contactMethods.emailUrl || contactMethods.portalUrl}
+                target={(contactMethods.emailUrl || "").startsWith("mailto:") ? "_self" : "_blank"}
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-2 sm:px-3 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-1.5 min-w-0"
+                title="Postuler par Email"
+              >
+                <i className="fa-solid fa-envelope text-xs sm:text-sm"></i>
+                <span className="truncate">Par E-mail</span>
+              </a>
+              <a
+                href={contactMethods.waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 bg-[#25D366] hover:bg-[#20bd5a] active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-2 sm:px-3 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-1.5 min-w-0"
+                title="Postuler sur WhatsApp"
+              >
+                <i className="fa-brands fa-whatsapp text-sm sm:text-base"></i>
+                <span className="truncate">Sur WhatsApp</span>
+              </a>
+            </div>
+          ) : effectiveLink ? (
             <a
               href={effectiveLink}
               target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import ApplyModal from "@/components/ApplyModal";
-import { resolveOfferAction } from "@/lib/offerContact";
+import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
 
 const EDUCATION_LEVELS = ["Aucun", "CM2", "Brevet", "BAC", "Licence", "Master", "Doctorat"];
 const levelRank = (level) => {
@@ -56,7 +56,12 @@ export default function OffreApplySection({ offer }) {
     [offer.id, offer.title, offer.company]
   );
 
-  // Résolution intelligente de l'action de candidature (WhatsApp prioritaire si numéro présent)
+  // Extraction complète de tous les moyens de contact
+  const contactMethods = useMemo(() => {
+    return extractOfferContactMethods(offer);
+  }, [offer]);
+
+  // Résolution intelligente de l'action de candidature principale
   const offerAction = useMemo(() => {
     return resolveOfferAction(offer);
   }, [offer]);
@@ -84,7 +89,28 @@ export default function OffreApplySection({ offer }) {
         </p>
       )}
 
-      {targetUrl ? (
+      {contactMethods.hasBoth ? (
+        <div className="w-full flex flex-col sm:flex-row gap-3">
+          <a
+            href={contactMethods.emailUrl || contactMethods.portalUrl}
+            target={(contactMethods.emailUrl || "").startsWith("mailto:") ? "_self" : "_blank"}
+            rel="noopener noreferrer"
+            className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer"
+          >
+            <i className="fa-solid fa-envelope text-base sm:text-lg"></i>
+            <span>Postuler par E-mail</span>
+          </a>
+          <a
+            href={contactMethods.waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 py-3.5 bg-[#25D366] hover:bg-[#20bd5a] active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-500/25 cursor-pointer"
+          >
+            <i className="fa-brands fa-whatsapp text-lg"></i>
+            <span>Postuler sur WhatsApp</span>
+          </a>
+        </div>
+      ) : targetUrl ? (
         <a
           href={targetUrl}
           target={targetUrl.startsWith("mailto:") ? "_self" : "_blank"}
