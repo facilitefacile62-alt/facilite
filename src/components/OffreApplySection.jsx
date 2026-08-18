@@ -139,67 +139,6 @@ export default function OffreApplySection({ offer }) {
         )}
       </div>
 
-      {/* Barre d'Action Fixe Permanente en Bas de l'Écran (Sticky Bottom CTA Bar) */}
-      <div className="fixed bottom-0 inset-x-0 z-[80] bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200/90 dark:border-gray-800 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-          <div className="hidden sm:flex flex-col min-w-0">
-            <h4 className="text-xs font-black text-gray-900 dark:text-white truncate max-w-md">
-              {offer.title}
-            </h4>
-            <p className="text-[11px] text-gray-500 font-medium truncate">
-              {offer.company} • {offer.location}
-            </p>
-          </div>
-
-          <div className="w-full sm:w-auto flex-1 sm:flex-initial flex items-center gap-2 sm:min-w-[280px]">
-            {contactMethods.hasBoth ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setApplyOpen(true)}
-                  disabled={blocked}
-                  className="flex-1 py-3 px-5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 cursor-pointer disabled:opacity-50"
-                >
-                  <i className="fa-solid fa-paper-plane text-xs"></i>
-                  <span>Postuler via Facilité</span>
-                </button>
-                <a
-                  href={contactMethods.waUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 py-3 px-4 bg-[#25D366] hover:bg-[#20bd5a] active:scale-98 text-white font-black text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-emerald-500/25 cursor-pointer"
-                >
-                  <i className="fa-brands fa-whatsapp text-sm"></i>
-                  <span>WhatsApp</span>
-                </a>
-              </>
-            ) : targetUrl ? (
-              <a
-                href={targetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`w-full py-3 px-6 ${buttonColorClass} active:scale-98 font-black text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-md ${
-                  isWhatsApp ? "shadow-emerald-500/25" : "shadow-blue-600/25"
-                } cursor-pointer`}
-              >
-                <i className={`${buttonIconClass} text-sm`}></i>
-                <span>{buttonLabel}</span>
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setApplyOpen(true)}
-                disabled={blocked}
-                className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <i className="fa-solid fa-paper-plane text-xs"></i>
-                <span>{blocked ? "Niveau insuffisant" : buttonLabel}</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
       <ApplyModal
         isOpen={applyOpen}
         onClose={() => setApplyOpen(false)}

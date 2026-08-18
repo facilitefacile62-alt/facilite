@@ -208,7 +208,7 @@ export default function OffreDetailClient({ initialOffer }) {
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 pt-8 pb-28">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8">
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
           {/* S'il n'est pas en cours d'édition, on affiche l'image de l'offre (Style Facebook propre) */}
           {!isEditing && offer.image_url && (
