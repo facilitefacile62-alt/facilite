@@ -164,6 +164,13 @@ export default function FacturationPage() {
               <span>Mon espace</span>
             </Link>
             <Link
+              href="/candidat/securite"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+            >
+              <i className="fa-solid fa-shield-halved"></i>
+              <span>Sécurité</span>
+            </Link>
+            <Link
               href="/messagerie"
               className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 relative"
             >

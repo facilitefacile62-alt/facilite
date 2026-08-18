@@ -225,6 +225,13 @@ export default function CandidatDashboardPage() {
               >
                 <span>⚡ L'Extracteur 1-Click</span>
               </Link>
+              <Link
+                href="/candidat/securite"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-extrabold rounded-xl transition flex items-center space-x-1.5"
+              >
+                <i className="fa-solid fa-shield-halved"></i>
+                <span>Sécurité</span>
+              </Link>
             </div>
           </div>
 

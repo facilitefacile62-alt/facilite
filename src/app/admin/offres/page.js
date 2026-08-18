@@ -6,11 +6,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
+import SocialShareButtons from "@/components/SocialShareButtons";
+import OfferImageWatermark from "@/components/OfferImageWatermark";
+import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
 
 const EMPTY_OFFER = {
   title: "",
   company: "",
-  location: "",
+  location: "Sénégal",
   contract_type: "CDI",
   salary_range: "",
   min_education_level: "Aucun",
@@ -28,18 +31,35 @@ export default function AdminOffresPage() {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // État des offres existantes
   const [allOffers, setAllOffers] = useState([]);
-  
+  const [searchFilter, setSearchFilter] = useState("");
+
+  // Mode de publication : "ai_scanner" | "manual"
+  const [publishMode, setPublishMode] = useState("ai_scanner");
+
+  // Formulaire de l'offre
   const [offerForm, setOfferForm] = useState(EMPTY_OFFER);
   const [offerImageFile, setOfferImageFile] = useState(null);
   const [offerImagePreview, setOfferImagePreview] = useState(null);
+
+  // États du Scanner IA
+  const [isScanningAI, setIsScanningAI] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
+  const [scanMessage, setScanMessage] = useState("");
   const [savingOffer, setSavingOffer] = useState(false);
 
-  const [toast, setToast] = useState("");
-  const triggerToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3000);
+  // Modal d'agrandissement d'image
+  const [viewImageModal, setViewImageModal] = useState({ isOpen: false, url: null });
+
+  // Toast
+  const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-check" });
+  const triggerToast = (message, icon = "fa-circle-check") => {
+    setToast({ show: true, message, icon });
+    setTimeout(() => setToast({ show: false, message: "", icon: "fa-circle-info" }), 3500);
   };
+
+  const fileDropInputRef = useRef(null);
 
   async function loadAdminData() {
     try {
@@ -100,11 +120,92 @@ export default function AdminOffresPage() {
     };
   }, []);
 
-  const handleOfferImageChange = (e) => {
+  // Gestion du téléversement de fichier affiche
+  const handleFileDropSelect = (file) => {
+    if (!file) return;
+    setOfferImageFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setOfferImagePreview(previewUrl);
+    setScanSuccess(false);
+    setScanMessage("");
+
+    // Si on est en mode Scanner IA, lancer automatiquement l'extraction
+    if (publishMode === "ai_scanner") {
+      runAIScanner(file);
+    }
+  };
+
+  const handleFileInputChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setOfferImageFile(file);
-      setOfferImagePreview(URL.createObjectURL(file));
+      handleFileDropSelect(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileDropSelect(e.dataTransfer.files[0]);
+    }
+  };
+
+  // Exécution du Scanner IA
+  const runAIScanner = async (fileToScan = offerImageFile) => {
+    if (!fileToScan) {
+      triggerToast("Veuillez d'abord déposer une affiche d'offre.", "fa-triangle-exclamation");
+      return;
+    }
+
+    setIsScanningAI(true);
+    setScanSuccess(false);
+    setScanMessage("Analyse et extraction automatique par l'IA en cours...");
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const formData = new FormData();
+      formData.append("file", fileToScan);
+
+      const res = await fetch("/api/admin/extract-job-poster", {
+        method: "POST",
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.offer) {
+        const extracted = data.offer;
+        setOfferForm({
+          title: extracted.title || "",
+          company: extracted.company || "",
+          location: extracted.location || "Sénégal",
+          contract_type: extracted.contract_type || "CDI",
+          salary_range: extracted.salary_range || "",
+          min_education_level: extracted.min_education_level || "Aucun",
+          description: extracted.description || "",
+          image_url: extracted.image_url || offerForm.image_url || "",
+          deadline: extracted.deadline || "",
+          contact_email: extracted.contact_email || "",
+          contact_phone: extracted.contact_phone || "",
+          external_link: extracted.external_link || "",
+        });
+
+        setScanSuccess(true);
+        setScanMessage("✨ Affiche scannée et formulaire pré-rempli avec succès par l'IA !");
+        triggerToast("Informations extraites par l'IA !", "fa-wand-magic-sparkles");
+      } else {
+        setScanMessage(data.error || "L'IA n'a pas pu extraire toutes les informations. Vous pouvez compléter le formulaire.");
+        triggerToast(data.error || "Extraction partielle.", "fa-triangle-exclamation");
+      }
+    } catch (err) {
+      console.error("Erreur Scanner IA:", err);
+      setScanMessage("Erreur réseau lors de l'analyse.");
+      triggerToast("Erreur lors de l'analyse IA.", "fa-circle-xmark");
+    } finally {
+      setIsScanningAI(false);
     }
   };
 
@@ -112,17 +213,27 @@ export default function AdminOffresPage() {
     setOfferImageFile(null);
     setOfferImagePreview(null);
     setOfferForm((prev) => ({ ...prev, image_url: "" }));
+    setScanSuccess(false);
+    setScanMessage("");
   };
 
+  // Soumission et Publication directe sur le Fil d'Actualité
   const handleSubmitOffer = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!userSession?.user?.id) return;
+
+    if (!offerForm.title || !offerForm.company) {
+      triggerToast("Le titre du poste et l'entreprise sont obligatoires.", "fa-triangle-exclamation");
+      return;
+    }
+
     setSavingOffer(true);
 
     try {
       let imageUrl = offerForm.image_url || "";
 
-      if (offerImageFile) {
+      // Si l'image n'est pas encore téléversée sur Supabase Storage
+      if (offerImageFile && (!imageUrl || imageUrl.startsWith("blob:"))) {
         const ext = offerImageFile.name.split(".").pop().toLowerCase();
         const storagePath = `${userSession.user.id}/admin-offers-${Date.now()}.${ext}`;
 
@@ -130,37 +241,73 @@ export default function AdminOffresPage() {
           .from("job-offers")
           .upload(storagePath, offerImageFile, { contentType: offerImageFile.type });
 
-        if (uploadError) {
-          triggerToast("Erreur lors du téléversement de l'image.");
-          console.error("Storage upload error:", uploadError);
-          setSavingOffer(false);
-          return;
+        if (!uploadError) {
+          const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
+          imageUrl = publicUrlData?.publicUrl || "";
         }
-
-        const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
-        imageUrl = publicUrlData?.publicUrl || "";
       }
 
-      const payload = { ...offerForm, image_url: imageUrl, deadline: offerForm.deadline || null, status: 'approved' }; // Direct approval for admin
+      // Si un numéro WhatsApp / Téléphone est renseigné et aucun lien externe défini, générer le lien wa.me
+      let externalLink = offerForm.external_link || "";
+      const phoneDigits = detectWhatsAppNumber({
+        contact_phone: offerForm.contact_phone,
+        description: offerForm.description,
+        title: offerForm.title,
+        company: offerForm.company,
+      });
 
-      const { data, error } = await supabase
-        .from("job_offers")
-        .insert({ ...payload, recruiter_id: userSession.user.id })
-        .select()
-        .single();
+      if (phoneDigits && (!externalLink || externalLink.includes("wa.me"))) {
+        externalLink = buildWhatsAppLink(phoneDigits, {
+          title: offerForm.title,
+          company: offerForm.company,
+        });
+      }
 
-      if (error) {
-        triggerToast("Erreur lors de la publication de l'offre.");
-        console.error(error);
+      const payload = {
+        title: offerForm.title.trim(),
+        company: offerForm.company.trim(),
+        location: offerForm.location.trim() || "Sénégal",
+        contract_type: offerForm.contract_type || "CDI",
+        salary_range: offerForm.salary_range || null,
+        min_education_level: offerForm.min_education_level || "Aucun",
+        description: offerForm.description || "",
+        image_url: imageUrl || null,
+        deadline: offerForm.deadline || null,
+        contact_email: offerForm.contact_email ? offerForm.contact_email.trim() : null,
+        contact_phone: offerForm.contact_phone ? offerForm.contact_phone.trim() : (phoneDigits ? `+${phoneDigits}` : null),
+        external_link: externalLink || null,
+        status: "approved",
+        is_active: true,
+        recruiter_id: userSession.user.id,
+      };
+
+      const res = await fetch("/api/admin/publish-offer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userSession.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json();
+
+      if (!resData.success) {
+        triggerToast(resData.error || "Erreur lors de la publication de l'offre.", "fa-circle-xmark");
+        console.error(resData);
       } else {
-        setAllOffers((prev) => [data, ...prev]);
-        triggerToast("Offre publiée avec succès !");
+        setAllOffers((prev) => [resData.offer, ...prev]);
+        triggerToast("🎉 Offre publiée en direct sur le Fil d'Actualité !", "fa-bullhorn");
+        
+        // Reset
         setOfferForm(EMPTY_OFFER);
         setOfferImageFile(null);
         setOfferImagePreview(null);
+        setScanSuccess(false);
+        setScanMessage("");
       }
     } catch (err) {
-      triggerToast("Une erreur est survenue.");
+      triggerToast("Une erreur est survenue.", "fa-circle-xmark");
       console.error(err);
     } finally {
       setSavingOffer(false);
@@ -176,31 +323,51 @@ export default function AdminOffresPage() {
       .eq("id", offer.id);
 
     if (error) {
-      triggerToast("Erreur modification statut.");
+      triggerToast("Erreur modification statut.", "fa-circle-xmark");
       return;
     }
     setAllOffers((prev) => prev.map((o) => (o.id === offer.id ? { ...o, is_active: nextActive } : o)));
-    triggerToast(nextActive ? "Offre réactivée." : "Offre désactivée.");
+    triggerToast(nextActive ? "Offre activée et visible sur le fil." : "Offre masquée du fil d'actualité.");
   };
 
   const handleDeleteOffer = async (offerId) => {
-    if (!window.confirm("Archiver définitivement cette offre ?")) return;
-    const { error } = await supabase.from("job_offers").update({ status: 'archived', is_active: false }).eq("id", offerId);
-    
+    if (!window.confirm("Voulez-vous vraiment archiver cette offre ?")) return;
+    const { error } = await supabase
+      .from("job_offers")
+      .update({ status: "archived", is_active: false })
+      .eq("id", offerId);
+
     if (error) {
-      triggerToast("Erreur lors de l'archivage.");
+      triggerToast("Erreur lors de l'archivage.", "fa-circle-xmark");
       return;
     }
-    setAllOffers((prev) => prev.map((o) => (o.id === offerId ? { ...o, status: 'archived', is_active: false } : o)));
+    setAllOffers((prev) => prev.map((o) => (o.id === offerId ? { ...o, status: "archived", is_active: false } : o)));
     triggerToast("Offre archivée.");
   };
+
+  const filteredOffers = allOffers.filter((o) => {
+    if (!searchFilter.trim()) return true;
+    const q = searchFilter.toLowerCase();
+    return (
+      (o.title || "").toLowerCase().includes(q) ||
+      (o.company || "").toLowerCase().includes(q) ||
+      (o.location || "").toLowerCase().includes(q)
+    );
+  });
+
+  const detectedPhoneOnForm = detectWhatsAppNumber({
+    contact_phone: offerForm.contact_phone,
+    description: offerForm.description,
+    title: offerForm.title,
+    company: offerForm.company,
+  });
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF6F1] flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm font-bold text-gray-700">Chargement des Offres...</p>
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm font-extrabold text-gray-700">Initialisation du Publieur d'Offres...</p>
         </div>
       </div>
     );
@@ -208,265 +375,622 @@ export default function AdminOffresPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col">
-      {/* Toast */}
-      {toast && (
-        <div className="fixed top-20 right-4 z-[700] bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl animate-fade-in-down">
-          <span className="text-sm font-semibold">{toast}</span>
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-20 right-4 z-[700] bg-gray-950 text-white px-5 py-3 rounded-2xl shadow-2xl animate-fade-in-down flex items-center space-x-3 border border-gray-800">
+          <i className={`fa-solid ${toast.icon} text-emerald-400 text-base`}></i>
+          <span className="text-sm font-bold">{toast.message}</span>
         </div>
       )}
 
-      {/* HEADER TIRE DU DASHBOARD ADMIN */}
+      {/* HEADER PRINCIPAL */}
       <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2">
               <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold text-gray-900 tracking-tight hidden sm:inline">Facilite</span>
+              <span className="text-xl font-black text-gray-900 tracking-tight hidden sm:inline">Facilite</span>
             </Link>
             <RoleBadge role={userRole} />
+            <span className="hidden md:inline-block px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+              ⚡ Publieur IA
+            </span>
           </div>
-          <div className="flex items-center space-x-2 sm:space-x-4">
+
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <Link
+              href="/"
+              target="_blank"
+              className="text-xs font-extrabold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
+              title="Voir le fil d'actualité en direct"
+            >
+              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+              <span className="hidden sm:inline">Voir le Fil en direct</span>
+            </Link>
             <Link
               href="/admin"
-              className="text-xs font-bold text-gray-700 hover:text-amber-700 bg-gray-100 hover:bg-amber-50 px-3 py-2 rounded-xl transition flex items-center space-x-1.5"
+              className="text-xs font-extrabold text-gray-700 hover:text-amber-700 bg-gray-100 hover:bg-amber-50 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5"
             >
-              <i className="fa-solid fa-arrow-left"></i>
-              <span className="hidden md:inline">Retour Admin</span>
+              <i className="fa-solid fa-arrow-left text-xs"></i>
+              <span className="hidden md:inline">Dashboard Admin</span>
             </Link>
             <button
               onClick={handleGlobalSignOut}
-              className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-xl transition flex items-center space-x-1"
+              className="text-xs font-extrabold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-xl transition flex items-center space-x-1"
             >
               <i className="fa-solid fa-right-from-bracket"></i>
-              <span className="hidden md:inline">Déconnexion</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* CONTENU PRINCIPAL */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8 flex-1 w-full flex flex-col">
-        <div className="mb-6 sticky top-16 pt-6 pb-4 bg-[#FAF6F1] z-40 -mt-6">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-            Gestion des Offres d'Emploi
-          </h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">Gérez le fil d'actualité et ajoutez de nouvelles offres.</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 flex-1 w-full flex flex-col space-y-8">
+        
+        {/* Titre & Sélecteur de Mode */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-200/90 shadow-xs">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <span className="p-2.5 bg-gradient-to-tr from-[#10E688] to-emerald-600 text-gray-950 rounded-2xl text-lg shadow-sm font-black">
+                📢
+              </span>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-gray-950 tracking-tight">
+                  Publieur d'Offres d'Emploi & Scanner IA
+                </h1>
+                <p className="text-xs text-gray-500 font-medium">
+                  Glissez une affiche de recrutement : l'IA extrait tout automatiquement et prépare la publication en 1 clic.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center bg-gray-100 p-1.5 rounded-2xl border border-gray-200">
+            <button
+              type="button"
+              onClick={() => setPublishMode("ai_scanner")}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+                publishMode === "ai_scanner"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-gray-700 hover:text-gray-950"
+              }`}
+            >
+              <i className="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Scanner Affiche IA</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPublishMode("manual")}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+                publishMode === "manual"
+                  ? "bg-gray-900 text-white shadow-sm"
+                  : "text-gray-700 hover:text-gray-950"
+              }`}
+            >
+              <i className="fa-solid fa-pen-to-square"></i>
+              <span>Saisie Manuelle</span>
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-          {/* FORMULAIRE DE PUBLICATION */}
-          <div className="xl:col-span-5 bg-white rounded-3xl border border-gray-200 shadow-sm relative xl:sticky xl:top-44 max-h-[calc(100vh-2rem)] xl:max-h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar">
-            <div className="sticky top-0 bg-white z-20 p-6 sm:p-8 border-b border-gray-100">
-              <h2 className="text-lg font-extrabold text-gray-900">Nouvelle Offre d'Emploi</h2>
+        {/* SECTION 1 : ZONE DE PUBLICATION (DRAG & DROP + IA + FORMULAIRE + LIVE PREVIEW) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Colonne Gauche : Formulaire & Zone de Scanner IA */}
+          <div className="lg:col-span-7 bg-white rounded-3xl border border-gray-200/90 shadow-sm p-6 sm:p-8 space-y-6">
+            
+            {/* Zone Drag & Drop de l'Affiche */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-extrabold text-gray-900 flex items-center gap-1.5">
+                  <i className="fa-solid fa-image text-emerald-600"></i>
+                  <span>Affiche de l'offre / Image de recrutement</span>
+                </label>
+                {offerImagePreview && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveOfferImage}
+                    className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <i className="fa-solid fa-trash-can"></i>
+                    <span>Supprimer l'image</span>
+                  </button>
+                )}
+              </div>
+
+              {!offerImagePreview ? (
+                <div
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onClick={() => fileDropInputRef.current?.click()}
+                  className="relative group border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50/80 rounded-3xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center space-y-3"
+                >
+                  <input
+                    ref={fileDropInputRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform">
+                    <i className="fa-solid fa-cloud-arrow-up"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-gray-900">
+                      Glissez-déposez l'affiche ici, ou cliquez pour parcourir
+                    </h3>
+                    <p className="text-[11px] text-gray-500 font-medium mt-1">
+                      Formats supportés : JPG, PNG, WEBP, PDF (l'IA analysera automatiquement le texte)
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white text-emerald-800 text-[11px] font-extrabold rounded-full border border-emerald-200 shadow-2xs">
+                    <i className="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
+                    <span>Extraction automatique en 1 seconde</span>
+                  </span>
+                </div>
+              ) : (
+                /* Aperçu de l'Affiche avec Laser Scanner IA */
+                <div className="relative rounded-3xl overflow-hidden border border-gray-200 bg-gray-950 flex flex-col items-center group">
+                  <div className="relative w-full max-h-[360px] flex items-center justify-center overflow-hidden">
+                    <img
+                      src={offerImagePreview || offerForm.image_url}
+                      alt="Affiche scannée"
+                      className="max-h-[360px] w-auto object-contain transition group-hover:scale-[1.01]"
+                    />
+                    
+                    {/* Animation Laser Scanner IA */}
+                    {isScanningAI && (
+                      <div className="absolute inset-0 bg-emerald-950/40 backdrop-blur-xs flex flex-col items-center justify-center text-white z-30">
+                        <div className="w-full h-1 bg-gradient-to-r from-transparent via-[#10E688] to-transparent absolute top-0 animate-bounce"></div>
+                        <div className="w-12 h-12 border-4 border-[#10E688] border-t-transparent rounded-full animate-spin mb-3"></div>
+                        <p className="text-xs font-black text-[#10E688] uppercase tracking-wider animate-pulse">
+                          Extraction IA en cours...
+                        </p>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setViewImageModal({ isOpen: true, url: offerImagePreview || offerForm.image_url })}
+                      className="absolute bottom-3 right-3 bg-black/70 hover:bg-black text-white text-[11px] font-bold px-3 py-1.5 rounded-xl backdrop-blur-xs flex items-center gap-1.5 shadow-md cursor-pointer"
+                    >
+                      <i className="fa-solid fa-magnifying-glass-plus"></i>
+                      <span>Agrandir</span>
+                    </button>
+                  </div>
+
+                  {/* Barre d'action Scanner sous l'image */}
+                  <div className="w-full bg-gray-900 p-3 px-4 flex items-center justify-between border-t border-gray-800">
+                    <div className="flex items-center space-x-2 text-xs font-bold text-gray-300">
+                      <i className="fa-solid fa-check text-emerald-400"></i>
+                      <span>Affiche prête</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isScanningAI}
+                      onClick={() => runAIScanner()}
+                      className="px-4 py-1.5 bg-[#10E688] hover:bg-[#0fd57d] disabled:opacity-50 text-gray-950 text-xs font-black rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <i className="fa-solid fa-rotate text-[11px]"></i>
+                      <span>Ré-analyser par IA</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            <form onSubmit={handleSubmitOffer} className="p-6 sm:p-8 pt-6 space-y-6">
-              <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Titre du poste *</label>
+
+            {/* Message de statut du Scanner */}
+            {scanMessage && (
+              <div
+                className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 ${
+                  scanSuccess
+                    ? "bg-emerald-50 text-emerald-900 border border-emerald-200"
+                    : "bg-amber-50 text-amber-900 border border-amber-200"
+                }`}
+              >
+                <i
+                  className={`fa-solid ${
+                    scanSuccess ? "fa-circle-check text-emerald-600 text-base" : "fa-triangle-exclamation text-amber-600 text-base"
+                  }`}
+                ></i>
+                <span>{scanMessage}</span>
+              </div>
+            )}
+
+            {/* Formulaire des Informations de l'Offre */}
+            <form onSubmit={handleSubmitOffer} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Titre */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1">
+                    Titre du poste ou de l'offre *
+                  </label>
                   <input
                     type="text"
-                    
+                    required
                     value={offerForm.title}
                     onChange={(e) => setOfferForm({ ...offerForm, title: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
-                    placeholder="Ex: Développeur React"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
+                    placeholder="Ex: CASTING : FAMILLE HALPULAR (EVENPROD)"
                   />
                 </div>
+
+                {/* Entreprise */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Entreprise *</label>
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1">
+                    Entreprise / Organisation *
+                  </label>
                   <input
                     type="text"
-                    
+                    required
                     value={offerForm.company}
                     onChange={(e) => setOfferForm({ ...offerForm, company: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
+                    placeholder="Ex: EvenProd"
                   />
                 </div>
+
+                {/* Lieu */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Lieu *</label>
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1">Localisation</label>
                   <input
                     type="text"
-                    
                     value={offerForm.location}
                     onChange={(e) => setOfferForm({ ...offerForm, location: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
+                    placeholder="Ex: Dakar, Sénégal"
                   />
                 </div>
+
+                {/* Contrat */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Type de contrat</label>
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1">Type de contrat</label>
                   <select
                     value={offerForm.contract_type}
                     onChange={(e) => setOfferForm({ ...offerForm, contract_type: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
                   >
                     <option value="CDI">CDI</option>
                     <option value="CDD">CDD</option>
                     <option value="Stage">Stage</option>
+                    <option value="Casting / Tournage">Casting / Tournage</option>
                     <option value="Freelance">Freelance</option>
                     <option value="Intérim">Intérim</option>
+                    <option value="Bourse d'études">Bourse d'études</option>
+                    <option value="Concours / Fonction Publique">Concours / Fonction Publique</option>
+                    <option value="Plein Temps">Plein Temps</option>
                   </select>
                 </div>
+
+                {/* Date limite */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Date limite (optionnel)</label>
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1">Date limite (optionnel)</label>
                   <input
                     type="date"
                     value={offerForm.deadline}
                     onChange={(e) => setOfferForm({ ...offerForm, deadline: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
                   />
                 </div>
+
+                {/* Téléphone / WhatsApp */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Email du recruteur (optionnel)</label>
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1 flex items-center justify-between">
+                    <span>Téléphone / WhatsApp</span>
+                    {detectedPhoneOnForm && (
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
+                        <i className="fa-brands fa-whatsapp mr-1"></i> WhatsApp Détecté
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    value={offerForm.contact_phone}
+                    onChange={(e) => setOfferForm({ ...offerForm, contact_phone: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
+                    placeholder="Ex: +221 77 717 73 73"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1">Email recruteur (optionnel)</label>
                   <input
                     type="email"
                     value={offerForm.contact_email}
                     onChange={(e) => setOfferForm({ ...offerForm, contact_email: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
-                    placeholder="Ex: recrutement@entreprise.com"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
+                    placeholder="Ex: recrutement@evenprod.sn"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Téléphone du recruteur (optionnel)</label>
-                  <input
-                    type="tel"
-                    value={offerForm.contact_phone}
-                    onChange={(e) => setOfferForm({ ...offerForm, contact_phone: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
-                    placeholder="Ex: 06 12 34 56 78"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Lien externe / Site web (optionnel)</label>
+
+                {/* Lien externe */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1">
+                    Lien externe officiel / WhatsApp URL (optionnel)
+                  </label>
                   <input
                     type="url"
                     value={offerForm.external_link}
                     onChange={(e) => setOfferForm({ ...offerForm, external_link: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
-                    placeholder="Ex: https://entreprise.com/carrieres"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
+                    placeholder="Ex: https://wa.me/221777177373 ou https://mirador..."
                   />
                 </div>
               </div>
-              
+
+              {/* Description */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Description *</label>
+                <label className="block text-xs font-extrabold text-gray-700 mb-1">Description de l'offre *</label>
                 <textarea
-                  
-                  rows={4}
+                  rows={5}
+                  required
                   value={offerForm.description}
                   onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-amber-500 transition"
-                  placeholder="Décrivez les missions, le profil recherché..."
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-normal text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition leading-relaxed"
+                  placeholder="Décrivez les missions, le profil recherché et les instructions de candidature..."
                 ></textarea>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-2">Image d'illustration (optionnel)</label>
-                <div className="flex items-center space-x-4">
-                  {(offerImagePreview || offerForm.image_url) && (
-                    <div className="relative w-24 h-24 rounded-xl border-2 border-gray-100 overflow-hidden shrink-0">
-                      <img src={offerImagePreview || offerForm.image_url} alt="Aperçu" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={handleRemoveOfferImage}
-                        className="absolute top-1 right-1 w-6 h-6 bg-white/90 text-red-600 rounded-full flex items-center justify-center shadow-sm"
-                      >
-                        <i className="fa-solid fa-xmark text-xs"></i>
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      id="admin-offer-image"
-                      onChange={handleOfferImageChange}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="admin-offer-image"
-                      className="inline-flex items-center justify-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition cursor-pointer border border-gray-200"
-                    >
-                      <i className="fa-solid fa-camera mr-2"></i> Choisir une image
-                    </label>
-                  </div>
-                </div>
-              </div>
+              {/* Bouton de Publication 1-Clic */}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOfferForm(EMPTY_OFFER);
+                    setOfferImageFile(null);
+                    setOfferImagePreview(null);
+                  }}
+                  className="text-xs font-bold text-gray-500 hover:text-gray-800 transition"
+                >
+                  Réinitialiser
+                </button>
 
-              <div className="flex justify-end pt-4 border-t border-gray-100">
                 <button
                   type="submit"
-                  disabled={savingOffer}
-                  className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-extrabold rounded-xl transition shadow-md"
+                  disabled={savingOffer || isScanningAI}
+                  className="px-6 py-3.5 bg-gradient-to-r from-[#10E688] to-emerald-600 hover:from-[#0fd57d] hover:to-emerald-700 disabled:opacity-50 text-gray-950 font-black text-sm rounded-2xl transition shadow-md shadow-emerald-500/20 flex items-center gap-2 cursor-pointer active:scale-98"
                 >
-                  {savingOffer ? "Publication en cours..." : "Publier l'offre"}
+                  <i className={`fa-solid ${savingOffer ? "fa-spinner fa-spin" : "fa-paper-plane"}`}></i>
+                  <span>{savingOffer ? "Publication en cours..." : "🚀 Publier sur le Fil d'Actualité"}</span>
                 </button>
               </div>
             </form>
           </div>
 
-          {/* LISTE DES OFFRES */}
-          <div className="xl:col-span-7 bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden relative xl:sticky xl:top-44 max-h-[calc(100vh-2rem)] xl:max-h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar">
-             <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-20 shadow-sm">
-             <div>
-               <h2 className="text-lg font-extrabold text-gray-900">Toutes les offres ({allOffers.length})</h2>
-               <p className="text-xs text-gray-500 font-medium mt-0.5">Offres dynamiques provenant de la base de données</p>
-             </div>
-           </div>
-           
-           {allOffers.length === 0 ? (
-             <div className="p-12 text-center text-gray-400 italic text-sm">
-               Aucune offre d'emploi trouvée dans la base de données.
-             </div>
-           ) : (
-             <div className="divide-y divide-gray-100">
-               {allOffers.map((offer) => (
-                 <div key={offer.id} className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 transition">
-                   <div className="flex items-start space-x-4">
-                     <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                       <i className="fa-solid fa-briefcase"></i>
-                     </div>
-                     <div>
-                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                         <h3 className="text-sm font-extrabold text-gray-900">{offer.title}</h3>
-                         {!offer.is_active && (
-                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600">Désactivée</span>
-                         )}
-                         {offer.status === 'archived' && (
-                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">Archivée</span>
-                         )}
-                       </div>
-                       <p className="text-xs font-bold text-gray-600">{offer.company}</p>
-                       <p className="text-[11px] text-gray-400 mt-1 flex items-center">
-                         <i className="fa-solid fa-location-dot mr-1"></i> {offer.location}
-                         <span className="mx-2">•</span>
-                         <i className="fa-regular fa-clock mr-1"></i> Ajoutée le {new Date(offer.created_at).toLocaleDateString("fr-FR")}
-                       </p>
-                     </div>
-                   </div>
-                   <div className="flex items-center gap-2 shrink-0">
-                     <button
-                       onClick={() => handleToggleOfferActive(offer)}
-                       className={`w-9 h-9 rounded-xl flex items-center justify-center transition border ${offer.is_active ? 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}`}
-                       title={offer.is_active ? "Désactiver" : "Activer"}
-                     >
-                       <i className={`fa-solid ${offer.is_active ? 'fa-eye' : 'fa-eye-slash'}`}></i>
-                     </button>
-                     <button
-                       onClick={() => handleDeleteOffer(offer.id)}
-                       disabled={offer.status === 'archived'}
-                       className="w-9 h-9 rounded-xl bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 flex items-center justify-center transition disabled:opacity-50"
-                       title="Archiver l'offre"
-                     >
-                       <i className="fa-regular fa-trash-can"></i>
-                     </button>
-                   </div>
-                 </div>
-               ))}
-             </div>
-           )}
+          {/* Colonne Droite : Prévisualisation en Direct (Live Feed Preview) */}
+          <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-24">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                <i className="fa-solid fa-eye text-emerald-600"></i>
+                <span>Aperçu en Direct sur le Fil</span>
+              </span>
+              <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full">
+                Rendu 1:1 Candidats
+              </span>
+            </div>
+
+            {/* Carte Prévisualisée façon Feed */}
+            <div className="bg-white rounded-3xl border border-gray-200 p-5 shadow-md space-y-3">
+              {/* Header Post */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-extrabold text-xs shadow-2xs flex-shrink-0">
+                  {offerForm.company ? offerForm.company.substring(0, 2).toUpperCase() : "CO"}
+                </div>
+                <div className="flex-grow min-w-0">
+                  <p className="text-sm font-extrabold text-gray-900 truncate">
+                    {offerForm.company || "Nom de l'entreprise"}
+                  </p>
+                  <div className="text-[11px] text-gray-500 font-medium flex items-center gap-1">
+                    <span>À l'instant</span>
+                    <span>·</span>
+                    <i className="fa-solid fa-earth-africa text-[9px]" title="Offre publique"></i>
+                  </div>
+                </div>
+              </div>
+
+              {/* Titre & Sous-titre */}
+              <div>
+                <h4 className="text-sm sm:text-base font-extrabold text-gray-900 leading-snug break-words">
+                  {offerForm.title || "Titre de l'offre d'emploi"}
+                </h4>
+                <p className="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5 flex-wrap">
+                  <span>{offerForm.location || "Sénégal"}</span>
+                  <span>·</span>
+                  <span>Opportunité</span>
+                  <span>·</span>
+                  <span>{offerForm.contract_type || "CDI"}</span>
+                  {offerForm.deadline && (
+                    <>
+                      <span>·</span>
+                      <span>Jusqu'au {offerForm.deadline}</span>
+                    </>
+                  )}
+                </p>
+              </div>
+
+              {/* Description */}
+              <div className="text-xs text-gray-700 font-normal leading-relaxed whitespace-pre-line max-h-36 overflow-y-auto custom-scrollbar">
+                {offerForm.description || "La description détaillée de votre offre apparaîtra ici avec ses emojis et sa mise en page."}
+              </div>
+
+              {/* Affiche Visuelle */}
+              {(offerImagePreview || offerForm.image_url) && (
+                <div className="relative w-full rounded-2xl overflow-hidden bg-gray-950 border border-gray-200 flex items-center justify-center min-h-[180px] max-h-[300px]">
+                  <img
+                    src={offerImagePreview || offerForm.image_url}
+                    alt="Aperçu"
+                    className="w-full h-auto max-h-[300px] object-contain mx-auto block"
+                  />
+                  <OfferImageWatermark />
+                </div>
+              )}
+
+              {/* Bouton d'action calculé par le moteur de contact */}
+              <div className="pt-2">
+                <SocialShareButtons
+                  offer={{
+                    id: "preview-id",
+                    title: offerForm.title || "Offre d'emploi",
+                    company: offerForm.company || "Entreprise",
+                    location: offerForm.location || "Sénégal",
+                    contract: offerForm.contract_type || "CDI",
+                    description: offerForm.description,
+                    contact_phone: offerForm.contact_phone,
+                    contact_email: offerForm.contact_email,
+                    external_link: offerForm.external_link,
+                  }}
+                  variant="feed"
+                  onApply={() => triggerToast("Prévisualisation : le candidat sera redirigé vers ce lien.")}
+                  onToast={triggerToast}
+                />
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* SECTION 2 : TOUTES LES OFFRES EN BASE DE DONNÉES */}
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+            <div>
+              <h2 className="text-lg font-black text-gray-950">
+                Offres d'Emploi en Base de Données ({filteredOffers.length})
+              </h2>
+              <p className="text-xs text-gray-500 font-medium">
+                Gérez, activez ou archivez les offres visibles par tous les candidats.
+              </p>
+            </div>
+
+            {/* Barre de recherche locale */}
+            <div className="relative w-full sm:w-72">
+              <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+              <input
+                type="text"
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                placeholder="Rechercher une offre..."
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
+              />
+            </div>
+          </div>
+
+          {filteredOffers.length === 0 ? (
+            <div className="p-12 text-center text-gray-400 italic text-sm">
+              Aucune offre d'emploi ne correspond à vos critères.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredOffers.map((offer) => (
+                <div
+                  key={offer.id}
+                  className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/80 rounded-2xl px-3 transition"
+                >
+                  <div className="flex items-start space-x-3.5">
+                    {offer.image_url ? (
+                      <img
+                        src={offer.image_url}
+                        alt={offer.title}
+                        className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0 shadow-2xs"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center shrink-0">
+                        {offer.company ? offer.company.substring(0, 2).toUpperCase() : "CO"}
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="text-sm font-black text-gray-900">{offer.title}</h3>
+                        {!offer.is_active && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-700">
+                            Désactivée
+                          </span>
+                        )}
+                        {offer.status === "archived" && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-200 text-gray-700">
+                            Archivée
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-bold text-gray-600">
+                        {offer.company} — <span className="text-emerald-700">{offer.contract_type || "CDI"}</span>
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-2">
+                        <span>
+                          <i className="fa-solid fa-location-dot mr-1"></i> {offer.location || "Sénégal"}
+                        </span>
+                        <span>•</span>
+                        <span>
+                          <i className="fa-regular fa-clock mr-1"></i> {new Date(offer.created_at).toLocaleDateString("fr-FR")}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      href={`/offres/${offer.id}`}
+                      target="_blank"
+                      className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 border border-gray-200 flex items-center justify-center transition"
+                      title="Voir la fiche détaillée"
+                    >
+                      <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleOfferActive(offer)}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition border ${
+                        offer.is_active
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                          : "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200"
+                      }`}
+                      title={offer.is_active ? "Masquer du fil" : "Rendre visible sur le fil"}
+                    >
+                      <i className={`fa-solid ${offer.is_active ? "fa-eye" : "fa-eye-slash"} text-xs`}></i>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOffer(offer.id)}
+                      disabled={offer.status === "archived"}
+                      className="w-9 h-9 rounded-xl bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 flex items-center justify-center transition disabled:opacity-40"
+                      title="Archiver l'offre"
+                    >
+                      <i className="fa-regular fa-trash-can text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
+
+      {/* Modal Agrandissement d'Image */}
+      {viewImageModal.isOpen && (
+        <div
+          className="fixed inset-0 z-[800] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setViewImageModal({ isOpen: false, url: null })}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-gray-950 rounded-3xl p-2 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setViewImageModal({ isOpen: false, url: null })}
+              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-sm shadow-md transition cursor-pointer"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+            <img
+              src={viewImageModal.url}
+              alt="Affiche en grand"
+              className="max-h-[85vh] w-auto object-contain mx-auto rounded-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import ApplyModal from "@/components/ApplyModal";
+import { resolveOfferAction } from "@/lib/offerContact";
 
 const EDUCATION_LEVELS = ["Aucun", "CM2", "Brevet", "BAC", "Licence", "Master", "Doctorat"];
 const levelRank = (level) => {
@@ -44,12 +45,7 @@ export default function OffreApplySection({ offer }) {
   const eligible = levelRank(candidateEducationLevel) >= levelRank(offer.min_education_level);
   const blocked = !!userSession && !eligible;
 
-  // Stabilise la référence de l'objet job passé à ApplyModal : reconstruit
-  // en ligne à chaque rendu, un nouvel objet (même contenu) déclenchait le
-  // useEffect de reset d'ApplyModal (dépendance [isOpen, job, ...]) à
-  // chaque re-rendu de ce composant — y compris juste après l'envoi
-  // réussi, quand triggerToast() programme un setTimeout qui provoque un
-  // re-rendu ~3.5s plus tard, effaçant le message de succès.
+  // Stabilise la référence de l'objet job passé à ApplyModal
   const stableJob = useMemo(
     () => ({
       id: offer.id,
@@ -60,17 +56,16 @@ export default function OffreApplySection({ offer }) {
     [offer.id, offer.title, offer.company]
   );
 
-  const targetUrl = useMemo(() => {
-    if (offer.external_link && offer.external_link.trim()) return offer.external_link.trim();
-    if (offer.apply_url && offer.apply_url.trim()) return offer.apply_url.trim();
-    if (offer.source_url && offer.source_url.trim()) return offer.source_url.trim();
-    if (offer.url && offer.url.trim()) return offer.url.trim();
-    const email = offer.recruiter_email || offer.contact_email;
-    if (email && email.trim()) {
-      return `mailto:${email.trim()}?subject=${encodeURIComponent(`Candidature - ${offer.title || "Offre d'emploi"}`)}`;
-    }
-    return null;
+  // Résolution intelligente de l'action de candidature (WhatsApp prioritaire si numéro présent)
+  const offerAction = useMemo(() => {
+    return resolveOfferAction(offer);
   }, [offer]);
+
+  const targetUrl = offerAction.url;
+  const isWhatsApp = offerAction.isWhatsApp;
+  const buttonColorClass = offerAction.buttonColorClass || "bg-blue-600 hover:bg-blue-700 text-white";
+  const buttonIconClass = offerAction.iconClass || "fa-solid fa-arrow-up-right-from-square";
+  const buttonLabel = offerAction.label;
 
   return (
     <>
@@ -82,7 +77,7 @@ export default function OffreApplySection({ offer }) {
         <span className="text-sm font-semibold">{toast}</span>
       </div>
 
-      {blocked && (
+      {blocked && !isWhatsApp && (
         <p className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-3">
           <i className="fa-solid fa-triangle-exclamation mr-1"></i>
           Niveau requis : {offer.min_education_level}. Complétez votre profil pour postuler.
@@ -94,10 +89,12 @@ export default function OffreApplySection({ offer }) {
           href={targetUrl}
           target={targetUrl.startsWith("mailto:") ? "_self" : "_blank"}
           rel="noopener noreferrer"
-          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer"
+          className={`w-full py-3.5 ${buttonColorClass} active:scale-98 font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg ${
+            isWhatsApp ? "shadow-emerald-500/25" : "shadow-blue-600/25"
+          } cursor-pointer`}
         >
-          <i className="fa-solid fa-arrow-up-right-from-square text-base"></i>
-          <span>Postuler sur le site officiel</span>
+          <i className={`${buttonIconClass} text-lg`}></i>
+          <span>{buttonLabel}</span>
         </a>
       ) : (
         <button
@@ -106,8 +103,8 @@ export default function OffreApplySection({ offer }) {
           disabled={blocked}
           className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <i className="fa-solid fa-arrow-up-right-from-square text-base"></i>
-          <span>{blocked ? "Niveau insuffisant" : "Postuler sur le site officiel"}</span>
+          <i className="fa-solid fa-paper-plane text-base"></i>
+          <span>{blocked ? "Niveau insuffisant" : "Postuler sur Facilite"}</span>
         </button>
       )}
 

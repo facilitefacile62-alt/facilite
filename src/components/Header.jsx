@@ -309,6 +309,8 @@ export default function Header() {
         ? "Nouveau message"
         : n.type === "badge"
         ? "Statut de votre badge"
+        : n.type === "document_access"
+        ? "Accès à vos documents"
         : "Notification Facilité",
     content: n.content,
     link: n.link || "/offres",
@@ -324,6 +326,8 @@ export default function Header() {
         ? "fa-briefcase"
         : n.type === "message"
         ? "fa-comment"
+        : n.type === "document_access"
+        ? "fa-folder-open"
         : "fa-bell",
     badgeBg:
       n.type === "jobs"
@@ -1071,151 +1075,154 @@ export default function Header() {
             <i className="fa-solid fa-briefcase text-sm"></i>
             <span>Offres d&apos;emploi</span>
           </Link>
-          <Link
-            href="/messagerie"
-            onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              pathname === "/messagerie"
-                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-            }`}
-          >
-            <i className="fa-solid fa-comments text-sm"></i>
-            <span>Messagerie</span>
-          </Link>
-
-          {/* Menu déroulant "Plus" (contenant Fonctionnalités : Extracteur, Boîte à idées, Services & Modèles, etc.) */}
-          <div className="relative" ref={plusDropdownRef}>
-            <button
-              type="button"
-              onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
+          {userSession && (
+            <Link
+              href="/messagerie"
+              onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
               className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                plusDropdownOpen || pathname === "/service" || pathname === "/candidat/extracteur" || pathname === "/boite-a-idees" || pathname.startsWith("/recrutement-") || pathname === "/faq"
+                pathname === "/messagerie"
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
             >
-              <i className="fa-solid fa-layer-group text-sm"></i>
-              <span>Plus</span>
-              <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
-            </button>
+              <i className="fa-solid fa-comments text-sm"></i>
+              <span>Messagerie</span>
+            </Link>
+          )}
 
-            {plusDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
-                
-                {/* 1. Recrutement Spontané */}
-                <Link
-                  href="/recrutement-spontane"
-                  onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname.startsWith("/recrutement-spontane") ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-building-user text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Recrutement Spontané</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Répertoire des 77 entreprises</div>
-                  </div>
-                </Link>
+          {/* Menu déroulant "Plus" (visible uniquement si l'utilisateur est connecté) */}
+          {userSession && (
+            <div className="relative" ref={plusDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
+                className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  plusDropdownOpen || pathname === "/service" || pathname === "/candidat/extracteur" || pathname === "/boite-a-idees" || pathname.startsWith("/recrutement-") || pathname === "/faq"
+                    ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                    : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+                }`}
+              >
+                <i className="fa-solid fa-layer-group text-sm"></i>
+                <span>Plus</span>
+                <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+              </button>
 
-                {/* 2. Dépôts Physiques */}
-                <Link
-                  href="/recrutement-journalier"
-                  onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/recrutement-journalier" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-gas-pump text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Dépôts Physiques</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Stations-services & contacts</div>
-                  </div>
-                </Link>
-
-                {/* 3. Concours */}
-                <Link
-                  href="/offres?q=Concours"
-                  onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Concours")
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-award text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Concours</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Avis & examens de la fonction publique</div>
-                  </div>
-                </Link>
-
-                {/* 4. Formation */}
-                <Link
-                  href="/offres?q=Formation"
-                  onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Formation")
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-graduation-cap text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">Formation</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Formations & certifications professionnelles</div>
-                  </div>
-                </Link>
-
-                {/* 5. FAQ & Aide */}
-                <Link
-                  href="/faq"
-                  onClick={(e) => handleNavClick(e, "/faq", "nav_faq", "FAQ & Aide")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/faq" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-circle-question text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold">FAQ & Aide</div>
-                    <div className="text-[10px] text-gray-500 font-normal">Questions fréquentes & réponses</div>
-                  </div>
-                </Link>
-
-                <div className="my-1.5 border-t border-gray-100 dark:border-gray-800"></div>
-
-                {/* 6. Fonctionnalités - Touche directe vers la page /fonctionnalites */}
-                <Link
-                  href="/fonctionnalites"
-                  onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_fonctionnalites_hub", "Fonctionnalités")}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                    pathname === "/fonctionnalites" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
-                  </div>
-                  <div>
-                    <div className="font-extrabold flex items-center gap-1.5">
-                      <span>Fonctionnalités</span>
-                      <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8px] font-black rounded-md">Page & Outils</span>
+              {plusDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+                  
+                  {/* 1. Recrutement Spontané */}
+                  <Link
+                    href="/recrutement-spontane"
+                    onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      pathname.startsWith("/recrutement-spontane") ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-building-user text-sm"></i>
                     </div>
-                    <div className="text-[10px] text-gray-500 font-normal">Outils PDF, IA & Modèles</div>
-                  </div>
-                </Link>
-              </div>
-            )}
-          </div>
+                    <div>
+                      <div className="font-extrabold">Recrutement Spontané</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Répertoire des 77 entreprises</div>
+                    </div>
+                  </Link>
+
+                  {/* 2. Dépôts Physiques */}
+                  <Link
+                    href="/recrutement-journalier"
+                    onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      pathname === "/recrutement-journalier" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-gas-pump text-sm"></i>
+                    </div>
+                    <div>
+                      <div className="font-extrabold">Dépôts Physiques</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Stations-services & contacts</div>
+                    </div>
+                  </Link>
+
+                  {/* 3. Extraire CV */}
+                  <Link
+                    href="/candidat/extracteur"
+                    onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_plus_extracteur", "Extracteur")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      pathname === "/candidat/extracteur" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-bolt text-sm"></i>
+                    </div>
+                    <div>
+                      <div className="font-extrabold flex items-center gap-1.5">
+                        <span>Extraire CV</span>
+                        <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[8px] font-black rounded-md animate-pulse">1-Click</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Extraction IA & Candidature auto</div>
+                    </div>
+                  </Link>
+
+                  {/* 4. Boîte à idées */}
+                  <Link
+                    href="/boite-a-idees"
+                    onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      pathname === "/boite-a-idees" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-pink-50 dark:bg-pink-950 text-pink-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-lightbulb text-sm"></i>
+                    </div>
+                    <div>
+                      <div className="font-extrabold">Boîte à idées</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Votez pour les fonctionnalités</div>
+                    </div>
+                  </Link>
+
+                  {/* 5. FAQ & Aide */}
+                  <Link
+                    href="/faq"
+                    onClick={(e) => handleNavClick(e, "/faq", "nav_plus_faq", "FAQ & Aide")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      pathname === "/faq" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950 text-cyan-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-circle-question text-sm"></i>
+                    </div>
+                    <div>
+                      <div className="font-extrabold">FAQ & Aide</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Questions fréquentes</div>
+                    </div>
+                  </Link>
+
+                  <div className="border-t border-gray-100 dark:border-gray-800 my-1"></div>
+
+                  {/* 6. Page Fonctionnalités Complètes */}
+                  <Link
+                    href="/fonctionnalites"
+                    onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_plus_fonctionnalites", "Toutes les fonctionnalités")}
+                    className={`flex items-center gap-3 px-4 py-2 text-xs font-bold transition-colors cursor-pointer ${
+                      pathname === "/fonctionnalites" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                    </div>
+                    <div>
+                      <div className="font-extrabold flex items-center gap-1.5">
+                        <span>Fonctionnalités</span>
+                        <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8px] font-black rounded-md">Page & Outils</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Outils PDF, IA & Modèles</div>
+                    </div>
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
@@ -1227,21 +1234,23 @@ export default function Header() {
             </div>
           )}
 
-          {/* Centre de Notifications Interactif avec Compteur Dynamique (Desktop uniquement, sur mobile accessible via la barre d'onglets) */}
-          <button
-            type="button"
-            onClick={() => setNotificationsModalOpen(true)}
-            className="hidden lg:flex p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative items-center justify-center flex-shrink-0 cursor-pointer"
-            title="Centre de notifications"
-            aria-label="Ouvrir les notifications"
-          >
-            <i className="fa-regular fa-bell text-base sm:text-lg"></i>
-            {unreadNotificationsCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center animate-pulse shadow-sm">
-                {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
-              </span>
-            )}
-          </button>
+          {/* Centre de Notifications Interactif avec Compteur Dynamique (Desktop uniquement, seulement si l'utilisateur est connecté) */}
+          {userSession && (
+            <button
+              type="button"
+              onClick={() => setNotificationsModalOpen(true)}
+              className="hidden lg:flex p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative items-center justify-center flex-shrink-0 cursor-pointer"
+              title="Centre de notifications"
+              aria-label="Ouvrir les notifications"
+            >
+              <i className="fa-regular fa-bell text-base sm:text-lg"></i>
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center animate-pulse shadow-sm">
+                  {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Bouton Loupe pour ouvrir la recherche sur mobile */}
           <button
@@ -1359,17 +1368,19 @@ export default function Header() {
             <i className="fa-solid fa-house text-sm sm:text-base"></i>
             <span className="text-[9px] font-bold tracking-tight truncate w-full">Accueil</span>
           </Link>
-          <Link
-            href="/candidat/extracteur"
-            onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-              pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-            }`}
-            title="L'Extracteur 1-Click"
-          >
-            <i className="fa-solid fa-bolt text-sm sm:text-base text-amber-500"></i>
-            <span className="text-[9px] font-bold tracking-tight truncate w-full">Extracteur</span>
-          </Link>
+          {userSession && (
+            <Link
+              href="/candidat/extracteur"
+              onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
+              className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
+                pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+              }`}
+              title="L'Extracteur 1-Click"
+            >
+              <i className="fa-solid fa-bolt text-sm sm:text-base text-amber-500"></i>
+              <span className="text-[9px] font-bold tracking-tight truncate w-full">Extracteur</span>
+            </Link>
+          )}
           <Link
             href="/offres"
             onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
@@ -1380,32 +1391,36 @@ export default function Header() {
             <i className="fa-solid fa-list-check text-sm sm:text-base"></i>
             <span className="text-[9px] font-bold tracking-tight truncate w-full">Offres</span>
           </Link>
-          <Link
-            href="/messagerie"
-            onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-              pathname === "/messagerie" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-            }`}
-          >
-            <i className="fa-regular fa-comments text-sm sm:text-base"></i>
-            <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => setNotificationsModalOpen(true)}
-            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition relative text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-            aria-label="Notifications"
-          >
-            <div className="relative">
-              <i className="fa-regular fa-bell text-sm sm:text-base"></i>
-              {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] font-black rounded-full min-w-[15px] h-[15px] px-0.5 flex items-center justify-center animate-pulse">
-                  {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
-                </span>
-              )}
-            </div>
-            <span className="text-[9px] font-bold tracking-tight truncate w-full">Notifs</span>
-          </button>
+          {userSession && (
+            <Link
+              href="/messagerie"
+              onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+              className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
+                pathname === "/messagerie" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+              }`}
+            >
+              <i className="fa-regular fa-comments text-sm sm:text-base"></i>
+              <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
+            </Link>
+          )}
+          {userSession && (
+            <button
+              type="button"
+              onClick={() => setNotificationsModalOpen(true)}
+              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition relative text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+              aria-label="Notifications"
+            >
+              <div className="relative">
+                <i className="fa-regular fa-bell text-sm sm:text-base"></i>
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] font-black rounded-full min-w-[15px] h-[15px] px-0.5 flex items-center justify-center animate-pulse">
+                    {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[9px] font-bold tracking-tight truncate w-full">Notifs</span>
+            </button>
+          )}
           <RoleNavLink session={userSession} variant="bottom-bar" />
         </div>
       )}

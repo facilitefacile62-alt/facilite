@@ -158,6 +158,118 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
   };
 }
 
+export async function extractFullJobOfferFromPosterWithGemini(buffer, mimeType = "image/jpeg") {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+
+  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") {
+    return {
+      errorKeyMissing: true,
+      error: "Clé API Gemini introuvable. Veuillez configurer GEMINI_API_KEY dans Vercel/env.",
+    };
+  }
+
+  const prompt = `Tu es le moteur d'intelligence artificielle de la plateforme d'emploi 'Facilité' au Sénégal.
+Ta mission est d'analyser cette affiche/image de recrutement pour en extraire TOUTES les informations clés nécessaires à sa publication directe sur le fil d'actualité.
+
+Extrais méticuleusement :
+1. Titre du poste (clair, sans abréviation obscure)
+2. Nom de l'entreprise, agence ou organisation
+3. Localisation (ex: Dakar, Thiès, Sénégal, etc.)
+4. Type de contrat (ex: CDI, CDD, Stage, Casting / Tournage, Freelance, Intérim, Bourse d'études)
+5. Numéro de téléphone ou WhatsApp pour postuler (très important : extraire avec l'indicatif ou au format standard ex: +221 77 717 73 73)
+6. Adresse e-mail de contact (si mentionnée)
+7. Lien externe / site officiel de postulation (si mentionné)
+8. Date limite de candidature (au format AAAA-MM-JJ si mentionnée, sinon chaîne vide)
+9. Niveau d'études requis (ex: BAC, Licence, Master, Doctorat, Aucun)
+10. Description structurée, attractive et aérée avec des emojis adaptés (présentation du poste, missions, profil recherché, comment postuler).
+
+Réponds STRICTEMENT en JSON valide sans aucun texte avant ou après sous le format :
+{
+  "title": "...",
+  "company": "...",
+  "location": "...",
+  "contract_type": "...",
+  "contact_phone": "...",
+  "contact_email": "...",
+  "external_link": "...",
+  "deadline": "...",
+  "min_education_level": "...",
+  "salary_range": "...",
+  "description": "..."
+}`;
+
+  const cleanBase64 = buffer.toString("base64").replace(/^data:[^;]+;base64,/, "");
+
+  let lastErrorDetail = null;
+
+  for (const model of CANDIDATE_MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: prompt },
+                  {
+                    inline_data: {
+                      mime_type: mimeType || "image/jpeg",
+                      data: cleanBase64,
+                    },
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.1,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        let errJson;
+        try {
+          errJson = await response.json();
+        } catch {
+          errJson = { raw: await response.text().catch(() => "Corps de réponse illisible.") };
+        }
+        console.error("[Gemini Poster OCR Error]", response.status, errJson);
+        lastErrorDetail = { model, status: response.status, message: errJson?.error?.message || JSON.stringify(errJson) };
+        continue;
+      }
+
+      const resJson = await response.json();
+      const responseText = resJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      let cleanedJson = responseText.trim();
+      if (cleanedJson.includes("```")) {
+        cleanedJson = cleanedJson.replace(/```json/gi, "").replace(/```/g, "").trim();
+      }
+
+      try {
+        const parsed = JSON.parse(cleanedJson);
+        if (parsed && (parsed.title || parsed.company || parsed.description)) {
+          return { success: true, ...parsed };
+        }
+      } catch (jsonErr) {
+        console.warn("[Gemini Poster JSON Parse Fallback]", jsonErr);
+      }
+    } catch (err) {
+      console.error(`[Gemini Poster REST] Erreur ${model}:`, err.message);
+      lastErrorDetail = { model, status: null, message: err.message };
+    }
+  }
+
+  return {
+    error: lastErrorDetail?.message || "Impossible d'analyser l'affiche pour le moment. Réessayez avec une image plus nette.",
+  };
+}
+
 export async function extractCvWithGeminiVision(buffer, mimeType = "image/jpeg", systemPrompt) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
 

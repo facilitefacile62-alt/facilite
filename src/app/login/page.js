@@ -8,23 +8,30 @@ import { supabase } from "@/lib/supabase";
 import PhoneAuthForm from "@/components/PhoneAuthForm";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [honeypot, setHoneypot] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [showSuspendedNotice, setShowSuspendedNotice] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [needsConfirmation, setNeedsConfirmation] = useState(false);
-  const [isResending, setIsResending] = useState(false);
   const router = useRouter();
 
-  // Flux "mot de passe oublié" : Supabase ouvre une session temporaire de type
-  // recovery quand l'utilisateur clique sur le lien reçu par email (redirectTo=/login?reset=true).
-  // Initialisé à false (identique au rendu serveur) puis mis à jour côté client dans un useEffect
-  // ci-dessous, pour éviter un hydration mismatch (le HTML serveur ne connaît pas window.location.search).
+  // États du formulaire
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [step, setStep] = useState(1); // 1 = Saisie Email, 2 = Saisie Mot de passe
+  const [showPassword, setShowPassword] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+
+  // Méthode de connexion : 'email' ou 'phone'
+  const [authMethod, setAuthMethod] = useState("email");
+
+  // États de chargement et retours
+  const [isLoading, setIsLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [showSuspendedNotice, setShowSuspendedNotice] = useState(false);
+
+  // Mode de récupération de mot de passe (?reset=true)
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [isGoogleOnlyAccount, setIsGoogleOnlyAccount] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -32,15 +39,10 @@ export default function LoginPage() {
   const [recoveryError, setRecoveryError] = useState("");
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoverySuccess, setRecoverySuccess] = useState(false);
-  // Méthode de connexion sélectionnée : 'email' ou 'phone'
-  const [loginMethod, setLoginMethod] = useState("email");
 
   useEffect(() => {
-    // Lecture de window.location.search : ne peut pas être calculé pendant le rendu serveur,
-    // objectif justement de synchroniser l'état client une fois le composant monté.
     const params = new URLSearchParams(window.location.search);
     if (params.get("reset") === "true") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsRecoveryMode(true);
     }
     if (params.get("suspended") === "true") {
@@ -56,11 +58,6 @@ export default function LoginPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Détection "compte Google" : uniquement une fois la session de récupération
-  // établie (donc après que la personne a prouvé l'accès au compte en
-  // cliquant le lien reçu par e-mail) — jamais avant, sinon interroger les
-  // identités d'un compte reviendrait à confirmer son existence à qui ne l'a
-  // pas encore prouvée (énumération de comptes).
   useEffect(() => {
     if (!isRecoveryMode) return;
     let cancelled = false;
@@ -76,22 +73,199 @@ export default function LoginPage() {
     };
   }, [isRecoveryMode]);
 
+  // Étape 1 : validation de l'e-mail
+  const handleEmailStepSubmit = (e) => {
+    e.preventDefault();
+    setErrorMessage("");
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setErrorMessage("Veuillez saisir une adresse e-mail valide.");
+      return;
+    }
+    setStep(2);
+  };
+
+  // Étape 2 : connexion par mot de passe
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setNeedsConfirmation(false);
+
+    if (honeypot) {
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+        setErrorMessage("Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.");
+      }, 1200);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: password,
+      });
+
+      setIsLoading(false);
+
+      if (error) {
+        console.error("Supabase Auth Error:", error);
+        if (error.message.includes("Invalid login credentials")) {
+          setErrorMessage("Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.");
+        } else if (error.message.includes("Email not confirmed")) {
+          setErrorMessage("Votre adresse email n'a pas encore été confirmée. Vérifiez votre boîte de réception.");
+          setNeedsConfirmation(true);
+        } else if (
+          error.status === 429 ||
+          error.message.toLowerCase().includes("rate limit") ||
+          error.message.toLowerCase().includes("too many requests")
+        ) {
+          setErrorMessage("Trop de tentatives consécutives. Veuillez patienter quelques minutes.");
+        } else {
+          setErrorMessage(error.message || "Erreur de connexion. Veuillez réessayer.");
+        }
+        return;
+      }
+
+      if (data?.session) {
+        setIsSuccess(true);
+
+        fetch("/api/auth/confirm-after-login", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        }).catch(() => {});
+
+        const userId = data.session.user.id;
+        let targetRole = "user";
+
+        try {
+          const { data: userRoleRow } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", userId)
+            .single();
+
+          if (userRoleRow?.role) {
+            targetRole = userRoleRow.role;
+          }
+        } catch (pErr) {
+          console.warn("Impossible de lire le rôle:", pErr);
+        }
+
+        const searchParams = new URLSearchParams(window.location.search);
+        const targetRedirect = searchParams.get("redirect");
+        let redirectUrl = targetRedirect || "/messagerie";
+
+        if (!targetRedirect) {
+          if (targetRole === "admin" || targetRole === "publisher") {
+            redirectUrl = "/admin";
+          } else if (targetRole === "user") {
+            try {
+              const { data: hasVerifiedBadge } = await supabase.rpc("has_badge", {
+                check_user_id: userId,
+                badge_name: "verified_recruiter",
+              });
+              if (hasVerifiedBadge === true) {
+                redirectUrl = "/recruteur";
+              }
+            } catch (e) {
+              console.warn("Impossible de vérifier le badge recruteur:", e);
+            }
+          }
+        }
+
+        setTimeout(() => {
+          window.location.replace(redirectUrl);
+        }, 400);
+      }
+    } catch (err) {
+      console.error("Erreur de connexion:", err);
+      setIsLoading(false);
+      setErrorMessage("Une erreur est survenue lors de la connexion.");
+    }
+  };
+
+  // Connexion Google OAuth
+  const handleOAuthLogin = async (provider) => {
+    if (oauthLoading) return;
+    setOauthLoading(true);
+    setErrorMessage("");
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const targetRedirect = params.get("redirect") || "/profil";
+      const safeRedirect = targetRedirect.startsWith("/") ? targetRedirect : "/profil";
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (err) {
+      setErrorMessage(`Erreur de connexion via ${provider}`);
+      setOauthLoading(false);
+    }
+  };
+
+  // Envoi d'un Magic Link par email
+  const handleSendMagicLink = async () => {
+    if (!email.trim() || !email.includes("@")) {
+      setErrorMessage("Veuillez saisir une adresse e-mail valide.");
+      return;
+    }
+    setMagicLinkLoading(true);
+    setErrorMessage("");
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        setErrorMessage(error.message || "Impossible d'envoyer le lien magique.");
+      } else {
+        setMagicLinkSent(true);
+      }
+    } catch (err) {
+      setErrorMessage("Erreur lors de l'envoi du lien.");
+    } finally {
+      setMagicLinkLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email.trim()) return;
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim().toLowerCase(),
+      });
+      if (error) {
+        setErrorMessage(error.message || "Impossible de renvoyer l'email de confirmation.");
+      } else {
+        setErrorMessage("Un nouvel email de confirmation a été envoyé.");
+        setNeedsConfirmation(false);
+      }
+    } catch (err) {
+      setErrorMessage("Erreur lors du renvoi.");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  // Reset password submit
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
     setRecoveryError("");
 
     if (newPassword.length < 6) {
       setRecoveryError("Le mot de passe doit contenir au moins 6 caractères.");
-      return;
-    }
-    
-    // Honeypot anti-bot
-    if (honeypot) {
-      setRecoveryLoading(true);
-      setTimeout(() => {
-        setRecoveryLoading(false);
-        setRecoveryError("Lien invalide ou expiré.");
-      }, 1500);
       return;
     }
 
@@ -111,474 +285,345 @@ export default function LoginPage() {
       }
 
       setRecoverySuccess(true);
-      // scope: "global" révoque TOUTES les sessions de ce compte (autres
-      // appareils/onglets compris), pas seulement celle-ci — un mot de passe
-      // qu'on vient de changer via "mot de passe oublié" l'a probablement été
-      // parce qu'il a fuité ; laisser d'anciennes sessions actives ailleurs
-      // annulerait l'intérêt du changement.
       await supabase.auth.signOut({ scope: "global" });
       setTimeout(() => {
         window.location.replace("/login");
-      }, 2000);
+      }, 1800);
     } catch (err) {
       setRecoveryLoading(false);
       setRecoveryError("Une erreur imprévue est survenue.");
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMessage("");
-    setNeedsConfirmation(false);
-    
-    if (honeypot) {
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-        setErrorMessage("Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.");
-      }, 1500);
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // Authentification directe
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password,
-      });
-
-      setIsLoading(false);
-
-      if (error) {
-        console.error("Supabase Auth Error:", error);
-        if (error.message.includes("Invalid login credentials")) {
-          setErrorMessage("Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.");
-        } else if (error.message.includes("Email not confirmed")) {
-          setErrorMessage("Votre adresse email n'a pas encore été confirmée. Vérifiez votre boîte de réception ou renvoyez l'email de confirmation ci-dessous.");
-          setNeedsConfirmation(true);
-        } else if (error.status === 429 || error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("too many requests")) {
-          setErrorMessage("Trop de tentatives consécutives. Veuillez patienter quelques minutes puis réessayer.");
-        } else {
-          setErrorMessage(error.message || "Erreur de connexion. Veuillez réessayer.");
-        }
-        return;
-      }
-
-      if (data?.session) {
-        setIsSuccess(true);
-
-        // Best-effort, ne bloque jamais la connexion : Supabase ne marque
-        // email_confirmed_at/phone_confirmed_at qu'après un OTP/lien, jamais
-        // après un mot de passe — voir /api/auth/confirm-after-login.
-        fetch("/api/auth/confirm-after-login", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-        }).catch(() => {});
-
-        const userId = data.session.user.id;
-        // Uniquement pour l'UX de redirection immédiate — jamais une
-        // décision d'autorisation (middleware.js revérifie indépendamment
-        // via public.user_roles, seule source de vérité réelle).
-        let targetRole = "user";
-
-        try {
-          const { data: userRoleRow } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", userId)
-            .single();
-
-          if (userRoleRow?.role) {
-            targetRole = userRoleRow.role;
-          }
-        } catch (pErr) {
-          console.warn("Impossible de lire le rôle:", pErr);
-        }
-
-        // Redirection dynamique selon le rôle ou le paramètre redirect
-        const searchParams = new URLSearchParams(window.location.search);
-        const targetRedirect = searchParams.get("redirect");
-        let redirectUrl = targetRedirect || "/messagerie";
-
-        if (!targetRedirect) {
-          if (targetRole === "admin" || targetRole === "publisher") {
-            redirectUrl = "/admin";
-          } else if (targetRole === "user") {
-            try {
-              const { data: hasVerifiedBadge } = await supabase.rpc("has_badge", { check_user_id: userId, badge_name: "verified_recruiter" });
-              if (hasVerifiedBadge === true) {
-                redirectUrl = "/recruteur";
-              }
-            } catch (e) {
-              console.warn("Impossible de vérifier le badge recruteur:", e);
-            }
-          }
-        }
-
-        setTimeout(() => {
-          window.location.replace(redirectUrl);
-        }, 500);
-      }
-    } catch (err) {
-      console.error("Erreur de connexion d'exception:", err);
-      setIsLoading(false);
-      setErrorMessage("Une erreur est survenue lors de la communication avec le serveur.");
-    }
-  };
-
-  const handleResendConfirmation = async () => {
-    if (!email.trim()) return;
-    setIsResending(true);
-    try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: email.trim().toLowerCase(),
-      });
-      if (error) {
-        setErrorMessage(error.message || "Impossible de renvoyer l'email de confirmation.");
-      } else {
-        setErrorMessage("Un nouvel email de confirmation a été envoyé. Vérifiez vos spams.");
-        setNeedsConfirmation(false);
-      }
-    } catch (err) {
-      setErrorMessage("Une erreur est survenue lors du renvoi de l'email.");
-    } finally {
-      setIsResending(false);
-    }
-  };
-
-  const handleOAuthLogin = async (provider) => {
-    if (oauthLoading) return; // évite un double déclenchement de la redirection OAuth
-    setOauthLoading(true);
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const targetRedirect = params.get("redirect") || "/profil";
-      const safeRedirect = targetRedirect.startsWith("/") ? targetRedirect : "/profil";
-      // /auth/callback échange le code CÔTÉ SERVEUR avant de rediriger vers
-      // safeRedirect — sans ça, le navigateur atteint safeRedirect (protégée)
-      // avant que la session existe, rebondit sur /login via le middleware,
-      // et le SDK client n'échange le code qu'à ce moment-là : d'où le
-      // double aller-retour observé avant d'atteindre la plateforme.
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
-        },
-      });
-      // Succès : le navigateur est redirigé vers Google, pas besoin de
-      // réinitialiser l'état — la page est sur le point d'être déchargée.
-      if (error) throw error;
-    } catch (err) {
-      setErrorMessage(`Erreur de connexion via ${provider}`);
-      setOauthLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 font-sans flex flex-col justify-between items-center relative overflow-hidden">
-      {/* Arrière-plan dynamique Premium */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vh] rounded-full bg-gradient-to-tr from-[#10E688]/20 to-teal-200/20 blur-[100px] animate-pulse"></div>
-        <div className="absolute top-[30%] -right-[20%] w-[50vw] h-[70vh] rounded-full bg-gradient-to-bl from-blue-300/20 to-[#10E688]/10 blur-[120px]"></div>
-        <div className="absolute -bottom-[20%] left-[10%] w-[70vw] h-[50vh] rounded-full bg-gradient-to-tl from-emerald-300/20 to-transparent blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
-      </div>
-
-
-
-      {/* Conteneur Principal / Carte de Login OU Carte de Réinitialisation */}
-      <main className="w-[92%] max-w-xs sm:max-w-sm mx-auto py-4 z-10">
+    <div className="min-h-screen bg-[#F0F4F8]/80 font-sans flex flex-col justify-center items-center py-8 px-4 relative select-none">
+      
+      {/* CARTE DE CONNEXION PRINCIPALE */}
+      <div className="w-full max-w-[380px] mx-auto bg-white rounded-3xl p-6 sm:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-gray-100 transition-all">
+        
+        {/* Mode Réinitialisation de mot de passe */}
         {isRecoveryMode ? (
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/60 transition-all duration-300 max-h-[85vh] overflow-y-auto no-scrollbar animate-fade-in-up">
-            <div className="flex justify-center mb-5">
-              <Link href="/" className="cursor-pointer hover:opacity-85 transition" title="Retour à l'accueil Facilite">
-                <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
-              </Link>
+          <div className="space-y-4">
+            <div className="text-center mb-2">
+              <h1 className="text-2xl font-black text-[#111827]">Nouveau mot de passe</h1>
+              <p className="text-xs text-gray-500 mt-1">Définissez votre nouveau mot de passe.</p>
             </div>
-
-            <div className="text-center mb-8">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
-                Nouveau mot de passe
-              </h1>
-              <p className="text-sm font-medium text-gray-500">
-                Choisissez un nouveau mot de passe pour votre compte.
-              </p>
-            </div>
-
-            {isGoogleOnlyAccount && !recoverySuccess && (
-              <p className="text-xs font-semibold text-blue-800 bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
-                ℹ️ Ce compte utilise la connexion Google. Vous pouvez tout de
-                même définir un mot de passe ci-dessous pour vous connecter
-                aussi par e-mail, ou continuer à utiliser "Se connecter avec
-                Google" sans rien changer.
-              </p>
-            )}
 
             {recoverySuccess ? (
-              <div className="text-center py-6 animate-fade-in">
-                <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+              <div className="text-center py-4 space-y-2">
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-xl font-bold border border-emerald-200">
                   ✓
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Mot de passe mis à jour !</h2>
-                <p className="text-sm text-gray-600">
-                  Redirection vers la page de connexion...
-                </p>
+                <p className="text-sm font-bold text-gray-900">Mot de passe mis à jour !</p>
+                <p className="text-xs text-gray-500">Redirection vers la connexion...</p>
               </div>
             ) : (
-              <form onSubmit={handleResetPasswordSubmit} className="space-y-2.5">
-                <input
-                  type="text"
-                  name="address"
-                  value={honeypot}
-                  onChange={(e) => setHoneypot(e.target.value)}
-                  style={{ display: "none" }}
-                  tabIndex={-1}
-                  autoComplete="off"
-                />
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                    Nouveau mot de passe
-                  </label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Nouveau mot de passe</label>
                   <input
                     type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
                     required
                     placeholder="Au moins 6 caractères"
-                    className="w-full px-4 py-3 bg-white/50 backdrop-blur-sm border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-300 hover:bg-white"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                    Confirmer le mot de passe
-                  </label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Confirmer le mot de passe</label>
                   <input
                     type="password"
-                    value={confirmNewPassword}
-                    onChange={(e) => setConfirmNewPassword(e.target.value)}
                     required
                     placeholder="Confirmez le mot de passe"
-                    className="w-full px-4 py-3 bg-white/50 backdrop-blur-sm border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-300 hover:bg-white"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black transition"
                   />
                 </div>
+
                 {recoveryError && (
-                  <p className="text-xs font-semibold text-red-600 bg-red-50 p-3 rounded-xl border border-red-200">
-                    ⚠️ {recoveryError}
+                  <p className="text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                    {recoveryError}
                   </p>
                 )}
+
                 <button
                   type="submit"
                   disabled={recoveryLoading}
-                  className="w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2"
+                  className="w-full py-3 bg-black hover:bg-neutral-900 text-white text-sm font-semibold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
                 >
-                  {recoveryLoading ? (
-                    <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
-                  ) : (
-                    <span>Mettre à jour le mot de passe</span>
-                  )}
+                  {recoveryLoading ? "Mise à jour..." : "Enregistrer le mot de passe"}
                 </button>
               </form>
             )}
           </div>
-        ) : (
-        <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/60 transition-all duration-300 max-h-[85vh] overflow-y-auto no-scrollbar animate-fade-in-up">
-
-          {/* Logo officiel du site au-dessus de la carte */}
-          <div className="flex justify-center mb-3">
-            <Link href="/" className="cursor-pointer hover:opacity-85 transition" title="Retour à l'accueil Facilite">
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
-            </Link>
-          </div>
-
-          {/* Titre & Sous-titre */}
-          <div className="text-center mb-5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
-              Login
-            </h1>
-            <p className="text-sm font-medium text-gray-500">
-              Saisissez vos identifiants pour vous connecter.
-            </p>
-          </div>
-
-          {isSuccess ? (
-            <div className="text-center py-6 animate-fade-in">
-              <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                ✓
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Connexion réussie !</h2>
-              <p className="text-sm text-gray-600 mb-6">
-                Bienvenue sur votre espace Facilité. Redirection en cours...
-              </p>
-              <Link
-                href="/profil"
-                className="inline-block w-full py-3.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md transition-all duration-200"
-              >
-                Accéder à mon espace
-              </Link>
+        ) : isSuccess ? (
+          /* Succès de Connexion */
+          <div className="text-center py-6 space-y-3 animate-fade-in">
+            <div className="w-14 h-14 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-2xl font-bold border border-emerald-200">
+              ✓
             </div>
-          ) : (
-            <>
+            <h2 className="text-lg font-bold text-gray-900">Connexion réussie !</h2>
+            <p className="text-xs text-gray-500">Bienvenue sur Facilité. Redirection en cours...</p>
+          </div>
+        ) : authMethod === "phone" ? (
+          /* Mode Authentification par Téléphone */
+          <div className="space-y-4">
+            <PhoneAuthForm />
+            <button
+              type="button"
+              onClick={() => setAuthMethod("email")}
+              className="w-full text-center text-xs font-bold text-gray-600 hover:text-black py-2 cursor-pointer transition"
+            >
+              ← Retour à la connexion par e-mail
+            </button>
+          </div>
+        ) : (
+          /* Mode Principal : Icône Clé + Login + Google en Haut + OU + Saisie Email + Bouton Noir */
+          <div className="space-y-4">
+            
+            {/* Icône Clé Officielle */}
+            <div className="flex justify-center mb-1">
+              <div className="w-14 h-14 rounded-full bg-white border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-center justify-center p-2.5">
+                <img
+                  src="/login_key.png"
+                  alt="Clé de connexion"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </div>
+
+            {/* Titre & Sous-titre */}
+            <div className="text-center mb-4">
+              <h1 className="text-2xl font-black text-[#0F172A] tracking-tight">
+                Connexion
+              </h1>
+              <p className="text-xs text-gray-500 font-medium mt-1">
+                Saisissez vos identifiants pour vous connecter.
+              </p>
+            </div>
+
             {showSuspendedNotice && (
-              <p className="mb-3 text-xs font-semibold text-red-700 bg-red-50 p-3 rounded-xl border border-red-200">
-                ⚠️ Ce compte a été suspendu. Contactez le support si vous pensez qu'il s'agit d'une erreur.
+              <p className="text-xs font-bold text-red-700 bg-red-50 p-3 rounded-xl border border-red-200">
+                ⚠️ Ce compte a été suspendu. Contactez le support.
               </p>
             )}
-            <form onSubmit={handleSubmit} className="space-y-2.5">
-              <input
-                type="text"
-                name="website"
-                value={honeypot}
-                onChange={(e) => setHoneypot(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1 }}
-                tabIndex={-1}
-                autoComplete="off"
-              />
-              {/* Champ Email */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Email
-                </label>
-                <div className="relative">
+
+            {/* 1. BOUTON GOOGLE EN HAUT */}
+            <button
+              type="button"
+              onClick={() => handleOAuthLogin("google")}
+              disabled={oauthLoading}
+              className="w-full py-3 px-4 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 text-sm font-medium rounded-xl transition flex items-center justify-center gap-2.5 shadow-2xs cursor-pointer disabled:opacity-60"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.39 7.37 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.37 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+              <span>{oauthLoading ? "Redirection..." : "Continuer avec Google"}</span>
+            </button>
+
+            {/* 2. SÉPARATEUR OU AU CENTRE */}
+            <div className="flex items-center justify-center my-3">
+              <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                OU
+              </span>
+            </div>
+
+            {/* 3. EN BAS : SAISIE E-MAIL + BOUTON NOIR CONTINUER AVEC L'E-MAIL */}
+            {step === 1 ? (
+              <form onSubmit={handleEmailStepSubmit} className="space-y-3">
+                <input
+                  type="text"
+                  name="website"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  style={{ position: "absolute", opacity: 0, height: 0, width: 0, zIndex: -1 }}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+                <div>
                   <input
                     type="email"
+                    required
+                    autoFocus
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
                       if (errorMessage) setErrorMessage("");
                     }}
-                    required
-                    placeholder="Enter your Email"
-                    className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm hover:bg-white border ${
-                      errorMessage
-                        ? "border-red-400 ring-2 ring-red-100 text-red-900"
-                        : "border-gray-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                    } rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none transition-all duration-300`}
+                    placeholder="Saisissez votre e-mail"
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black transition"
                   />
                 </div>
-              </div>
 
-              {/* Champ Mot de Passe */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-gray-700">
-                    Password
-                  </label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs font-extrabold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200 cursor-pointer"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (errorMessage) setErrorMessage("");
-                    }}
-                    required
-                    placeholder="Enter your password"
-                    className="w-full pl-3 pr-10 py-2.5 bg-white/50 backdrop-blur-sm hover:bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-300"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
-                  >
-                    <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-chevron-down"} text-xs`}></i>
-                  </button>
-                </div>
                 {errorMessage && (
-                  <p className="mt-2 text-xs font-semibold text-red-600 bg-red-50 p-3 rounded-xl border border-red-200">
-                    ⚠️ {errorMessage}
+                  <p className="text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                    {errorMessage}
                   </p>
                 )}
-                {needsConfirmation && (
+
+                {/* Bouton Noir "Continuer avec l'e-mail" */}
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-black hover:bg-neutral-900 text-white text-sm font-semibold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
+                >
+                  Continuer avec l'e-mail
+                </button>
+
+                {/* Lien Mot de passe oublié ? */}
+                <div className="flex justify-end pt-1">
+                  <Link
+                    href="/forgot-password"
+                    style={{ textDecoration: "none" }}
+                    className="text-xs font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline transition"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
+              </form>
+            ) : (
+              /* Étape 2 : Saisie du Mot de Passe */
+              <form onSubmit={handlePasswordSubmit} className="space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs">
+                  <span className="font-semibold text-gray-800 truncate max-w-[220px]">{email}</span>
                   <button
                     type="button"
-                    onClick={handleResendConfirmation}
-                    disabled={isResending}
-                    className="mt-2 w-full text-xs font-extrabold text-blue-600 hover:text-blue-800 hover:underline transition cursor-pointer"
+                    onClick={() => {
+                      setStep(1);
+                      setPassword("");
+                      setErrorMessage("");
+                      setMagicLinkSent(false);
+                    }}
+                    style={{ textDecoration: "none" }}
+                    className="text-xs font-semibold text-gray-500 hover:text-black no-underline hover:no-underline cursor-pointer"
                   >
-                    {isResending ? "Envoi en cours..." : "Renvoyer l'email de confirmation"}
+                    Modifier
                   </button>
-                )}
-              </div>
+                </div>
 
-              {/* Bouton de Soumission Principal */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-xl shadow-[0_4px_14px_0_rgba(16,230,136,0.39)] hover:shadow-[0_6px_20px_rgba(16,230,136,0.23)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.99] cursor-pointer flex items-center justify-center space-x-2 mt-2 min-h-[44px]"
-              >
-                {isLoading ? (
-                  <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
+                {magicLinkSent ? (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 space-y-1">
+                    <p className="font-bold">✉️ Lien de connexion envoyé !</p>
+                    <p>Vérifiez votre boîte de réception pour vous connecter en 1 clic.</p>
+                  </div>
                 ) : (
-                  <span>Log In</span>
+                  <>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        autoFocus
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (errorMessage) setErrorMessage("");
+                        }}
+                        placeholder="Saisissez votre mot de passe"
+                        className="w-full pl-3.5 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-black cursor-pointer"
+                      >
+                        <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"} text-xs`}></i>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <button
+                        type="button"
+                        onClick={handleSendMagicLink}
+                        disabled={magicLinkLoading}
+                        style={{ textDecoration: "none" }}
+                        className="text-gray-500 hover:text-black no-underline hover:no-underline cursor-pointer"
+                      >
+                        {magicLinkLoading ? "Envoi du lien..." : "M'envoyer un lien magique"}
+                      </button>
+
+                      <Link
+                        href="/forgot-password"
+                        style={{ textDecoration: "none" }}
+                        className="text-xs font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline"
+                      >
+                        Mot de passe oublié ?
+                      </Link>
+                    </div>
+
+                    {errorMessage && (
+                      <p className="text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                        {errorMessage}
+                      </p>
+                    )}
+
+                    {needsConfirmation && (
+                      <button
+                        type="button"
+                        onClick={handleResendConfirmation}
+                        disabled={isResending}
+                        style={{ textDecoration: "none" }}
+                        className="w-full text-xs font-bold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline py-1 cursor-pointer"
+                      >
+                        {isResending ? "Envoi en cours..." : "Renvoyer l'email de confirmation"}
+                      </button>
+                    )}
+
+                    {/* Bouton Se Connecter */}
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full py-3 bg-black hover:bg-neutral-900 text-white text-sm font-semibold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {isLoading ? (
+                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      ) : (
+                        <span>Se connecter</span>
+                      )}
+                    </button>
+                  </>
                 )}
-              </button>
+              </form>
+            )}
 
-              {/* Séparateur OR */}
-              <div className="relative flex items-center justify-center my-4">
-                <div className="absolute border-t border-gray-200 w-full top-1/2"></div>
-                <span className="bg-white px-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider relative z-10">
-                  OR
-                </span>
-              </div>
+            {/* Séparateur Fin */}
+            <div className="border-t border-gray-100 my-4"></div>
 
-              {/* Bouton Google */}
-              <button
-                type="button"
-                onClick={() => handleOAuthLogin("google")}
-                disabled={oauthLoading}
-                className="w-full py-2.5 px-4 bg-white/60 backdrop-blur-sm border border-gray-200 hover:border-gray-300 hover:bg-white text-gray-800 font-bold text-sm rounded-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 shadow-sm hover:shadow-md cursor-pointer disabled:opacity-60"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.39 7.37 24 12 24z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.37 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                  />
-                </svg>
-                <span>{oauthLoading ? "Redirection..." : "Continue with Google"}</span>
-              </button>
-
-              {/* Inscription Sign up */}
-              <div className="text-center mt-3">
-                <p className="text-xs text-gray-600 font-semibold flex items-center justify-center space-x-1.5">
-                  <span>Don't have an account yet?</span>
-                  <Link
-                    href="/register"
-                    className="font-extrabold text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-all duration-200 cursor-pointer"
-                  >
-                    Sign up
-                  </Link>
-                </p>
-              </div>
-            </form>
-            </>
-          )}
-        </div>
+            {/* 4. FOOTER : Pas encore de compte ? Inscrivez-vous */}
+            <div className="text-center pt-1">
+              <p className="text-xs text-gray-700 font-normal">
+                Pas encore de compte ?{" "}
+                <Link
+                  href="/register"
+                  style={{ textDecoration: "none" }}
+                  className="font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline"
+                >
+                  Inscrivez-vous
+                </Link>
+              </p>
+            </div>
+          </div>
         )}
-      </main>
+      </div>
 
-      {/* Footer minimaliste */}
-      <footer className="w-full text-center py-4 text-xs font-semibold text-gray-400 z-10">
-        © 2026 Facilite. All rights reserved.
+      {/* Footer Minimaliste */}
+      <footer className="text-center py-3 text-xs text-gray-400">
+        © 2026 Facilite · Tous droits réservés.
       </footer>
     </div>
   );

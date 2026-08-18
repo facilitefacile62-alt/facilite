@@ -492,6 +492,7 @@ function OffresContent() {
                   <div className="mt-auto">
                     <SocialShareButtons
                       offer={{
+                        ...offer,
                         id: offer.id,
                         title: offer.title,
                         company: offer.company || "Recruteur Confidentiel",
@@ -507,7 +508,7 @@ function OffresContent() {
                         setApplyingOffer(offer);
                       }}
                       externalLink={offer.external_link}
-                      externalButtonLabel="Postuler sur le site officiel"
+                      externalButtonLabel={offer.external_button_label || "Postuler sur le site officiel"}
                       onToast={triggerToast}
                     />
 

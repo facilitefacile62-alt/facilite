@@ -155,6 +155,14 @@ export default function CandidaturesPage() {
               <span className="hidden md:inline">Mes CVs</span>
             </Link>
             <Link
+              href="/candidat/securite"
+              className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition flex items-center space-x-1.5"
+              title="Sécurité"
+            >
+              <i className="fa-solid fa-shield-halved"></i>
+              <span className="hidden md:inline">Sécurité</span>
+            </Link>
+            <Link
               href="/messagerie"
               className="text-xs font-bold text-gray-700 hover:text-emerald-700 bg-gray-100 hover:bg-emerald-50 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl transition flex items-center space-x-1.5 relative"
               title="Messagerie"

@@ -4,13 +4,20 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityAlertsWidget";
 import { getFeatureFlagsTreeAsync, persistFeatureFlagsOverrides, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import {
+  requestDocumentAccess,
+  fetchAccessibleDocument,
+  STATUS_LABELS,
+  STATUS_COLORS,
+  PROFILE_COMPLETENESS_FIELDS,
+} from "@/lib/documentAccess";
 import AvatarImage from "@/components/AvatarImage";
 import AdminAIStudio from "@/components/AdminAIStudio";
 import AdminSecurityLab from "@/components/AdminSecurityLab";
@@ -46,8 +53,8 @@ const NAV_SECTIONS = [
   {
     label: "Contenu",
     items: [
-      { type: "link", href: "/admin/offres", icon: "🔍", label: "Explorer / Offres" },
-      { type: "link", href: "/creer-cv", icon: "➕", label: "Créer", accent: true },
+      { type: "link", href: "/admin/offres", icon: "⚡", label: "Publieur d'Offres IA & Affiches", accent: true },
+      { type: "link", href: "/creer-cv", icon: "➕", label: "Créer un CV" },
     ],
   },
   {
@@ -194,6 +201,17 @@ export default function AdminDashboardPage() {
   const [applications, setApplications] = useState([]);
   const [resumes, setResumes] = useState([]);
   const [badgeRequests, setBadgeRequests] = useState([]);
+
+  // --- Fiche détaillée candidat (palier 1 sans consentement + palier 2 avec) ---
+  const [ordersByUser, setOrdersByUser] = useState(new Map());
+  const [completenessByUser, setCompletenessByUser] = useState(new Map());
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userAccessRequests, setUserAccessRequests] = useState([]);
+  const [userResumesList, setUserResumesList] = useState([]);
+  const [accessReasonDraft, setAccessReasonDraft] = useState("");
+  const [requestingAccess, setRequestingAccess] = useState(false);
+  const [viewingDocumentKey, setViewingDocumentKey] = useState(null);
+
   const [rejectReasonDraft, setRejectReasonDraft] = useState({});
   const [pendingOffers, setPendingOffers] = useState([]);
   const [pendingReports, setPendingReports] = useState([]);
@@ -389,8 +407,19 @@ export default function AdminDashboardPage() {
           setMyRole("admin");
         }
 
-        const [profilesRes, rolesRes, offersRes, applicationsRes, resumesRes, badgeRequestsRes, pendingOffersRes, pendingReportsRes, phoneStatusRes] = await Promise.all([
-          supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+        const [profilesRes, rolesRes, offersRes, applicationsRes, resumesRes, badgeRequestsRes, pendingOffersRes, pendingReportsRes, phoneStatusRes, ordersRes] = await Promise.all([
+          // Colonnes explicites plutôt que "*" : exclut délibérément le
+          // contenu que le candidat a rédigé sur lui-même (bio, expériences,
+          // formations, compétences, langues, CV importé...) — le palier 1
+          // (sans consentement) ne montre qu'identité/statut/réglages,
+          // jamais ce contenu. Le CV lui-même reste en plus protégé par la
+          // RLS (voir 20260818030000_resumes_consent_gate.sql).
+          supabase
+            .from("profiles")
+            .select(
+              "id, email, full_name, avatar_url, cover_url, created_at, updated_at, location, city, country, phone, website_url, gender, slug, contact_email, is_public, show_contact, education_level, recruiter_verified, badges, is_test_account, cv_visible_recruteurs, date_naissance, deleted_at, profile_views, post_impressions"
+            )
+            .order("created_at", { ascending: false }),
           supabase.from("user_roles").select("*"),
           supabase.from("job_offers").select("id, created_at").order("created_at", { ascending: false }),
           supabase.from("candidatures").select("id, created_at").order("created_at", { ascending: false }),
@@ -413,6 +442,11 @@ export default function AdminDashboardPage() {
           // Numéros déjà masqués côté SQL (mask_phone_number) — le numéro
           // complet ne transite jamais jusqu'ici, voir 20260808020000.
           supabase.rpc("get_users_phone_status"),
+          // Historique de commandes (statuts uniquement, jamais invoice_url)
+          // pour la fiche candidat palier 1.
+          supabase
+            .from("orders")
+            .select("id, user_id, cv_model_id, has_agent_option, amount, currency, payment_status, created_at"),
         ]);
 
         if (active) {
@@ -435,6 +469,22 @@ export default function AdminDashboardPage() {
               phone_masked: phoneByUserId.get(p.id) || null,
             }));
             setUsers(merged);
+
+            // Complétude de profil : calculée en SQL (get_profiles_completeness),
+            // jamais depuis le contenu brut — ce composant ne l'a plus
+            // (voir la liste de colonnes explicite ci-dessus).
+            const userIds = merged.map((u) => u.id);
+            if (userIds.length > 0) {
+              const { data: completenessRows, error: completenessError } = await supabase.rpc(
+                "get_profiles_completeness",
+                { p_user_ids: userIds }
+              );
+              if (completenessError) {
+                console.error("Erreur chargement complétude des profils:", completenessError);
+              } else if (active) {
+                setCompletenessByUser(new Map((completenessRows || []).map((r) => [r.user_id, r])));
+              }
+            }
           }
 
           if (offersRes.error) console.error("Erreur chargement offres:", offersRes.error);
@@ -448,6 +498,18 @@ export default function AdminDashboardPage() {
 
           if (badgeRequestsRes.error) console.error("Erreur chargement demandes de badge:", badgeRequestsRes.error);
           else setBadgeRequests(badgeRequestsRes.data || []);
+
+          if (ordersRes.error) {
+            console.error("Erreur chargement commandes:", ordersRes.error);
+          } else {
+            const grouped = new Map();
+            for (const order of ordersRes.data || []) {
+              const list = grouped.get(order.user_id) || [];
+              list.push(order);
+              grouped.set(order.user_id, list);
+            }
+            setOrdersByUser(grouped);
+          }
         }
 
       } catch (err) {
@@ -858,6 +920,84 @@ export default function AdminDashboardPage() {
 
     setBadgeRequests((prev) => prev.filter((r) => r.id !== requestId));
     triggerToast("Demande rejetée.", "fa-circle-check");
+  };
+
+  // --- Fiche détaillée candidat : palier 1 (déjà chargé en bloc) + palier 2
+  // (demandes d'accès aux documents, chargées à la demande à l'ouverture). ---
+  const openUserDetail = async (user) => {
+    setSelectedUser(user);
+    setUserAccessRequests([]);
+    setUserResumesList([]);
+    setAccessReasonDraft("");
+
+    const { data, error } = await supabase
+      .from("document_access_requests")
+      .select("id, admin_id, candidate_id, reason, status, expires_at, created_at")
+      .eq("candidate_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Erreur chargement des demandes d'accès:", error);
+      return;
+    }
+    setUserAccessRequests(data || []);
+
+    const hasActiveAccess = (data || []).some(
+      (r) => r.admin_id === userSession?.user?.id && r.status === "approved" && new Date(r.expires_at) > new Date()
+    );
+    if (hasActiveAccess) {
+      const { data: resumesData, error: resumesError } = await supabase
+        .from("resumes")
+        .select("id, title, type, created_at")
+        .eq("user_id", user.id);
+      if (resumesError) console.error("Erreur chargement des CV du candidat:", resumesError);
+      else setUserResumesList(resumesData || []);
+    }
+  };
+
+  const handleRequestDocumentAccess = async (candidateId) => {
+    if (!accessReasonDraft.trim()) {
+      triggerToast("Un motif est requis pour la demande.", "fa-triangle-exclamation");
+      return;
+    }
+    setRequestingAccess(true);
+    const { requestId, error } = await requestDocumentAccess(candidateId, accessReasonDraft.trim());
+    setRequestingAccess(false);
+
+    if (error || !requestId) {
+      triggerToast("Impossible de créer la demande : " + (error?.message || "une demande est peut-être déjà en attente"), "fa-triangle-exclamation");
+      return;
+    }
+
+    triggerToast("Demande envoyée au candidat.", "fa-circle-check");
+    setAccessReasonDraft("");
+    if (selectedUser?.id === candidateId) {
+      await openUserDetail(selectedUser);
+    }
+  };
+
+  const handleViewDocument = async (candidateId, documentType, resumeId) => {
+    const key = `${documentType}:${resumeId || "profile"}`;
+    setViewingDocumentKey(key);
+    const { data, error } = await fetchAccessibleDocument({ candidateId, documentType, resumeId });
+    setViewingDocumentKey(null);
+
+    if (error || !data?.document) {
+      triggerToast("Accès refusé ou document introuvable : " + (error || "erreur inconnue"), "fa-triangle-exclamation");
+      return;
+    }
+
+    const doc = data.document;
+    const rawPath = doc.file_url || doc.cv_url;
+    if (rawPath) {
+      const signedUrl = await getSignedCvUrl(rawPath);
+      if (signedUrl) window.open(signedUrl, "_blank", "noopener,noreferrer");
+      else triggerToast("Impossible de générer le lien du document.", "fa-triangle-exclamation");
+    } else if (doc.content) {
+      triggerToast(`CV "${doc.title}" consulté (contenu du builder) — vue détaillée à venir.`, "fa-circle-info");
+    } else {
+      triggerToast("Aucun document disponible pour ce candidat.", "fa-triangle-exclamation");
+    }
   };
 
   // --- KPI ---
@@ -1595,18 +1735,28 @@ export default function AdminDashboardPage() {
 
                           {/* Actions FIXE à droite */}
                           <td className="py-3.5 px-4 text-right sticky right-0 z-10 bg-white group-hover:bg-[#FFFBF7] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.08)]">
-                            <button
-                              type="button"
-                              onClick={() => handleSuspendToggle(user)}
-                              disabled={updatingUserId === user.id}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer shadow-xs disabled:opacity-50 ${
-                                user.status === "suspended"
-                                  ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
-                                  : "bg-red-50 hover:bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {user.status === "suspended" ? "Réactiver" : "Suspendre"}
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openUserDetail(user)}
+                                title="Voir la fiche détaillée"
+                                className="w-8 h-8 rounded-xl bg-gray-50 hover:bg-orange-50 text-gray-500 hover:text-orange-600 transition cursor-pointer flex items-center justify-center shrink-0"
+                              >
+                                <i className="fa-solid fa-id-card text-xs"></i>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSuspendToggle(user)}
+                                disabled={updatingUserId === user.id}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer shadow-xs disabled:opacity-50 ${
+                                  user.status === "suspended"
+                                    ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
+                                    : "bg-red-50 hover:bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {user.status === "suspended" ? "Réactiver" : "Suspendre"}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1615,6 +1765,24 @@ export default function AdminDashboardPage() {
                 </table>
               </div>
             </div>
+          )}
+
+          {selectedUser && (
+            <UserDetailModal
+              user={selectedUser}
+              onClose={() => setSelectedUser(null)}
+              orders={ordersByUser.get(selectedUser.id) || []}
+              completeness={completenessByUser.get(selectedUser.id) || null}
+              accessRequests={userAccessRequests}
+              resumesList={userResumesList}
+              accessReasonDraft={accessReasonDraft}
+              setAccessReasonDraft={setAccessReasonDraft}
+              requestingAccess={requestingAccess}
+              onRequestAccess={() => handleRequestDocumentAccess(selectedUser.id)}
+              viewingDocumentKey={viewingDocumentKey}
+              onViewDocument={(documentType, resumeId) => handleViewDocument(selectedUser.id, documentType, resumeId)}
+              currentAdminId={userSession?.user?.id}
+            />
           )}
 
           {activeTab === "badges" && (
@@ -2049,6 +2217,215 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </main>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Fiche détaillée candidat, deux paliers :
+ * - Palier 1 (toujours visible, sans consentement) : identité, statut,
+ *   complétude, historique de commandes (statuts uniquement).
+ * - Palier 2 (avec consentement) : état des demandes d'accès aux
+ *   documents CV de ce candidat, et la liste des CV une fois une demande
+ *   approuvée pour l'admin connecté.
+ * Aucun composant Modal générique n'existe dans ce projet — patron repris
+ * du tiroir de navigation mobile (backdrop + clic extérieur ferme).
+ */
+function UserDetailModal({
+  user,
+  onClose,
+  orders,
+  completeness,
+  accessRequests,
+  resumesList,
+  accessReasonDraft,
+  setAccessReasonDraft,
+  requestingAccess,
+  onRequestAccess,
+  viewingDocumentKey,
+  onViewDocument,
+  currentAdminId,
+}) {
+  const myActiveRequest = accessRequests.find(
+    (r) => r.admin_id === currentAdminId && r.status === "approved" && new Date(r.expires_at) > new Date()
+  );
+  const myPendingRequest = accessRequests.find((r) => r.admin_id === currentAdminId && r.status === "pending");
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" onClick={onClose} />
+      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
+          <div>
+            <h3 className="text-base font-extrabold text-gray-900">{user.full_name || "Sans nom"}</h3>
+            <p className="text-[11px] text-gray-400 font-mono">{user.email}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fermer"
+            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition cursor-pointer"
+          >
+            <i className="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Palier 1 */}
+          <section>
+            <h4 className="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-3">Informations du compte</h4>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="bg-gray-50 rounded-xl p-3">
+                <span className="block text-gray-400 font-bold text-[10px] uppercase">Téléphone</span>
+                <span className="font-mono text-gray-800">{user.phone_masked || "—"}</span>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <span className="block text-gray-400 font-bold text-[10px] uppercase">Inscription</span>
+                <span className="text-gray-800">
+                  {user.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—"}
+                </span>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 col-span-2">
+                <span className="block text-gray-400 font-bold text-[10px] uppercase">Statut</span>
+                <span className="text-gray-800">{user.status === "suspended" ? "🔒 Suspendu" : "✓ Actif"}</span>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h4 className="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-3">Complétude du profil</h4>
+            {completeness ? (
+              <div className="flex flex-wrap gap-1.5">
+                {PROFILE_COMPLETENESS_FIELDS.map((f) => (
+                  <span
+                    key={f.key}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                      completeness[f.key]
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-gray-50 text-gray-400 border-gray-200"
+                    }`}
+                  >
+                    {completeness[f.key] ? "✓" : "✗"} {f.label}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic">Chargement...</p>
+            )}
+          </section>
+
+          <section>
+            <h4 className="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-3">
+              Historique de commandes ({orders.length})
+            </h4>
+            {orders.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">Aucune commande.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {orders.map((o) => (
+                  <div key={o.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 text-xs">
+                    <span className="text-gray-600">{new Date(o.created_at).toLocaleDateString("fr-FR")}</span>
+                    <span className="font-bold text-gray-800">
+                      {Number(o.amount).toLocaleString("fr-FR")} {o.currency}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                        o.payment_status === "paid"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : o.payment_status === "failed"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {o.payment_status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Palier 2 */}
+          <section className="border-t border-gray-100 pt-5">
+            <h4 className="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-3">
+              Accès aux documents (CV) — avec consentement
+            </h4>
+
+            {myActiveRequest ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${STATUS_COLORS.approved}`}>
+                    {STATUS_LABELS.approved}
+                  </span>
+                  <span className="text-[11px] text-gray-500">
+                    Expire le {new Date(myActiveRequest.expires_at).toLocaleDateString("fr-FR")}
+                  </span>
+                </div>
+                {resumesList.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">Ce candidat n'a aucun CV enregistré.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {resumesList.map((r) => (
+                      <div key={r.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 text-xs">
+                        <span className="font-bold text-gray-800">{r.title}</span>
+                        <button
+                          type="button"
+                          onClick={() => onViewDocument(r.type === "imported" ? "resume_file" : "resume_content", r.id)}
+                          disabled={viewingDocumentKey !== null}
+                          className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-extrabold rounded-lg transition cursor-pointer disabled:opacity-50"
+                        >
+                          {viewingDocumentKey?.startsWith(r.type === "imported" ? "resume_file" : "resume_content") ? "..." : "Voir"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : myPendingRequest ? (
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${STATUS_COLORS.pending}`}>
+                  {STATUS_LABELS.pending}
+                </span>
+                <span className="text-[11px] text-gray-500">En attente de la réponse du candidat.</span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <textarea
+                  value={accessReasonDraft}
+                  onChange={(e) => setAccessReasonDraft(e.target.value)}
+                  placeholder="Motif de la demande (ex. accompagnement candidature, vérification suite signalement...)"
+                  rows={2}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 focus:bg-white transition resize-none"
+                />
+                <button
+                  type="button"
+                  onClick={onRequestAccess}
+                  disabled={requestingAccess}
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                >
+                  {requestingAccess ? "Envoi..." : "Demander l'accès aux documents"}
+                </button>
+              </div>
+            )}
+
+            {accessRequests.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-50">
+                <span className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Historique des demandes</span>
+                <div className="space-y-1">
+                  {accessRequests.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between text-[11px] text-gray-500">
+                      <span>{new Date(r.created_at).toLocaleDateString("fr-FR")} — {r.reason}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${STATUS_COLORS[r.status]}`}>
+                        {STATUS_LABELS[r.status]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { safeJsonLdString } from "@/lib/jsonLd";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
+import { resolveOfferAction } from "@/lib/offerContact";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
@@ -170,6 +171,45 @@ const translations = {
 };
 
 const initialJobs = [
+  {
+    id: "77177373-1111-4444-8888-000000000001",
+    titleFR: "CASTING : FAMILLE HALPULAR (EVENPROD)",
+    titleEN: "CASTING: HALPULAR FAMILY (EVENPROD)",
+    company: "EvenProd",
+    logo: "/evenprod_logo.png",
+    logoColor: "bg-red-600 text-white",
+    initials: "EP",
+    location: "Sénégal (Dakar & Régions)",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Casting / Tournage",
+    descFR: `🎬 GRAND CASTING EVENPROD !
+
+Nous recherchons :
+FAMILLE HALPULAR AVEC BONNE MAÎTRISE DE LA LANGUE
+
+📲 Envoyez vos vidéos de présentation directement par WhatsApp au :
++221 77 717 73 73
+
+Rejoignez une production audiovisuelle d'envergure avec EvenProd !`,
+    descEN: `🎬 MAJOR EVENPROD CASTING CALL!
+
+We are looking for:
+HALPULAR FAMILY WITH FLUENT LANGUAGE SKILLS
+
+📲 Send your application videos directly via WhatsApp to:
++221 77 717 73 73
+
+Join a major audiovisual production with EvenProd!`,
+    tags: ["Casting", "EvenProd", "Halpular", "Cinéma & Séries", "Audiovisuel"],
+    whatsapp: "+221 77 717 73 73",
+    recruiterPhone: "+221777177373",
+    externalLink: "https://wa.me/221777177373?text=Bonjour%20EvenProd,%20je%20vous%20contacte%20concernant%20le%20casting%20Famille%20Halpular.",
+    externalButtonLabel: "Postuler sur WhatsApp",
+    image: "/casting_evenprod.jpg",
+    image_url: "/casting_evenprod.jpg",
+    pinned: true
+  },
   {
     id: "9b125270-1234-4567-89ab-cdef25272026",
     titleFR: "Concours de Recrutement Spécial de 2 527 Enseignants (Préscolaire, Élémentaire, Moyen-Secondaire)",
@@ -580,12 +620,16 @@ export default function Home() {
 
   // Search and Filter States for Job Board
   const [dynamicJobs, setDynamicJobs] = useState([]);
-  // Entièrement dérivé de dynamicJobs (fusion avec le fil statique) sans doublons
+  // Entièrement dérivé de dynamicJobs (fusion avec le fil statique) avec priorité absolue aux offres épinglées (EvenProd)
   const allJobs = useMemo(() => {
-    const dynamicIds = new Set(dynamicJobs.map((j) => String(j.id)));
-    const staticPinned = initialJobs.filter((job) => job.pinned && !dynamicIds.has(String(job.id)));
-    const staticUnpinned = initialJobs.filter((job) => !job.pinned && !dynamicIds.has(String(job.id)));
-    return [...dynamicJobs, ...staticPinned, ...staticUnpinned];
+    const pinnedList = initialJobs.filter((j) => j.pinned);
+    const pinnedIds = new Set(pinnedList.map((j) => String(j.id)));
+    
+    const filteredDynamic = dynamicJobs.filter((j) => !pinnedIds.has(String(j.id)));
+    const allSeenIds = new Set([...pinnedIds, ...filteredDynamic.map((j) => String(j.id))]);
+    const staticUnpinned = initialJobs.filter((j) => !j.pinned && !allSeenIds.has(String(j.id)));
+
+    return [...pinnedList, ...filteredDynamic, ...staticUnpinned];
   }, [dynamicJobs]);
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
@@ -790,6 +834,15 @@ export default function Home() {
   const [authRequiredModalOpen, setAuthRequiredModalOpen] = useState(false);
 
   const handleApplyClick = (job) => {
+    const action = resolveOfferAction(job);
+    if (action.isWhatsApp && action.url) {
+      window.open(action.url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (action.type === "external" && action.url) {
+      window.open(action.url, "_blank", "noopener,noreferrer");
+      return;
+    }
     setSelectedJobToApply(job);
     if (!userSession) {
       // Si déconnecté, bloquer la candidature et afficher le modal de création de compte
@@ -1890,10 +1943,10 @@ export default function Home() {
                     </div>
 
                     {/* Visuel de l'offre (Style Facebook : Image nette 100% propre, sans côtés floutés) */}
-                    {job.image && (
+                    {(job.image || job.image_url) && (
                       <div
                         className="relative w-full rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 border border-gray-200/80 dark:border-gray-800 group cursor-pointer flex items-center justify-center min-h-[220px] sm:min-h-[320px] max-h-[560px]"
-                        onClick={() => setViewImageModal({ isOpen: true, url: job.image })}
+                        onClick={() => setViewImageModal({ isOpen: true, url: job.image || job.image_url })}
                         title="Cliquer pour voir l'affiche en plein écran"
                       >
                         <div className="absolute top-2.5 right-2.5 bg-black/60 hover:bg-black/80 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1.5 z-20 pointer-events-none transition opacity-90 group-hover:opacity-100">
@@ -1901,10 +1954,10 @@ export default function Home() {
                           <span>Agrandir</span>
                         </div>
                         <img
-                          src={job.image}
+                          src={job.image || job.image_url}
                           alt={selectedLang === "FR" ? job.titleFR : job.titleEN || "Affiche de recrutement"}
                           className="w-full h-auto max-h-[560px] object-contain mx-auto block animate-fade-in transition-transform duration-200 group-hover:scale-[1.01]"
-                          loading="lazy"
+                          loading="eager"
                         />
                         <OfferImageWatermark />
                       </div>
@@ -1915,15 +1968,29 @@ export default function Home() {
                       offer={{
                         id: job.id,
                         title: selectedLang === "FR" ? job.titleFR : job.titleEN,
+                        titleFR: job.titleFR,
+                        titleEN: job.titleEN,
                         company: job.company,
                         location: job.location,
                         contract: job.contract,
+                        description: selectedLang === "FR" ? job.descFR : job.descEN,
+                        descFR: job.descFR,
+                        descEN: job.descEN,
+                        whatsapp: job.whatsapp,
+                        phone: job.phone,
+                        recruiterPhone: job.recruiterPhone,
+                        recruiterEmail: job.recruiterEmail,
+                        contact_email: job.recruiterEmail,
+                        externalLink: job.externalLink,
+                        external_link: job.externalLink,
+                        image: job.image,
+                        image_url: job.image,
                       }}
                       variant="feed"
                       onApply={() => handleApplyClick(job)}
                       externalLink={job.externalLink}
                       externalButtonLabel={job.externalButtonLabel}
-                      onToast={(msg) => showToast(msg, "fa-circle-check")}
+                      onToast={(msg) => triggerToast(msg, "fa-circle-check")}
                       className="mt-1"
                     />
                   </div>

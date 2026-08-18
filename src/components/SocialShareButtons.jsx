@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { resolveOfferAction } from "@/lib/offerContact";
 
 const REACTIONS = [
   { id: "like", emoji: "👍", label: "J'aime", color: "text-blue-600", bg: "bg-blue-50" },
@@ -17,7 +18,7 @@ const REACTIONS = [
  * Barre d'Engagement & Partage Réseau Social (Design 3 Actions Ultra-Propre)
  * 1. 👍 J'aime (avec barre de réactions animées au survol)
  * 2. ↪️ Partager (Bouton avec menu déroulant de tous les réseaux sociaux)
- * 3. ✈️ Envoyer (Postuler directement)
+ * 3. ✈️ Envoyer / Postuler (WhatsApp / Lien Officiel / Interne)
  */
 export default function SocialShareButtons({
   offer,
@@ -62,15 +63,21 @@ export default function SocialShareButtons({
   const shareUrl = offerId ? `${getBaseUrl()}/offres/${offerId}` : getBaseUrl();
   const shareText = `🚀 Recrutement : ${title} chez ${company} (${contract} - ${location}) sur Facilite.\nDécouvrez l'offre et postulez ici :`;
 
-  const effectiveLink =
-    externalLink ||
-    offer?.external_link ||
-    offer?.apply_url ||
-    offer?.source_url ||
-    offer?.url ||
-    (offer?.recruiter_email || offer?.contact_email
-      ? `mailto:${(offer?.recruiter_email || offer?.contact_email).trim()}?subject=${encodeURIComponent(`Candidature - ${title}`)}`
-      : null);
+  // Résolution intelligente et automatique de l'action de candidature (WhatsApp prioritaire si numéro détecté)
+  const offerAction = resolveOfferAction(
+    {
+      ...offer,
+      external_link: externalLink || offer?.external_link || offer?.externalLink,
+      contact_email: offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail,
+    },
+    { customLabel: externalButtonLabel }
+  );
+
+  const effectiveLink = offerAction.url;
+  const isWhatsAppAction = offerAction.isWhatsApp;
+  const buttonLabel = externalButtonLabel || offerAction.label;
+  const buttonIconClass = offerAction.iconClass;
+  const buttonColorClass = offerAction.buttonColorClass;
 
   // Fermer les menus lors d'un clic extérieur
   useEffect(() => {
@@ -262,17 +269,18 @@ export default function SocialShareButtons({
             <span className="hidden xs:inline">Partager</span>
           </button>
 
-          {/* Bouton 3 : Postuler sur le site officiel (Gros bouton bleu principal) */}
+          {/* Bouton 3 : Postuler sur WhatsApp / Site officiel / Facilité */}
           {effectiveLink ? (
             <a
               href={effectiveLink}
               target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              className={`flex-1 ${buttonColorClass} active:scale-98 font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2`}
+              title={buttonLabel}
             >
-              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span className="truncate">{externalButtonLabel || "Postuler sur le site officiel"}</span>
+              <i className={`${buttonIconClass} text-sm sm:text-base`}></i>
+              <span className="truncate">{buttonLabel}</span>
             </a>
           ) : onApply ? (
             <button
@@ -283,8 +291,8 @@ export default function SocialShareButtons({
               }}
               className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
-              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span className="truncate">Postuler sur le site officiel</span>
+              <i className="fa-solid fa-paper-plane text-xs"></i>
+              <span className="truncate">{buttonLabel || "Postuler"}</span>
             </button>
           ) : (
             <Link
@@ -293,7 +301,7 @@ export default function SocialShareButtons({
               className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
               <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span className="truncate">Postuler sur le site officiel</span>
+              <span className="truncate">Voir l'offre</span>
             </Link>
           )}
 
@@ -545,17 +553,18 @@ export default function SocialShareButtons({
             <span className="hidden xs:inline">Partager</span>
           </button>
 
-          {/* Action 3 : Postuler sur le site officiel (Gros bouton bleu principal) */}
+          {/* Action 3 : Postuler sur WhatsApp / Site officiel / Facilité */}
           {effectiveLink ? (
             <a
               href={effectiveLink}
               target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              className={`flex-1 ${buttonColorClass} active:scale-98 font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2`}
+              title={buttonLabel}
             >
-              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span className="truncate">{externalButtonLabel || "Postuler sur le site officiel"}</span>
+              <i className={`${buttonIconClass} text-sm sm:text-base`}></i>
+              <span className="truncate">{buttonLabel}</span>
             </a>
           ) : onApply ? (
             <button
@@ -566,8 +575,8 @@ export default function SocialShareButtons({
               }}
               className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
-              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span className="truncate">Postuler sur le site officiel</span>
+              <i className="fa-solid fa-paper-plane text-xs"></i>
+              <span className="truncate">{buttonLabel || "Postuler"}</span>
             </button>
           ) : (
             <Link
@@ -576,7 +585,7 @@ export default function SocialShareButtons({
               className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
               <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-              <span className="truncate">Postuler sur le site officiel</span>
+              <span className="truncate">Voir l'offre</span>
             </Link>
           )}
 
