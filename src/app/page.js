@@ -2605,20 +2605,18 @@ export default function Home() {
                         contract: job.contract,
                         description: selectedLang === "FR" ? job.descFR : job.descEN,
                         descFR: job.descFR,
-                        descEN: job.descEN,
-                        whatsapp: job.whatsapp,
-                        phone: job.phone,
-                        recruiterPhone: job.recruiterPhone,
-                        recruiterEmail: job.recruiterEmail,
-                        contact_email: job.recruiterEmail,
-                        externalLink: job.externalLink,
-                        external_link: job.externalLink,
-                        image: job.image,
-                        image_url: job.image,
+                        whatsapp: job.contact_whatsapp || job.whatsapp,
+                        contact_phone: job.contact_phone || job.phone || job.recruiterPhone,
+                        recruiterEmail: job.recruiterEmail || job.contact_email,
+                        contact_email: job.contact_email || job.recruiterEmail,
+                        externalLink: job.externalLink || job.external_link,
+                        external_link: job.external_link || job.externalLink,
+                        image: job.image || job.image_url,
+                        image_url: job.image_url || job.image,
                       }}
                       variant="feed"
                       onApply={() => handleApplyClick(job)}
-                      externalLink={job.externalLink}
+                      externalLink={job.externalLink || job.external_link}
                       externalButtonLabel={job.externalButtonLabel}
                       onToast={(msg) => triggerToast(msg, "fa-circle-check")}
                       className="mt-1"

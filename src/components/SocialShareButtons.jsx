@@ -68,7 +68,7 @@ export default function SocialShareButtons({
     ...offer,
     external_link: externalLink || offer?.external_link || offer?.externalLink,
     contact_email: offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail,
-    whatsapp: offer?.whatsapp || offer?.contact_whatsapp || offer?.recruiter_phone || offer?.recruiterPhone,
+    whatsapp: offer?.whatsapp || offer?.contact_whatsapp,
   });
 
   // Résolution intelligente et automatique de l'action de candidature principale

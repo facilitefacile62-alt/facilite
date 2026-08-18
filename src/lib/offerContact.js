@@ -47,28 +47,28 @@ export function normalizePhoneNumber(rawPhone) {
 /**
  * Recherche et extrait un numéro de téléphone/WhatsApp depuis n'importe quel texte ou objet offre.
  */
+/**
+ * Recherche si l'offre propose explicitement une candidature par WhatsApp.
+ * Ne se déclenche QUE si WhatsApp est explicitement mentionné comme canal de postulation
+ * ou si un champ contact_whatsapp / lien wa.me est fourni.
+ */
 export function detectWhatsAppNumber(offer, extraText = "") {
   if (!offer && !extraText) return null;
 
-  // 1. Vérification des champs explicites d'abord
-  const explicitCandidates = [
+  // 1. Vérification des champs WhatsApp explicites
+  const explicitWaCandidates = [
     offer?.contact_whatsapp,
     offer?.whatsapp,
-    offer?.contact_phone,
-    offer?.phone,
-    offer?.recruiter_phone,
-    offer?.recruiterPhone,
-    offer?.telephone,
   ];
 
-  for (const candidate of explicitCandidates) {
+  for (const candidate of explicitWaCandidates) {
     if (candidate) {
       const normalized = normalizePhoneNumber(String(candidate));
       if (normalized) return normalized;
     }
   }
 
-  // 2. Vérification dans external_link ou apply_url si c'est un lien WhatsApp
+  // 2. Vérification dans external_link si c'est un lien WhatsApp explicite
   const urlCandidates = [offer?.external_link, offer?.externalLink, offer?.apply_url, offer?.url];
   for (const url of urlCandidates) {
     if (url && typeof url === "string") {
@@ -76,15 +76,10 @@ export function detectWhatsAppNumber(offer, extraText = "") {
         const normalized = normalizePhoneNumber(url);
         if (normalized) return normalized;
       }
-      // Cas tel:+221...
-      if (url.startsWith("tel:")) {
-        const normalized = normalizePhoneNumber(url.slice(4));
-        if (normalized) return normalized;
-      }
     }
   }
 
-  // 3. Extraction par Regex dans les textes de description et titres
+  // 3. Extraction dans le texte UNIQUEMENT si le texte mentionne explicitement de postuler par WhatsApp
   const textContent = [
     extraText,
     offer?.description,
@@ -92,36 +87,25 @@ export function detectWhatsAppNumber(offer, extraText = "") {
     offer?.descEN,
     offer?.title,
     offer?.titleFR,
-    offer?.company,
-    offer?.contact_email, // Parfois les utilisateurs écrivent le numéro dans ce champ
   ]
     .filter(Boolean)
     .join("\n");
 
   if (!textContent) return null;
 
-  // Pattern A : Détection explicite avec mot-clé (WhatsApp, Tél, Contact, Numéro, Infoline, etc.)
-  const keywordPattern = /(?:whatsapp|wa|tél|tel|contact|infoline|infolines|téléphone|telephone|portable|appel|numéro|numero|envoyez|vidéos|videos|cv)\s*(?:par\s*whatsapp)?\s*(?::|-|\sau|\sau\s*numéro)?\s*(\+?[0-9\s.-]{8,20})/gi;
-  let match;
-  while ((match = keywordPattern.exec(textContent)) !== null) {
-    const rawNumber = match[1];
-    const normalized = normalizePhoneNumber(rawNumber);
+  // Pattern strict : candidature / CV / postulation explicitement demandée par WhatsApp
+  const explicitWaApplicationPattern = /(?:candidature|postuler|postulez|envoyez?(?:\s+vos|\s+votre)?\s+(?:cv|vid[ée]o|dossier)|d[ée]p[ôo]t)\s+(?:sur|via|par|au)\s*whatsapp\s*(?::|-|\sau|\sau\s*num[ée]ro)?\s*(\+?[0-9\s.-]{8,20})/i;
+  const match = explicitWaApplicationPattern.exec(textContent);
+  if (match && match[1]) {
+    const normalized = normalizePhoneNumber(match[1]);
     if (normalized) return normalized;
   }
 
-  // Pattern B : Détection de numéros sénégalais avec indicatif +221 ou 221
-  const snWithCodePattern = /(?:\+?221|00221)[\s.-]?(?:7[05678]|33)[\s.-]?[0-9]{2,3}[\s.-]?[0-9]{2}[\s.-]?[0-9]{2}/g;
-  const snMatch = textContent.match(snWithCodePattern);
-  if (snMatch && snMatch[0]) {
-    const normalized = normalizePhoneNumber(snMatch[0]);
-    if (normalized) return normalized;
-  }
-
-  // Pattern C : Détection de numéros sénégalais locaux standards (ex: 77 717 73 73 ou 777177373)
-  const snLocalPattern = /\b(?:7[05678]|33)[\s.-]?[0-9]{2,3}[\s.-]?[0-9]{2}[\s.-]?[0-9]{2}\b/g;
-  const snLocalMatch = textContent.match(snLocalPattern);
-  if (snLocalMatch && snLocalMatch[0]) {
-    const normalized = normalizePhoneNumber(snLocalMatch[0]);
+  // Pattern alternatif : mention "WhatsApp : +221..." spécifiquement étiquetée
+  const labeledWaPattern = /\b(?:whatsapp|wa)\s*:\s*(\+?[0-9\s.-]{8,20})/i;
+  const matchLabeled = labeledWaPattern.exec(textContent);
+  if (matchLabeled && matchLabeled[1]) {
+    const normalized = normalizePhoneNumber(matchLabeled[1]);
     if (normalized) return normalized;
   }
 
@@ -139,19 +123,19 @@ export function buildWhatsAppLink(phoneNumber, offer = {}) {
   const company = offer?.company ? ` chez ${offer.company}` : "";
   const title = offer?.title || offer?.titleFR || "l'opportunité";
   
-  const defaultMsg = `Bonjour${offer?.company ? ` ${offer.company}` : ""}, je vous contacte concernant l'offre "${title}"${company} publiée sur Facilite.`;
+  const defaultMsg = `Bonjour${offer?.company ? ` ${offer.company}` : ""}, je vous contacte concernant l'offre "${title}"${company} publiée sur Facilité.`;
   
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(defaultMsg)}`;
 }
 
 /**
  * Extrait toutes les méthodes de contact disponibles pour une offre donnée :
- * - Email direct (mailto:)
- * - WhatsApp direct (wa.me)
+ * - Email direct (mailto: / candidature Facilité)
+ * - WhatsApp direct (wa.me - UNIQUEMENT si explicitement indiqué)
  * - Portail web externe (https://...)
  */
 export function extractOfferContactMethods(offer = {}) {
-  // 1. Détection WhatsApp
+  // 1. Détection WhatsApp (Strictement si explicitement demandé)
   const phone = detectWhatsAppNumber(offer);
   const waUrl = phone ? buildWhatsAppLink(phone, offer) : null;
 
@@ -186,77 +170,16 @@ export function extractOfferContactMethods(offer = {}) {
 }
 
 /**
- * Analyse une offre et détermine l'action de candidature prioritaire :
- * 1. WhatsApp si un numéro est présent
- * 2. Lien externe officiel
- * 3. Email (mailto)
- * 4. Candidature interne Facilité
+ * Analyse une offre et détermine l'action de candidature prioritaire et fidèle :
+ * 1. Email recruteur ou lien mailto -> Postuler via Facilité (ou Postuler par E-mail)
+ * 2. Lien externe officiel (site web, portail SIGOF, etc.) -> Postuler sur le site officiel
+ * 3. WhatsApp UNIQUEMENT si l'offre le demande explicitement
+ * 4. Candidature interne Facilité standard
  */
 export function resolveOfferAction(offer = {}, options = {}) {
   const { customLabel } = options;
 
-  // 1. Détection WhatsApp prioritaire
-  const phone = detectWhatsAppNumber(offer);
-  if (phone) {
-    const waUrl = buildWhatsAppLink(phone, offer);
-    return {
-      type: "whatsapp",
-      isWhatsApp: true,
-      url: waUrl,
-      phoneNumber: phone,
-      label: customLabel || "Postuler sur WhatsApp",
-      buttonColorClass: "bg-[#25D366] hover:bg-[#20bd5a] text-white",
-      iconClass: "fa-brands fa-whatsapp",
-    };
-  }
-
-  // 2. Lien externe officiel
-  const extLink = offer?.external_link || offer?.externalLink || offer?.apply_url || offer?.source_url || offer?.url;
-  if (extLink && typeof extLink === "string" && extLink.trim().length > 0) {
-    const cleanExt = extLink.trim();
-    if (cleanExt.includes("wa.me") || cleanExt.includes("whatsapp")) {
-      return {
-        type: "whatsapp",
-        isWhatsApp: true,
-        isEmail: false,
-        url: cleanExt,
-        phoneNumber: normalizePhoneNumber(cleanExt),
-        label: customLabel || "Postuler sur WhatsApp",
-        buttonColorClass: "bg-[#25D366] hover:bg-[#20bd5a] text-white",
-        iconClass: "fa-brands fa-whatsapp",
-      };
-    }
-
-    // Si le lien externe est un mailto:, l'offre est une offre par e-mail qui doit ouvrir la candidature directe Facilité
-    if (cleanExt.startsWith("mailto:")) {
-      const emailRaw = cleanExt.replace(/^mailto:/i, "").split("?")[0];
-      return {
-        type: "email",
-        isWhatsApp: false,
-        isEmail: true,
-        email: emailRaw,
-        mailtoUrl: cleanExt,
-        url: null, // url null déclenche ApplyModal (candidature directe Facilité)
-        phoneNumber: null,
-        label: customLabel || "Postuler via Facilité",
-        buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
-        iconClass: "fa-solid fa-paper-plane",
-      };
-    }
-
-    return {
-      type: "external",
-      isWhatsApp: false,
-      isEmail: false,
-      url: cleanExt,
-      phoneNumber: null,
-      label: customLabel || "Postuler sur le site officiel",
-      buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
-      iconClass: "fa-solid fa-arrow-up-right-from-square",
-    };
-  }
-
-  // 3. Email recruteur explicite (candidature directe par e-mail via Facilité)
+  // 1. Email recruteur explicite (Priorité N°1 pour la postulation directe via Facilité)
   const email = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
   if (email && typeof email === "string" && email.includes("@")) {
     const title = offer?.title || offer?.titleFR || "Offre d'emploi";
@@ -274,6 +197,69 @@ export function resolveOfferAction(offer = {}, options = {}) {
     };
   }
 
+  // 2. Lien externe officiel (site, portail, plateforme entreprise)
+  const extLink = offer?.external_link || offer?.externalLink || offer?.apply_url || offer?.source_url || offer?.url;
+  if (extLink && typeof extLink === "string" && extLink.trim().length > 0) {
+    const cleanExt = extLink.trim();
+
+    // Si le lien externe est un mailto:
+    if (cleanExt.startsWith("mailto:")) {
+      const emailRaw = cleanExt.replace(/^mailto:/i, "").split("?")[0];
+      return {
+        type: "email",
+        isWhatsApp: false,
+        isEmail: true,
+        email: emailRaw,
+        mailtoUrl: cleanExt,
+        url: null,
+        phoneNumber: null,
+        label: customLabel || "Postuler via Facilité",
+        buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
+        iconClass: "fa-solid fa-paper-plane",
+      };
+    }
+
+    // Si le lien externe est un lien WhatsApp wa.me explicite
+    if (cleanExt.includes("wa.me") || cleanExt.includes("whatsapp")) {
+      return {
+        type: "whatsapp",
+        isWhatsApp: true,
+        isEmail: false,
+        url: cleanExt,
+        phoneNumber: normalizePhoneNumber(cleanExt),
+        label: customLabel || "Postuler sur WhatsApp",
+        buttonColorClass: "bg-[#25D366] hover:bg-[#20bd5a] text-white",
+        iconClass: "fa-brands fa-whatsapp",
+      };
+    }
+
+    return {
+      type: "external",
+      isWhatsApp: false,
+      isEmail: false,
+      url: cleanExt,
+      phoneNumber: null,
+      label: customLabel || "Postuler sur le site officiel",
+      buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
+      iconClass: "fa-solid fa-arrow-up-right-from-square",
+    };
+  }
+
+  // 3. WhatsApp UNIQUEMENT si l'annonce le demande explicitement
+  const phone = detectWhatsAppNumber(offer);
+  if (phone) {
+    const waUrl = buildWhatsAppLink(phone, offer);
+    return {
+      type: "whatsapp",
+      isWhatsApp: true,
+      url: waUrl,
+      phoneNumber: phone,
+      label: customLabel || "Postuler sur WhatsApp",
+      buttonColorClass: "bg-[#25D366] hover:bg-[#20bd5a] text-white",
+      iconClass: "fa-brands fa-whatsapp",
+    };
+  }
+
   // 4. Candidature interne Facilité standard
   return {
     type: "internal",
@@ -281,7 +267,7 @@ export function resolveOfferAction(offer = {}, options = {}) {
     isEmail: false,
     url: null,
     phoneNumber: null,
-    label: customLabel || "Postuler sur Facilite",
+    label: customLabel || "Postuler via Facilité",
     buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
     iconClass: "fa-solid fa-paper-plane",
   };
