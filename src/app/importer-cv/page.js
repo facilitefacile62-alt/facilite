@@ -491,6 +491,21 @@ export default function ImporterCvPage() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+
+      // Vérification quota 2 documents
+      if (session?.user) {
+        const { count } = await supabase
+          .from("resumes")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", session.user.id);
+
+        if (count >= 2) {
+          triggerToast("Limite atteinte : vous avez déjà 2 documents enregistrés. Supprimez-en un depuis votre profil pour en ajouter un nouveau.", "fa-triangle-exclamation");
+          setSavingImport(false);
+          return;
+        }
+      }
+
       const resumeTitle = parsedData.firstName && parsedData.lastName
         ? `CV Importé - ${parsedData.firstName} ${parsedData.lastName}`
         : "CV Importé Facilité";

@@ -1306,6 +1306,13 @@ export default function ProfilPage() {
     const file = e.target.files[0];
     if (!file || !userSession?.user) return;
 
+    // Règle stricte : Limite de 2 documents maximum par candidat
+    if (userDocuments.length >= 2) {
+      triggerToast("Limite atteinte : vous pouvez conserver au maximum 2 documents (1 CV et 1 lettre de motivation). Supprimez un document pour en ajouter un nouveau.", "fa-triangle-exclamation");
+      if (cvFileInputRef.current) cvFileInputRef.current.value = "";
+      return;
+    }
+
     setIsUploadingCv(true);
     triggerToast("Importation et sauvegarde du document...", "fa-spinner fa-spin");
 
@@ -3730,11 +3737,15 @@ export default function ProfilPage() {
                       <div>
                         <h3 className="text-sm font-extrabold text-gray-900 flex items-center space-x-2">
                           <span>Curriculum vitae & Lettres de motivation</span>
-                          <span className="bg-emerald-100 text-[#047857] text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                            {userDocuments.length} document{userDocuments.length > 1 ? "s" : ""}
+                          <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                            userDocuments.length >= 2
+                              ? "bg-amber-100 text-amber-900 border-amber-300"
+                              : "bg-emerald-100 text-[#047857] border-emerald-200"
+                          }`}>
+                            {userDocuments.length}/2 document{userDocuments.length > 1 ? "s" : ""} {userDocuments.length >= 2 ? "(Max atteint)" : ""}
                           </span>
                         </h3>
-                        <p className="text-xs text-gray-500 font-medium">Ajoutez ou supprimez vos fichiers réutilisables pour vos candidatures.</p>
+                        <p className="text-xs text-gray-500 font-medium">Gérez vos 2 fichiers maximum (1 CV et 1 lettre de motivation).</p>
                       </div>
                     </div>
 
@@ -3759,8 +3770,18 @@ export default function ProfilPage() {
 
                       <button
                         type="button"
-                        onClick={() => cvFileInputRef.current?.click()}
-                        className="bg-[#047857] hover:bg-[#036448] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center flex-1 sm:flex-none"
+                        onClick={() => {
+                          if (userDocuments.length >= 2) {
+                            triggerToast("Limite atteinte : vous pouvez conserver au maximum 2 documents (1 CV et 1 lettre de motivation). Supprimez un document pour en ajouter un nouveau.", "fa-triangle-exclamation");
+                            return;
+                          }
+                          cvFileInputRef.current?.click();
+                        }}
+                        className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition shadow-xs cursor-pointer justify-center flex-1 sm:flex-none ${
+                          userDocuments.length >= 2
+                            ? "bg-gray-200 text-gray-500 hover:bg-gray-300"
+                            : "bg-[#047857] hover:bg-[#036448] text-white"
+                        }`}
                       >
                         <i className="fa-solid fa-plus text-xs"></i>
                         <span>Ajouter un document</span>
