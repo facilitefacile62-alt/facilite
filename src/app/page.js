@@ -172,6 +172,53 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "000d9a92-0af4-4c51-af40-e748db51c89d",
+    titleFR: "Stagiaire Informaticien(ne) - Connaissances ERP Sage & Odoo",
+    titleEN: "IT Intern - Sage & Odoo ERP Systems Knowledge",
+    company: "Zenith International Audit & Conseil (ZIAC)",
+    logoColor: "bg-slate-950 text-amber-400",
+    initials: "ZIAC",
+    location: "Dakar, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Stage / Plein temps",
+    descFR: `Le cabinet Zenith International Audit & Conseil (ZIAC) recrute un(e) Stagiaire Informaticien(ne) avec de solides connaissances sur les solutions ERP (Sage & Odoo).
+
+🎯 MISSIONS PRINCIPALES :
+• Participer au paramétrage, à l'intégration et au support des solutions ERP (Sage et Odoo).
+• Accompagner les équipes dans la maintenance des systèmes d'information.
+• Assurer l'assistance aux utilisateurs et la rédaction de documentations techniques.
+
+📌 PROFIL RECHERCHÉ :
+• Formation en Informatique, Génie Logiciel ou domaine équivalent (Bac+2 à Bac+5).
+• Connaissances pratiques sur les ERP Sage & Odoo.
+• Esprit d’analyse, rigueur, autonomie et curiosité technique.
+• Goût prononcé pour le travail en équipe et l’apprentissage continu.
+
+📅 DATE LIMITE : 23 août 2026
+📩 COMMENT POSTULER :
+Envoyez votre CV à : rh@ziac.sn
+📌 Objet du mail : « Candidature – Stagiaire Informaticien(ne) ERP »`,
+    descEN: `Zenith International Audit & Conseil (ZIAC) is hiring an IT Intern with practical knowledge of Sage & Odoo ERP systems.
+
+📌 MISSIONS:
+• Support ERP parameterization, deployment, and maintenance (Sage & Odoo).
+• Assist end users and write technical procedures.
+• Education: Degree in Computer Science, Software Engineering or related.
+
+📅 Deadline: August 23, 2026
+📩 Send CV to: rh@ziac.sn
+📌 Subject: "Candidature – Stagiaire Informaticien(ne) ERP"`,
+    tags: ["ZIAC", "Stage Informatique", "ERP Sage", "Odoo", "Génie Logiciel", "Dakar"],
+    recruiterEmail: "rh@ziac.sn",
+    contact_email: "rh@ziac.sn",
+    externalLink: "mailto:rh@ziac.sn?subject=Candidature%20%E2%80%93%20Stagiaire%20Informaticien(ne)%20ERP",
+    image: "/ziac_stagiaire_informaticien.jpg",
+    image_url: "/ziac_stagiaire_informaticien.jpg",
+    deadline: "2026-08-23",
+    pinned: true
+  },
+  {
     id: "8119367c-e0e0-4279-ba9f-ec1a6063bae0",
     titleFR: "Cadre infirmier(ère) référent(e) senior en prévention et contrôle des infections",
     titleEN: "Senior Infection Prevention & Control (IPC) Lead Nurse",

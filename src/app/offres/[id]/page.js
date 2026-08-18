@@ -7,6 +7,38 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "000d9a92-0af4-4c51-af40-e748db51c89d": {
+    id: "000d9a92-0af4-4c51-af40-e748db51c89d",
+    title: "Stagiaire Informaticien(ne) - Connaissances ERP Sage & Odoo",
+    company: "Zenith International Audit & Conseil (ZIAC)",
+    location: "Dakar, Sénégal",
+    contract_type: "Stage / Plein temps",
+    salary_range: "Indemnité de stage légale",
+    description: `Le cabinet Zenith International Audit & Conseil (ZIAC) recrute un(e) Stagiaire Informaticien(ne) avec de solides connaissances sur les solutions ERP (Sage & Odoo).
+
+🎯 MISSIONS PRINCIPALES :
+• Participer au paramétrage, à l'intégration et au support des solutions ERP (Sage et Odoo).
+• Accompagner les équipes dans la maintenance des systèmes d'information.
+• Assurer l'assistance aux utilisateurs et la rédaction de documentations techniques.
+
+📌 PROFIL RECHERCHÉ :
+• Formation en Informatique, Génie Logiciel ou domaine équivalent (Bac+2 à Bac+5).
+• Connaissances pratiques sur les ERP Sage & Odoo.
+• Esprit d’analyse, rigueur, autonomie et curiosité technique.
+• Goût prononcé pour le travail en équipe et l’apprentissage continu.
+
+📅 DATE LIMITE : 23 août 2026
+📩 COMMENT POSTULER :
+Envoyez votre CV à : rh@ziac.sn
+📌 Objet du mail : « Candidature – Stagiaire Informaticien(ne) ERP »`,
+    image_url: "/ziac_stagiaire_informaticien.jpg",
+    min_education_level: "Bac+2 à Bac+5 (Informatique / Génie Logiciel)",
+    deadline: "2026-08-23",
+    contact_email: "rh@ziac.sn",
+    external_link: "mailto:rh@ziac.sn?subject=Candidature%20%E2%80%93%20Stagiaire%20Informaticien(ne)%20ERP",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "8119367c-e0e0-4279-ba9f-ec1a6063bae0": {
     id: "8119367c-e0e0-4279-ba9f-ec1a6063bae0",
     title: "Cadre infirmier(ère) référent(e) senior en prévention et contrôle des infections",
