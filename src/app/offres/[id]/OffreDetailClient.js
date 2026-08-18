@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import OffreApplySection from "@/components/OffreApplySection";
+import ApplyModal from "@/components/ApplyModal";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
@@ -14,6 +14,8 @@ export default function OffreDetailClient({ initialOffer }) {
   const [offer, setOffer] = useState(initialOffer);
   const [userId, setUserId] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [toast, setToast] = useState("");
 
   // Status states
   const [isEditing, setIsEditing] = useState(false);
@@ -514,8 +516,32 @@ export default function OffreDetailClient({ initialOffer }) {
                   )}
                 </div>
 
-                {/* Barre d'Engagement & Partage Réseau Social (Style Facebook Compact) */}
-                <SocialShareButtons offer={offer} variant="compact" className="my-6" />
+                {/* Toast Notification */}
+                {toast && (
+                  <div className="fixed top-20 right-4 z-[700] bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl animate-fade-in flex items-center gap-2">
+                    <i className="fa-solid fa-circle-check text-emerald-400"></i>
+                    <span className="text-sm font-semibold">{toast}</span>
+                  </div>
+                )}
+
+                {/* Barre d'Actions Alignée : [ 👍 J'aime ] [ 📤 Partager ] [ ✈️ Postuler via Facilité ] [ 🔖 Enregistrer ] */}
+                <SocialShareButtons
+                  offer={{
+                    ...offer,
+                    titleFR: offer.title,
+                    titleEN: offer.title,
+                    description: offer.description,
+                    descFR: offer.description,
+                    contact_email: offer.contact_email,
+                    recruiterEmail: offer.contact_email,
+                    external_link: offer.external_link,
+                    externalLink: offer.external_link,
+                  }}
+                  variant="feed"
+                  onApply={() => setApplyOpen(true)}
+                  onToast={(msg) => setToast(msg)}
+                  className="my-6"
+                />
 
                 {/* Description de l'offre (Lisibilité 100% nette sans dégradé masquant) */}
                 <div className="my-6 bg-gray-50/70 dark:bg-gray-800/40 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-700">
@@ -555,9 +581,23 @@ export default function OffreDetailClient({ initialOffer }) {
                   </div>
                 </div>
 
-                <div className="max-w-sm">
-                  <OffreApplySection offer={offer} />
-                </div>
+                {/* Modale de Candidature Rapide Facilité */}
+                <ApplyModal
+                  isOpen={applyOpen}
+                  onClose={() => setApplyOpen(false)}
+                  job={{
+                    ...offer,
+                    titleFR: offer.title,
+                    titleEN: offer.title,
+                    recruiterEmail: offer.contact_email,
+                    contact_email: offer.contact_email,
+                  }}
+                  selectedLang="FR"
+                  triggerToast={(msg) => {
+                    setToast(msg);
+                    setTimeout(() => setToast(""), 3500);
+                  }}
+                />
               </>
             )}
           </div>
