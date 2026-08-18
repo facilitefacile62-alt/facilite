@@ -7,6 +7,44 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "ddc8c73d-7d1e-4ff0-a7af-153e5b5aa8a6": {
+    id: "ddc8c73d-7d1e-4ff0-a7af-153e5b5aa8a6",
+    title: "Recrutement Chantier (12 Profils Engins & BTP) - SECAM S.A.",
+    company: "SECAM S.A.",
+    location: "Kédougou, Sénégal",
+    contract_type: "CDD (2 ans)",
+    salary_range: "Selon profil & expérience",
+    description: `Pour les besoins d’un chantier situé à Kédougou, SECAM S.A. recrute du personnel qualifié pour un contrat de deux (02) ans avec prise de fonction immédiate.
+
+🏗️ 12 POSTES À POURVOIR :
+• 06 Conducteurs de chargeurs
+• 02 Conducteurs de tractopelles
+• 01 Conducteur de compacteur lisse
+• 01 Conducteur de bulldozer
+• 01 Conducteur de niveleuse CAT 140K
+• 01 Mécanicien hydraulicien
+
+📌 PROFIL RECHERCHÉ :
+• Expérience avérée dans le domaine visé.
+• Disponibilité immédiate pour affectation à Kédougou.
+
+📁 DOSSIER DE CANDIDATURE :
+• Demande manuscrite + CV à jour
+• Copie des diplômes / attestations + CNI
+
+📅 MODALITÉS & CONTACTS :
+• Date limite : 20 août 2026
+• Dépôt physique : Siège SECAM S.A., Almadies (Dakar)
+• Dépôt e-mail : secam.sa@secam.sn ou kancouba.ba@secam.sn
+• Téléphones : +221 33 844 30 41 / +221 77 531 33 48`,
+    image_url: "/secam_chantier_kedougou.jpg",
+    min_education_level: "Professionnel / Technique",
+    deadline: "2026-08-20",
+    contact_email: "secam.sa@secam.sn",
+    external_link: "mailto:secam.sa@secam.sn?cc=kancouba.ba@secam.sn&subject=Candidature%20Chantier%20SECAM%20Kedougou",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "f302e044-0ff5-4d60-9b33-b9db11fa2df7": {
     id: "f302e044-0ff5-4d60-9b33-b9db11fa2df7",
     title: "Chauffeur (Motor Pool) - Ambassade des États-Unis",

@@ -172,6 +172,64 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "ddc8c73d-7d1e-4ff0-a7af-153e5b5aa8a6",
+    titleFR: "Recrutement Chantier (12 Profils Engins & BTP) - SECAM S.A.",
+    titleEN: "Construction Site Recruitment (12 Heavy Equipment & Civil Engineering Roles)",
+    company: "SECAM S.A.",
+    logoColor: "bg-amber-600 text-white",
+    initials: "SEC",
+    location: "Kédougou, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDD (2 ans)",
+    descFR: `Pour les besoins d’un chantier situé à Kédougou, SECAM S.A. recrute du personnel qualifié pour un contrat de deux (02) ans avec prise de fonction immédiate.
+
+🏗️ 12 POSTES À POURVOIR :
+• 06 Conducteurs de chargeurs
+• 02 Conducteurs de tractopelles
+• 01 Conducteur de compacteur lisse
+• 01 Conducteur de bulldozer
+• 01 Conducteur de niveleuse CAT 140K
+• 01 Mécanicien hydraulicien
+
+📌 PROFIL RECHERCHÉ :
+• Expérience avérée dans le domaine visé.
+• Disponibilité immédiate pour affectation à Kédougou.
+
+📁 DOSSIER DE CANDIDATURE :
+• Demande manuscrite + CV à jour
+• Copie des diplômes / attestations + CNI
+
+📅 MODALITÉS & CONTACTS :
+• Date limite : 20 août 2026
+• Dépôt physique : Siège SECAM S.A., Almadies (Dakar)
+• Dépôt e-mail : secam.sa@secam.sn ou kancouba.ba@secam.sn
+• Téléphones : +221 33 844 30 41 / +221 77 531 33 48`,
+    descEN: `For a construction site in Kédougou, SECAM S.A. is recruiting 12 heavy equipment operators and mechanics for a 2-year contract with immediate start.
+
+🏗️ 12 OPEN POSITIONS:
+• 06 Loader Operators
+• 02 Backhoe Operators
+• 01 Smooth Compactor Operator
+• 01 Bulldozer Operator
+• 01 Grader CAT 140K Operator
+• 01 Hydraulic Mechanic
+
+📅 Deadline: August 20, 2026
+📩 Email: secam.sa@secam.sn / kancouba.ba@secam.sn
+📞 Phone: +221 33 844 30 41 / +221 77 531 33 48`,
+    tags: ["SECAM S.A.", "Kédougou", "BTP", "Conducteur d'engins", "Génie Civil"],
+    recruiterEmail: "secam.sa@secam.sn",
+    recruiterPhone: "+221775313348",
+    whatsapp: "+221 77 531 33 48",
+    externalLink: "mailto:secam.sa@secam.sn?cc=kancouba.ba@secam.sn&subject=Candidature%20Chantier%20SECAM%20Kedougou",
+    externalButtonLabel: "Envoyer ma candidature par Email",
+    image: "/secam_chantier_kedougou.jpg",
+    image_url: "/secam_chantier_kedougou.jpg",
+    deadline: "2026-08-20",
+    pinned: true
+  },
+  {
     id: "f302e044-0ff5-4d60-9b33-b9db11fa2df7",
     titleFR: "Chauffeur (Motor Pool) - Ambassade des États-Unis",
     titleEN: "Driver (Motor Pool) - US Embassy Dakar",
