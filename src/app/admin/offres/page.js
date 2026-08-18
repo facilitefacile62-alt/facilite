@@ -53,6 +53,11 @@ export default function AdminOffresPage() {
   // Modal d'agrandissement d'image
   const [viewImageModal, setViewImageModal] = useState({ isOpen: false, url: null });
 
+  // Onglet Image : Upload/Scan ou Génération IA 1:1
+  const [imageTab, setImageTab] = useState("upload"); // "upload" | "ai_generate"
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGeneratingAiPoster, setIsGeneratingAiPoster] = useState(false);
+
   // Sponsoring — activation manuelle admin uniquement (pas de webhook de
   // paiement pour l'instant), voir set_offer_sponsorship() en base.
   const [sponsoringOfferId, setSponsoringOfferId] = useState(null);
@@ -223,6 +228,61 @@ export default function AdminOffresPage() {
     setOfferForm((prev) => ({ ...prev, image_url: "" }));
     setScanSuccess(false);
     setScanMessage("");
+  };
+
+  // Génération d'une affiche de recrutement IA au format 1:1
+  const handleGenerateAiPoster = async (customPrompt = aiPrompt) => {
+    const promptToUse = (customPrompt || aiPrompt || "").trim();
+    if (!promptToUse && !offerForm.title.trim()) {
+      triggerToast("Veuillez saisir un prompt ou renseigner le titre du poste pour guider l'IA.", "fa-triangle-exclamation");
+      return;
+    }
+
+    setIsGeneratingAiPoster(true);
+    triggerToast("🎨 Génération de l'affiche 1:1 en cours par l'IA...", "fa-wand-magic-sparkles");
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/generate-job-poster", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: session?.access_token ? `Bearer ${session.access_token}` : "",
+        },
+        body: JSON.stringify({
+          prompt: promptToUse,
+          title: offerForm.title,
+          company: offerForm.company,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.imageUrl) {
+        setOfferImagePreview(data.imageUrl);
+        setOfferForm((prev) => ({ ...prev, image_url: data.imageUrl }));
+        setScanSuccess(true);
+        setScanMessage("✨ Affiche format carré 1:1 générée avec succès et attachée à l'offre !");
+        triggerToast("🎉 Affiche 1:1 générée avec succès !", "fa-circle-check");
+      } else {
+        triggerToast(data.error || "Erreur lors de la génération de l'image.", "fa-triangle-exclamation");
+      }
+    } catch (err) {
+      console.error("Erreur génération image IA:", err);
+      triggerToast("Erreur de connexion avec le générateur d'image.", "fa-circle-xmark");
+    } finally {
+      setIsGeneratingAiPoster(false);
+    }
+  };
+
+  // Suggérer automatiquement un prompt structuré basé sur les champs du formulaire
+  const handleSuggestPrompt = () => {
+    const title = offerForm.title || "Offre d'emploi";
+    const company = offerForm.company || "Entreprise";
+    const location = offerForm.location || "Dakar, Sénégal";
+    
+    const suggested = `Affiche de recrutement professionnelle et percutante pour le poste de ${title} chez ${company} à ${location}. Style corporate moderne, design soigné, mise en valeur du métier, format carré 1:1`;
+    setAiPrompt(suggested);
+    triggerToast("Prompt suggéré généré avec succès !", "fa-wand-magic-sparkles");
   };
 
   // Soumission et Publication directe sur le Fil d'Actualité
@@ -544,13 +604,37 @@ export default function AdminOffresPage() {
           {/* Colonne Gauche : Formulaire & Zone de Scanner IA */}
           <div className="lg:col-span-7 bg-white rounded-3xl border border-gray-200/90 shadow-sm p-6 sm:p-8 space-y-6">
             
-            {/* Zone Drag & Drop de l'Affiche */}
+            {/* Zone Affiche : Sélecteur d'Onglets (Upload vs Générateur IA 1:1) */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-extrabold text-gray-900 flex items-center gap-1.5">
-                  <i className="fa-solid fa-image text-emerald-600"></i>
-                  <span>Affiche de l'offre / Image de recrutement</span>
-                </label>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-2xl border border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setImageTab("upload")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer ${
+                      imageTab === "upload"
+                        ? "bg-white text-emerald-900 shadow-xs"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    <i className="fa-solid fa-cloud-arrow-up text-emerald-600"></i>
+                    <span>Scanner / Déposer</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setImageTab("ai_generate")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer ${
+                      imageTab === "ai_generate"
+                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                    <span>Générateur IA (Format 1:1)</span>
+                  </button>
+                </div>
+
                 {offerImagePreview && (
                   <button
                     type="button"
@@ -558,12 +642,98 @@ export default function AdminOffresPage() {
                     className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer flex items-center gap-1"
                   >
                     <i className="fa-solid fa-trash-can"></i>
-                    <span>Supprimer l'image</span>
+                    <span>Supprimer</span>
                   </button>
                 )}
               </div>
 
-              {!offerImagePreview ? (
+              {/* Contenu selon l'onglet choisi */}
+              {imageTab === "ai_generate" && !offerImagePreview && (
+                <div className="p-5 bg-gradient-to-br from-emerald-50/70 via-teal-50/40 to-cyan-50/30 border border-emerald-200 rounded-3xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-sm shadow-xs">
+                        <i className="fa-solid fa-paintbrush"></i>
+                      </span>
+                      <div>
+                        <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">
+                          Studio Affiche IA • Format 1:1
+                        </h4>
+                        <p className="text-[11px] text-emerald-700 font-medium">
+                          Créez un visuel carré haute fidélité prêt pour les réseaux sociaux.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSuggestPrompt}
+                      className="px-2.5 py-1 bg-white hover:bg-emerald-100/70 text-emerald-800 border border-emerald-300 rounded-xl text-[11px] font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                      title="Générer automatiquement un prompt avec les infos du formulaire"
+                    >
+                      <i className="fa-solid fa-lightbulb text-amber-500"></i>
+                      <span>Suggérer prompt</span>
+                    </button>
+                  </div>
+
+                  {/* Textarea du Prompt */}
+                  <div>
+                    <textarea
+                      rows={3}
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      placeholder="Décrivez l'affiche souhaitée (ex: Affiche de recrutement moderne et percutante pour Stagiaire Informaticien à Dakar, fond épuré, style corporate 1:1...)"
+                      className="w-full p-3 bg-white border border-emerald-200 rounded-2xl text-xs font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition resize-none placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  {/* Suggestions rapides en 1 clic */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-extrabold text-gray-500 uppercase mr-1">Raccourcis :</span>
+                    {[
+                      { label: "💻 Tech / Informatique", p: "Affiche de recrutement moderne Développeur & Informaticien, bureau high-tech avec ordinateurs, tons bleu et vert néon, format carré 1:1" },
+                      { label: "🏢 Commercial / Vente", p: "Affiche corporate recrutement Commercial B2B dynamique à Dakar, poignée de main, cadre professionnel prestigieux, format 1:1" },
+                      { label: "🏗️ BTP / Chantier", p: "Affiche professionnelle recrutement BTP & Chantier au Sénégal, ingénieurs et casques de sécurité, fond urbain moderne, format carré 1:1" },
+                      { label: "🛵 Logistique / Livreur", p: "Affiche dynamique recrutement Agent Livreur et Coursier avec scooter moderne dans les rues de Dakar, format 1:1" },
+                    ].map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setAiPrompt(item.p);
+                          triggerToast(`Modèle "${item.label}" sélectionné`, "fa-wand-magic-sparkles");
+                        }}
+                        className="px-2 py-0.5 bg-white/90 hover:bg-emerald-100 text-gray-700 text-[10px] font-bold rounded-lg border border-emerald-200/80 transition cursor-pointer"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Bouton de Lancement Génération */}
+                  <button
+                    type="button"
+                    disabled={isGeneratingAiPoster}
+                    onClick={() => handleGenerateAiPoster()}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-60 text-white text-xs font-black rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {isGeneratingAiPoster ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Génération du visuel 1:1 par l'IA...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-wand-magic-sparkles text-amber-300 text-sm"></i>
+                        <span>Générer l'Affiche 1:1 avec l'IA</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Mode Upload / Drag & Drop classique */}
+              {imageTab === "upload" && !offerImagePreview && (
                 <div
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
@@ -593,16 +763,24 @@ export default function AdminOffresPage() {
                     <span>Extraction automatique en 1 seconde</span>
                   </span>
                 </div>
-              ) : (
-                /* Aperçu de l'Affiche avec Laser Scanner IA */
+              )}
+
+              {/* Aperçu de l'Affiche (qu'elle soit issue d'upload ou générée par IA) */}
+              {offerImagePreview && (
                 <div className="relative rounded-3xl overflow-hidden border border-gray-200 bg-gray-950 flex flex-col items-center group">
-                  <div className="relative w-full max-h-[360px] flex items-center justify-center overflow-hidden">
+                  <div className="relative w-full aspect-square max-h-[380px] flex items-center justify-center overflow-hidden bg-black/40">
                     <img
-                      src={offerImagePreview || offerForm.image_url}
-                      alt="Affiche scannée"
-                      className="max-h-[360px] w-auto object-contain transition group-hover:scale-[1.01]"
+                      src={offerImagePreview}
+                      alt="Affiche de recrutement"
+                      className="w-full h-full object-cover transition group-hover:scale-[1.01]"
                     />
                     
+                    {/* Badge Format 1:1 */}
+                    <div className="absolute top-3 left-3 bg-black/80 text-white text-[10px] font-black px-2.5 py-1 rounded-lg backdrop-blur-xs border border-white/10 flex items-center gap-1 shadow-md">
+                      <i className="fa-solid fa-crop-simple text-[#10E688]"></i>
+                      <span>Format 1:1</span>
+                    </div>
+
                     {/* Animation Laser Scanner IA */}
                     {isScanningAI && (
                       <div className="absolute inset-0 bg-emerald-950/40 backdrop-blur-xs flex flex-col items-center justify-center text-white z-30">
@@ -624,22 +802,35 @@ export default function AdminOffresPage() {
                     </button>
                   </div>
 
-                  {/* Barre d'action Scanner sous l'image */}
+                  {/* Barre d'action sous l'image */}
                   <div className="w-full bg-gray-900 p-3 px-4 flex items-center justify-between border-t border-gray-800">
                     <div className="flex items-center space-x-2 text-xs font-bold text-gray-300">
                       <i className="fa-solid fa-check text-emerald-400"></i>
-                      <span>Affiche prête</span>
+                      <span>Affiche attachée à la publication</span>
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={isScanningAI}
-                      onClick={() => runAIScanner()}
-                      className="px-4 py-1.5 bg-[#10E688] hover:bg-[#0fd57d] disabled:opacity-50 text-gray-950 text-xs font-black rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <i className="fa-solid fa-rotate text-[11px]"></i>
-                      <span>Ré-analyser par IA</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {imageTab === "ai_generate" && (
+                        <button
+                          type="button"
+                          disabled={isGeneratingAiPoster}
+                          onClick={() => handleGenerateAiPoster()}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-black rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          <i className="fa-solid fa-wand-magic-sparkles text-amber-300 text-[11px]"></i>
+                          <span>Régénérer</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={isScanningAI}
+                        onClick={() => runAIScanner()}
+                        className="px-3.5 py-1.5 bg-[#10E688] hover:bg-[#0fd57d] disabled:opacity-50 text-gray-950 text-xs font-black rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <i className="fa-solid fa-rotate text-[11px]"></i>
+                        <span>Scanner le texte</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
