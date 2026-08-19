@@ -52,6 +52,13 @@ export default function OffreDetailClient({ initialOffer }) {
           setUserRole(roleData.role);
         }
       }
+
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("apply") === "1" || params.get("postuler") === "1") {
+          setApplyOpen(true);
+        }
+      }
     }
     loadSession();
   }, []);

@@ -98,6 +98,16 @@ function OffresContent() {
   }, [queryParam]);
 
   useEffect(() => {
+    const applyId = searchParams?.get("apply") || searchParams?.get("postuler");
+    if (applyId && offers.length > 0) {
+      const match = offers.find((o) => String(o.id) === String(applyId));
+      if (match) {
+        setApplyingOffer(match);
+      }
+    }
+  }, [searchParams, offers]);
+
+  useEffect(() => {
     async function loadData() {
       try {
         const { data, error } = await supabase

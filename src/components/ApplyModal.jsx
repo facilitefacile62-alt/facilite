@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, triggerToast }) {
@@ -15,6 +16,8 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
   const [selectedExistingCvIds, setSelectedExistingCvIds] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
   
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(false);
@@ -28,6 +31,9 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
     async function loadData() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        setCurrentUser(session?.user || null);
+        setAuthChecked(true);
+
         if (session?.user) {
           setEmail(session.user.email || "");
           
@@ -61,6 +67,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         }
       } catch (err) {
         console.error("Erreur chargement données ApplyModal:", err);
+        setAuthChecked(true);
       }
     }
 
@@ -77,6 +84,10 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
   }, [isOpen, job, selectedLang]);
 
   if (!isOpen || !job) return null;
+
+  const returnUrl = typeof window !== "undefined"
+    ? (window.location.pathname.startsWith("/offres/") ? `${window.location.pathname}?apply=1` : `/offres/${job.id}?apply=1`)
+    : `/offres/${job.id}?apply=1`;
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -214,7 +225,43 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
           <i className="fa-solid fa-xmark text-xl"></i>
         </button>
 
-        {success ? (
+        {authChecked && !currentUser ? (
+          <div className="text-center py-4 space-y-5">
+            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-xs border border-blue-100">
+              <i className="fa-solid fa-user-lock"></i>
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-gray-900">Connexion ou Inscription requise</h3>
+              <p className="text-xs text-gray-600 mt-1.5 max-w-sm mx-auto leading-relaxed">
+                Pour postuler à l&apos;offre <strong className="text-gray-900">{job.titleFR || job.titleEN || job.title}</strong> chez <strong className="text-gray-900">{job.company}</strong>, veuillez vous connecter ou créer votre compte gratuitement.
+              </p>
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-left flex items-start gap-2.5 max-w-sm mx-auto">
+              <i className="fa-solid fa-circle-check text-emerald-600 mt-0.5 text-sm"></i>
+              <p className="text-[11px] text-emerald-800 font-semibold leading-relaxed">
+                Dès votre connexion ou inscription terminée, vous serez <strong>automatiquement redirigé ici</strong> pour continuer et finaliser votre candidature immédiatement !
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 max-w-sm mx-auto">
+              <Link
+                href={`/login?redirect=${encodeURIComponent(returnUrl)}`}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition text-center flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-right-to-bracket"></i>
+                <span>Se connecter</span>
+              </Link>
+              <Link
+                href={`/register?redirect=${encodeURIComponent(returnUrl)}`}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-md transition text-center flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-user-plus"></i>
+                <span>Créer un compte</span>
+              </Link>
+            </div>
+          </div>
+        ) : success ? (
           <div className="text-center py-8 space-y-6">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center border border-emerald-100 shadow-sm mx-auto animate-bounce">
               <i className="fa-solid fa-circle-check text-4xl"></i>
