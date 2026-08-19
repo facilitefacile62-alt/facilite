@@ -237,12 +237,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               </p>
             </div>
 
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-left flex items-start gap-2.5 max-w-sm mx-auto">
-              <i className="fa-solid fa-circle-check text-emerald-600 mt-0.5 text-sm"></i>
-              <p className="text-[11px] text-emerald-800 font-semibold leading-relaxed">
-                Dès votre connexion ou inscription terminée, vous serez <strong>automatiquement redirigé ici</strong> pour continuer et finaliser votre candidature immédiatement !
-              </p>
-            </div>
+
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 max-w-sm mx-auto">
               <Link
