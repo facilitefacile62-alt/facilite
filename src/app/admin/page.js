@@ -1603,8 +1603,8 @@ export default function AdminDashboardPage() {
                       <th className="py-3.5 px-4 min-w-[130px]">Téléphone</th>
                       <th className="py-3.5 px-4 min-w-[140px]">Rôle</th>
                       <th className="py-3.5 px-4 min-w-[90px]">Statut</th>
+                      <th className="py-3.5 px-4 min-w-[170px]">Date & Heure d'inscription</th>
                       <th className="py-3.5 px-4 min-w-[200px]">Badges & Accréditations</th>
-                      <th className="py-3.5 px-4 min-w-[110px]">Inscription</th>
                       <th className="py-3.5 px-4 text-right sticky right-0 z-30 bg-gray-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.08)] min-w-[120px]">Actions</th>
                     </tr>
                   </thead>
@@ -1684,6 +1684,30 @@ export default function AdminDashboardPage() {
                             )}
                           </td>
 
+                          {/* Date & Heure d'inscription */}
+                          <td className="py-3.5 px-4">
+                            {user.created_at ? (
+                              <div className="flex flex-col">
+                                <span className="font-extrabold text-gray-900 text-xs">
+                                  {new Date(user.created_at).toLocaleDateString("fr-FR", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                </span>
+                                <span className="text-[11px] text-gray-500 font-mono font-medium flex items-center gap-1 mt-0.5">
+                                  <i className="fa-regular fa-clock text-[10px] text-orange-500"></i>
+                                  {new Date(user.created_at).toLocaleTimeString("fr-FR", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+
                           {/* Badges & Accréditations */}
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -1726,11 +1750,6 @@ export default function AdminDashboardPage() {
                                 />
                               </div>
                             </div>
-                          </td>
-
-                          {/* Inscription */}
-                          <td className="py-3.5 px-4 text-gray-500 font-medium">
-                            {user.created_at ? new Date(user.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                           </td>
 
                           {/* Actions FIXE à droite */}
@@ -2281,9 +2300,19 @@ function UserDetailModal({
                 <span className="font-mono text-gray-800">{user.phone_masked || "—"}</span>
               </div>
               <div className="bg-gray-50 rounded-xl p-3">
-                <span className="block text-gray-400 font-bold text-[10px] uppercase">Inscription</span>
-                <span className="text-gray-800">
-                  {user.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—"}
+                <span className="block text-gray-400 font-bold text-[10px] uppercase">Date & Heure d'inscription</span>
+                <span className="text-gray-800 font-medium flex items-center gap-1.5 mt-0.5">
+                  <i className="fa-regular fa-calendar text-[11px] text-orange-500"></i>
+                  {user.created_at
+                    ? `${new Date(user.created_at).toLocaleDateString("fr-FR", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })} à ${new Date(user.created_at).toLocaleTimeString("fr-FR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}`
+                    : "—"}
                 </span>
               </div>
               <div className="bg-gray-50 rounded-xl p-3 col-span-2">
