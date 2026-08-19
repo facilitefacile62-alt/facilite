@@ -139,17 +139,30 @@ export default function RecrutementSpontaneDetailPage() {
             </div>
 
             {/* Action buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-8 border-t border-gray-100">
+            <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-8 border-t border-gray-100 flex-wrap">
               {offer.contactType === "url" ? (
-                <a
-                  href={offer.externalLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 text-center py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base rounded-xl transition cursor-pointer shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                >
-                  <i className="fa-solid fa-external-link-alt"></i>
-                  Accéder au site officiel de l'entreprise
-                </a>
+                <>
+                  <a
+                    href={offer.externalLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 text-center py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base rounded-xl transition cursor-pointer shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-paper-plane"></i>
+                    Postuler sur le portail officiel
+                  </a>
+                  {offer.websiteLink && (
+                    <a
+                      href={offer.websiteLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 text-center py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-base rounded-xl transition cursor-pointer shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <i className="fa-solid fa-globe"></i>
+                      Visiter le site officiel
+                    </a>
+                  )}
+                </>
               ) : (
                 <a
                   href={`mailto:${offer.email}`}
