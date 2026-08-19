@@ -1411,7 +1411,7 @@ export default function Header() {
             </div>
           ) : (
             <Link
-              href="/login"
+              href={pathname && pathname !== "/" && pathname !== "/login" ? `/login?redirect=${encodeURIComponent(pathname)}` : "/login"}
               className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow-xs flex items-center gap-1 sm:gap-1.5 flex-shrink-0"
             >
               <i className="fa-solid fa-right-to-bracket text-xs"></i>
@@ -1589,14 +1589,14 @@ export default function Header() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <Link
-                    href="/login"
+                    href={pathname && pathname !== "/" && pathname !== "/login" ? `/login?redirect=${encodeURIComponent(pathname)}` : "/login"}
                     onClick={() => setMobileMenuOpen(false)}
                     className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl text-center shadow-xs transition"
                   >
                     Connexion
                   </Link>
                   <Link
-                    href="/register"
+                    href={pathname && pathname !== "/" && pathname !== "/register" ? `/register?redirect=${encodeURIComponent(pathname)}` : "/register"}
                     onClick={() => setMobileMenuOpen(false)}
                     className="py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-900 dark:text-white font-black text-xs rounded-xl text-center border border-gray-200/80 dark:border-gray-700 transition"
                   >

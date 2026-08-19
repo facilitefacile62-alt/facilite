@@ -27,10 +27,10 @@ export const runtime = "edge";
 export async function GET(req) {
   const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
-  const rawNext = searchParams.get("next") || "/profil";
+  const rawNext = searchParams.get("next") || "/";
   // Jamais une redirection ouverte : uniquement un chemin interne commençant
   // par "/" et pas "//" (qui serait interprété comme une URL externe par le navigateur).
-  const safeNext = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/profil";
+  const safeNext = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login`);

@@ -156,7 +156,7 @@ export default function LoginPage() {
 
         const searchParams = new URLSearchParams(window.location.search);
         const targetRedirect = searchParams.get("redirect");
-        let redirectUrl = targetRedirect || "/messagerie";
+        let redirectUrl = targetRedirect || "/";
 
         if (!targetRedirect) {
           if (targetRole === "admin" || targetRole === "publisher") {
@@ -194,8 +194,8 @@ export default function LoginPage() {
     setErrorMessage("");
     try {
       const params = new URLSearchParams(window.location.search);
-      const targetRedirect = params.get("redirect") || "/profil";
-      const safeRedirect = targetRedirect.startsWith("/") ? targetRedirect : "/profil";
+      const targetRedirect = params.get("redirect") || "/";
+      const safeRedirect = targetRedirect.startsWith("/") && !targetRedirect.startsWith("//") ? targetRedirect : "/";
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
@@ -366,7 +366,7 @@ export default function LoginPage() {
         ) : authMethod === "phone" ? (
           /* Mode Authentification par Téléphone */
           <div className="space-y-3.5">
-            <PhoneAuthForm />
+            <PhoneAuthForm onSuccessRedirect={typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/"} />
             <button
               type="button"
               onClick={() => setAuthMethod("email")}

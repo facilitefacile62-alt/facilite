@@ -19,7 +19,7 @@ const COUNTRIES = [
   { code: "other", iso: "other", name: "Autre (Saisie libre)" },
 ];
 
-export default function PhoneAuthForm({ onSuccessRedirect = "/profil", signupMetadata = null }) {
+export default function PhoneAuthForm({ onSuccessRedirect = "/", signupMetadata = null }) {
   const router = useRouter();
 
   // Étape 1 : 'phone' (Saisie numéro) | Étape 2 : 'otp' (Saisie code 6 chiffres)
@@ -144,8 +144,10 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/profil", signupMet
           method: "POST",
           headers: { Authorization: `Bearer ${data.session.access_token}` },
         }).catch(() => {});
+        const searchRedirect = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
+        const targetUrl = searchRedirect || onSuccessRedirect || "/";
         setTimeout(() => {
-          router.push(onSuccessRedirect);
+          router.push(targetUrl);
           router.refresh();
         }, 1000);
       }
