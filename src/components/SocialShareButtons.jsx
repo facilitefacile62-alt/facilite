@@ -4,7 +4,6 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
-import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 
 const REACTIONS = [
   { id: "like", emoji: "👍", label: "J'aime", color: "text-blue-600", bg: "bg-blue-50" },
@@ -377,30 +376,7 @@ export default function SocialShareButtons({
           </button>
         </div>
 
-        {/* Ligne Footer : Bouton d'aide vers WhatsApp avec provenance de l'offre */}
-        <div className="pt-2 mt-1 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 font-medium">
-          <a
-            href={getFaciliteWhatsAppUrl({ offerTitle: title, offerId: offerId })}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1.5 text-emerald-800 dark:text-[#10E688] hover:text-emerald-700 dark:hover:text-emerald-300 transition cursor-pointer text-xs font-bold py-1 px-2.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 active:scale-95 border border-emerald-200/80 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-2xs"
-            title="Besoin d'aide pour cette offre ? Contacter notre assistance WhatsApp (+221 77 140 08 32)"
-          >
-            <i className="fa-brands fa-whatsapp text-emerald-600 dark:text-[#10E688] text-sm"></i>
-            <span>Besoin d'aide ? WhatsApp</span>
-          </a>
 
-          <Link
-            href={offerId ? `/aide-candidature?offre=${encodeURIComponent(offerId)}&titre=${encodeURIComponent(title)}` : "/aide-candidature"}
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition text-[11px] font-medium"
-            title="Regarder le tutoriel vidéo pour cette offre"
-          >
-            <i className="fa-solid fa-circle-play text-[10px]"></i>
-            <span>Tutoriel vidéo</span>
-          </Link>
-        </div>
 
         {/* Modal de Partage Social Universel */}
         {dropdownOpen && (
