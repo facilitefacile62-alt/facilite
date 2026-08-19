@@ -844,6 +844,46 @@ Join a major audiovisual production with EvenProd!`,
     pinned: true
   },
   {
+    id: "3234b690-ae1b-4204-9dd3-73e98ea4c713",
+    titleFR: "Dexintec recrute un Chauffeur",
+    titleEN: "Dexintec is recruiting a Driver",
+    company: "Dexintec",
+    logoColor: "bg-emerald-600",
+    initials: "DX",
+    location: "Dakar (Golf / environs)",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI / Temps plein",
+    descFR: `Dexintec recherche un Chauffeur sérieux et expérimenté pour rejoindre son équipe.
+
+📌 Profil recherché :
+• De préférence, habiter aux alentours de Golf ou pouvoir s’y rendre très tôt le matin en semaine
+• Être disponible du lundi au samedi
+• Justifier d’une expérience préalable en tant que chauffeur
+• Faire preuve de discrétion, de ponctualité, de rigueur et de professionnalisme
+• Être obligatoirement titulaire d’un permis de conduire valide
+
+📁 Candidature :
+Les personnes intéressées et correspondant au profil recherché peuvent envoyer leur candidature en précisant leur expérience professionnelle et leur lieu de résidence.
+Adresse e-mail : maaguysarr@hotmail.com`,
+    descEN: `Dexintec is looking for a serious and experienced Driver to join its team.
+
+📌 Requirements:
+• Preferably living around Golf or able to commute early in the morning
+• Available Monday to Saturday
+• Previous verified driving experience
+• Discretion, punctuality, rigor and professionalism
+• Must hold a valid driver's license
+
+📁 Application:
+Send application detailing experience and residence to: maaguysarr@hotmail.com`,
+    tags: ["Golf", "Chauffeur", "CDI", "Permis B"],
+    recruiterEmail: "maaguysarr@hotmail.com",
+    externalLink: "mailto:maaguysarr@hotmail.com?subject=Candidature%20Chauffeur%20-%20Dexintec",
+    image: "/dexintec_chauffeur.png",
+    pinned: true
+  },
+  {
     id: "9b125270-1234-4567-89ab-cdef25272026",
     titleFR: "Concours de Recrutement Spécial de 2 527 Enseignants (Préscolaire, Élémentaire, Moyen-Secondaire)",
     titleEN: "Special Recruitment Competition for 2,527 Teachers",
@@ -1073,43 +1113,6 @@ Please send BOTH versions of your CV (French and English) to: recrutement@c2ksta
     recruiterEmail: "recrutement@c2kstaffing.com",
     image: "/c2k_sabodala.jpg",
     pinned: true
-  },
-  {
-    id: "3234b690-ae1b-4204-9dd3-73e98ea4c713",
-    titleFR: "Dexintec recrute un Chauffeur",
-    titleEN: "Dexintec is recruiting a Driver",
-    company: "Dexintec",
-    logoColor: "bg-emerald-600",
-    initials: "DX",
-    location: "Dakar (Golf)",
-    timeFR: "À l'instant",
-    timeEN: "Just now",
-    contract: "CDI",
-    descFR: `Dexintec recherche un Chauffeur sérieux et expérimenté pour rejoindre son équipe.
-
-📌 Profil recherché :
-• De préférence, habiter aux alentours de Golf ou pouvoir s’y rendre très tôt le matin en semaine
-• Être disponible du lundi au samedi
-• Justifier d’une expérience préalable en tant que chauffeur
-• Faire preuve de discrétion, de ponctualité, de rigueur et de professionnalisme
-• Être obligatoirement titulaire d’un permis de conduire valide
-
-📁 Candidature :
-Les personnes intéressées peuvent envoyer leur candidature en précisant leur expérience et leur lieu de résidence à : maaguysarr@hotmail.com`,
-    descEN: `Dexintec is looking for a serious and experienced Driver to join its team.
-
-📌 Requirements:
-• Preferably living around Golf or able to commute early in the morning
-• Available Monday to Saturday
-• Previous verified driving experience
-• Discretion, punctuality, rigor and professionalism
-• Must hold a valid driver's license
-
-📁 Application:
-Send application detailing experience and residence to: maaguysarr@hotmail.com`,
-    tags: ["Golf", "Chauffeur", "CDI", "Permis B"],
-    recruiterEmail: "maaguysarr@hotmail.com",
-    image: "/dexintec_chauffeur.png"
   },
 
   {
