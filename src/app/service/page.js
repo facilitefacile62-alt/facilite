@@ -9,6 +9,8 @@ import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import AdminPosterManagerModal from "@/components/AdminPosterManagerModal";
+import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
+import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -230,6 +232,30 @@ export default function Home() {
   const [userSession, setUserSession] = useState(null);
   const [userAvatarUrl, setUserAvatarUrl] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
+
+  // Feature Flags
+  const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
+
+  useEffect(() => {
+    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+
+    const channel = supabase
+      .channel("public-feature-flags-servicepage")
+      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
+        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const userRole = !userSession ? "visitor" : "user";
+  const checkFeatureAllowed = (featureKey) => {
+    if (!featureKey) return true;
+    return isFeatureAllowed(featureFlagsTree, featureKey, userRole);
+  };
 
   // Sync Supabase Auth session & profile
   useEffect(() => {
@@ -1213,44 +1239,53 @@ export default function Home() {
                 <span>Contact</span>
               </button>
 
-              {/* Option 1: Paramètres */}
+              {/* Option 1: Paramètres (Indisponible) */}
               <div className="flex flex-col">
                 <button
                   type="button"
-                  onClick={() => triggerToast("Paramètres", "fa-gear")}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                  disabled
+                  onClick={() => triggerToast("Paramètres — fonctionnalité bientôt disponible", "fa-gear")}
+                  className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-400 bg-gray-100/90 opacity-50 grayscale cursor-not-allowed border-y border-gray-200/60 select-none shadow-none"
                 >
-                  <div className="flex items-center space-x-3.5">
-                    <i className="fa-solid fa-gear text-gray-400 text-lg"></i>
+                  <div className="flex items-center space-x-3">
+                    <i className="fa-solid fa-gear text-gray-400 text-base"></i>
                     <span>Paramètres et confidentialité</span>
                   </div>
-                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                  <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-wider">Indisponible</span>
                 </button>
               </div>
 
-              {/* Option 2: Aide */}
+              {/* Option 2: Aide (WhatsApp direct) */}
               <div className="flex flex-col">
                 <button
                   type="button"
-                  onClick={() => triggerToast("Aide & Assistance", "fa-circle-question")}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openFaciliteWhatsApp({ page: "Page Services et Tarifs" });
+                  }}
+                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 transition cursor-pointer"
+                  title="Contacter notre support sur WhatsApp (+221 77 140 08 32)"
                 >
                   <div className="flex items-center space-x-3.5">
-                    <i className="fa-regular fa-circle-question text-gray-400 text-lg"></i>
-                    <span>Aide et assistance</span>
+                    <i className="fa-brands fa-whatsapp text-emerald-600 text-lg"></i>
+                    <span>Aide et assistance WhatsApp</span>
                   </div>
-                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">24/7</span>
                 </button>
               </div>
 
-              {/* Option 3: Ajouter un compte */}
+              {/* Option 3: Ajouter un compte (Indisponible) */}
               <button
                 type="button"
-                onClick={() => triggerToast("Ajouter un compte...", "fa-user-plus")}
-                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                disabled
+                onClick={() => triggerToast("Ajouter un compte — fonctionnalité bientôt disponible", "fa-user-plus")}
+                className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-400 bg-gray-100/90 opacity-50 grayscale cursor-not-allowed border-b border-gray-200/60 select-none shadow-none"
               >
-                <i className="fa-solid fa-user-plus text-gray-400 text-lg"></i>
-                <span>Ajouter un compte</span>
+                <div className="flex items-center space-x-3">
+                  <i className="fa-solid fa-user-plus text-gray-400 text-base"></i>
+                  <span>Ajouter un compte</span>
+                </div>
+                <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-wider">Indisponible</span>
               </button>
 
               {/* Compte : Déconnexion, clairement accessible en bas du menu */}
@@ -1546,12 +1581,22 @@ export default function Home() {
                     </ul>
                   </div>
                 </div>
-                <button
-                  onClick={() => triggerToast(t.toastOfferSelected, "fa-circle-check")}
-                  className="w-full border-2 border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)] cursor-pointer"
-                >
-                  {t.chooseOffer}
-                </button>
+                {!checkFeatureAllowed("feat_service_tarifs") && !checkFeatureAllowed("nav_plus_service") ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full bg-gray-100 text-gray-400 font-bold py-3.5 px-4 rounded-xl text-sm border border-gray-200 cursor-not-allowed opacity-50 grayscale pointer-events-none select-none shadow-none"
+                  >
+                    Bientôt disponible
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => triggerToast(t.toastOfferSelected, "fa-circle-check")}
+                    className="w-full border-2 border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)] cursor-pointer"
+                  >
+                    {t.chooseOffer}
+                  </button>
+                )}
               </div>
 
               {/* Carte 2 : Lettre de Motivation */}
@@ -1590,12 +1635,22 @@ export default function Home() {
                     </ul>
                   </div>
                 </div>
-                <button
-                  onClick={() => triggerToast(t.toastOfferSelected, "fa-circle-check")}
-                  className="w-full border-2 border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)] cursor-pointer"
-                >
-                  {t.chooseOffer}
-                </button>
+                {!checkFeatureAllowed("feat_service_tarifs") && !checkFeatureAllowed("nav_plus_service") ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full bg-gray-100 text-gray-400 font-bold py-3.5 px-4 rounded-xl text-sm border border-gray-200 cursor-not-allowed opacity-50 grayscale pointer-events-none select-none shadow-none"
+                  >
+                    Bientôt disponible
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => triggerToast(t.toastOfferSelected, "fa-circle-check")}
+                    className="w-full border-2 border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)] cursor-pointer"
+                  >
+                    {t.chooseOffer}
+                  </button>
+                )}
               </div>
 
               {/* Carte 3 : CV Version Anglaise */}
@@ -1634,12 +1689,22 @@ export default function Home() {
                     </ul>
                   </div>
                 </div>
-                <button
-                  onClick={() => triggerToast(t.toastOfferSelected, "fa-circle-check")}
-                  className="w-full border-2 border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)] cursor-pointer"
-                >
-                  {t.chooseOffer}
-                </button>
+                {!checkFeatureAllowed("feat_service_tarifs") && !checkFeatureAllowed("nav_plus_service") ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full bg-gray-100 text-gray-400 font-bold py-3.5 px-4 rounded-xl text-sm border border-gray-200 cursor-not-allowed opacity-50 grayscale pointer-events-none select-none shadow-none"
+                  >
+                    Bientôt disponible
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => triggerToast(t.toastOfferSelected, "fa-circle-check")}
+                    className="w-full border-2 border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)] cursor-pointer"
+                  >
+                    {t.chooseOffer}
+                  </button>
+                )}
               </div>
 
               {/* Carte 4 : CV Canadien */}
@@ -1678,12 +1743,22 @@ export default function Home() {
                     </ul>
                   </div>
                 </div>
-                <button
-                  onClick={() => triggerToast(t.toastOfferSelected, "fa-circle-check")}
-                  className="w-full border-2 border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)] cursor-pointer"
-                >
-                  {t.chooseOffer}
-                </button>
+                {!checkFeatureAllowed("feat_service_tarifs") && !checkFeatureAllowed("nav_plus_service") ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full bg-gray-100 text-gray-400 font-bold py-3.5 px-4 rounded-xl text-sm border border-gray-200 cursor-not-allowed opacity-50 grayscale pointer-events-none select-none shadow-none"
+                  >
+                    Bientôt disponible
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => triggerToast(t.toastOfferSelected, "fa-circle-check")}
+                    className="w-full border-2 border-blue-600 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all duration-300 shadow-[0_4px_12px_rgba(37,99,235,0)] group-hover:shadow-[0_8px_20px_rgba(37,99,235,0.35)] cursor-pointer"
+                  >
+                    {t.chooseOffer}
+                  </button>
+                )}
               </div>
 
             </div>
@@ -1763,7 +1838,7 @@ export default function Home() {
             {/* WhatsApp */}
             <div className="flex items-center space-x-3">
               <a
-                href="https://wa.me/221771400832"
+                href={getFaciliteWhatsAppUrl({ page: "Page Services et Tarifs (Footer)" })}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 bg-gray-900 rounded-xl border border-gray-800 w-11 h-11 flex items-center justify-center hover:border-green-500 transition-colors"
@@ -1771,12 +1846,12 @@ export default function Home() {
                 <img src="/whtsapp.jpeg" alt="WhatsApp" className="w-full h-full object-cover rounded-lg" />
               </a>
               <a
-                href="https://wa.me/221771400832"
+                href={getFaciliteWhatsAppUrl({ page: "Page Services et Tarifs (Footer)" })}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white text-base font-bold hover:text-green-500 transition-colors"
               >
-                WhatsApp Direct
+                WhatsApp Direct (+221 77 140 08 32)
               </a>
             </div>
 
@@ -1834,7 +1909,7 @@ export default function Home() {
                 <i className="fa-brands fa-linkedin-in text-lg"></i>
               </a>
               <a
-                href="https://wa.me/221771400832"
+                href={getFaciliteWhatsAppUrl({ page: "Page Services et Tarifs (Réseaux)" })}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-11 h-11 bg-gray-900 rounded-2xl flex items-center justify-center text-white hover:bg-[#10E688] hover:text-black transition-all border border-gray-800 shadow-md"
@@ -1999,7 +2074,7 @@ export default function Home() {
                   {/* Liens de contact direct avec images personnalisées */}
                   <div className="flex flex-col sm:flex-row gap-3 p-3 bg-gray-50 border border-gray-150 rounded-2xl">
                     <a
-                      href="https://wa.me/221771400832"
+                      href={getFaciliteWhatsAppUrl({ page: "Formulaire Contact Services" })}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 flex items-center justify-center space-x-2.5 bg-white border border-gray-200 hover:border-green-500 hover:shadow-xs p-2.5 rounded-xl transition cursor-pointer"

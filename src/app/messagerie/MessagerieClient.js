@@ -13,6 +13,7 @@ import UnreadBadge from "@/components/UnreadBadge";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import VideoInterviewModal from "@/components/VideoInterviewModal";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -2319,44 +2320,53 @@ export default function MessagerieClient() {
                 <span>Contact</span>
               </button>
 
-              {/* Option 1: Paramètres */}
+              {/* Option 1: Paramètres (Indisponible) */}
               <div className="flex flex-col">
                 <button
                   type="button"
-                  onClick={() => triggerToast("Paramètres", "fa-gear")}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                  disabled
+                  onClick={() => triggerToast("Paramètres — fonctionnalité bientôt disponible", "fa-gear")}
+                  className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-400 bg-gray-100/90 opacity-50 grayscale cursor-not-allowed border-y border-gray-200/60 select-none shadow-none"
                 >
-                  <div className="flex items-center space-x-3.5">
-                    <i className="fa-solid fa-gear text-gray-400 text-lg"></i>
+                  <div className="flex items-center space-x-3">
+                    <i className="fa-solid fa-gear text-gray-400 text-base"></i>
                     <span>Paramètres et confidentialité</span>
                   </div>
-                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                  <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-wider">Indisponible</span>
                 </button>
               </div>
 
-              {/* Option 2: Aide */}
+              {/* Option 2: Aide (WhatsApp direct) */}
               <div className="flex flex-col">
                 <button
                   type="button"
-                  onClick={() => triggerToast("Aide & Assistance", "fa-circle-question")}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openFaciliteWhatsApp({ page: "Messagerie" });
+                  }}
+                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 transition cursor-pointer"
+                  title="Contacter notre support sur WhatsApp (+221 77 140 08 32)"
                 >
                   <div className="flex items-center space-x-3.5">
-                    <i className="fa-regular fa-circle-question text-gray-400 text-lg"></i>
-                    <span>Aide et assistance</span>
+                    <i className="fa-brands fa-whatsapp text-emerald-600 text-lg"></i>
+                    <span>Aide et assistance WhatsApp</span>
                   </div>
-                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">24/7</span>
                 </button>
               </div>
 
-              {/* Option 3: Ajouter un compte */}
+              {/* Option 3: Ajouter un compte (Indisponible) */}
               <button
                 type="button"
-                onClick={() => triggerToast("Ajouter un compte...", "fa-user-plus")}
-                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                disabled
+                onClick={() => triggerToast("Ajouter un compte — fonctionnalité bientôt disponible", "fa-user-plus")}
+                className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-400 bg-gray-100/90 opacity-50 grayscale cursor-not-allowed border-b border-gray-200/60 select-none shadow-none"
               >
-                <i className="fa-solid fa-user-plus text-gray-400 text-lg"></i>
-                <span>Ajouter un compte</span>
+                <div className="flex items-center space-x-3">
+                  <i className="fa-solid fa-user-plus text-gray-400 text-base"></i>
+                  <span>Ajouter un compte</span>
+                </div>
+                <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-wider">Indisponible</span>
               </button>
 
               {/* Compte : Déconnexion, clairement accessible en bas du menu */}
@@ -3202,8 +3212,8 @@ export default function MessagerieClient() {
                           setShowQuickActions(false);
                           triggerToast("Stickers — bientôt disponible", "fa-icons");
                         }}
-                        className="w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 text-amber-500 hover:bg-amber-50 transition cursor-pointer"
-                        title="Stickers"
+                        className="w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 opacity-40 grayscale cursor-not-allowed bg-gray-100/60 text-gray-400"
+                        title="Stickers (Bientôt disponible)"
                       >
                         <i className="fa-solid fa-icons text-lg"></i>
                         <span className="text-[8px] font-bold">Stickers</span>
@@ -3214,8 +3224,8 @@ export default function MessagerieClient() {
                           setShowQuickActions(false);
                           triggerToast("GIF — bientôt disponible", "fa-film");
                         }}
-                        className="w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 text-purple-500 hover:bg-purple-50 transition cursor-pointer"
-                        title="GIF"
+                        className="w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 opacity-40 grayscale cursor-not-allowed bg-gray-100/60 text-gray-400"
+                        title="GIF (Bientôt disponible)"
                       >
                         <i className="fa-solid fa-film text-lg"></i>
                         <span className="text-[8px] font-bold">GIF</span>
@@ -3453,7 +3463,7 @@ export default function MessagerieClient() {
                   
                   <div className="flex flex-col sm:flex-row gap-3 p-3 bg-gray-50 border border-gray-150 rounded-2xl">
                     <a
-                      href="https://wa.me/221771400832"
+                      href={getFaciliteWhatsAppUrl({ page: "Formulaire Contact Messagerie" })}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 flex items-center justify-center space-x-2.5 bg-white border border-gray-200 hover:border-green-500 hover:shadow-xs p-2.5 rounded-xl transition cursor-pointer"

@@ -345,6 +345,73 @@ export async function extractCvWithGeminiVision(buffer, mimeType = "image/jpeg",
   return { error: "Impossible d'analyser l'image du CV pour le moment." };
 }
 
+/**
+ * Traitement dédié aux pièces d'identité (CNI/passeport) — 100% éphémère,
+ * appelé uniquement par src/app/api/profil/scan-identity-document/route.js
+ * qui ne touche jamais Storage. Extrait au maximum nom/prénom/quartier,
+ * jamais le numéro de document, la date de naissance, la nationalité ou la
+ * zone MRZ, même si le modèle les renvoyait par erreur : seules ces 4 clés
+ * sont lues sur l'objet parsé avant qu'il ne sorte de portée, tout le reste
+ * de la réponse brute de Gemini est perdu à la fin de cette fonction.
+ */
+export async function extractIdentityFieldsWithGemini(buffer, mimeType = "image/jpeg") {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") {
+    return { error: "Clé API Gemini introuvable." };
+  }
+
+  const prompt = `Tu analyses une image de document. Détermine d'abord s'il s'agit d'une pièce d'identité officielle (carte nationale d'identité ou passeport).
+- Si CE N'EST PAS une pièce d'identité, réponds STRICTEMENT en JSON : {"isIdentityDocument": false}
+- Si c'est une pièce d'identité, extrais UNIQUEMENT le nom de famille, le prénom, et la ville/quartier de résidence si visible sur le document. N'extrais et ne mentionne JAMAIS le numéro de document, la date de naissance, la nationalité, la photo, ou toute autre donnée. Réponds STRICTEMENT en JSON :
+{"isIdentityDocument": true, "nom": "...", "prenom": "...", "quartier": "..."}
+Utilise null pour un champ absent ou illisible. Ne renvoie jamais de texte hors de cet objet JSON.`;
+
+  const cleanBase64 = buffer.toString("base64").replace(/^data:[^;]+;base64,/, "");
+
+  for (const model of CANDIDATE_MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: cleanBase64 } }],
+              },
+            ],
+            generationConfig: { temperature: 0.1 },
+          }),
+        }
+      );
+
+      if (!response.ok) continue;
+
+      const resJson = await response.json();
+      const responseText = resJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      let cleaned = responseText.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) cleaned = jsonMatch[0];
+
+      const parsed = JSON.parse(cleaned);
+      if (typeof parsed?.isIdentityDocument === "boolean") {
+        return {
+          isIdentityDocument: parsed.isIdentityDocument,
+          nom: parsed.isIdentityDocument ? parsed.nom || null : null,
+          prenom: parsed.isIdentityDocument ? parsed.prenom || null : null,
+          quartier: parsed.isIdentityDocument ? parsed.quartier || null : null,
+        };
+      }
+    } catch {
+      // Modèle suivant — jamais logger le buffer ni la réponse ici.
+    }
+  }
+
+  return { error: "Impossible d'analyser le document." };
+}
+
 export async function extractTextWithGemini(buffer, mimeType = "image/jpeg") {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") return "";

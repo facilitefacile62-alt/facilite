@@ -3,6 +3,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 
 const FAQ_ITEMS = [
   {
@@ -213,8 +214,30 @@ export default function FaqPage() {
           )}
         </div>
 
+        {/* Bloc d'Assistance Directe WhatsApp */}
+        <div className="mt-10 bg-white dark:bg-gray-900 rounded-3xl border border-emerald-200 dark:border-emerald-900/60 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 text-left">
+            <div className="w-12 h-12 rounded-2xl bg-[#25D366] text-white flex items-center justify-center text-2xl shadow-sm shrink-0">
+              <i className="fa-brands fa-whatsapp"></i>
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-gray-900 dark:text-white">Vous n'avez pas trouvé votre réponse ?</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Notre équipe vous répond directement sur WhatsApp 24h/24 et 7j/7</p>
+            </div>
+          </div>
+          <a
+            href={getFaciliteWhatsAppUrl({ page: "FAQ & Centre d'Aide" })}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto px-5 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black rounded-xl shadow-md flex items-center justify-center gap-2 transition cursor-pointer shrink-0"
+          >
+            <i className="fa-brands fa-whatsapp text-base"></i>
+            <span>Poser ma question (+221 77 140 08 32)</span>
+          </a>
+        </div>
+
         {/* CTA Card Footer */}
-        <div className="mt-12 bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-8 text-white text-center shadow-xl relative overflow-hidden">
+        <div className="mt-8 bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-8 text-white text-center shadow-xl relative overflow-hidden">
           <h3 className="text-xl sm:text-2xl font-black mb-2">
             Prêt à propulser votre carrière ou vos recrutements ?
           </h3>

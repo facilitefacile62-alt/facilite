@@ -10,6 +10,7 @@ import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import RoleNavLink from "@/components/RoleNavLink";
 import { isFeatureAllowed, getFeatureFlagsTreeAsync, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
+import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
 const QUICK_SECTIONS_INDEX = [
@@ -504,6 +505,12 @@ export default function Header() {
       return false;
     }
     return true;
+  };
+
+  const userRole = !userSession ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
+  const checkFeatureAllowed = (featureKey) => {
+    if (!featureKey) return true;
+    return isFeatureAllowed(featureFlagsTree, featureKey, userRole);
   };
 
   const handleNavClick = (e, href, featureKey, featureName) => {
@@ -1129,14 +1136,23 @@ export default function Header() {
                     href="/recrutement-spontane"
                     onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
                     className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                      pathname.startsWith("/recrutement-spontane") ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      !checkFeatureAllowed("nav_plus_recrutement_spontane")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname.startsWith("/recrutement-spontane")
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     }`}
                   >
                     <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center flex-shrink-0">
                       <i className="fa-solid fa-building-user text-sm"></i>
                     </div>
-                    <div>
-                      <div className="font-extrabold">Recrutement Spontané</div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Recrutement Spontané</span>
+                        {!checkFeatureAllowed("nav_plus_recrutement_spontane") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
+                      </div>
                       <div className="text-[10px] text-gray-500 font-normal">Répertoire des 77 entreprises</div>
                     </div>
                   </Link>
@@ -1146,14 +1162,23 @@ export default function Header() {
                     href="/recrutement-journalier"
                     onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
                     className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                      pathname === "/recrutement-journalier" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      !checkFeatureAllowed("nav_plus_depots")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/recrutement-journalier"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     }`}
                   >
                     <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 flex items-center justify-center flex-shrink-0">
                       <i className="fa-solid fa-gas-pump text-sm"></i>
                     </div>
-                    <div>
-                      <div className="font-extrabold">Dépôts Physiques</div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Dépôts Physiques</span>
+                        {!checkFeatureAllowed("nav_plus_depots") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
+                      </div>
                       <div className="text-[10px] text-gray-500 font-normal">Stations-services & contacts</div>
                     </div>
                   </Link>
@@ -1163,16 +1188,25 @@ export default function Header() {
                     href="/candidat/extracteur"
                     onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_plus_extracteur", "Extracteur")}
                     className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                      pathname === "/candidat/extracteur" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      !checkFeatureAllowed("nav_plus_extracteur")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/candidat/extracteur"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     }`}
                   >
                     <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
                       <i className="fa-solid fa-bolt text-sm"></i>
                     </div>
-                    <div>
-                      <div className="font-extrabold flex items-center gap-1.5">
-                        <span>Extraire CV</span>
-                        <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[8px] font-black rounded-md animate-pulse">1-Click</span>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center gap-1.5 justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span>Extraire CV</span>
+                          <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[8px] font-black rounded-md animate-pulse">1-Click</span>
+                        </div>
+                        {!checkFeatureAllowed("nav_plus_extracteur") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
                       </div>
                       <div className="text-[10px] text-gray-500 font-normal">Extraction IA & Candidature auto</div>
                     </div>
@@ -1183,14 +1217,23 @@ export default function Header() {
                     href="/boite-a-idees"
                     onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
                     className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                      pathname === "/boite-a-idees" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      !checkFeatureAllowed("nav_plus_boite_idees")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/boite-a-idees"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     }`}
                   >
                     <div className="w-8 h-8 rounded-lg bg-pink-50 dark:bg-pink-950 text-pink-600 flex items-center justify-center flex-shrink-0">
                       <i className="fa-solid fa-lightbulb text-sm"></i>
                     </div>
-                    <div>
-                      <div className="font-extrabold">Boîte à idées</div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Boîte à idées</span>
+                        {!checkFeatureAllowed("nav_plus_boite_idees") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
+                      </div>
                       <div className="text-[10px] text-gray-500 font-normal">Votez pour les fonctionnalités</div>
                     </div>
                   </Link>
@@ -1200,14 +1243,23 @@ export default function Header() {
                     href="/faq"
                     onClick={(e) => handleNavClick(e, "/faq", "nav_plus_faq", "FAQ & Aide")}
                     className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                      pathname === "/faq" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      !checkFeatureAllowed("nav_plus_faq")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/faq"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     }`}
                   >
                     <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950 text-cyan-600 flex items-center justify-center flex-shrink-0">
                       <i className="fa-solid fa-circle-question text-sm"></i>
                     </div>
-                    <div>
-                      <div className="font-extrabold">FAQ & Aide</div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>FAQ & Aide</span>
+                        {!checkFeatureAllowed("nav_plus_faq") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
+                      </div>
                       <div className="text-[10px] text-gray-500 font-normal">Questions fréquentes</div>
                     </div>
                   </Link>
@@ -1219,16 +1271,25 @@ export default function Header() {
                     href="/fonctionnalites"
                     onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_plus_fonctionnalites", "Toutes les fonctionnalités")}
                     className={`flex items-center gap-3 px-4 py-2 text-xs font-bold transition-colors cursor-pointer ${
-                      pathname === "/fonctionnalites" ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      !checkFeatureAllowed("nav_plus_fonctionnalites")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/fonctionnalites"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     }`}
                   >
                     <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
                       <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
                     </div>
-                    <div>
-                      <div className="font-extrabold flex items-center gap-1.5">
-                        <span>Fonctionnalités</span>
-                        <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8px] font-black rounded-md">Page & Outils</span>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center gap-1.5 justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span>Fonctionnalités</span>
+                          <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8px] font-black rounded-md">Page & Outils</span>
+                        </div>
+                        {!checkFeatureAllowed("nav_plus_fonctionnalites") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
                       </div>
                       <div className="text-[10px] text-gray-500 font-normal">Outils PDF, IA & Modèles</div>
                     </div>
@@ -1584,13 +1645,23 @@ export default function Header() {
                 <Link
                   href="/fonctionnalites"
                   onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_plus_fonctionnalites", "Fonctionnalités")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_plus_fonctionnalites")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-sm shadow-2xs">
                       <i className="fa-solid fa-wand-magic-sparkles"></i>
                     </div>
-                    <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black rounded-md">Tous</span>
+                    <span className={`px-1.5 py-0.5 text-[9px] font-black rounded-md uppercase ${
+                      !checkFeatureAllowed("nav_plus_fonctionnalites")
+                        ? "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        : "bg-emerald-500 text-white"
+                    }`}>
+                      {!checkFeatureAllowed("nav_plus_fonctionnalites") ? "Bientôt" : "Tous"}
+                    </span>
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Fonctionnalités</h4>
@@ -1602,10 +1673,19 @@ export default function Header() {
                 <Link
                   href="/messagerie"
                   onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_messagerie")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 flex items-center justify-center text-sm shadow-2xs">
-                    <i className="fa-solid fa-comments"></i>
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-comments"></i>
+                    </div>
+                    {!checkFeatureAllowed("nav_messagerie") && (
+                      <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black rounded-md uppercase">Bientôt</span>
+                    )}
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Messages</h4>
@@ -1617,13 +1697,23 @@ export default function Header() {
                 <Link
                   href="/offres"
                   onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_offres")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-sm shadow-2xs">
                       <i className="fa-solid fa-briefcase"></i>
                     </div>
-                    <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black rounded-md">Live</span>
+                    <span className={`px-1.5 py-0.5 text-[9px] font-black rounded-md uppercase ${
+                      !checkFeatureAllowed("nav_offres")
+                        ? "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        : "bg-emerald-500 text-white"
+                    }`}>
+                      {!checkFeatureAllowed("nav_offres") ? "Bientôt" : "Live"}
+                    </span>
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Offres d'emploi</h4>
@@ -1635,13 +1725,23 @@ export default function Header() {
                 <Link
                   href="/recrutement-spontane"
                   onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Spontané")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_plus_recrutement_spontane")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 flex items-center justify-center text-sm shadow-2xs">
                       <i className="fa-solid fa-building-user"></i>
                     </div>
-                    <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-md">77 entr.</span>
+                    <span className={`px-1.5 py-0.5 text-[9px] font-black rounded-md uppercase ${
+                      !checkFeatureAllowed("nav_plus_recrutement_spontane")
+                        ? "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        : "bg-blue-600 text-white"
+                    }`}>
+                      {!checkFeatureAllowed("nav_plus_recrutement_spontane") ? "Bientôt" : "77 entr."}
+                    </span>
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Candidature Spontanée</h4>
@@ -1653,10 +1753,19 @@ export default function Header() {
                 <Link
                   href="/recrutement-journalier"
                   onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_plus_depots")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center text-sm shadow-2xs">
-                    <i className="fa-solid fa-gas-pump"></i>
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-gas-pump"></i>
+                    </div>
+                    {!checkFeatureAllowed("nav_plus_depots") && (
+                      <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black rounded-md uppercase">Bientôt</span>
+                    )}
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Dépôts Physiques</h4>
@@ -1668,13 +1777,23 @@ export default function Header() {
                 <Link
                   href="/offres?q=Concours"
                   onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_plus_concours")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center text-sm shadow-2xs">
                       <i className="fa-solid fa-award"></i>
                     </div>
-                    <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-md">Public</span>
+                    <span className={`px-1.5 py-0.5 text-[9px] font-black rounded-md uppercase ${
+                      !checkFeatureAllowed("nav_plus_concours")
+                        ? "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        : "bg-amber-500 text-white"
+                    }`}>
+                      {!checkFeatureAllowed("nav_plus_concours") ? "Bientôt" : "Public"}
+                    </span>
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Concours</h4>
@@ -1686,13 +1805,23 @@ export default function Header() {
                 <Link
                   href="/offres?q=Formation"
                   onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_plus_formation")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-600 flex items-center justify-center text-sm shadow-2xs">
                       <i className="fa-solid fa-graduation-cap"></i>
                     </div>
-                    <span className="px-1.5 py-0.5 bg-teal-500 text-white text-[9px] font-black rounded-md">Pro</span>
+                    <span className={`px-1.5 py-0.5 text-[9px] font-black rounded-md uppercase ${
+                      !checkFeatureAllowed("nav_plus_formation")
+                        ? "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        : "bg-teal-500 text-white"
+                    }`}>
+                      {!checkFeatureAllowed("nav_plus_formation") ? "Bientôt" : "Pro"}
+                    </span>
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Formation</h4>
@@ -1704,10 +1833,19 @@ export default function Header() {
                 <Link
                   href="/creer-cv"
                   onClick={(e) => handleNavClick(e, "/creer-cv", "nav_creer_cv", "Prêt pour votre candidature")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_creer_cv")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-sm shadow-2xs">
-                    <i className="fa-solid fa-lightbulb"></i>
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-lightbulb"></i>
+                    </div>
+                    {!checkFeatureAllowed("nav_creer_cv") && (
+                      <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black rounded-md uppercase">Bientôt</span>
+                    )}
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Prêt pour votre candidature ?</h4>
@@ -1715,16 +1853,23 @@ export default function Header() {
                   </div>
                 </Link>
 
-
-
                 {/* 11. Boîte à idées & Suggestions */}
                 <Link
                   href="/boite-a-idees"
                   onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Idées")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_plus_boite_idees")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-yellow-100 dark:bg-yellow-950 text-yellow-600 flex items-center justify-center text-sm shadow-2xs">
-                    <i className="fa-solid fa-lightbulb"></i>
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-yellow-100 dark:bg-yellow-950 text-yellow-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-lightbulb"></i>
+                    </div>
+                    {!checkFeatureAllowed("nav_plus_boite_idees") && (
+                      <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black rounded-md uppercase">Bientôt</span>
+                    )}
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Boîte à idées</h4>
@@ -1736,13 +1881,22 @@ export default function Header() {
                 <Link
                   href="/faq"
                   onClick={(e) => handleNavClick(e, "/faq", "nav_faq", "FAQ")}
-                  className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs hover:shadow-md transition active:scale-95 flex flex-col justify-between min-h-[92px]"
+                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
+                    !checkFeatureAllowed("nav_faq")
+                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
+                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                  }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-600 flex items-center justify-center text-sm shadow-2xs">
-                    <i className="fa-solid fa-circle-question"></i>
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-circle-question"></i>
+                    </div>
+                    {!checkFeatureAllowed("nav_faq") && (
+                      <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black rounded-md uppercase">Bientôt</span>
+                    )}
                   </div>
                   <div>
-                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">FAQ & Aide</h4>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">FAQ & Centre d'aide</h4>
                     <p className="text-[10px] text-gray-500 font-medium truncate">Questions fréquentes</p>
                   </div>
                 </Link>
@@ -1818,13 +1972,13 @@ export default function Header() {
                 {mobileHelpOpen && (
                   <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-800 space-y-2 text-xs">
                     <a
-                      href="https://wa.me/221771400832"
+                      href={getFaciliteWhatsAppUrl({ page: "Menu Mobile / Centre d'Aide" })}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-2.5 rounded-xl bg-emerald-50 text-emerald-900 font-bold border border-emerald-200"
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-emerald-50 text-emerald-900 font-bold border border-emerald-200 hover:bg-emerald-100 transition"
                     >
                       <i className="fa-brands fa-whatsapp text-lg text-emerald-600"></i>
-                      <span>Assistance direct WhatsApp (24/7)</span>
+                      <span>Assistance directe WhatsApp (24/7)</span>
                     </a>
                     <Link
                       href="/faq"

@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 
 function AideCandidatureContent() {
   const searchParams = useSearchParams();
@@ -121,7 +122,7 @@ function AideCandidatureContent() {
             </div>
           </div>
           <a
-            href="https://wa.me/221771400832"
+            href={getFaciliteWhatsAppUrl({ offerTitle: offreTitre, offerId: offreLien })}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto px-4 py-2.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0"
@@ -138,7 +139,7 @@ function AideCandidatureContent() {
             <span>Besoin d'un accompagnement personnalisé ?</span>
           </div>
           <a
-            href="https://wa.me/221771400832"
+            href={getFaciliteWhatsAppUrl({ offerTitle: offreTitre, offerId: offreLien })}
             target="_blank"
             rel="noopener noreferrer"
             className="text-emerald-600 hover:text-emerald-700 underline font-bold whitespace-nowrap ml-2"

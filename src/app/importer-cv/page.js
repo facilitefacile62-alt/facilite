@@ -8,6 +8,7 @@ import { supabase, handleGlobalSignOut, getSignedAvatarUrl } from "@/lib/supabas
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 
 const translations = {
   FR: {
@@ -1528,6 +1529,25 @@ export default function ImporterCvPage() {
                 <div>
                   <h3 className="text-lg font-black text-gray-900">{t.modalTitle}</h3>
                   <p className="text-[11px] text-gray-500 font-semibold mt-1">{t.modalSubtitle}</p>
+                </div>
+
+                {/* Lien WhatsApp Direct */}
+                <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <i className="fa-brands fa-whatsapp text-emerald-600 text-xl"></i>
+                    <div>
+                      <div className="text-xs font-bold text-gray-900">Assistance rapide WhatsApp</div>
+                      <div className="text-[10px] text-gray-500 font-medium">+221 77 140 08 32 (24/7)</div>
+                    </div>
+                  </div>
+                  <a
+                    href={getFaciliteWhatsAppUrl({ page: "Analyseur & Diagnostic CV" })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs rounded-xl shadow-xs transition"
+                  >
+                    Discuter
+                  </a>
                 </div>
 
                 <div className="space-y-3.5">

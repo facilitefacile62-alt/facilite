@@ -16,6 +16,8 @@ import { safeJsonLdString } from "@/lib/jsonLd";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { resolveOfferAction } from "@/lib/offerContact";
+import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
+import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
@@ -1285,6 +1287,30 @@ export default function Home() {
   const { session: userSession, profile: userProfile, loading: authLoading } = useAuth();
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
 
+  // Arbre dynamique de feature flags
+  const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
+
+  useEffect(() => {
+    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+
+    const channel = supabase
+      .channel("public-feature-flags-homepage")
+      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
+        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const userRole = !userSession ? "visitor" : userProfile?.role === "admin" ? "admin" : userProfile?.role === "recruiter" ? "recruiter" : "user";
+  const checkFeatureAllowed = (featureKey) => {
+    if (!featureKey) return true;
+    return isFeatureAllowed(featureFlagsTree, featureKey, userRole);
+  };
+
   useEffect(() => {
     setExperiences(userProfile?.experiences || []);
   }, [userProfile]);
@@ -2159,44 +2185,53 @@ export default function Home() {
                 <span>Contact</span>
               </button>
 
-              {/* Option 1: Paramètres */}
+              {/* Option 1: Paramètres (Indisponible) */}
               <div className="flex flex-col">
                 <button
                   type="button"
-                  onClick={() => triggerToast("Paramètres", "fa-gear")}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                  disabled
+                  onClick={() => triggerToast("Paramètres — fonctionnalité bientôt disponible", "fa-gear")}
+                  className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-400 bg-gray-100/90 opacity-50 grayscale cursor-not-allowed border-y border-gray-200/60 select-none shadow-none"
                 >
-                  <div className="flex items-center space-x-3.5">
-                    <i className="fa-solid fa-gear text-gray-400 text-lg"></i>
+                  <div className="flex items-center space-x-3">
+                    <i className="fa-solid fa-gear text-gray-400 text-base"></i>
                     <span>Paramètres et confidentialité</span>
                   </div>
-                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                  <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-wider">Indisponible</span>
                 </button>
               </div>
 
-              {/* Option 2: Aide */}
+              {/* Option 2: Aide (WhatsApp direct) */}
               <div className="flex flex-col">
                 <button
                   type="button"
-                  onClick={() => triggerToast("Aide & Assistance", "fa-circle-question")}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openFaciliteWhatsApp({ page: "Page d'Accueil" });
+                  }}
+                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 transition cursor-pointer"
+                  title="Contacter notre support sur WhatsApp (+221 77 140 08 32)"
                 >
                   <div className="flex items-center space-x-3.5">
-                    <i className="fa-regular fa-circle-question text-gray-400 text-lg"></i>
-                    <span>Aide et assistance</span>
+                    <i className="fa-brands fa-whatsapp text-emerald-600 text-lg"></i>
+                    <span>Aide et assistance WhatsApp</span>
                   </div>
-                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">24/7</span>
                 </button>
               </div>
 
-              {/* Option 3: Ajouter un compte */}
+              {/* Option 3: Ajouter un compte (Indisponible) */}
               <button
                 type="button"
-                onClick={() => triggerToast("Ajouter un compte...", "fa-user-plus")}
-                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                disabled
+                onClick={() => triggerToast("Ajouter un compte — fonctionnalité bientôt disponible", "fa-user-plus")}
+                className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-400 bg-gray-100/90 opacity-50 grayscale cursor-not-allowed border-b border-gray-200/60 select-none shadow-none"
               >
-                <i className="fa-solid fa-user-plus text-gray-400 text-lg"></i>
-                <span>Ajouter un compte</span>
+                <div className="flex items-center space-x-3">
+                  <i className="fa-solid fa-user-plus text-gray-400 text-base"></i>
+                  <span>Ajouter un compte</span>
+                </div>
+                <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-wider">Indisponible</span>
               </button>
 
               {/* Compte : Déconnexion, clairement accessible en bas du menu */}
@@ -2657,27 +2692,54 @@ export default function Home() {
             </div>
 
             {/* Aide et raccourcis rapides */}
-            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs text-center flex flex-col items-center space-y-2.5">
-              <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
+            <div className={`bg-white rounded-xl border border-gray-200 p-3 shadow-xs text-center flex flex-col items-center space-y-2.5 ${
+              !checkFeatureAllowed("feat_card_pret_candidature") || (!checkFeatureAllowed("feat_creer_cv") && !checkFeatureAllowed("nav_plus_service")) ? "opacity-60 grayscale bg-gray-50" : ""
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                !checkFeatureAllowed("feat_card_pret_candidature") || (!checkFeatureAllowed("feat_creer_cv") && !checkFeatureAllowed("nav_plus_service"))
+                  ? "bg-gray-200 text-gray-400"
+                  : "bg-blue-50 text-blue-500"
+              }`}>
                 <i className="fa-regular fa-lightbulb text-base"></i>
               </div>
-              <h4 className="text-[10px] font-extrabold text-gray-800">Prêt pour votre candidature ?</h4>
+              <div className="flex items-center gap-1.5 justify-center">
+                <h4 className="text-[10px] font-extrabold text-gray-800">Prêt pour votre candidature ?</h4>
+                {(!checkFeatureAllowed("feat_card_pret_candidature") || (!checkFeatureAllowed("feat_creer_cv") && !checkFeatureAllowed("nav_plus_service"))) && (
+                  <span className="px-1.5 py-0.2 bg-gray-200 text-gray-600 text-[8px] font-black rounded-md uppercase">Indisponible</span>
+                )}
+              </div>
               <p className="text-[9px] text-gray-500 leading-relaxed font-semibold">
                 Utilisez nos services de création pour générer des CV percutants optimisés pour les recruteurs.
               </p>
-              <Link
-                href="/service"
-                className="w-full bg-[#E4B8F9] hover:bg-[#db9ff7] text-purple-950 font-extrabold py-1.5 px-3 rounded-lg text-[9px] transition text-center shadow-xs cursor-pointer block"
-              >
-                Concevoir mon CV
-              </Link>
+              {!checkFeatureAllowed("feat_card_pret_candidature") || (!checkFeatureAllowed("feat_creer_cv") && !checkFeatureAllowed("nav_plus_service")) ? (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full bg-gray-200/90 text-gray-400 font-bold py-1.5 px-3 rounded-lg text-[9px] cursor-not-allowed opacity-50 grayscale border border-gray-300 pointer-events-none select-none block text-center shadow-none"
+                >
+                  Concevoir mon CV (Indisponible)
+                </button>
+              ) : (
+                <Link
+                  href="/service"
+                  className="w-full bg-[#E4B8F9] hover:bg-[#db9ff7] text-purple-950 font-extrabold py-1.5 px-3 rounded-lg text-[9px] transition text-center shadow-xs cursor-pointer block"
+                >
+                  Concevoir mon CV
+                </Link>
+              )}
             </div>
 
             {/* Diagnostic CV Gratuit Card */}
-            <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-xl border border-indigo-950 p-4.5 shadow-md text-center flex flex-col items-center space-y-3 relative overflow-hidden">
-              {/* Badge GRATUIT */}
-              <div className="absolute top-2.5 right-2.5 bg-emerald-400 text-emerald-950 font-black text-[8px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm animate-pulse">
-                GRATUIT
+            <div className={`bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-xl border border-indigo-950 p-4.5 shadow-md text-center flex flex-col items-center space-y-3 relative overflow-hidden ${
+              !checkFeatureAllowed("feat_diagnostic_cv") || (!checkFeatureAllowed("feat_importer_cv") && !checkFeatureAllowed("nav_plus_importer")) ? "opacity-60 grayscale" : ""
+            }`}>
+              {/* Badge GRATUIT ou Bientôt */}
+              <div className={`absolute top-2.5 right-2.5 font-black text-[8px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm ${
+                !checkFeatureAllowed("feat_diagnostic_cv") || (!checkFeatureAllowed("feat_importer_cv") && !checkFeatureAllowed("nav_plus_importer"))
+                  ? "bg-gray-700 text-gray-300"
+                  : "bg-emerald-400 text-emerald-950 animate-pulse"
+              }`}>
+                {!checkFeatureAllowed("feat_diagnostic_cv") || (!checkFeatureAllowed("feat_importer_cv") && !checkFeatureAllowed("nav_plus_importer")) ? "Indisponible" : "GRATUIT"}
               </div>
               <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
                 <i className="fa-solid fa-stethoscope text-sm"></i>
@@ -2686,13 +2748,23 @@ export default function Home() {
               <p className="text-[9px] text-indigo-250 leading-relaxed font-semibold">
                 Importez ou prenez une photo de votre CV pour obtenir une analyse IA complète de votre design, vos mots-clés et votre score ATS.
               </p>
-              <button
-                type="button"
-                onClick={() => setDiagnosticModalOpen(true)}
-                className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold py-2 px-3 rounded-lg text-[10px] transition text-center shadow-md cursor-pointer block border-none focus:outline-none"
-              >
-                Diagnostiquer mon CV
-              </button>
+              {!checkFeatureAllowed("feat_diagnostic_cv") || (!checkFeatureAllowed("feat_importer_cv") && !checkFeatureAllowed("nav_plus_importer")) ? (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full bg-gray-800/90 text-gray-400 font-bold py-2 px-3 rounded-lg text-[10px] cursor-not-allowed opacity-50 grayscale border border-gray-700 pointer-events-none select-none block text-center shadow-none"
+                >
+                  Diagnostiquer mon CV (Indisponible)
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setDiagnosticModalOpen(true)}
+                  className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold py-2 px-3 rounded-lg text-[10px] transition text-center shadow-md cursor-pointer block border-none focus:outline-none"
+                >
+                  Diagnostiquer mon CV
+                </button>
+              )}
             </div>
 
           </aside>
@@ -2792,7 +2864,7 @@ export default function Home() {
             </div>
             <div className="flex items-center space-x-3">
               <a
-                href="https://wa.me/221771400832"
+                href={getFaciliteWhatsAppUrl({ page: "Page d'Accueil (Footer)" })}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 bg-gray-900 rounded-xl border border-gray-800 w-11 h-11 flex items-center justify-center hover:border-green-500 transition-colors"
@@ -2800,12 +2872,12 @@ export default function Home() {
                 <img src="/whtsapp.jpeg" alt="WhatsApp" className="w-full h-full object-cover rounded-lg" />
               </a>
               <a
-                href="https://wa.me/221771400832"
+                href={getFaciliteWhatsAppUrl({ page: "Page d'Accueil (Footer)" })}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white text-base font-bold hover:text-green-500 transition-colors"
               >
-                WhatsApp Direct
+                WhatsApp Direct (+221 77 140 08 32)
               </a>
             </div>
             <div className="flex items-center space-x-3 mb-2">
@@ -2850,7 +2922,7 @@ export default function Home() {
                 <i className="fa-brands fa-linkedin-in text-lg"></i>
               </a>
               <a
-                href="https://wa.me/221771400832"
+                href={getFaciliteWhatsAppUrl({ page: "Page d'Accueil (Réseaux)" })}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-11 h-11 bg-gray-900 rounded-2xl flex items-center justify-center text-white hover:bg-[#10E688] hover:text-black transition-all border border-gray-800 shadow-md"
@@ -2963,7 +3035,7 @@ export default function Home() {
                   {/* Liens de contact direct avec images personnalisées */}
                   <div className="flex flex-col sm:flex-row gap-3 p-3 bg-gray-50 border border-gray-150 rounded-2xl">
                     <a
-                      href="https://wa.me/221771400832"
+                      href={getFaciliteWhatsAppUrl({ page: "Formulaire Contact Accueil" })}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 flex items-center justify-center space-x-2.5 bg-white border border-gray-200 hover:border-green-500 hover:shadow-xs p-2.5 rounded-xl transition cursor-pointer"

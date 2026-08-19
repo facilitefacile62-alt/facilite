@@ -18,6 +18,7 @@ import DiagnosticModal from "@/components/DiagnosticModal";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityTabContent from "@/components/SecurityTabContent";
+import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 
 /**
  * Convertit une data URI base64 (sortie de canvas.toDataURL) en Blob, sans
@@ -131,6 +132,7 @@ export default function ProfilPage() {
   const [jobTitle, setJobTitle] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
+  const [quartier, setQuartier] = useState("");
   // Publication du profil sur /in/[slug] — opt-in explicite, deux niveaux
   const [isPublic, setIsPublic] = useState(false);
   const [showContact, setShowContact] = useState(false);
@@ -494,6 +496,7 @@ export default function ProfilPage() {
       setJobTitle(profile.headline || (typeof window !== "undefined" ? localStorage.getItem("user_job_title") || "" : ""));
       setCity(profile.city || (profile.location ? profile.location.split(",")[0]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_city") || "" : "")));
       setCountry(profile.country || (profile.location ? profile.location.split(",")[1]?.trim() : (typeof window !== "undefined" ? localStorage.getItem("user_country") || "" : "")));
+      setQuartier(profile.quartier || (typeof window !== "undefined" ? localStorage.getItem("user_quartier") || "" : ""));
     } else {
       // En cas d'erreur 500 ou d'échec de chargement, bascule sur des valeurs par défaut à partir de la session
       setProfileName(session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "");
@@ -1177,6 +1180,37 @@ export default function ProfilPage() {
     triggerToast("🔍 Analyse du contenu réel du document...", "fa-expand fa-spin");
 
     try {
+      // Garde-fou obligatoire AVANT tout upload Storage ou appel au parseur
+      // CV générique : une pièce d'identité (CNI/passeport) ne doit jamais
+      // atteindre ni l'un ni l'autre. Ce contrôle appelle un endpoint dédié
+      // et 100% éphémère (aucune écriture Storage/base/log) — voir
+      // src/app/api/profil/scan-identity-document/route.js. Corrige une
+      // faille réelle : jusqu'ici, une pièce d'identité était uploadée dans
+      // le bucket "resumes" AVANT même d'être classifiée.
+      const identityCheckFormData = new FormData();
+      identityCheckFormData.append("file", file);
+      const identityCheckResponse = await fetch("/api/profil/scan-identity-document", {
+        method: "POST",
+        headers: userSession?.access_token ? { Authorization: `Bearer ${userSession.access_token}` } : undefined,
+        body: identityCheckFormData,
+      });
+      const identityCheckResult = await identityCheckResponse.json().catch(() => ({}));
+
+      if (identityCheckResult?.isIdentityDocument) {
+        // Jamais de Storage, jamais /api/parse-document pour ce fichier —
+        // seuls nom/prénom/quartier sont utilisés, rien d'autre n'est
+        // jamais lu depuis ce document.
+        if (identityCheckResult.prenom) setFirstName(identityCheckResult.prenom);
+        if (identityCheckResult.nom) setLastName(identityCheckResult.nom);
+        if (identityCheckResult.quartier) setQuartier(identityCheckResult.quartier);
+        setIsParsingCv(false);
+        triggerToast(
+          "✓ Pièce d'identité reconnue — nom, prénom et quartier pré-remplis. Le document n'a pas été conservé. Vérifiez puis enregistrez votre profil.",
+          "fa-shield-check"
+        );
+        return;
+      }
+
       const ext = file.name.split('.').pop().toLowerCase();
       // Uniquement exécuté au clic (jamais pendant le rendu) : react-hooks/purity
       // ne peut pas le déduire statiquement pour une fonction définie dans le
@@ -2221,44 +2255,53 @@ export default function ProfilPage() {
                 <span>{selectedLang === "FR" ? "Travail journalier" : "Daily Worker Jobs"}</span>
               </Link>
 
-              {/* Option 1: Paramètres */}
+              {/* Option 1: Paramètres (Indisponible) */}
               <div className="flex flex-col">
                 <button
                   type="button"
-                  onClick={() => triggerToast("Paramètres", "fa-gear")}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                  disabled
+                  onClick={() => triggerToast("Paramètres — fonctionnalité bientôt disponible", "fa-gear")}
+                  className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-400 bg-gray-100/90 opacity-50 grayscale cursor-not-allowed border-y border-gray-200/60 select-none shadow-none"
                 >
-                  <div className="flex items-center space-x-3.5">
-                    <i className="fa-solid fa-gear text-gray-400 text-lg"></i>
+                  <div className="flex items-center space-x-3">
+                    <i className="fa-solid fa-gear text-gray-400 text-base"></i>
                     <span>Paramètres et confidentialité</span>
                   </div>
-                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                  <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-wider">Indisponible</span>
                 </button>
               </div>
 
-              {/* Option 2: Aide */}
+              {/* Option 2: Aide (WhatsApp direct) */}
               <div className="flex flex-col">
                 <button
                   type="button"
-                  onClick={() => triggerToast("Aide & Assistance", "fa-circle-question")}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openFaciliteWhatsApp({ page: "Profil Candidat" });
+                  }}
+                  className="w-full px-5 py-4 flex items-center justify-between text-left text-sm font-bold text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 transition cursor-pointer"
+                  title="Contacter notre support sur WhatsApp (+221 77 140 08 32)"
                 >
                   <div className="flex items-center space-x-3.5">
-                    <i className="fa-regular fa-circle-question text-gray-400 text-lg"></i>
-                    <span>Aide et assistance</span>
+                    <i className="fa-brands fa-whatsapp text-emerald-600 text-lg"></i>
+                    <span>Aide et assistance WhatsApp</span>
                   </div>
-                  <i className="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">24/7</span>
                 </button>
               </div>
 
-              {/* Option 3: Ajouter un compte */}
+              {/* Option 3: Ajouter un compte (Indisponible) */}
               <button
                 type="button"
-                onClick={() => triggerToast("Ajouter un compte...", "fa-user-plus")}
-                className="w-full px-5 py-4 flex items-center space-x-3.5 text-left text-sm font-bold text-gray-700 active:bg-gray-50 cursor-pointer border-b border-gray-100"
+                disabled
+                onClick={() => triggerToast("Ajouter un compte — fonctionnalité bientôt disponible", "fa-user-plus")}
+                className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-400 bg-gray-100/90 opacity-50 grayscale cursor-not-allowed border-b border-gray-200/60 select-none shadow-none"
               >
-                <i className="fa-solid fa-user-plus text-gray-400 text-lg"></i>
-                <span>Ajouter un compte</span>
+                <div className="flex items-center space-x-3">
+                  <i className="fa-solid fa-user-plus text-gray-400 text-base"></i>
+                  <span>Ajouter un compte</span>
+                </div>
+                <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-wider">Indisponible</span>
               </button>
 
               {/* Option 4: Déconnexion */}
@@ -2922,6 +2965,37 @@ export default function ProfilPage() {
                               if (newCity !== null) {
                                 setCity(newCity.trim());
                                 handleSaveAboutField("city", newCity.trim());
+                              }
+                            }}
+                            className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
+                            title="Modifier"
+                          >
+                            <i className="fa-solid fa-pen text-xs"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Quartier */}
+                      <div className="flex items-start justify-between p-3.5 hover:bg-gray-50/80 rounded-2xl transition border border-transparent hover:border-gray-200/60">
+                        <div className="flex items-center space-x-4 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 text-base shadow-xs">
+                            <i className="fa-solid fa-map-pin"></i>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider">Quartier</h4>
+                            <p className="text-sm font-extrabold text-[#1D4ED8] mt-0.5">{quartier || "Non renseigné"}</p>
+                            <p className="text-[11px] text-gray-500 font-medium">Peut être pré-rempli via "Scanner Document"</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-md border border-gray-200">🌐 Public</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newQuartier = prompt("Modifier votre quartier :", quartier || "");
+                              if (newQuartier !== null) {
+                                setQuartier(newQuartier.trim());
+                                handleSaveAboutField("quartier", newQuartier.trim());
                               }
                             }}
                             className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition cursor-pointer"
