@@ -210,7 +210,7 @@ Nous recrutons des conseillers clients en réception d’appels qui auront pour 
 🌐 Postulez directement en ligne via le lien ci-dessous !`,
     descEN: `Foundever™ is hiring Inbound Customer Service Advisors in Dakar. Full-time permanent contract (CDI). French fluency, customer-oriented and computer literate. Competitive salary (base + bonus) & 100% paid training.`,
     tags: ["Foundever", "Conseiller Client", "Réception d'appels", "Centre d'appels", "Dakar", "CDI"],
-    externalLink: "https://career4.successfactors.com/careers?company=SitelPROD&_gl=1*wog4mn*_gcl_au*Njc4OTEzNzE1LjE3ODcxMzc3MTM.*_ga*OTcwMDQ4NzI2LjE3ODcxMzc3MTM.*_ga_VZWYPKQK9Z*czE3ODcxNzA1MTQkbzMkZzEkdDE3ODcxNzM0NzYkajU3JGwwJGgw",
+    externalLink: "https://jobs.foundever.com/",
     externalButtonLabel: "Postuler sur le portail officiel",
     image: "/foundever_conseiller_client.jpg",
     image_url: "/foundever_conseiller_client.jpg",
