@@ -174,6 +174,52 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "8e7bdec1-c693-43a8-af11-d5515f733a4c",
+    titleFR: "Foundever™ recrute des Conseillers Clients en Réception d'Appels",
+    titleEN: "Foundever™ is hiring Inbound Customer Service Advisors",
+    company: "Foundever",
+    logoColor: "bg-emerald-600 text-white",
+    initials: "FO",
+    location: "Dakar, Sénégal",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI / Plein temps",
+    descFR: `À propos de Foundever™ :
+Foundever™ est un leader mondial de l'expérience client (CX). Avec 170 000 collaborateurs dans le monde, nous sommes l’équipe derrière les meilleures expériences des 750 plus grandes marques internationales.
+
+🎯 Résumé du poste :
+Nous recrutons des conseillers clients en réception d’appels qui auront pour missions d’assurer l’assistance de la clientèle en difficulté dans un esprit de fidélisation et de satisfaction.
+
+📋 Missions principales :
+• Accueillir les appels des clients et diagnostiquer leurs besoins.
+• Appliquer les process définis et maîtriser l’utilisation des outils.
+• Remonter toute information permettant d’identifier un dysfonctionnement ou d’améliorer une procédure.
+• Contribuer à la bonne marche du service et veiller à atteindre les objectifs qualitatifs et quantitatifs.
+
+👤 Profil recherché :
+• Une parfaite maîtrise de la langue française (à l’oral comme à l’écrit).
+• Le sens de l’écoute et du service client.
+• Une bonne connaissance de l’outil informatique.
+• Assidu, impliqué, ponctuel.
+
+🎁 Nous offrons :
+• Rémunération attractive (fixe + prime)
+• Formation rémunérée à 100%
+• Avantages sociaux attrayants
+
+🌐 Postulez directement en ligne via le lien ci-dessous !`,
+    descEN: `Foundever™ is hiring Inbound Customer Service Advisors in Dakar. Full-time permanent contract (CDI). French fluency, customer-oriented and computer literate. Competitive salary (base + bonus) & 100% paid training.`,
+    tags: ["Foundever", "Conseiller Client", "Réception d'appels", "Centre d'appels", "Dakar", "CDI"],
+    externalLink: "https://career4.successfactors.com/careers?company=SitelPROD&_gl=1*w592w8*_gcl_au*Njc4OTEzNzE1LjE3ODcxMzc3MTM.*_ga*OTcwMDQ4NzI2LjE3ODcxMzc3MTM.*_ga_VZWYPKQK9Z*czE3ODcxNzA1MTQkbzMkZzEkdDE3ODcxNzE4MDEkajYwJGwwJGgw",
+    externalButtonLabel: "Postuler sur le portail officiel",
+    image: "/foundever_conseiller_client.jpg",
+    image_url: "/foundever_conseiller_client.jpg",
+    deadline: "2026-09-30",
+    pinned: true,
+    is_sponsored: true,
+    sponsor_priority: 1000,
+  },
+  {
     id: "3234b690-ae1b-4204-9dd3-73e98ea4c713",
     titleFR: "Dexintec recrute un Chauffeur",
     titleEN: "Dexintec is recruiting a Driver",
