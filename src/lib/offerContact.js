@@ -179,25 +179,7 @@ export function extractOfferContactMethods(offer = {}) {
 export function resolveOfferAction(offer = {}, options = {}) {
   const { customLabel } = options;
 
-  // 1. Email recruteur explicite (Priorité N°1 pour la postulation directe via Facilité)
-  const email = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
-  if (email && typeof email === "string" && email.includes("@")) {
-    const title = offer?.title || offer?.titleFR || "Offre d'emploi";
-    return {
-      type: "email",
-      isWhatsApp: false,
-      isEmail: true,
-      email: email.trim(),
-      mailtoUrl: `mailto:${email.trim()}?subject=${encodeURIComponent(`Candidature - ${title}`)}`,
-      url: null, // url null déclenche ApplyModal (candidature directe Facilité)
-      phoneNumber: null,
-      label: customLabel || "Postuler via Facilité",
-      buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
-      iconClass: "fa-solid fa-paper-plane",
-    };
-  }
-
-  // 2. Lien externe officiel (site, portail, plateforme entreprise)
+  // 1. Lien externe officiel de recrutement (site web, portail ministériel, plateforme entreprise, Google Forms)
   const extLink = offer?.external_link || offer?.externalLink || offer?.apply_url || offer?.source_url || offer?.url;
   if (extLink && typeof extLink === "string" && extLink.trim().length > 0) {
     const cleanExt = extLink.trim();
@@ -233,6 +215,7 @@ export function resolveOfferAction(offer = {}, options = {}) {
       };
     }
 
+    // Lien de candidature officiel sur le site / portail externe
     return {
       type: "external",
       isWhatsApp: false,
@@ -242,6 +225,24 @@ export function resolveOfferAction(offer = {}, options = {}) {
       label: customLabel || "Postuler sur le site officiel",
       buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
       iconClass: "fa-solid fa-arrow-up-right-from-square",
+    };
+  }
+
+  // 2. Email recruteur explicite (Pour les dépôts de candidatures directs par e-mail)
+  const email = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
+  if (email && typeof email === "string" && email.includes("@")) {
+    const title = offer?.title || offer?.titleFR || "Offre d'emploi";
+    return {
+      type: "email",
+      isWhatsApp: false,
+      isEmail: true,
+      email: email.trim(),
+      mailtoUrl: `mailto:${email.trim()}?subject=${encodeURIComponent(`Candidature - ${title}`)}`,
+      url: null, // url null déclenche ApplyModal (candidature directe Facilité)
+      phoneNumber: null,
+      label: customLabel || "Postuler via Facilité",
+      buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
+      iconClass: "fa-solid fa-paper-plane",
     };
   }
 

@@ -308,8 +308,21 @@ export default function SocialShareButtons({
                 <span className="truncate">Sur WhatsApp</span>
               </a>
             </div>
+          ) : effectiveLink ? (
+            /* Offre avec lien officiel / portail de recrutement externe */
+            <a
+              href={effectiveLink}
+              target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className={`flex-1 ${buttonColorClass} active:scale-98 font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2`}
+              title={buttonLabel}
+            >
+              <i className={`${buttonIconClass} text-sm sm:text-base`}></i>
+              <span className="truncate">{buttonLabel}</span>
+            </a>
           ) : (offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail) ? (
-            /* Offre avec E-mail : L'action unique et exclusive est 'Postuler via Facilité' */
+            /* Offre avec E-mail : L'action exclusive est 'Postuler via Facilité' */
             <button
               type="button"
               onClick={(e) => {
@@ -322,19 +335,6 @@ export default function SocialShareButtons({
               <i className="fa-solid fa-paper-plane text-xs"></i>
               <span className="truncate">Postuler via Facilité</span>
             </button>
-          ) : effectiveLink ? (
-            /* Offre avec lien externe officiel sans e-mail */
-            <a
-              href={effectiveLink}
-              target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className={`flex-1 ${buttonColorClass} active:scale-98 font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2`}
-              title={buttonLabel}
-            >
-              <i className={`${buttonIconClass} text-sm sm:text-base`}></i>
-              <span className="truncate">{buttonLabel}</span>
-            </a>
           ) : onApply ? (
             <button
               type="button"
