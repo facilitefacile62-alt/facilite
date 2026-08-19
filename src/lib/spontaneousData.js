@@ -1,4 +1,21 @@
 export const SPONTANEOUS_COMPANIES = [
+  {
+    id: "foundever",
+    slug: "foundever",
+    company: "Foundever",
+    title: "Candidature Spontanée & Conseillers Clients - Foundever",
+    domains: "Conseillers Clients, Réception d'appels, Expérience Client (CX), Support Client, Téléphonie",
+    location: "Dakar, Sénégal / International",
+    contract_type: "CDI / Plein temps",
+    description: "Foundever™ est un leader mondial de l'expérience client (CX) avec 170 000 collaborateurs. Recrutement de conseillers clients en réception d'appels pour assurer l'assistance, la fidélisation et la satisfaction client.",
+    rawContact: "career4.successfactors.com/careers?company=SitelPROD",
+    contactType: "url",
+    externalLink: "https://career4.successfactors.com/careers?company=SitelPROD&_gl=1*w592w8*_gcl_au*Njc4OTEzNzE1LjE3ODcxMzc3MTM.*_ga*OTcwMDQ4NzI2LjE3ODcxMzc3MTM.*_ga_VZWYPKQK9Z*czE3ODcxNzA1MTQkbzMkZzEkdDE3ODcxNzE4MDEkajYwJGwwJGgw",
+    websiteLink: "https://jobs.foundever.com/",
+    documentsRequired: "CV & Lettre de motivation",
+    image_url: "/foundever_conseiller_client.jpg",
+    poles: ["Conseillers Clients", "Réception d'appels", "Expérience Client (CX)", "Support Client"],
+  },
   // --- LISTES PRÉCÉDENTES (65 Entreprises) ---
   {
     id: "semi-sarl",
