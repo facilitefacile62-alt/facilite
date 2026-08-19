@@ -2695,12 +2695,12 @@ export default function Home() {
                       })()}
                     </div>
 
-                    {/* Visuel de l'offre (Style Facebook : Image nette 100% propre, sans côtés floutés) */}
+                    {/* Visuel de l'offre (Hauteur Standardisée et Cadrage Homogène) */}
                     {(job.image || job.image_url) && (
                       <div
-                        className="relative w-full rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 border border-gray-200/80 dark:border-gray-800 group cursor-pointer flex items-center justify-center min-h-[220px] sm:min-h-[320px] max-h-[560px]"
+                        className="relative w-full h-64 sm:h-80 rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 border border-gray-200/80 dark:border-gray-800 group cursor-pointer flex items-center justify-center"
                         onClick={() => setViewImageModal({ isOpen: true, url: job.image || job.image_url })}
-                        title="Cliquer pour voir l'affiche en plein écran"
+                        title="Cliquer pour voir l'affiche complète en plein écran"
                       >
                         <div className="absolute top-2.5 right-2.5 bg-black/60 hover:bg-black/80 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1.5 z-20 pointer-events-none transition opacity-90 group-hover:opacity-100">
                           <i className="fa-solid fa-magnifying-glass-plus text-xs"></i>
@@ -2709,7 +2709,7 @@ export default function Home() {
                         <img
                           src={job.image || job.image_url}
                           alt={selectedLang === "FR" ? job.titleFR : job.titleEN || "Affiche de recrutement"}
-                          className="w-full h-auto max-h-[560px] object-contain mx-auto block animate-fade-in transition-transform duration-200 group-hover:scale-[1.01]"
+                          className="w-full h-full object-cover object-top mx-auto block animate-fade-in transition-transform duration-300 group-hover:scale-105"
                           loading="eager"
                         />
                         <OfferImageWatermark />

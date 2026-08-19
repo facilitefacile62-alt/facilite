@@ -467,15 +467,15 @@ function OffresContent() {
                   <div className="mb-3">
                     <Link
                       href={`/offres/${offer.id}`}
-                      className="text-sm font-extrabold text-gray-900 leading-snug hover:text-emerald-700 transition-colors block"
+                      className="text-sm font-extrabold text-gray-900 leading-snug hover:text-emerald-700 transition-colors block line-clamp-1 min-h-[20px]"
                       title={offer.title}
                     >
                       {offer.title}
                     </Link>
-                    <p className="text-xs text-gray-600 line-clamp-2 mt-1 leading-relaxed">
+                    <p className="text-xs text-gray-600 line-clamp-2 mt-1 leading-relaxed min-h-[34px]">
                       {offer.description}
                     </p>
-                    <p className="text-[11px] text-gray-500 font-medium mt-1.5 flex items-center gap-1.5 flex-wrap">
+                    <p className="text-[11px] text-gray-500 font-medium mt-1.5 flex items-center gap-1.5 flex-wrap min-h-[18px]">
                       <span>{offer.location || "Sénégal"}</span>
                       <span aria-hidden="true">·</span>
                       <span>{offer.contract_type || "CDI"}</span>
@@ -499,24 +499,24 @@ function OffresContent() {
                     </p>
                   </div>
 
-                  {/* Visuel Haute Définition de Recrutement (Style Facebook Net & Épuré) */}
+                  {/* Visuel Haute Définition de Recrutement (Hauteur Standardisée et Cadrage Homogène) */}
                   <div
-                    className="relative w-full rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 mb-3 border border-gray-200/90 dark:border-gray-800 group/img cursor-pointer flex items-center justify-center min-h-[200px] sm:min-h-[260px] max-h-[480px]"
+                    className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 mb-3 border border-gray-200/90 dark:border-gray-800 group/img cursor-pointer flex items-center justify-center"
                     onClick={() => setViewImageModal({ isOpen: true, url: offerImg })}
-                    title="Cliquer pour voir l'affiche en plein écran"
+                    title="Cliquer pour voir l'affiche complète en plein écran"
                   >
                     {/* Overlay au survol */}
-                    <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors duration-200 z-10 flex items-center justify-center">
-                      <div className="opacity-0 group-hover/img:opacity-100 bg-black/75 text-white rounded-full py-1.5 px-3.5 shadow-xl transform scale-95 group-hover/img:scale-100 transition-all duration-200 flex items-center gap-1.5">
+                    <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/30 transition-colors duration-200 z-10 flex items-center justify-center">
+                      <div className="opacity-0 group-hover/img:opacity-100 bg-black/80 text-white rounded-full py-1.5 px-3.5 shadow-xl transform scale-95 group-hover/img:scale-100 transition-all duration-200 flex items-center gap-1.5">
                         <i className="fa-solid fa-expand text-xs text-emerald-400"></i>
-                        <span className="text-xs font-black">Agrandir</span>
+                        <span className="text-xs font-black">Voir l'affiche</span>
                       </div>
                     </div>
-                    {/* Image principale nette */}
+                    {/* Image principale nette avec cadrage uniforme */}
                     <img
                       src={offerImg}
                       alt={offer.title}
-                      className="w-full h-auto max-h-[480px] object-contain mx-auto block animate-fade-in transition-transform duration-200 group-hover/img:scale-[1.01]"
+                      className="w-full h-full object-cover object-top mx-auto block animate-fade-in transition-transform duration-300 group-hover/img:scale-105"
                       loading="lazy"
                     />
                     <OfferImageWatermark />
