@@ -521,11 +521,13 @@ function OffresContent() {
                         title: offer.title,
                         company: offer.company || "Recruteur Confidentiel",
                         location: offer.location || "Sénégal",
-                        contract: offer.contract_type || "CDI",
                         contact_email: offer.contact_email || offer.recruiterEmail,
                         recruiterEmail: offer.contact_email || offer.recruiterEmail,
-                        recruiterPhone: offer.contact_whatsapp || offer.recruiterPhone,
+                        contact_phone: offer.contact_phone || offer.phone,
+                        contact_whatsapp: offer.contact_whatsapp || offer.whatsapp,
                         whatsapp: offer.contact_whatsapp || offer.whatsapp,
+                        external_link: offer.external_link,
+                        externalLink: offer.external_link,
                       }}
                       variant="feed"
                       onApply={() => {
