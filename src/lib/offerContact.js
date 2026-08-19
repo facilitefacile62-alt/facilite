@@ -179,43 +179,40 @@ export function extractOfferContactMethods(offer = {}) {
 export function resolveOfferAction(offer = {}, options = {}) {
   const { customLabel } = options;
 
-  // 1. Lien externe officiel de recrutement (site web, portail ministériel, plateforme entreprise, Google Forms)
   const extLink = offer?.external_link || offer?.externalLink || offer?.apply_url || offer?.source_url || offer?.url;
-  if (extLink && typeof extLink === "string" && extLink.trim().length > 0) {
+  const email = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
+
+  // 1. WhatsApp explicite dans l'URL
+  if (typeof extLink === "string" && (extLink.includes("wa.me") || extLink.includes("whatsapp"))) {
+    return {
+      type: "whatsapp",
+      isWhatsApp: true,
+      isEmail: false,
+      url: extLink.trim(),
+      phoneNumber: normalizePhoneNumber(extLink),
+      label: customLabel || "Postuler sur WhatsApp",
+      buttonColorClass: "bg-[#25D366] hover:bg-[#20bd5a] text-white",
+      iconClass: "fa-brands fa-whatsapp",
+    };
+  }
+
+  // 2. Portail de candidature officiel dédié en ligne (ERA, SIGOF, MIRADOR, Forms, LinkedIn, etc.)
+  const isDirectApplyPortal = typeof extLink === "string" && extLink.trim().length > 0 && !extLink.startsWith("mailto:") && (
+    extLink.includes("vacancy") ||
+    extLink.includes("sigof") ||
+    extLink.includes("mirador") ||
+    extLink.includes("forms") ||
+    extLink.includes("jobs") ||
+    extLink.includes("tzportal") ||
+    extLink.includes("lnkd.in") ||
+    extLink.includes("youthmedia") ||
+    extLink.includes("opportunites") ||
+    extLink.includes("apply") ||
+    !email // S'il n'y a pas d'email fourni, tout lien externe renseigné sert de portail officiel
+  );
+
+  if (isDirectApplyPortal && typeof extLink === "string" && !extLink.startsWith("mailto:")) {
     const cleanExt = extLink.trim();
-
-    // Si le lien externe est un mailto:
-    if (cleanExt.startsWith("mailto:")) {
-      const emailRaw = cleanExt.replace(/^mailto:/i, "").split("?")[0];
-      return {
-        type: "email",
-        isWhatsApp: false,
-        isEmail: true,
-        email: emailRaw,
-        mailtoUrl: cleanExt,
-        url: null,
-        phoneNumber: null,
-        label: customLabel || "Postuler via Facilité",
-        buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
-        iconClass: "fa-solid fa-paper-plane",
-      };
-    }
-
-    // Si le lien externe est un lien WhatsApp wa.me explicite
-    if (cleanExt.includes("wa.me") || cleanExt.includes("whatsapp")) {
-      return {
-        type: "whatsapp",
-        isWhatsApp: true,
-        isEmail: false,
-        url: cleanExt,
-        phoneNumber: normalizePhoneNumber(cleanExt),
-        label: customLabel || "Postuler sur WhatsApp",
-        buttonColorClass: "bg-[#25D366] hover:bg-[#20bd5a] text-white",
-        iconClass: "fa-brands fa-whatsapp",
-      };
-    }
-
-    // Lien de candidature officiel sur le site / portail externe
     return {
       type: "external",
       isWhatsApp: false,
@@ -228,8 +225,7 @@ export function resolveOfferAction(offer = {}, options = {}) {
     };
   }
 
-  // 2. Email recruteur explicite (Pour les dépôts de candidatures directs par e-mail)
-  const email = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
+  // 3. Email recruteur explicite (Dépôt de candidature direct avec CV Facilité)
   if (email && typeof email === "string" && email.includes("@")) {
     const title = offer?.title || offer?.titleFR || "Offre d'emploi";
     return {
@@ -246,7 +242,21 @@ export function resolveOfferAction(offer = {}, options = {}) {
     };
   }
 
-  // 3. WhatsApp UNIQUEMENT si l'annonce le demande explicitement
+  // 4. Lien externe standard restant
+  if (extLink && typeof extLink === "string" && extLink.trim().length > 0 && !extLink.startsWith("mailto:")) {
+    return {
+      type: "external",
+      isWhatsApp: false,
+      isEmail: false,
+      url: extLink.trim(),
+      phoneNumber: null,
+      label: customLabel || "Postuler sur le site officiel",
+      buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
+      iconClass: "fa-solid fa-arrow-up-right-from-square",
+    };
+  }
+
+  // 5. WhatsApp UNIQUEMENT si l'annonce le demande explicitement
   const phone = detectWhatsAppNumber(offer);
   if (phone) {
     const waUrl = buildWhatsAppLink(phone, offer);
@@ -261,7 +271,7 @@ export function resolveOfferAction(offer = {}, options = {}) {
     };
   }
 
-  // 4. Candidature interne Facilité standard
+  // 6. Candidature interne Facilité standard par défaut
   return {
     type: "internal",
     isWhatsApp: false,
