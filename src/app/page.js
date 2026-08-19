@@ -174,6 +174,48 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "3234b690-ae1b-4204-9dd3-73e98ea4c713",
+    titleFR: "Dexintec recrute un Chauffeur",
+    titleEN: "Dexintec is recruiting a Driver",
+    company: "Dexintec",
+    logoColor: "bg-emerald-600",
+    initials: "DX",
+    location: "Dakar (Golf / environs)",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "CDI / Temps plein",
+    descFR: `Dexintec recherche un Chauffeur sérieux et expérimenté pour rejoindre son équipe.
+
+📌 Profil recherché :
+• De préférence, habiter aux alentours de Golf ou pouvoir s’y rendre très tôt le matin en semaine
+• Être disponible du lundi au samedi
+• Justifier d’une expérience préalable en tant que chauffeur
+• Faire preuve de discrétion, de ponctualité, de rigueur et de professionnalisme
+• Être obligatoirement titulaire d’un permis de conduire valide
+
+📁 Candidature :
+Les personnes intéressées et correspondant au profil recherché peuvent envoyer leur candidature en précisant leur expérience professionnelle et leur lieu de résidence.
+Adresse e-mail : maaguysarr@hotmail.com`,
+    descEN: `Dexintec is looking for a serious and experienced Driver to join its team.
+
+📌 Requirements:
+• Preferably living around Golf or able to commute early in the morning
+• Available Monday to Saturday
+• Previous verified driving experience
+• Discretion, punctuality, rigor and professionalism
+• Must hold a valid driver's license
+
+📁 Application:
+Send application detailing experience and residence to: maaguysarr@hotmail.com`,
+    tags: ["Golf", "Chauffeur", "CDI", "Permis B"],
+    recruiterEmail: "maaguysarr@hotmail.com",
+    externalLink: "mailto:maaguysarr@hotmail.com?subject=Candidature%20Chauffeur%20-%20Dexintec",
+    image: "/dexintec_chauffeur.png",
+    pinned: true,
+    is_sponsored: true,
+    sponsor_priority: 999,
+  },
+  {
     id: "7c9a2814-6ef1-42e7-9104-d54b83ea1902",
     titleFR: "ODS recrute un(e) Business Analyst (Pôle Gestion de Projets)",
     titleEN: "ODS recruits a Business Analyst (Project Management)",
@@ -841,46 +883,6 @@ Join a major audiovisual production with EvenProd!`,
     externalButtonLabel: "Postuler sur WhatsApp",
     image: "/casting_evenprod.jpg",
     image_url: "/casting_evenprod.jpg",
-    pinned: true
-  },
-  {
-    id: "3234b690-ae1b-4204-9dd3-73e98ea4c713",
-    titleFR: "Dexintec recrute un Chauffeur",
-    titleEN: "Dexintec is recruiting a Driver",
-    company: "Dexintec",
-    logoColor: "bg-emerald-600",
-    initials: "DX",
-    location: "Dakar (Golf / environs)",
-    timeFR: "À l'instant",
-    timeEN: "Just now",
-    contract: "CDI / Temps plein",
-    descFR: `Dexintec recherche un Chauffeur sérieux et expérimenté pour rejoindre son équipe.
-
-📌 Profil recherché :
-• De préférence, habiter aux alentours de Golf ou pouvoir s’y rendre très tôt le matin en semaine
-• Être disponible du lundi au samedi
-• Justifier d’une expérience préalable en tant que chauffeur
-• Faire preuve de discrétion, de ponctualité, de rigueur et de professionnalisme
-• Être obligatoirement titulaire d’un permis de conduire valide
-
-📁 Candidature :
-Les personnes intéressées et correspondant au profil recherché peuvent envoyer leur candidature en précisant leur expérience professionnelle et leur lieu de résidence.
-Adresse e-mail : maaguysarr@hotmail.com`,
-    descEN: `Dexintec is looking for a serious and experienced Driver to join its team.
-
-📌 Requirements:
-• Preferably living around Golf or able to commute early in the morning
-• Available Monday to Saturday
-• Previous verified driving experience
-• Discretion, punctuality, rigor and professionalism
-• Must hold a valid driver's license
-
-📁 Application:
-Send application detailing experience and residence to: maaguysarr@hotmail.com`,
-    tags: ["Golf", "Chauffeur", "CDI", "Permis B"],
-    recruiterEmail: "maaguysarr@hotmail.com",
-    externalLink: "mailto:maaguysarr@hotmail.com?subject=Candidature%20Chauffeur%20-%20Dexintec",
-    image: "/dexintec_chauffeur.png",
     pinned: true
   },
   {
