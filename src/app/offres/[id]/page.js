@@ -8,6 +8,34 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "3234b690-ae1b-4204-9dd3-73e98ea4c713": {
+    id: "3234b690-ae1b-4204-9dd3-73e98ea4c713",
+    title: "Dexintec recrute un Chauffeur",
+    company: "Dexintec",
+    location: "Dakar (Golf / environs), Sénégal",
+    contract_type: "CDI / Temps plein (Lun-Sam)",
+    salary_range: "Selon profil & expérience",
+    description: `Dexintec recherche un Chauffeur sérieux et expérimenté pour rejoindre son équipe.
+
+📌 Profil recherché :
+• De préférence, habiter aux alentours de Golf ou pouvoir s’y rendre très tôt le matin en semaine
+• Être disponible du lundi au samedi
+• Justifier d’une expérience préalable en tant que chauffeur
+• Faire preuve de discrétion, de ponctualité, de rigueur et de professionnalisme
+• Être obligatoirement titulaire d’un permis de conduire valide
+
+📁 Candidature :
+Les personnes intéressées et correspondant au profil recherché peuvent envoyer leur candidature en précisant leur expérience professionnelle et leur lieu de résidence.
+
+📧 Adresse e-mail : maaguysarr@hotmail.com`,
+    image_url: "/dexintec_chauffeur.png",
+    min_education_level: "Permis de conduire valide",
+    deadline: "2026-08-31",
+    contact_email: "maaguysarr@hotmail.com",
+    external_link: "mailto:maaguysarr@hotmail.com?subject=Candidature%20Chauffeur%20-%20Dexintec",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "7c9a2814-6ef1-42e7-9104-d54b83ea1902": {
     id: "7c9a2814-6ef1-42e7-9104-d54b83ea1902",
     title: "ODS recrute un(e) Business Analyst (Pôle Gestion de Projets)",
