@@ -35,15 +35,15 @@ export default function ScrollToTop() {
       onClick={scrollToTop}
       aria-label="Retourner en haut de la page"
       title="Retour en haut"
-      className={`fixed z-[450] bottom-20 sm:bottom-8 right-4 sm:right-8 w-12 h-12 rounded-full bg-gradient-to-tr from-[#E11D48] via-[#E60049] to-[#F43F5E] text-white shadow-xl shadow-rose-500/40 flex items-center justify-center cursor-pointer transition-all duration-300 transform select-none hover:shadow-2xl hover:shadow-rose-600/50 hover:scale-110 active:scale-95 border-2 border-white/30 dark:border-white/20 ${
+      className={`fixed z-[450] bottom-20 sm:bottom-8 right-2.5 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-[#E11D48] via-[#E60049] to-[#F43F5E] text-white shadow-md sm:shadow-xl shadow-rose-500/30 flex items-center justify-center cursor-pointer transition-all duration-300 transform select-none hover:shadow-lg sm:hover:shadow-2xl hover:scale-110 active:scale-95 border border-white/40 dark:border-white/20 ${
         isVisible
-          ? "opacity-100 translate-y-0 pointer-events-auto"
-          : "opacity-0 translate-y-8 pointer-events-none"
+          ? "opacity-90 sm:opacity-100 translate-y-0 pointer-events-auto"
+          : "opacity-0 translate-y-6 pointer-events-none"
       }`}
     >
-      {/* Icône de flèche vers le haut avec barre (exactement comme le visuel) */}
+      {/* Icône de flèche vers le haut avec barre (proportionnée pour mobile & desktop) */}
       <svg
-        className="w-6 h-6 text-white transform transition-transform group-hover:-translate-y-0.5"
+        className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white transform transition-transform group-hover:-translate-y-0.5"
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
