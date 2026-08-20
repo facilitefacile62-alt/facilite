@@ -226,6 +226,12 @@ export default function ProfilPage() {
     fileName: "",
     message: "",
   });
+  // Consentement affiché avant l'ouverture du sélecteur de fichier : le
+  // bouton "Scanner Document" accepte aussi bien un CV qu'une pièce
+  // d'identité, on ne sait donc pas encore lequel avant l'upload — le
+  // message doit couvrir les deux cas et être vu AVANT que le fichier ne
+  // parte vers le serveur (pas seulement confirmé après coup par un toast).
+  const [scanConsentModalOpen, setScanConsentModalOpen] = useState(false);
 
   const triggerToast = (message, icon = "fa-circle-info", type = "info") => {
     setToast({ show: true, message, icon, type });
@@ -2830,7 +2836,7 @@ export default function ProfilPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => aiCvFileInputRef.current?.click()}
+                    onClick={() => setScanConsentModalOpen(true)}
                     disabled={isParsingCv}
                     className="bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-extrabold px-3.5 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
                     title="Scanner ou importer n'importe quel document (CNI, Passeport, CV, Attestation) pour remplissage automatique du profil"
@@ -5396,6 +5402,76 @@ export default function ProfilPage() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* CONSENTEMENT AVANT ENVOI D'UN DOCUMENT (CV OU PIÈCE D'IDENTITÉ) */}
+      {scanConsentModalOpen && (
+        <div className="fixed inset-0 z-[800] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-5 shadow-2xl border border-gray-100 space-y-3.5 relative overflow-hidden animate-scale-up">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#10E688] via-emerald-500 to-[#10E688]"></div>
+
+            <div className="flex items-start gap-3 pt-0.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0 shadow-2xs">
+                <i className="fa-solid fa-shield-halved text-base"></i>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm sm:text-base font-black text-gray-900 leading-tight">
+                  Avant d'envoyer votre document
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScanConsentModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 transition flex items-center justify-center cursor-pointer shrink-0"
+              >
+                <i className="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
+              <p className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                <i className="fa-solid fa-id-card text-emerald-600 text-[11px]"></i>
+                Si c'est une pièce d'identité (CNI, Passeport)
+              </p>
+              <p className="text-[11px] text-gray-600 leading-snug">
+                Le document n'est jamais conservé — ni en base, ni en fichier, ni dans les journaux techniques. Seuls
+                votre nom, prénom et quartier sont extraits pour pré-remplir votre profil, puis le document est
+                immédiatement oublié.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200/80 space-y-1.5">
+              <p className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                <i className="fa-solid fa-file-lines text-gray-500 text-[11px]"></i>
+                Si c'est un CV ou une attestation
+              </p>
+              <p className="text-[11px] text-gray-600 leading-snug">
+                Le document est analysé et enregistré normalement dans votre espace candidat, comme n'importe quel
+                autre document importé.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setScanConsentModalOpen(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setScanConsentModalOpen(false);
+                  aiCvFileInputRef.current?.click();
+                }}
+                className="flex-1 bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-black py-2.5 px-4 rounded-xl text-xs transition cursor-pointer shadow-xs active:scale-[0.99]"
+              >
+                J'ai compris, continuer
+              </button>
+            </div>
           </div>
         </div>
       )}
