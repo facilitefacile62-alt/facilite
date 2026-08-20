@@ -20,6 +20,13 @@ const BodySchema = z.object({
  * service_role, voir supabase/migrations/20260818050000_log_document_access.sql).
  * L'autorisation (demande approuvée et non expirée) est revérifiée
  * indépendamment côté base à chaque appel, jamais supposée depuis le client.
+ *
+ * Restauré le 20/08 après un incident : une version intermédiaire de ce
+ * fichier lisait resumes/profiles directement via supabaseAdmin, sans
+ * jamais appeler log_document_access() — contournant entièrement le
+ * contrôle de consentement (demande approuvée et non expirée). Ne jamais
+ * réintroduire de lecture directe de resumes/profiles dans cette route :
+ * log_document_access() doit rester le seul chemin.
  */
 export async function POST(req) {
   try {
@@ -42,53 +49,18 @@ export async function POST(req) {
     }
     const { candidateId, documentType, resumeId } = parseResult.data;
 
-    let docData = null;
+    const { data, error } = await supabaseAdmin.rpc("log_document_access", {
+      p_admin_id: user.id,
+      p_candidate_id: candidateId,
+      p_document_type: documentType,
+      p_resume_id: resumeId || null,
+    });
 
-    if (documentType === "resume_content" || documentType === "resume_file") {
-      if (resumeId) {
-        const { data: resData } = await supabaseAdmin
-          .from("resumes")
-          .select("id, title, content, file_url, type")
-          .eq("id", resumeId)
-          .maybeSingle();
-        docData = resData;
-      }
-      if (!docData) {
-        const { data: resList } = await supabaseAdmin
-          .from("resumes")
-          .select("id, title, content, file_url, type")
-          .eq("user_id", candidateId)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (resList && resList.length > 0) docData = resList[0];
-      }
-    } else if (documentType === "profile_cv_file") {
-      const { data: profData } = await supabaseAdmin
-        .from("profiles")
-        .select("id, cv_url, cv_name")
-        .eq("id", candidateId)
-        .maybeSingle();
-      docData = profData;
+    if (error) {
+      return NextResponse.json({ error: "Aucune autorisation active pour ce candidat." }, { status: 403 });
     }
 
-    if (!docData) {
-      return NextResponse.json({ error: "Document introuvable pour ce candidat." }, { status: 404 });
-    }
-
-    // Journalisation sécurisée de l'accès
-    await supabaseAdmin
-      .from("document_access_logs")
-      .insert({
-        admin_id: user.id,
-        candidate_id: candidateId,
-        document_type: documentType,
-        resume_id: resumeId || (docData.id && docData.id !== candidateId ? docData.id : null),
-      })
-      .catch((logErr) => {
-        console.warn("[Document Access Log Warning]", logErr);
-      });
-
-    return NextResponse.json({ document: docData });
+    return NextResponse.json({ document: data });
   } catch (err) {
     console.error("[Admin Documents Access API Error]", err);
     return NextResponse.json({ error: "Une erreur interne est survenue." }, { status: 500 });
