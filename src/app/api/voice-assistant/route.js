@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireUser, checkRateLimit } from '@/lib/apiAuth';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/env';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
 
@@ -171,6 +172,31 @@ async function buildUnreadMessagesSummary(token, userId) {
   return intro + summary;
 }
 
+// Base de connaissances FAQ gérée depuis l'admin (assistant_faq) plutôt que
+// codée en dur — table verrouillée service_role uniquement (aucune policy
+// RLS authenticated, voir 20260821100000_assistant_faq.sql), donc lue ici
+// via getSupabaseAdmin() comme le panneau admin (/api/admin/faq). Échec de
+// lecture non bloquant : l'assistant continue avec la seule base transport
+// plutôt que de renvoyer une erreur pour une simple indisponibilité FAQ.
+async function loadActiveFaqBlock() {
+  try {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin
+      .from("assistant_faq")
+      .select("question, reponse")
+      .eq("actif", true)
+      .order("created_at", { ascending: true });
+
+    if (error || !data || data.length === 0) return "";
+
+    const lines = data.map((row) => `- ${row.question} : "${row.reponse}"`).join("\n");
+    return `\n\nBASE DE CONNAISSANCES FAQ (VALIDÉE PAR L'ÉQUIPE FACILITÉ) :\n${lines}`;
+  } catch (err) {
+    console.warn("[voice-assistant] Échec chargement FAQ (non bloquant) :", err?.message);
+    return "";
+  }
+}
+
 export async function POST(req) {
   try {
     const { user, error: authError } = await requireUser(req);
@@ -228,6 +254,8 @@ export async function POST(req) {
       mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${location.lat},${location.lng}&destination=${encodeURIComponent(matchedDestination.label)}&travelmode=transit`;
     }
 
+    const faqBlock = await loadActiveFaqBlock();
+
     const SYSTEM_PROMPT = `
 Tu es l'assistant vocal officiel de Facilité (ffacilite.com), basé à Dakar, Sénégal.
 Réponds de façon concise, naturelle et directe (1 phrase courte adaptée à la voix).
@@ -240,9 +268,9 @@ BASE DE CONNAISSANCES STRICTE POUR LES TRANSPORTS ET ITINÉRAIRES :
 - Aller à Guédiawaye : "Pour Guédiawaye, empruntez le bus 28 ou un taxi."
 - Aller au Plateau / Centre-ville : "Prenez le bus Tata ligne 1 ou le TER selon votre arrêt."
 - Déposer un CV : "Déposez votre CV directement dans l'onglet Candidat sur le site ffacilite.com."
-- Créer une offre : "Connectez-vous sur votre espace recruteur pour publier votre annonce."
+- Créer une offre : "Connectez-vous sur votre espace recruteur pour publier votre annonce."${faqBlock}
 
-RÈGLE ABSOLUE : Si la destination demandée n'est pas répertoriée ou est hors-sujet, réponds exactement : "Je n'ai pas cet itinéraire pour le moment, veuillez contacter le support."
+RÈGLE ABSOLUE : Utilise UNIQUEMENT les réponses ci-dessus (transports/itinéraires et FAQ). Si la question posée (destination, sujet Facilité, ou autre) ne correspond à aucune entrée listée, réponds exactement : "Je n'ai pas cette information pour le moment, veuillez contacter le support." N'invente jamais de réponse hors de cette base.
 `;
 
     // gemini-1.5-flash n'existe plus (retiré du catalogue Google, 404
