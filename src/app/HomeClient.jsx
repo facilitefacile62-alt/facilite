@@ -174,6 +174,43 @@ const translations = {
 
 const initialJobs = [
   {
+    id: "c5e31782-b7e1-482a-a926-d183f3e79201",
+    titleFR: "Sénégal Découvertes Touristiques (SDT) recrute des Chauffeurs Professionnels",
+    titleEN: "Sénégal Découvertes Touristiques (SDT) is hiring Professional Drivers",
+    company: "Sénégal Découvertes Touristiques (SDT)",
+    logoColor: "bg-blue-600 text-white",
+    initials: "SDT",
+    location: "Dakar, Mbour, Thiès et environs",
+    timeFR: "À l'instant",
+    timeEN: "Just now",
+    contract: "Mission temporaire (Mi-octobre à mi-novembre 2026)",
+    descFR: `Dans le cadre du déploiement de ses activités, Sénégal Découvertes Touristiques (SDT) recrute des Chauffeurs Professionnels Bilingues (Français – Anglais) pour une mission temporaire se déroulant de mi-octobre à mi-novembre 2026.
+
+📌 Descriptif de la Mission :
+• Période de la mission : Mi-octobre à mi-novembre 2026 (Mission temporaire).
+• Zones de couverture : Dakar, Mbour, Thiès et leurs environs.
+• Missions principales : Assurer le transport sécurisé, confortable et ponctuel d’une clientèle internationale dans le cadre de circuits et déplacements touristiques.
+
+🎯 Profil & Exigences du Poste :
+• Permis de conduire : Permis valide depuis au moins un (01) an minimum.
+• Français : Bon niveau professionnel.
+• Anglais : Bonne maîtrise orale (atout majeur pour l’accueil de la clientèle internationale).
+• Atouts : Présentation soignée, sens du service client, courtoisie et très bonne connaissance du réseau routier (Dakar, Mbour, Thiès).
+
+📁 Modalités de Candidature :
+Les candidat(e)s intéressé(e)s répondant au profil sont invité(e)s à envoyer leur dossier de candidature :
+• Document à fournir : Curriculum Vitae (CV) à jour.
+• Adresse e-mail de réception : contact@sdt.sn`,
+    descEN: `Sénégal Découvertes Touristiques (SDT) is recruiting bilingual professional drivers (French - English) for a temporary mission from mid-October to mid-November 2026 covering Dakar, Mbour, Thiès and surrounding areas. Requirements: Valid driver's license (1+ year), fluent French & conversational English. Send CV to: contact@sdt.sn`,
+    tags: ["SDT", "Chauffeur", "Tourisme", "Bilingue", "Dakar", "Mbour", "Thiès", "Permis de conduire"],
+    recruiterEmail: "contact@sdt.sn",
+    externalLink: "mailto:contact@sdt.sn?subject=Candidature%20Chauffeur%20Professionnel%20-%20SDT",
+    image: "/sdt_chauffeur_professionnel.png",
+    image_url: "/sdt_chauffeur_professionnel.png",
+    deadline: "2026-10-15",
+    pinned: true,
+  },
+  {
     id: "8e7bdec1-c693-43a8-af11-d5515f733a4c",
     titleFR: "Foundever™ recrute des Conseillers Clients en Réception d'Appels",
     titleEN: "Foundever™ is hiring Inbound Customer Service Advisors",
@@ -1888,6 +1925,38 @@ export default function Home() {
                     <div>
                       <div className="font-extrabold text-xs">{selectedLang === "FR" ? "Dépôts Physiques" : "In-person Dropoffs"}</div>
                       <div className="text-[10px] text-gray-500 font-normal">Stations & contacts</div>
+                    </div>
+                  </Link>
+
+                  {/* Concours */}
+                  <Link
+                    href="/offres?q=Concours"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-amber-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-solid fa-award text-lg text-amber-500 w-5 text-center"></i>
+                    <div className="flex-1">
+                      <div className="font-extrabold text-xs flex items-center justify-between">
+                        <span>Concours</span>
+                        <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[8px] font-black rounded-md">Public</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Avis & Examens d'État</div>
+                    </div>
+                  </Link>
+
+                  {/* Formation */}
+                  <Link
+                    href="/offres?q=Formation"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-teal-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-solid fa-graduation-cap text-lg text-teal-600 w-5 text-center"></i>
+                    <div className="flex-1">
+                      <div className="font-extrabold text-xs flex items-center justify-between">
+                        <span>Formation</span>
+                        <span className="px-1.5 py-0.2 bg-teal-100 text-teal-800 text-[8px] font-black rounded-md">Pro</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Certifications & Cours</div>
                     </div>
                   </Link>
 

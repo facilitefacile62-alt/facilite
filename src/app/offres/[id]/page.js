@@ -8,6 +8,38 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "c5e31782-b7e1-482a-a926-d183f3e79201": {
+    id: "c5e31782-b7e1-482a-a926-d183f3e79201",
+    title: "Sénégal Découvertes Touristiques (SDT) recrute des Chauffeurs Professionnels",
+    company: "Sénégal Découvertes Touristiques (SDT)",
+    location: "Dakar, Mbour, Thiès et environs, Sénégal",
+    contract_type: "Mission temporaire (Mi-octobre à mi-novembre 2026)",
+    salary_range: "Selon profil & mission touristique",
+    description: `Dans le cadre du déploiement de ses activités, Sénégal Découvertes Touristiques (SDT) recrute des Chauffeurs Professionnels Bilingues (Français – Anglais) pour une mission temporaire se déroulant de mi-octobre à mi-novembre 2026.
+
+📌 Descriptif de la Mission :
+• Période de la mission : Mi-octobre à mi-novembre 2026 (Mission temporaire).
+• Zones de couverture : Dakar, Mbour, Thiès et leurs environs.
+• Missions principales : Assurer le transport sécurisé, confortable et ponctuel d’une clientèle internationale dans le cadre de circuits et déplacements touristiques.
+
+🎯 Profil & Exigences du Poste :
+• Permis de conduire : Permis valide depuis au moins un (01) an minimum.
+• Français : Bon niveau professionnel.
+• Anglais : Bonne maîtrise orale (atout majeur pour l’accueil de la clientèle internationale).
+• Atouts : Présentation soignée, sens du service client, courtoisie et très bonne connaissance du réseau routier (Dakar, Mbour, Thiès).
+
+📁 Modalités de Candidature :
+Les candidat(e)s intéressé(e)s répondant au profil sont invité(e)s à envoyer leur dossier de candidature :
+• Document à fournir : Curriculum Vitae (CV) à jour.
+• Adresse e-mail de réception : contact@sdt.sn`,
+    image_url: "/sdt_chauffeur_professionnel.png",
+    min_education_level: "Permis de conduire valide (1 an min) + Bilingue (Français - Anglais)",
+    deadline: "2026-10-15",
+    contact_email: "contact@sdt.sn",
+    external_link: "mailto:contact@sdt.sn?subject=Candidature%20Chauffeur%20Professionnel%20-%20SDT",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "3234b690-ae1b-4204-9dd3-73e98ea4c713": {
     id: "3234b690-ae1b-4204-9dd3-73e98ea4c713",
     title: "Dexintec recrute un Chauffeur",

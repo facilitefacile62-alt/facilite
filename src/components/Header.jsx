@@ -1183,6 +1183,54 @@ export default function Header() {
                     </div>
                   </Link>
 
+                  {/* Concours */}
+                  <Link
+                    href="/offres?q=Concours"
+                    onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_plus_concours")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Concours")
+                        ? "bg-amber-50 text-amber-700 dark:bg-gray-800 dark:text-amber-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-award text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Concours</span>
+                        <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[8px] font-black rounded-md">Public</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Avis & Examens d'État</div>
+                    </div>
+                  </Link>
+
+                  {/* Formation */}
+                  <Link
+                    href="/offres?q=Formation"
+                    onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_plus_formation")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Formation")
+                        ? "bg-teal-50 text-teal-700 dark:bg-gray-800 dark:text-teal-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-graduation-cap text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Formation</span>
+                        <span className="px-1.5 py-0.2 bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 text-[8px] font-black rounded-md">Pro</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Certifications & Cours</div>
+                    </div>
+                  </Link>
+
                   {/* 3. Extraire CV */}
                   <Link
                     href="/candidat/extracteur"

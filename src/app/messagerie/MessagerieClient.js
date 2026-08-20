@@ -2057,6 +2057,38 @@ export default function MessagerieClient() {
                     </div>
                   </Link>
 
+                  {/* Concours */}
+                  <Link
+                    href="/offres?q=Concours"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-amber-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-solid fa-award text-lg text-amber-500 w-5 text-center"></i>
+                    <div className="flex-1">
+                      <div className="font-extrabold text-xs flex items-center justify-between">
+                        <span>Concours</span>
+                        <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[8px] font-black rounded-md">Public</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Avis & Examens d'État</div>
+                    </div>
+                  </Link>
+
+                  {/* Formation */}
+                  <Link
+                    href="/offres?q=Formation"
+                    onClick={() => setPlusDropdownOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-teal-600 transition border-t border-gray-100"
+                  >
+                    <i className="fa-solid fa-graduation-cap text-lg text-teal-600 w-5 text-center"></i>
+                    <div className="flex-1">
+                      <div className="font-extrabold text-xs flex items-center justify-between">
+                        <span>Formation</span>
+                        <span className="px-1.5 py-0.2 bg-teal-100 text-teal-800 text-[8px] font-black rounded-md">Pro</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Certifications & Cours</div>
+                    </div>
+                  </Link>
+
                   {/* 6. Contact */}
                   <button
                     type="button"
