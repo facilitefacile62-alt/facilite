@@ -1567,8 +1567,30 @@ export default function AdminDashboardPage() {
             <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
               <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-extrabold text-gray-900">Liste des Comptes</h2>
-                  <p className="text-xs text-gray-500 font-medium">Attribuer ou modifier les privilèges d'accès</p>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h2 className="text-lg font-extrabold text-gray-900">Liste des Comptes</h2>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-orange-50 text-orange-700 border border-orange-200 shadow-2xs">
+                      <i className="fa-solid fa-users text-[11px]"></i>
+                      {filteredUsers.length !== users.length
+                        ? `${filteredUsers.length} affiché${filteredUsers.length > 1 ? "s" : ""} / ${users.length} au total`
+                        : `${users.length} compte${users.length > 1 ? "s" : ""} au total`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 font-medium flex-wrap">
+                    <span>Attribuer ou modifier les privilèges d'accès</span>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-[11px] font-semibold text-gray-600">
+                      👥 Utilisateurs : <strong className="text-gray-900 font-extrabold">{users.filter((u) => !u.role || u.role === "user").length}</strong>
+                    </span>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-[11px] font-semibold text-gray-600">
+                      ✏️ Éditeurs : <strong className="text-gray-900 font-extrabold">{users.filter((u) => u.role === "publisher").length}</strong>
+                    </span>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-[11px] font-semibold text-gray-600">
+                      🛡️ Admins : <strong className="text-gray-900 font-extrabold">{users.filter((u) => u.role === "admin").length}</strong>
+                    </span>
+                  </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <select
@@ -1576,10 +1598,10 @@ export default function AdminDashboardPage() {
                     onChange={(e) => setTableRoleFilter(e.target.value)}
                     className="px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-orange-500"
                   >
-                    <option value="all">Tous les rôles</option>
-                    <option value="user">Utilisateurs</option>
-                    <option value="publisher">Éditeurs</option>
-                    <option value="admin">Administrateurs</option>
+                    <option value="all">Tous les rôles ({users.length})</option>
+                    <option value="user">Utilisateurs ({users.filter((u) => !u.role || u.role === "user").length})</option>
+                    <option value="publisher">Éditeurs ({users.filter((u) => u.role === "publisher").length})</option>
+                    <option value="admin">Administrateurs ({users.filter((u) => u.role === "admin").length})</option>
                   </select>
                   <div className="relative max-w-xs w-full">
                     <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-400 text-xs"></i>
