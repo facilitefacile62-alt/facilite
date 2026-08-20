@@ -323,7 +323,7 @@ export default function LoginPage() {
                     placeholder="Au moins 6 caractères"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 transition"
+                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#064034] focus:ring-4 focus:ring-[#085041]/20 transition"
                   />
                 </div>
                 <div>
@@ -334,7 +334,7 @@ export default function LoginPage() {
                     placeholder="Confirmez le mot de passe"
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 transition"
+                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#064034] focus:ring-4 focus:ring-[#085041]/20 transition"
                   />
                 </div>
 
@@ -347,7 +347,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={recoveryLoading}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
+                  className="w-full py-2.5 bg-[#085041] hover:bg-[#064034] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
                 >
                   {recoveryLoading ? "Mise à jour..." : "Enregistrer le mot de passe"}
                 </button>
@@ -363,30 +363,18 @@ export default function LoginPage() {
             <h2 className="text-base font-bold text-gray-900">Connexion réussie !</h2>
             <p className="text-[11px] text-gray-500">Bienvenue sur Facilité. Redirection en cours...</p>
           </div>
-        ) : authMethod === "phone" ? (
-          /* Mode Authentification par Téléphone */
-          <div className="space-y-3.5">
-            <PhoneAuthForm onSuccessRedirect={typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/"} />
-            <button
-              type="button"
-              onClick={() => setAuthMethod("email")}
-              className="w-full text-center text-[11px] font-bold text-gray-600 hover:text-black py-1.5 cursor-pointer transition"
-            >
-              ← Retour à la connexion par e-mail
-            </button>
-          </div>
         ) : (
-          /* Mode Principal : Icône Clé + Login + Google en Haut + OU + Saisie Email + Bouton Vert */
+          /* Mode Principal : Logo Facilite + Login + Google en Haut + OU + Onglets E-mail/Téléphone */
           <div className="space-y-3">
-            
-            {/* Icône Clé Officielle avec contour animé */}
+
+            {/* Logo Facilite (identité teal #085041) avec contour animé */}
             <div className="flex justify-center mb-0.5">
               <div className="relative group">
-                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 opacity-60 blur-xs animate-pulse"></div>
-                <div className="relative w-11 h-11 rounded-full bg-white border-2 border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.25)] flex items-center justify-center p-2 transition-transform duration-300 group-hover:scale-105">
+                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#085041] via-teal-400 to-[#085041] opacity-60 blur-xs animate-pulse"></div>
+                <div className="relative w-11 h-11 rounded-full bg-white border-2 border-[#085041] shadow-[0_0_12px_rgba(8,80,65,0.25)] flex items-center justify-center p-2 transition-transform duration-300 group-hover:scale-105">
                   <img
-                    src="/login_key.png"
-                    alt="Clé de connexion"
+                    src="/login_key_teal.png"
+                    alt="Facilite"
                     className="w-full h-full object-contain drop-shadow-xs"
                   />
                 </div>
@@ -414,7 +402,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => handleOAuthLogin("google")}
               disabled={oauthLoading}
-              className="w-full py-2.5 px-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 text-xs sm:text-sm font-medium rounded-xl transition flex items-center justify-center gap-2 shadow-2xs cursor-pointer disabled:opacity-60"
+              className="w-full py-2.5 px-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 text-xs sm:text-sm font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-2xs cursor-pointer disabled:opacity-60 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#085041]/20 focus-visible:border-[#085041]"
             >
               <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
                 <path
@@ -444,8 +432,36 @@ export default function LoginPage() {
               </span>
             </div>
 
-            {/* 3. EN BAS : SAISIE E-MAIL + BOUTON VERT CONTINUER AVEC L'E-MAIL */}
-            {step === 1 ? (
+            {/* Onglets E-mail / Téléphone */}
+            <div className="flex bg-gray-100 rounded-xl p-1" role="tablist" aria-label="Méthode de connexion">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMethod === "email"}
+                onClick={() => setAuthMethod("email")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#085041]/40 ${
+                  authMethod === "email" ? "bg-white text-[#085041] shadow-xs" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                E-mail
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMethod === "phone"}
+                onClick={() => setAuthMethod("phone")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#085041]/40 ${
+                  authMethod === "phone" ? "bg-white text-[#085041] shadow-xs" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Téléphone
+              </button>
+            </div>
+
+            {/* 3. CONTENU DE L'ONGLET ACTIF */}
+            {authMethod === "phone" ? (
+              <PhoneAuthForm onSuccessRedirect={typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/"} />
+            ) : step === 1 ? (
               <form onSubmit={handleEmailStepSubmit} className="space-y-2.5">
                 <input
                   type="text"
@@ -467,7 +483,7 @@ export default function LoginPage() {
                       if (errorMessage) setErrorMessage("");
                     }}
                     placeholder="nom@exemple.com"
-                    className="w-full px-3.5 py-2.5 bg-white border-2 border-emerald-500 hover:border-emerald-600 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.18)] transition-all duration-300"
+                    className="w-full px-3.5 py-2.5 bg-white border-2 border-[#085041] hover:border-[#064034] rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#064034] focus:ring-4 focus:ring-[#085041]/20 shadow-[0_0_12px_rgba(8,80,65,0.18)] transition-all duration-300"
                   />
                 </div>
 
@@ -480,7 +496,7 @@ export default function LoginPage() {
                 {/* Bouton Vert "Continuer avec l'e-mail" */}
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
+                  className="w-full py-2.5 bg-[#085041] hover:bg-[#064034] active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center"
                 >
                   Continuer avec l'e-mail
                 </button>
@@ -490,7 +506,7 @@ export default function LoginPage() {
                   <Link
                     href="/forgot-password"
                     style={{ textDecoration: "none" }}
-                    className="text-[11px] font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline transition"
+                    className="text-[11px] font-semibold text-[#085041] hover:text-[#064034] no-underline hover:no-underline transition"
                   >
                     Mot de passe oublié ?
                   </Link>
@@ -534,7 +550,7 @@ export default function LoginPage() {
                           if (errorMessage) setErrorMessage("");
                         }}
                         placeholder="Saisissez votre mot de passe"
-                        className="w-full pl-3.5 pr-9 py-2.5 bg-white border-2 border-emerald-500 hover:border-emerald-600 rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.18)] transition-all duration-300"
+                        className="w-full pl-3.5 pr-9 py-2.5 bg-white border-2 border-[#085041] hover:border-[#064034] rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#064034] focus:ring-4 focus:ring-[#085041]/20 shadow-[0_0_12px_rgba(8,80,65,0.18)] transition-all duration-300"
                       />
                       <button
                         type="button"
@@ -559,7 +575,7 @@ export default function LoginPage() {
                       <Link
                         href="/forgot-password"
                         style={{ textDecoration: "none" }}
-                        className="font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline"
+                        className="font-semibold text-[#085041] hover:text-[#064034] no-underline hover:no-underline"
                       >
                         Mot de passe oublié ?
                       </Link>
@@ -577,7 +593,7 @@ export default function LoginPage() {
                         onClick={handleResendConfirmation}
                         disabled={isResending}
                         style={{ textDecoration: "none" }}
-                        className="w-full text-[11px] font-bold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline py-0.5 cursor-pointer"
+                        className="w-full text-[11px] font-bold text-[#085041] hover:text-[#064034] no-underline hover:no-underline py-0.5 cursor-pointer"
                       >
                         {isResending ? "Envoi en cours..." : "Renvoyer l'email de confirmation"}
                       </button>
@@ -587,7 +603,7 @@ export default function LoginPage() {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full py-2.5 bg-[#085041] hover:bg-[#064034] active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-2"
                     >
                       {isLoading ? (
                         <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -610,7 +626,7 @@ export default function LoginPage() {
                 <Link
                   href="/register"
                   style={{ textDecoration: "none" }}
-                  className="font-semibold text-[#006666] hover:text-[#004d4d] no-underline hover:no-underline"
+                  className="font-semibold text-[#085041] hover:text-[#064034] no-underline hover:no-underline"
                 >
                   Inscrivez-vous
                 </Link>
