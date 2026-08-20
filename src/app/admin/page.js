@@ -1822,6 +1822,7 @@ export default function AdminDashboardPage() {
               viewingDocumentKey={viewingDocumentKey}
               onViewDocument={(documentType, resumeId) => handleViewDocument(selectedUser.id, documentType, resumeId)}
               currentAdminId={userSession?.user?.id}
+              onRefresh={() => openUserDetail(selectedUser)}
             />
           )}
 
@@ -2286,20 +2287,43 @@ function UserDetailModal({
   viewingDocumentKey,
   onViewDocument,
   currentAdminId,
+  onRefresh,
 }) {
+  // Tout accès approuvé et valide dans les 7 jours pour ce candidat
   const myActiveRequest = accessRequests.find(
-    (r) => r.admin_id === currentAdminId && r.status === "approved" && new Date(r.expires_at) > new Date()
+    (r) => r.status === "approved" && (!r.expires_at || new Date(r.expires_at) > new Date())
   );
-  const myPendingRequest = accessRequests.find((r) => r.admin_id === currentAdminId && r.status === "pending");
+  const myPendingRequest = !myActiveRequest && accessRequests.find((r) => r.status === "pending");
+
+  // Rafraîchissement automatique toutes les 2.5s pour détecter l'approbation du candidat en direct
+  useEffect(() => {
+    if (!onRefresh) return;
+    const interval = setInterval(() => {
+      onRefresh();
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [onRefresh]);
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" onClick={onClose} />
       <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-          <div>
-            <h3 className="text-base font-extrabold text-gray-900">{user.full_name || "Sans nom"}</h3>
-            <p className="text-[11px] text-gray-400 font-mono">{user.email}</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h3 className="text-base font-extrabold text-gray-900">{user.full_name || "Sans nom"}</h3>
+              <p className="text-[11px] text-gray-400 font-mono">{user.email}</p>
+            </div>
+            {onRefresh && (
+              <button
+                type="button"
+                onClick={onRefresh}
+                title="Actualiser les statuts"
+                className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs transition cursor-pointer"
+              >
+                <i className="fa-solid fa-arrows-rotate"></i>
+              </button>
+            )}
           </div>
           <button
             type="button"
