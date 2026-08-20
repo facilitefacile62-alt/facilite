@@ -198,6 +198,12 @@ test.describe("Invariants de sécurité", () => {
       // get_cv_quota_today() (SECURITY DEFINER) — jamais un SELECT/INSERT
       // direct, même pour un admin. Voir 20260806150000_cv_consultations_quota.sql.
       "cv_consultations",
+      // Base de connaissances FAQ de l'assistant vocal : lecture ET écriture
+      // exclusivement via service_role (route API admin avec isCallerAdmin,
+      // et /api/voice-assistant pour l'injection dans le SYSTEM_PROMPT) —
+      // jamais de RLS/GRANT authenticated, même pour l'admin. Voir
+      // 20260821100000_assistant_faq.sql.
+      "assistant_faq",
     ]);
 
     const rows = await runIntrospectionSql(`
