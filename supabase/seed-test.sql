@@ -224,6 +224,17 @@ DROP POLICY IF EXISTS "Upload de ses propres documents de badge" ON storage.obje
 DROP POLICY IF EXISTS "Upload de son propre CV" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated upload chat-attachments" ON storage.objects;
 DROP POLICY IF EXISTS "Public select chat-attachments" ON storage.objects;
+-- avatars/covers ajoutés le 2026-08-21 (voir scripts/setup-test-buckets.js) :
+-- absents de la prod le 08/08, jamais backportés ici depuis. Exportées de
+-- la meme facon depuis la production (pg_policies, roles/qual/with_check).
+DROP POLICY IF EXISTS "Un utilisateur ecrit sa propre couverture" ON storage.objects;
+DROP POLICY IF EXISTS "Un utilisateur ecrit son propre avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Un utilisateur lit sa propre couverture" ON storage.objects;
+DROP POLICY IF EXISTS "Un utilisateur lit son propre avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Un utilisateur remplace sa propre couverture" ON storage.objects;
+DROP POLICY IF EXISTS "Un utilisateur remplace son propre avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Un utilisateur supprime sa propre couverture" ON storage.objects;
+DROP POLICY IF EXISTS "Un utilisateur supprime son propre avatar" ON storage.objects;
 
 CREATE POLICY "Lecture de ses propres documents de badge" ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'badge-documents'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 CREATE POLICY "Lecture de son propre CV" ON storage.objects AS PERMISSIVE FOR SELECT TO PUBLIC USING (((bucket_id = 'resumes'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
@@ -253,6 +264,18 @@ CREATE POLICY "Un recruteur televerse ses visuels d'offres" ON storage.objects A
 CREATE POLICY "Upload de sa propre piece jointe de discussion" ON storage.objects AS PERMISSIVE FOR INSERT TO PUBLIC WITH CHECK (((bucket_id = 'chat-attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 CREATE POLICY "Upload de ses propres documents de badge" ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'badge-documents'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 CREATE POLICY "Upload de son propre CV" ON storage.objects AS PERMISSIVE FOR INSERT TO PUBLIC WITH CHECK (((bucket_id = 'resumes'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un utilisateur ecrit sa propre couverture" ON storage.objects AS PERMISSIVE FOR INSERT TO PUBLIC WITH CHECK (((bucket_id = 'covers'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un utilisateur ecrit son propre avatar" ON storage.objects AS PERMISSIVE FOR INSERT TO PUBLIC WITH CHECK (((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un utilisateur lit sa propre couverture" ON storage.objects AS PERMISSIVE FOR SELECT TO PUBLIC USING (((bucket_id = 'covers'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_admin(auth.uid()) OR (EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE (((p.id)::text = (storage.foldername(objects.name))[1]) AND (p.is_public = true)))))));
+CREATE POLICY "Un utilisateur lit son propre avatar" ON storage.objects AS PERMISSIVE FOR SELECT TO PUBLIC USING (((bucket_id = 'avatars'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_admin(auth.uid()) OR (EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE (((p.id)::text = (storage.foldername(objects.name))[1]) AND (p.is_public = true)))))));
+CREATE POLICY "Un utilisateur remplace sa propre couverture" ON storage.objects AS PERMISSIVE FOR UPDATE TO PUBLIC USING (((bucket_id = 'covers'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))) WITH CHECK (((bucket_id = 'covers'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un utilisateur remplace son propre avatar" ON storage.objects AS PERMISSIVE FOR UPDATE TO PUBLIC USING (((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))) WITH CHECK (((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un utilisateur supprime sa propre couverture" ON storage.objects AS PERMISSIVE FOR DELETE TO PUBLIC USING (((bucket_id = 'covers'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+CREATE POLICY "Un utilisateur supprime son propre avatar" ON storage.objects AS PERMISSIVE FOR DELETE TO PUBLIC USING (((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 
 -- 0quater. Publication Realtime — même trou de nouveau : dump-schema-via-introspection.js
 -- ne capture pas l'appartenance à supabase_realtime. Vérifié sur la production le
