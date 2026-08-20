@@ -208,17 +208,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={`${inter.variable} scroll-smooth`} suppressHydrationWarning>
       <head>
-        {/* Favicons & App Icons Multi-Plateformes (Google, iOS, Android, Desktop) */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="manifest" href="/manifest.json" />
-
+        {/* Favicons/manifest : déjà déclarés une seule fois via l'objet
+            metadata.icons/manifest ci-dessus (Next.js génère les <link>
+            automatiquement) — des balises manuelles identiques ici
+            produisaient un doublon exact dans le <head> rendu, sans
+            rapport avec le contenu affiché mais un vrai doublon de
+            balisage, retiré le 2026-08-21. */}
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <script
           type="application/ld+json"
