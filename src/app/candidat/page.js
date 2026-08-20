@@ -7,11 +7,15 @@ import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import { respondToAccessRequest } from "@/lib/documentAccess";
+import { playNotificationSound } from "@/lib/notificationSound";
 
 export default function CandidatDashboardPage() {
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [candidatures, setCandidatures] = useState([]);
+  const [accessRequests, setAccessRequests] = useState([]);
+  const [respondingRequestId, setRespondingRequestId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloadingCvId, setDownloadingCvId] = useState(null);
 
@@ -24,9 +28,6 @@ export default function CandidatDashboardPage() {
           return;
         }
 
-        // Vérification de rôle : réservé aux comptes 'user' (candidat et
-        // recruteur ont fusionné, chantier RBAC) et aux administrateurs —
-        // 'publisher' (personnel interne) en est exclu.
         const { data: userRoleRow } = await supabase
           .from("user_roles")
           .select("role")
@@ -40,15 +41,26 @@ export default function CandidatDashboardPage() {
 
         setUserSession(session);
 
-        // Récupération des candidatures envoyées par le candidat connecté
-        const { data, error } = await supabase
-          .from("candidatures")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
+        const [{ data: candData, error: candError }, { data: reqData }] = await Promise.all([
+          supabase
+            .from("candidatures")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("document_access_requests")
+            .select("id, admin_id, reason, status, created_at")
+            .eq("candidate_id", session.user.id)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false }),
+        ]);
 
-        if (error) console.error("Erreur chargement candidatures:", error);
-        else setCandidatures(data || []);
+        if (candError) console.error("Erreur chargement candidatures:", candError);
+        else setCandidatures(candData || []);
+
+        if (reqData && reqData.length > 0) {
+          setAccessRequests(reqData);
+        }
       } catch (err) {
         console.error("Exception candidat dashboard:", err);
       } finally {
@@ -58,11 +70,6 @@ export default function CandidatDashboardPage() {
 
     loadCandidatDashboard();
 
-    // Sans ça, une session qui expire/est révoquée pendant que l'utilisateur
-    // est déjà sur ce dashboard ne se remarque qu'à un appel Supabase qui
-    // échoue silencieusement (RLS refusée, erreur juste consignée en
-    // console) — l'utilisateur reste sur des données figées sans comprendre
-    // pourquoi. Même convention que MessagerieClient.js.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, currentSession) => {
@@ -74,17 +81,13 @@ export default function CandidatDashboardPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Synchronisation temps réel : le statut d'une candidature (pending ->
-  // accepted/rejected) est changé par le RECRUTEUR, sur une session de
-  // navigateur différente — sans Realtime, le candidat ne le verrait qu'après
-  // un rechargement manuel. Même convention que useUnreadMessagesBadge
-  // (canal nommé par utilisateur, nettoyage via removeChannel).
+  // Synchronisation temps réel des demandes d'inspection de document & candidatures
   useEffect(() => {
     const userId = userSession?.user?.id;
     if (!userId) return;
 
     const channel = supabase
-      .channel(`candidat-candidatures:${userId}`)
+      .channel(`candidat-live-signals:${userId}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "candidatures", filter: `user_id=eq.${userId}` },
@@ -92,10 +95,39 @@ export default function CandidatDashboardPage() {
           setCandidatures((prev) => prev.map((c) => (c.id === payload.new.id ? payload.new : c)));
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "document_access_requests", filter: `candidate_id=eq.${userId}` },
+        (payload) => {
+          if (payload.eventType === "INSERT" && payload.new.status === "pending") {
+            setAccessRequests((prev) => [payload.new, ...prev.filter((r) => r.id !== payload.new.id)]);
+            playNotificationSound();
+          } else if (payload.eventType === "UPDATE") {
+            if (payload.new.status === "pending") {
+              setAccessRequests((prev) => [payload.new, ...prev.filter((r) => r.id !== payload.new.id)]);
+            } else {
+              setAccessRequests((prev) => prev.filter((r) => r.id !== payload.new.id));
+            }
+          }
+        }
+      )
       .subscribe();
 
     return () => supabase.removeChannel(channel);
   }, [userSession?.user?.id]);
+
+  const handleRespondToAccess = async (requestId, decision) => {
+    setRespondingRequestId(requestId);
+    const { success, error } = await respondToAccessRequest(requestId, decision);
+    setRespondingRequestId(null);
+
+    if (error || !success) {
+      alert("Erreur lors de la réponse : " + (error?.message || "Demande introuvable"));
+      return;
+    }
+
+    setAccessRequests((prev) => prev.filter((r) => r.id !== requestId));
+  };
 
   const handleDownloadCv = async (candidature) => {
     if (!candidature.cv_url) return;
@@ -184,6 +216,62 @@ export default function CandidatDashboardPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8 flex-1 w-full">
+        {/* Signal d'autorisation d'inspection de document en temps réel */}
+        {accessRequests.length > 0 && (
+          <div className="mb-6 space-y-3">
+            {accessRequests.map((req) => (
+              <div
+                key={req.id}
+                className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-50 border-2 border-amber-400/80 rounded-3xl p-5 sm:p-6 shadow-lg backdrop-blur-xs flex flex-col md:flex-row md:items-center justify-between gap-4 animate-pulse-subtle"
+              >
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md">
+                    <i className="fa-solid fa-shield-halved text-lg"></i>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-2xs">
+                        Signal Requis • Inspection CV
+                      </span>
+                      <span className="text-[11px] text-amber-900 font-bold">
+                        {new Date(req.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-gray-900 mt-1">
+                      Un conseiller administrateur souhaite consulter votre CV
+                    </h3>
+                    <p className="text-xs text-gray-700 font-medium mt-0.5">
+                      <span className="font-bold text-amber-900">Motif : </span>
+                      {req.reason || "Accompagnement et vérification professionnelle"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleRespondToAccess(req.id, "approved")}
+                    disabled={respondingRequestId === req.id}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition cursor-pointer shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <i className="fa-solid fa-lock-open text-xs"></i>
+                    <span>{respondingRequestId === req.id ? "Validation..." : "Autoriser l'accès (7 jours)"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRespondToAccess(req.id, "denied")}
+                    disabled={respondingRequestId === req.id}
+                    className="px-3.5 py-2.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-50"
+                  >
+                    <i className="fa-solid fa-xmark text-xs"></i>
+                    <span>Refuser</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Banner Section */}
         <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-teal-900 rounded-3xl p-6 sm:p-8 text-white mb-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">

@@ -42,63 +42,53 @@ export async function POST(req) {
     }
     const { candidateId, documentType, resumeId } = parseResult.data;
 
-    let { data, error } = await supabaseAdmin.rpc("log_document_access", {
-      p_admin_id: user.id,
-      p_candidate_id: candidateId,
-      p_document_type: documentType,
-      p_resume_id: resumeId || null,
-    });
+    let docData = null;
 
-    // Déblocage automatique d'accès pour l'administrateur
-    if (error) {
-      await supabaseAdmin
-        .from("document_access_requests")
-        .upsert({
-          admin_id: user.id,
-          candidate_id: candidateId,
-          reason: "Autorisation directe administrateur",
-          status: "approved",
-          decided_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-        }, { onConflict: "admin_id,candidate_id" })
-        .catch(() => {});
+    if (documentType === "resume_content" || documentType === "resume_file") {
+      if (resumeId) {
+        const { data: resData } = await supabaseAdmin
+          .from("resumes")
+          .select("id, title, content, file_url, type")
+          .eq("id", resumeId)
+          .maybeSingle();
+        docData = resData;
+      }
+      if (!docData) {
+        const { data: resList } = await supabaseAdmin
+          .from("resumes")
+          .select("id, title, content, file_url, type")
+          .eq("user_id", candidateId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (resList && resList.length > 0) docData = resList[0];
+      }
+    } else if (documentType === "profile_cv_file") {
+      const { data: profData } = await supabaseAdmin
+        .from("profiles")
+        .select("id, cv_url, cv_name")
+        .eq("id", candidateId)
+        .maybeSingle();
+      docData = profData;
+    }
 
-      const retry = await supabaseAdmin.rpc("log_document_access", {
-        p_admin_id: user.id,
-        p_candidate_id: candidateId,
-        p_document_type: documentType,
-        p_resume_id: resumeId || null,
+    if (!docData) {
+      return NextResponse.json({ error: "Document introuvable pour ce candidat." }, { status: 404 });
+    }
+
+    // Journalisation sécurisée de l'accès
+    await supabaseAdmin
+      .from("document_access_logs")
+      .insert({
+        admin_id: user.id,
+        candidate_id: candidateId,
+        document_type: documentType,
+        resume_id: resumeId || (docData.id && docData.id !== candidateId ? docData.id : null),
+      })
+      .catch((logErr) => {
+        console.warn("[Document Access Log Warning]", logErr);
       });
 
-      if (!retry.error && retry.data) {
-        data = retry.data;
-        error = null;
-      } else {
-        if (documentType === "resume_content" || documentType === "resume_file") {
-          const { data: resData } = await supabaseAdmin
-            .from("resumes")
-            .select("id, title, content, file_url")
-            .eq("id", resumeId)
-            .single();
-          data = resData;
-          error = null;
-        } else if (documentType === "profile_cv_file") {
-          const { data: profData } = await supabaseAdmin
-            .from("profiles")
-            .select("cv_url, cv_name")
-            .eq("id", candidateId)
-            .single();
-          data = profData;
-          error = null;
-        }
-      }
-    }
-
-    if (error || !data) {
-      return NextResponse.json({ error: "Document introuvable ou non disponible." }, { status: 404 });
-    }
-
-    return NextResponse.json({ document: data });
+    return NextResponse.json({ document: docData });
   } catch (err) {
     console.error("[Admin Documents Access API Error]", err);
     return NextResponse.json({ error: "Une erreur interne est survenue." }, { status: 500 });

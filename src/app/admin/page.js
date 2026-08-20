@@ -951,24 +951,24 @@ export default function AdminDashboardPage() {
   };
 
   const handleRequestDocumentAccess = async (candidateId) => {
+    if (!accessReasonDraft.trim()) {
+      triggerToast("Veuillez saisir un motif pour informer le candidat.", "fa-triangle-exclamation");
+      return;
+    }
     setRequestingAccess(true);
-    const reason = accessReasonDraft.trim() || "Autorisation directe administrateur";
+    const reason = accessReasonDraft.trim();
     const { requestId, error } = await requestDocumentAccess(candidateId, reason);
+    setRequestingAccess(false);
 
-    // Auto-approbation immédiate de la demande pour l'administrateur
-    if (requestId) {
-      await supabase
-        .from("document_access_requests")
-        .update({
-          status: "approved",
-          decided_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-        })
-        .eq("id", requestId);
+    if (error || !requestId) {
+      triggerToast("Une demande est déjà en attente auprès de ce candidat.", "fa-circle-info");
+      if (selectedUser?.id === candidateId) {
+        await openUserDetail(selectedUser);
+      }
+      return;
     }
 
-    setRequestingAccess(false);
-    triggerToast("Accès aux documents autorisé avec succès.", "fa-circle-check");
+    triggerToast("Signal & demande d'autorisation transmis au candidat !", "fa-paper-plane");
     setAccessReasonDraft("");
     if (selectedUser?.id === candidateId) {
       await openUserDetail(selectedUser);
