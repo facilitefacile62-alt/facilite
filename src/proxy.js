@@ -22,6 +22,16 @@ const PUBLIC_ROUTES = [
   // AVANT qu'un cookie de session existe, par construction — doit rester
   // public pour ne pas se bloquer lui-même.
   "/auth/callback",
+  // Pages légales statiques, même nature que /faq (texte pur, aucune
+  // personnalisation) — trouvées le 2026-08-21 en vérifiant robots.txt
+  // contre le comportement réel : toutes redirigeaient vers /login pour un
+  // visiteur anonyme (donc pour Google) malgré leur présence dans
+  // sitemap.js, qui les annonce comme indexables depuis le début sans
+  // qu'elles l'aient jamais été.
+  "/conditions",
+  "/confidentialite",
+  "/politique-de-confidentialite",
+  "/conditions-utilisation",
 ];
 
 // Routes visibles SANS connexion (pour Googlebot et les visiteurs anonymes)
@@ -49,6 +59,21 @@ const PUBLIC_BROWSABLE_ROUTES = [
   // ApplyModal, pas par ce mur.
   "/in",
   "/recruteurs",
+  // Même trouvaille que ci-dessus (2026-08-21) : pages produit/marketing
+  // annoncées indexables par sitemap.js mais en réalité bloquées par ce
+  // mur. PUBLIC_BROWSABLE plutôt que PUBLIC_ROUTES (contrairement aux
+  // pages légales ci-dessus) : ce sont des pages produit consultées aussi
+  // bien par des visiteurs anonymes que des utilisateurs connectés,
+  // potentiellement sensibles au contrôle par fonctionnalité (/service
+  // l'utilise déjà) — comportement inchangé pour un visiteur déjà
+  // authentifié, seul l'accès anonyme change.
+  "/service",
+  "/modeles",
+  "/fonctionnalites",
+  "/recrutement-spontane",
+  "/recrutement-journalier",
+  "/boite-a-idees",
+  "/aide-candidature",
 ];
 
 // Comparaison par segment de chemin plutôt que préfixe brut
