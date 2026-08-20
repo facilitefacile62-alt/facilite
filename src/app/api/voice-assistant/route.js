@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { requireUser, checkRateLimit } from '@/lib/apiAuth';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/env';
 
 export const runtime = 'nodejs';
 
@@ -91,6 +93,84 @@ async function synthesizeSpeech(text, apiKey) {
   return null;
 }
 
+// Détection déterministe (jamais confiée au LLM, même principe que
+// KNOWN_DESTINATIONS plus bas) — "lis mes messages" déclenche un résumé
+// des notifications réelles de l'utilisateur, pas une réponse générée qui
+// pourrait halluciner ou mélanger des données personnelles.
+const READ_MESSAGES_TRIGGERS = [
+  "lis mes messages", "lis-moi mes messages", "lis moi mes messages",
+  "mes messages", "mes notifications", "lis mes notifications",
+];
+
+function isReadMessagesRequest(message) {
+  const lower = message.toLowerCase();
+  return READ_MESSAGES_TRIGGERS.some((trigger) => lower.includes(trigger));
+}
+
+const NOTIFICATION_TYPE_LABELS = {
+  candidature: "Nouvelle candidature",
+  reponse: "Réponse recruteur",
+  jobs: "Offre d'emploi",
+  message: "Nouveau message",
+  badge: "Statut de votre badge",
+  document_access: "Accès à vos documents",
+};
+
+/**
+ * Résumé vocal des notifications non lues — construit à partir de
+ * `content`, déjà un texte complet et lisible écrit à l'insertion
+ * (vérifié sur des lignes réelles le 2026-08-21 : "Candidat Test E2E a
+ * postulé pour...", "Votre badge \"Recruteur vérifié\" a été approuvé !").
+ * Jamais de résolution séparée actor_id -> nom : la RLS de `profiles`
+ * n'autorise de toute façon la lecture que de son propre profil pour un
+ * utilisateur standard, c'est précisément pourquoi `content` est déjà
+ * pré-rédigé côté serveur au moment de la création de la notification.
+ *
+ * Client Supabase authentifié avec le jeton de LA REQUÊTE (jamais
+ * service_role) : mark_notification_read() et la RLS de `notifications`
+ * dépendent toutes deux de auth.uid(), qui ne résout correctement que
+ * pour une connexion authentifiée comme l'utilisateur — même patron déjà
+ * en service dans src/app/api/interviews/[id]/join/route.js.
+ */
+async function buildUnreadMessagesSummary(token, userId) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+
+  const { data: unread, error } = await supabase
+    .from("notifications")
+    .select("id, type, content, created_at")
+    .eq("user_id", userId)
+    .eq("is_read", false)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (error) {
+    console.error("[Voice Assistant] Échec lecture notifications:", error.message);
+    return "Désolé, je n'ai pas pu récupérer vos messages pour le moment.";
+  }
+
+  if (!unread || unread.length === 0) {
+    return "Vous n'avez aucun nouveau message.";
+  }
+
+  const summary = unread
+    .map((n) => `${NOTIFICATION_TYPE_LABELS[n.type] || "Notification"} : ${n.content}`)
+    .join(". ");
+
+  // Marqués lus dès l'inclusion dans ce résumé (au moment où ils sont
+  // "énoncés" côté serveur) — aucun signal fiable de fin de lecture audio
+  // réelle côté navigateur sans un second aller-retour ; en cas d'échec de
+  // lecture audio côté client, l'utilisateur voit quand même le texte à
+  // l'écran, donc le message n'est pas perdu même marqué lu par erreur.
+  await Promise.all(
+    unread.map((n) => supabase.rpc("mark_notification_read", { notification_id: n.id }))
+  );
+
+  const intro = unread.length === 1 ? "Vous avez 1 nouveau message. " : `Vous avez ${unread.length} nouveaux messages. `;
+  return intro + summary;
+}
+
 export async function POST(req) {
   try {
     const { user, error: authError } = await requireUser(req);
@@ -103,6 +183,22 @@ export async function POST(req) {
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: "Message invalide" }, { status: 400 });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "Clé API Gemini non configurée" }, { status: 500 });
+    }
+
+    // "Lis mes messages" court-circuite tout le reste (itinéraires, base de
+    // connaissances) : réponse déterministe construite depuis les vraies
+    // notifications de l'utilisateur, jamais depuis le LLM.
+    if (isReadMessagesRequest(message)) {
+      const authHeader = req.headers.get("authorization") || "";
+      const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+      const summaryText = await buildUnreadMessagesSummary(token, user.id);
+      const audioBase64 = await synthesizeSpeech(summaryText, apiKey);
+      return NextResponse.json({ reply: summaryText, mapsUrl: null, audioBase64 });
     }
 
     const hasRealPosition = !!(location && typeof location.lat === "number" && typeof location.lng === "number");
@@ -148,11 +244,6 @@ BASE DE CONNAISSANCES STRICTE POUR LES TRANSPORTS ET ITINÉRAIRES :
 
 RÈGLE ABSOLUE : Si la destination demandée n'est pas répertoriée ou est hors-sujet, réponds exactement : "Je n'ai pas cet itinéraire pour le moment, veuillez contacter le support."
 `;
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "Clé API Gemini non configurée" }, { status: 500 });
-    }
 
     // gemini-1.5-flash n'existe plus (retiré du catalogue Google, 404
     // systématique) — même liste de repli déjà vérifiée et en service dans
