@@ -45,6 +45,12 @@ async function urlToFile(url, filename) {
 
 export default function AdminPosterManagerModal({ isOpen, onClose, onPosterUpdated }) {
   const [uploadingKey, setUploadingKey] = useState(null);
+  // Cache-busting des vignettes : clé par filename (pas targetKey) car s1/s3
+  // partagent affiche_cv_pro.jpg — un seul état déclenché par un vrai succès
+  // d'upload, jamais Date.now() calculé en direct dans le rendu (react-hooks/purity,
+  // même correctif que posterRefreshKey dans modeles/page.jsx : valeur initiale
+  // stable pour que serveur et hydratation client calculent la même chose).
+  const [previewTimestamps, setPreviewTimestamps] = useState({});
   const [statusMessage, setStatusMessage] = useState({ text: "", type: "" });
   const fileInputRefs = useRef({});
   const [expandedAiKey, setExpandedAiKey] = useState(null);
@@ -140,6 +146,11 @@ export default function AdminPosterManagerModal({ isOpen, onClose, onPosterUpdat
         type: "success",
       });
 
+      const updatedFilename = SLIDE_DEFINITIONS.find((s) => s.targetKey === targetKey)?.filename;
+      if (updatedFilename) {
+        setPreviewTimestamps((prev) => ({ ...prev, [updatedFilename]: Date.now() }));
+      }
+
       if (onPosterUpdated) {
         onPosterUpdated(targetKey, data.url);
       }
@@ -206,7 +217,7 @@ export default function AdminPosterManagerModal({ isOpen, onClose, onPosterUpdat
             const isUploading = uploadingKey === slide.targetKey;
             const isGenerating = generatingKey === slide.targetKey;
             const isAiExpanded = expandedAiKey === slide.targetKey;
-            const previewTimestamp = Date.now();
+            const previewTimestamp = previewTimestamps[slide.filename] || 0;
 
             return (
               <div
