@@ -63,6 +63,7 @@ const NAV_SECTIONS = [
       { type: "link", href: "/messagerie", icon: "💬", label: "Messagerie Échanges", unread: true },
       { type: "link", href: "/admin/messages", icon: "💬", label: "Messagerie Support Admin" },
       { type: "link", href: "/admin/support", icon: "🎧", label: "Support" },
+      { type: "link", href: "/admin/assistant-faq", icon: "❓", label: "FAQ Assistant Vocal" },
     ],
   },
   {
