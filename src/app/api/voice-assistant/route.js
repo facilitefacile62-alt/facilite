@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
+import { requireUser, checkRateLimit } from '@/lib/apiAuth';
 
 export const runtime = 'nodejs';
 
 export async function POST(req) {
   try {
+    const { user, error: authError } = await requireUser(req);
+    if (authError) return authError;
+
+    const { allowed, error: rateError } = await checkRateLimit(user.id);
+    if (!allowed) return rateError;
+
     const { message, location } = await req.json();
 
     if (!message || typeof message !== 'string') {
