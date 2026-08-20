@@ -24,10 +24,12 @@ playwright-report/
 /playwright/.cache/
 **/trace.zip
 
-# Permissions Claude Code locales à ce dépôt (peuvent évoluer sans qu'on y
-# pense — jamais committées, pour éviter qu'une permission trop large
-# passe inaperçue dans l'historique).
-.claude/settings.local.json
+# Config Claude Code locale à ce dépôt — jamais committée (règle
+# permanente, voir CLAUDE.md) : une permission trop large ou un réglage de
+# session ne doit jamais passer inaperçu dans l'historique. settings.json
+# était suivi jusqu'ici ; il a été retiré du suivi git (git rm --cached)
+# sans être supprimé du disque.
+.claude/
 
 # next.js
 /.next/
