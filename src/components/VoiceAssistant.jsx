@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export default function VoiceAssistant() {
+export default function VoiceAssistant({ location = null }) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [status, setStatus] = useState('');
@@ -33,7 +33,7 @@ export default function VoiceAssistant() {
         const res = await fetch('/api/voice-assistant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: transcript }),
+          body: JSON.stringify({ message: transcript, location }),
         });
 
         const data = await res.json();
