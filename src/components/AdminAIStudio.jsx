@@ -132,9 +132,36 @@ export default function AdminAIStudio() {
   const [selectedAttachment, setSelectedAttachment] = useState(null); // { name, type, mimeType, size, data }
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastElapsedMs, setLastElapsedMs] = useState(null);
+  const [showQuickPresets, setShowQuickPresets] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [isListeningVoice, setIsListeningVoice] = useState(false);
   const chatScrollRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  const startVoiceInput = () => {
+    if (typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = "fr-FR";
+        recognition.interimResults = false;
+        recognition.onstart = () => setIsListeningVoice(true);
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          setInputText((prev) => (prev ? prev + " " + transcript : transcript));
+          setIsListeningVoice(false);
+        };
+        recognition.onerror = () => setIsListeningVoice(false);
+        recognition.onend = () => setIsListeningVoice(false);
+        recognition.start();
+        return;
+      } catch {}
+    }
+    setIsListeningVoice(true);
+    setTimeout(() => setIsListeningVoice(false), 2500);
+  };
 
   // État du Testeur de Diagnostic CV en direct
   const [diagTestFile, setDiagTestFile] = useState(null); // { name, type, mimeType, size, data }
@@ -1485,14 +1512,14 @@ ${productsContext}
                 </div>
               )}
 
-              {/* Zone de saisie avec boutons Trombone (Document) et Photo (Image) */}
-              <div className="p-3 bg-[#181B20] border-t border-[#2A2F3A] flex-none">
+              {/* Zone de saisie prompt box moderne (Style référence / Lovable / Claude) */}
+              <div className="p-3 bg-[#131518] border-t border-[#2A2F3A] flex-none">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     handleSendTestMessage();
                   }}
-                  className="flex items-center gap-2"
+                  className="relative"
                 >
                   {/* Inputs de fichiers cachés */}
                   <input
@@ -1510,56 +1537,185 @@ ${productsContext}
                     className="hidden"
                   />
 
-                  {/* Bouton Trombone (Document PDF/Word) */}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isGenerating}
-                    className="p-2.5 bg-[#1F232B] hover:bg-[#2A303C] text-gray-300 hover:text-[#10E688] border border-[#2E3542] rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center"
-                    title="Insérer un document (CV PDF, Word, Lettre...)"
-                  >
-                    <i className="fa-solid fa-paperclip text-sm"></i>
-                  </button>
+                  {/* Popover Menu "+" pour actions rapides */}
+                  {showQuickPresets && (
+                    <div className="absolute bottom-full left-0 mb-2 w-72 bg-[#1C1F26] border border-[#2E3545] rounded-2xl p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 px-2.5 py-1">
+                        Actions rapides IA
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSendTestMessage("Quels sont les tarifs officiels pour refaire mon CV et ma lettre de motivation ?");
+                          setShowQuickPresets(false);
+                        }}
+                        className="w-full text-left px-2.5 py-2 text-xs font-semibold text-gray-200 hover:bg-white/10 rounded-xl transition flex items-center gap-2 cursor-pointer"
+                      >
+                        <i className="fa-solid fa-tag text-emerald-400 text-xs"></i>
+                        <span>Demander les tarifs & offres</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSendTestMessage("Je souhaite optimiser mon CV pour le marché de l'emploi au Sénégal");
+                          setShowQuickPresets(false);
+                        }}
+                        className="w-full text-left px-2.5 py-2 text-xs font-semibold text-gray-200 hover:bg-white/10 rounded-xl transition flex items-center gap-2 cursor-pointer"
+                      >
+                        <i className="fa-solid fa-briefcase text-blue-400 text-xs"></i>
+                        <span>Conseil CV Marché Sénégal</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSendTestMessage("Peux-tu m'expliquer la norme ATS et comment passer les filtres recruteurs ?");
+                          setShowQuickPresets(false);
+                        }}
+                        className="w-full text-left px-2.5 py-2 text-xs font-semibold text-gray-200 hover:bg-white/10 rounded-xl transition flex items-center gap-2 cursor-pointer"
+                      >
+                        <i className="fa-solid fa-robot text-purple-400 text-xs"></i>
+                        <span>Explication norme ATS</span>
+                      </button>
+                    </div>
+                  )}
 
-                  {/* Bouton Appareil Photo / Image */}
-                  <button
-                    type="button"
-                    onClick={() => imageInputRef.current?.click()}
-                    disabled={isGenerating}
-                    className="p-2.5 bg-[#1F232B] hover:bg-[#2A303C] text-gray-300 hover:text-[#10E688] border border-[#2E3542] rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center"
-                    title="Insérer une photo (Photo de CV, capture d'écran...)"
-                  >
-                    <i className="fa-solid fa-camera text-sm"></i>
-                  </button>
+                  {/* Popover Menu "Attach" */}
+                  {showAttachMenu && (
+                    <div className="absolute bottom-full left-10 mb-2 w-56 bg-[#1C1F26] border border-[#2E3545] rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fileInputRef.current?.click();
+                          setShowAttachMenu(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/10 rounded-xl transition flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <i className="fa-solid fa-file-pdf text-red-400 text-sm"></i>
+                        <div>
+                          <div className="font-bold text-white">Document CV</div>
+                          <div className="text-[10px] text-gray-400">PDF, Word, TXT</div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          imageInputRef.current?.click();
+                          setShowAttachMenu(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/10 rounded-xl transition flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <i className="fa-solid fa-camera text-emerald-400 text-sm"></i>
+                        <div>
+                          <div className="font-bold text-white">Photo / Image</div>
+                          <div className="text-[10px] text-gray-400">Capture d'écran, JPG, PNG</div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
 
-                  {/* Champ texte */}
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
+                  {/* Boîte de prompt sombre arrondie (1:1 style capture) */}
+                  <div className="bg-[#0b0c0f] border border-[#222630] hover:border-[#323846] focus-within:border-gray-500 rounded-[24px] p-3 sm:p-3.5 shadow-xl transition-all">
+                    
+                    {/* Zone de texte multi-lignes */}
+                    <textarea
+                      ref={textareaRef}
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
-                      placeholder={selectedAttachment ? "Ajouter un message d'accompagnement..." : "Message ou insérer CV..."}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendTestMessage();
+                        }
+                      }}
+                      rows={2}
+                      placeholder={
+                        selectedAttachment
+                          ? "Ajouter un message d'accompagnement ou appuyez sur Entrée..."
+                          : "Posez une question, demandez une analyse de CV ou décrivez un besoin..."
+                      }
                       disabled={isGenerating}
-                      className="w-full pl-4 pr-9 py-2.5 bg-[#131518] border border-[#2E3542] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#10E688] transition font-medium"
+                      className="w-full bg-transparent text-white placeholder-gray-500 text-xs sm:text-sm leading-relaxed resize-none focus:outline-none custom-scrollbar"
+                      style={{ maxHeight: "120px" }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleSendTestMessage("Bonjour, voici mon CV pour analyse")}
-                      className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white transition cursor-pointer"
-                      title="Suggestion automatique"
-                    >
-                      <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
-                    </button>
-                  </div>
 
-                  {/* Bouton Envoi */}
-                  <button
-                    type="submit"
-                    disabled={(!inputText.trim() && !selectedAttachment) || isGenerating}
-                    className="px-4 py-2.5 bg-[#10E688] hover:bg-[#10E688]/90 disabled:bg-gray-700 text-gray-950 font-black rounded-xl text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
-                  >
-                    <i className="fa-solid fa-paper-plane"></i>
-                  </button>
+                    {/* Barre d'outils inférieure intégrée */}
+                    <div className="flex items-center justify-between gap-2 pt-2 mt-1 border-t border-white/5">
+                      {/* Côté Gauche : Boutons Pills (+, Attach, Public) */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Bouton (+) */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowQuickPresets(!showQuickPresets);
+                            setShowAttachMenu(false);
+                          }}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition cursor-pointer ${
+                            showQuickPresets
+                              ? "bg-white text-black"
+                              : "bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white"
+                          }`}
+                          title="Actions & Suggestions rapides"
+                        >
+                          <i className="fa-solid fa-plus"></i>
+                        </button>
+
+                        {/* Bouton Attach */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAttachMenu(!showAttachMenu);
+                            setShowQuickPresets(false);
+                          }}
+                          className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[11px] font-medium flex items-center gap-1.5 transition cursor-pointer"
+                          title="Joindre un fichier ou une photo"
+                        >
+                          <i className="fa-solid fa-paperclip text-[10px]"></i>
+                          <span>Attach</span>
+                        </button>
+
+                        {/* Badge Public / Modèle */}
+                        <div
+                          className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 text-[11px] font-medium flex items-center gap-1.5 select-none"
+                          title={`Modèle IA actif : ${AI_MODELS.find((m) => m.id === selectedModel)?.name || selectedModel}`}
+                        >
+                          <i className="fa-solid fa-globe text-[10px] text-gray-400"></i>
+                          <span>Public</span>
+                        </div>
+                      </div>
+
+                      {/* Côté Droit : Forme d'onde Vocale + Bouton Flèche Haut */}
+                      <div className="flex items-center gap-2">
+                        {/* Forme d'onde Vocale (Voice Waveform) */}
+                        <button
+                          type="button"
+                          onClick={startVoiceInput}
+                          className={`px-2 py-1 text-xs rounded-full transition flex items-center gap-0.5 cursor-pointer ${
+                            isListeningVoice
+                              ? "text-emerald-400 bg-emerald-950/60 border border-emerald-500/50 animate-pulse"
+                              : "text-gray-400 hover:text-white"
+                          }`}
+                          title={isListeningVoice ? "Écoute en cours..." : "Saisie vocale"}
+                        >
+                          <span className="inline-flex items-center gap-[2px] h-3">
+                            <span className={`w-[2px] bg-current rounded-full ${isListeningVoice ? "h-3 animate-bounce" : "h-2"}`}></span>
+                            <span className={`w-[2px] bg-current rounded-full ${isListeningVoice ? "h-4 animate-bounce delay-75" : "h-3.5"}`}></span>
+                            <span className={`w-[2px] bg-current rounded-full ${isListeningVoice ? "h-2 animate-bounce delay-150" : "h-1.5"}`}></span>
+                            <span className={`w-[2px] bg-current rounded-full ${isListeningVoice ? "h-3.5 animate-bounce delay-100" : "h-2.5"}`}></span>
+                          </span>
+                        </button>
+
+                        {/* Bouton Rond Blanc avec Flèche Noire vers le Haut */}
+                        <button
+                          type="submit"
+                          disabled={(!inputText.trim() && !selectedAttachment) || isGenerating}
+                          className="w-8 h-8 rounded-full bg-white text-black hover:bg-gray-200 disabled:opacity-25 disabled:hover:bg-white transition-all flex items-center justify-center font-black text-sm shadow-md cursor-pointer disabled:cursor-not-allowed active:scale-95 flex-shrink-0"
+                          title="Envoyer le message (Entrée)"
+                        >
+                          <i className="fa-solid fa-arrow-up text-xs font-black"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </form>
               </div>
 

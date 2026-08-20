@@ -3278,6 +3278,112 @@ export default function MessagerieClient() {
                         </button>
                       </div>
                     </div>
+                  ) : activeConversation.isAI ? (
+                    <form onSubmit={handleSendMessage} className="relative">
+                      {/* Popover actions rapides IA */}
+                      {showQuickActions && (
+                        <div className="absolute bottom-full left-0 mb-2 w-72 bg-[#1C1F26] border border-[#2E3545] rounded-2xl p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                          <div className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 px-2.5 py-1">
+                            Actions rapides IA
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowQuickActions(false);
+                              handleSendMessage(null, "Quels sont les tarifs pour refaire mon CV et ma lettre de motivation ?");
+                            }}
+                            className="w-full text-left px-2.5 py-2 text-xs font-semibold text-gray-200 hover:bg-white/10 rounded-xl transition flex items-center gap-2 cursor-pointer"
+                          >
+                            <i className="fa-solid fa-tag text-emerald-400 text-xs"></i>
+                            <span>Tarifs & Modèles CV Facilité</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowQuickActions(false);
+                              handleSendMessage(null, "Comment structurer mon CV pour réussir un recrutement au Sénégal ?");
+                            }}
+                            className="w-full text-left px-2.5 py-2 text-xs font-semibold text-gray-200 hover:bg-white/10 rounded-xl transition flex items-center gap-2 cursor-pointer"
+                          >
+                            <i className="fa-solid fa-briefcase text-blue-400 text-xs"></i>
+                            <span>Conseils Recrutement Sénégal</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Boîte de prompt sombre arrondie style Lovable/Claude */}
+                      <div className="bg-[#0b0c0f] border border-[#222630] hover:border-[#323846] focus-within:border-gray-500 rounded-[24px] p-3 sm:p-3.5 shadow-xl transition-all">
+                        <textarea
+                          value={messageText}
+                          onChange={(e) => setMessageText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendMessage(e);
+                            }
+                          }}
+                          rows={2}
+                          placeholder="Posez une question, demandez un conseil CV ou orientation..."
+                          className="w-full bg-transparent text-white placeholder-gray-500 text-xs sm:text-sm leading-relaxed resize-none focus:outline-none custom-scrollbar"
+                          style={{ maxHeight: "120px" }}
+                        />
+
+                        <div className="flex items-center justify-between gap-2 pt-2 mt-1 border-t border-white/5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => setShowQuickActions(!showQuickActions)}
+                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition cursor-pointer ${
+                                showQuickActions ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white"
+                              }`}
+                              title="Actions & Suggestions IA"
+                            >
+                              <i className="fa-solid fa-plus"></i>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handleAttachmentClick}
+                              className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[11px] font-medium flex items-center gap-1.5 transition cursor-pointer"
+                              title="Joindre un fichier"
+                            >
+                              <i className="fa-solid fa-paperclip text-[10px]"></i>
+                              <span>Attach</span>
+                            </button>
+
+                            <div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 text-[11px] font-medium flex items-center gap-1.5 select-none">
+                              <i className="fa-solid fa-globe text-[10px] text-gray-400"></i>
+                              <span>Public</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={startVoiceRecording}
+                              className="px-2 py-1 text-xs rounded-full text-gray-400 hover:text-white transition flex items-center gap-0.5 cursor-pointer"
+                              title="Enregistrer une note vocale"
+                            >
+                              <span className="inline-flex items-center gap-[2px] h-3">
+                                <span className="w-[2px] bg-current rounded-full h-2"></span>
+                                <span className="w-[2px] bg-current rounded-full h-3.5"></span>
+                                <span className="w-[2px] bg-current rounded-full h-1.5"></span>
+                                <span className="w-[2px] bg-current rounded-full h-2.5"></span>
+                              </span>
+                            </button>
+
+                            <button
+                              type="submit"
+                              disabled={!messageText.trim()}
+                              className="w-8 h-8 rounded-full bg-white text-black hover:bg-gray-200 disabled:opacity-25 disabled:hover:bg-white transition-all flex items-center justify-center font-black text-sm shadow-md cursor-pointer disabled:cursor-not-allowed active:scale-95 flex-shrink-0"
+                              title="Envoyer (Entrée)"
+                            >
+                              <i className="fa-solid fa-arrow-up text-xs font-black"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </form>
                   ) : (
                     <form onSubmit={handleSendMessage} className="flex items-center space-x-1 sm:space-x-1.5">
                       {/* Galerie photo — réutilise le sélecteur de fichier existant
