@@ -39,6 +39,16 @@ const PUBLIC_BROWSABLE_ROUTES = [
   // Ne couvre que /offres et /offres/[id] (seules pages sous ce préfixe) —
   // la publication d'offres vit sous /recruteur, non touchée.
   "/offres",
+  // Même raisonnement, trouvé le 2026-08-21 en vérifiant que le
+  // generateMetadata ajouté à ces deux pages avait un effet réel : profil
+  // public candidat et vitrine recruteur sont conçus pour être partagés
+  // (contrôle déjà fait côté candidat par profiles.is_public, filtré par
+  // get_profils_publics() — ce mur de connexion était redondant avec ce
+  // contrôle, pas une protection supplémentaire voulue) et référencés.
+  // Postuler depuis /recruteurs/[id] reste protégé séparément par
+  // ApplyModal, pas par ce mur.
+  "/in",
+  "/recruteurs",
 ];
 
 // Comparaison par segment de chemin plutôt que préfixe brut
