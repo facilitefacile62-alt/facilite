@@ -5,7 +5,6 @@
 
 require("dotenv").config({ path: ".env.local" });
 const { rabbitmq } = require("../lib/rabbitmq");
-const { startOcrWorker } = require("./ocrWorker");
 const { startNotificationsWorker } = require("./notificationsWorker");
 const { startWebhooksWorker } = require("./webhooksWorker");
 const { startDlqWorker } = require("./dlqWorker");
@@ -18,7 +17,6 @@ async function main() {
   try {
     // Initialisation et démarrage des consommateurs
     const channels = await Promise.all([
-      startOcrWorker(),
       startNotificationsWorker(),
       startWebhooksWorker(),
       startDlqWorker(),

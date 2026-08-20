@@ -11,7 +11,6 @@
     "lint": "eslint",
     "test:e2e": "playwright test",
     "worker": "node src/workers/index.js",
-    "worker:ocr": "node src/workers/ocrWorker.js",
     "worker:notifications": "node src/workers/notificationsWorker.js",
     "worker:webhooks": "node src/workers/webhooksWorker.js"
   },
