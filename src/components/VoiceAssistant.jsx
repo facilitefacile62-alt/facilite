@@ -6,6 +6,7 @@ export default function VoiceAssistant({ location = null }) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [status, setStatus] = useState('');
+  const [mapsUrl, setMapsUrl] = useState(null);
 
   const startVoice = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -28,6 +29,7 @@ export default function VoiceAssistant({ location = null }) {
     recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript;
       setStatus(`"${transcript}"`);
+      setMapsUrl(null);
 
       try {
         const res = await fetch('/api/voice-assistant', {
@@ -39,6 +41,12 @@ export default function VoiceAssistant({ location = null }) {
         const data = await res.json();
         if (data.reply) {
           speakText(data.reply);
+        }
+        // Lien Google Maps réel (origin = position GPS transmise dans la
+        // requête, jamais persistée) : seulement quand une destination
+        // reconnue ET une position ont été fournies (voir route.js).
+        if (data.mapsUrl) {
+          setMapsUrl(data.mapsUrl);
         }
       } catch (err) {
         setStatus("Erreur lors de la communication.");
@@ -99,6 +107,16 @@ export default function VoiceAssistant({ location = null }) {
       <p className="text-sm font-medium text-slate-700 dark:text-slate-200 text-center min-h-[40px] flex items-center justify-center">
         {status || "Appuyez sur le micro pour poser une question"}
       </p>
+      {mapsUrl && (
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm flex items-center justify-center gap-2 transition shadow-sm"
+        >
+          🧭 Ouvrir l'itinéraire dans Google Maps
+        </a>
+      )}
     </div>
   );
 }
