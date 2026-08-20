@@ -30,60 +30,23 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com",
   "worker-src 'self' blob: https://cdnjs.cloudflare.com",
-  // fonts.googleapis.com : feuilles de style chargées dynamiquement par
-  // loadFont() (creer-cv/page.js) pour les polices Google Fonts choisies
-  // dans le sélecteur de style CV (Outfit, Montserrat, Roboto, Playfair
-  // Display, Public Sans) — Inter reste hors CDN, servie par next/font.
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
-  // fonts.gstatic.com : fichiers de police référencés par les feuilles de
-  // style ci-dessus (@font-face url()) — sans cette entrée, la feuille de
-  // style Google Fonts chargerait mais les fichiers .woff2 resteraient
-  // bloqués.
   "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
-  // *.googleusercontent.com : photo de profil Google, copiée dans
-  // profiles.avatar_url à l'inscription par le trigger handle_new_user
-  // (raw_user_meta_data->>'avatar_url') pour les comptes connectés via
-  // Google OAuth (seul provider OAuth branché sur /login et /register).
-  // images.unsplash.com : visuels des offres d'emploi de démonstration
-  // (supabase/seed.sql) — les images réellement uploadées par un recruteur
-  // passent toujours par supabase.storage (déjà couvert par *.supabase.co).
-  // flagcdn.com : drapeaux des indicatifs pays dans PhoneAuthForm.jsx.
   "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com",
-  // *.sentry.io : ingestion des événements par le SDK Sentry (client-side).
-  // *.daily.co : signalisation WebRTC de VideoInterviewModal.jsx (daily-js).
+  "media-src 'self' blob: data: https://*.supabase.co",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co",
-  // *.daily.co : iframe Daily Prebuilt embarquée par VideoInterviewModal.jsx
-  // youtube.com : vidéos explicatives et tutoriels pour postuler (/aide-candidature).
-  "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co https://www.youtube.com https://www.youtube-nocookie.com",
-  "object-src 'none'",
+  "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co https://www.youtube.com https://www.youtube-nocookie.com https://maps.google.com https://*.google.com",
+  "object-src 'self' blob: data: https://*.supabase.co",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  // upgrade-insecure-requests délibérément absente : cette directive réécrit
-  // toute requête http:// en https:// avant même l'envoi — un effet réel
-  // (contrairement à ce que suggérait l'ancien commentaire ici, qui la
-  // croyait à tort inoffensive en mode Report-Only). Pas encore vérifié
-  // qu'aucune ressource legitime du site ne dépend encore de http:// ; à
-  // auditer avant de l'ajouter, pas dans ce nettoyage de nommage.
 ].join("; ");
 
 const nextConfig = {
   devIndicators: false,
   poweredByHeader: false,
   serverExternalPackages: ["unpdf", "mammoth", "tesseract.js", "@napi-rs/canvas", "canvas"],
-  // Dev uniquement : Next.js bloque par défaut les chunks JS/HMR d'une
-  // origine différente de celle sur laquelle `next dev` a démarré — accéder
-  // au serveur via 127.0.0.1 alors qu'il tourne "sur localhost" casse toute
-  // l'hydratation React (page servie mais totalement inerte). Nécessaire
-  // pour tester le flux OAuth Canva localement avec CANVA_REDIRECT_URI=
-  // http://127.0.0.1:3000/... (Canva exige une correspondance exacte).
-  // Sans effet en production (Vercel).
   allowedDevOrigins: ["127.0.0.1"],
-  // Domaines externes réellement chargés par <Image> de next/image — mêmes 4
-  // domaines déjà documentés dans img-src de la CSP ci-dessus (Storage
-  // Supabase pour les photos de profil/couverture migrées, avatars Google
-  // OAuth via profiles.avatar_url, offres de démo dans supabase/seed.sql,
-  // drapeaux pays dans PhoneAuthForm.jsx).
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co" },
@@ -110,14 +73,8 @@ const nextConfig = {
             value: "strict-origin-when-cross-origin",
           },
           {
-            // camera=(self) : l'import de CV par photo (DiagnosticModal) utilise
-            // capture="environment" et serait bloqué avec camera=().
-            // microphone=(self) : la note vocale de /messagerie (getUserMedia
-            // audio, déclenchée au clic sur le bouton micro) serait bloquée par
-            // le navigateur AVANT même l'appel JS avec microphone=() — quel que
-            // soit le geste utilisateur, un allowlist vide refuse toujours.
             key: "Permissions-Policy",
-            value: "camera=(self), microphone=(self), geolocation=(), payment=(), usb=()",
+            value: "camera=(self), microphone=(self), geolocation=(self), payment=(self), usb=()",
           },
           {
             key: "Strict-Transport-Security",

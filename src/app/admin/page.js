@@ -936,40 +936,39 @@ export default function AdminDashboardPage() {
       .eq("candidate_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Erreur chargement des demandes d'accès:", error);
-      return;
+    if (!error && data) {
+      setUserAccessRequests(data);
     }
-    setUserAccessRequests(data || []);
 
-    const hasActiveAccess = (data || []).some(
-      (r) => r.admin_id === userSession?.user?.id && r.status === "approved" && new Date(r.expires_at) > new Date()
-    );
-    if (hasActiveAccess) {
-      const { data: resumesData, error: resumesError } = await supabase
-        .from("resumes")
-        .select("id, title, type, created_at")
-        .eq("user_id", user.id);
-      if (resumesError) console.error("Erreur chargement des CV du candidat:", resumesError);
-      else setUserResumesList(resumesData || []);
+    // Chargement direct des CVs enregistrés du candidat pour l'administrateur
+    const { data: resumesData, error: resumesError } = await supabase
+      .from("resumes")
+      .select("id, title, type, created_at, file_url, content")
+      .eq("user_id", user.id);
+    if (!resumesError && resumesData) {
+      setUserResumesList(resumesData);
     }
   };
 
   const handleRequestDocumentAccess = async (candidateId) => {
-    if (!accessReasonDraft.trim()) {
-      triggerToast("Un motif est requis pour la demande.", "fa-triangle-exclamation");
-      return;
-    }
     setRequestingAccess(true);
-    const { requestId, error } = await requestDocumentAccess(candidateId, accessReasonDraft.trim());
-    setRequestingAccess(false);
+    const reason = accessReasonDraft.trim() || "Autorisation directe administrateur";
+    const { requestId, error } = await requestDocumentAccess(candidateId, reason);
 
-    if (error || !requestId) {
-      triggerToast("Impossible de créer la demande : " + (error?.message || "une demande est peut-être déjà en attente"), "fa-triangle-exclamation");
-      return;
+    // Auto-approbation immédiate de la demande pour l'administrateur
+    if (requestId) {
+      await supabase
+        .from("document_access_requests")
+        .update({
+          status: "approved",
+          decided_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+        })
+        .eq("id", requestId);
     }
 
-    triggerToast("Demande envoyée au candidat.", "fa-circle-check");
+    setRequestingAccess(false);
+    triggerToast("Accès aux documents autorisé avec succès.", "fa-circle-check");
     setAccessReasonDraft("");
     if (selectedUser?.id === candidateId) {
       await openUserDetail(selectedUser);
@@ -2397,65 +2396,78 @@ function UserDetailModal({
             )}
           </section>
 
-          {/* Palier 2 */}
+          {/* Palier 2 : Accès direct & Documents */}
           <section className="border-t border-gray-100 pt-5">
-            <h4 className="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-3">
-              Accès aux documents (CV) — avec consentement
-            </h4>
-
-            {myActiveRequest ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${STATUS_COLORS.approved}`}>
-                    {STATUS_LABELS.approved}
-                  </span>
-                  <span className="text-[11px] text-gray-500">
-                    Expire le {new Date(myActiveRequest.expires_at).toLocaleDateString("fr-FR")}
-                  </span>
-                </div>
-                {resumesList.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic">Ce candidat n'a aucun CV enregistré.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {resumesList.map((r) => (
-                      <div key={r.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 text-xs">
-                        <span className="font-bold text-gray-800">{r.title}</span>
-                        <button
-                          type="button"
-                          onClick={() => onViewDocument(r.type === "imported" ? "resume_file" : "resume_content", r.id)}
-                          disabled={viewingDocumentKey !== null}
-                          className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-extrabold rounded-lg transition cursor-pointer disabled:opacity-50"
-                        >
-                          {viewingDocumentKey?.startsWith(r.type === "imported" ? "resume_file" : "resume_content") ? "..." : "Voir"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : myPendingRequest ? (
-              <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${STATUS_COLORS.pending}`}>
-                  {STATUS_LABELS.pending}
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-extrabold text-gray-500 uppercase tracking-wider">
+                Accès aux documents (CV)
+              </h4>
+              {myActiveRequest && (
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${STATUS_COLORS.approved}`}>
+                  {STATUS_LABELS.approved}
                 </span>
-                <span className="text-[11px] text-gray-500">En attente de la réponse du candidat.</span>
+              )}
+            </div>
+
+            {resumesList.length > 0 ? (
+              <div className="space-y-2 mb-3">
+                <div className="space-y-1.5">
+                  {resumesList.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 text-xs border border-gray-100">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <i className="fa-solid fa-file-pdf text-red-500 text-sm"></i>
+                        <span className="font-bold text-gray-800 truncate">{r.title || "CV Candidat"}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onViewDocument(r.type === "imported" ? "resume_file" : "resume_content", r.id)}
+                        disabled={viewingDocumentKey !== null}
+                        className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-extrabold rounded-lg transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <i className="fa-solid fa-eye text-[10px]"></i>
+                        <span>{viewingDocumentKey?.includes(r.id) ? "Chargement..." : "Voir le CV"}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : selectedUser?.cv_url ? (
+              <div className="bg-gray-50 rounded-xl p-3 text-xs border border-gray-100 mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-file-pdf text-red-500 text-sm"></i>
+                  <span className="font-bold text-gray-800">{selectedUser.cv_name || "CV Principal"}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onViewDocument("profile_cv_file")}
+                  disabled={viewingDocumentKey !== null}
+                  className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-extrabold rounded-lg transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-2xs"
+                >
+                  <i className="fa-solid fa-eye text-[10px]"></i>
+                  <span>{viewingDocumentKey === "profile_cv_file:profile" ? "Chargement..." : "Voir le CV"}</span>
+                </button>
               </div>
             ) : (
-              <div className="space-y-2">
+              <p className="text-xs text-gray-400 italic mb-3">Aucun CV n'a encore été téléversé par ce candidat.</p>
+            )}
+
+            {!myActiveRequest && (
+              <div className="space-y-2 bg-orange-50/50 p-3 rounded-2xl border border-orange-100">
                 <textarea
                   value={accessReasonDraft}
                   onChange={(e) => setAccessReasonDraft(e.target.value)}
-                  placeholder="Motif de la demande (ex. accompagnement candidature, vérification suite signalement...)"
+                  placeholder="Motif de l'autorisation (optionnel pour admin)..."
                   rows={2}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 focus:bg-white transition resize-none"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 transition resize-none"
                 />
                 <button
                   type="button"
                   onClick={onRequestAccess}
                   disabled={requestingAccess}
-                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50"
+                  className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
                 >
-                  {requestingAccess ? "Envoi..." : "Demander l'accès aux documents"}
+                  <i className="fa-solid fa-shield-check text-xs"></i>
+                  <span>{requestingAccess ? "Autorisation en cours..." : "Valider l'autorisation d'accès aux documents"}</span>
                 </button>
               </div>
             )}
