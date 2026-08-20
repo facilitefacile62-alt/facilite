@@ -2431,11 +2431,11 @@ function UserDetailModal({
                   ))}
                 </div>
               </div>
-            ) : selectedUser?.cv_url ? (
+            ) : user?.cv_url ? (
               <div className="bg-gray-50 rounded-xl p-3 text-xs border border-gray-100 mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <i className="fa-solid fa-file-pdf text-red-500 text-sm"></i>
-                  <span className="font-bold text-gray-800">{selectedUser.cv_name || "CV Principal"}</span>
+                  <span className="font-bold text-gray-800">{user.cv_name || "CV Principal"}</span>
                 </div>
                 <button
                   type="button"
