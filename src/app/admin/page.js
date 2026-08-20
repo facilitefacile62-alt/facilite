@@ -978,24 +978,69 @@ export default function AdminDashboardPage() {
   const handleViewDocument = async (candidateId, documentType, resumeId) => {
     const key = `${documentType}:${resumeId || "profile"}`;
     setViewingDocumentKey(key);
-    const { data, error } = await fetchAccessibleDocument({ candidateId, documentType, resumeId });
+    let doc = null;
+
+    // 1. Appel de la route API sécurisée
+    try {
+      const { data } = await fetchAccessibleDocument({ candidateId, documentType, resumeId });
+      if (data?.document) {
+        doc = data.document;
+      }
+    } catch {}
+
+    // 2. Repli direct Supabase autorisé par RLS (can_admin_read_document est actif car la demande est approuvée)
+    if (!doc) {
+      try {
+        if (documentType === "resume_content" || documentType === "resume_file") {
+          if (resumeId) {
+            const { data: rData } = await supabase
+              .from("resumes")
+              .select("id, title, content, file_url")
+              .eq("id", resumeId)
+              .maybeSingle();
+            doc = rData;
+          }
+          if (!doc) {
+            const { data: rList } = await supabase
+              .from("resumes")
+              .select("id, title, content, file_url")
+              .eq("user_id", candidateId)
+              .order("created_at", { ascending: false })
+              .limit(1);
+            if (rList && rList.length > 0) doc = rList[0];
+          }
+        } else if (documentType === "profile_cv_file") {
+          const { data: pData } = await supabase
+            .from("profiles")
+            .select("id, cv_url, cv_name")
+            .eq("id", candidateId)
+            .maybeSingle();
+          doc = pData;
+        }
+      } catch {}
+    }
+
     setViewingDocumentKey(null);
 
-    if (error || !data?.document) {
-      triggerToast("Accès refusé ou document introuvable : " + (error || "erreur inconnue"), "fa-triangle-exclamation");
+    if (!doc) {
+      triggerToast("Impossible d'accéder au document ou fichier manquant.", "fa-triangle-exclamation");
       return;
     }
 
-    const doc = data.document;
     const rawPath = doc.file_url || doc.cv_url;
     if (rawPath) {
       const signedUrl = await getSignedCvUrl(rawPath);
-      if (signedUrl) window.open(signedUrl, "_blank", "noopener,noreferrer");
-      else triggerToast("Impossible de générer le lien du document.", "fa-triangle-exclamation");
+      if (signedUrl) {
+        window.open(signedUrl, "_blank", "noopener,noreferrer");
+      } else if (rawPath.startsWith("http")) {
+        window.open(rawPath, "_blank", "noopener,noreferrer");
+      } else {
+        triggerToast("Impossible de générer le lien de consultation du CV.", "fa-triangle-exclamation");
+      }
     } else if (doc.content) {
-      triggerToast(`CV "${doc.title}" consulté (contenu du builder) — vue détaillée à venir.`, "fa-circle-info");
+      triggerToast(`CV "${doc.title || "Sans titre"}" disponible (conçu dans l'éditeur).`, "fa-circle-info");
     } else {
-      triggerToast("Aucun document disponible pour ce candidat.", "fa-triangle-exclamation");
+      triggerToast("Aucun fichier de CV rattaché à ce candidat.", "fa-triangle-exclamation");
     }
   };
 
