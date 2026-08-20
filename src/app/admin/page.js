@@ -930,6 +930,7 @@ export default function AdminDashboardPage() {
     setUserResumesList([]);
     setAccessReasonDraft("");
 
+    // 1. Récupération des demandes d'accès
     const { data, error } = await supabase
       .from("document_access_requests")
       .select("id, admin_id, candidate_id, reason, status, expires_at, created_at")
@@ -940,14 +941,68 @@ export default function AdminDashboardPage() {
       setUserAccessRequests(data);
     }
 
-    // Chargement direct des CVs enregistrés du candidat pour l'administrateur
-    const { data: resumesData, error: resumesError } = await supabase
-      .from("resumes")
-      .select("id, title, type, created_at, file_url, content")
-      .eq("user_id", user.id);
-    if (!resumesError && resumesData) {
-      setUserResumesList(resumesData);
+    // 2. Récupération du profil complet (pour cv_url et cv_name)
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("id, cv_url, cv_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileData && (profileData.cv_url || profileData.cv_name)) {
+      setSelectedUser((prev) => (prev ? { ...prev, cv_url: profileData.cv_url, cv_name: profileData.cv_name } : prev));
     }
+
+    // 3. Chargement simultané des CVs du builder et des candidatures
+    const [resumesRes, candidaturesRes] = await Promise.all([
+      supabase
+        .from("resumes")
+        .select("id, title, type, created_at, file_url, content")
+        .eq("user_id", user.id),
+      supabase
+        .from("candidatures")
+        .select("id, cv_url, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+    ]);
+
+    const collectedResumes = [];
+
+    // CV enregistré sur le profil
+    if (profileData?.cv_url) {
+      collectedResumes.push({
+        id: `profile_cv_${user.id}`,
+        title: profileData.cv_name || "CV Principal",
+        type: "profile_cv_file",
+        file_url: profileData.cv_url,
+        created_at: user.created_at,
+      });
+    }
+
+    // CVs de la table resumes
+    if (resumesRes.data && resumesRes.data.length > 0) {
+      for (const r of resumesRes.data) {
+        if (!collectedResumes.some((c) => c.file_url === r.file_url && c.title === r.title)) {
+          collectedResumes.push(r);
+        }
+      }
+    }
+
+    // CVs des candidatures envoyées
+    if (candidaturesRes.data && candidaturesRes.data.length > 0) {
+      for (const cand of candidaturesRes.data) {
+        if (cand.cv_url && !collectedResumes.some((c) => c.file_url === cand.cv_url)) {
+          collectedResumes.push({
+            id: cand.id,
+            title: `CV Candidature (${new Date(cand.created_at).toLocaleDateString("fr-FR")})`,
+            type: "imported",
+            file_url: cand.cv_url,
+            created_at: cand.created_at,
+          });
+        }
+      }
+    }
+
+    setUserResumesList(collectedResumes);
   };
 
   const handleRequestDocumentAccess = async (candidateId) => {
