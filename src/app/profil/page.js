@@ -1415,9 +1415,13 @@ export default function ProfilPage() {
     const file = e.target.files[0];
     if (!file || !userSession?.user) return;
 
-    // Règle stricte : Limite de 2 documents maximum par candidat
-    if (userDocuments.length >= 2) {
-      triggerToast("Limite atteinte : vous pouvez conserver au maximum 2 documents (1 CV et 1 lettre de motivation). Supprimez un document pour en ajouter un nouveau.", "fa-triangle-exclamation");
+    // Règle stricte : Limite de 2 documents IMPORTÉS maximum par candidat —
+    // les CV créés avec l'éditeur (file_url null) ne comptent jamais dans
+    // ce quota, seul le trigger DB check_resume_quota() fait foi en dernier
+    // ressort (non contournable, voir 20260820170000_fix_resume_quota_imported_only.sql).
+    const importedDocsCount = userDocuments.filter((doc) => doc.file_url).length;
+    if (importedDocsCount >= 2) {
+      triggerToast("Limite atteinte : vous pouvez conserver au maximum 2 documents importés (1 CV et 1 lettre de motivation). Supprimez un document pour en ajouter un nouveau.", "fa-triangle-exclamation");
       if (cvFileInputRef.current) cvFileInputRef.current.value = "";
       return;
     }
