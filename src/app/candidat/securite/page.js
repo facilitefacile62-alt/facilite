@@ -219,17 +219,44 @@ export default function SecuriteConnexionPage() {
           ) : (
             <div className="divide-y divide-gray-100">
               {decidedRequests.map((r) => (
-                <div key={r.id} className="p-5 flex items-center justify-between gap-3">
+                <div key={r.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm text-gray-700 truncate">{r.reason}</p>
-                    <p className="text-[11px] text-gray-400 mt-1">
-                      {new Date(r.created_at).toLocaleDateString("fr-FR")}
-                      {r.status === "approved" && r.expires_at && ` — expire le ${new Date(r.expires_at).toLocaleDateString("fr-FR")}`}
+                    <p className="text-sm font-semibold text-gray-800">{r.reason}</p>
+                    <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5">
+                      <i className="fa-regular fa-clock text-[10px]"></i>
+                      <span>
+                        {new Date(r.created_at).toLocaleDateString("fr-FR")}
+                        {r.status === "approved" && r.expires_at && ` — accès actif jusqu'au ${new Date(r.expires_at).toLocaleDateString("fr-FR")}`}
+                        {r.status === "denied" && " — accès bloqué / refusé"}
+                      </span>
                     </p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border shrink-0 ${STATUS_COLORS[r.status]}`}>
-                    {STATUS_LABELS[r.status]}
-                  </span>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border shrink-0 ${STATUS_COLORS[r.status]}`}>
+                      {STATUS_LABELS[r.status]}
+                    </span>
+                    {r.status === "approved" ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRespond(r.id, "denied")}
+                        disabled={busyId === r.id}
+                        className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <i className="fa-solid fa-ban text-[10px]"></i>
+                        <span>{busyId === r.id ? "Modification..." : "Désapprouver l'accès"}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleRespond(r.id, "approved")}
+                        disabled={busyId === r.id}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <i className="fa-solid fa-check text-[10px]"></i>
+                        <span>{busyId === r.id ? "Modification..." : "Approuver l'accès"}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

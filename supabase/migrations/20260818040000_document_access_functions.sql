@@ -56,7 +56,6 @@ BEGIN
       expires_at = CASE WHEN p_decision = 'approved' THEN now() + interval '7 days' ELSE NULL END
   WHERE id = p_request_id
     AND candidate_id = auth.uid()
-    AND status = 'pending'
   RETURNING candidate_id INTO v_candidate_id;
 
   RETURN v_candidate_id IS NOT NULL;
