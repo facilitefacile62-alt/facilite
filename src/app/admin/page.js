@@ -952,18 +952,12 @@ export default function AdminDashboardPage() {
       setSelectedUser((prev) => (prev ? { ...prev, cv_url: profileData.cv_url, cv_name: profileData.cv_name } : prev));
     }
 
-    // 3. Chargement simultané des CVs du builder et des candidatures
-    const [resumesRes, candidaturesRes] = await Promise.all([
-      supabase
-        .from("resumes")
-        .select("id, title, type, created_at, file_url, content")
-        .eq("user_id", user.id),
-      supabase
-        .from("candidatures")
-        .select("id, cv_url, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-    ]);
+    // 3. Chargement des CVs officiels (profil et builder resumes)
+    const { data: resumesData } = await supabase
+      .from("resumes")
+      .select("id, title, type, created_at, file_url, content")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
     const collectedResumes = [];
 
@@ -979,25 +973,10 @@ export default function AdminDashboardPage() {
     }
 
     // CVs de la table resumes
-    if (resumesRes.data && resumesRes.data.length > 0) {
-      for (const r of resumesRes.data) {
+    if (resumesData && resumesData.length > 0) {
+      for (const r of resumesData) {
         if (!collectedResumes.some((c) => c.file_url === r.file_url && c.title === r.title)) {
           collectedResumes.push(r);
-        }
-      }
-    }
-
-    // CVs des candidatures envoyées
-    if (candidaturesRes.data && candidaturesRes.data.length > 0) {
-      for (const cand of candidaturesRes.data) {
-        if (cand.cv_url && !collectedResumes.some((c) => c.file_url === cand.cv_url)) {
-          collectedResumes.push({
-            id: cand.id,
-            title: `CV Candidature (${new Date(cand.created_at).toLocaleDateString("fr-FR")})`,
-            type: "imported",
-            file_url: cand.cv_url,
-            created_at: cand.created_at,
-          });
         }
       }
     }
@@ -1030,72 +1009,27 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleViewDocument = async (candidateId, documentType, resumeId) => {
-    const key = `${documentType}:${resumeId || "profile"}`;
-    setViewingDocumentKey(key);
-    let doc = null;
+  const handleViewDocument = async (docItem) => {
+    const rawPath = typeof docItem === "string" ? docItem : docItem?.file_url || docItem?.cv_url;
+    const docKey = typeof docItem === "object" ? docItem.id : "doc";
+    setViewingDocumentKey(docKey);
 
-    // 1. Appel de la route API sécurisée
-    try {
-      const { data } = await fetchAccessibleDocument({ candidateId, documentType, resumeId });
-      if (data?.document) {
-        doc = data.document;
-      }
-    } catch {}
-
-    // 2. Repli direct Supabase autorisé par RLS (can_admin_read_document est actif car la demande est approuvée)
-    if (!doc) {
-      try {
-        if (documentType === "resume_content" || documentType === "resume_file") {
-          if (resumeId) {
-            const { data: rData } = await supabase
-              .from("resumes")
-              .select("id, title, content, file_url")
-              .eq("id", resumeId)
-              .maybeSingle();
-            doc = rData;
-          }
-          if (!doc) {
-            const { data: rList } = await supabase
-              .from("resumes")
-              .select("id, title, content, file_url")
-              .eq("user_id", candidateId)
-              .order("created_at", { ascending: false })
-              .limit(1);
-            if (rList && rList.length > 0) doc = rList[0];
-          }
-        } else if (documentType === "profile_cv_file") {
-          const { data: pData } = await supabase
-            .from("profiles")
-            .select("id, cv_url, cv_name")
-            .eq("id", candidateId)
-            .maybeSingle();
-          doc = pData;
-        }
-      } catch {}
-    }
-
-    setViewingDocumentKey(null);
-
-    if (!doc) {
-      triggerToast("Impossible d'accéder au document ou fichier manquant.", "fa-triangle-exclamation");
-      return;
-    }
-
-    const rawPath = doc.file_url || doc.cv_url;
     if (rawPath) {
       const signedUrl = await getSignedCvUrl(rawPath);
+      setViewingDocumentKey(null);
       if (signedUrl) {
         window.open(signedUrl, "_blank", "noopener,noreferrer");
       } else if (rawPath.startsWith("http")) {
         window.open(rawPath, "_blank", "noopener,noreferrer");
       } else {
-        triggerToast("Impossible de générer le lien de consultation du CV.", "fa-triangle-exclamation");
+        triggerToast("Impossible de générer le lien du document.", "fa-triangle-exclamation");
       }
-    } else if (doc.content) {
-      triggerToast(`CV "${doc.title || "Sans titre"}" disponible (conçu dans l'éditeur).`, "fa-circle-info");
+    } else if (docItem?.content) {
+      setViewingDocumentKey(null);
+      triggerToast(`CV "${docItem.title || "Sans titre"}" (conçu dans l'éditeur).`, "fa-circle-info");
     } else {
-      triggerToast("Aucun fichier de CV rattaché à ce candidat.", "fa-triangle-exclamation");
+      setViewingDocumentKey(null);
+      triggerToast("Aucun fichier de CV disponible pour ce candidat.", "fa-triangle-exclamation");
     }
   };
 
@@ -1920,7 +1854,7 @@ export default function AdminDashboardPage() {
               requestingAccess={requestingAccess}
               onRequestAccess={() => handleRequestDocumentAccess(selectedUser.id)}
               viewingDocumentKey={viewingDocumentKey}
-              onViewDocument={(documentType, resumeId) => handleViewDocument(selectedUser.id, documentType, resumeId)}
+              onViewDocument={(docItem) => handleViewDocument(docItem)}
               currentAdminId={userSession?.user?.id}
               onRefresh={() => openUserDetail(selectedUser)}
             />
@@ -2544,12 +2478,12 @@ function UserDetailModal({
                       </div>
                       <button
                         type="button"
-                        onClick={() => onViewDocument(r.type === "imported" ? "resume_file" : "resume_content", r.id)}
+                        onClick={() => onViewDocument(r)}
                         disabled={viewingDocumentKey !== null}
                         className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-extrabold rounded-lg transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-2xs"
                       >
                         <i className="fa-solid fa-eye text-[10px]"></i>
-                        <span>{viewingDocumentKey?.includes(r.id) ? "Chargement..." : "Voir le CV"}</span>
+                        <span>{viewingDocumentKey === r.id ? "Chargement..." : "Voir le CV"}</span>
                       </button>
                     </div>
                   ))}
@@ -2563,12 +2497,12 @@ function UserDetailModal({
                 </div>
                 <button
                   type="button"
-                  onClick={() => onViewDocument("profile_cv_file")}
+                  onClick={() => onViewDocument({ id: "profile_cv", file_url: user.cv_url, title: user.cv_name })}
                   disabled={viewingDocumentKey !== null}
                   className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-extrabold rounded-lg transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-2xs"
                 >
                   <i className="fa-solid fa-eye text-[10px]"></i>
-                  <span>{viewingDocumentKey === "profile_cv_file:profile" ? "Chargement..." : "Voir le CV"}</span>
+                  <span>{viewingDocumentKey === "profile_cv" ? "Chargement..." : "Voir le CV"}</span>
                 </button>
               </div>
             ) : (
