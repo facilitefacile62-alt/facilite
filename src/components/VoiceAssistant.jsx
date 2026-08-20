@@ -40,7 +40,7 @@ export default function VoiceAssistant({ location = null }) {
 
         const data = await res.json();
         if (data.reply) {
-          speakText(data.reply);
+          speakText(data.reply, data.audioBase64);
         }
         // Lien Google Maps réel (origin = position GPS transmise dans la
         // requête, jamais persistée) : seulement quand une destination
@@ -65,9 +65,28 @@ export default function VoiceAssistant({ location = null }) {
     recognition.start();
   };
 
-  const speakText = (text) => {
+  // Voix de sortie : synthèse serveur (API Gemini TTS, voix "Sulafat") —
+  // remplace speechSynthesis, seule la reconnaissance vocale du micro
+  // (startVoice ci-dessus) reste côté navigateur. audioBase64 absent
+  // (échec ponctuel de la synthèse côté serveur, jamais volontaire) ->
+  // repli sur speechSynthesis pour ne jamais laisser l'utilisateur sans
+  // réponse audible.
+  const speakText = (text, audioBase64) => {
+    if (audioBase64) {
+      setIsSpeaking(true);
+      const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
+      const finish = () => {
+        setIsSpeaking(false);
+        setStatus(text);
+      };
+      audio.onended = finish;
+      audio.onerror = finish;
+      audio.play().catch(finish);
+      return;
+    }
+
     if (!('speechSynthesis' in window)) return;
-    
+
     window.speechSynthesis.cancel(); // Stoppe toute lecture en cours
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'fr-FR';
