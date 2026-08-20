@@ -622,6 +622,30 @@ function mapEmploymentType(contractType) {
   return "FULL_TIME";
 }
 
+// schema.org exige un Number pour QuantitativeValue.value — salary_range
+// est un champ texte libre saisi par le recruteur ("Selon profil &
+// expérience", "Grille Institutionnelle BCEAO"...), jamais un nombre brut
+// (vérifié le 2026-08-21 sur les 15 valeurs distinctes réellement en
+// production : une seule contient un montant chiffré). Extraction
+// best-effort du seul cas exploitable : un montant explicitement libellé
+// en FCFA. Motif "X FCFA / an (~Y FCFA/mois)" observé en production ->
+// préfère la DERNIÈRE occurrence (le mensuel, cohérent avec
+// unitText: "MONTH" déjà utilisé ici). Bornes 10 000-10 000 000 pour
+// écarter un faux positif improbable (un nombre isolé sans rapport avec
+// un salaire, jamais rencontré en pratique mais pas à exclure). Aucune
+// correspondance ou hors bornes -> baseSalary omis entièrement plutôt
+// qu'une valeur inventée ou mal typée : omettre le champ est valide pour
+// schema.org, un texte au mauvais type ne l'est jamais.
+function extractMonthlySalaryFcfa(salaryRangeText) {
+  if (!salaryRangeText) return null;
+  const matches = [...salaryRangeText.matchAll(/(\d[\d\s.,]*\d|\d)\s*(?:FCFA|F\s?CFA|XOF)/gi)];
+  if (matches.length === 0) return null;
+  const last = matches[matches.length - 1][1];
+  const numeric = Number(last.replace(/[\s.,]/g, ""));
+  if (!Number.isFinite(numeric) || numeric < 10000 || numeric > 10000000) return null;
+  return numeric;
+}
+
 function formatJobDescriptionToHtml(text) {
   if (!text) return "";
   const lines = text.split("\n");
@@ -770,19 +794,22 @@ export default async function OffreDetailPage({ params }) {
       value: offer.id,
     },
     url: `${SITE_URL}/offres/${offer.id}`,
-    ...(offer.salary_range
-      ? {
-          baseSalary: {
-            "@type": "MonetaryAmount",
-            currency: "XOF",
-            value: {
-              "@type": "QuantitativeValue",
-              value: offer.salary_range,
-              unitText: "MONTH",
+    ...(() => {
+      const monthlySalary = extractMonthlySalaryFcfa(offer.salary_range);
+      return monthlySalary
+        ? {
+            baseSalary: {
+              "@type": "MonetaryAmount",
+              currency: "XOF",
+              value: {
+                "@type": "QuantitativeValue",
+                value: monthlySalary,
+                unitText: "MONTH",
+              },
             },
-          },
-        }
-      : {}),
+          }
+        : {};
+    })(),
   };
 
   return (
