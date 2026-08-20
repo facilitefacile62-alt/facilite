@@ -1,11 +1,12 @@
 /**
  * @file webhooksWorker.js
  * @description Consommateur autonome de la file des Webhooks de paiement (PayDunya / KPay).
- * @architecture Traitement 100% idempotent avec table de déduplication et notification automatique.
+ * @architecture Traitement idempotent avec table de déduplication (processed_webhooks).
+ * Aucune activation automatique de fonctionnalité payante ici — décision produit du
+ * 18/08, voir le commentaire dans processWebhookMessage().
  */
 
 const { rabbitmq, QUEUES } = require("../lib/rabbitmq");
-const { enqueueNotificationJob } = require("../lib/queueProducers");
 const { createClient } = require("@supabase/supabase-js");
 
 const CONCURRENCY = 5;
@@ -45,44 +46,21 @@ async function processWebhookMessage(jobData) {
   });
 
   try {
-    // 3. Traitement métier selon le type de paiement (Boost d'offre, Abonnement ou CV)
-    const customData = payload.custom_data || {};
-    const offerId = customData.offer_id || payload.offer_id;
-    const customerEmail = payload.customer?.email || customData.email;
+    // Incident du 18/08 — décision produit explicite : aucune activation
+    // automatique du sponsoring via webhook de paiement pour l'instant,
+    // tant que KPay n'a pas confirmé un paiement réel abouti en conditions
+    // réelles. Ce worker a déjà été utilisé une fois pour écrire directement
+    // is_sponsored/sponsored_until/sponsor_priority sur job_offers via la
+    // clé service_role — ce qui a nécessité de contourner
+    // prevent_sponsorship_self_edit() pour fonctionner (voir migration
+    // 20260820130000_restore_sponsorship_trigger.sql). Le seul chemin
+    // autorisé pour activer un sponsoring reste set_offer_sponsorship(),
+    // appelée manuellement par un admin. Ne jamais réintroduire ici
+    // d'écriture directe sur job_offers.is_sponsored/sponsored_until/
+    // sponsor_priority : le trigger la bloquera de toute façon, mais elle
+    // n'a pas sa place dans ce fichier.
 
-    if (offerId && (payload.status === "completed" || eventType === "payment.success")) {
-      // Activer le sponsoring pour l'offre concernée (ex: 7 jours de boost)
-      const durationDays = parseInt(customData.duration_days || "7", 10);
-      const sponsoredUntil = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
-
-      await supabase
-        .from("job_offers")
-        .update({
-          is_sponsored: true,
-          sponsored_until: sponsoredUntil,
-          sponsor_priority: parseInt(customData.priority || "10", 10),
-        })
-        .eq("id", offerId);
-
-      console.log(`[Worker Webhooks] 🚀 Offre ${offerId} sponsorisée avec succès jusqu'au ${sponsoredUntil}`);
-
-      // 4. Déclenchement automatique de la notification utilisateur via RabbitMQ
-      if (customerEmail) {
-        await enqueueNotificationJob({
-          channel: "email",
-          recipient: customerEmail,
-          subject: "🎉 Votre offre d'emploi est désormais sponsorisée sur Facilité !",
-          templateId: "offer_boost_activated",
-          data: {
-            offerId,
-            durationDays,
-            sponsoredUntil,
-          },
-        });
-      }
-    }
-
-    // 5. Marquer l'événement comme complété
+    // 3. Marquer l'événement comme complété
     await supabase
       .from("processed_webhooks")
       .update({ status: "completed" })
