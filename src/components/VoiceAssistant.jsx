@@ -1,17 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from '@/lib/featureFlags';
 import LiveMapLocation from './LiveMapLocation';
 
 const ORB_GRADIENT = 'conic-gradient(from 0deg, #085041, #14b89a, #9FE1CB, #085041)';
 
 // Widget global (monté une fois dans layout.js, visible sur toutes les
-// pages) — remplace l'ancienne carte statique non montée nulle part
-// (diagnostic Point 1 : LiveMapLocation et l'assistant vocal existaient
-// mais n'étaient jamais composés ensemble ni affichés sur le site réel).
+// pages) — contrôlé dynamiquement par le Feature Flag 'feat_voice_assistant'.
 export default function VoiceAssistant() {
-  const { session } = useAuth();
+  const pathname = usePathname();
+  const { session, isAdmin, isRecruiter } = useAuth();
+  const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
+
+  useEffect(() => {
+    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+
+    const channel = supabase
+      .channel("public-feature-flags-voice-assistant")
+      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
+        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const [isOpen, setIsOpen] = useState(false);
   const [hasEngaged, setHasEngaged] = useState(false);
@@ -21,6 +39,15 @@ export default function VoiceAssistant() {
   const [mapsUrl, setMapsUrl] = useState(null);
   const [inputText, setInputText] = useState('');
   const [location, setLocation] = useState(null);
+
+  // Masquer sur le panneau d'administration pour éviter de recouvrir les réglages
+  const isDashboard = pathname?.startsWith('/admin');
+  const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
+  const isAllowed = isFeatureAllowed(featureFlagsTree, "feat_voice_assistant", userRole);
+
+  if (isDashboard || !isAllowed) {
+    return null;
+  }
 
   const requireLogin = () => {
     window.location.href = '/login';

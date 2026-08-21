@@ -258,6 +258,15 @@ export const DEFAULT_FEATURE_TREE = [
         roles: { user: true, recruiter: true, visitor: true },
         description: "Visualisation des tarifs et offres d'optimisation",
       },
+      {
+        id: "feat_voice_assistant",
+        name: "Assistant Vocal & IA (Widget flottant)",
+        path: "/assistant-vocal",
+        icon: "🎙️",
+        enabled: false,
+        roles: { user: false, recruiter: false, visitor: false },
+        description: "Widget et bouton d'Assistant Vocal IA flottant sur le site",
+      },
     ],
   },
 ];

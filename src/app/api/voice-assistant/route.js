@@ -205,6 +205,34 @@ export async function POST(req) {
     const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
 
+    // Contrôle Feature Flag : Assistant vocal activé / désactivé
+    try {
+      const admin = getSupabaseAdmin();
+      const { data: flagData } = await admin
+        .from('feature_flags')
+        .select('enabled, roles')
+        .eq('id', 'feat_voice_assistant')
+        .maybeSingle();
+
+      if (flagData && !flagData.enabled) {
+        const { data: roleData } = await admin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const isUserAdmin = roleData?.role === 'admin' || user.email === 'facilitefacile62@gmail.com';
+        if (!isUserAdmin) {
+          return NextResponse.json(
+            { error: "L'assistant vocal est temporairement désactivé pour maintenance." },
+            { status: 403 }
+          );
+        }
+      }
+    } catch (flagErr) {
+      console.warn("[voice-assistant] Erreur vérification feature flag:", flagErr?.message);
+    }
+
     const { message, location } = await req.json();
 
     if (!message || typeof message !== 'string') {
