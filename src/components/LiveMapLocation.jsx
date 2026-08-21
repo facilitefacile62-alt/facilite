@@ -2,15 +2,23 @@
 
 import { useState, useEffect } from 'react';
 
-export default function LiveMapLocation({ onLocationUpdate }) {
+/**
+ * render=false (mode utilisé par le widget flottant VoiceAssistant) :
+ * aucune UI propre affichée (pas de carte/bouton "Activer GPS" dupliqué
+ * avec les contrôles du widget) — le suivi est piloté par `active`, fourni
+ * par le parent, plutôt que par le bouton interne isTracking. Défaut
+ * (render=true, active ignoré) : comportement autonome inchangé.
+ */
+export default function LiveMapLocation({ onLocationUpdate, render = true, active = false }) {
   const [coords, setCoords] = useState(null);
   const [error, setError] = useState(null);
   const [isTracking, setIsTracking] = useState(false);
+  const trackingEnabled = render ? isTracking : active;
 
   useEffect(() => {
     let watcherId = null;
 
-    if (isTracking && typeof window !== 'undefined' && 'geolocation' in navigator) {
+    if (trackingEnabled && typeof window !== 'undefined' && 'geolocation' in navigator) {
       watcherId = navigator.geolocation.watchPosition(
         (position) => {
           const currentCoords = {
@@ -40,13 +48,15 @@ export default function LiveMapLocation({ onLocationUpdate }) {
         navigator.geolocation.clearWatch(watcherId);
       }
     };
-  }, [isTracking, onLocationUpdate]);
+  }, [trackingEnabled, onLocationUpdate]);
 
   const openGoogleMapsRoute = () => {
     if (!coords) return;
     const url = `https://www.google.com/maps/dir/?api=1&origin=${coords.lat},${coords.lng}`;
     window.open(url, '_blank');
   };
+
+  if (!render) return null;
 
   return (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 max-w-md mx-auto">
