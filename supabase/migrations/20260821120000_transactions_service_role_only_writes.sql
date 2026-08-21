@@ -1,0 +1,23 @@
+-- Trouvé en testant le point 1 PayDunya (21/08) : `transactions` n'a
+-- jamais eu de policy RLS UPDATE (seulement SELECT/INSERT), donc toute
+-- écriture via le client authentifié par requête échoue silencieusement
+-- (0 ligne affectée, aucune erreur) — /api/pay/checkout tentait de fixer
+-- provider_reference juste après création de facture sans jamais y
+-- parvenir, ni pour KPay ni pour PayDunya.
+--
+-- Corrigé dans le sens "écriture réservée à service_role" plutôt que
+-- d'ouvrir une policy UPDATE candidat — même principe déjà en place sur
+-- les autres tables de paiement/webhook (processed_webhooks,
+-- kpay_webhook_logs, 20260820140000_processed_webhooks_rls.sql :
+-- "sans GRANT INSERT/UPDATE/DELETE"). service_role contourne RLS de toute
+-- façon (BYPASSRLS) : aucune policy UPDATE à ajouter pour lui, seulement
+-- retirer le GRANT partiel qui contredisait cette intention.
+--
+-- Ce GRANT column-level (ajouté 20260802250000_wave3_update_columns.sql)
+-- était déjà sans effet réel (RLS bloquait faute de policy), mais le
+-- laisser en l'état est trompeur — il suggère à tort que authenticated
+-- peut écrire cette colonne. Le code applicatif est corrigé en parallèle
+-- (src/app/api/pay/checkout/route.js passe désormais par service_role
+-- pour cette écriture précise, comme le webhook le fait déjà pour la
+-- confirmation).
+REVOKE UPDATE (provider_reference) ON public.transactions FROM authenticated;

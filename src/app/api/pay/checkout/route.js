@@ -4,6 +4,7 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { initKpayGatewayPayment } from "@/lib/kpay";
 import { createPayDunyaInvoiceCheckout } from "@/lib/paydunya";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 import { z } from "zod";
 
@@ -232,7 +233,11 @@ export async function POST(req) {
       }
     }
 
-    await supabase.from("transactions").update({ provider_reference: payment.id }).eq("id", transaction.id);
+    // transactions n'accorde aucune écriture UPDATE à authenticated
+    // (service_role uniquement, voir 20260821120000_transactions_service_role_only_writes.sql)
+    // — contrairement à orders.payment_reference ci-dessus, qui a sa
+    // propre policy candidat dédiée.
+    await getSupabaseAdmin().from("transactions").update({ provider_reference: payment.id }).eq("id", transaction.id);
 
     return NextResponse.json({
       checkoutUrl: payment.gatewayUrl,

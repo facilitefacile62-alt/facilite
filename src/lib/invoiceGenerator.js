@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { getSupabaseAdmin } from "./supabaseAdmin";
+import { getSupabaseAdmin } from "./supabaseAdmin.js";
 
 /**
  * Numéro de facture unique et déterministe : FACT-{année}-{8 premiers
