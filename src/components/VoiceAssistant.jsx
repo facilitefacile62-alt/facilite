@@ -89,9 +89,21 @@ export default function VoiceAssistant() {
       sendToAssistant(transcript);
     };
 
-    recognition.onerror = () => {
+    // event.error jamais exposé auparavant : impossible de distinguer
+    // permission refusée / pas de réseau / silence / micro absent depuis
+    // une seule et même formule générique. Loggé en clair + message
+    // spécifique par code pour que le prochain signalement soit exploitable.
+    recognition.onerror = (event) => {
+      console.error('[VoiceAssistant] SpeechRecognition error:', event.error);
       setIsListening(false);
-      setStatus('Erreur de capture audio.');
+      const ERROR_MESSAGES = {
+        'not-allowed': "Autorisation micro refusée.",
+        'service-not-allowed': "Autorisation micro refusée.",
+        network: "Problème réseau.",
+        'no-speech': "Aucune parole détectée.",
+        'audio-capture': "Micro introuvable.",
+      };
+      setStatus(ERROR_MESSAGES[event.error] || 'Erreur de capture audio.');
     };
 
     recognition.onend = () => {
