@@ -7,6 +7,12 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import PhoneAuthForm from "@/components/PhoneAuthForm";
 
+// Désactivé temporairement (Twilio non configuré, voir point 5 - inscription
+// Google/e-mail) : masque l'onglet Téléphone sans toucher au code ni au
+// composant PhoneAuthForm, pour pouvoir le réactiver d'un simple `true` une
+// fois Twilio branché.
+const PHONE_LOGIN_ENABLED = false;
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -432,34 +438,37 @@ export default function LoginPage() {
               </span>
             </div>
 
-            {/* Onglets E-mail / Téléphone */}
-            <div className="flex bg-gray-100 rounded-xl p-1" role="tablist" aria-label="Méthode de connexion">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={authMethod === "email"}
-                onClick={() => setAuthMethod("email")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#085041]/40 ${
-                  authMethod === "email" ? "bg-white text-[#085041] shadow-xs" : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                E-mail
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={authMethod === "phone"}
-                onClick={() => setAuthMethod("phone")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#085041]/40 ${
-                  authMethod === "phone" ? "bg-white text-[#085041] shadow-xs" : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Téléphone
-              </button>
-            </div>
+            {/* Onglets E-mail / Téléphone — Téléphone masqué tant que Twilio
+                n'est pas configuré (PHONE_LOGIN_ENABLED ci-dessus) */}
+            {PHONE_LOGIN_ENABLED && (
+              <div className="flex bg-gray-100 rounded-xl p-1" role="tablist" aria-label="Méthode de connexion">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={authMethod === "email"}
+                  onClick={() => setAuthMethod("email")}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#085041]/40 ${
+                    authMethod === "email" ? "bg-white text-[#085041] shadow-xs" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  E-mail
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={authMethod === "phone"}
+                  onClick={() => setAuthMethod("phone")}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#085041]/40 ${
+                    authMethod === "phone" ? "bg-white text-[#085041] shadow-xs" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Téléphone
+                </button>
+              </div>
+            )}
 
             {/* 3. CONTENU DE L'ONGLET ACTIF */}
-            {authMethod === "phone" ? (
+            {PHONE_LOGIN_ENABLED && authMethod === "phone" ? (
               <div className="space-y-2.5">
                 <p className="text-[11px] text-gray-500 font-medium text-center">
                   Connexion avec un numéro déjà vérifié depuis votre profil. Pas encore de compte ?{" "}
