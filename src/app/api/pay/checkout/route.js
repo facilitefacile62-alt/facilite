@@ -140,6 +140,7 @@ export async function POST(req) {
         try {
           const kpayPayment = await initKpayGatewayPayment({
             amount,
+            currency,
             externalId: order.id,
             returnUrl: `${appUrl}/candidat/facturation`,
             cancelUrl: `${appUrl}/creer-cv`,
@@ -217,6 +218,7 @@ export async function POST(req) {
       try {
         const kpayPayment = await initKpayGatewayPayment({
           amount,
+          currency,
           externalId: transaction.id,
           returnUrl: `${appUrl}/candidat/facturation`,
           cancelUrl: `${appUrl}/candidat/facturation`,

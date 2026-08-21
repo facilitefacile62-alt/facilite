@@ -100,6 +100,11 @@ function getKpayHeaders() {
  * @param {object} params
  * @param {number} params.amount - Montant en unité entière de la devise du
  *   compte marchand (pas de sous-unité à gérer, contrairement à Paystack).
+ * @param {string} params.currency - Devise du montant (ex. "XOF") —
+ *   obligatoire côté API KPay en mode GATEWAY depuis le 21/08 ("Le champ
+ *   \"currency\" est obligatoire..."), absente jusqu'ici de cet appel :
+ *   tout paiement KPay échouait en 502 avant même d'atteindre la page de
+ *   paiement.
  * @param {string} params.externalId - Identifiant unique côté Facilite
  *   (l'id de la commande Supabase) — renvoyé tel quel dans le webhook.
  * @param {string} params.returnUrl - Redirection après paiement réussi.
@@ -110,6 +115,7 @@ function getKpayHeaders() {
  */
 export async function initKpayGatewayPayment({
   amount,
+  currency,
   externalId,
   returnUrl,
   cancelUrl,
@@ -121,6 +127,7 @@ export async function initKpayGatewayPayment({
     headers: getKpayHeaders(),
     body: JSON.stringify({
       amount,
+      currency,
       externalId,
       returnUrl,
       cancelUrl,
