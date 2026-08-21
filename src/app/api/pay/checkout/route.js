@@ -3,8 +3,15 @@ import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { initKpayGatewayPayment } from "@/lib/kpay";
+import { createPayDunyaInvoiceCheckout } from "@/lib/paydunya";
 
 import { z } from "zod";
+
+// KPay reste le processeur par défaut (comportement historique inchangé) ;
+// PayDunya est une option explicite, pas un remplacement — voir le
+// diagnostic du 21/08 : PayDunya était configuré mais totalement
+// débranché (aucune route ne créait jamais de facture).
+const processorSchema = z.enum(["kpay", "paydunya"]).optional().default("kpay");
 
 const PRICE_AUTONOME = 1500;
 const PRICE_ACCOMPAGNE = 2000;
@@ -24,6 +31,7 @@ const cvOrderSchema = z.object({
   // sans ça, impossible de savoir plus tard quel contenu régénérer en PDF
   // après paiement. Optionnel : reste compatible avec un appel sans brouillon.
   resumeId: z.string().uuid().optional(),
+  processor: processorSchema,
 });
 
 // Une seule offre de recharge existe actuellement : montant et nom de plan
@@ -38,6 +46,7 @@ const CREDIT_TOPUP_PLAN_NAME = "Premium";
 
 const creditTopupSchema = z.object({
   description: z.string().max(200).optional(),
+  processor: processorSchema,
 });
 
 export const runtime = "nodejs";
@@ -51,10 +60,18 @@ export async function POST(req) {
     if (!allowed) return rateError;
 
     const body = await req.json().catch(() => ({}));
+    const processor = body?.processor === "paydunya" ? "paydunya" : "kpay";
 
-    if (!process.env.NEXT_PUBLIC_KPAY_PUBLIC_KEY || !process.env.KPAY_SECRET_KEY) {
+    if (processor === "kpay" && (!process.env.NEXT_PUBLIC_KPAY_PUBLIC_KEY || !process.env.KPAY_SECRET_KEY)) {
       return NextResponse.json(
         { error: "Le paiement en ligne n'est pas encore configuré (clés KPay manquantes)." },
+        { status: 503 }
+      );
+    }
+
+    if (processor === "paydunya" && (!process.env.PAYDUNYA_MASTER_KEY || !process.env.PAYDUNYA_PRIVATE_KEY || !process.env.PAYDUNYA_TOKEN)) {
+      return NextResponse.json(
+        { error: "Le paiement en ligne n'est pas encore configuré (clés PayDunya manquantes)." },
         { status: 503 }
       );
     }
@@ -99,26 +116,48 @@ export async function POST(req) {
         return NextResponse.json({ error: "Impossible de créer la commande." }, { status: 500 });
       }
 
-      let kpayPayment;
-      try {
-        kpayPayment = await initKpayGatewayPayment({
-          amount,
-          externalId: order.id,
-          returnUrl: `${appUrl}/candidat/facturation`,
-          cancelUrl: `${appUrl}/creer-cv`,
-          description: `Confection de CV Facilite — ${hasAgent ? "accompagnée" : "autonome"}`,
-          metadata: { order_id: order.id, user_id: user.id, has_agent_option: hasAgent, cv_model_id: cvModelId },
-        });
-      } catch (kpayError) {
-        console.error("[Checkout] Échec initialisation KPay :", kpayError.message);
-        return NextResponse.json({ error: kpayError.message }, { status: 502 });
+      const cvOrderDescription = `Confection de CV Facilite — ${hasAgent ? "accompagnée" : "autonome"}`;
+      const cvOrderMetadata = { order_id: order.id, user_id: user.id, has_agent_option: hasAgent, cv_model_id: cvModelId };
+
+      let payment;
+      if (processor === "paydunya") {
+        try {
+          const invoice = await createPayDunyaInvoiceCheckout({
+            amount,
+            externalId: order.id,
+            returnUrl: `${appUrl}/candidat/facturation`,
+            cancelUrl: `${appUrl}/creer-cv`,
+            callbackUrl: `${appUrl}/api/pay/paydunya-webhook`,
+            description: cvOrderDescription,
+            metadata: cvOrderMetadata,
+          });
+          payment = { id: invoice.token, gatewayUrl: invoice.checkoutUrl };
+        } catch (paydunyaError) {
+          console.error("[Checkout] Échec initialisation PayDunya :", paydunyaError.message);
+          return NextResponse.json({ error: paydunyaError.message }, { status: 502 });
+        }
+      } else {
+        try {
+          const kpayPayment = await initKpayGatewayPayment({
+            amount,
+            externalId: order.id,
+            returnUrl: `${appUrl}/candidat/facturation`,
+            cancelUrl: `${appUrl}/creer-cv`,
+            description: cvOrderDescription,
+            metadata: cvOrderMetadata,
+          });
+          payment = { id: kpayPayment.id, gatewayUrl: kpayPayment.gatewayUrl };
+        } catch (kpayError) {
+          console.error("[Checkout] Échec initialisation KPay :", kpayError.message);
+          return NextResponse.json({ error: kpayError.message }, { status: 502 });
+        }
       }
 
-      await supabase.from("orders").update({ payment_reference: kpayPayment.id }).eq("id", order.id);
+      await supabase.from("orders").update({ payment_reference: payment.id }).eq("id", order.id);
 
       return NextResponse.json({
-        checkoutUrl: kpayPayment.gatewayUrl,
-        reference: kpayPayment.id,
+        checkoutUrl: payment.gatewayUrl,
+        reference: payment.id,
         orderId: order.id,
       });
     }
@@ -142,7 +181,7 @@ export async function POST(req) {
         user_id: user.id,
         amount,
         currency,
-        provider: "kpay",
+        provider: processor,
         status: "pending",
         metadata: { plan_name: planName || "credit_topup", description: description || "Recharge" },
       })
@@ -154,26 +193,48 @@ export async function POST(req) {
       return NextResponse.json({ error: "Impossible de créer la transaction." }, { status: 500 });
     }
 
-    let kpayPayment;
-    try {
-      kpayPayment = await initKpayGatewayPayment({
-        amount,
-        externalId: transaction.id,
-        returnUrl: `${appUrl}/candidat/facturation`,
-        cancelUrl: `${appUrl}/candidat/facturation`,
-        description: description || `Paiement Facilite - ${amount} XOF`,
-        metadata: { transaction_id: transaction.id, user_id: user.id, plan_name: planName || "credit_topup" },
-      });
-    } catch (kpayError) {
-      console.error("[Checkout] Échec initialisation KPay :", kpayError.message);
-      return NextResponse.json({ error: kpayError.message }, { status: 502 });
+    const creditTopupDescription = description || `Paiement Facilite - ${amount} XOF`;
+    const creditTopupMetadata = { transaction_id: transaction.id, user_id: user.id, plan_name: planName || "credit_topup" };
+
+    let payment;
+    if (processor === "paydunya") {
+      try {
+        const invoice = await createPayDunyaInvoiceCheckout({
+          amount,
+          externalId: transaction.id,
+          returnUrl: `${appUrl}/candidat/facturation`,
+          cancelUrl: `${appUrl}/candidat/facturation`,
+          callbackUrl: `${appUrl}/api/pay/paydunya-webhook`,
+          description: creditTopupDescription,
+          metadata: creditTopupMetadata,
+        });
+        payment = { id: invoice.token, gatewayUrl: invoice.checkoutUrl };
+      } catch (paydunyaError) {
+        console.error("[Checkout] Échec initialisation PayDunya :", paydunyaError.message);
+        return NextResponse.json({ error: paydunyaError.message }, { status: 502 });
+      }
+    } else {
+      try {
+        const kpayPayment = await initKpayGatewayPayment({
+          amount,
+          externalId: transaction.id,
+          returnUrl: `${appUrl}/candidat/facturation`,
+          cancelUrl: `${appUrl}/candidat/facturation`,
+          description: creditTopupDescription,
+          metadata: creditTopupMetadata,
+        });
+        payment = { id: kpayPayment.id, gatewayUrl: kpayPayment.gatewayUrl };
+      } catch (kpayError) {
+        console.error("[Checkout] Échec initialisation KPay :", kpayError.message);
+        return NextResponse.json({ error: kpayError.message }, { status: 502 });
+      }
     }
 
-    await supabase.from("transactions").update({ provider_reference: kpayPayment.id }).eq("id", transaction.id);
+    await supabase.from("transactions").update({ provider_reference: payment.id }).eq("id", transaction.id);
 
     return NextResponse.json({
-      checkoutUrl: kpayPayment.gatewayUrl,
-      reference: kpayPayment.id,
+      checkoutUrl: payment.gatewayUrl,
+      reference: payment.id,
       transactionId: transaction.id,
     });
   } catch (error) {
