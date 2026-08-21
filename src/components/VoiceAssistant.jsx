@@ -261,14 +261,15 @@ export default function VoiceAssistant() {
           type="button"
           onClick={() => {
             if (isOpen) return setIsOpen(false);
-            if (!session) return requireLogin();
-            // Déclenche le suivi GPS headless dès l'ouverture, pas seulement
-            // à l'envoi du premier message : sendToAssistant lit `location`
-            // de façon synchrone, donc si le suivi ne démarrait qu'au moment
-            // même de l'envoi, le tout premier message partirait toujours
-            // sans coordonnées (watchPosition est asynchrone par nature).
-            setHasEngaged(true);
-            setIsOpen(true);
+            // Un seul geste : ouvrir ET démarrer l'écoute (comme décrocher un
+            // appel), plutôt que d'exiger un second clic sur le bouton
+            // d'appel interne une fois le panneau ouvert — c'est ce second
+            // clic manquant qui donnait l'impression que l'assistant ne
+            // répondait jamais à la voix. startVoice() gère déjà la
+            // vérification de session, l'ouverture du panneau et
+            // l'engagement GPS ; le bouton d'appel interne reste disponible
+            // pour relancer l'écoute après une réponse.
+            startVoice();
           }}
           aria-label="Assistant Facilite"
           className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center cursor-pointer"
