@@ -5,7 +5,6 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import PhoneAuthForm from "@/components/PhoneAuthForm";
 
 function RegisterForm() {
   const [fullName, setFullName] = useState("");
@@ -18,7 +17,6 @@ function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [registerMethod, setRegisterMethod] = useState("email");
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/";
@@ -168,9 +166,16 @@ function RegisterForm() {
                 ✓
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Compte créé avec succès !</h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-gray-600 mb-4">
                 Vos informations ont bien été enregistrées sur Supabase. Vous pouvez maintenant vous connecter.
               </p>
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 mb-6 flex items-start gap-2.5 text-left">
+                <i className="fa-solid fa-mobile-screen text-emerald-600 text-sm mt-0.5 flex-shrink-0"></i>
+                <p className="text-xs text-emerald-900 font-semibold">
+                  Pensez à vérifier votre numéro de téléphone une fois connecté (section « Sécurité &amp; Connexion »
+                  de votre profil) : une fois vérifié, il devient une méthode de connexion à part entière.
+                </p>
+              </div>
               <Link
                 href={`/login${redirectUrl && redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
                 className="inline-block w-full py-3.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md transition-all duration-200"

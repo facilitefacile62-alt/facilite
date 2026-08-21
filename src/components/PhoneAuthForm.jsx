@@ -19,7 +19,11 @@ const COUNTRIES = [
   { code: "other", iso: "other", name: "Autre (Saisie libre)" },
 ];
 
-export default function PhoneAuthForm({ onSuccessRedirect = "/", signupMetadata = null }) {
+// Connexion UNIQUEMENT (jamais d'inscription) : seuls Google et l'e-mail
+// créent un compte (/register). Un numéro vérifié s'ajoute après coup
+// depuis le profil (Sécurité & Connexion, cf. SecurityTabContent.jsx) —
+// c'est CE flux-là qui crée la vérification, jamais signInWithOtp ici.
+export default function PhoneAuthForm({ onSuccessRedirect = "/" }) {
   const router = useRouter();
 
   // Étape 1 : 'phone' (Saisie numéro) | Étape 2 : 'otp' (Saisie code 6 chiffres)
@@ -76,11 +80,12 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/", signupMetadata 
       const { error: supabaseError } = await supabase.auth.signInWithOtp({
         phone: fullPhoneNumber,
         options: {
-          shouldCreateUser: true, // Crée l'utilisateur automatiquement s'il n'existe pas encore
-          // Attaché à raw_user_meta_data si le compte est créé ici (contexte
-          // inscription) — sans effet si le numéro correspond à un compte
-          // existant (contexte connexion), Supabase l'ignore silencieusement.
-          ...(signupMetadata ? { data: signupMetadata } : {}),
+          // false : ce formulaire ne crée plus de compte (retiré comme
+          // méthode d'inscription initiale — seuls Google et l'e-mail sur
+          // /register créent un compte). Un numéro inconnu renvoie une
+          // erreur explicite ci-dessous plutôt que de créer un compte fantôme
+          // sans nom ni e-mail comme c'était le cas avant.
+          shouldCreateUser: false,
         },
       });
 
@@ -90,7 +95,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/", signupMetadata 
       setMessage(`Un code de validation à 6 chiffres a été envoyé par SMS au ${fullPhoneNumber}.`);
     } catch (err) {
       console.error("Détail complet erreur OTP :", err);
-      
+
       // Extraction propre du message sans jamais passer un objet au state
       let msg = "Impossible d'envoyer le SMS. Vérifiez le numéro.";
       if (typeof err === 'string') {
@@ -98,12 +103,20 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/", signupMetadata 
       } else if (err && typeof err === 'object') {
         msg = err.message || err.error_description || err.msg || String(err);
       }
-      
+
+      // shouldCreateUser:false + numéro inconnu -> Supabase renvoie un
+      // message technique ("Signups not allowed for otp", code
+      // otp_disabled) qui ne dit rien à un candidat. Reformulé explicitement
+      // plutôt que laissé tel quel.
+      if (/signups? not allowed/i.test(msg) || err?.code === "otp_disabled") {
+        msg = "Aucun compte n'est associé à ce numéro. Créez d'abord un compte par e-mail ou Google, puis ajoutez et vérifiez votre numéro depuis votre profil (Sécurité & Connexion).";
+      }
+
       // Sécurité anti-objet vide "{}"
       if (!msg || msg === "{}" || msg === "[object Object]") {
         msg = "Erreur lors de l'envoi du SMS. Vérifiez la configuration Twilio/Supabase.";
       }
-      
+
       setError(msg);
     } finally {
       setLoading(false);

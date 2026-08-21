@@ -460,7 +460,16 @@ export default function LoginPage() {
 
             {/* 3. CONTENU DE L'ONGLET ACTIF */}
             {authMethod === "phone" ? (
-              <PhoneAuthForm onSuccessRedirect={typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/"} />
+              <div className="space-y-2.5">
+                <p className="text-[11px] text-gray-500 font-medium text-center">
+                  Connexion avec un numéro déjà vérifié depuis votre profil. Pas encore de compte ?{" "}
+                  <Link href="/register" className="font-bold text-[#085041] hover:underline">
+                    Inscrivez-vous
+                  </Link>{" "}
+                  par e-mail ou Google.
+                </p>
+                <PhoneAuthForm onSuccessRedirect={typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/"} />
+              </div>
             ) : step === 1 ? (
               <form onSubmit={handleEmailStepSubmit} className="space-y-2.5">
                 <input
