@@ -8,11 +8,12 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 import { z } from "zod";
 
-// KPay reste le processeur par défaut (comportement historique inchangé) ;
-// PayDunya est une option explicite, pas un remplacement — voir le
-// diagnostic du 21/08 : PayDunya était configuré mais totalement
-// débranché (aucune route ne créait jamais de facture).
-const processorSchema = z.enum(["kpay", "paydunya"]).optional().default("kpay");
+// PayDunya devient le processeur par défaut (bascule du 21/08, une fois le
+// webhook rebranché sur orders/transactions et le domaine Resend confirmé
+// vérifié) ; KPay reste disponible en repli explicite (processor: "kpay"),
+// jamais supprimé — voir le diagnostic du 21/08 (KPay avait lui-même un bug
+// currency bloquant, corrigé séparément).
+const processorSchema = z.enum(["kpay", "paydunya"]).optional().default("paydunya");
 
 const PRICE_AUTONOME = 1500;
 const PRICE_ACCOMPAGNE = 2000;
@@ -61,7 +62,7 @@ export async function POST(req) {
     if (!allowed) return rateError;
 
     const body = await req.json().catch(() => ({}));
-    const processor = body?.processor === "paydunya" ? "paydunya" : "kpay";
+    const processor = body?.processor === "kpay" ? "kpay" : "paydunya";
 
     if (processor === "kpay" && (!process.env.NEXT_PUBLIC_KPAY_PUBLIC_KEY || !process.env.KPAY_SECRET_KEY)) {
       return NextResponse.json(

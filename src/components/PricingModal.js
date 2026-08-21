@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { KPAY_TEST_MODE } from "@/lib/kpayClientInfo";
 
 const OPTIONS = [
   {
@@ -101,16 +100,6 @@ export default function PricingModal({ cvModelId, resumeId, onClose }) {
         </h2>
         <p className="text-sm text-gray-500 mb-4">Choisissez la formule qui vous convient.</p>
 
-        {KPAY_TEST_MODE && (
-          <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-start gap-2">
-            <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-            <span>
-              Mode test — la validation du compte marchand KPay est en cours. Aucun débit réel ne sera
-              effectué sur ce paiement.
-            </span>
-          </div>
-        )}
-
         <div className="space-y-3 mb-6">
           {OPTIONS.map((option) => {
             const isSelected = selectedOptionId === option.id;
@@ -180,7 +169,7 @@ export default function PricingModal({ cvModelId, resumeId, onClose }) {
         </button>
 
         <p className="text-[11px] text-gray-400 text-center mt-3">
-          Paiement sécurisé via KPay — Wave, Orange Money, MTN Mobile Money.
+          Paiement sécurisé — Wave, Orange Money ou carte bancaire.
         </p>
       </div>
     </div>
