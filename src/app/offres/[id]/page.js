@@ -600,43 +600,381 @@ https://youthmedia.net/opportunites/programme-de-stages-unicef-2026`,
     external_link: "https://mirador.education.gouv.sn/recr26",
     is_active: true,
     created_at: new Date().toISOString(),
+  },
+  "100": {
+    id: "100",
+    title: "Recrutement massif — mine d'or underground",
+    company: "C2K Staffing",
+    location: "Sabodala, Thiès, Sénégal",
+    contract_type: "12 postes / Intérim & CDI",
+    salary_range: "Selon profil & grille minière",
+    description: `🚨 C2K STAFFING, leader du recrutement, de l'intérim et du placement de personnel hautement qualifié au Sénégal, recrute pour le compte d'une multinationale de renommée internationale exploitant le projet de la mine underground d'Endeavour Mining – Sabodala Gold Operations.
+📍 Démarrage du projet : Début juillet 2026
+
+📌 71 POSTES À POURVOIR :
+• 12x Sauveteur Minier (Équipe de sauvetage minier)
+• 2x Responsable Formation HSE
+• 2x Coordinateur Magasin / Acheteur
+• 3x Magasinier
+• 2x Administrateur de Site
+• 2x Traducteur / Interprète (Anglais – Français)
+• 6x Conducteur de Chargeuse
+• 7x Opérateur de Chargement d'Explosifs
+• 6x Conducteur de Camion
+• 3x Chauffeur Véhicules Légers (VL)
+• 3x Foreur Carottier (Forage Diamanté)
+• 6x Aide-Foreur Carottier (Forage Diamanté)
+• 9x Aide-Opérateur
+
+✅ PROFIL RECHERCHÉ :
+✔️ Expérience obligatoire sur site minier
+✔️ Disponibilité immédiate
+✔️ Bonne maîtrise du français et de l'anglais
+
+📩 COMMENT POSTULER ?
+Merci de transmettre vos DEUX versions de CV (Français et Anglais) à : recrutement@c2kstaffing.com
+⚠️ Objet du mail : Intitulé du poste souhaité
+(Seuls les candidats présélectionnés seront contactés pour les entretiens de validation. Siège : Thiès Ouest tableau Commune, Route Nationale N°1).`,
+    image_url: "/c2k_sabodala.jpg",
+    min_education_level: "Tous niveaux (Expérience minière obligatoire)",
+    deadline: "2026-09-30",
+    contact_email: "recrutement@c2kstaffing.com",
+    external_link: "mailto:recrutement@c2kstaffing.com?subject=Candidature%20%E2%80%93%20Recrutement%20Mine%20Sabodala",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "101": {
+    id: "101",
+    title: "Chargé(e) de Communication & d'Animation du Réseau France Alumni",
+    company: "Institut français du Sénégal",
+    location: "Dakar, Saint-Louis, Kaolack, Ziguinchor, Banjul",
+    contract_type: "CDD, niveau 6",
+    salary_range: "Grille Institut Français",
+    description: `📣 L'Institut français du Sénégal recrute son ou sa Chargé(e) de Communication & d'Animation du Réseau France Alumni, au sein de l'espace Campus France Sénégal.
+
+Vous piloterez la stratégie de communication numérique de Campus France Sénégal (sites, réseaux sociaux), la création de supports visuels et l'animation du réseau France Alumni (plateformes, événements, Club des Présidents Alumni) sur Dakar, Saint-Louis, Kaolack, Ziguinchor et Banjul.
+
+📝 Profil recherché : Bac+4 en marketing digital, expérience confirmée en communication digitale, compétences en infographie (Canva, Adobe Suite).
+
+ℹ️ Contrat : CDD, niveau 6.
+
+📅 Candidature avant le 26 août 2026
+📩 CV et lettre de motivation : recrutement@ifs.sn
+🔗 Fiche de poste complète : https://lnkd.in/dp9s3CFt`,
+    image_url: "/pub3.jpg",
+    min_education_level: "Bac+4 (Marketing Digital / Communication)",
+    deadline: "2026-08-26",
+    contact_email: "recrutement@ifs.sn",
+    external_link: "https://lnkd.in/dp9s3CFt",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "102": {
+    id: "102",
+    title: "Bourses FAWE SENEGAL–Fondation Mastercard",
+    company: "FAWE Sénégal & Fondation Mastercard",
+    location: "Kédougou, Sédhiou, Tambacounda, Kolda, Ziguinchor, Matam, Louga",
+    contract_type: "Bourse d'études",
+    salary_range: "Prise en charge intégrale",
+    description: `Le FAWE Sénégal, en partenariat avec la Fondation Mastercard, offre des bourses entièrement financées aux jeunes de 15 à 25 ans résidant à Kédougou, Sédhiou, Tambacounda, Kolda, Ziguinchor, Matam ou Louga.
+
+Les candidats doivent être titulaires du Baccalauréat ou du Brevet Technique et souhaiter suivre une formation en STEM ou en formation professionnelle et technique.
+
+La bourse couvre les frais de scolarité, le logement, la restauration, le transport et la couverture maladie.
+
+Les jeunes filles, les personnes vivant avec un handicap et les réfugiés sont particulièrement encouragés à postuler.
+Date limite : 31 août 2026`,
+    image_url: "/pub4.jpg",
+    min_education_level: "Bac / Brevet Technique",
+    deadline: "2026-08-31",
+    contact_email: "contact@fawe-senegal.org",
+    external_link: "https://fawe-senegal.org",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "7": {
+    id: "7",
+    title: "Téléconseiller(ère) (Appels Entrants/Sortants)",
+    company: "Groupe Immobilier CPI",
+    location: "Dakar, Sénégal",
+    contract_type: "Plein Temps / CDI",
+    salary_range: "Selon profil & primes",
+    description: `Nous recrutons notre équipe call ! 4 postes à pourvoir avec prise de poste immédiate.
+
+🎯 Vos missions :
+- Émission et réception d'appels (6 jours par semaine)
+- Assurer un échange téléphonique de qualité (critère éliminatoire)
+
+✅ Profil attendu :
+- Baccalauréat exigé, BTS apprécié
+- Français et wolof exigés à l'oral (écrit clair en français)
+- 1 an minimum d'expérience en centre d'appels ou en télévente
+- Aisance avec un outil de suivi
+- Expérience dans l'immobilier appréciée, non exigée`,
+    image_url: "/cpi-call.jpg",
+    min_education_level: "Baccalauréat exigé, BTS apprécié",
+    deadline: "2026-09-30",
+    contact_email: "recrutement@cpi.sn",
+    external_link: "mailto:recrutement@cpi.sn?subject=Candidature%20T%C3%A9l%C3%A9conseiller%20-%20CPI",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "6": {
+    id: "6",
+    title: "FACILITE BUSINESS RECRUTE !",
+    company: "Facilite Business",
+    location: "Abidjan, Côte d'Ivoire",
+    contract_type: "CDI",
+    salary_range: "Selon profil",
+    description: `Vous cherchez un nouveau challenge professionnel ? Facilite Business grandit et recherche des talents motivés et dynamiques pour rejoindre son équipe !
+
+Nous recrutons activement pour les postes suivants :
+- 💻 Informaticiens : Maîtrise du développement, du support technique et de la maintenance IT. Expérience requise.
+- 📞 Téléconseillères : Aisance relationnelle pour le service client, la vente et l'assistance téléphonique. Bonnes compétences en communication exigées.
+- 🍳 Cuisinière : Expérience solide en restauration pour la préparation des repas, la gestion de cuisine et le service alimentaire.`,
+    image_url: "/affichedoffre.jpeg",
+    min_education_level: "Selon poste",
+    deadline: "2026-09-30",
+    contact_email: "facilitefacile@gmail.com",
+    external_link: "mailto:facilitefacile@gmail.com?subject=Candidature%20Facilite%20Business",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "1": {
+    id: "1",
+    title: "Conseiller Clientèle Télécom",
+    company: "Orange Sénégal",
+    location: "Dakar, Sénégal",
+    contract_type: "CDI",
+    salary_range: "Grille Télécom",
+    description: "Gérer le portefeuille client, répondre aux requêtes téléphoniques et par chat, et promouvoir les nouveaux forfaits mobiles et offres internet en français et wolof.",
+    image_url: "/logo.jpeg",
+    min_education_level: "Bac+2",
+    deadline: "2026-09-30",
+    contact_email: "recrutement@orange.sn",
+    external_link: "mailto:recrutement@orange.sn?subject=Candidature%20Conseiller%20Client%C3%A8le",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "2": {
+    id: "2",
+    title: "Développeur Front-End React / Next.js",
+    company: "Facilite Corporation",
+    location: "Pikine, Dakar, Sénégal",
+    contract_type: "Stage",
+    salary_range: "Indemnité de stage",
+    description: "Participer à la conception et à l'optimisation de nos interfaces de CV interactifs. Collaboration étroite avec l'équipe design pour un rendu Pixel-Perfect.",
+    image_url: "/logo.jpeg",
+    min_education_level: "Bac+3 Informatique",
+    deadline: "2026-09-30",
+    contact_email: "contact@ffacilite.com",
+    external_link: "mailto:contact@ffacilite.com?subject=Candidature%20Dev%20Frontend",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "3": {
+    id: "3",
+    title: "Comptable & Gestionnaire de Paie",
+    company: "Senelec",
+    location: "Dakar, Sénégal",
+    contract_type: "CDI",
+    salary_range: "Selon profil & expérience",
+    description: "Supervision des écritures comptables mensuelles, traitement de la paie du personnel sénégalais, établissement des déclarations fiscales et sociales.",
+    image_url: "/logo.jpeg",
+    min_education_level: "Bac+3 Comptabilité / Gestion",
+    deadline: "2026-09-30",
+    contact_email: "recrutement@senelec.sn",
+    external_link: "mailto:recrutement@senelec.sn?subject=Candidature%20Comptable",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "4": {
+    id: "4",
+    title: "Chargé de Clientèle & Support Utilisateurs",
+    company: "Wave Mobile Money",
+    location: "Thiès, Sénégal",
+    contract_type: "CDD",
+    salary_range: "Selon profil",
+    description: "Fournir une assistance téléphonique rapide et claire aux agents et utilisateurs de l'application Wave. Résolution d'incidents techniques de niveau 1.",
+    image_url: "/pub.jpeg",
+    min_education_level: "Bac+2",
+    deadline: "2026-09-30",
+    contact_email: "support@wave.com",
+    external_link: "mailto:support@wave.com?subject=Candidature%20Support%20Wave",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "5": {
+    id: "5",
+    title: "Assistant Administratif H/F",
+    company: "Bred Sénégal",
+    location: "Dakar, Sénégal",
+    contract_type: "CDD",
+    salary_range: "Selon grille bancaire",
+    description: "Secrétariat classique, accueil des partenaires, gestion de l'agenda de la direction générale et organisation logistique des déplacements d'affaires.",
+    image_url: "/logo.jpeg",
+    min_education_level: "Bac+2 Assistanat",
+    deadline: "2026-09-30",
+    contact_email: "recrutement@bred.sn",
+    external_link: "mailto:recrutement@bred.sn?subject=Candidature%20Assistant%20Administratif",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "8e7bdec1-c693-43a8-af11-d5515f733a4c": {
+    id: "8e7bdec1-c693-43a8-af11-d5515f733a4c",
+    title: "Foundever™ recrute des Conseillers Clients en Réception d'Appels",
+    company: "Foundever",
+    location: "Dakar, Sénégal",
+    contract_type: "CDI / Plein temps",
+    salary_range: "Fixe attractif + Primes + 100% formation payée",
+    description: `À propos de Foundever™ :
+Foundever™ est un leader mondial de l'expérience client (CX). Avec 170 000 collaborateurs dans le monde, nous sommes l’équipe derrière les meilleures expériences des 750 plus grandes marques internationales.
+
+🎯 Résumé du poste :
+Nous recrutons des conseillers clients en réception d’appels qui auront pour missions d’assurer l’assistance de la clientèle en difficulté dans un esprit de fidélisation et de satisfaction.
+
+📋 Missions principales :
+• Accueillir les appels des clients et diagnostiquer leurs besoins.
+• Appliquer les process définis et maîtriser l’utilisation des outils.
+• Remonter toute information permettant d’identifier un dysfonctionnement ou d’améliorer une procédure.
+• Contribuer à la bonne marche du service et veiller à atteindre les objectifs qualitatifs et quantitatifs.
+
+👤 Profil recherché :
+• Une parfaite maîtrise de la langue française (à l’oral comme à l’écrit).
+• Le sens de l’écoute et du service client.
+• Une bonne connaissance de l’outil informatique.
+• Assidu, impliqué, ponctuel.
+
+🎁 Nous offrons :
+• Rémunération attractive (fixe + prime)
+• Formation rémunérée à 100%
+• Avantages sociaux attrayants
+
+🌐 Postulez directement en ligne via le portail officiel !`,
+    image_url: "/foundever_conseiller_client.jpg",
+    min_education_level: "Bac minimum + Parfait français",
+    deadline: "2026-09-30",
+    contact_email: "recrutement@foundever.com",
+    external_link: "https://jobs.foundever.com/",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "77177373-1111-4444-8888-000000000001": {
+    id: "77177373-1111-4444-8888-000000000001",
+    title: "CASTING : FAMILLE HALPULAR (EVENPROD)",
+    company: "EvenProd",
+    location: "Sénégal (Dakar & Régions)",
+    contract_type: "Casting / Tournage",
+    salary_range: "Cachet de production audiovisuelle",
+    description: `🎬 GRAND CASTING EVENPROD !
+
+Nous recherchons :
+FAMILLE HALPULAR AVEC BONNE MAÎTRISE DE LA LANGUE
+
+📲 Envoyez vos vidéos de présentation directement par WhatsApp au :
++221 77 717 73 73
+
+Rejoignez une production audiovisuelle d'envergure avec EvenProd !`,
+    image_url: "/casting_evenprod.jpg",
+    min_education_level: "Aucun exigé (Maîtrise langue Halpular)",
+    deadline: "2026-09-30",
+    contact_email: "contact@evenprod.sn",
+    contact_phone: "+221 77 717 73 73",
+    contact_whatsapp: "+221777177373",
+    external_link: "https://wa.me/221777177373?text=Bonjour%20EvenProd,%20je%20vous%20contacte%20concernant%20le%20casting%20Famille%20Halpular.",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  "b69b4b86-859f-4cff-a508-b2c21c74e765": {
+    id: "b69b4b86-859f-4cff-a508-b2c21c74e765",
+    title: "Électrotechnicien(ne) / Ingénieur(e) en Automatisme & Génie Électrique",
+    company: "Entreprise Industrielle & Automatisme",
+    location: "Sénégal (Dakar & Régions)",
+    contract_type: "CDI / Plein temps",
+    salary_range: "Selon profil & expérience",
+    description: `🚨 RECRUTEMENT URGENT
+
+Une entreprise recherche activement un(e) Électrotechnicien(ne) en automatisme ou un(e) Ingénieur(e) en génie électrique / automatisme.
+
+🎯 MISSIONS & RESPONSABILITÉS :
+• Conception, programmation et maintenance des systèmes automatisés (API, HMI, automates industriels).
+• Lecture, analyse et réalisation de schémas électriques et opérations de câblage industriel.
+• Diagnostic, dépannage et optimisation des installations électrotechniques.
+• Participation aux mises en service et suivi des performances des équipements.
+• Collaboration avec les équipes techniques et de production.
+
+📌 PROFIL RECHERCHÉ :
+• Formation : Bac+2 (BTS, DUT) à Bac+5 (Master, Diplôme d'Ingénieur) en Électrotechnique, Génie Électrique ou Automatisme Industriel.
+• Maîtrise confirmée des systèmes automatisés (API, HMI, SCADA).
+• Excellente maîtrise des schémas électriques, normes de sécurité et câblage.
+• Rigueur, esprit d'analyse méthodique et esprit d'équipe.
+• Expérience professionnelle bienvenue (débutants motivés ou profils confirmés).
+
+📩 COMMENT POSTULER :
+Envoyez dès maintenant votre CV à l'adresse suivante :
+👉 walykebe@gmail.com
+
+⚡ *Besoin urgent — Merci de partager largement !*`,
+    image_url: "/recrutement_urgent_electrotechnicien_automatisme.jpg",
+    min_education_level: "Bac+2 à Bac+5 (Électrotechnique, Automatisme, Génie Électrique)",
+    deadline: "2026-09-30",
+    contact_email: "walykebe@gmail.com",
+    external_link: "mailto:walykebe@gmail.com?subject=Candidature%20%E2%80%93%20%C3%89lectrotechnicien(ne)%20%2F%20Ing%C3%A9nieur(e)%20Automatisme%20G%C3%A9nie%20%C3%89lectrique",
+    is_active: true,
+    created_at: new Date().toISOString(),
   }
 };
 
 async function fetchOffer(id) {
-  try {
-    let supabase;
-    try {
-      supabase = getSupabaseAdmin();
-    } catch {
-      supabase = getSupabasePublicClient();
-    }
+  if (!id) return null;
+  const strId = String(id).trim();
 
-    const { data, error } = await supabase
-      .from("job_offers")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (!error && data) {
-      let recruiterVerified = false;
-      if (data.recruiter_id) {
-        try {
-          const { data: verified } = await supabase.rpc("has_badge", {
-            check_user_id: data.recruiter_id,
-            badge_name: "verified_recruiter",
-          });
-          recruiterVerified = verified === true;
-        } catch (e) {}
-      }
-      return { ...data, recruiterVerified };
-    }
-  } catch (err) {
-    console.error("fetchOffer DB error:", err);
+  // 1. Si présent dans les offres statiques de secours (IDs numériques ou clés enregistrées)
+  if (FALLBACK_STATIC_OFFERS[strId]) {
+    return { ...FALLBACK_STATIC_OFFERS[strId], recruiterVerified: true };
   }
 
-  if (FALLBACK_STATIC_OFFERS[id]) {
-    return { ...FALLBACK_STATIC_OFFERS[id], recruiterVerified: true };
+  // 2. Si c'est un format UUID, interrogation de Supabase
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(strId);
+  if (isUuid) {
+    try {
+      let supabase;
+      try {
+        supabase = getSupabaseAdmin();
+      } catch {
+        supabase = getSupabasePublicClient();
+      }
+
+      const { data, error } = await supabase
+        .from("job_offers")
+        .select("*")
+        .eq("id", strId)
+        .single();
+
+      if (!error && data) {
+        let recruiterVerified = false;
+        if (data.recruiter_id) {
+          try {
+            const { data: verified } = await supabase.rpc("has_badge", {
+              check_user_id: data.recruiter_id,
+              badge_name: "verified_recruiter",
+            });
+            recruiterVerified = verified === true;
+          } catch (e) {}
+        }
+        return { ...data, recruiterVerified };
+      }
+    } catch (err) {
+      console.error("fetchOffer DB error:", err);
+    }
+  }
+
+  // 3. Recherche flexible dans FALLBACK_STATIC_OFFERS
+  const found = Object.values(FALLBACK_STATIC_OFFERS).find(
+    (o) => String(o.id).toLowerCase() === strId.toLowerCase()
+  );
+  if (found) {
+    return { ...found, recruiterVerified: true };
   }
 
   return null;
