@@ -189,7 +189,7 @@ async function appelerGeminiVision(systemPrompt, historique, images) {
 
 export async function POST(req) {
   try {
-    // 1. Authentification & limitation de débit — alignées sur /api/assistant.
+    // 1. Authentification & limitation de débit — même garde que les autres routes IA du dépôt.
     // Sans elles, l'endpoint serait ouvert et n'importe qui pourrait consommer
     // le crédit Gemini du projet.
     const { user, error: authError } = await requireUser(req);
