@@ -1,11 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { sendMessage, resolveConversationWith, touchConversation } from '@/lib/messages';
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from '@/lib/featureFlags';
 import LiveMapLocation from './LiveMapLocation';
+
+// Mots-clés oui/non — jamais confié au LLM : une confirmation d'envoi de
+// message doit rester déterministe, même principe que READ_MESSAGES_TRIGGERS
+// côté serveur (voir /api/voice-assistant/route.js).
+const REPLY_YES_WORDS = ["oui", "ouais", "yes", "d'accord", "daccord", "ok", "vas-y", "confirme"];
+const REPLY_NO_WORDS = ["non", "nan", "no", "annule", "stop", "laisse tomber"];
+
+function matchYesNo(text) {
+  const lower = text.toLowerCase();
+  if (REPLY_NO_WORDS.some((w) => lower.includes(w))) return "no";
+  if (REPLY_YES_WORDS.some((w) => lower.includes(w))) return "yes";
+  return null;
+}
 
 const ORB_GRADIENT = 'conic-gradient(from 0deg, #085041, #14b89a, #9FE1CB, #085041)';
 
@@ -39,6 +53,21 @@ export default function VoiceAssistant() {
   const [mapsUrl, setMapsUrl] = useState(null);
   const [inputText, setInputText] = useState('');
   const [location, setLocation] = useState(null);
+
+  // État du flux "répondre à un message par la voix" — en refs (pas des
+  // useState) car lu/écrit depuis des callbacks recognition.onresult
+  // successifs qui ne doivent jamais agir sur une valeur figée par une
+  // fermeture React périmée. null = aucun flux en cours ; sinon
+  // 'confirm_reply' | 'dictate_reply' | 'confirm_send'.
+  const replyFlowRef = useRef(null);
+  const pendingReplyTargetRef = useRef(null); // actor_id du message à répondre
+  const pendingReplyTextRef = useRef('');
+
+  const resetReplyFlow = () => {
+    replyFlowRef.current = null;
+    pendingReplyTargetRef.current = null;
+    pendingReplyTextRef.current = '';
+  };
 
   // Masquer sur le panneau d'administration pour éviter de recouvrir les réglages
   const isDashboard = pathname?.startsWith('/admin');
@@ -76,7 +105,20 @@ export default function VoiceAssistant() {
 
       const data = await res.json();
       if (data.reply) {
-        speakText(data.reply, data.audioBase64);
+        if (data.replyTarget) {
+          // "Lis mes messages" a trouvé un message auquel répondre — enchaîne
+          // sur la proposition de réponse une fois le résumé énoncé. Cible
+          // (actor_id) et déclenchement du flux : jamais décidés par le LLM,
+          // uniquement par la présence de replyTarget renvoyée par le serveur
+          // (voir buildUnreadMessagesSummary, route.js).
+          speakText(data.reply, data.audioBase64, () => {
+            replyFlowRef.current = 'confirm_reply';
+            pendingReplyTargetRef.current = data.replyTarget;
+            speakLocal('Tu veux répondre ?', () => startVoice());
+          });
+        } else {
+          speakText(data.reply, data.audioBase64);
+        }
       }
       // Lien Google Maps réel (origin = position GPS transmise dans la
       // requête, jamais persistée) : seulement quand une destination
@@ -86,6 +128,96 @@ export default function VoiceAssistant() {
       }
     } catch (err) {
       setStatus('Erreur lors de la communication.');
+    }
+  };
+
+  // Voix de sortie purement locale (speechSynthesis navigateur, jamais
+  // Gemini TTS) pour les invites de confirmation du flux de réponse — ce
+  // sont des chaînes fixes côté client, aucun besoin du pipeline serveur
+  // (LLM + TTS) pour "Tu veux répondre ?" ou un texte déjà transcrit par
+  // l'utilisateur lui-même.
+  const speakLocal = (text, onFinish) => {
+    setStatus(text);
+    if (!('speechSynthesis' in window)) {
+      if (onFinish) onFinish();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-FR';
+    utterance.rate = 1.0;
+    setIsSpeaking(true);
+    const finish = () => {
+      setIsSpeaking(false);
+      if (onFinish) onFinish();
+    };
+    utterance.onend = finish;
+    utterance.onerror = finish;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Dispatch déterministe de chaque transcript selon l'étape du flux de
+  // réponse en cours (jamais confié au LLM) — sendToAssistant reste le
+  // chemin par défaut hors flux de réponse.
+  const handleTranscript = (transcript) => {
+    const flow = replyFlowRef.current;
+    if (flow === 'confirm_reply') return handleReplyConfirmation(transcript);
+    if (flow === 'dictate_reply') return handleReplyDictation(transcript);
+    if (flow === 'confirm_send') return handleSendConfirmation(transcript);
+    sendToAssistant(transcript);
+  };
+
+  const handleReplyConfirmation = (transcript) => {
+    const answer = matchYesNo(transcript);
+    if (answer === 'yes') {
+      replyFlowRef.current = 'dictate_reply';
+      speakLocal('Je t\'écoute, dicte ta réponse.', () => startVoice());
+    } else if (answer === 'no') {
+      resetReplyFlow();
+      speakLocal("D'accord, pas de réponse envoyée.");
+    } else {
+      speakLocal('Dis oui pour répondre, ou non pour annuler.', () => startVoice());
+    }
+  };
+
+  const handleReplyDictation = (transcript) => {
+    pendingReplyTextRef.current = transcript;
+    replyFlowRef.current = 'confirm_send';
+    speakLocal(`Tu veux envoyer : "${transcript}" — confirme ?`, () => startVoice());
+  };
+
+  // Envoi réel : sendMessage()/resolveConversationWith() (@/lib/messages),
+  // exactement le même chemin — même client Supabase navigateur, même RLS —
+  // que la messagerie normale (MessagerieClient.js). Aucun nouveau chemin
+  // d'écriture, aucune route serveur dédiée : seule une confirmation
+  // explicite ("oui") déclenche l'envoi.
+  const handleSendConfirmation = async (transcript) => {
+    const answer = matchYesNo(transcript);
+    if (answer === 'yes') {
+      const targetId = pendingReplyTargetRef.current;
+      const text = pendingReplyTextRef.current;
+      resetReplyFlow();
+      try {
+        const resolved = await resolveConversationWith(session.user.id, targetId);
+        const { data: sentMsg, error } = await sendMessage({
+          senderId: session.user.id,
+          receiverId: targetId,
+          conversationId: resolved?.conversationId || null,
+          content: text,
+          typeDiscussion: 'ECHANGE',
+        });
+        if (error || !sentMsg) throw new Error(error || 'Échec de l\'envoi');
+        if (resolved?.conversationId) await touchConversation(resolved.conversationId, text);
+        speakLocal('Message envoyé !');
+      } catch (err) {
+        console.error('[VoiceAssistant] Échec envoi réponse vocale:', err);
+        speakLocal("Désolé, l'envoi a échoué.");
+      }
+    } else if (answer === 'no') {
+      resetReplyFlow();
+      speakLocal('Message annulé.');
+    } else {
+      speakLocal("Dis oui pour envoyer, ou non pour annuler.", () => startVoice());
     }
   };
 
@@ -113,7 +245,7 @@ export default function VoiceAssistant() {
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      sendToAssistant(transcript);
+      handleTranscript(transcript);
     };
 
     // event.error jamais exposé auparavant : impossible de distinguer
@@ -150,7 +282,10 @@ export default function VoiceAssistant() {
     setIsOpen(true);
     setHasEngaged(true);
     setInputText('');
-    sendToAssistant(text);
+    // Passe par le même dispatch que la voix : un "oui"/"non" tapé doit
+    // aussi faire avancer un flux de réponse en cours, pas uniquement une
+    // réponse dictée à voix haute.
+    handleTranscript(text);
   };
 
   // Voix de sortie : synthèse serveur (API Gemini TTS, voix "Sulafat") —
@@ -159,13 +294,14 @@ export default function VoiceAssistant() {
   // (échec ponctuel de la synthèse côté serveur, jamais volontaire) ->
   // repli sur speechSynthesis pour ne jamais laisser l'utilisateur sans
   // réponse audible.
-  const speakText = (text, audioBase64) => {
+  const speakText = (text, audioBase64, onFinish) => {
     if (audioBase64) {
       setIsSpeaking(true);
       const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
       const finish = () => {
         setIsSpeaking(false);
         setStatus(text);
+        if (onFinish) onFinish();
       };
       audio.onended = finish;
       audio.onerror = finish;
@@ -173,7 +309,10 @@ export default function VoiceAssistant() {
       return;
     }
 
-    if (!('speechSynthesis' in window)) return;
+    if (!('speechSynthesis' in window)) {
+      if (onFinish) onFinish();
+      return;
+    }
 
     window.speechSynthesis.cancel(); // Stoppe toute lecture en cours
     const utterance = new SpeechSynthesisUtterance(text);
@@ -184,6 +323,7 @@ export default function VoiceAssistant() {
     utterance.onend = () => {
       setIsSpeaking(false);
       setStatus(text);
+      if (onFinish) onFinish();
     };
 
     window.speechSynthesis.speak(utterance);
@@ -210,7 +350,10 @@ export default function VoiceAssistant() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  resetReplyFlow();
+                  setIsOpen(false);
+                }}
                 aria-label="Fermer l'assistant"
                 className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center transition flex-shrink-0 cursor-pointer"
               >
@@ -287,7 +430,10 @@ export default function VoiceAssistant() {
         <button
           type="button"
           onClick={() => {
-            if (isOpen) return setIsOpen(false);
+            if (isOpen) {
+              resetReplyFlow();
+              return setIsOpen(false);
+            }
             // Un seul geste : ouvrir ET démarrer l'écoute (comme décrocher un
             // appel), plutôt que d'exiger un second clic sur le bouton
             // d'appel interne une fois le panneau ouvert — c'est ce second

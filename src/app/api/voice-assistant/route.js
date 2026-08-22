@@ -140,7 +140,7 @@ async function buildUnreadMessagesSummary(token, userId) {
 
   const { data: unread, error } = await supabase
     .from("notifications")
-    .select("id, type, content, created_at")
+    .select("id, type, content, actor_id, created_at")
     .eq("user_id", userId)
     .eq("is_read", false)
     .order("created_at", { ascending: false })
@@ -148,11 +148,11 @@ async function buildUnreadMessagesSummary(token, userId) {
 
   if (error) {
     console.error("[Voice Assistant] Échec lecture notifications:", error.message);
-    return "Désolé, je n'ai pas pu récupérer vos messages pour le moment.";
+    return { text: "Désolé, je n'ai pas pu récupérer vos messages pour le moment.", replyTarget: null };
   }
 
   if (!unread || unread.length === 0) {
-    return "Vous n'avez aucun nouveau message.";
+    return { text: "Vous n'avez aucun nouveau message.", replyTarget: null };
   }
 
   const summary = unread
@@ -169,7 +169,17 @@ async function buildUnreadMessagesSummary(token, userId) {
   );
 
   const intro = unread.length === 1 ? "Vous avez 1 nouveau message. " : `Vous avez ${unread.length} nouveaux messages. `;
-  return intro + summary;
+
+  // Cible de réponse déterministe : l'auteur de la notification de type
+  // "message" la plus récente parmi celles lues (unread est déjà trié
+  // created_at DESC) — jamais devinée par le LLM. Aucune résolution de nom
+  // nécessaire ici : les invites de confirmation ("Tu veux répondre ?",
+  // "Tu veux envoyer... confirme ?") ne citent jamais l'interlocuteur, donc
+  // pas de contournement de la RLS profiles (qui n'autorise pas la lecture
+  // du profil d'un tiers arbitraire).
+  const replyTarget = unread.find((n) => n.type === "message" && n.actor_id)?.actor_id || null;
+
+  return { text: intro + summary, replyTarget };
 }
 
 // Base de connaissances FAQ gérée depuis l'admin (assistant_faq) plutôt que
@@ -250,9 +260,9 @@ export async function POST(req) {
     if (isReadMessagesRequest(message)) {
       const authHeader = req.headers.get("authorization") || "";
       const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-      const summaryText = await buildUnreadMessagesSummary(token, user.id);
+      const { text: summaryText, replyTarget } = await buildUnreadMessagesSummary(token, user.id);
       const audioBase64 = await synthesizeSpeech(summaryText, apiKey);
-      return NextResponse.json({ reply: summaryText, mapsUrl: null, audioBase64 });
+      return NextResponse.json({ reply: summaryText, mapsUrl: null, audioBase64, replyTarget });
     }
 
     const hasRealPosition = !!(location && typeof location.lat === "number" && typeof location.lng === "number");
