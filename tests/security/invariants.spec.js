@@ -204,6 +204,12 @@ test.describe("Invariants de sécurité", () => {
       // jamais de RLS/GRANT authenticated, même pour l'admin. Voir
       // 20260821100000_assistant_faq.sql.
       "assistant_faq",
+      // Config + catalogue de l'onglet admin "Entraînement IA" (Agent IA
+      // Facilité) : même principe que assistant_faq, lecture/écriture
+      // exclusivement via service_role et une route API admin dédiée. Voir
+      // 20260821130000_assistant_ai_studio.sql.
+      "assistant_ai_config",
+      "assistant_ai_products",
     ]);
 
     const rows = await runIntrospectionSql(`

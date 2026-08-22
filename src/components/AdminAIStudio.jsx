@@ -125,6 +125,12 @@ export default function AdminAIStudio() {
   const [currency, setCurrency] = useState("FCFA"); // "FCFA" | "EUR"
   const [isDeployed, setIsDeployed] = useState(true);
   const [savedToast, setSavedToast] = useState(false);
+  // true seulement si aucune configuration n'existe encore côté serveur ET
+  // qu'une sauvegarde locale (ancien système, propre à ce navigateur) a été
+  // trouvée — propose un import explicite plutôt que de l'appliquer
+  // silencieusement (voir handleImportLocalConfig).
+  const [hasLocalBackup, setHasLocalBackup] = useState(false);
+  const [importingLocal, setImportingLocal] = useState(false);
 
   // État du Bac à sable (Playground)
   const [chatMessages, setChatMessages] = useState([]);
@@ -184,20 +190,44 @@ export default function AdminAIStudio() {
     return Math.min(10, score).toFixed(1);
   })();
 
-  // Chargement des données persistées (Paramètres, Sous-onglet actif et Historique du Playground)
+  // Chargement Supabase-first (voir /api/admin/ai-studio) : une config
+  // enregistrée côté serveur prime toujours sur les valeurs par défaut. Si
+  // le serveur n'a encore rien (personne n'a sauvegardé depuis la bascule),
+  // repli sur les valeurs par défaut codées en dur (déjà les valeurs
+  // initiales des useState ci-dessus, donc rien à faire) — et si une
+  // sauvegarde locale (ancien système) existe dans CE navigateur, propose
+  // un import explicite plutôt que de l'appliquer automatiquement comme
+  // avant (voir handleImportLocalConfig).
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("FACILITE_AI_STUDIO_V2");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.promptText) setPromptText(parsed.promptText);
-        if (parsed.knowledgeText) setKnowledgeText(parsed.knowledgeText);
-        if (parsed.diagnosticRulesText) setDiagnosticRulesText(parsed.diagnosticRulesText);
-        if (parsed.commStyle) setCommStyle(parsed.commStyle);
-        if (parsed.selectedModel) setSelectedModel(parsed.selectedModel);
-        if (parsed.productsList) setProductsList(parsed.productsList);
+    (async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        const res = await fetch("/api/admin/ai-studio", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.config) {
+            setPromptText(data.config.promptText || DEFAULT_MAIN_PROMPT);
+            setKnowledgeText(data.config.knowledgeText || DEFAULT_KNOWLEDGE);
+            setDiagnosticRulesText(data.config.diagnosticRulesText || DEFAULT_DIAGNOSTIC_RULES);
+            setCommStyle(data.config.commStyle || "normal");
+            setSelectedModel(data.config.selectedModel || "deepseek-chat");
+            setCurrency(data.config.currency || "FCFA");
+            if (data.productsList?.length) setProductsList(data.productsList);
+          } else if (localStorage.getItem("FACILITE_AI_STUDIO_V2")) {
+            setHasLocalBackup(true);
+          }
+        }
+      } catch (err) {
+        console.error("Erreur chargement config IA Studio (Supabase) :", err);
       }
+    })();
 
+    // État d'UI pur (onglet actif, historique du playground) — jamais migré
+    // en base, reste local à chaque navigateur comme avant.
+    try {
       const savedSubTab = localStorage.getItem("FACILITE_AI_STUDIO_ACTIVE_SUBTAB");
       if (savedSubTab) setActiveSubTab(savedSubTab);
 
@@ -210,6 +240,55 @@ export default function AdminAIStudio() {
       }
     } catch {}
   }, []);
+
+  // Import explicite unique de l'ancienne sauvegarde locale vers Supabase —
+  // n'apparaît que si le serveur n'a encore aucune configuration (voir
+  // hasLocalBackup ci-dessus), pour ne jamais écraser un réglage déjà
+  // partagé par une copie locale périmée d'un autre poste.
+  const handleImportLocalConfig = async () => {
+    setImportingLocal(true);
+    try {
+      const saved = localStorage.getItem("FACILITE_AI_STUDIO_V2");
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+
+      const next = {
+        promptText: parsed.promptText || DEFAULT_MAIN_PROMPT,
+        knowledgeText: parsed.knowledgeText || DEFAULT_KNOWLEDGE,
+        diagnosticRulesText: parsed.diagnosticRulesText || DEFAULT_DIAGNOSTIC_RULES,
+        commStyle: parsed.commStyle || "normal",
+        selectedModel: parsed.selectedModel || "deepseek-chat",
+        // Absent des sauvegardes faites avant ce correctif (bug de
+        // persistance) — repli sur l'état "currency" actuel du composant.
+        currency: parsed.currency || currency,
+        productsList: parsed.productsList || DEFAULT_PRODUCTS,
+      };
+
+      setPromptText(next.promptText);
+      setKnowledgeText(next.knowledgeText);
+      setDiagnosticRulesText(next.diagnosticRulesText);
+      setCommStyle(next.commStyle);
+      setSelectedModel(next.selectedModel);
+      setCurrency(next.currency);
+      setProductsList(next.productsList);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      await fetch("/api/admin/ai-studio", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(next),
+      });
+
+      setHasLocalBackup(false);
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 3000);
+    } catch (err) {
+      console.error("Erreur import de la config locale :", err);
+    } finally {
+      setImportingLocal(false);
+    }
+  };
 
   // Changement de sous-onglet avec persistance
   const handleSubTabChange = (subTabId) => {
@@ -235,29 +314,51 @@ export default function AdminAIStudio() {
     }
   }, [chatMessages, isGenerating]);
 
-  // Sauvegarde des réglages
-  const handleSaveConfig = () => {
+  // Sauvegarde des réglages — écrit toujours localStorage (inchangé, conservé
+  // en secours pour l'instant, voir plan de retrait en 2e étape) ET
+  // désormais aussi Supabase (source de vérité partagée entre postes admin).
+  const handleSaveConfig = async () => {
+    const config = {
+      promptText,
+      knowledgeText,
+      diagnosticRulesText,
+      commStyle,
+      selectedModel,
+      currency, // bug de persistance corrigé : absent de l'objet sauvegardé jusqu'ici
+      productsList,
+      updatedAt: new Date().toISOString(),
+    };
+
     try {
-      const config = {
-        promptText,
-        knowledgeText,
-        diagnosticRulesText,
-        commStyle,
-        selectedModel,
-        productsList,
-        updatedAt: new Date().toISOString(),
-      };
       localStorage.setItem("FACILITE_AI_STUDIO_V2", JSON.stringify(config));
       localStorage.setItem("FACILITE_DIAGNOSTIC_RULES", diagnosticRulesText);
-      setSavedToast(true);
-      setTimeout(() => setSavedToast(false), 3000);
     } catch (e) {
-      console.error("Erreur sauvegarde studio IA:", e);
+      console.error("Erreur sauvegarde locale studio IA:", e);
     }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const res = await fetch("/api/admin/ai-studio", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(config),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setHasLocalBackup(false);
+    } catch (e) {
+      console.error("Erreur sauvegarde Supabase studio IA:", e);
+    }
+
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 3000);
   };
 
-  // Vider complètement la page de formation (Page blanche / Saisie libre)
-  const handleClearAllTraining = () => {
+  // Vider complètement la page de formation (Page blanche / Saisie libre) —
+  // efface aussi la config Supabase : sans ça, un rechargement de page
+  // réappliquerait l'ancienne config serveur et le "vidage" paraîtrait
+  // n'avoir jamais eu lieu.
+  const handleClearAllTraining = async () => {
     const confirmClear = window.confirm(
       "Voulez-vous vider complètement la page de formation pour partir d'une page blanche ?"
     );
@@ -282,6 +383,7 @@ export default function AdminAIStudio() {
           diagnosticRulesText: "",
           commStyle: "normal",
           selectedModel: "deepseek-chat",
+          currency,
           productsList: [],
           updatedAt: new Date().toISOString(),
         })
@@ -289,6 +391,17 @@ export default function AdminAIStudio() {
       localStorage.removeItem("FACILITE_DIAGNOSTIC_RULES");
       localStorage.removeItem("FACILITE_AI_STUDIO_CHAT_HISTORY");
     } catch {}
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      await fetch("/api/admin/ai-studio", {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    } catch (err) {
+      console.error("Erreur suppression config Supabase studio IA:", err);
+    }
 
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 3000);
@@ -601,6 +714,30 @@ ${productsContext}
             </button>
           </div>
         </div>
+
+        {/* Import ponctuel de l'ancienne sauvegarde locale (localStorage) —
+            n'apparaît que si Supabase n'a encore aucune config enregistrée
+            ET qu'une sauvegarde locale existe dans ce navigateur. */}
+        {hasLocalBackup && (
+          <div className="bg-amber-950/40 border border-amber-700/50 rounded-xl p-2.5 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 text-amber-200 text-[11px] font-semibold">
+              <i className="fa-solid fa-triangle-exclamation text-amber-400"></i>
+              <span>
+                Une configuration enregistrée localement sur ce poste a été trouvée, mais rien n'existe encore côté
+                serveur.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleImportLocalConfig}
+              disabled={importingLocal}
+              className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-gray-950 rounded-lg text-[11px] font-extrabold transition cursor-pointer disabled:opacity-50 flex items-center gap-1 flex-shrink-0"
+            >
+              <i className={`fa-solid ${importingLocal ? "fa-spinner fa-spin" : "fa-cloud-arrow-up"} text-[10px]`}></i>
+              <span>{importingLocal ? "Import..." : "Importer cette configuration"}</span>
+            </button>
+          </div>
+        )}
 
         {/* 2. BARRE D'ONGLETS DU STUDIO (Sub-nav avec persistance) */}
         <div className="flex items-center space-x-1 bg-[#181B20] border border-[#2A2F3A] p-1 rounded-xl overflow-x-auto scrollbar-none shadow-sm">
