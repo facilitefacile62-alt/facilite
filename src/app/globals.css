@@ -223,3 +223,17 @@ html.dark .divide-gray-100 > * + * {
   scrollbar-width: thin;
   scrollbar-color: #CBD5E1 #F1F5F9;
 }
+
+/* WhatsApp Chat Wallpaper Pattern */
+.bg-whatsapp-chat {
+  background-color: #EFEAE2;
+  background-image: radial-gradient(#00000008 1px, transparent 1px), radial-gradient(#00000005 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+html.dark .bg-whatsapp-chat {
+  background-color: #0B141A !important;
+  background-image: radial-gradient(#ffffff08 1px, transparent 1px), radial-gradient(#ffffff05 1px, transparent 1px);
+}
+

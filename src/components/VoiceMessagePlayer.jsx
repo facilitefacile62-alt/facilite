@@ -10,13 +10,9 @@ function formatAudioTime(totalSeconds) {
 }
 
 /**
- * Hauteurs de barres déterministes à partir de l'URL du fichier : pas une
- * vraie analyse de fréquence (décoder chaque note vocale d'un historique de
- * discussion potentiellement long serait coûteux), mais un motif stable et
- * propre à chaque message plutôt qu'un bloc uniforme — xorshift32 léger,
- * usage purement visuel, pas cryptographique.
+ * Hauteurs de barres déterministes style WhatsApp
  */
-function buildWaveformBars(seed, count = 32) {
+function buildWaveformBars(seed, count = 30) {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
@@ -28,14 +24,20 @@ function buildWaveformBars(seed, count = 32) {
     state ^= state >>> 17;
     state ^= state << 5;
     state >>>= 0;
-    bars.push(0.25 + (state % 100) / 100 * 0.75); // hauteur entre 25% et 100%
+    bars.push(0.25 + ((state % 100) / 100) * 0.75);
   }
   return bars;
 }
 
-export default function VoiceMessagePlayer({ src, variant = "received" }) {
+export default function VoiceMessagePlayer({
+  src,
+  variant = "received",
+  avatarUrl = null,
+  avatarInitials = null,
+  avatarColor = "bg-[#10E688]"
+}) {
   const audioRef = useRef(null);
-  const bars = useMemo(() => buildWaveformBars(src || "voice"), [src]);
+  const bars = useMemo(() => buildWaveformBars(src || "voice", 28), [src]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -52,9 +54,6 @@ export default function VoiceMessagePlayer({ src, variant = "received" }) {
     };
 
     const handleLoadedMetadata = () => {
-      // Bug connu Chrome : les blobs webm enregistrés via MediaRecorder
-      // rapportent souvent duration = Infinity tant qu'une recherche
-      // complète du flux n'a pas été forcée au moins une fois.
       if (!Number.isFinite(audio.duration)) {
         audio.currentTime = 1e101;
         audio.addEventListener("timeupdate", fixInfiniteDuration);
@@ -128,62 +127,91 @@ export default function VoiceMessagePlayer({ src, variant = "received" }) {
   const isSent = variant === "sent";
 
   return (
-    <div className="flex items-center gap-2 w-full min-w-0">
+    <div className="flex items-center gap-2.5 w-full min-w-[240px] sm:min-w-[280px]">
       <audio ref={audioRef} src={src} preload="metadata" />
 
+      {/* Bouton Play/Pause WhatsApp */}
       <button
         type="button"
         onClick={togglePlay}
         aria-label={isPlaying ? "Mettre en pause" : "Écouter la note vocale"}
-        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition cursor-pointer ${
-          isSent ? "bg-white/20 hover:bg-white/30 text-white" : "bg-[#2563EB]/10 hover:bg-[#2563EB]/20 text-[#2563EB]"
-        }`}
+        className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-transform active:scale-95 cursor-pointer bg-[#111B21] text-white hover:bg-black shadow-xs"
       >
         <i className={`fa-solid ${isPlaying ? "fa-pause" : "fa-play"} text-xs ${isPlaying ? "" : "ml-0.5"}`}></i>
       </button>
 
-      <div
-        onClick={handleSeekClick}
-        onKeyDown={handleSeekKeyDown}
-        tabIndex={0}
-        role="slider"
-        aria-label="Progression de la note vocale"
-        aria-valuemin={0}
-        aria-valuemax={Math.round(duration)}
-        aria-valuenow={Math.round(currentTime)}
-        className={`flex-1 min-w-0 h-8 flex items-center gap-[2px] cursor-pointer rounded-lg focus:outline-none focus:ring-2 ${
-          isSent ? "focus:ring-white/50" : "focus:ring-[#2563EB]/40"
-        }`}
-      >
-        {bars.map((height, i) => {
-          const played = i / bars.length <= progressRatio;
-          return (
+      {/* Waveform avec scrubber cyan WhatsApp */}
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+        <div
+          onClick={handleSeekClick}
+          onKeyDown={handleSeekKeyDown}
+          tabIndex={0}
+          role="slider"
+          aria-label="Progression de la note vocale"
+          aria-valuemin={0}
+          aria-valuemax={Math.round(duration)}
+          aria-valuenow={Math.round(currentTime)}
+          className="relative w-full h-7 flex items-center gap-[2.5px] cursor-pointer focus:outline-none"
+        >
+          {bars.map((height, i) => {
+            const played = i / bars.length <= progressRatio;
+            return (
+              <span
+                key={i}
+                className={`flex-1 rounded-full transition-colors ${
+                  played ? "bg-[#53BDEB]" : isSent ? "bg-[#7DB596]" : "bg-[#8696A0]"
+                }`}
+                style={{ height: `${Math.round(height * 100)}%` }}
+              />
+            );
+          })}
+
+          {/* Point indicateur de lecture cyan */}
+          {progressRatio > 0 && (
             <span
-              key={i}
-              className={`flex-1 rounded-full transition-colors ${
-                played ? (isSent ? "bg-white" : "bg-[#2563EB]") : isSent ? "bg-white/35" : "bg-gray-300"
-              }`}
-              style={{ height: `${Math.round(height * 100)}%` }}
+              className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#53BDEB] border-2 border-white shadow-xs pointer-events-none transition-all"
+              style={{ left: `calc(${progressRatio * 100}% - 6px)` }}
             />
-          );
-        })}
+          )}
+        </div>
+
+        {/* Temps & vitesse */}
+        <div className="flex items-center justify-between text-[10px] font-bold text-[#667781] px-0.5">
+          <span className="tabular-nums">
+            {formatAudioTime(isPlaying || currentTime > 0 ? currentTime : duration)}
+          </span>
+          <button
+            type="button"
+            onClick={cyclePlaybackRate}
+            title="Vitesse de lecture"
+            className="text-[9px] font-extrabold px-1 py-0.2 rounded bg-black/5 hover:bg-black/10 text-gray-700 transition cursor-pointer"
+          >
+            {playbackRate}x
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-col items-end flex-shrink-0 gap-1">
-        <button
-          type="button"
-          onClick={cyclePlaybackRate}
-          title="Vitesse de lecture"
-          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md leading-none transition cursor-pointer ${
-            isSent ? "bg-white/20 hover:bg-white/30 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-600"
-          }`}
-        >
-          {playbackRate}x
-        </button>
-        <span className={`text-[9px] font-bold tabular-nums ${isSent ? "text-white/80" : "text-gray-500"}`}>
-          {formatAudioTime(isPlaying || currentTime > 0 ? currentTime : duration)}
-        </span>
-      </div>
+      {/* Avatar avec mini badge microphone cyan (style WhatsApp) */}
+      {(avatarUrl || avatarInitials) && (
+        <div className="relative flex-shrink-0">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Avatar"
+              className="w-10 h-10 rounded-full object-cover shadow-2xs border border-white"
+            />
+          ) : (
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-xs shadow-2xs border border-white ${avatarColor}`}
+            >
+              {avatarInitials}
+            </div>
+          )}
+          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white border border-[#EFEAE2] flex items-center justify-center shadow-2xs">
+            <i className="fa-solid fa-microphone text-[#53BDEB] text-[8px]"></i>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

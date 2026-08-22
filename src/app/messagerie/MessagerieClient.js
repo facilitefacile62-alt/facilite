@@ -2432,114 +2432,107 @@ export default function MessagerieClient() {
             activeConvId ? "hidden md:flex" : "flex"
           }`}>
             {/* Header Recherche */}
-            <div className="p-4 border-b border-gray-150 flex flex-col space-y-3 flex-none">
+            {/* En-tête Discussions Style WhatsApp */}
+            <div className="p-3.5 sm:p-4 border-b border-gray-200 flex flex-col space-y-2.5 flex-none bg-[#FAF6F1]">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-lg font-extrabold text-gray-900">Messages</h2>
-                <button
-                  type="button"
-                  onClick={handleContactSupport}
-                  className="flex-shrink-0 flex items-center gap-1.5 text-[11px] font-extrabold text-white bg-gray-900 hover:bg-gray-800 px-3 py-1.5 rounded-xl transition cursor-pointer"
-                  title="Contacter le Support Facilite"
-                >
-                  <i className="fa-solid fa-headset"></i>
-                  <span>Support</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-lg font-black text-[#111B21] tracking-tight">Discussions</h2>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                    {filteredConversations.length}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <button
+                    type="button"
+                    onClick={handleContactSupport}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 transition cursor-pointer"
+                    title="Nouveau message / Support"
+                  >
+                    <i className="fa-solid fa-pen-to-square text-sm"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => triggerToast("Paramètres des discussions", "fa-gear")}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition cursor-pointer"
+                    title="Menu"
+                  >
+                    <i className="fa-solid fa-ellipsis-vertical text-sm"></i>
+                  </button>
+                </div>
               </div>
+
+              {/* Champ de recherche arrondi WhatsApp */}
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
-                  <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
+                  <i className="fa-solid fa-magnifying-glass text-[#8696A0] text-xs"></i>
                 </span>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t.searchPlaceholder}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/10 transition-all font-medium"
+                  placeholder="Rechercher ou démarrer une discussion..."
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm text-[#111B21] placeholder-[#8696A0] focus:outline-none focus:border-[#00A884] focus:ring-2 focus:ring-[#00A884]/15 transition-all font-medium shadow-2xs"
                 />
               </div>
             </div>
 
-            {/* Barre d'onglets de type de discussion (Offres d'emploi vs Demandes d'échange) */}
-            <div className="px-4 py-2 border-b border-gray-150 bg-gray-50 flex items-center space-x-1 flex-none">
+            {/* Barre de filtres pilules style WhatsApp */}
+            <div className="px-3 py-2 border-b border-gray-150 bg-[#FAF6F1] flex items-center space-x-1.5 overflow-x-auto no-scrollbar flex-none">
               <button
                 type="button"
                 onClick={() => setDiscussionTypeFilter("all")}
-                className={`flex-1 py-1.5 px-2 text-[11px] font-extrabold rounded-lg transition cursor-pointer text-center ${
-                  discussionTypeFilter === "all" ? "bg-white text-gray-900 shadow-xs border border-gray-200" : "text-gray-500 hover:text-gray-900"
+                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
+                  discussionTypeFilter === "all" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                 }`}
               >
-                Tous
+                Toutes
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab(filterTab === "unread" ? "all" : "unread")}
+                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                  filterTab === "unread" ? "bg-[#00A884] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                <span>Non lues</span>
+                {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0) > 0 && (
+                  <span className="bg-white text-[#00A884] text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                    {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
+                  </span>
+                )}
               </button>
               <button
                 type="button"
                 onClick={() => setDiscussionTypeFilter("OFFRE")}
-                className={`flex-1 py-1.5 px-2 text-[11px] font-extrabold rounded-lg transition cursor-pointer text-center flex items-center justify-center space-x-1 ${
-                  discussionTypeFilter === "OFFRE" ? "bg-emerald-600 text-white shadow-xs" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
+                  discussionTypeFilter === "OFFRE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                 }`}
               >
-                <span>💼 Offres</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiscussionTypeFilter("ECHANGE")}
-                className={`flex-1 py-1.5 px-2 text-[11px] font-extrabold rounded-lg transition cursor-pointer text-center flex items-center justify-center space-x-1 ${
-                  discussionTypeFilter === "ECHANGE" ? "bg-blue-600 text-white shadow-xs" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                }`}
-              >
-                <span>🎓 Demande de stage</span>
+                Offres
               </button>
               <button
                 type="button"
                 onClick={() => setDiscussionTypeFilter("SUPPORT")}
-                className={`flex-1 py-1.5 px-2 text-[11px] font-extrabold rounded-lg transition cursor-pointer text-center flex items-center justify-center space-x-1 ${
-                  discussionTypeFilter === "SUPPORT" ? "bg-gray-900 text-white shadow-xs" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
+                  discussionTypeFilter === "SUPPORT" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                 }`}
               >
-                <span>🎧 Support Facilite</span>
+                Support
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscussionTypeFilter("ECHANGE")}
+                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
+                  discussionTypeFilter === "ECHANGE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Stages
               </button>
             </div>
 
-            {/* Filtres de messages secondaires */}
-            <div className="px-4 pb-3 pt-2 border-b border-gray-150 flex items-center space-x-2 text-xs font-bold text-gray-500 bg-white flex-none">
-              <button
-                type="button"
-                onClick={() => setFilterTab("all")}
-                className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg transition cursor-pointer ${
-                  filterTab === "all" ? "bg-gray-100 text-gray-900" : "hover:bg-gray-50 text-gray-500 hover:text-gray-900"
-                }`}
-              >
-                <span>{t.filterAll}</span>
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setFilterTab("unread")}
-                className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg transition cursor-pointer relative ${
-                  filterTab === "unread" ? "bg-gray-100 text-gray-900" : "hover:bg-gray-50 text-gray-500 hover:text-gray-900"
-                }`}
-              >
-                <span className="relative flex items-center">
-                  <i className="fa-regular fa-comment-dots text-sm"></i>
-                  <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-gray-900"></span>
-                </span>
-                <span>{t.filterUnread}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilterTab("favorites")}
-                className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg transition cursor-pointer ${
-                  filterTab === "favorites" ? "bg-gray-100 text-gray-900" : "hover:bg-gray-50 text-gray-500 hover:text-gray-900"
-                }`}
-              >
-                <i className="fa-regular fa-heart text-sm"></i>
-                <span>{t.filterFavorites}</span>
-              </button>
-            </div>
-
-            {/* Liste des conversations */}
-            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-100">
-              {/* 🤖 Carte de discussion IA Épinglée : affichée uniquement sous l'onglet 'Tous' */}
+            {/* Liste des conversations WhatsApp */}
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-100 bg-white">
+              {/* 🤖 Carte de discussion Support RH IA Épinglée */}
               {discussionTypeFilter === "all" && (
                 <div
                   key={AI_PINNED_CHAT.id}
@@ -2550,45 +2543,38 @@ export default function MessagerieClient() {
                       loadAiMessagesFromSupabase(userSession.user.id);
                     }
                   }}
-                  className={`flex items-start space-x-3 p-4 cursor-pointer transition-all relative border-b border-emerald-200/80 ${
+                  className={`flex items-center space-x-3 p-3.5 cursor-pointer transition-all relative border-b border-emerald-100 ${
                     activeConvId === AI_PINNED_CHAT.id
-                      ? "bg-emerald-100/70 border-l-4 border-[#10E688]"
-                      : "bg-emerald-50/60 hover:bg-emerald-100/40"
+                      ? "bg-[#F0F2F5] border-l-4 border-[#00A884]"
+                      : "hover:bg-[#F5F6F6]"
                   }`}
                 >
                   <div className="relative flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm bg-white border border-emerald-200">
-                      <img src="/ouvrier.jpg" alt="IA" className="w-full h-full object-cover" />
+                    <div className="w-12 h-12 rounded-full overflow-hidden shadow-xs bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                      <img src="/logo.jpeg" alt="Support RH" className="w-full h-full object-cover" />
                     </div>
-                    <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-emerald-500 border-2 border-white"></span>
+                    <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-[#25D366] border-2 border-white"></span>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline mb-1">
-                      <div className="flex items-center space-x-1.5 min-w-0 pr-2">
-                        <h3 className="text-sm font-extrabold text-gray-900 truncate">
-                          {AI_PINNED_CHAT.name}
-                        </h3>
-                        <span className="bg-emerald-200 text-emerald-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                          📌 Épinglé
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-bold text-emerald-700">{AI_PINNED_CHAT.time}</span>
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <h3 className="text-[13px] font-black text-[#111B21] truncate flex items-center gap-1.5">
+                        <span>{AI_PINNED_CHAT.name}</span>
+                        <span className="text-emerald-700 text-[10px]" title="Épinglé">📌</span>
+                      </h3>
+                      <span className="text-[10px] font-bold text-[#667781] whitespace-nowrap">{AI_PINNED_CHAT.time}</span>
                     </div>
-                    <div className="flex items-center space-x-1 mb-0.5">
-                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded-md truncate max-w-[150px]">
-                        {AI_PINNED_CHAT.company}
-                      </span>
-                      <span className="text-[10px] font-medium text-gray-500 truncate">{AI_PINNED_CHAT.title}</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs truncate font-medium text-[#667781] flex items-center gap-1">
+                        <i className="fa-solid fa-wand-magic-sparkles text-[#00A884] text-[10px]"></i>
+                        <span>{AI_PINNED_CHAT.lastMessage}</span>
+                      </p>
                     </div>
-                    <p className="text-xs truncate font-medium text-gray-700">
-                      {AI_PINNED_CHAT.lastMessage}
-                    </p>
                   </div>
                 </div>
               )}
 
-              {/* Autres discussions filtrées */}
+              {/* Autres discussions */}
               {filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).length > 0 ? (
                 filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).map(conv => (
                   <div
@@ -2597,50 +2583,41 @@ export default function MessagerieClient() {
                       setActiveConvId(conv.id);
                       setMobileChatView(true);
                     }}
-                    className={`flex items-start space-x-3 p-4 cursor-pointer hover:bg-gray-50 transition-all relative ${
-                      activeConvId === conv.id ? "bg-[#2563EB]/5 border-l-4 border-[#2563EB]" : ""
+                    className={`flex items-center space-x-3 p-3.5 cursor-pointer hover:bg-[#F5F6F6] transition-all relative ${
+                      activeConvId === conv.id ? "bg-[#F0F2F5] border-l-4 border-[#00A884]" : ""
                     }`}
                   >
                     <div className="relative flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-extrabold text-sm shadow-inner ${conv.avatarColor}`}>
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-sm shadow-xs ${conv.avatarColor}`}>
                         {conv.avatarInitials}
                       </div>
                       {conv.online && (
-                        <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
+                        <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-[#25D366] border-2 border-white"></span>
                       )}
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-baseline mb-1">
+                      <div className="flex justify-between items-baseline mb-0.5">
                         <div className="flex items-center space-x-1.5 min-w-0 pr-2">
-                          <h3 className="text-sm font-extrabold text-gray-900 truncate">{conv.name}</h3>
-                          {conv.sendCount > 1 && (
-                            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0" title={`${conv.sendCount} candidatures envoyées`}>
-                              {conv.sendCount}
-                            </span>
-                          )}
+                          <h3 className="text-[13px] font-black text-[#111B21] truncate">{conv.name}</h3>
                           {conv.favorite && (
                             <i className="fa-solid fa-heart text-red-500 text-[10px]" title="Favori"></i>
                           )}
                         </div>
-                        <span className="text-[10px] font-bold text-gray-400">{conv.time}</span>
+                        <span className="text-[10px] font-bold text-[#667781] whitespace-nowrap">{conv.time}</span>
                       </div>
-                      <div className="flex items-center space-x-1 mb-0.5">
-                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md truncate max-w-[150px]">
-                          {conv.company}
-                        </span>
-                        <span className="text-[10px] font-medium text-gray-500 truncate">{conv.title}</span>
+                      <div className="flex items-center justify-between gap-1">
+                        <p className={`text-xs truncate flex items-center gap-1 ${conv.unreadCount > 0 ? "font-bold text-[#111B21]" : "text-[#667781]"}`}>
+                          <i className="fa-solid fa-check-double text-[#53BDEB] text-[10px]"></i>
+                          <span>{conv.lastMessage}</span>
+                        </p>
+                        {conv.unreadCount > 0 && (
+                          <span className="bg-[#25D366] text-white text-[10px] font-black min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center flex-shrink-0 shadow-2xs">
+                            {conv.unreadCount}
+                          </span>
+                        )}
                       </div>
-                      <p className={`text-xs truncate ${conv.unreadCount > 0 ? "font-bold text-gray-900" : "text-gray-500"}`}>
-                        {conv.lastMessage}
-                      </p>
                     </div>
-
-                    {conv.unreadCount > 0 && (
-                      <span className="absolute right-4 bottom-4 bg-red-500 text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center shadow-xs animate-bounce">
-                        {conv.unreadCount}
-                      </span>
-                    )}
                   </div>
                 ))
               ) : (
@@ -2673,13 +2650,13 @@ export default function MessagerieClient() {
 
           {/* COLONNE DROITE : CHAT ACTIF / LECTEUR D'E-MAIL CANDIDATURE */}
           <section className={`flex-1 flex flex-col h-full min-h-0 overflow-hidden ${
-            activeConversation?.isCandidature ? "bg-white" : "bg-[#FAF9F6]"
+            activeConversation?.isCandidature ? "bg-white" : "bg-[#EFEAE2] bg-whatsapp-chat"
           } relative ${
             activeConvId ? "flex" : "hidden md:flex"
           }`}>
             {activeConversation ? (
               <>
-                <div className="bg-white p-4 border-b border-gray-200 flex flex-col space-y-3 shadow-xs flex-none">
+                <div className="bg-[#FAF6F1] px-4 py-2.5 border-b border-gray-200 flex flex-col space-y-2 shadow-2xs flex-none">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3 min-w-0">
                       <button
@@ -2692,30 +2669,30 @@ export default function MessagerieClient() {
                         <i className="fa-solid fa-arrow-left text-lg"></i>
                       </button>
 
-                      <div className="relative">
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-extrabold text-sm shadow-inner ${activeConversation.avatarColor}`}>
+                      <div className="relative flex-shrink-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-sm shadow-xs ${activeConversation.avatarColor}`}>
                           {activeConversation.avatarInitials}
                         </div>
                         {activeConversation.online && (
-                          <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white"></span>
+                          <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-[#25D366] border-2 border-white"></span>
                         )}
                       </div>
 
                       <div className="min-w-0">
                         <div className="flex items-center space-x-2">
-                          <h2 className="text-sm font-extrabold text-gray-900 truncate leading-snug">{activeConversation.name}</h2>
+                          <h2 className="text-sm font-black text-[#111B21] truncate leading-snug">{activeConversation.name}</h2>
                           {activeConversation.isAI ? (
-                            <span className="hidden sm:inline-block text-[10px] font-extrabold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                            <span className="hidden sm:inline-block text-[9px] font-extrabold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md uppercase tracking-wider">
                               ⚡ IA 24/7
                             </span>
                           ) : (
-                            <span className="hidden sm:inline-block text-[10px] font-extrabold text-white bg-gray-900 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                            <span className="hidden sm:inline-block text-[9px] font-extrabold text-white bg-gray-900 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
                               {t.recruiterTitle}
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-gray-500 font-medium truncate">
-                          {activeConversation.title} — <span className="font-bold text-gray-800">{activeConversation.company}</span>
+                        <p className="text-[11px] text-[#667781] font-medium truncate">
+                          en ligne • <span className="font-bold text-gray-700">{activeConversation.company}</span>
                         </p>
                       </div>
                     </div>
@@ -2882,26 +2859,26 @@ export default function MessagerieClient() {
                   </div>
                 )}
 
-                {/* Messages scrollarea */}
+                {/* Messages scrollarea avec fond d'écran WhatsApp */}
                 <div
                   ref={messagesContainerRef}
                   className={`flex-1 min-h-0 overflow-y-auto ${
-                    activeConversation?.isCandidature ? "bg-white px-4 sm:px-8 py-5 space-y-6" : "p-4 space-y-4"
+                    activeConversation?.isCandidature ? "bg-white px-4 sm:px-8 py-5 space-y-6" : "bg-[#EFEAE2] bg-whatsapp-chat p-3 sm:p-4 space-y-2.5 custom-scrollbar"
                   }`}
                 >
                   {/* Séparateur visuel entre la zone épinglée et le fil chronologique */}
                   {pinnedMessage && (
                     <div className="flex items-center gap-3 pb-1">
-                      <div className="flex-1 h-px bg-gray-200"></div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      <div className="flex-1 h-px bg-gray-300/60"></div>
+                      <span className="text-[10px] font-bold text-[#54656F] uppercase tracking-wider bg-white/80 px-2.5 py-0.5 rounded-full shadow-2xs">
                         {selectedLang === "FR" ? "Discussion" : "Conversation"}
                       </span>
-                      <div className="flex-1 h-px bg-gray-200"></div>
+                      <div className="flex-1 h-px bg-gray-300/60"></div>
                     </div>
                   )}
 
                   {visibleMessages.length === 0 && discussionTypeFilter !== "all" && (
-                    <div className="text-center text-xs text-gray-400 italic py-6">
+                    <div className="text-center text-xs text-[#54656F] italic py-6">
                       {discussionTypeFilter === "OFFRE"
                         ? "Aucun échange lié à une candidature pour le moment."
                         : discussionTypeFilter === "SUPPORT"
@@ -2910,6 +2887,14 @@ export default function MessagerieClient() {
                     </div>
                   )}
 
+                  {/* Bandeau d'information sécurisé style WhatsApp */}
+                  <div className="flex items-center justify-center my-2">
+                    <span className="text-[11px] font-semibold text-[#54656F] bg-[#FFEECD]/90 border border-amber-300/60 px-3.5 py-1.5 rounded-lg shadow-2xs flex items-center gap-1.5 text-center max-w-md">
+                      <i className="fa-solid fa-lock text-[10px] text-amber-700"></i>
+                      <span>Les échanges avec le Support RH Facilité sont chiffrés et assistés par nos conseillers & IA.</span>
+                    </span>
+                  </div>
+
                   {visibleMessages.map((msg, index) => {
                     const prevMsg = visibleMessages[index - 1];
                     const showDateSeparator = shouldShowDateSeparator(msg, prevMsg);
@@ -2917,8 +2902,8 @@ export default function MessagerieClient() {
                     return (
                     <div key={msg.id}>
                       {showDateSeparator && (
-                        <div className="flex items-center justify-center my-3">
-                          <span className="text-[10px] font-extrabold text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                        <div className="flex items-center justify-center my-2.5">
+                          <span className="text-[10px] font-black text-[#54656F] bg-white/90 shadow-2xs px-3.5 py-1 rounded-lg uppercase tracking-wider">
                             {formatDateSeparatorLabel(resolveMessageDate(msg))}
                           </span>
                         </div>
@@ -2928,7 +2913,7 @@ export default function MessagerieClient() {
                       if (isOffreMessage) {
                         const parsed = parseCandidatureMessage(msg, userSession);
                         return (
-                          <div className="w-full max-w-4xl mx-auto space-y-5 pb-6 border-b border-gray-150 last:border-b-0">
+                          <div className="w-full max-w-4xl mx-auto space-y-5 pb-6 border-b border-gray-150 last:border-b-0 bg-white p-5 rounded-2xl shadow-xs">
                             {/* 1. OBJET / TITRE DE L'E-MAIL STYLE GMAIL */}
                             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-150 pb-4">
                               <div className="min-w-0 flex-1">
@@ -2960,109 +2945,108 @@ export default function MessagerieClient() {
                               </div>
                             </div>
 
-                              {/* 2. EXPÉDITEUR & DESTINATAIRE (STYLE GMAIL) */}
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex items-center space-x-3.5 min-w-0">
-                                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#10E688] to-emerald-600 text-white font-black text-sm flex items-center justify-center shadow-xs flex-shrink-0">
-                                    {(parsed.candidateName || "FA").slice(0, 2).toUpperCase()}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="flex flex-wrap items-baseline gap-x-2">
-                                      <strong className="text-xs sm:text-sm font-black text-gray-900 truncate">
-                                        {parsed.candidateName}
-                                      </strong>
-                                      <span className="text-[11px] text-gray-400 font-medium truncate">
-                                        &lt;{parsed.candidateEmail}&gt;
-                                      </span>
-                                    </div>
-                                    <div className="text-[11px] text-gray-600 font-medium flex items-center gap-1 mt-0.5">
-                                      <span>À :</span>
-                                      <span className="font-bold text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded text-[10px]">
-                                        {parsed.recipientEmail}
-                                      </span>
-                                      <span className="text-gray-400 font-semibold">({parsed.company})</span>
-                                    </div>
-                                  </div>
+                            {/* 2. EXPÉDITEUR & DESTINATAIRE (STYLE GMAIL) */}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center space-x-3.5 min-w-0">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#10E688] to-emerald-600 text-white font-black text-sm flex items-center justify-center shadow-xs flex-shrink-0">
+                                  {(parsed.candidateName || "FA").slice(0, 2).toUpperCase()}
                                 </div>
-
-                                <div className="text-[10px] font-bold text-gray-400 whitespace-nowrap flex-shrink-0">
-                                  {msg.time}
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-baseline gap-x-2">
+                                    <strong className="text-xs sm:text-sm font-black text-gray-900 truncate">
+                                      {parsed.candidateName}
+                                    </strong>
+                                    <span className="text-[11px] text-gray-400 font-medium truncate">
+                                      &lt;{parsed.candidateEmail}&gt;
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-gray-600 font-medium flex items-center gap-1 mt-0.5">
+                                    <span>À :</span>
+                                    <span className="font-bold text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded text-[10px]">
+                                      {parsed.recipientEmail}
+                                    </span>
+                                    <span className="text-gray-400 font-semibold">({parsed.company})</span>
+                                  </div>
                                 </div>
                               </div>
 
-                              {/* 3. CORPS DU MESSAGE (LE TEXTE PROPRE STYLE E-MAIL) */}
-                              <div className="text-xs sm:text-sm text-gray-800 leading-relaxed font-normal bg-[#FAF9F6] p-4 sm:p-5 rounded-xl border border-gray-200/80 space-y-3.5">
-                                {/* Encadré des coordonnées du destinataire à l'intérieur du message */}
-                                {parsed.recipientEmail && (
-                                  <div className="bg-white p-3 rounded-lg border border-gray-200/90 shadow-2xs space-y-1.5 text-xs">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="text-gray-500 font-bold min-w-[95px]">📧 Destinataire :</span>
-                                      <span className="font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 break-all">
-                                        {parsed.recipientEmail}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="text-gray-500 font-bold min-w-[95px]">🏢 Entreprise :</span>
-                                      <span className="font-extrabold text-gray-900">{parsed.company}</span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="text-gray-500 font-bold min-w-[95px]">💼 Poste :</span>
-                                      <span className="font-extrabold text-emerald-800">{parsed.jobTitle}</span>
-                                    </div>
-                                  </div>
-                                )}
-
-                                <p className="font-semibold text-gray-700">Madame, Monsieur,</p>
-                                
-                                <p className="whitespace-pre-wrap text-gray-800">
-                                  {parsed.coverMessage
-                                    ? parsed.coverMessage
-                                    : `Veuillez trouver ci-joint mon CV ainsi que ma candidature pour le poste de ${parsed.jobTitle} au sein de l'entreprise ${parsed.company}.\n\nJe reste à votre entière disposition pour tout échange ou entretien éventuel.`}
-                                </p>
-
-                                <p className="font-semibold text-gray-700 pt-1">
-                                  Bien cordialement,<br />
-                                  <span className="text-gray-900 font-extrabold">{parsed.candidateName}</span>
-                                </p>
+                              <div className="text-[10px] font-bold text-gray-400 whitespace-nowrap flex-shrink-0">
+                                {msg.time}
                               </div>
+                            </div>
 
-                              {/* 4. PIÈCES JOINTES EN BAS (VIGNETTES STYLE GMAIL) */}
-                              {(msg.attachment_url || msg.file) && (
-                                <div className="pt-3 border-t border-gray-150">
-                                  <div className="flex items-center justify-between text-xs text-gray-500 font-bold mb-3">
-                                    <span>1 pièce jointe • Analysé & Sécurisé par Facilité 🛡️</span>
+                            {/* 3. CORPS DU MESSAGE (LE TEXTE PROPRE STYLE E-MAIL) */}
+                            <div className="text-xs sm:text-sm text-gray-800 leading-relaxed font-normal bg-[#FAF9F6] p-4 sm:p-5 rounded-xl border border-gray-200/80 space-y-3.5">
+                              {parsed.recipientEmail && (
+                                <div className="bg-white p-3 rounded-lg border border-gray-200/90 shadow-2xs space-y-1.5 text-xs">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-gray-500 font-bold min-w-[95px]">📧 Destinataire :</span>
+                                    <span className="font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 break-all">
+                                      {parsed.recipientEmail}
+                                    </span>
                                   </div>
-
-                                  <div className="flex flex-wrap gap-3">
-                                    <ChatAttachmentUrl path={msg.attachment_url}>
-                                      {(resolvedUrl) => (
-                                        <a
-                                          href={resolvedUrl || "#"}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          download={msg.file_name || "CV_Candidature.pdf"}
-                                          className="w-full sm:w-72 bg-white border border-gray-200 hover:border-gray-400 rounded-2xl p-3.5 flex items-center space-x-3.5 transition-all shadow-xs hover:shadow-md group/att cursor-pointer"
-                                        >
-                                          <div className="w-12 h-14 bg-red-50 text-red-500 rounded-xl flex flex-col items-center justify-center border border-red-100 flex-shrink-0 group-hover/att:scale-105 transition-transform">
-                                            <i className="fa-solid fa-file-pdf text-xl"></i>
-                                            <span className="text-[8px] font-black uppercase mt-0.5">PDF</span>
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-bold text-gray-900 truncate group-hover/att:text-blue-600 transition-colors">
-                                              {msg.file_name || "CV_Candidature.pdf"}
-                                            </p>
-                                            <p className="text-[10px] text-gray-400 font-medium">Document PDF</p>
-                                          </div>
-                                          <div className="w-8 h-8 rounded-full bg-gray-100 group-hover/att:bg-blue-50 text-gray-500 group-hover/att:text-blue-600 flex items-center justify-center flex-shrink-0 transition-colors">
-                                            <i className="fa-solid fa-download text-xs"></i>
-                                          </div>
-                                        </a>
-                                      )}
-                                    </ChatAttachmentUrl>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-gray-500 font-bold min-w-[95px]">🏢 Entreprise :</span>
+                                    <span className="font-extrabold text-gray-900">{parsed.company}</span>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-gray-500 font-bold min-w-[95px]">💼 Poste :</span>
+                                    <span className="font-extrabold text-emerald-800">{parsed.jobTitle}</span>
                                   </div>
                                 </div>
                               )}
+
+                              <p className="font-semibold text-gray-700">Madame, Monsieur,</p>
+                              
+                              <p className="whitespace-pre-wrap text-gray-800">
+                                {parsed.coverMessage
+                                  ? parsed.coverMessage
+                                  : `Veuillez trouver ci-joint mon CV ainsi que ma candidature pour le poste de ${parsed.jobTitle} au sein de l'entreprise ${parsed.company}.\n\nJe reste à votre entière disposition pour tout échange ou entretien éventuel.`}
+                              </p>
+
+                              <p className="font-semibold text-gray-700 pt-1">
+                                Bien cordialement,<br />
+                                <span className="text-gray-900 font-extrabold">{parsed.candidateName}</span>
+                              </p>
                             </div>
+
+                            {/* 4. PIÈCES JOINTES EN BAS (VIGNETTES STYLE GMAIL) */}
+                            {(msg.attachment_url || msg.file) && (
+                              <div className="pt-3 border-t border-gray-150">
+                                <div className="flex items-center justify-between text-xs text-gray-500 font-bold mb-3">
+                                  <span>1 pièce jointe • Analysé & Sécurisé par Facilité 🛡️</span>
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                  <ChatAttachmentUrl path={msg.attachment_url}>
+                                    {(resolvedUrl) => (
+                                      <a
+                                        href={resolvedUrl || "#"}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        download={msg.file_name || "CV_Candidature.pdf"}
+                                        className="w-full sm:w-72 bg-white border border-gray-200 hover:border-gray-400 rounded-2xl p-3.5 flex items-center space-x-3.5 transition-all shadow-xs hover:shadow-md group/att cursor-pointer"
+                                      >
+                                        <div className="w-12 h-14 bg-red-50 text-red-500 rounded-xl flex flex-col items-center justify-center border border-red-100 flex-shrink-0 group-hover/att:scale-105 transition-transform">
+                                          <i className="fa-solid fa-file-pdf text-xl"></i>
+                                          <span className="text-[8px] font-black uppercase mt-0.5">PDF</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-xs font-bold text-gray-900 truncate group-hover/att:text-blue-600 transition-colors">
+                                            {msg.file_name || "CV_Candidature.pdf"}
+                                          </p>
+                                          <p className="text-[10px] text-gray-400 font-medium">Document PDF</p>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full bg-gray-100 group-hover/att:bg-blue-50 text-gray-500 group-hover/att:text-blue-600 flex items-center justify-center flex-shrink-0 transition-colors">
+                                          <i className="fa-solid fa-download text-xs"></i>
+                                        </div>
+                                      </a>
+                                    )}
+                                  </ChatAttachmentUrl>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         );
                       }
 
@@ -3072,27 +3056,15 @@ export default function MessagerieClient() {
                             if (node) messageNodesRef.current[msg.id] = node;
                             else delete messageNodesRef.current[msg.id];
                           }}
-                          className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"} items-end space-x-1.5 rounded-2xl transition-all duration-500`}
+                          className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"} items-end space-x-1.5 transition-all duration-300`}
                         >
-                          {msg.sender === "them" && (
-                            <div className="relative flex-shrink-0">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-extrabold text-[10px] shadow-inner ${activeConversation.avatarColor}`}>
-                                {activeConversation.avatarInitials}
-                              </div>
-                              {msg.attachment_type === "audio" && (
-                                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-gray-500 border-2 border-[#FAF9F6] flex items-center justify-center">
-                                  <i className="fa-solid fa-microphone text-white text-[7px]"></i>
-                                </span>
-                              )}
-                            </div>
-                          )}
-
+                          {/* Bulle de Message Style WhatsApp 1:1 */}
                           <div
-                            className={`max-w-[75%] md:max-w-md rounded-2xl p-3.5 shadow-xs border relative group transition-all hover:shadow-md ${
+                            className={`max-w-[88%] sm:max-w-md md:max-w-lg rounded-2xl px-3.5 py-2.5 shadow-2xs relative group transition-all ${
                               msg.sender === "me"
-                                ? "bg-[#2563EB] text-white border-blue-600 rounded-br-xs"
-                                : "bg-white text-gray-800 border-gray-200 rounded-bl-xs"
-                            } ${msg.isPinned ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-[#FAF9F6]" : ""}`}
+                                ? "bg-[#D9FDD3] dark:bg-[#005C4B] text-[#111B21] dark:text-[#E9EDEF] rounded-tr-xs border border-[#C5EFC0]/70"
+                                : "bg-white text-[#111B21] rounded-tl-xs border border-black/5"
+                            } ${msg.isPinned ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-[#EFEAE2]" : ""}`}
                           >
                             {/* Action d'épinglage */}
                             {msg.persisted && (
@@ -3113,11 +3085,17 @@ export default function MessagerieClient() {
                             )}
 
                             {msg.isPinned && (
-                              <div className={`flex items-center gap-1 mb-1.5 text-[9px] font-extrabold uppercase tracking-wider ${
-                                msg.sender === "me" ? "text-amber-200" : "text-amber-600"
-                              }`}>
+                              <div className="flex items-center gap-1 mb-1 text-[9px] font-black uppercase tracking-wider text-amber-700">
                                 <span aria-hidden="true">📌</span>
                                 <span>{t.pinnedLabel}</span>
+                              </div>
+                            )}
+
+                            {/* Encadré Citation / Réponse Style WhatsApp */}
+                            {msg.replyQuote && (
+                              <div className="mb-2 p-2 rounded-lg bg-black/[0.04] dark:bg-black/20 border-l-4 border-[#00A884] text-xs">
+                                <p className="font-black text-[#00A884] text-[11px] mb-0.5">{msg.replyQuote.author || "Vous"}</p>
+                                <p className="text-gray-700 dark:text-gray-200 line-clamp-2 text-[11px]">{msg.replyQuote.text}</p>
                               </div>
                             )}
 
@@ -3126,14 +3104,14 @@ export default function MessagerieClient() {
                               <button
                                 type="button"
                                 onClick={() => setActiveInterviewId(msg.attachment_url)}
-                                className="flex items-center space-x-3 bg-[#2563EB]/90 hover:bg-[#2563EB] text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition cursor-pointer w-full"
+                                className="flex items-center space-x-3 bg-[#00A884] hover:bg-[#008f6f] text-white p-3 rounded-2xl mb-2 text-left shadow-xs transition cursor-pointer w-full"
                               >
                                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
                                   <i className="fa-solid fa-video text-lg"></i>
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <span className="text-xs font-extrabold block">Entretien vidéo</span>
-                                  <span className="text-[10px] opacity-80 block font-semibold truncate">
+                                  <span className="text-xs font-black block">Entretien vidéo</span>
+                                  <span className="text-[10px] opacity-90 block font-medium truncate">
                                     {msg.file_name || "Rejoindre l'entretien"}
                                   </span>
                                 </div>
@@ -3149,36 +3127,39 @@ export default function MessagerieClient() {
                                     href={resolvedUrl || "#"}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center space-x-3 bg-blue-600/90 hover:bg-blue-700 text-white p-3 rounded-2xl mb-2 border border-blue-400/30 text-left shadow-xs transition group/file"
+                                    className="flex items-center space-x-3 bg-black/[0.04] hover:bg-black/[0.08] dark:bg-white/10 dark:hover:bg-white/15 p-2.5 rounded-xl mb-2 text-left transition group/file"
                                   >
-                                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white flex-shrink-0">
-                                      <i className={`fa-solid ${msg.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-xl`}></i>
+                                    <div className="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                      <i className={`fa-solid ${msg.attachment_type === "pdf" ? "fa-file-pdf" : "fa-file-lines"} text-lg`}></i>
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <span className="text-xs font-extrabold block truncate max-w-xs md:max-w-md">
+                                      <span className="text-xs font-bold block truncate max-w-xs text-[#111B21] dark:text-white">
                                         {msg.file_name || msg.file?.name || "Document"}
                                       </span>
-                                      <span className="text-[10px] opacity-80 block font-semibold">
-                                        {msg.file_size || msg.file?.size || "PDF / Fichier"}
+                                      <span className="text-[10px] text-[#667781] block font-medium">
+                                        {msg.file_size || msg.file?.size || "Document joint"}
                                       </span>
                                     </div>
-                                    <div className="w-8 h-8 rounded-full bg-white/20 group-hover/file:bg-white/30 flex items-center justify-center text-white transition">
-                                      <i className="fa-solid fa-download text-xs"></i>
+                                    <div className="w-7 h-7 rounded-full bg-white/80 flex items-center justify-center text-[#111B21] shadow-2xs">
+                                      <i className="fa-solid fa-arrow-down text-xs"></i>
                                     </div>
                                   </a>
                                 )}
                               </ChatAttachmentUrl>
                             )}
 
-                            {/* Note Vocale */}
+                            {/* Note Vocale WhatsApp */}
                             {msg.attachment_type === "audio" && msg.attachment_url && (
-                              <div className="mb-1 min-w-[200px] md:min-w-[240px]">
+                              <div className="mb-1 w-full">
                                 <ChatAttachmentUrl path={msg.attachment_url}>
                                   {(resolvedUrl) =>
                                     resolvedUrl && (
                                       <VoiceMessagePlayer
                                         src={resolvedUrl}
                                         variant={msg.sender === "me" ? "sent" : "received"}
+                                        avatarUrl={msg.sender === "them" ? (activeConversation.avatar || "/logo.jpeg") : (userAvatarUrl || null)}
+                                        avatarInitials={msg.sender === "them" ? activeConversation.avatarInitials : ((userSession?.user?.user_metadata?.full_name || "Moi").slice(0, 2).toUpperCase())}
+                                        avatarColor={msg.sender === "them" ? activeConversation.avatarColor : "bg-black"}
                                       />
                                     )
                                   }
@@ -3186,19 +3167,21 @@ export default function MessagerieClient() {
                               </div>
                             )}
 
+                            {/* Texte du message */}
                             {msg.text && !(msg.attachment_url && msg.attachment_type !== "audio" && msg.text.startsWith("📎")) && (
-                              <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                              <p className="text-xs sm:text-[13px] font-medium leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
                             )}
                             
-                            <div className="flex items-center justify-end space-x-1 mt-1 text-[9px] opacity-75 font-bold" suppressHydrationWarning>
+                            {/* Horodatage & Statut Doubles Coches WhatsApp */}
+                            <div className="flex items-center justify-end space-x-1 mt-1 text-[10px] font-semibold text-[#667781] dark:text-[#8696A0] select-none" suppressHydrationWarning>
                               <span>{msg.time}</span>
                               {msg.sender === "me" && (
-                                <span>
-                                  {msg.status === "sent" && <i className="fa-solid fa-check"></i>}
-                                  {msg.status === "delivered" && <i className="fa-solid fa-check-double text-gray-300"></i>}
-                                  {msg.status === "read" && <i className="fa-solid fa-check-double text-[#10E688]"></i>}
+                                <span className="flex items-center ml-0.5">
+                                  {msg.status === "sent" && <i className="fa-solid fa-check text-[#8696A0] text-[10px]"></i>}
+                                  {msg.status === "delivered" && <i className="fa-solid fa-check-double text-[#8696A0] text-[10px]"></i>}
+                                  {(msg.status === "read" || !msg.status) && <i className="fa-solid fa-check-double text-[#53BDEB] text-[10px]"></i>}
                                   {msg.status === "error" && (
-                                    <i className="fa-solid fa-triangle-exclamation text-red-400" title="Échec de l'envoi"></i>
+                                    <i className="fa-solid fa-triangle-exclamation text-red-500 text-[10px]" title="Échec de l'envoi"></i>
                                   )}
                                 </span>
                               )}
@@ -3213,13 +3196,10 @@ export default function MessagerieClient() {
 
                   {(isTyping || (activeConvId === AI_PINNED_CHAT.id && assistantLoading)) && (
                     <div className="flex justify-start items-end space-x-2 animate-pulse">
-                      <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white font-extrabold text-[10px] shadow-inner ${activeConversation.avatarColor}`}>
-                        {activeConversation.avatarInitials}
-                      </div>
-                      <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-xs px-4 py-2.5 shadow-xs flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                      <div className="bg-white border border-black/5 rounded-2xl rounded-tl-xs px-4 py-2.5 shadow-2xs flex items-center space-x-1.5">
+                        <div className="w-1.5 h-1.5 bg-[#00A884] rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                        <div className="w-1.5 h-1.5 bg-[#00A884] rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                        <div className="w-1.5 h-1.5 bg-[#00A884] rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
                       </div>
                     </div>
                   )}
@@ -3235,7 +3215,7 @@ export default function MessagerieClient() {
                     <span>Cette candidature a été transmise par e-mail au recruteur • Dossier officiel archivé en lecture seule</span>
                   </div>
                 ) : (
-                <div className="bg-white p-3 sm:p-4 border-t border-gray-200 relative flex-none">
+                <div className="bg-[#FAF6F1] p-3 sm:p-4 border-t border-gray-200 relative flex-none">
                   {showQuickActions && (
                     <div className="absolute bottom-full left-3 sm:left-4 bg-white border border-gray-200 p-2 rounded-2xl shadow-xl flex gap-2 z-40 mb-2 animate-fade-in-up">
                       <button
@@ -3310,7 +3290,7 @@ export default function MessagerieClient() {
                         </button>
                       </div>
                     </div>
-                  ) : activeConversation.isAI ? (
+                  ) : (
                     <form onSubmit={handleSendMessage} className="relative">
                       {/* Popover actions rapides IA */}
                       {showQuickActions && (
@@ -3343,7 +3323,7 @@ export default function MessagerieClient() {
                         </div>
                       )}
 
-                      {/* Boîte de prompt sombre arrondie style Lovable/Claude */}
+                      {/* Boîte de prompt sombre arrondie style Lovable/Claude unifiée */}
                       <div className="bg-[#0b0c0f] border border-[#222630] hover:border-[#323846] focus-within:border-gray-500 rounded-[24px] p-3 sm:p-3.5 shadow-xl transition-all">
                         <textarea
                           value={messageText}
@@ -3355,7 +3335,7 @@ export default function MessagerieClient() {
                             }
                           }}
                           rows={2}
-                          placeholder="Posez une question, demandez un conseil CV ou orientation..."
+                          placeholder={activeConversation.isAI ? "Posez une question, demandez un conseil CV ou orientation..." : "Entrez votre message (Entrée pour envoyer)..."}
                           className="w-full bg-transparent text-white placeholder-gray-500 text-xs sm:text-sm leading-relaxed resize-none focus:outline-none custom-scrollbar"
                           style={{ maxHeight: "120px" }}
                         />
@@ -3368,7 +3348,7 @@ export default function MessagerieClient() {
                               className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition cursor-pointer ${
                                 showQuickActions ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white"
                               }`}
-                              title="Actions & Suggestions IA"
+                              title="Actions rapides & Suggestions"
                             >
                               <i className="fa-solid fa-plus"></i>
                             </button>
@@ -3377,15 +3357,24 @@ export default function MessagerieClient() {
                               type="button"
                               onClick={handleAttachmentClick}
                               className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[11px] font-medium flex items-center gap-1.5 transition cursor-pointer"
-                              title="Joindre un fichier"
+                              title="Joindre un fichier ou CV"
                             >
                               <i className="fa-solid fa-paperclip text-[10px]"></i>
                               <span>Attach</span>
                             </button>
 
-                            <div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 text-[11px] font-medium flex items-center gap-1.5 select-none">
+                            <button
+                              type="button"
+                              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                              className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-amber-400 text-xs flex items-center justify-center transition cursor-pointer"
+                              title="Émojis"
+                            >
+                              <i className="fa-regular fa-smile text-xs"></i>
+                            </button>
+
+                            <div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 text-[11px] font-medium flex items-center gap-1.5 select-none hidden sm:inline-flex">
                               <i className="fa-solid fa-globe text-[10px] text-gray-400"></i>
-                              <span>Public</span>
+                              <span>{activeConversation.isAI ? "Support RH" : "Direct"}</span>
                             </div>
                           </div>
 
@@ -3416,84 +3405,10 @@ export default function MessagerieClient() {
                         </div>
                       </div>
                     </form>
-                  ) : (
-                    <form onSubmit={handleSendMessage} className="flex items-center space-x-1 sm:space-x-1.5">
-                      {/* Galerie photo — réutilise le sélecteur de fichier existant
-                          (accepte déjà .png/.jpg/.jpeg), pas de doublon de logique. */}
-                      <button
-                        type="button"
-                        disabled={uploadingFile}
-                        onClick={handleAttachmentClick}
-                        className="text-gray-400 hover:text-blue-600 transition hover:bg-blue-50 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer disabled:opacity-50"
-                        title="Galerie photo"
-                      >
-                        <i className="fa-solid fa-image text-base"></i>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={startVoiceRecording}
-                        className="text-gray-400 hover:text-red-600 transition hover:bg-red-50 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
-                        title="Enregistrer un message vocal"
-                      >
-                        <i className="fa-solid fa-microphone text-base"></i>
-                      </button>
-
-                      {/* "+" Stickers / GIF — regroupés dans un petit popover
-                          plutôt qu'affichés en continu, pour ne jamais faire
-                          déborder la barre sur les petits écrans. */}
-                      <button
-                        type="button"
-                        onClick={() => setShowQuickActions(!showQuickActions)}
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition cursor-pointer ${
-                          showQuickActions ? "text-white bg-gray-700" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-                        }`}
-                        title="Stickers, GIF"
-                      >
-                        <i className="fa-solid fa-plus text-base"></i>
-                      </button>
-
-                      <input
-                        type="text"
-                        value={messageText}
-                        onChange={(e) => setMessageText(e.target.value)}
-                        placeholder="Aa"
-                        className="flex-1 min-w-0 bg-gray-100 border border-transparent rounded-full px-4 py-2.5 text-sm font-medium text-gray-900 focus:outline-none focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-[#2563EB]/10 transition-all placeholder-gray-400"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className="text-gray-400 hover:text-amber-500 transition hover:bg-amber-50 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer"
-                        title={t.emojiTooltip}
-                      >
-                        <i className="fa-regular fa-smile text-base"></i>
-                      </button>
-
-                      {/* Like (pouce bleu, style Messenger) quand le champ est
-                          vide, sinon Envoyer — jamais les deux à la fois. */}
-                      {messageText.trim() ? (
-                        <button
-                          type="submit"
-                          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all cursor-pointer bg-[#2563EB] text-white hover:bg-blue-700 shadow-md hover:scale-105 active:scale-95"
-                        >
-                          <i className="fa-solid fa-paper-plane text-sm"></i>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleSendMessage(null, "👍")}
-                          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all cursor-pointer text-[#2563EB] hover:bg-blue-50 hover:scale-110 active:scale-95"
-                          title="Envoyer un pouce bleu"
-                        >
-                          <i className="fa-solid fa-thumbs-up text-lg"></i>
-                        </button>
-                      )}
-                    </form>
                   )}
                 </div>
-                )}
-              </>
+              )}
+            </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50">
                 <div className="w-20 h-20 bg-blue-50 border border-blue-100 text-blue-500 rounded-[2rem] flex items-center justify-center shadow-xs mb-6">
