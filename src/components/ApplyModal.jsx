@@ -50,12 +50,17 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             setFullName(session.user.user_metadata?.full_name || session.user.email.split("@")[0] || "");
           }
 
-          // Charger la liste des CVs existants — uniquement ceux avec un vrai fichier
+          // Charger la liste des CVs existants — uniquement ceux avec un vrai
+          // fichier. Le CV épinglé (is_pinned, point 9 — au plus un par
+          // candidat) est trié en premier : la présélection ci-dessous reste
+          // resumesList[0], mais c'est désormais un choix délibéré du
+          // candidat plutôt que simplement "le plus récent".
           const { data: resumesList } = await supabase
             .from("resumes")
             .select("*")
             .eq("user_id", session.user.id)
             .not("file_url", "is", null)
+            .order("is_pinned", { ascending: false })
             .order("created_at", { ascending: false });
 
           setResumes(resumesList || []);
@@ -392,7 +397,10 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
                             disabled={loading}
                           />
                           <i className="fa-solid fa-file-pdf text-emerald-600 text-sm"></i>
-                          <span className="truncate flex-1">{cv.title}</span>
+                          <span className="truncate flex-1 flex items-center gap-1">
+                            {cv.title}
+                            {cv.is_pinned && <i className="fa-solid fa-thumbtack text-emerald-500 text-[10px]" title="CV épinglé"></i>}
+                          </span>
                           <span className="text-[10px] text-gray-400 font-normal">
                             {new Date(cv.created_at).toLocaleDateString("fr-FR")}
                           </span>

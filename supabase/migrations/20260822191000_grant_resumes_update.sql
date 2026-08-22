@@ -1,0 +1,20 @@
+-- Trouvaille en marge du point 9 (CV épinglé, 2026-08-22) : `authenticated`
+-- n'a JAMAIS eu de GRANT UPDATE sur public.resumes (confirmé par
+-- information_schema.role_table_grants). Sans surprise vu qu'aucun appel
+-- .from("resumes").update(...) n'existe nulle part dans le dépôt avant ce
+-- point : creer-cv/page.js ne fait que des INSERT (nouvelle ligne à chaque
+-- sauvegarde), la suppression passe par la fonction dédiée
+-- delete_own_resume() (SECURITY DEFINER, pas besoin de GRANT table). Le
+-- nouveau bouton "Épingler" (is_pinned) est le premier UPDATE direct côté
+-- client sur cette table, et échoue donc avec "permission denied for table
+-- resumes" sans ce GRANT.
+--
+-- Scopé à la seule colonne is_pinned, pas un GRANT UPDATE table entière :
+-- c'est le patron déjà établi dans ce schéma (ex. profiles, 79 GRANT
+-- colonne existants pour authenticated — jamais un GRANT UPDATE de table
+-- brut) — défense en profondeur au-delà de la RLS, qui limite déjà les
+-- LIGNES mais pas les COLONNES modifiables. La RLS ("Modification de ses
+-- propres CV", auth.uid() = user_id) reste la garde principale ; ce GRANT
+-- colonne empêche en plus qu'un appel direct tente de modifier n'importe
+-- quelle autre colonne (content, ats_score, file_url...) par ce chemin.
+GRANT UPDATE (is_pinned) ON public.resumes TO authenticated;

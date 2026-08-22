@@ -86,6 +86,31 @@ export default function MesCvsPage() {
     return () => supabase.removeChannel(channel);
   }, [userSession?.user?.id]);
 
+  // Épingle/dépingle un CV — au plus un CV épinglé par candidat (index
+  // unique partiel resumes.idx_resumes_one_pinned_per_user), donc on
+  // dépingle explicitement l'ancien avant de poser le nouveau plutôt que de
+  // laisser l'UPDATE échouer sur la contrainte.
+  const handleTogglePin = async (resume) => {
+    setBusyId(resume.id);
+    try {
+      if (resume.is_pinned) {
+        await supabase.from("resumes").update({ is_pinned: false }).eq("id", resume.id);
+      } else {
+        await supabase
+          .from("resumes")
+          .update({ is_pinned: false })
+          .eq("user_id", userSession.user.id)
+          .eq("is_pinned", true);
+        await supabase.from("resumes").update({ is_pinned: true }).eq("id", resume.id);
+      }
+      setResumes((prev) => prev.map((r) => ({ ...r, is_pinned: r.id === resume.id ? !resume.is_pinned : false })));
+    } catch (err) {
+      console.error("Erreur épinglage CV:", err);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handleDownloadImported = async (resume) => {
     if (!resume.file_url) return;
     setBusyId(resume.id);
@@ -202,7 +227,14 @@ export default function MesCvsPage() {
                       <i className="fa-solid fa-file-lines"></i>
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold text-gray-900 truncate">{resume.title || "Mon CV"}</p>
+                      <p className="font-bold text-gray-900 truncate flex items-center gap-1.5">
+                        {resume.title || "Mon CV"}
+                        {resume.is_pinned && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[10px] font-extrabold shrink-0">
+                            <i className="fa-solid fa-thumbtack"></i> Épinglé
+                          </span>
+                        )}
+                      </p>
                       <p className="text-[11px] text-gray-400">
                         {resume.type === "created" ? "Créé sur Facilite" : "Importé"} ·{" "}
                         {new Date(resume.created_at).toLocaleDateString("fr-FR")}
@@ -211,6 +243,18 @@ export default function MesCvsPage() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleTogglePin(resume)}
+                      disabled={busyId === resume.id}
+                      title={resume.is_pinned ? "Ne plus présélectionner ce CV à la candidature" : "Présélectionner ce CV à la candidature"}
+                      className={`px-3 py-1.5 text-[11px] font-extrabold rounded-lg transition disabled:opacity-50 cursor-pointer ${
+                        resume.is_pinned
+                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      {busyId === resume.id ? "..." : resume.is_pinned ? "Épinglé" : "Épingler"}
+                    </button>
                     {resume.type === "created" && (
                       <Link
                         href={`/creer-cv?resumeId=${resume.id}`}
