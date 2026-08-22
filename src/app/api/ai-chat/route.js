@@ -3,6 +3,7 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
 import { AiChatPayloadSchema } from "@/lib/validation";
 import { extractTextFromFile } from "@/lib/documentParser";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -33,6 +34,71 @@ Sois clair, dynamique, courtois, hautement professionnel et structuré dans tes 
 
 const GEMINI_VISION_MODEL = "gemini-flash-latest";
 const BASE64_PREFIXE = /^data:[a-zA-Z0-9/\-+.]+;base64,/;
+
+// Copie exacte de COMMUNICATION_STYLES (src/components/AdminAIStudio.jsx) —
+// même id/modifier, pour composer côté serveur EXACTEMENT le même
+// fullSystemPrompt que celui déjà construit côté client dans le Playground
+// admin. Toute dérive entre les deux redonnerait deux comportements
+// différents pour un même réglage enregistré.
+const COMMUNICATION_STYLE_MODIFIERS = {
+  normal: "Adopte un ton naturel, chaleureux, bienveillant et professionnel.",
+  concis: "Sois direct et ultra-synthétique. Limite tes réponses à 2-4 phrases ou points clés sans bavardage.",
+  explicatif: "Donne des explications complètes et pédagogiques, étape par étape, avec des exemples concrets.",
+  commercial: "Mets en valeur la qualité des maquettes Canva de Facilité et invite poliment le client à valider sa commande de CV ou lettre.",
+};
+
+/**
+ * Construit le system prompt depuis assistant_ai_config (verrouillée
+ * service_role, voir 20260821130000_assistant_ai_studio.sql) — c'est ce qui
+ * manquait pour que l'onglet admin "Entraînement IA" ait un effet réel sur
+ * la messagerie candidat : df3fe34 avait migré la PERSISTANCE de la config
+ * vers Supabase, mais cette route continuait à ignorer la table et à
+ * utiliser BASE_PROMPT (constante figée ci-dessus) pour tout appelant qui
+ * n'envoie pas explicitement customSystemPrompt — c'est-à-dire la vraie
+ * messagerie (MessagerieClient.js n'envoie que { messages }), contrairement
+ * au Playground admin qui construit et envoie son propre prompt complet.
+ *
+ * Aucun cache : lu à chaque requête, une modification enregistrée est donc
+ * immédiatement active à la prochaine réponse, sans redéploiement.
+ * Repli sur BASE_PROMPT si la config est absente ou vide, jamais un échec
+ * bloquant pour l'utilisateur final.
+ */
+async function buildSystemPromptFromConfig() {
+  try {
+    const admin = getSupabaseAdmin();
+    const [{ data: config }, { data: products }] = await Promise.all([
+      admin.from("assistant_ai_config").select("*").eq("id", 1).maybeSingle(),
+      admin.from("assistant_ai_products").select("*").order("display_order", { ascending: true }),
+    ]);
+
+    if (!config?.prompt_text?.trim()) return BASE_PROMPT;
+
+    const styleModifier = COMMUNICATION_STYLE_MODIFIERS[config.comm_style] || COMMUNICATION_STYLE_MODIFIERS.normal;
+    const currency = config.currency === "EUR" ? "EUR" : "FCFA";
+    const productsContext = (products || [])
+      .map((p) => `• ${p.name} : ${currency === "FCFA" ? `${p.price_fcfa} FCFA` : `${p.price_eur} €`} (${p.description || ""})`)
+      .join("\n");
+
+    return `
+${config.prompt_text.trim()}
+
+[STYLE DE COMMUNICATION OBLIGATOIRE]
+${styleModifier}
+
+[BASE DE CONNAISSANCES OFFICIELLE & TARIFS EN VIGUEUR]
+${(config.knowledge_text || "").trim()}
+
+[RÈGLES ET CRITÈRES OFFICIELS DU DIAGNOSTIC CV & SCORING ATS]
+${(config.diagnostic_rules_text || "").trim()}
+
+[CATALOGUE DES PRODUITS ET TARIFS (${currency})]
+${productsContext}
+`.trim();
+  } catch (err) {
+    console.error("ai-chat: échec lecture assistant_ai_config, repli sur BASE_PROMPT:", err.message);
+    return BASE_PROMPT;
+  }
+}
 
 /**
  * Extrait le texte des documents joints (PDF, Word...) pour l'injecter dans le
@@ -153,9 +219,14 @@ export async function POST(req) {
         ? messages
         : [{ role: "user", content: message }];
 
+    // customSystemPrompt reste un override explicite (utilisé par le
+    // Playground admin pour prévisualiser un brouillon non enregistré) ;
+    // tout appelant qui ne le fournit pas — c'est-à-dire la vraie
+    // messagerie candidat — reçoit désormais le prompt réellement
+    // enregistré en base, lu à chaque requête (aucun cache).
     const systemPrompt = customSystemPrompt?.trim()
       ? customSystemPrompt.trim()
-      : BASE_PROMPT;
+      : await buildSystemPromptFromConfig();
 
     // 3. Pièces jointes
     const images = (attachments || []).filter((a) => a.type === "image");
