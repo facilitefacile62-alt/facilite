@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { extractTextFromFile } from "@/lib/documentParser";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { validateUploadedFile } from "@/lib/validation";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
+import { extractAndEmbedResume } from "@/lib/resumeEmbedding";
 
 // Même contrainte que les autres routes dépendantes de l'OCR
 // (parse-document, diagnostic-cv, extract-email) : l'extraction de texte
@@ -12,11 +12,6 @@ import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
 // lent — la fonction doit avoir le temps de finir avant que Vercel ne la tue.
 export const runtime = "nodejs";
 export const maxDuration = 55;
-
-// Limite de texte envoyée à l'Edge Function d'embedding : gemini-embedding-001
-// a une fenêtre d'entrée bornée, et un CV n'a de toute façon pas besoin de
-// plusieurs dizaines de milliers de caractères pour être représenté.
-const MAX_EMBEDDING_INPUT_CHARS = 8000;
 
 /**
  * Marque la ligne `resumes` en erreur plutôt que de la laisser bloquée à
@@ -33,6 +28,13 @@ async function markResumeAsError(supabase, resumeId, message) {
     })
     .eq("id", resumeId);
 }
+
+const ERROR_MESSAGES = {
+  extraction_failed: "Impossible d'extraire le texte du document.",
+  no_text: "Aucun texte exploitable détecté dans le document.",
+  embedding_failed: "Échec de l'analyse sémantique du document.",
+  update_failed: "Échec de l'enregistrement de l'analyse.",
+};
 
 export async function POST(req) {
   try {
@@ -87,63 +89,20 @@ export async function POST(req) {
       return NextResponse.json({ error: check.error }, { status: check.status });
     }
 
-    let extractedText = "";
-    try {
-      extractedText = await extractTextFromFile(buffer, file.name, file.type);
-    } catch (extractErr) {
-      console.error("[process-resume] Extraction échouée:", extractErr);
-      await markResumeAsError(supabase, resumeId, "Impossible d'extraire le texte du document.");
-      return NextResponse.json({ error: "Impossible d'extraire le texte du document." }, { status: 422 });
-    }
-
-    if (!extractedText || extractedText.trim().length < 20) {
-      await markResumeAsError(supabase, resumeId, "Aucun texte exploitable détecté dans le document.");
-      return NextResponse.json({ error: "Aucun texte exploitable détecté dans le document." }, { status: 422 });
-    }
-
-    const truncatedText = extractedText.slice(0, MAX_EMBEDDING_INPUT_CHARS);
-
-    // Génération de l'embedding via l'Edge Function déployée plutôt qu'un
-    // appel Gemini dupliqué ici : un seul endroit connaît le modèle
-    // d'embedding réellement disponible pour ce projet (gemini-embedding-001,
-    // voir supabase/functions/gemini-orchestrator).
-    const embedResponse = await fetch(`${SUPABASE_URL}/functions/v1/gemini-orchestrator`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ action: "embed", text: truncatedText }),
+    const result = await extractAndEmbedResume({
+      supabase,
+      resumeId,
+      buffer,
+      filename: file.name,
+      mimeType: file.type,
+      token,
     });
 
-    const embedResult = await embedResponse.json().catch(() => null);
-
-    if (!embedResponse.ok || !embedResult?.success || !Array.isArray(embedResult.embedding)) {
-      console.error("[process-resume] Échec embedding:", embedResult?.error || embedResponse.status);
-      await markResumeAsError(supabase, resumeId, "Échec de la génération de l'embedding sémantique.");
-      return NextResponse.json({ error: "Échec de l'analyse sémantique du document." }, { status: 502 });
-    }
-
-    // Format texte pgvector : "[v1,v2,...]" — décodé automatiquement par
-    // PostgREST vers la colonne `vector(768)`.
-    const embeddingLiteral = `[${embedResult.embedding.join(",")}]`;
-
-    const { error: updateErr } = await supabase
-      .from("resumes")
-      .update({
-        content: {
-          extractedText: extractedText.slice(0, 5000),
-          analyzedAt: new Date().toISOString(),
-        },
-        embedding: embeddingLiteral,
-        status: "completed",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", resumeId);
-
-    if (updateErr) {
-      console.error("[process-resume] Échec mise à jour resume:", updateErr.message);
-      return NextResponse.json({ error: "Échec de l'enregistrement de l'analyse." }, { status: 500 });
+    if (!result.success) {
+      const message = ERROR_MESSAGES[result.error] || "Échec du traitement du document.";
+      await markResumeAsError(supabase, resumeId, message);
+      const status = result.error === "extraction_failed" || result.error === "no_text" ? 422 : 502;
+      return NextResponse.json({ error: message }, { status });
     }
 
     return NextResponse.json({ success: true });

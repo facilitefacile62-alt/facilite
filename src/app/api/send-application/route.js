@@ -4,8 +4,12 @@ import { Resend } from "resend";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SendApplicationPayloadSchema, validateUploadedFile } from "@/lib/validation";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
+import { extractAndEmbedResume } from "@/lib/resumeEmbedding";
 
 export const runtime = "nodejs";
+// Même contrainte que /api/process-resume : l'extraction du CV importé ici
+// peut basculer sur l'OCR, potentiellement lent.
+export const maxDuration = 55;
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 
@@ -77,15 +81,34 @@ export async function POST(req) {
 
       // Le nouveau CV rejoint la bibliothèque du candidat, comme sur
       // /api/postuler : disponible pour ses prochaines candidatures 1-clic.
-      const { error: resumeInsertErr } = await supabase.from("resumes").insert({
-        user_id: user.id,
-        title: cvFile.name,
-        type: "imported",
-        file_url: storagePath,
-        ats_score: 95,
-      });
+      const { data: insertedResume, error: resumeInsertErr } = await supabase
+        .from("resumes")
+        .insert({
+          user_id: user.id,
+          title: cvFile.name,
+          type: "imported",
+          file_url: storagePath,
+          ats_score: 95,
+        })
+        .select("id")
+        .single();
       if (resumeInsertErr) {
         console.error("Erreur enregistrement resume send-application:", resumeInsertErr.message);
+      } else {
+        // Attendu, best-effort au sens erreur uniquement — voir la même
+        // remarque dans /api/postuler.
+        try {
+          await extractAndEmbedResume({
+            supabase,
+            resumeId: insertedResume.id,
+            buffer,
+            filename: cvFile.name,
+            mimeType: cvFile.type,
+            token,
+          });
+        } catch (err) {
+          console.error("Erreur extraction/embedding CV (send-application):", err?.message);
+        }
       }
 
       fileBuffer = buffer;

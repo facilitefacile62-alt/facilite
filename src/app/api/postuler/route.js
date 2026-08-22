@@ -4,8 +4,14 @@ import { Resend } from "resend";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { validateUploadedFile } from "@/lib/validation";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
+import { extractAndEmbedResume } from "@/lib/resumeEmbedding";
 
 export const runtime = "nodejs";
+// Même contrainte que /api/process-resume : l'extraction d'un CV importé
+// (ajoutée ici pour qu'un nouveau CV téléversé au moment de postuler
+// devienne aussi exploitable par le score de similarité) peut basculer sur
+// l'OCR, potentiellement lent.
+export const maxDuration = 55;
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 
@@ -228,7 +234,7 @@ export async function POST(req) {
         );
       }
 
-      const { error: resumeError } = await supabase
+      const { data: insertedResume, error: resumeError } = await supabase
         .from("resumes")
         .insert({
           user_id: user.id,
@@ -236,10 +242,32 @@ export async function POST(req) {
           type: "imported",
           file_url: storagePath,
           ats_score: 95,
-        });
+        })
+        .select("id")
+        .single();
 
       if (resumeError) {
         console.error("Erreur création entrée resume:", resumeError.message);
+      } else {
+        // Attendu (pas fire-and-forget) : une fonction serverless peut être
+        // gelée dès la réponse renvoyée, un appel non attendu risquerait de
+        // ne jamais aboutir. Best-effort seulement au sens erreur : un échec
+        // ici ne doit jamais faire échouer l'envoi de la candidature — un CV
+        // importé au moment de postuler doit aussi devenir exploitable par
+        // le score de similarité (resume_offer_similarity) pour les
+        // candidatures futures, pas seulement celle en cours.
+        try {
+          await extractAndEmbedResume({
+            supabase,
+            resumeId: insertedResume.id,
+            buffer,
+            filename: cvFile.name,
+            mimeType: cvFile.type,
+            token,
+          });
+        } catch (err) {
+          console.error("Erreur extraction/embedding CV (postuler):", err?.message);
+        }
       }
 
       allCvUrls.push(storagePath);

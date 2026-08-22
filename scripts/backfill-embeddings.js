@@ -90,24 +90,68 @@ function flattenCreatedResumeContent(content) {
   return parts.filter(Boolean).join("\n");
 }
 
+// Deviné depuis l'extension — même logique de branchement que
+// extractTextFromFile (src/lib/documentParser.js), qui se fie d'abord au nom
+// de fichier avant le mimeType exact.
+const MIME_BY_EXTENSION = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+
+async function extractTextFromResumeFile(admin, extractTextFromFile, fileUrl) {
+  const { data: blob, error: downloadError } = await admin.storage.from("resumes").download(fileUrl);
+  if (downloadError) throw new Error(`téléchargement Storage: ${downloadError.message}`);
+
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  const ext = (fileUrl.split(".").pop() || "").toLowerCase();
+  const mimeType = MIME_BY_EXTENSION[ext] || blob.type || "application/octet-stream";
+  const filename = fileUrl.split("/").pop();
+
+  return extractTextFromFile(buffer, filename, mimeType);
+}
+
 async function backfillResumes() {
   const { data: rows, error } = await admin
     .from("resumes")
-    .select("id, user_id, type, content")
+    .select("id, user_id, type, content, file_url")
     .is("embedding", null)
     .eq("status", "completed");
 
   if (error) throw new Error(`Lecture resumes: ${error.message}`);
   console.log(`\nCV sans embedding : ${rows.length}`);
 
+  // documentParser.js est en ESM ; ce script tourne en CommonJS (hors
+  // pipeline de build Next.js, comme webhooksWorker.js) — import()
+  // dynamique, seul moyen fiable de consommer un module ESM depuis du CJS.
+  const { extractTextFromFile } = await import("../src/lib/documentParser.js");
+
   const result = await runBatch(rows, async (row) => {
-    const text =
+    let text =
       row.content?.extractedText ||
       row.content?.rawText ||
       (row.type === "created" ? flattenCreatedResumeContent(row.content || {}) : "");
-    if (!text.trim()) throw new Error(`aucun texte exploitable (type=${row.type})`);
+
+    // type="imported" (fichier réellement téléversé, jamais de contenu
+    // structuré) : même pipeline d'extraction que /api/process-resume,
+    // depuis le fichier Storage plutôt qu'un champ déjà en base.
+    if (!text.trim() && row.type === "imported" && row.file_url) {
+      text = await extractTextFromResumeFile(admin, extractTextFromFile, row.file_url);
+    }
+
+    if (!text || !text.trim()) throw new Error(`aucun texte exploitable (type=${row.type})`);
     const embeddingLiteral = await embedText(text);
-    const { error: updateError } = await admin.from("resumes").update({ embedding: embeddingLiteral }).eq("id", row.id);
+
+    const updatePayload = { embedding: embeddingLiteral };
+    // content restait {} pour les CV importés avant ce correctif — même
+    // format que /api/process-resume, pour que les prochaines lectures
+    // (rag-matching, etc.) trouvent le texte au même endroit que pour les
+    // CV traités via le flux normal.
+    if (row.type === "imported" && (!row.content || Object.keys(row.content).length === 0)) {
+      updatePayload.content = { extractedText: text.slice(0, 5000), analyzedAt: new Date().toISOString() };
+    }
+
+    const { error: updateError } = await admin.from("resumes").update(updatePayload).eq("id", row.id);
     if (updateError) throw new Error(updateError.message);
   });
 

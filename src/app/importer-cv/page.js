@@ -536,15 +536,36 @@ export default function ImporterCvPage() {
       }
 
       if (session?.user) {
-        await supabase.from("resumes").insert({
-          user_id: session.user.id,
-          title: resumeTitle,
-          type: "imported",
-          content: parsedData,
-          file_url: fileUrl,
-          ats_score: Math.floor(Math.random() * (99 - 88 + 1)) + 88,
-        });
+        const { data: insertedResume } = await supabase
+          .from("resumes")
+          .insert({
+            user_id: session.user.id,
+            title: resumeTitle,
+            type: "imported",
+            content: parsedData,
+            file_url: fileUrl,
+            ats_score: Math.floor(Math.random() * (99 - 88 + 1)) + 88,
+          })
+          .select("id")
+          .single();
         triggerToast("CV importé sauvegardé dans Supabase !", "fa-cloud-arrow-up");
+
+        // Best-effort, en tâche de fond : extraction du texte réel + embedding
+        // sémantique du CV importé (même pipeline que /profil), pour que ce CV
+        // devienne exploitable par le score de similarité de candidature — un
+        // échec ici ne doit jamais bloquer la confirmation d'import déjà affichée.
+        if (insertedResume?.id && file) {
+          const processFormData = new FormData();
+          processFormData.append("file", file);
+          processFormData.append("resumeId", insertedResume.id);
+          fetch("/api/process-resume", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            body: processFormData,
+          }).catch((err) => {
+            console.error("Erreur lors du lancement de l'analyse du CV importé:", err);
+          });
+        }
       } else {
         triggerToast("Connectez-vous pour sauvegarder définitivement votre CV.", "fa-triangle-exclamation");
       }
