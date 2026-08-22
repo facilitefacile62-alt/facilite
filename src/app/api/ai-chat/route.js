@@ -100,6 +100,106 @@ ${productsContext}
   }
 }
 
+// Machine à états du tunnel CV (point 3, 2026-08-22). Le CODE impose l'ordre
+// et l'unicité de la question posée à chaque tour ; le TEXTE de chaque
+// question reste entièrement piloté par prompt_text (section "TUNNEL DE
+// CONVERSATION"), jamais réécrit ici — seule une consigne d'étape ("ne pose
+// que la question de cette étape précise") est ajoutée par-dessus. C'est
+// précisément ce qui manquait à l'agent WhatsApp (prompt détaillé, jamais
+// suivi) : ici, le modèle ne peut pas dériver du plan sans que le code ne
+// rejette la transition proposée.
+const TUNNEL_TRANSITIONS = {
+  accueil: ["intention", "cv_existant", "lettre_cv_upload"],
+  intention: ["cv_existant", "lettre_cv_upload"],
+  cv_existant: ["cv_ancien_upload", "infos_personnelles"],
+  cv_ancien_upload: ["resume_cloture"],
+  lettre_cv_upload: ["resume_cloture"],
+  infos_personnelles: ["etudes"],
+  etudes: ["formations_oui_non"],
+  formations_oui_non: ["formations_details", "stages_oui_non"],
+  formations_details: ["stages_oui_non"],
+  stages_oui_non: ["stages_details", "experience_oui_non"],
+  stages_details: ["experience_oui_non"],
+  experience_oui_non: ["experience_details", "resume_cloture"],
+  experience_details: ["resume_cloture"],
+  // Permet de relancer un nouveau tunnel après clôture (candidat qui revient
+  // plus tard) plutôt que de rester bloqué sur le message final.
+  resume_cloture: ["intention", "cv_existant", "lettre_cv_upload", "resume_cloture"],
+};
+const TUNNEL_STEPS = Object.keys(TUNNEL_TRANSITIONS);
+
+// Consigne par étape : ne fixe JAMAIS le texte de la question elle-même
+// (toujours puisé dans prompt_text par le modèle), seulement le PÉRIMÈTRE
+// autorisé pour ce tour — quelle section du TUNNEL DE CONVERSATION utiliser,
+// et l'interdiction explicite d'anticiper la suite.
+const STEP_INSTRUCTIONS = {
+  accueil: `Étape actuelle : ACCUEIL. Envoie uniquement le message d'accueil défini dans la section "Accueil (Premier message)" du TUNNEL DE CONVERSATION ci-dessus. Si le message du client révèle déjà une intention précise (CV, lettre, les deux — voir règle "Prise en compte de l'intention directe"), tu peux enchaîner directement sur LA SEULE question d'orientation/tarifs correspondante dans ce même message, sans reposer une question d'intention séparée.`,
+  intention: `Étape actuelle : INTENTION. Pose UNIQUEMENT la question permettant de savoir si le client veut un CV, une lettre de motivation, ou les deux (section "Orientation & Tarifs"). N'ajoute aucune autre question.`,
+  cv_existant: `Étape actuelle : CV_EXISTANT. Pose UNIQUEMENT la question "Avez-vous déjà eu un CV auparavant ?" accompagnée de l'annonce du tarif correspondant (section "Orientation & Tarifs"). Ne demande pas encore les informations personnelles.`,
+  cv_ancien_upload: `Étape actuelle : CV_ANCIEN_UPLOAD. Demande au client de t'envoyer son ancien CV. N'ajoute aucune autre question.`,
+  lettre_cv_upload: `Étape actuelle : LETTRE_CV_UPLOAD. Demande au client de t'envoyer son CV actuel pour rédiger la lettre de motivation (section "Orientation & Tarifs", cas "lettre"). N'ajoute aucune autre question.`,
+  infos_personnelles: `Étape actuelle : INFOS_PERSONNELLES. Pose UNIQUEMENT la question A ("Infos personnelles & Poste") de la section "Collecte de données". N'ajoute aucune question sur les études, formations, stages ou expérience à ce stade.`,
+  etudes: `Étape actuelle : ÉTUDES. Pose UNIQUEMENT la question B ("Niveau d'études") de la section "Collecte de données". N'ajoute aucune autre question.`,
+  formations_oui_non: `Étape actuelle : FORMATIONS_OUI_NON. Pose UNIQUEMENT la question C ("Formations complémentaires") en version oui/non — ne demande pas encore le nom, la durée, l'établissement ou l'année : ce sera une relance séparée si la réponse est oui.`,
+  formations_details: `Étape actuelle : FORMATIONS_DETAILS. Le client a répondu OUI à la question sur les formations. Demande UNIQUEMENT les détails prévus (nom, durée, établissement, année).`,
+  stages_oui_non: `Étape actuelle : STAGES_OUI_NON. Pose UNIQUEMENT la question D ("Stages") en version oui/non.`,
+  stages_details: `Étape actuelle : STAGES_DETAILS. Le client a répondu OUI à la question sur les stages. Demande UNIQUEMENT les détails prévus (lieu, domaine, durée, année).`,
+  experience_oui_non: `Étape actuelle : EXPERIENCE_OUI_NON. Pose UNIQUEMENT la question E ("Expérience professionnelle") en version oui/non.`,
+  experience_details: `Étape actuelle : EXPERIENCE_DETAILS. Le client a répondu OUI à la question sur l'expérience. Demande UNIQUEMENT les détails prévus (nombre d'entreprises, noms des structures, postes occupés, durée pour chacune).`,
+  resume_cloture: `Étape actuelle : RESUME_CLOTURE. Résume proprement toutes les informations recueillies durant cette conversation sous forme de fiche synthétique, puis termine impérativement par le message de clôture prévu dans la section "Résumé & Clôture finale".`,
+};
+
+const TUNNEL_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    reply: { type: "STRING" },
+    nextStep: { type: "STRING", enum: TUNNEL_STEPS },
+  },
+  required: ["reply", "nextStep"],
+};
+
+/**
+ * Étape courante du candidat (assistant_conversation_state, verrouillée
+ * service_role — voir 20260822180000_assistant_conversation_state.sql).
+ * Repli sur "accueil" si la ligne n'existe pas encore ou en cas d'échec :
+ * jamais un échec bloquant pour l'utilisateur final.
+ */
+async function getConversationStep(userId) {
+  try {
+    const admin = getSupabaseAdmin();
+    const { data } = await admin
+      .from("assistant_conversation_state")
+      .select("current_step")
+      .eq("user_id", userId)
+      .maybeSingle();
+    return data?.current_step && TUNNEL_TRANSITIONS[data.current_step] ? data.current_step : "accueil";
+  } catch (err) {
+    console.error("ai-chat: échec lecture assistant_conversation_state, repli sur 'accueil':", err.message);
+    return "accueil";
+  }
+}
+
+async function saveConversationStep(userId, nextStep) {
+  try {
+    const admin = getSupabaseAdmin();
+    await admin.from("assistant_conversation_state").upsert({ user_id: userId, current_step: nextStep });
+  } catch (err) {
+    console.error("ai-chat: échec écriture assistant_conversation_state:", err.message);
+  }
+}
+
+/**
+ * Le modèle PROPOSE une prochaine étape (nextStep) ; le code en a le dernier
+ * mot. Une proposition hors du graphe de transitions légales depuis l'étape
+ * courante est rejetée — repli sur la première option légale, jamais sur
+ * l'idée du modèle. C'est ici, et seulement ici, que "l'ordre" est imposé.
+ */
+function resolveNextStep(currentStep, proposedNextStep) {
+  const legal = TUNNEL_TRANSITIONS[currentStep] || TUNNEL_TRANSITIONS.accueil;
+  if (proposedNextStep && legal.includes(proposedNextStep)) return proposedNextStep;
+  return legal[0];
+}
+
 /**
  * Extrait le texte des documents joints (PDF, Word...) pour l'injecter dans le
  * prompt. Le modèle ne lit que du texte : sans cette étape, un CV joint était
@@ -230,6 +330,17 @@ export async function POST(req) {
       ? customSystemPrompt.trim()
       : await buildSystemPromptFromConfig();
 
+    // La machine à états ne s'applique qu'au vrai fil candidat (aucun
+    // customSystemPrompt fourni) : le Playground admin garde un accès libre
+    // au prompt brut pour tester un brouillon non enregistré, sans jamais
+    // toucher à l'état persisté d'un vrai candidat.
+    const useTunnelStateMachine = !customSystemPrompt?.trim();
+    const currentStep = useTunnelStateMachine ? await getConversationStep(user.id) : null;
+
+    const systemPromptAvecEtape = useTunnelStateMachine
+      ? `${systemPrompt}\n\n[MACHINE À ÉTATS DU TUNNEL — CONTRÔLE IMPÉRATIF]\n${STEP_INSTRUCTIONS[currentStep]}\n\nRègle absolue, au-dessus de toute autre instruction ci-dessus : ne pose JAMAIS plus d'une question par message.`
+      : systemPrompt;
+
     // 3. Pièces jointes
     const images = (attachments || []).filter((a) => a.type === "image");
     const documents = (attachments || []).filter((a) => a.type === "document");
@@ -250,9 +361,18 @@ export async function POST(req) {
     }
 
     // Les images ont besoin du chemin inlineData dédié (voir appelerGeminiVision).
+    // Reçoit la consigne d'étape (systemPromptAvecEtape) mais PAS le format
+    // JSON — ce chemin ne demande jamais de nouvelle question, seulement un
+    // message de transition en texte libre après réception d'un fichier.
     if (images.length > 0) {
-      const reponseVision = await appelerGeminiVision(systemPrompt, historique, images);
+      const reponseVision = await appelerGeminiVision(systemPromptAvecEtape, historique, images);
       if (reponseVision) {
+        // Recevoir le fichier attendu satisfait l'étape upload en cours —
+        // avance directement vers le résumé, sans repasser par le modèle
+        // pour le choix de nextStep (ce chemin n'est pas au format JSON).
+        if (useTunnelStateMachine && (currentStep === "cv_ancien_upload" || currentStep === "lettre_cv_upload")) {
+          await saveConversationStep(user.id, "resume_cloture");
+        }
         return NextResponse.json({ reply: reponseVision });
       }
       console.warn("ai-chat: vision indisponible, repli sur le chemin texte seul.");
@@ -281,6 +401,15 @@ export async function POST(req) {
           parts: [{ text: m.content }],
         }));
 
+        // En mode machine à états, le modèle doit renvoyer {reply, nextStep}
+        // (responseSchema) plutôt qu'un texte libre — c'est ce format
+        // structuré qui permet au code de valider (ou de rejeter) la
+        // transition proposée avant de l'écrire dans
+        // assistant_conversation_state.
+        const generationConfig = useTunnelStateMachine
+          ? { temperature: temp, responseMimeType: "application/json", responseSchema: TUNNEL_RESPONSE_SCHEMA }
+          : { temperature: temp };
+
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
           {
@@ -290,17 +419,36 @@ export async function POST(req) {
               "x-goog-api-key": geminiKey,
             },
             body: JSON.stringify({
-              systemInstruction: { parts: [{ text: systemPrompt }] },
+              systemInstruction: { parts: [{ text: systemPromptAvecEtape }] },
               contents,
-              generationConfig: { temperature: temp },
+              generationConfig,
             }),
           }
         );
 
         if (geminiRes.ok) {
           const geminiData = await geminiRes.json();
-          const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (reply) return NextResponse.json({ reply });
+          const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+          if (!useTunnelStateMachine) {
+            if (rawText) return NextResponse.json({ reply: rawText });
+          } else if (rawText) {
+            try {
+              const { reply, nextStep: proposedNextStep } = JSON.parse(rawText);
+              if (reply) {
+                const resolvedNextStep = resolveNextStep(currentStep, proposedNextStep);
+                await saveConversationStep(user.id, resolvedNextStep);
+                return NextResponse.json({ reply });
+              }
+            } catch (parseErr) {
+              // Le modèle n'a pas respecté le format JSON malgré
+              // responseSchema : repli sur le texte brut tel quel plutôt que
+              // de bloquer la conversation, sans faire avancer l'étape (on
+              // reste sur currentStep, la prochaine requête re-tentera).
+              console.error("ai-chat: réponse hors format JSON attendu:", parseErr.message);
+              return NextResponse.json({ reply: rawText });
+            }
+          }
         } else {
           const err = await geminiRes.text();
           console.error("ai-chat: Gemini a répondu en erreur:", geminiRes.status, err.slice(0, 300));

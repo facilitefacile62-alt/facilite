@@ -210,6 +210,11 @@ test.describe("Invariants de sécurité", () => {
       // 20260821130000_assistant_ai_studio.sql.
       "assistant_ai_config",
       "assistant_ai_products",
+      // État de la machine à états du tunnel CV (étape en cours par
+      // candidat) : bookkeeping interne au pipeline /api/ai-chat,
+      // lu/écrit exclusivement via service_role, jamais par le client. Voir
+      // 20260822180000_assistant_conversation_state.sql.
+      "assistant_conversation_state",
     ]);
 
     const rows = await runIntrospectionSql(`
