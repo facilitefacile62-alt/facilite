@@ -89,90 +89,6 @@ Règles impératives d'extraction :
 - Si une information est absente, utilise la valeur null ou un tableau vide [].
 - Extrais le texte verbatim.`;
 
-async function callGemini(documentText, systemPrompt) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey || geminiApiKey.includes("[") || geminiApiKey.trim() === "") {
-    console.warn("Gemini API key non configurée ou placeholder.");
-    return null;
-  }
-
-  try {
-    console.log("Tentative d'appel à l'API Gemini (gemini-2.5-flash)...");
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: `${systemPrompt}\n\nVoici le texte du document à analyser :\n\n${documentText}` }
-            ]
-          }
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.1
-        }
-      })
-    });
-
-    if (response.ok) {
-      const json = await response.json();
-      const rawContent = json.candidates?.[0]?.content?.parts?.[0]?.text;
-      const parsedData = extractAndParseJSON(rawContent);
-      if (parsedData) {
-        console.log("Extraction Gemini réussie.");
-        return parsedData;
-      }
-    } else {
-      const errText = await response.text();
-      console.error(`Gemini API rejetée. Statut: ${response.status}. Message: ${errText}`);
-    }
-  } catch (err) {
-    console.error("Échec de l'appel à l'API Gemini :", err);
-  }
-
-  // Fallback sur gemini-1.5-flash en cas de problème de version
-  try {
-    console.log("Tentative d'appel de secours à l'API Gemini (gemini-1.5-flash)...");
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: `${systemPrompt}\n\nVoici le texte du document à analyser :\n\n${documentText}` }
-            ]
-          }
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.1
-        }
-      })
-    });
-
-    if (response.ok) {
-      const json = await response.json();
-      const rawContent = json.candidates?.[0]?.content?.parts?.[0]?.text;
-      const parsedData = extractAndParseJSON(rawContent);
-      if (parsedData) {
-        console.log("Extraction Gemini 1.5 réussie.");
-        return parsedData;
-      }
-    }
-  } catch (err) {
-    console.error("Échec de l'appel à l'API Gemini 1.5 :", err);
-  }
-
-  return null;
-}
-
 export async function POST(req) {
   let documentText = "";
   let filename = "document.txt";
@@ -241,14 +157,33 @@ export async function POST(req) {
 
     let parsedData = null;
 
-    // Tentative 1 : Gemini (Inférence ultra-rapide et structurée nativement)
-    try {
-      parsedData = await callGemini(documentText, SYSTEM_PROMPT);
-    } catch (geminiErr) {
-      console.error("[Gemini Pipeline Failed]", geminiErr?.message);
+    // Tentative 1 : DeepSeek en modèle principal (réallocation Gemini, point 2
+    // du 2026-08-22 — texte pur, l'appel Gemini précédent ciblait un modèle
+    // mort (gemini-2.5-flash, 404) et dégradait déjà silencieusement vers
+    // DeepSeek à chaque appel ; autant y aller directement).
+    const dsKey = process.env.DEEPSEEK_API_KEY;
+    if (dsKey && !dsKey.includes("[") && dsKey.trim() !== "") {
+      try {
+        console.log("Appel DeepSeek OpenAI Client (deepseek-chat)...");
+        const dsResponse = await deepseek.chat.completions.create({
+          model: "deepseek-chat",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: `Voici le texte du document à analyser :\n\n${documentText}` },
+          ],
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+        });
+
+        const rawContent = dsResponse.choices[0]?.message?.content;
+        parsedData = extractAndParseJSON(rawContent);
+        console.log("Extraction DeepSeek réussie.");
+      } catch (dsError) {
+        console.error("[DeepSeek Failure]", dsError?.message);
+      }
     }
 
-    // Tentative 2 : Groq (Fallback 1 avec deepseek-r1-distill-llama-70b)
+    // Tentative 2 : Groq en repli
     if (!parsedData) {
       const groqKey = process.env.GROQ_API_KEY;
       if (groqKey && !groqKey.includes("[") && groqKey.trim() !== "") {
@@ -273,32 +208,7 @@ export async function POST(req) {
       }
     }
 
-    // Tentative 3 : Fallback 2 sur l'API officielle DeepSeek
-    if (!parsedData) {
-      const dsKey = process.env.DEEPSEEK_API_KEY;
-      if (dsKey && !dsKey.includes("[") && dsKey.trim() !== "") {
-        try {
-          console.log("Appel DeepSeek OpenAI Client (deepseek-chat)...");
-          const dsResponse = await deepseek.chat.completions.create({
-            model: "deepseek-chat",
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: `Voici le texte du document à analyser :\n\n${documentText}` },
-            ],
-            temperature: 0.1,
-            response_format: { type: "json_object" },
-          });
-
-          const fallbackContent = dsResponse.choices[0]?.message?.content;
-          parsedData = extractAndParseJSON(fallbackContent);
-          console.log("Extraction DeepSeek réussie.");
-        } catch (dsError) {
-          console.error("[DeepSeek Failure]", dsError?.message);
-        }
-      }
-    }
-
-    // Tentative 4 : Fallback regex local si toutes les APIs IA échouent
+    // Tentative 3 : Fallback regex local si toutes les APIs IA échouent
     if (!parsedData) {
       console.log("Appel regex local fallback.");
       parsedData = mapTextToProfileFields(documentText);

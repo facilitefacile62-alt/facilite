@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { requireUser, checkRateLimit } from '@/lib/apiAuth';
 
 export const runtime = 'nodejs';
+
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY || 'dummy',
+  baseURL: 'https://api.deepseek.com',
+});
 
 /**
  * Nettoie et extrait un JSON valide à partir d'une réponse textuelle LLM
@@ -139,20 +145,7 @@ export async function POST(req) {
 
     rawText = texteBrut.trim();
 
-    // 3. Détection de la clé API Gemini
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
-
-    if (!apiKey || apiKey.trim() === '' || apiKey.includes('[VOTRE_')) {
-      console.warn("[API NLP] Clé Gemini non configurée, utilisation du parseur heuristique local.");
-      const donneesLocales = parseCVLocally(rawText);
-      return NextResponse.json({ success: true, data: donneesLocales, degraded: true });
-    }
-
-    // 4. Appel avec modèles Gemini
-    const GEMINI_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-latest"];
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    const defaultInstruction = `Tu es un extracteur de données RH expert. Analyse ce texte et extrais les informations pour un CV. 
+    const defaultInstruction = `Tu es un extracteur de données RH expert. Analyse ce texte et extrais les informations pour un CV.
 Renvoie UNIQUEMENT un objet JSON strict avec la structure suivante :
 {
   "infosPersonnelles": { "nomPrenom": "", "email": "", "telephone": "", "adresse": "" },
@@ -163,36 +156,58 @@ Renvoie UNIQUEMENT un objet JSON strict avec la structure suivante :
 }
 Laisse des chaînes ou listes vides pour les champs introuvables. Ne rajoute aucun commentaire en dehors du JSON.`;
 
-    const prompt = `${instructionSysteme || defaultInstruction}\n\nTexte du CV à analyser :\n"""\n${rawText}\n"""`;
+    const systemPrompt = instructionSysteme || defaultInstruction;
+    const userPrompt = `Texte du CV à analyser :\n"""\n${rawText}\n"""`;
 
-    for (const modelName of GEMINI_MODELS) {
+    const renvoyerStructure = (donneesStructurees) =>
+      NextResponse.json({
+        success: true,
+        data: {
+          infosPersonnelles: donneesStructurees?.infosPersonnelles || {},
+          profil: donneesStructurees?.profil || "",
+          experiences: Array.isArray(donneesStructurees?.experiences) ? donneesStructurees.experiences : [],
+          formations: Array.isArray(donneesStructurees?.formations) ? donneesStructurees.formations : [],
+          competences: Array.isArray(donneesStructurees?.competences) ? donneesStructurees.competences : []
+        }
+      });
+
+    // 3. DeepSeek en modèle principal (texte pur, JSON mode natif)
+    const dsKey = process.env.DEEPSEEK_API_KEY;
+    if (dsKey && !dsKey.includes('[') && dsKey.trim() !== '') {
+      try {
+        const dsResponse = await deepseek.chat.completions.create({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+        });
+        const donneesStructurees = cleanAndParseJSON(dsResponse.choices[0]?.message?.content);
+        return renvoyerStructure(donneesStructurees);
+      } catch (dsError) {
+        console.warn("[API NLP] Échec DeepSeek, repli sur Gemini:", dsError?.message);
+      }
+    }
+
+    // 4. Repli Gemini si DeepSeek indisponible ou en échec
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+
+    if (apiKey && apiKey.trim() !== '' && !apiKey.includes('[VOTRE_')) {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const prompt = `${systemPrompt}\n\n${userPrompt}`;
       try {
         const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.2,
-          }
+          model: "gemini-3.6-flash",
+          generationConfig: { responseMimeType: "application/json", temperature: 0.2 }
         });
-
         const result = await model.generateContent(prompt);
         const response = await result.response;
-        const responseText = response.text();
-
-        const donneesStructurees = cleanAndParseJSON(responseText);
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            infosPersonnelles: donneesStructurees?.infosPersonnelles || {},
-            profil: donneesStructurees?.profil || "",
-            experiences: Array.isArray(donneesStructurees?.experiences) ? donneesStructurees.experiences : [],
-            formations: Array.isArray(donneesStructurees?.formations) ? donneesStructurees.formations : [],
-            competences: Array.isArray(donneesStructurees?.competences) ? donneesStructurees.competences : []
-          }
-        });
+        const donneesStructurees = cleanAndParseJSON(response.text());
+        return renvoyerStructure(donneesStructurees);
       } catch (geminiError) {
-        console.warn(`[API NLP] Échec avec le modèle ${modelName} :`, geminiError?.message);
+        console.warn("[API NLP] Échec Gemini:", geminiError?.message);
       }
     }
 

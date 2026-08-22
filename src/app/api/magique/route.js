@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { requireUser, checkRateLimit } from '@/lib/apiAuth';
 
 export const runtime = 'nodejs';
 
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY || 'dummy',
+  baseURL: 'https://api.deepseek.com',
+});
+
 /**
  * Route API /api/magique
- * Studio IA & Écriture Magique pour CV et lettres de motivation
- * Utilise le modèle Google Gemini 1.5 Flash via @google/generative-ai
+ * Studio IA & Écriture Magique pour CV et lettres de motivation.
+ * Texte pur (pas de vision/document) : DeepSeek en modèle principal
+ * (réallocation Gemini, point 2 du 2026-08-22 — usage texte substituable),
+ * Gemini gardé en repli si DeepSeek est indisponible.
  */
 export async function POST(req) {
   try {
@@ -54,32 +62,7 @@ export async function POST(req) {
 
     const texteNettoye = texte.trim();
 
-    // 3. Vérification de la clé API Gemini
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
-    if (!apiKey || apiKey.trim() === '' || apiKey.includes('[VOTRE_')) {
-      console.error("[API Magique] Clé GEMINI_API_KEY introuvable ou invalide dans l'environnement.");
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: "Configuration de la clé API Gemini manquante côté serveur.",
-          message: "Le service d'assistance IA est momentanément indisponible (clé API non configurée)."
-        },
-        { status: 500 }
-      );
-    }
-
-    // 4. Initialisation du SDK Google Generative AI
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-flash-latest",
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.95,
-        maxOutputTokens: 1024,
-      },
-    });
-
-    // 5. Construction du prompt optimisé selon le contexte
+    // 3. Construction du prompt optimisé selon le contexte
     let promptContexte = "";
     if (typeAction === 'ats') {
       promptContexte = "Optimise ce texte pour maximiser sa compatibilité avec les logiciels de recrutement ATS (Applicant Tracking Systems) en intégrant des mots-clés stratégiques du secteur.";
@@ -87,8 +70,7 @@ export async function POST(req) {
       promptContexte = "Reformule et valorise ce texte avec un ton percutant, professionnel et moderne, en utilisant des verbes d'action au présent/passé composé et une syntaxe irréprochable.";
     }
 
-    const prompt = `Tu es un expert senior en recrutement et rédaction de CV de haut niveau pour la plateforme Facilité.
-Mission : Améliorer le texte suivant pour un CV professionnel${jobTitle ? ` dans le domaine "${jobTitle}"` : ""}.
+    const consignes = `Mission : Améliorer le texte suivant pour un CV professionnel${jobTitle ? ` dans le domaine "${jobTitle}"` : ""}.
 
 Directives strictes :
 - ${promptContexte}
@@ -101,11 +83,51 @@ Texte d'origine à transformer :
 """
 ${texteNettoye}
 """`;
+    const systemPrompt = "Tu es un expert senior en recrutement et rédaction de CV de haut niveau pour la plateforme Facilité.";
 
-    // 6. Appel du modèle Gemini
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let texteAmeliore = response.text();
+    // 4. DeepSeek en modèle principal
+    let texteAmeliore = null;
+    const dsKey = process.env.DEEPSEEK_API_KEY;
+    if (dsKey && !dsKey.includes('[') && dsKey.trim() !== '') {
+      try {
+        const dsResponse = await deepseek.chat.completions.create({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: consignes },
+          ],
+          temperature: 0.7,
+        });
+        texteAmeliore = dsResponse.choices[0]?.message?.content?.trim() || null;
+      } catch (dsError) {
+        console.warn("[API Magique] Échec DeepSeek, repli sur Gemini:", dsError?.message);
+      }
+    }
+
+    // 5. Repli Gemini si DeepSeek indisponible ou en échec
+    if (!texteAmeliore) {
+      const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+      if (!apiKey || apiKey.trim() === '' || apiKey.includes('[VOTRE_')) {
+        console.error("[API Magique] Ni DeepSeek ni Gemini disponibles.");
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Configuration des clés API IA manquante côté serveur.",
+            message: "Le service d'assistance IA est momentanément indisponible."
+          },
+          { status: 500 }
+        );
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-3.6-flash",
+        generationConfig: { temperature: 0.7, topP: 0.95, maxOutputTokens: 1024 },
+      });
+      const result = await model.generateContent(`${systemPrompt}\n\n${consignes}`);
+      const response = await result.response;
+      texteAmeliore = response.text();
+    }
 
     if (!texteAmeliore || !texteAmeliore.trim()) {
       throw new Error("La réponse générée par le modèle est vide.");

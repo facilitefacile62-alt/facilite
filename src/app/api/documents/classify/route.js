@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import OpenAI from "openai";
 import { extractTextFromFile } from "@/lib/documentParser";
 import { requireUser } from "@/lib/apiAuth";
 import { validateUploadedFile } from "@/lib/validation";
@@ -7,7 +8,15 @@ import { supabaseAdmin, getSupabaseAdmin } from "@/lib/supabaseAdmin";
 export const runtime = "nodejs";
 export const maxDuration = 35;
 
-const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.0-flash"];
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY || "dummy",
+  baseURL: "https://api.deepseek.com",
+});
+
+// Texte pur (extractedText déjà extrait, pas de vision) : DeepSeek en
+// modèle principal (réallocation Gemini, point 2 du 2026-08-22), Gemini
+// gardé en repli si DeepSeek est indisponible.
+const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest"];
 
 /**
  * Heuristique NLP rapide pour classifier le type de document si l'IA est indisponible
@@ -159,13 +168,23 @@ function extractIdentityHeuristics(text = "", filename = "") {
   return { fullName: extractedName, email, phone };
 }
 
+function parseClassification(raw) {
+  let cleaned = (raw || "").trim();
+  if (cleaned.includes("```")) {
+    cleaned = cleaned.replace(/```json/gi, "").replace(/```/g, "").trim();
+  }
+  const parsed = JSON.parse(cleaned);
+  if (parsed && (parsed.type === "CV" || parsed.type === "Lettre de motivation" || parsed.type === "invalide")) {
+    return parsed;
+  }
+  return null;
+}
+
 /**
- * Classification et extraction d'identité avec Gemini Flash
+ * Classification et extraction d'identité — DeepSeek en principal, Gemini
+ * en repli (voir CANDIDATE_MODELS ci-dessus).
  */
 async function classifyWithAI(documentText, filename) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") return null;
-
   const prompt = `Tu es un expert RH et vérificateur d'identité. Analyse le texte de ce document professionnel (nom de fichier: "${filename}").
 Tâches :
 1. Détermine la nature du document : "CV", "Lettre de motivation" ou "invalide" (facture, reçu, pièce d'identité sans rapport, texte hors sujet).
@@ -181,6 +200,26 @@ Réponds STRICTEMENT en JSON :
 }`;
 
   const snippet = documentText.slice(0, 3500);
+  const userContent = `${prompt}\n\nCONTENU DU DOCUMENT :\n${snippet}`;
+
+  const dsKey = process.env.DEEPSEEK_API_KEY;
+  if (dsKey && !dsKey.includes("[") && dsKey.trim() !== "") {
+    try {
+      const dsResponse = await deepseek.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [{ role: "user", content: userContent }],
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+      });
+      const parsed = parseClassification(dsResponse.choices[0]?.message?.content);
+      if (parsed) return parsed;
+    } catch (dsError) {
+      console.warn("[Classify] Échec DeepSeek, repli sur Gemini:", dsError?.message);
+    }
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") return null;
 
   for (const model of CANDIDATE_MODELS) {
     try {
@@ -190,12 +229,7 @@ Réponds STRICTEMENT en JSON :
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: `${prompt}\n\nCONTENU DU DOCUMENT :\n${snippet}` }],
-              },
-            ],
+            contents: [{ role: "user", parts: [{ text: userContent }] }],
             generationConfig: { temperature: 0.1 },
           }),
         }
@@ -204,16 +238,8 @@ Réponds STRICTEMENT en JSON :
       if (!response.ok) continue;
 
       const resJson = await response.json();
-      const responseText = resJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      let cleaned = responseText.trim();
-      if (cleaned.includes("```")) {
-        cleaned = cleaned.replace(/```json/gi, "").replace(/```/g, "").trim();
-      }
-
-      const parsed = JSON.parse(cleaned);
-      if (parsed && (parsed.type === "CV" || parsed.type === "Lettre de motivation" || parsed.type === "invalide")) {
-        return parsed;
-      }
+      const parsed = parseClassification(resJson.candidates?.[0]?.content?.parts?.[0]?.text);
+      if (parsed) return parsed;
     } catch {
       // continuer au modèle suivant
     }

@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
 import { requireUser, checkRateLimit } from '@/lib/apiAuth';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/env';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
+
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY || 'dummy',
+  baseURL: 'https://api.deepseek.com',
+});
 
 // Voix "Sulafat" (caractéristique officielle : "Warm") choisie parmi les 30
 // voix documentées (ai.google.dev/gemini-api/docs/speech-generation) pour
@@ -313,44 +319,68 @@ BASE DE CONNAISSANCES STRICTE POUR LES TRANSPORTS ET ITINÉRAIRES :
 RÈGLE ABSOLUE (pour toute VRAIE QUESTION D'INFORMATION uniquement — pas la politesse ci-dessus) : utilise UNIQUEMENT les réponses listées ci-dessus (transports/itinéraires et FAQ). Si la question posée (destination, sujet Facilité, ou autre) ne correspond à aucune entrée listée, réponds exactement : "Je n'ai pas cette information pour le moment, veuillez contacter le support." N'invente jamais de réponse hors de cette base.
 `;
 
-    // gemini-1.5-flash n'existe plus (retiré du catalogue Google, 404
-    // systématique) — même liste de repli déjà vérifiée et en service dans
-    // src/lib/documentParser.js (CANDIDATE_MODELS) pour cette même clé API.
-    const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.0-flash"];
-
+    // Texte pur (base de connaissances fermée, pas de vision) : DeepSeek en
+    // modèle principal (réallocation Gemini, point 2 du 2026-08-22), Gemini
+    // gardé en repli. La synthèse vocale plus bas reste sur Gemini (TTS
+    // exclusif, non substituable).
     let replyText = null;
-    for (const model of CANDIDATE_MODELS) {
+    const dsKey = process.env.DEEPSEEK_API_KEY;
+    if (dsKey && !dsKey.includes('[') && dsKey.trim() !== '') {
       try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-                  parts: [{ text: `${SYSTEM_PROMPT}\n\nQuestion posée : "${message}"` }]
+        const dsResponse = await deepseek.chat.completions.create({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: `Question posée : "${message}"` },
+          ],
+          temperature: 0.1,
+          max_tokens: 60,
+        });
+        replyText = dsResponse.choices[0]?.message?.content?.trim() || null;
+      } catch (dsError) {
+        console.warn("[voice-assistant] Échec DeepSeek, repli sur Gemini:", dsError?.message);
+      }
+    }
+
+    if (!replyText) {
+      // gemini-1.5-flash n'existe plus (retiré du catalogue Google, 404
+      // systématique) — même liste de repli déjà vérifiée et en service dans
+      // src/lib/documentParser.js (CANDIDATE_MODELS) pour cette même clé API.
+      const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest"];
+
+      for (const model of CANDIDATE_MODELS) {
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: "user",
+                    parts: [{ text: `${SYSTEM_PROMPT}\n\nQuestion posée : "${message}"` }]
+                  }
+                ],
+                generationConfig: {
+                  temperature: 0.1,
+                  maxOutputTokens: 60
                 }
-              ],
-              generationConfig: {
-                temperature: 0.1,
-                maxOutputTokens: 60
-              }
-            })
+              })
+            }
+          );
+
+          if (!response.ok) continue;
+
+          const data = await response.json();
+          const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (candidateText) {
+            replyText = candidateText;
+            break;
           }
-        );
-
-        if (!response.ok) continue;
-
-        const data = await response.json();
-        const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (candidateText) {
-          replyText = candidateText;
-          break;
+        } catch {
+          // Modèle indisponible ou erreur réseau ponctuelle — tente le suivant.
         }
-      } catch {
-        // Modèle indisponible ou erreur réseau ponctuelle — tente le suivant.
       }
     }
 
