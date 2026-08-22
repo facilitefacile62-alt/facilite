@@ -175,12 +175,27 @@ export async function POST(req) {
         );
       }
 
-      // Calcul du score indicatif d'adéquation CV (sans barrière bloquante)
-      cvMatchScore = computeScore(
-        candidateProfile?.skills || [],
-        candidateProfile?.bio || "",
-        offerData.description || ""
-      );
+      // Calcul du score indicatif d'adéquation CV (sans barrière bloquante).
+      // Priorité à la similarité cosinus réelle (embeddings) sur le CV
+      // effectivement joint à cette candidature quand elle est disponible —
+      // repli sur l'heuristique mot-à-mot existante (moins précise, mais
+      // toujours disponible) si aucun CV existant n'a été sélectionné, ou si
+      // son embedding (ou celui de l'offre) manque encore.
+      let similarityScore = null;
+      if (existingIds.length > 0) {
+        const { data: similarity, error: similarityError } = await supabase.rpc("resume_offer_similarity", {
+          p_resume_id: existingIds[0],
+          p_offer_id: jobOfferId,
+        });
+        if (!similarityError && typeof similarity === "number") {
+          similarityScore = Math.round(similarity * 100);
+        }
+      }
+
+      cvMatchScore =
+        similarityScore !== null
+          ? similarityScore
+          : computeScore(candidateProfile?.skills || [], candidateProfile?.bio || "", offerData.description || "");
     }
 
     const allAttachments = [];
