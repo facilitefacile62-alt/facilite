@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
-// Modèles IA supportés
+// Modèle IA unique de l'assistant plateforme (point 1, 2026-08-22) :
+// DeepSeek/Groq retirés de ce panneau, /api/ai-chat n'appelle plus que
+// Gemini pour cette route — un seul choix affiché, non modifiable.
 const AI_MODELS = [
-  { id: "deepseek-chat", name: "DeepSeek V3", tag: "Recommandé • Ultra-Rapide", cost: "⚡ Rapide", badge: "best" },
-  { id: "gemini-flash-latest", name: "Gemini 2.5 Flash", tag: "Vision & Documents", cost: "⚡ Vision", badge: "vision" },
-  { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", tag: "Raisonnement structuré", cost: "⚡ Précis", badge: "groq" },
+  { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash", tag: "Modèle unique de l'assistant plateforme", cost: "⚡ Vision", badge: "vision" },
 ];
 
 // Styles de communication
@@ -115,7 +115,7 @@ export default function AdminAIStudio() {
   const [activeSubTab, setActiveSubTab] = useState("prompt"); // "prompt" | "knowledge" | "products" | "connections" | "tools"
   
   // Paramètres de configuration
-  const [selectedModel, setSelectedModel] = useState("deepseek-chat");
+  const [selectedModel, setSelectedModel] = useState("gemini-3.6-flash");
   const [commStyle, setCommStyle] = useState("normal");
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
   const [promptText, setPromptText] = useState(DEFAULT_MAIN_PROMPT);
@@ -213,7 +213,7 @@ export default function AdminAIStudio() {
             setKnowledgeText(data.config.knowledgeText || DEFAULT_KNOWLEDGE);
             setDiagnosticRulesText(data.config.diagnosticRulesText || DEFAULT_DIAGNOSTIC_RULES);
             setCommStyle(data.config.commStyle || "normal");
-            setSelectedModel(data.config.selectedModel || "deepseek-chat");
+            setSelectedModel(data.config.selectedModel || "gemini-3.6-flash");
             setCurrency(data.config.currency || "FCFA");
             if (data.productsList?.length) setProductsList(data.productsList);
           } else if (localStorage.getItem("FACILITE_AI_STUDIO_V2")) {
@@ -257,7 +257,7 @@ export default function AdminAIStudio() {
         knowledgeText: parsed.knowledgeText || DEFAULT_KNOWLEDGE,
         diagnosticRulesText: parsed.diagnosticRulesText || DEFAULT_DIAGNOSTIC_RULES,
         commStyle: parsed.commStyle || "normal",
-        selectedModel: parsed.selectedModel || "deepseek-chat",
+        selectedModel: parsed.selectedModel || "gemini-3.6-flash",
         // Absent des sauvegardes faites avant ce correctif (bug de
         // persistance) — repli sur l'état "currency" actuel du composant.
         currency: parsed.currency || currency,
@@ -382,7 +382,7 @@ export default function AdminAIStudio() {
           knowledgeText: "",
           diagnosticRulesText: "",
           commStyle: "normal",
-          selectedModel: "deepseek-chat",
+          selectedModel: "gemini-3.6-flash",
           currency,
           productsList: [],
           updatedAt: new Date().toISOString(),
@@ -843,31 +843,27 @@ ${productsContext}
 
               {/* Contenu avec défilement interne exclusif */}
               <div className="flex-1 min-h-0 overflow-y-auto space-y-4 py-3 pr-1.5 scrollbar-thin">
-                {/* Sélecteur Modèle d'IA */}
+                {/* Sélecteur Modèle d'IA — verrouillé sur Gemini (point 1,
+                    2026-08-22) : plus de choix possible, un seul modèle
+                    affiché à titre informatif, non cliquable. */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-300">Modèle d'IA :</label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {AI_MODELS.map((model) => {
-                      const isSelected = selectedModel === model.id;
                       return (
-                        <button
+                        <div
                           key={model.id}
-                          type="button"
-                          onClick={() => setSelectedModel(model.id)}
-                          className={`p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
-                            isSelected
-                              ? "bg-[#252B35] border-[#10E688] ring-1 ring-[#10E688]/30 shadow-md"
-                              : "bg-[#1F232B] border-[#2E3542] hover:border-gray-500"
-                          }`}
+                          className="p-3 rounded-2xl border text-left flex flex-col justify-between bg-[#252B35] border-[#10E688] ring-1 ring-[#10E688]/30 shadow-md cursor-default"
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-black text-white">{model.name}</span>
-                            <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded">
+                            <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <i className="fa-solid fa-lock text-[8px]"></i>
                               {model.cost}
                             </span>
                           </div>
                           <p className="text-[10px] text-gray-400 mt-1 truncate">{model.tag}</p>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>

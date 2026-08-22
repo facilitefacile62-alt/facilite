@@ -79,7 +79,6 @@ export async function PUT(req) {
     knowledgeText = "",
     diagnosticRulesText = "",
     commStyle = "normal",
-    selectedModel = "deepseek-chat",
     currency = "FCFA",
     productsList = [],
   } = body;
@@ -90,7 +89,12 @@ export async function PUT(req) {
     knowledge_text: knowledgeText,
     diagnostic_rules_text: diagnosticRulesText,
     comm_style: commStyle,
-    selected_model: selectedModel,
+    // Verrouillé côté serveur (point 1, 2026-08-22) : Gemini est l'unique
+    // modèle de l'assistant plateforme, un éventuel selectedModel envoyé
+    // par le client est ignoré — le panneau admin ne propose de toute
+    // façon plus qu'un seul choix, mais un appel API direct ne doit pas
+    // pouvoir contourner cette décision.
+    selected_model: "gemini-3.6-flash",
     currency,
     updated_by: user.id,
   });

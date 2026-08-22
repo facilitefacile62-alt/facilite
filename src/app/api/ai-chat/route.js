@@ -11,7 +11,7 @@ export const runtime = "nodejs";
  * Assistant IA de la messagerie — une conversation directe couvrant CV,
  * entretien et orientation sans que l'utilisateur ait à choisir un mode.
  *
- * Appel direct à l'API DeepSeek en `fetch`, sans Vercel AI SDK : les versions
+ * Appel direct à l'API Gemini en `fetch`, sans Vercel AI SDK : les versions
  * installées sont incompatibles entre elles (`ai@7` côté serveur n'expose plus
  * `toDataStreamResponse`, alors que `@ai-sdk/react@4` côté client attend encore
  * l'ancien protocole). Un appel HTTP brut est ici le chemin le plus fiable, au
@@ -32,7 +32,7 @@ Ton rôle est d'accompagner les utilisateurs, candidats et recruteurs au Sénég
 Tu es trilingue : réponds avec aisance en Français, en Wolof ou en Anglais selon la langue choisie par l'utilisateur.
 Sois clair, dynamique, courtois, hautement professionnel et structuré dans tes réponses.`;
 
-const GEMINI_VISION_MODEL = "gemini-flash-latest";
+const GEMINI_VISION_MODEL = "gemini-3.6-flash";
 const BASE64_PREFIXE = /^data:[a-zA-Z0-9/\-+.]+;base64,/;
 
 // Copie exacte de COMMUNICATION_STYLES (src/components/AdminAIStudio.jsx) —
@@ -102,7 +102,7 @@ ${productsContext}
 
 /**
  * Extrait le texte des documents joints (PDF, Word...) pour l'injecter dans le
- * prompt. DeepSeek ne lit que du texte : sans cette étape, un CV joint était
+ * prompt. Le modèle ne lit que du texte : sans cette étape, un CV joint était
  * transmis puis purement ignoré.
  */
 async function extraireContexteDocuments(documents) {
@@ -128,10 +128,12 @@ async function extraireContexteDocuments(documents) {
 }
 
 /**
- * Analyse d'images via Gemini : DeepSeek n'a pas de capacité vision, une image
- * jointe ne peut donc pas être traitée par le chemin nominal.
- * Renvoie null si la clé manque ou si l'appel échoue — l'appelant retombe alors
- * sur DeepSeek en mode texte seul.
+ * Analyse d'images via Gemini : le chemin nominal plus bas n'envoie que du
+ * texte (`parts: [{ text }]`), une image jointe a donc besoin de ce chemin
+ * séparé qui construit des `inlineData`.
+ * Renvoie null si la clé manque ou si l'appel échoue — l'appelant retombe
+ * alors sur le chemin nominal en texte seul (note système expliquant
+ * l'image non traitée).
  */
 async function appelerGeminiVision(systemPrompt, historique, images) {
   const geminiKey = process.env.GEMINI_API_KEY;
@@ -189,7 +191,7 @@ export async function POST(req) {
   try {
     // 1. Authentification & limitation de débit — alignées sur /api/assistant.
     // Sans elles, l'endpoint serait ouvert et n'importe qui pourrait consommer
-    // le crédit DeepSeek du projet.
+    // le crédit Gemini du projet.
     const { user, error: authError } = await requireUser(req);
     if (authError) return authError;
 
@@ -211,7 +213,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { messages, message, model: requestedModel, customSystemPrompt, temperature, attachments } = parsed.data;
+    const { messages, message, customSystemPrompt, temperature, attachments } = parsed.data;
 
     // Normalisation des deux formes acceptées vers un historique unique.
     const historique =
@@ -247,13 +249,13 @@ export async function POST(req) {
       }
     }
 
-    // Les images exigent un modèle vision : DeepSeek n'en a pas.
+    // Les images ont besoin du chemin inlineData dédié (voir appelerGeminiVision).
     if (images.length > 0) {
       const reponseVision = await appelerGeminiVision(systemPrompt, historique, images);
       if (reponseVision) {
         return NextResponse.json({ reply: reponseVision });
       }
-      console.warn("ai-chat: vision indisponible, repli sur DeepSeek en texte seul.");
+      console.warn("ai-chat: vision indisponible, repli sur le chemin texte seul.");
       historique.push({
         role: "user",
         content:
@@ -264,37 +266,13 @@ export async function POST(req) {
 
     const temp = typeof temperature === "number" ? temperature : 0.7;
 
-    // 1. Tentative avec DeepSeek (si demandé ou par défaut)
-    if (!requestedModel || requestedModel === "deepseek-chat") {
-      const apiKey = process.env.DEEPSEEK_API_KEY;
-      if (apiKey && !apiKey.includes("[") && apiKey.trim() !== "") {
-        try {
-          const response = await fetch("https://api.deepseek.com/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: "deepseek-chat",
-              messages: [{ role: "system", content: systemPrompt }, ...historique],
-              temperature: temp,
-              stream: false,
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            const reply = data.choices?.[0]?.message?.content;
-            if (reply) return NextResponse.json({ reply });
-          }
-        } catch (deepseekErr) {
-          console.warn("ai-chat: échec DeepSeek, bascule sur Gemini Flash:", deepseekErr.message);
-        }
-      }
-    }
-
-    // 2. Tentative avec Google Gemini Flash
+    // Gemini seul (point 1, 2026-08-22) : DeepSeek et Groq retirés de cette
+    // route. Seuls appelants de /api/ai-chat dans le dépôt : le Playground
+    // admin (AdminAIStudio.jsx) et le fil "Support RH Facilité" réel
+    // (MessagerieClient.js) — aucun autre consommateur n'est cassé par ce
+    // retrait. requestedModel n'est plus lu : le modèle n'est plus un choix
+    // exposé à l'appelant, Gemini est la seule option (verrouillée aussi
+    // côté panneau admin, voir AdminAIStudio.jsx AI_MODELS).
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey && !geminiKey.includes("[") && geminiKey.trim() !== "") {
       try {
@@ -304,7 +282,7 @@ export async function POST(req) {
         }));
 
         const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
           {
             method: "POST",
             headers: {
@@ -323,41 +301,17 @@ export async function POST(req) {
           const geminiData = await geminiRes.json();
           const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
           if (reply) return NextResponse.json({ reply });
+        } else {
+          const err = await geminiRes.text();
+          console.error("ai-chat: Gemini a répondu en erreur:", geminiRes.status, err.slice(0, 300));
         }
       } catch (geminiErr) {
-        console.warn("ai-chat: échec Gemini, bascule sur Groq:", geminiErr.message);
-      }
-    }
-
-    // 3. Repli de secours : Groq (Llama 3.3 70B)
-    const groqKey = process.env.GROQ_API_KEY;
-    if (groqKey && !groqKey.includes("[") && groqKey.trim() !== "") {
-      try {
-        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${groqKey}`,
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [{ role: "system", content: systemPrompt }, ...historique],
-            temperature: temp,
-          }),
-        });
-
-        if (groqRes.ok) {
-          const groqData = await groqRes.json();
-          const reply = groqData.choices?.[0]?.message?.content;
-          if (reply) return NextResponse.json({ reply });
-        }
-      } catch (groqErr) {
-        console.error("ai-chat: échec Groq:", groqErr.message);
+        console.error("ai-chat: échec Gemini:", geminiErr.message);
       }
     }
 
     return NextResponse.json(
-      { error: "Aucun fournisseur d'intelligence artificielle n'a pu répondre à la requête." },
+      { error: "L'assistant IA est temporairement indisponible." },
       { status: 503 }
     );
   } catch (error) {
