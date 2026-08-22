@@ -18,6 +18,8 @@ export default function CandidatDashboardPage() {
   const [respondingRequestId, setRespondingRequestId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloadingCvId, setDownloadingCvId] = useState(null);
+  const [recommendedOffers, setRecommendedOffers] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 
   useEffect(() => {
     async function loadCandidatDashboard() {
@@ -40,6 +42,7 @@ export default function CandidatDashboardPage() {
         }
 
         setUserSession(session);
+        loadRecommendedOffers(session.user.id);
 
         const [{ data: candData, error: candError }, { data: reqData }] = await Promise.all([
           supabase
@@ -65,6 +68,57 @@ export default function CandidatDashboardPage() {
         console.error("Exception candidat dashboard:", err);
       } finally {
         setLoading(false);
+      }
+    }
+
+    // Recommandations à la volée (pas de pré-calcul stocké, pas de nouvelle
+    // table) : embedding du CV le plus récemment mis à jour PARMI ceux qui
+    // en ont un (un candidat peut avoir un CV importé sans embedding et un
+    // CV créé avec embedding — voir diagnostic RAG du 21/08) comme requête
+    // vers match_job_offers, même RPC que la recherche sémantique existante
+    // de /offres. Séparé de loadCandidatDashboard : un échec ici (aucun CV
+    // avec embedding, quota IA atteint...) ne doit jamais bloquer le
+    // tableau de bord principal.
+    async function loadRecommendedOffers(userId) {
+      try {
+        const { data: resume } = await supabase
+          .from("resumes")
+          .select("embedding")
+          .eq("user_id", userId)
+          .not("embedding", "is", null)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!resume?.embedding) return;
+
+        const embeddingLiteral = Array.isArray(resume.embedding)
+          ? `[${resume.embedding.join(",")}]`
+          : resume.embedding;
+
+        const { data: matches, error: matchError } = await supabase.rpc("match_job_offers", {
+          query_embedding: embeddingLiteral,
+          match_threshold: 0.4,
+          match_count: 8,
+        });
+
+        if (matchError || !matches || matches.length === 0) return;
+
+        const { data: offers } = await supabase
+          .from("job_offers")
+          .select("id, title, company, location, image_url, contract_type, salary_range")
+          .in("id", matches.map((m) => m.id));
+
+        const similarityById = new Map(matches.map((m) => [m.id, m.similarity]));
+        const merged = (offers || [])
+          .map((o) => ({ ...o, similarity: similarityById.get(o.id) || 0 }))
+          .sort((a, b) => b.similarity - a.similarity);
+
+        setRecommendedOffers(merged);
+      } catch (err) {
+        console.error("Exception recommandations candidat:", err);
+      } finally {
+        setLoadingRecommendations(false);
       }
     }
 
@@ -286,6 +340,46 @@ export default function CandidatDashboardPage() {
             </p>
           </div>
         </div>
+
+        {/* Offres recommandées pour toi — similarité sémantique CV <-> offre,
+            calculée à la volée (match_job_offers), pas de pré-calcul stocké.
+            Rien affiché tant que le CV n'a pas d'embedding ou qu'aucune
+            offre ne dépasse le seuil — pas d'état "vide" alarmant. */}
+        {!loadingRecommendations && recommendedOffers.length > 0 && (
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden mb-8">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-extrabold text-gray-900">Offres recommandées pour toi</h2>
+              <p className="text-xs text-gray-500 font-medium">
+                Sélectionnées selon la proximité entre ton CV et chaque offre
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6">
+              {recommendedOffers.map((offer) => (
+                <Link
+                  key={offer.id}
+                  href={`/offres/${offer.id}`}
+                  className="block p-4 rounded-2xl border border-gray-200 hover:border-emerald-300 hover:shadow-md transition group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {Math.round(offer.similarity * 100)}% compatible
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-extrabold text-gray-900 group-hover:text-emerald-700 transition line-clamp-2 mb-1">
+                    {offer.title}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-semibold truncate">{offer.company}</p>
+                  {offer.location && (
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      <i className="fa-solid fa-location-dot mr-1"></i>
+                      {offer.location}
+                    </p>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Dashboard Candidatures Table */}
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
