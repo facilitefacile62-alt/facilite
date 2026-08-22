@@ -8,12 +8,15 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 import { z } from "zod";
 
-// PayDunya devient le processeur par défaut (bascule du 21/08, une fois le
-// webhook rebranché sur orders/transactions et le domaine Resend confirmé
-// vérifié) ; KPay reste disponible en repli explicite (processor: "kpay"),
-// jamais supprimé — voir le diagnostic du 21/08 (KPay avait lui-même un bug
-// currency bloquant, corrigé séparément).
-const processorSchema = z.enum(["kpay", "paydunya"]).optional().default("paydunya");
+// KPay redevient le processeur par défaut (retour arrière du 22/08) : les
+// workers RabbitMQ qui reconcilient les paiements PayDunya (webhooksWorker.js)
+// ne tournent nulle part en production — confirmé en direct via l'API de
+// gestion CloudAMQP, 0 consumer sur les 4 files, à l'instant. Un paiement
+// PayDunya confirmé aujourd'hui resterait en file indéfiniment sans jamais
+// mettre à jour orders/transactions. processor: "paydunya" reste disponible
+// explicitement (code non supprimé, juste plus le choix par défaut) pour
+// reprendre la bascule dès que l'hébergement des workers sera réglé.
+const processorSchema = z.enum(["kpay", "paydunya"]).optional().default("kpay");
 
 const PRICE_AUTONOME = 1500;
 const PRICE_ACCOMPAGNE = 2000;
@@ -62,7 +65,7 @@ export async function POST(req) {
     if (!allowed) return rateError;
 
     const body = await req.json().catch(() => ({}));
-    const processor = body?.processor === "kpay" ? "kpay" : "paydunya";
+    const processor = body?.processor === "paydunya" ? "paydunya" : "kpay";
 
     if (processor === "kpay" && (!process.env.NEXT_PUBLIC_KPAY_PUBLIC_KEY || !process.env.KPAY_SECRET_KEY)) {
       return NextResponse.json(
