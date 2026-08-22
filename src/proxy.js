@@ -74,6 +74,12 @@ const PUBLIC_BROWSABLE_ROUTES = [
   "/recrutement-journalier",
   "/boite-a-idees",
   "/aide-candidature",
+  // Même trouvaille que les entrées ci-dessus, trouvée le 2026-08-22 :
+  // aucune route de recherche visible pour un visiteur anonyme (barre du
+  // header comme page dédiée) ne doit forcer une redirection /login avant
+  // même d'avoir exécuté la recherche — un visiteur qui n'a pas encore de
+  // compte doit pouvoir chercher une offre avant de décider de s'inscrire.
+  "/recherche",
 ];
 
 // Comparaison par segment de chemin plutôt que préfixe brut
