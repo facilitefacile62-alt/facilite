@@ -434,7 +434,7 @@ function RechercheContent() {
 
                       <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
                         <Link
-                          href={`/offres?id=${offer.id}`}
+                          href={`/offres/${offer.id}`}
                           className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-extrabold text-xs rounded-xl transition text-center"
                         >
                           Détails
