@@ -152,7 +152,7 @@ export async function POST(req) {
       // A. Récupérer l'offre pour connaître le diplôme requis et la description
       const { data: offerData, error: offerErr } = await supabase
         .from("job_offers")
-        .select("min_education_level, description, recruiter_id")
+        .select("min_education_level, description, recruiter_id, requires_cover_letter")
         .eq("id", jobOfferId)
         .single();
 
@@ -160,6 +160,17 @@ export async function POST(req) {
         return NextResponse.json({ error: "Offre introuvable." }, { status: 404 });
       }
       offerRecruiterId = offerData.recruiter_id;
+
+      // Le recruteur peut exiger une lettre de motivation à la publication
+      // (job_offers.requires_cover_letter) — coverLetter est sinon un champ
+      // texte libre toujours optionnel. Vérifié ici, avant tout traitement
+      // de fichier, pour renvoyer un message ciblé sur le document manquant.
+      if (offerData.requires_cover_letter && !String(coverLetter).trim()) {
+        return NextResponse.json(
+          { error: "Cette offre exige une lettre de motivation. Ajoutez un message d'accompagnement avant de postuler." },
+          { status: 400 }
+        );
+      }
 
       // B. Récupérer le profil du candidat pour vérifier son niveau d'études et ses compétences
       const { data: candidateProfile } = await supabase

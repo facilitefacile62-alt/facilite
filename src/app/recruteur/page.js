@@ -21,6 +21,7 @@ const EMPTY_OFFER = {
   description: "",
   image_url: "",
   deadline: "",
+  requires_cover_letter: false,
 };
 
 const EMPTY_RECRUITER_PROFILE = {
@@ -542,6 +543,7 @@ export default function RecruteurDashboardPage() {
       description: offer.description || "",
       image_url: offer.image_url || "",
       deadline: offer.deadline || "",
+      requires_cover_letter: offer.requires_cover_letter || false,
     });
     setOfferImageFile(null);
     setOfferImagePreview(offer.image_url || null);
@@ -1438,6 +1440,18 @@ export default function RecruteurDashboardPage() {
                     placeholder="Missions, compétences requises, profil recherché, avantages..."
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition resize-none"
                   />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={offerForm.requires_cover_letter}
+                      onChange={(e) => handleOfferFieldChange("requires_cover_letter", e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-xs font-bold text-gray-700">Lettre de motivation obligatoire pour candidater à cette offre</span>
+                  </label>
                 </div>
 
                 <div className="sm:col-span-2 flex items-center gap-3 pt-2">
