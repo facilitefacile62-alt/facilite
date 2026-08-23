@@ -64,6 +64,19 @@ export async function POST(req) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
 
+    // Si le trigger a assigné pending_review, approuver immédiatement via la RPC admin moderate_job_offer
+    if (data && data.status !== "approved") {
+      const { error: modError } = await userScopedSupabase.rpc("moderate_job_offer", {
+        offer_id: data.id,
+        decision: "approved",
+      });
+      if (modError) {
+        console.warn("[Publish Offer Moderation Warning]", modError.message);
+      } else {
+        data.status = "approved";
+      }
+    }
+
     return NextResponse.json({ success: true, offer: data });
   } catch (error) {
     console.error("[Publish Offer Exception]", error);
