@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { requireUser } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 
 export const runtime = "nodejs";
 
@@ -22,6 +24,24 @@ export async function POST(req) {
       return NextResponse.json({ error: "Accès réservé aux administrateurs." }, { status: 403 });
     }
 
+    // L'INSERT doit passer par le client scopé au token de l'admin, pas
+    // supabaseAdmin (service_role) : le trigger trg_reset_job_offer_moderation
+    // (reset_job_offer_moderation()) a un bypass explicite pour les admins,
+    // mais ce bypass teste current_user_role(), qui dépend de auth.uid() —
+    // toujours NULL sous service_role. Résultat avant ce correctif : CHAQUE
+    // offre publiée depuis ce panneau retombait silencieusement en
+    // status='pending_review' (invisible sur le Fil d'Actualité, RLS
+    // publique exige status='approved'), quel que soit l'admin réel qui
+    // publie — le toast de succès affichait pourtant "publié en direct".
+    // Vérifié : la policy INSERT ("Un recruteur publie ses propres offres")
+    // exige auth.uid() = recruiter_id (déjà le cas, recruiter_id = user.id)
+    // et current_user_role() = 'admin' — satisfaite avec ce client.
+    const authHeader = req.headers.get("authorization") || "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    const userScopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${bearerToken}` } },
+    });
+
     const body = await req.json();
     const payload = {
       ...body,
@@ -33,7 +53,7 @@ export async function POST(req) {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await userScopedSupabase
       .from("job_offers")
       .insert(payload)
       .select()
