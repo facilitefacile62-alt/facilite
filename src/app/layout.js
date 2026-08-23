@@ -1,4 +1,5 @@
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
 import GlobalModals from "@/components/GlobalModals";
@@ -228,6 +229,21 @@ export default function RootLayout({ children }) {
             <GlobalModals />
           </AuthProvider>
         </ThemeProvider>
+        {/* Plausible (point 2, 2026-08-23) — uniquement en production : le
+            dépôt lance énormément de trafic Playwright contre ce même code
+            (dev local pointe déjà vers la base de production, voir
+            CLAUDE.md), qui polluerait le dashboard réel s'il était chargé
+            aussi en dev. afterInteractive : n'entrave jamais le rendu
+            initial. */}
+        {process.env.NODE_ENV === "production" && (
+          <>
+            <Script strategy="afterInteractive" src="https://plausible.io/js/pa-wTgUIIBGOJXMLrt7nyXVt.js" />
+            <Script id="plausible-init" strategy="afterInteractive">
+              {`window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+  plausible.init()`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

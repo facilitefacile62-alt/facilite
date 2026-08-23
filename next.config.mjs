@@ -28,13 +28,13 @@ const isDev = process.env.NODE_ENV !== "production";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://plausible.io",
   "worker-src 'self' blob: https://cdnjs.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
   "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com",
   "media-src 'self' blob: data: https://*.supabase.co",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co https://plausible.io",
   "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co https://www.youtube.com https://www.youtube-nocookie.com https://maps.google.com https://*.google.com",
   "object-src 'self' blob: data: https://*.supabase.co",
   "base-uri 'self'",
