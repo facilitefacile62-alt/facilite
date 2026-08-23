@@ -86,6 +86,11 @@ function OffresContent() {
   const [isSemanticSearching, setIsSemanticSearching] = useState(false);
   const [semanticSearchError, setSemanticSearchError] = useState("");
 
+  // Badge de correspondance candidat (point 7) — un seul appel en lot
+  // (match_job_offers, même RPC que semanticResults ci-dessus et que les
+  // recommandations de candidat/page.js), jamais un appel par carte.
+  const [candidateMatchScores, setCandidateMatchScores] = useState(null);
+
   const triggerToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3500);
@@ -145,6 +150,62 @@ function OffresContent() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Scores de correspondance candidat pour toutes les offres de la page —
+  // un seul appel batch (comme candidat/page.js loadRecommendedOffers), pas
+  // un appel par carte. Repose sur le CV avec embedding le plus récent ;
+  // reste null (aucun badge affiché) si le candidat n'est pas connecté ou
+  // n'a aucun CV avec embedding — jamais bloquant, jamais un second calcul
+  // par offre.
+  useEffect(() => {
+    async function loadCandidateMatchScores() {
+      const userId = userSession?.user?.id;
+      if (!userId) {
+        setCandidateMatchScores(null);
+        return;
+      }
+      try {
+        const { data: resume } = await supabase
+          .from("resumes")
+          .select("embedding")
+          .eq("user_id", userId)
+          .not("embedding", "is", null)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!resume?.embedding) {
+          setCandidateMatchScores(null);
+          return;
+        }
+
+        const embeddingLiteral = Array.isArray(resume.embedding)
+          ? `[${resume.embedding.join(",")}]`
+          : resume.embedding;
+
+        const { data: matches, error } = await supabase.rpc("match_job_offers", {
+          query_embedding: embeddingLiteral,
+          match_threshold: 0,
+          match_count: 200,
+        });
+
+        if (error || !matches) {
+          setCandidateMatchScores(null);
+          return;
+        }
+
+        const map = {};
+        matches.forEach((m) => {
+          map[m.id] = m.similarity;
+        });
+        setCandidateMatchScores(map);
+      } catch (err) {
+        console.error("Exception calcul scores de correspondance candidat:", err);
+        setCandidateMatchScores(null);
+      }
+    }
+    loadCandidateMatchScores();
+  }, [userSession?.user?.id]);
 
   const handleSemanticSearch = async () => {
     const query = searchQuery.trim();
@@ -495,6 +556,19 @@ function OffresContent() {
                         <span className="text-amber-700 font-bold">
                           ⚡ {Math.round(semanticResults[offer.id] * 100)}% pertinence
                         </span>
+                      )}
+                      {/* Badge de correspondance candidat (point 7) — masqué pendant une
+                          recherche sémantique active pour ne pas doubler l'information avec
+                          le badge "pertinence" ci-dessus, qui répond à une autre question
+                          (correspondance à la recherche tapée, pas au profil du candidat). */}
+                      {!semanticResults && candidateMatchScores && offer.id in candidateMatchScores && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="text-emerald-700 font-bold">
+                            <i className="fa-solid fa-user-check text-[9px] mr-0.5"></i>
+                            {Math.round(candidateMatchScores[offer.id] * 100)}% avec votre profil
+                          </span>
+                        </>
                       )}
                     </p>
                   </div>

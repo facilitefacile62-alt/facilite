@@ -1493,6 +1493,62 @@ export default function Home() {
     };
   }, []);
 
+  // Badge de correspondance candidat (point 7) — un seul appel en lot
+  // (match_job_offers), même logique que /offres (OffresClient.jsx) et que
+  // les recommandations de candidat/page.js. La map est indexée par UUID
+  // job_offers.id : les offres statiques legacy (initialJobs, ids non-UUID)
+  // n'y figurent jamais, donc n'affichent jamais ce badge — comportement
+  // voulu, pas un cas à gérer explicitement.
+  const [candidateMatchScores, setCandidateMatchScores] = useState(null);
+  useEffect(() => {
+    async function loadCandidateMatchScores() {
+      const userId = userSession?.user?.id;
+      if (!userId) {
+        setCandidateMatchScores(null);
+        return;
+      }
+      try {
+        const { data: resume } = await supabase
+          .from("resumes")
+          .select("embedding")
+          .eq("user_id", userId)
+          .not("embedding", "is", null)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!resume?.embedding) {
+          setCandidateMatchScores(null);
+          return;
+        }
+
+        const embeddingLiteral = Array.isArray(resume.embedding)
+          ? `[${resume.embedding.join(",")}]`
+          : resume.embedding;
+
+        const { data: matches, error } = await supabase.rpc("match_job_offers", {
+          query_embedding: embeddingLiteral,
+          match_threshold: 0,
+          match_count: 200,
+        });
+
+        if (error || !matches) {
+          setCandidateMatchScores(null);
+          return;
+        }
+
+        const map = {};
+        matches.forEach((m) => {
+          map[m.id] = m.similarity;
+        });
+        setCandidateMatchScores(map);
+      } catch (err) {
+        console.error("Exception calcul scores de correspondance candidat:", err);
+        setCandidateMatchScores(null);
+      }
+    }
+    loadCandidateMatchScores();
+  }, [userSession?.user?.id]);
 
   const handleAddExperience = (e) => {
     e.preventDefault();
@@ -2733,6 +2789,15 @@ export default function Home() {
                           <>
                             <span aria-hidden="true">·</span>
                             <span>Jusqu'au {new Date(job.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                          </>
+                        )}
+                        {candidateMatchScores && job.id in candidateMatchScores && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span className="text-emerald-700 font-bold">
+                              <i className="fa-solid fa-user-check text-[9px] mr-0.5"></i>
+                              {Math.round(candidateMatchScores[job.id] * 100)}% avec votre profil
+                            </span>
                           </>
                         )}
                       </p>
