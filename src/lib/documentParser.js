@@ -213,6 +213,13 @@ Extrais méticuleusement et organise :
 9. Niveau d'études requis (ex: BAC, Licence, Master, Doctorat, Aucun, Professionnel / Technique)
 10. Fourchette salariale / Indemnité (si mentionnée, ex: 'Selon profil', ou laisser vide)
 11. Description structurée, attrayante et aérée avec des emojis adaptés (présentation du poste, missions détaillées avec puces, profil recherché, comment postuler, contacts).
+12. Type de publication (listing_type) — classe cette publication dans EXACTEMENT une de ces 6 catégories, choisis la plus précise :
+   - "offre_emploi" : un poste précis à pourvoir (CDI, CDD, stage, intérim, freelance...) proposé par une entreprise qui recrute.
+   - "concours" : un concours (fonction publique, concours d'entrée dans une école/administration, bourse compétitive avec épreuves de sélection).
+   - "formation" : une formation, un cursus, une certification ou un programme d'apprentissage — PAS un poste à pourvoir.
+   - "recrutement_spontane" : une invitation à envoyer une candidature spontanée, sans poste précis affiché.
+   - "travail_sur_place" : un recrutement en présentiel (journée de recrutement, "walk-in") où le candidat se présente directement, sans candidature en ligne.
+   - "autre" : si aucune des catégories ci-dessus ne correspond clairement.
 
 ${hasText ? `\n--- TEXTE / DESCRIPTION FOURNI PAR L'UTILISATEUR (À ANALYSER & FUSIONNER AVEC L'AFFICHE) ---\n"""\n${accompanyingText.trim()}\n"""\n` : ""}
 
@@ -228,7 +235,8 @@ Réponds STRICTEMENT en JSON valide sans aucun texte avant ou après sous le for
   "deadline": "...",
   "min_education_level": "...",
   "salary_range": "...",
-  "description": "..."
+  "description": "...",
+  "listing_type": "offre_emploi | concours | formation | recrutement_spontane | travail_sur_place | autre"
 }`;
 
   const cleanBase64 = hasImage ? buffer.toString("base64").replace(/^data:[^;]+;base64,/, "") : null;

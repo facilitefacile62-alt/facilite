@@ -10,6 +10,7 @@ import ApplyModal from "@/components/ApplyModal";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/sponsoredFeed";
+import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -550,6 +551,12 @@ function OffresContent() {
                         <>
                           <span aria-hidden="true">·</span>
                           <span>Niveau {offer.required_education_level}</span>
+                        </>
+                      )}
+                      {offer.listing_type && offer.listing_type !== "offre_emploi" && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-bold text-purple-700">{LISTING_TYPE_LABELS[offer.listing_type] || offer.listing_type}</span>
                         </>
                       )}
                       {semanticResults && offer.id in semanticResults && (

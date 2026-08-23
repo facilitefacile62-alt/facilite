@@ -4,9 +4,12 @@ import { requireUser } from "@/lib/apiAuth";
 import { validateUploadedFile } from "@/lib/validation";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
+import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
+
+const VALID_LISTING_TYPES = Object.keys(LISTING_TYPE_LABELS);
 
 export async function POST(req) {
   try {
@@ -121,6 +124,7 @@ export async function POST(req) {
         salary_range: extracted.salary_range || "",
         description: extracted.description || "",
         image_url: uploadedImageUrl,
+        listing_type: VALID_LISTING_TYPES.includes(extracted.listing_type) ? extracted.listing_type : "offre_emploi",
       },
     });
   } catch (error) {

@@ -18,6 +18,7 @@ import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { resolveOfferAction } from "@/lib/offerContact";
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
@@ -1467,6 +1468,7 @@ export default function Home() {
             recruiterEmail: offer.contact_email || null,
             externalLink: offer.external_link || null,
             deadline: offer.deadline || null,
+            listing_type: offer.listing_type || "offre_emploi",
           }));
           setDynamicJobs(formatted);
         }
@@ -2789,6 +2791,12 @@ export default function Home() {
                           <>
                             <span aria-hidden="true">·</span>
                             <span>Jusqu'au {new Date(job.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                          </>
+                        )}
+                        {job.listing_type && job.listing_type !== "offre_emploi" && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span className="font-bold text-purple-700">{LISTING_TYPE_LABELS[job.listing_type] || job.listing_type}</span>
                           </>
                         )}
                         {candidateMatchScores && job.id in candidateMatchScores && (

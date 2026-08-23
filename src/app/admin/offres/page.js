@@ -10,6 +10,7 @@ import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
 import { isOfferActivelySponsored } from "@/lib/sponsoredFeed";
+import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 
 const EMPTY_OFFER = {
   title: "",
@@ -24,6 +25,7 @@ const EMPTY_OFFER = {
   contact_email: "",
   contact_phone: "",
   external_link: "",
+  listing_type: "offre_emploi",
 };
 
 export default function AdminOffresPage() {
@@ -219,6 +221,7 @@ export default function AdminOffresPage() {
           contact_email: extracted.contact_email || "",
           contact_phone: extracted.contact_phone || "",
           external_link: extracted.external_link || "",
+          listing_type: extracted.listing_type || "offre_emploi",
         });
 
         setScanSuccess(true);
@@ -399,6 +402,7 @@ export default function AdminOffresPage() {
         contact_email: currentOfferData.contact_email ? currentOfferData.contact_email.trim() : null,
         contact_phone: currentOfferData.contact_phone ? currentOfferData.contact_phone.trim() : (phoneDigits ? `+${phoneDigits}` : null),
         external_link: externalLink || null,
+        listing_type: LISTING_TYPE_LABELS[currentOfferData.listing_type] ? currentOfferData.listing_type : "offre_emploi",
         status: "approved",
         is_active: true,
         recruiter_id: userSession.user.id,
@@ -493,6 +497,7 @@ export default function AdminOffresPage() {
         contact_email: offerForm.contact_email ? offerForm.contact_email.trim() : null,
         contact_phone: offerForm.contact_phone ? offerForm.contact_phone.trim() : (phoneDigits ? `+${phoneDigits}` : null),
         external_link: externalLink || null,
+        listing_type: LISTING_TYPE_LABELS[offerForm.listing_type] ? offerForm.listing_type : "offre_emploi",
         status: "approved",
         is_active: true,
         recruiter_id: userSession.user.id,
@@ -1135,6 +1140,21 @@ export default function AdminOffresPage() {
                     <option value="Bourse d'études">Bourse d'études</option>
                     <option value="Concours / Fonction Publique">Concours / Fonction Publique</option>
                     <option value="Plein Temps">Plein Temps</option>
+                  </select>
+                </div>
+
+                {/* Type de publication (point 4) — auto-déterminé par le Scanner IA,
+                    toujours modifiable manuellement ici avant publication. */}
+                <div>
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1">Type de publication</label>
+                  <select
+                    value={offerForm.listing_type}
+                    onChange={(e) => setOfferForm({ ...offerForm, listing_type: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+                  >
+                    {Object.entries(LISTING_TYPE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
                   </select>
                 </div>
 
