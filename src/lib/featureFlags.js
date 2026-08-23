@@ -93,7 +93,7 @@ export const DEFAULT_FEATURE_TREE = [
       {
         id: "nav_plus_concours",
         name: "Concours (Avis & examens de la fonction publique)",
-        path: "/offres?q=Concours",
+        path: "/concours",
         icon: "🏆",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
@@ -102,7 +102,7 @@ export const DEFAULT_FEATURE_TREE = [
       {
         id: "nav_plus_formation",
         name: "Formation (Certifications & cours pro)",
-        path: "/offres?q=Formation",
+        path: "/formations",
         icon: "🎓",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },

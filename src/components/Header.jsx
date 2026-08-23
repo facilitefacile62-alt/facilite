@@ -119,7 +119,7 @@ const QUICK_SECTIONS_INDEX = [
     title: "Concours & Examens Directs",
     type: "Opportunité",
     subtitle: "Avis de concours d'entrée et recrutements publics",
-    targetUrl: "/offres?q=Concours",
+    targetUrl: "/concours",
     icon: "fa-award",
     badgeColor: "purple",
     keywords: "concours examen direct fonction publique recrutement état ministère sénégal avis",
@@ -129,7 +129,7 @@ const QUICK_SECTIONS_INDEX = [
     title: "Formations & Certifications Pro",
     type: "Formation",
     subtitle: "Programmes certifiants et diplômes professionnels",
-    targetUrl: "/offres?q=Formation",
+    targetUrl: "/formations",
     icon: "fa-graduation-cap",
     badgeColor: "emerald",
     keywords: "formation certifiante diplôme apprentissage cours atelier compétences",
@@ -1185,12 +1185,12 @@ export default function Header() {
 
                   {/* Concours */}
                   <Link
-                    href="/offres?q=Concours"
-                    onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
+                    href="/concours"
+                    onClick={(e) => handleNavClick(e, "/concours", "nav_plus_concours", "Concours")}
                     className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
                       !checkFeatureAllowed("nav_plus_concours")
                         ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                        : pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Concours")
+                        : pathname === "/concours"
                         ? "bg-amber-50 text-amber-700 dark:bg-gray-800 dark:text-amber-400"
                         : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     }`}
@@ -1209,12 +1209,12 @@ export default function Header() {
 
                   {/* Formation */}
                   <Link
-                    href="/offres?q=Formation"
-                    onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
+                    href="/formations"
+                    onClick={(e) => handleNavClick(e, "/formations", "nav_plus_formation", "Formation")}
                     className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
                       !checkFeatureAllowed("nav_plus_formation")
                         ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                        : pathname === "/offres" && typeof window !== "undefined" && window.location.search.includes("Formation")
+                        : pathname === "/formations"
                         ? "bg-teal-50 text-teal-700 dark:bg-gray-800 dark:text-teal-400"
                         : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     }`}
@@ -1823,8 +1823,8 @@ export default function Header() {
 
                 {/* Concours */}
                 <Link
-                  href="/offres?q=Concours"
-                  onClick={(e) => handleNavClick(e, "/offres?q=Concours", "nav_plus_concours", "Concours")}
+                  href="/concours"
+                  onClick={(e) => handleNavClick(e, "/concours", "nav_plus_concours", "Concours")}
                   className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
                     !checkFeatureAllowed("nav_plus_concours")
                       ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
@@ -1851,8 +1851,8 @@ export default function Header() {
 
                 {/* Formation */}
                 <Link
-                  href="/offres?q=Formation"
-                  onClick={(e) => handleNavClick(e, "/offres?q=Formation", "nav_plus_formation", "Formation")}
+                  href="/formations"
+                  onClick={(e) => handleNavClick(e, "/formations", "nav_plus_formation", "Formation")}
                   className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
                     !checkFeatureAllowed("nav_plus_formation")
                       ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"

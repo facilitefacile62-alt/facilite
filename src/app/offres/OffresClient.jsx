@@ -10,7 +10,7 @@ import ApplyModal from "@/components/ApplyModal";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/sponsoredFeed";
-import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
+import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,7 @@ function getOfferImage(offer, index = 0) {
   return FALLBACK_JOB_POSTERS[index % FALLBACK_JOB_POSTERS.length];
 }
 
-function OffresContent() {
+function OffresContent({ listingType } = {}) {
   const searchParams = useSearchParams();
   const queryParam = searchParams?.get("q") || "";
 
@@ -116,10 +116,14 @@ function OffresContent() {
   useEffect(() => {
     async function loadData() {
       try {
-        const { data, error } = await supabase
-          .from("job_offers")
-          .select("*")
-          .order("created_at", { ascending: false });
+        let query = supabase.from("job_offers").select("*").order("created_at", { ascending: false });
+        // Filtre serveur sur listing_type pour une page catégorie dédiée
+        // (/concours, /formations...) — même requête que /offres, juste
+        // restreinte à un type. /offres (listingType absent) reste inchangé.
+        if (listingType) {
+          query = query.eq("listing_type", listingType);
+        }
+        const { data, error } = await query;
 
         if (error) {
           console.error("Erreur chargement des offres:", error);
@@ -137,7 +141,7 @@ function OffresContent() {
 
     // Abonnement Realtime Supabase sur la table job_offers
     const channel = supabase
-      .channel("public-job-offers-catalog")
+      .channel(`public-job-offers-catalog-${listingType || "all"}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "job_offers" },
@@ -150,7 +154,7 @@ function OffresContent() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [listingType]);
 
   // Scores de correspondance candidat pour toutes les offres de la page —
   // un seul appel batch (comme candidat/page.js loadRecommendedOffers), pas
@@ -294,16 +298,12 @@ function OffresContent() {
   // ne dépend jamais du contenu de filteredOffers pour cette garantie.
   const feedOffers = interleaveSponsoredOffers(filteredOffers, { everyN: 5 });
 
-  // Catégorie "Formation" : pas un vrai catalogue de formations, juste une
-  // recherche texte qui remonte des offres d'emploi normales sans rapport
-  // (le mot apparaît par coïncidence dans leur texte). Calculé ici (pas
-  // seulement dans la bannière ci-dessous) pour aussi masquer la grille de
-  // résultats — accessible en tapant "formation" dans la recherche, ce que
-  // ni le clic sur le lien du menu ni la navigation directe (tous deux déjà
-  // bloqués via feature_flags) ne peuvent intercepter : c'est un filtrage
-  // texte côté client, pas une navigation.
-  const isFormationCategory =
-    searchQuery?.toLowerCase()?.includes("formation") || queryParam?.toLowerCase()?.includes("formation");
+  // Bannière hero pilotée par le vrai listing_type (prop) pour une page
+  // catégorie dédiée (/concours, /formations...), pas par une détection de
+  // texte tapé dans la recherche — remplace l'ancienne heuristique
+  // isFormationCategory/isConcoursCategory, devenue incorrecte depuis que
+  // listing_type existe et que ces pages filtrent réellement dessus.
+  const hero = LISTING_TYPE_HERO[listingType] || LISTING_TYPE_HERO.offre_emploi;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900 font-sans pb-16">
@@ -317,40 +317,21 @@ function OffresContent() {
       </div>
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6 pb-12 flex-1 w-full">
-        {/* Hero Banner - Dynamique selon la catégorie (Formation, Concours, Emploi) */}
-        {(() => {
-          const isConcoursCategory =
-            searchQuery?.toLowerCase()?.includes("concours") || queryParam?.toLowerCase()?.includes("concours");
-
-          return (
-            <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-emerald-950 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white mb-4 sm:mb-6 shadow-md sm:shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-3 sm:p-8 opacity-10 pointer-events-none">
-                <i className={`fa-solid ${isFormationCategory ? "fa-graduation-cap" : isConcoursCategory ? "fa-landmark" : "fa-briefcase"} text-5xl sm:text-9xl`}></i>
-              </div>
-              <span className="text-[10px] sm:text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-1 sm:mb-1.5 relative z-10">
-                {isFormationCategory
-                  ? "Catalogue des Formations"
-                  : isConcoursCategory
-                  ? "Concours & Fonction Publique"
-                  : "Catalogue des Emplois"}
-              </span>
-              <h1 className="text-lg sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-1 sm:mb-2 relative z-10 leading-snug">
-                {isFormationCategory
-                  ? "Formations & Certifications Professionnelles"
-                  : isConcoursCategory
-                  ? "Avis de Concours & Examens Publics"
-                  : "Offres d'Emploi Disponibles"}
-              </h1>
-              <p className="text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed max-w-2xl relative z-10">
-                {isFormationCategory
-                  ? "Découvrez les opportunités de formation, montées en compétences et certifications professionnelles au Sénégal."
-                  : isConcoursCategory
-                  ? "Consultez les concours officiels de l'État, recrutements spéciaux et examens professionnels."
-                  : "Explorez toutes les opportunités publiées par nos recruteurs au Sénégal et postulez en un clic."}
-              </p>
-            </div>
-          );
-        })()}
+        {/* Hero Banner */}
+        <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-emerald-950 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white mb-4 sm:mb-6 shadow-md sm:shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-3 sm:p-8 opacity-10 pointer-events-none">
+            <i className={`fa-solid ${hero.icon} text-5xl sm:text-9xl`}></i>
+          </div>
+          <span className="text-[10px] sm:text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-1 sm:mb-1.5 relative z-10">
+            {hero.eyebrow}
+          </span>
+          <h1 className="text-lg sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-1 sm:mb-2 relative z-10 leading-snug">
+            {hero.title}
+          </h1>
+          <p className="text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed max-w-2xl relative z-10">
+            {hero.description}
+          </p>
+        </div>
 
         {/* Barre de Recherche & Filtres */}
         <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-200 shadow-xs mb-4 sm:mb-8">
@@ -430,23 +411,7 @@ function OffresContent() {
         </div>
 
         {/* Grille des Offres d'Emploi */}
-        {isFormationCategory ? (
-          <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center max-w-lg mx-auto shadow-sm">
-            <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
-              <i className="fa-solid fa-graduation-cap"></i>
-            </div>
-            <h3 className="text-lg font-extrabold text-gray-900 mb-1">Formation non disponible</h3>
-            <p className="text-xs text-gray-500 mb-6">
-              Le catalogue de formations n'est pas encore disponible. Revenez bientôt !
-            </p>
-            <button
-              onClick={handleResetSearch}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
-            >
-              Afficher toutes les offres
-            </button>
-          </div>
-        ) : loading ? (
+        {loading ? (
           <div className="py-20 text-center">
             <i className="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-600 mb-3"></i>
             <p className="text-sm font-bold text-gray-500">Chargement des offres d'emploi...</p>
@@ -454,9 +419,11 @@ function OffresContent() {
         ) : filteredOffers.length === 0 ? (
           <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center max-w-lg mx-auto shadow-sm">
             <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
-              <i className="fa-solid fa-briefcase"></i>
+              <i className={`fa-solid ${hero.icon}`}></i>
             </div>
-            <h3 className="text-lg font-extrabold text-gray-900 mb-1">Aucune offre ne correspond</h3>
+            <h3 className="text-lg font-extrabold text-gray-900 mb-1">
+              {listingType ? `Aucune offre "${LISTING_TYPE_LABELS[listingType] || hero.title}" ne correspond` : "Aucune offre ne correspond"}
+            </h3>
             <p className="text-xs text-gray-500 mb-6">
               Essayez de modifier vos termes de recherche ou réinitialisez les filtres.
             </p>
@@ -693,7 +660,7 @@ function OffresContent() {
   );
 }
 
-export default function OffresPage() {
+export default function OffresPage({ listingType } = {}) {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -703,7 +670,7 @@ export default function OffresPage() {
         </div>
       </div>
     }>
-      <OffresContent />
+      <OffresContent listingType={listingType} />
     </Suspense>
   );
 }

@@ -49,6 +49,12 @@ const PUBLIC_BROWSABLE_ROUTES = [
   // Ne couvre que /offres et /offres/[id] (seules pages sous ce préfixe) —
   // la publication d'offres vit sous /recruteur, non touchée.
   "/offres",
+  // Vues filtrées sur listing_type (même composant qu'/offres, même
+  // raisonnement SEO/anonyme) — sans cette entrée, ces nouvelles routes
+  // seraient bloquées par défaut (refus par défaut, voir doc en tête de
+  // fichier) et rediraient un visiteur anonyme vers /login.
+  "/concours",
+  "/formations",
   // Même raisonnement, trouvé le 2026-08-21 en vérifiant que le
   // generateMetadata ajouté à ces deux pages avait un effet réel : profil
   // public candidat et vitrine recruteur sont conçus pour être partagés

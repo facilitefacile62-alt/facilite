@@ -2059,7 +2059,7 @@ export default function MessagerieClient() {
 
                   {/* Concours */}
                   <Link
-                    href="/offres?q=Concours"
+                    href="/concours"
                     onClick={() => setPlusDropdownOpen(false)}
                     className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-amber-600 transition border-t border-gray-100"
                   >
@@ -2075,7 +2075,7 @@ export default function MessagerieClient() {
 
                   {/* Formation */}
                   <Link
-                    href="/offres?q=Formation"
+                    href="/formations"
                     onClick={() => setPlusDropdownOpen(false)}
                     className="flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-gray-800 hover:bg-gray-50 hover:text-teal-600 transition border-t border-gray-100"
                   >
