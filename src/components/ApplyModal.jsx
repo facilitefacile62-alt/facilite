@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { computeApplicationMatch } from "@/lib/matchScore";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, triggerToast }) {
   const [fullName, setFullName] = useState("");
@@ -22,6 +25,16 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(false);
 
+  // Avertissement de correspondance (point 6) — calculé au clic sur
+  // "Postuler", jamais bloquant. offerDetails/candidateProfile ne sont
+  // chargés que pour une vraie offre publiée (job.id UUID, pas les offres
+  // statiques legacy ni une candidature spontanée) : sans eux, matchWarning
+  // reste toujours null et le flux est identique à avant ce point.
+  const [offerDetails, setOfferDetails] = useState(null);
+  const [candidateProfile, setCandidateProfile] = useState(null);
+  const [matchWarning, setMatchWarning] = useState(null);
+  const [checkingMatch, setCheckingMatch] = useState(false);
+
   const fileInputRef = useRef(null);
 
   // Charger la session et les CVs de l'utilisateur sur mount
@@ -38,9 +51,10 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
           setEmail(session.user.email || "");
           
           // Essayer de récupérer le profil complet pour pré-remplir le nom complet
+          // + les champs nécessaires à l'avertissement de correspondance (point 6).
           const { data: profile } = await supabase
             .from("profiles")
-            .select("full_name")
+            .select("full_name, education_level, skills, bio")
             .eq("id", session.user.id)
             .single();
 
@@ -48,6 +62,23 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             setFullName(profile.full_name);
           } else {
             setFullName(session.user.user_metadata?.full_name || session.user.email.split("@")[0] || "");
+          }
+          setCandidateProfile(profile || null);
+
+          // Détails de l'offre nécessaires à l'avertissement de correspondance
+          // — uniquement pour une vraie offre publiée (job.id est un UUID
+          // job_offers.id) : les offres statiques legacy (id entier) et les
+          // candidatures spontanées (job.isSpontaneous) n'ont pas de ligne
+          // job_offers à interroger, offerDetails reste null pour elles.
+          if (job?.id && !job.isSpontaneous && UUID_RE.test(String(job.id))) {
+            const { data: offerRow } = await supabase
+              .from("job_offers")
+              .select("description, min_education_level")
+              .eq("id", job.id)
+              .single();
+            setOfferDetails(offerRow || null);
+          } else {
+            setOfferDetails(null);
           }
 
           // Charger la liste des CVs existants — uniquement ceux avec un vrai
@@ -86,6 +117,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
     setCoverLetter("");
     setErrorMsg("");
     setSuccess(false);
+    setMatchWarning(null);
   }, [isOpen, job, selectedLang]);
 
   if (!isOpen || !job) return null;
@@ -99,6 +131,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       const added = Array.from(e.target.files);
       setNewFiles((prev) => [...prev, ...added]);
       setErrorMsg("");
+      setMatchWarning(null);
     }
   };
 
@@ -112,14 +145,17 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       const added = Array.from(e.dataTransfer.files);
       setNewFiles((prev) => [...prev, ...added]);
       setErrorMsg("");
+      setMatchWarning(null);
     }
   };
 
   const removeFile = (indexToRemove) => {
     setNewFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    setMatchWarning(null);
   };
 
   const toggleExistingCv = (cvId) => {
+    setMatchWarning(null);
     setSelectedExistingCvIds((prev) =>
       prev.includes(cvId) ? prev.filter((id) => id !== cvId) : [...prev, cvId]
     );
@@ -137,6 +173,46 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       return;
     }
 
+    setErrorMsg("");
+
+    // Avertissement de correspondance (point 6) — jamais bloquant : un
+    // score faible affiche un message clair et un bouton "Postuler quand
+    // même" au lieu d'envoyer directement. Uniquement pour une vraie offre
+    // (offerDetails chargé), et seulement à la première tentative — une
+    // fois matchWarning affiché, un second clic sur "Postuler" ne
+    // recalcule pas indéfiniment, l'utilisateur passe par "Postuler quand
+    // même" ou change de CV (ce qui réinitialise matchWarning).
+    if (offerDetails && !matchWarning) {
+      setCheckingMatch(true);
+      try {
+        const result = await computeApplicationMatch({
+          resumeId: selectedExistingCvIds[0] || null,
+          offerId: job.id,
+          offerDescription: offerDetails.description,
+          requiredEducation: offerDetails.min_education_level,
+          candidateEducation: candidateProfile?.education_level,
+          candidateSkills: candidateProfile?.skills,
+          candidateBio: candidateProfile?.bio,
+        });
+        if (result.reasons.length > 0) {
+          setMatchWarning(result);
+          setCheckingMatch(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Erreur calcul correspondance candidature:", err);
+        // best-effort : un échec de calcul ne doit jamais empêcher de postuler.
+      }
+      setCheckingMatch(false);
+    }
+
+    await submitApplication();
+  };
+
+  // Soumission réelle vers /api/postuler — inchangée, extraite de
+  // handleSubmit pour être appelable directement depuis "Postuler quand
+  // même" (point 6), sans repasser par la vérification de correspondance.
+  const submitApplication = async () => {
     setLoading(true);
     setErrorMsg("");
 
@@ -300,6 +376,29 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs font-bold text-rose-700 flex items-center gap-2">
                 <i className="fa-solid fa-triangle-exclamation"></i>
                 <span>{errorMsg}</span>
+              </div>
+            )}
+
+            {matchWarning && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                <div className="flex items-start gap-2 text-xs font-bold text-amber-800">
+                  <i className="fa-solid fa-circle-exclamation mt-0.5"></i>
+                  <span>Correspondance limitée avec cette offre ({matchWarning.score}%)</span>
+                </div>
+                <ul className="text-[11px] text-amber-700 font-medium list-disc list-inside space-y-0.5">
+                  {matchWarning.reasons.map((reason, idx) => (
+                    <li key={idx}>{reason}</li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-amber-700 font-medium">Vous pouvez tout de même postuler si vous le souhaitez.</p>
+                <button
+                  type="button"
+                  onClick={submitApplication}
+                  disabled={loading}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-2.5 rounded-lg text-xs transition cursor-pointer disabled:opacity-50"
+                >
+                  Postuler quand même
+                </button>
               </div>
             )}
 
@@ -483,13 +582,18 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             {/* Bouton de Soumission */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || checkingMatch}
               className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-black py-3 px-4 rounded-xl text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
                   <i className="fa-solid fa-spinner animate-spin text-sm"></i>
                   <span>Envoi de votre candidature...</span>
+                </>
+              ) : checkingMatch ? (
+                <>
+                  <i className="fa-solid fa-spinner animate-spin text-sm"></i>
+                  <span>Vérification de la correspondance...</span>
                 </>
               ) : (
                 <>
