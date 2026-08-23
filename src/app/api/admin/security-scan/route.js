@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isCallerAdmin } from "@/lib/rbac";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 
 export const runtime = "nodejs";
 
@@ -120,37 +122,41 @@ export async function POST(req) {
       return NextResponse.json({ error: "Réservé aux administrateurs." }, { status: 403 });
     }
 
-    // 1. Audit des tables et protection RLS
-    const criticalTables = [
-      "profiles",
-      "user_roles",
-      "job_offers",
-      "candidatures",
-      "resumes",
-      "reports",
-      "chat_messages",
-      "security_logs",
-      "feature_flags",
-      "badge_requests",
-      "cv_consultations",
-      "ai_usage_daily",
-    ];
+    // Client scopé par le token Bearer de l'appelant — jamais service_role
+    // — pour tout appel RPC dont le garde-fou interne dépend de auth.uid()
+    // (current_user_role(), même patron que get_users_phone_status). Avec
+    // supabaseAdmin, auth.uid() est NULL côté SQL : la fonction rejetterait
+    // systématiquement un admin réel, pas seulement un non-admin.
+    const authHeader = req.headers.get("authorization") || "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    const userScopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${bearerToken}` } },
+    });
 
-    const tableAudits = [];
-    for (const table of criticalTables) {
-      try {
-        const { count, error } = await supabaseAdmin.from(table).select("*", { count: "exact", head: true });
-        tableAudits.push({
-          table,
-          rls_active: !error || error.code !== "42P01",
-          accessible: !error,
-          records_count: count ?? 0,
-          status: error && error.code === "42P01" ? "fail" : "pass",
-        });
-      } catch {
-        tableAudits.push({ table, rls_active: true, accessible: true, status: "pass" });
-      }
+    // 1. Audit RLS réel — service_role contourne la RLS par construction :
+    // interroger les tables via supabaseAdmin (comme avant ce correctif) ne
+    // peut donc JAMAIS détecter une régression RLS, quel que soit le
+    // résultat. get_rls_audit() (SECURITY DEFINER, 2026-08-23) interroge
+    // directement pg_class/pg_policy — même requête que l'Invariant 2 de
+    // tests/security/invariants.spec.js — pour TOUTES les tables de public,
+    // pas une liste de 12 tables codée en dur (qui contenait un nom erroné,
+    // "chat_messages" au lieu de "messages", jamais détecté car cette
+    // vérification ne pouvait de toute façon rien détecter).
+    const { data: rlsRows, error: rlsError } = await userScopedSupabase.rpc("get_rls_audit");
+    if (rlsError) {
+      console.error("[Security Scan API] get_rls_audit a échoué:", rlsError.message);
     }
+    const tableAudits = (rlsRows || []).map((r) => ({
+      table: r.table_name,
+      rls_enabled: r.rls_enabled,
+      policy_count: Number(r.policy_count),
+      // "warn", pas "fail" : 0 policy avec RLS activée est un motif légitime
+      // pour une table verrouillée service_role uniquement (voir
+      // JUSTIFIED_ZERO_POLICY dans invariants.spec.js) — ce panneau ne
+      // duplique pas cette liste de justifications au cas par cas, il
+      // affiche le fait brut plutôt que de trancher à sa place.
+      status: !r.rls_enabled ? "fail" : Number(r.policy_count) === 0 ? "warn" : "pass",
+    }));
 
     // 2. Audit des Buckets de Stockage
     const storageAudits = [
@@ -158,40 +164,86 @@ export async function POST(req) {
         bucket: "resumes",
         expected_public: false,
         purpose: "Stockage des CVs candidats (Données personnelles sensibles)",
-        status: "pass",
-        protection: "Verrouillage RLS strict, accès exclusif par URLs signées éphémères (300s)",
+        protection: "Accès exclusif par URLs signées éphémères",
       },
       {
         bucket: "chat-attachments",
         expected_public: false,
         purpose: "Pièces jointes de messagerie (Documents & contrats)",
-        status: "pass",
         protection: "Isolation par dossier utilisateur et vérification de participant",
       },
       {
         bucket: "job-offers",
         expected_public: true,
         purpose: "Images et bannières publiques des offres d'emploi",
-        status: "pass",
         protection: "Lecture publique autorisée, upload réservé aux recruteurs vérifiés",
+      },
+      // Les 5 buckets ci-dessous étaient absents de cette vérification avant
+      // ce correctif (2026-08-23) — jamais audités du tout, pas seulement
+      // mal audités. expected_public vérifié en lisant leur usage réel dans
+      // le code (getSignedAvatarUrl/getSignedCoverUrl — src/lib/supabase.js,
+      // createSignedUrl sur completed_cvs/invoices, commentaire "bucket
+      // privé" sur badge-documents) : tous accédés exclusivement via URL
+      // signée, jamais d'URL publique construite nulle part.
+      {
+        bucket: "avatars",
+        expected_public: false,
+        purpose: "Photos de profil (accès signé, voir 20260813180000_avatars_covers_policies.sql)",
+        protection: "URLs signées (getSignedAvatarUrl), propriétaire ou admin uniquement",
+      },
+      {
+        bucket: "covers",
+        expected_public: false,
+        purpose: "Photos de couverture de profil (même politique qu'avatars)",
+        protection: "URLs signées (getSignedCoverUrl), propriétaire ou admin uniquement",
+      },
+      {
+        bucket: "badge-documents",
+        expected_public: false,
+        purpose: "Justificatifs de vérification recruteur (documents d'identité/entreprise)",
+        protection: "Bucket privé, jamais d'URL publique — purgé automatiquement (cron dédié)",
+      },
+      {
+        bucket: "completed_cvs",
+        expected_public: false,
+        purpose: "CVs finalisés par un agent (option accompagnement)",
+        protection: "Accès exclusif par URLs signées éphémères",
+      },
+      {
+        bucket: "invoices",
+        expected_public: false,
+        purpose: "Factures PDF (commandes CV et recharges de crédits)",
+        protection: "Accès exclusif par URLs signées éphémères",
       },
     ];
 
+    // Statut calculé UNIQUEMENT à partir de la comparaison avec l'API
+    // Storage réelle ci-dessous — jamais "pass" par défaut avant
+    // vérification (contrairement à l'ancienne version de cette route).
+    for (const sa of storageAudits) sa.status = "unknown";
+
     try {
-      const { data: buckets } = await supabaseAdmin.storage.listBuckets();
-      if (buckets && Array.isArray(buckets)) {
-        for (const sa of storageAudits) {
-          const found = buckets.find((b) => b.id === sa.bucket);
-          if (found) {
-            if (found.public !== sa.expected_public) {
-              sa.status = "fail";
-              sa.error = `Le bucket ${sa.bucket} est public=${found.public} au lieu de public=${sa.expected_public} !`;
-            }
-          }
+      const { data: buckets, error: bucketsError } = await supabaseAdmin.storage.listBuckets();
+      if (bucketsError) throw bucketsError;
+
+      for (const sa of storageAudits) {
+        const found = buckets?.find((b) => b.id === sa.bucket);
+        if (!found) {
+          sa.status = "fail";
+          sa.error = `Le bucket ${sa.bucket} est introuvable.`;
+          continue;
+        }
+        if (found.public !== sa.expected_public) {
+          sa.status = "fail";
+          sa.error = `Le bucket ${sa.bucket} est public=${found.public} au lieu de public=${sa.expected_public} !`;
+        } else {
+          sa.status = "pass";
         }
       }
     } catch (e) {
-      console.warn("[Security Scan API] Lecture des buckets impossible (non bloquant):", e.message);
+      console.error("[Security Scan API] Lecture des buckets impossible:", e.message);
+      // "unknown" reste : jamais de "pass" silencieux si l'API Storage n'a
+      // pas pu être interrogée.
     }
 
     // 3. Audit des variables d'environnement & Secrets
@@ -255,8 +307,12 @@ export async function POST(req) {
       const rec = recordedInvariants.find((r) => r.invariant_key === inv.key);
       return {
         ...inv,
-        status: rec?.status || "pass",
-        last_run_at: rec?.last_run_at || new Date().toISOString(),
+        // "unknown", jamais "pass" par défaut : un invariant jamais
+        // enregistré (tests/security/invariants.spec.js jamais exécuté
+        // pour cette clé) n'a été ni vérifié ni certifié — l'afficher vert
+        // serait la donnée approximative exactement interdite ici.
+        status: rec?.status || "unknown",
+        last_run_at: rec?.last_run_at || null,
         error_summary: rec?.error_summary || null,
       };
     });
@@ -279,11 +335,18 @@ export async function POST(req) {
 
     // 6. Calcul du Score Global de Santé Sécurité (0-100)
     let score = 100;
+    const failedTables = tableAudits.filter((t) => t.status === "fail").length;
     const failedInvariants = invariantAudits.filter((i) => i.status === "fail").length;
-    const failedBuckets = storageAudits.filter((s) => s.status === "fail").length;
+    const unknownInvariants = invariantAudits.filter((i) => i.status === "unknown").length;
+    const failedBuckets = storageAudits.filter((s) => s.status === "fail" || s.status === "unknown").length;
     const failedEnv = envAudits.filter((e) => e.status === "fail").length;
 
+    // Une régression RLS réelle (failedTables) est le signal le plus grave
+    // que ce panneau puisse désormais détecter (voir get_rls_audit) : pesée
+    // au même niveau qu'un bucket mal configuré, pas un simple avertissement.
+    score -= failedTables * 25;
     score -= failedInvariants * 8;
+    score -= unknownInvariants * 3;
     score -= failedBuckets * 25;
     score -= failedEnv * 20;
     score -= openCriticalCount * 5;
@@ -300,7 +363,7 @@ export async function POST(req) {
       p_details: {
         score,
         duration_ms: Date.now() - startTime,
-        tables_count: criticalTables.length,
+        tables_count: tableAudits.length,
         invariants_pass: invariantAudits.filter((i) => i.status === "pass").length,
       },
     });
@@ -312,7 +375,7 @@ export async function POST(req) {
       score,
       scoreRating: score >= 90 ? "Excellent / Bouclier Actif" : score >= 70 ? "Bon / Quelques points à surveiller" : "Alerte Sécurité Requise",
       summary: {
-        totalTablesChecked: criticalTables.length,
+        totalTablesChecked: tableAudits.length,
         tablesRlsPass: tableAudits.filter((t) => t.status === "pass").length,
         totalBucketsChecked: storageAudits.length,
         bucketsSecure: storageAudits.filter((b) => b.status === "pass").length,

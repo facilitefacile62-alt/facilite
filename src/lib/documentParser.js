@@ -179,7 +179,7 @@ Réponds STRICTEMENT en JSON valide sous la forme :
   };
 }
 
-export async function extractFullJobOfferFromPosterWithGemini(buffer, mimeType = "image/jpeg") {
+export async function extractFullJobOfferFromPosterWithGemini(buffer, mimeType = "image/jpeg", accompanyingText = "") {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
 
   if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") {
@@ -189,20 +189,32 @@ export async function extractFullJobOfferFromPosterWithGemini(buffer, mimeType =
     };
   }
 
-  const prompt = `Tu es le moteur d'intelligence artificielle de la plateforme d'emploi 'Facilité' au Sénégal.
-Ta mission est d'analyser cette affiche/image de recrutement pour en extraire TOUTES les informations clés nécessaires à sa publication directe sur le fil d'actualité.
+  const hasImage = buffer && buffer.length > 0;
+  const hasText = typeof accompanyingText === "string" && accompanyingText.trim().length > 0;
 
-Extrais méticuleusement :
-1. Titre du poste (clair, sans abréviation obscure)
+  if (!hasImage && !hasText) {
+    return {
+      error: "Veuillez fournir une affiche ou un texte descriptif de l'offre.",
+    };
+  }
+
+  let prompt = `Tu es le moteur d'intelligence artificielle de la plateforme d'emploi 'Facilité' au Sénégal.
+Ta mission est d'analyser cette offre de recrutement ${hasImage ? "(affiche visuelle" + (hasText ? " ET texte d'accompagnement fourni)" : ")") : "(texte descriptif fourni)"} pour en extraire et structurer TOUTES les informations nécessaires à sa publication directe sur le fil d'actualité.
+
+Extrais méticuleusement et organise :
+1. Titre du poste (clair, précis et professionnel, sans abréviation obscure)
 2. Nom de l'entreprise, agence ou organisation
-3. Localisation (ex: Dakar, Thiès, Sénégal, etc.)
-4. Type de contrat (ex: CDI, CDD, Stage, Casting / Tournage, Freelance, Intérim, Bourse d'études)
+3. Localisation (ex: Dakar, Thiès, Diamniadio, Sénégal, etc.)
+4. Type de contrat (ex: CDI, CDD, Stage, Casting / Tournage, Freelance, Intérim, Bourse d'études, Plein Temps)
 5. Numéro de téléphone ou WhatsApp pour postuler (très important : extraire avec l'indicatif ou au format standard ex: +221 77 717 73 73)
-6. Adresse e-mail de contact (si mentionnée)
-7. Lien externe / site officiel de postulation (si mentionné)
+6. Adresse e-mail de contact ou de recrutement (ex: recrutement@domaine.com)
+7. Lien externe / site officiel ou lien de postulation (si mentionné)
 8. Date limite de candidature (au format AAAA-MM-JJ si mentionnée, sinon chaîne vide)
-9. Niveau d'études requis (ex: BAC, Licence, Master, Doctorat, Aucun)
-10. Description structurée, attractive et aérée avec des emojis adaptés (présentation du poste, missions, profil recherché, comment postuler).
+9. Niveau d'études requis (ex: BAC, Licence, Master, Doctorat, Aucun, Professionnel / Technique)
+10. Fourchette salariale / Indemnité (si mentionnée, ex: 'Selon profil', ou laisser vide)
+11. Description structurée, attrayante et aérée avec des emojis adaptés (présentation du poste, missions détaillées avec puces, profil recherché, comment postuler, contacts).
+
+${hasText ? `\n--- TEXTE / DESCRIPTION FOURNI PAR L'UTILISATEUR (À ANALYSER & FUSIONNER AVEC L'AFFICHE) ---\n"""\n${accompanyingText.trim()}\n"""\n` : ""}
 
 Réponds STRICTEMENT en JSON valide sans aucun texte avant ou après sous le format :
 {
@@ -219,12 +231,22 @@ Réponds STRICTEMENT en JSON valide sans aucun texte avant ou après sous le for
   "description": "..."
 }`;
 
-  const cleanBase64 = buffer.toString("base64").replace(/^data:[^;]+;base64,/, "");
+  const cleanBase64 = hasImage ? buffer.toString("base64").replace(/^data:[^;]+;base64,/, "") : null;
 
   let lastErrorDetail = null;
 
   for (const model of CANDIDATE_MODELS) {
     try {
+      const parts = [{ text: prompt }];
+      if (hasImage && cleanBase64) {
+        parts.push({
+          inline_data: {
+            mime_type: mimeType || "image/jpeg",
+            data: cleanBase64,
+          },
+        });
+      }
+
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
@@ -234,15 +256,7 @@ Réponds STRICTEMENT en JSON valide sans aucun texte avant ou après sous le for
             contents: [
               {
                 role: "user",
-                parts: [
-                  { text: prompt },
-                  {
-                    inline_data: {
-                      mime_type: mimeType || "image/jpeg",
-                      data: cleanBase64,
-                    },
-                  },
-                ],
+                parts: parts,
               },
             ],
             generationConfig: {
@@ -287,7 +301,7 @@ Réponds STRICTEMENT en JSON valide sans aucun texte avant ou après sous le for
   }
 
   return {
-    error: lastErrorDetail?.message || "Impossible d'analyser l'affiche pour le moment. Réessayez avec une image plus nette.",
+    error: lastErrorDetail?.message || "Impossible d'analyser l'offre pour le moment. Réessayez dans quelques instants.",
   };
 }
 

@@ -28,45 +28,55 @@ export async function POST(req) {
 
     const formData = await req.formData();
     const file = formData.get("file");
+    const accompanyingText = formData.get("accompanying_text") || formData.get("description") || formData.get("text") || "";
 
-    if (!file || typeof file === "string") {
-      return NextResponse.json({ error: "Aucun fichier d'affiche fourni." }, { status: 400 });
+    const hasFile = file && typeof file !== "string";
+    const hasText = typeof accompanyingText === "string" && accompanyingText.trim().length > 0;
+
+    if (!hasFile && !hasText) {
+      return NextResponse.json({ error: "Veuillez fournir une affiche ou un texte descriptif de l'offre." }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    const check = validateUploadedFile(buffer, file.type, file.size);
-    if (!check.valid) {
-      return NextResponse.json({ error: check.error }, { status: check.status });
-    }
-
-    // 1. Sauvegarder automatiquement l'affiche sur Supabase Storage
+    let buffer = null;
+    let fileMime = "image/jpeg";
     let uploadedImageUrl = "";
-    try {
-      const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
-      const storageKey = `admin-posters/poster-${Date.now()}.${ext}`;
 
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from("job-offers")
-        .upload(storageKey, buffer, {
-          contentType: file.type || "image/jpeg",
-          upsert: true,
-        });
+    if (hasFile) {
+      buffer = Buffer.from(await file.arrayBuffer());
+      fileMime = file.type || "image/jpeg";
 
-      if (!uploadError) {
-        const { data: pubData } = supabaseAdmin.storage
-          .from("job-offers")
-          .getPublicUrl(storageKey);
-        uploadedImageUrl = pubData?.publicUrl || "";
-      } else {
-        console.warn("[Poster Upload Warning]", uploadError);
+      const check = validateUploadedFile(buffer, fileMime, file.size);
+      if (!check.valid) {
+        return NextResponse.json({ error: check.error }, { status: check.status });
       }
-    } catch (uploadEx) {
-      console.warn("[Poster Storage Exception]", uploadEx);
+
+      // 1. Sauvegarder automatiquement l'affiche sur Supabase Storage
+      try {
+        const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
+        const storageKey = `admin-posters/poster-${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from("job-offers")
+          .upload(storageKey, buffer, {
+            contentType: fileMime,
+            upsert: true,
+          });
+
+        if (!uploadError) {
+          const { data: pubData } = supabaseAdmin.storage
+            .from("job-offers")
+            .getPublicUrl(storageKey);
+          uploadedImageUrl = pubData?.publicUrl || "";
+        } else {
+          console.warn("[Poster Upload Warning]", uploadError);
+        }
+      } catch (uploadEx) {
+        console.warn("[Poster Storage Exception]", uploadEx);
+      }
     }
 
-    // 2. Extraction IA des données de l'affiche via Gemini
-    const extracted = await extractFullJobOfferFromPosterWithGemini(buffer, file.type);
+    // 2. Extraction IA des données de l'affiche et/ou du texte d'accompagnement via Gemini
+    const extracted = await extractFullJobOfferFromPosterWithGemini(buffer, fileMime, accompanyingText);
 
     if (extracted.error) {
       return NextResponse.json(
@@ -118,7 +128,7 @@ export async function POST(req) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Erreur interne lors du traitement de l'affiche.",
+        error: error.message || "Erreur interne lors du traitement de l'offre.",
       },
       { status: 500 }
     );

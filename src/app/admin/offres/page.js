@@ -43,6 +43,7 @@ export default function AdminOffresPage() {
   const [offerForm, setOfferForm] = useState(EMPTY_OFFER);
   const [offerImageFile, setOfferImageFile] = useState(null);
   const [offerImagePreview, setOfferImagePreview] = useState(null);
+  const [accompanyingText, setAccompanyingText] = useState("");
 
   // États du Scanner IA
   const [isScanningAI, setIsScanningAI] = useState(false);
@@ -142,9 +143,9 @@ export default function AdminOffresPage() {
     setScanSuccess(false);
     setScanMessage("");
 
-    // Si on est en mode Scanner IA, lancer automatiquement l'extraction
+    // Si on est en mode Scanner IA, lancer l'extraction automatique
     if (publishMode === "ai_scanner") {
-      runAIScanner(file);
+      runAIScanner(file, accompanyingText);
     }
   };
 
@@ -165,21 +166,35 @@ export default function AdminOffresPage() {
     }
   };
 
-  // Exécution du Scanner IA
-  const runAIScanner = async (fileToScan = offerImageFile) => {
-    if (!fileToScan) {
-      triggerToast("Veuillez d'abord déposer une affiche d'offre.", "fa-triangle-exclamation");
+  // Exécution du Scanner / Organisateur IA
+  const runAIScanner = async (fileToScan = offerImageFile, textToInclude = accompanyingText) => {
+    const hasFile = !!fileToScan;
+    const hasText = typeof textToInclude === "string" && textToInclude.trim().length > 0;
+
+    if (!hasFile && !hasText) {
+      triggerToast("Veuillez déposer une affiche ou coller un texte descriptif de l'offre.", "fa-triangle-exclamation");
       return;
     }
 
     setIsScanningAI(true);
     setScanSuccess(false);
-    setScanMessage("Analyse et extraction automatique par l'IA en cours...");
+    setScanMessage(
+      hasFile && hasText
+        ? "✨ Fusion et organisation intelligente de l'affiche et de la description par l'IA..."
+        : hasFile
+        ? "🔍 Analyse et extraction automatique de l'affiche par l'IA..."
+        : "📝 Analyse et structuration intelligente du texte par l'IA..."
+    );
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const formData = new FormData();
-      formData.append("file", fileToScan);
+      if (hasFile) {
+        formData.append("file", fileToScan);
+      }
+      if (hasText) {
+        formData.append("accompanying_text", textToInclude.trim());
+      }
 
       const res = await fetch("/api/admin/extract-job-poster", {
         method: "POST",
@@ -207,8 +222,14 @@ export default function AdminOffresPage() {
         });
 
         setScanSuccess(true);
-        setScanMessage("✨ Affiche scannée et formulaire pré-rempli avec succès par l'IA !");
-        triggerToast("Informations extraites par l'IA !", "fa-wand-magic-sparkles");
+        setScanMessage(
+          hasFile && hasText
+            ? "✨ Affiche et description fusionnées avec succès ! Tous les champs ont été organisés."
+            : hasFile
+            ? "✨ Affiche scannée et formulaire pré-rempli avec succès par l'IA !"
+            : "✨ Texte structuré et formulaire pré-rempli avec succès par l'IA !"
+        );
+        triggerToast("Informations organisées par l'IA !", "fa-wand-magic-sparkles");
       } else {
         setScanMessage(data.error || "L'IA n'a pas pu extraire toutes les informations. Vous pouvez compléter le formulaire.");
         triggerToast(data.error || "Extraction partielle.", "fa-triangle-exclamation");
@@ -283,6 +304,134 @@ export default function AdminOffresPage() {
     const suggested = `Affiche de recrutement professionnelle et percutante pour le poste de ${title} chez ${company} à ${location}. Style corporate moderne, design soigné, mise en valeur du métier, format carré 1:1`;
     setAiPrompt(suggested);
     triggerToast("Prompt suggéré généré avec succès !", "fa-wand-magic-sparkles");
+  };
+
+  // Publication directe en 1 Clic assistée par IA (depuis image et/ou description)
+  const handleInstantAiPublish = async () => {
+    if (!userSession?.user?.id) {
+      triggerToast("Veuillez vous connecter en tant qu'administrateur.", "fa-triangle-exclamation");
+      return;
+    }
+    const hasFile = !!offerImageFile;
+    const hasText = typeof accompanyingText === "string" && accompanyingText.trim().length > 0;
+    const hasFormFilled = offerForm.title?.trim() && offerForm.company?.trim();
+
+    if (!hasFile && !hasText && !hasFormFilled) {
+      triggerToast("Veuillez déposer une image ou saisir une description.", "fa-triangle-exclamation");
+      return;
+    }
+
+    setSavingOffer(true);
+    triggerToast("⚡ Analyse IA et publication directe en cours...", "fa-wand-magic-sparkles");
+
+    try {
+      let currentOfferData = { ...offerForm };
+
+      // Si le formulaire n'a pas encore été analysé / pré-rempli, lancer l'IA
+      if (!hasFormFilled || hasFile || hasText) {
+        const formData = new FormData();
+        if (hasFile) formData.append("file", offerImageFile);
+        if (hasText) formData.append("accompanying_text", accompanyingText.trim());
+
+        const extRes = await fetch("/api/admin/extract-job-poster", {
+          method: "POST",
+          headers: userSession?.access_token ? { Authorization: `Bearer ${userSession.access_token}` } : undefined,
+          body: formData,
+        });
+        const extJson = await extRes.json();
+
+        if (extJson.success && extJson.offer) {
+          currentOfferData = {
+            ...currentOfferData,
+            ...extJson.offer,
+            image_url: extJson.offer.image_url || offerForm.image_url || "",
+          };
+          setOfferForm(currentOfferData);
+        } else if (!hasFormFilled) {
+          triggerToast(extJson.error || "Extraction incomplète.", "fa-triangle-exclamation");
+          setSavingOffer(false);
+          return;
+        }
+      }
+
+      // Upload de l'image si elle n'est pas encore stockée
+      let finalImageUrl = currentOfferData.image_url || "";
+      if (offerImageFile && (!finalImageUrl || finalImageUrl.startsWith("blob:"))) {
+        const ext = offerImageFile.name.split(".").pop().toLowerCase();
+        const storagePath = `${userSession.user.id}/admin-offers-${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("job-offers")
+          .upload(storagePath, offerImageFile, { contentType: offerImageFile.type });
+
+        if (!uploadError) {
+          const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
+          finalImageUrl = publicUrlData?.publicUrl || "";
+        }
+      }
+
+      // Détection WhatsApp automatique
+      let externalLink = currentOfferData.external_link || "";
+      const phoneDigits = detectWhatsAppNumber({
+        contact_phone: currentOfferData.contact_phone,
+        description: currentOfferData.description,
+        title: currentOfferData.title,
+        company: currentOfferData.company,
+      });
+
+      if (phoneDigits && (!externalLink || externalLink.includes("wa.me"))) {
+        externalLink = buildWhatsAppLink(phoneDigits, {
+          title: currentOfferData.title,
+          company: currentOfferData.company,
+        });
+      }
+
+      const payload = {
+        title: (currentOfferData.title || "Opportunité de recrutement").trim(),
+        company: (currentOfferData.company || "Entreprise").trim(),
+        location: (currentOfferData.location || "Sénégal").trim(),
+        contract_type: currentOfferData.contract_type || "CDI",
+        salary_range: currentOfferData.salary_range || null,
+        min_education_level: currentOfferData.min_education_level || "Aucun",
+        description: currentOfferData.description || "",
+        image_url: finalImageUrl || null,
+        deadline: currentOfferData.deadline || null,
+        contact_email: currentOfferData.contact_email ? currentOfferData.contact_email.trim() : null,
+        contact_phone: currentOfferData.contact_phone ? currentOfferData.contact_phone.trim() : (phoneDigits ? `+${phoneDigits}` : null),
+        external_link: externalLink || null,
+        status: "approved",
+        is_active: true,
+        recruiter_id: userSession.user.id,
+      };
+
+      const res = await fetch("/api/admin/publish-offer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userSession.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json();
+      if (!resData.success) {
+        triggerToast(resData.error || "Erreur lors de la publication.", "fa-circle-xmark");
+      } else {
+        setAllOffers((prev) => [resData.offer, ...prev]);
+        triggerToast("🎉 Offre analysée et publiée en direct sur le Fil d'Actualité !", "fa-bullhorn");
+        setOfferForm(EMPTY_OFFER);
+        setOfferImageFile(null);
+        setOfferImagePreview(null);
+        setAccompanyingText("");
+        setScanSuccess(false);
+        setScanMessage("");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast("Erreur lors de la publication automatique.", "fa-circle-xmark");
+    } finally {
+      setSavingOffer(false);
+    }
   };
 
   // Soumission et Publication directe sur le Fil d'Actualité
@@ -371,6 +520,7 @@ export default function AdminOffresPage() {
         setOfferForm(EMPTY_OFFER);
         setOfferImageFile(null);
         setOfferImagePreview(null);
+        setAccompanyingText("");
         setScanSuccess(false);
         setScanMessage("");
       }
@@ -836,6 +986,75 @@ export default function AdminOffresPage() {
               )}
             </div>
 
+            {/* Zone de description / texte accompagnant l'affiche (Optionnel mais ultra-pratique) */}
+            <div className="bg-gradient-to-br from-emerald-50/70 via-teal-50/40 to-cyan-50/30 p-4 sm:p-5 rounded-3xl border border-emerald-200/90 shadow-2xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs shadow-xs">
+                    <i className="fa-solid fa-file-pen"></i>
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">
+                      Texte & Description d'accompagnement
+                    </h4>
+                    <p className="text-[11px] text-emerald-700 font-medium">
+                      Facultatif : collez le texte accompagnant l'affiche (WhatsApp, LinkedIn, Email...).
+                    </p>
+                  </div>
+                </div>
+
+                <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200/80">
+                  Optionnel
+                </span>
+              </div>
+
+              <textarea
+                rows={3}
+                value={accompanyingText}
+                onChange={(e) => setAccompanyingText(e.target.value)}
+                placeholder="Ex: 🚨 RECRUTEMENT URGENT : Nous recherchons un Ingénieur / Juriste / Commercial à Dakar. Envoyez votre candidature à recrutement@exemple.com avant le 31 août..."
+                className="w-full p-3.5 bg-white border border-emerald-200/80 rounded-2xl text-xs font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition resize-none placeholder:text-gray-400 shadow-2xs"
+              />
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-t border-emerald-200/60">
+                <span className="text-[11px] text-gray-600 font-medium flex items-center gap-1.5">
+                  <i className="fa-solid fa-circle-info text-emerald-600 text-xs"></i>
+                  <span>
+                    {offerImageFile && accompanyingText.trim()
+                      ? "Affiche + Description détectées : l'IA fusionne et publie tout."
+                      : offerImageFile
+                      ? "Affiche prête : la description est facultative."
+                      : accompanyingText.trim()
+                      ? "Texte prêt : l'IA structurera tout le formulaire."
+                      : "Glissez une image, écrivez une description (optionnelle), puis publiez !"}
+                  </span>
+                </span>
+
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <button
+                    type="button"
+                    disabled={isScanningAI || (!offerImageFile && !accompanyingText.trim())}
+                    onClick={() => runAIScanner(offerImageFile, accompanyingText)}
+                    className="px-3.5 py-2.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 disabled:opacity-50 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                    title="Remplir le formulaire ci-dessous pour vérification manuelle"
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
+                    <span>Organiser formulaire</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={savingOffer || isScanningAI || (!offerImageFile && !accompanyingText.trim() && !offerForm.title.trim())}
+                    onClick={handleInstantAiPublish}
+                    className="px-4 py-2.5 bg-gradient-to-r from-[#10E688] to-emerald-600 hover:from-[#0fd57d] hover:to-emerald-700 disabled:opacity-50 text-gray-950 text-xs font-black rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  >
+                    <i className={`fa-solid ${savingOffer ? "fa-spinner fa-spin" : "fa-bolt-lightning"}`}></i>
+                    <span>{savingOffer ? "Publication IA..." : "🚀 Publier avec l'IA"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Message de statut du Scanner */}
             {scanMessage && (
               <div
@@ -997,6 +1216,9 @@ export default function AdminOffresPage() {
                     setOfferForm(EMPTY_OFFER);
                     setOfferImageFile(null);
                     setOfferImagePreview(null);
+                    setAccompanyingText("");
+                    setScanSuccess(false);
+                    setScanMessage("");
                   }}
                   className="text-xs font-bold text-gray-500 hover:text-gray-800 transition"
                 >

@@ -186,15 +186,22 @@ Score Global : ${scanResult.score}/100 (${scanResult.scoreRating})
 ${(scanResult.categories?.invariants || []).map((i) => `- [${i.status.toUpperCase()}] ${i.name}`).join("\n")}
 
 2. ISOLATION DU STOCKAGE :
-${(scanResult.categories?.storage || []).map((s) => `- Bucket '${s.bucket}' (public=${s.expected_public}) : ${s.status === "pass" ? "CONFORME" : "FAIL"}`).join("\n")}
+${(scanResult.categories?.storage || []).map((s) => `- Bucket '${s.bucket}' (public=${s.expected_public}) : ${s.status === "pass" ? "CONFORME" : s.status === "unknown" ? "NON VÉRIFIÉ" : "FAIL"}`).join("\n")}
 
 3. TABLES ET PROTECTION RLS :
-${(scanResult.categories?.tables || []).map((t) => `- Table '${t.table}' : ${t.status === "pass" ? "RLS ACTIF" : "NON SÉCURISÉ"}`).join("\n")}
+${(scanResult.categories?.tables || []).map((t) => `- Table '${t.table}' : ${t.status === "pass" ? "RLS ACTIF" : t.status === "warn" ? "RLS ACTIF, 0 POLICY" : "NON SÉCURISÉ"}`).join("\n")}
 
 4. SECRETS & ENVIRONNEMENT :
 ${(scanResult.categories?.environment || []).map((e) => `- ${e.label} : ${e.status.toUpperCase()}`).join("\n")}
 
-État du système certifié robuste.`;
+${(() => {
+  // Jamais une conclusion fixe : dérivée du vrai score, jamais affirmée
+  // indépendamment du résultat (l'ancienne version affichait cette phrase
+  // même sur un scan en échec).
+  if (scanResult.score >= 90) return "État du système certifié robuste sur la base de ce scan.";
+  if (scanResult.score >= 70) return "État du système : points de vigilance identifiés ci-dessus, à traiter.";
+  return "État du système : anomalies significatives détectées ci-dessus — action requise.";
+})()}`;
 
     navigator.clipboard.writeText(reportText);
     if (triggerToast) {
@@ -202,8 +209,13 @@ ${(scanResult.categories?.environment || []).map((e) => `- ${e.label} : ${e.stat
     }
   };
 
-  const score = scanResult?.score ?? 100;
-  const rating = scanResult?.scoreRating ?? "Système Hautement Sécurisé";
+  // Jamais de score par défaut optimiste : tant qu'aucun scan réel n'a
+  // abouti (scanResult toujours null — chargement en cours, ou échec), rien
+  // n'est affiché plutôt qu'un "100/100" fabriqué. Voir aussi les 3
+  // sections plus bas (stockage/environnement/tables) qui avaient le même
+  // défaut.
+  const score = scanResult?.score ?? null;
+  const rating = scanResult?.scoreRating ?? (isScanning ? "Scan en cours..." : "Aucun scan valide pour le moment");
   const openAlerts = securityAlerts.filter((a) => a.resolved_status === "open");
 
   // Invariants combinés
@@ -299,38 +311,49 @@ ${(scanResult.categories?.environment || []).map((e) => `- ${e.label} : ${e.stat
       {/* CARTES KPI DE SANTÉ & RÉSUMÉ DU BOUCLIER */}
       {/* ------------------------------------------------------------- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Score Global */}
+        {/* Score Global — jamais de valeur par défaut : "—" tant qu'aucun
+            scan réel n'a abouti, jamais un chiffre inventé. */}
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500">Indice de Défense</span>
-            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${score >= 90 ? "bg-emerald-100 text-emerald-800" : "bg-orange-100 text-orange-800"}`}>
-              {score >= 90 ? "Optimal" : "Surveillance"}
-            </span>
+            {score !== null && (
+              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${score >= 90 ? "bg-emerald-100 text-emerald-800" : "bg-orange-100 text-orange-800"}`}>
+                {score >= 90 ? "Optimal" : "Surveillance"}
+              </span>
+            )}
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-gray-900 tracking-tight">{score}</span>
+            <span className="text-3xl font-black text-gray-900 tracking-tight">{score !== null ? score : "—"}</span>
             <span className="text-xs font-bold text-gray-400">/ 100</span>
           </div>
-          <p className="text-[11px] text-emerald-700 font-bold mt-1 truncate">
+          <p className={`text-[11px] font-bold mt-1 truncate ${score !== null ? "text-emerald-700" : "text-gray-400"}`}>
             🛡️ {rating}
           </p>
         </div>
 
-        {/* Protection RLS & Tables */}
+        {/* Protection RLS & Tables — pourcentage calculé à partir du vrai
+            résultat (categories.tables, get_rls_audit), jamais "100%" fixe. */}
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500">Tables Protégées (RLS)</span>
             <span className="text-emerald-500 text-sm"><i className="fa-solid fa-lock"></i></span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-gray-900 tracking-tight">100%</span>
+            <span className="text-3xl font-black text-gray-900 tracking-tight">
+              {scanResult?.summary?.totalTablesChecked
+                ? `${Math.round((scanResult.summary.tablesRlsPass / scanResult.summary.totalTablesChecked) * 100)}%`
+                : "—"}
+            </span>
           </div>
           <p className="text-[11px] text-gray-500 font-medium mt-1">
-            {scanResult?.summary?.tablesRlsPass ?? 12} tables isolées par Row-Level Security
+            {scanResult?.summary
+              ? `${scanResult.summary.tablesRlsPass} / ${scanResult.summary.totalTablesChecked} tables isolées par Row-Level Security`
+              : "Scan requis"}
           </p>
         </div>
 
-        {/* Invariants Certifiés */}
+        {/* Invariants Certifiés — plus de "?? 13" ni de "0 régression"
+            affirmé sans donnée : dérivé du vrai décompte fail/unknown. */}
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500">Invariants Validés</span>
@@ -338,13 +361,20 @@ ${(scanResult.categories?.environment || []).map((e) => `- ${e.label} : ${e.stat
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-gray-900 tracking-tight">
-              {scanResult?.summary?.invariantsPass ?? 13}
+              {scanResult?.summary?.invariantsPass ?? "—"}
             </span>
-            <span className="text-xs font-bold text-gray-400">/ 13 actifs</span>
+            <span className="text-xs font-bold text-gray-400">/ {scanResult?.summary?.totalInvariants ?? 13} actifs</span>
           </div>
-          <p className="text-[11px] text-emerald-600 font-bold mt-1">
-            ✓ 0 régression détectée
-          </p>
+          {scanResult && (() => {
+            const failCount = (scanResult.categories?.invariants || []).filter((i) => i.status === "fail").length;
+            const unknownCount = (scanResult.categories?.invariants || []).filter((i) => i.status === "unknown").length;
+            return (
+              <p className={`text-[11px] font-bold mt-1 ${failCount > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                {failCount > 0 ? `✕ ${failCount} régression(s) détectée(s)` : "✓ 0 régression détectée"}
+                {unknownCount > 0 ? ` · ${unknownCount} jamais vérifié(s)` : ""}
+              </p>
+            );
+          })()}
         </div>
 
         {/* Alertes d'Intrusion Actives */}
@@ -419,26 +449,28 @@ ${(scanResult.categories?.environment || []).map((e) => `- ${e.label} : ${e.stat
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(scanResult?.categories?.storage || [
-                { bucket: "resumes", expected_public: false, purpose: "Stockage des CVs candidats", status: "pass", protection: "RLS + URLs signées 300s" },
-                { bucket: "chat-attachments", expected_public: false, purpose: "Pièces jointes de messagerie", status: "pass", protection: "Isolation par dossier utilisateur" },
-                { bucket: "job-offers", expected_public: true, purpose: "Images publiques des offres", status: "pass", protection: "Lecture publique autorisée" },
-              ]).map((b) => (
-                <div key={b.bucket} className={`p-4 rounded-2xl border ${b.status === "pass" ? "bg-emerald-50/50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-extrabold text-xs text-gray-900 font-mono">bucket/{b.bucket}</span>
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${b.status === "pass" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
-                      {b.status === "pass" ? "✓ Protégé" : "✕ Faille Publique"}
-                    </span>
+            {scanResult?.categories?.storage ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {scanResult.categories.storage.map((b) => (
+                  <div key={b.bucket} className={`p-4 rounded-2xl border ${b.status === "pass" ? "bg-emerald-50/50 border-emerald-200" : b.status === "unknown" ? "bg-gray-50 border-gray-200" : "bg-red-50 border-red-200"}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-extrabold text-xs text-gray-900 font-mono">bucket/{b.bucket}</span>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${b.status === "pass" ? "bg-emerald-100 text-emerald-800" : b.status === "unknown" ? "bg-gray-100 text-gray-600" : "bg-red-100 text-red-800"}`}>
+                        {b.status === "pass" ? "✓ Protégé" : b.status === "unknown" ? "? Non vérifié" : "✕ Faille Publique"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 font-medium mb-2">{b.purpose}</p>
+                    <div className="text-[10px] text-gray-500 bg-white/80 p-2 rounded-xl border border-gray-200 font-mono">
+                      {b.error || b.protection}
+                    </div>
                   </div>
-                  <p className="text-[11px] text-gray-600 font-medium mb-2">{b.purpose}</p>
-                  <div className="text-[10px] text-gray-500 bg-white/80 p-2 rounded-xl border border-gray-200 font-mono">
-                    {b.protection || (b.expected_public ? "Public intentionnel" : "Privé strict")}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic py-6 text-center">
+                {isScanning ? "Scan en cours..." : "Aucun scan valide — aucune donnée à afficher."}
+              </p>
+            )}
           </div>
 
           {/* Section 2 : Secrets & Variables d'environnement */}
@@ -450,26 +482,28 @@ ${(scanResult.categories?.environment || []).map((e) => `- ${e.label} : ${e.stat
               Vérification de l'absence de fuites des clés maîtresses côté navigateur.
             </p>
 
-            <div className="divide-y divide-gray-100">
-              {(scanResult?.categories?.environment || [
-                { id: "e1", label: "Clé Maître (SUPABASE_SERVICE_ROLE_KEY)", status: "pass", severity: "critical", description: "La clé administrative est correctement confinée côté serveur." },
-                { id: "e2", label: "Chiffrement des Transmissions (HTTPS)", status: "pass", severity: "critical", description: "Toutes les connexions à la base de données sont chiffrées via TLS 1.3." },
-                { id: "e3", label: "Clé Publique Client (Anon JWT)", status: "pass", severity: "medium", description: "Clé cliente standard configurée pour le frontend." },
-              ]).map((env) => (
-                <div key={env.id || env.label} className="py-3 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${env.status === "pass" ? "bg-emerald-500" : "bg-red-500"}`}></span>
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-gray-900 block">{env.label}</span>
-                      <span className="text-[11px] text-gray-500 truncate block">{env.description}</span>
+            {scanResult?.categories?.environment ? (
+              <div className="divide-y divide-gray-100">
+                {scanResult.categories.environment.map((env) => (
+                  <div key={env.id || env.label} className="py-3 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${env.status === "pass" ? "bg-emerald-500" : env.status === "warn" ? "bg-amber-500" : "bg-red-500"}`}></span>
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-gray-900 block">{env.label}</span>
+                        <span className="text-[11px] text-gray-500 truncate block">{env.description}</span>
+                      </div>
                     </div>
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full shrink-0 ${env.status === "pass" ? "bg-emerald-100 text-emerald-800" : env.status === "warn" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>
+                      {env.status === "pass" ? "SÉCURISÉ" : env.status === "warn" ? "À VÉRIFIER" : "VULNÉRABILITÉ"}
+                    </span>
                   </div>
-                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full shrink-0 ${env.status === "pass" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
-                    {env.status === "pass" ? "SÉCURISÉ" : "VULNÉRABILITÉ"}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic py-6 text-center">
+                {isScanning ? "Scan en cours..." : "Aucun scan valide — aucune donnée à afficher."}
+              </p>
+            )}
           </div>
 
           {/* Section 3 : Protection des Tables & RLS */}
@@ -481,27 +515,25 @@ ${(scanResult.categories?.environment || []).map((e) => `- ${e.label} : ${e.stat
               Chaque table PostgreSQL est verrouillée par des politiques d'isolation par utilisateur.
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-              {(scanResult?.categories?.tables || [
-                { table: "profiles", status: "pass" },
-                { table: "user_roles", status: "pass" },
-                { table: "job_offers", status: "pass" },
-                { table: "candidatures", status: "pass" },
-                { table: "resumes", status: "pass" },
-                { table: "reports", status: "pass" },
-                { table: "chat_messages", status: "pass" },
-                { table: "security_logs", status: "pass" },
-                { table: "feature_flags", status: "pass" },
-                { table: "badge_requests", status: "pass" },
-                { table: "cv_consultations", status: "pass" },
-                { table: "ai_usage_daily", status: "pass" },
-              ]).map((tbl) => (
-                <div key={tbl.table} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-200">
-                  <span className="text-xs font-mono font-bold text-gray-800 truncate">{tbl.table}</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="RLS Actif & Protégé"></span>
-                </div>
-              ))}
-            </div>
+            {scanResult?.categories?.tables ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                {scanResult.categories.tables.map((tbl) => (
+                  <div key={tbl.table} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-200">
+                    <span className="text-xs font-mono font-bold text-gray-800 truncate" title={`RLS activée : ${tbl.rls_enabled} · ${tbl.policy_count} policy(ies)`}>
+                      {tbl.table}
+                    </span>
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${tbl.status === "pass" ? "bg-emerald-500" : tbl.status === "warn" ? "bg-amber-500" : "bg-red-500"}`}
+                      title={tbl.status === "pass" ? "RLS Actif & Protégé" : tbl.status === "warn" ? "RLS activée, 0 policy — à vérifier" : "RLS désactivée"}
+                    ></span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic py-6 text-center">
+                {isScanning ? "Scan en cours..." : "Aucun scan valide — aucune donnée à afficher."}
+              </p>
+            )}
           </div>
         </div>
       )}
