@@ -5,6 +5,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { initKpayGatewayPayment } from "@/lib/kpay";
 import { createPayDunyaInvoiceCheckout } from "@/lib/paydunya";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 import { z } from "zod";
 
@@ -118,6 +119,7 @@ export async function POST(req) {
 
       if (orderError || !order) {
         console.error("[Checkout] Échec création commande :", orderError?.message);
+        captureCriticalPaymentError("[Checkout] Échec création commande", { message: orderError?.message });
         return NextResponse.json({ error: "Impossible de créer la commande." }, { status: 500 });
       }
 
@@ -139,6 +141,7 @@ export async function POST(req) {
           payment = { id: invoice.token, gatewayUrl: invoice.checkoutUrl };
         } catch (paydunyaError) {
           console.error("[Checkout] Échec initialisation PayDunya :", paydunyaError.message);
+          captureCriticalPaymentError("[Checkout] Échec initialisation PayDunya (commande CV)", { orderId: order.id, message: paydunyaError.message });
           return NextResponse.json({ error: paydunyaError.message }, { status: 502 });
         }
       } else {
@@ -155,6 +158,7 @@ export async function POST(req) {
           payment = { id: kpayPayment.id, gatewayUrl: kpayPayment.gatewayUrl };
         } catch (kpayError) {
           console.error("[Checkout] Échec initialisation KPay :", kpayError.message);
+          captureCriticalPaymentError("[Checkout] Échec initialisation KPay (commande CV)", { orderId: order.id, message: kpayError.message });
           return NextResponse.json({ error: kpayError.message }, { status: 502 });
         }
       }
@@ -196,6 +200,7 @@ export async function POST(req) {
 
     if (transactionError || !transaction) {
       console.error("[Checkout] Échec création transaction :", transactionError?.message);
+      captureCriticalPaymentError("[Checkout] Échec création transaction", { message: transactionError?.message });
       return NextResponse.json({ error: "Impossible de créer la transaction." }, { status: 500 });
     }
 
@@ -217,6 +222,7 @@ export async function POST(req) {
         payment = { id: invoice.token, gatewayUrl: invoice.checkoutUrl };
       } catch (paydunyaError) {
         console.error("[Checkout] Échec initialisation PayDunya :", paydunyaError.message);
+        captureCriticalPaymentError("[Checkout] Échec initialisation PayDunya (recharge crédits)", { transactionId: transaction.id, message: paydunyaError.message });
         return NextResponse.json({ error: paydunyaError.message }, { status: 502 });
       }
     } else {
@@ -233,6 +239,7 @@ export async function POST(req) {
         payment = { id: kpayPayment.id, gatewayUrl: kpayPayment.gatewayUrl };
       } catch (kpayError) {
         console.error("[Checkout] Échec initialisation KPay :", kpayError.message);
+        captureCriticalPaymentError("[Checkout] Échec initialisation KPay (recharge crédits)", { transactionId: transaction.id, message: kpayError.message });
         return NextResponse.json({ error: kpayError.message }, { status: 502 });
       }
     }
@@ -250,6 +257,7 @@ export async function POST(req) {
     });
   } catch (error) {
     console.error("[Checkout API Error]", error);
+    captureCriticalPaymentError("[Checkout API Error] Exception non gérée", { message: error?.message });
     return NextResponse.json({ error: "Une erreur interne est survenue lors du paiement." }, { status: 500 });
   }
 }

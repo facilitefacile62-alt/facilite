@@ -5,6 +5,7 @@ import { generateAndStoreInvoice } from "@/lib/invoiceGenerator";
 import { sendInvoiceEmail, sendWhatsAppConfirmation } from "@/lib/notifications";
 import { isEquivalentCfaCurrency, isPlaceholderKpaySecret } from "@/lib/kpay";
 import { labelForCvModel } from "@/lib/cvModels";
+import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 export const runtime = "nodejs";
 
@@ -372,6 +373,7 @@ export async function POST(req) {
         "secret du tableau de bord KPay. Toutes les notifications KPay réelles seront rejetées (signature " +
         "invalide) tant que la vraie valeur n'aura pas été renseignée."
     );
+    captureCriticalPaymentError("[Webhook KPay] KPAY_WEBHOOK_SECRET ressemble à un placeholder");
   }
 
   const rawBody = await req.text();
@@ -379,6 +381,7 @@ export async function POST(req) {
 
   if (!isValidKpaySignature(rawBody, signature, secret)) {
     console.error("[Webhook KPay] Signature invalide — requête rejetée.");
+    captureCriticalPaymentError("[Webhook KPay] Signature invalide");
     return NextResponse.json({ error: "Signature invalide." }, { status: 401 });
   }
 
@@ -394,6 +397,7 @@ export async function POST(req) {
     supabaseAdmin = getSupabaseAdmin();
   } catch (err) {
     console.error("[Webhook KPay]", err.message);
+    captureCriticalPaymentError("[Webhook KPay] Service role manquant", { message: err.message });
     return NextResponse.json({ error: "Webhook non configuré (service role manquant)." }, { status: 503 });
   }
 
@@ -418,9 +422,11 @@ export async function POST(req) {
       if (transactionResult.handled) return transactionResult.response;
 
       console.error("[Webhook KPay] Ni commande ni transaction introuvable pour externalId/paymentId", externalId, kpayPaymentId);
+      captureCriticalPaymentError("[Webhook KPay] Ni commande ni transaction introuvable", { externalId, kpayPaymentId });
       return NextResponse.json({ received: true, warning: "not_found" });
     } catch (error) {
       console.error("[Webhook KPay] Erreur interne :", error);
+      captureCriticalPaymentError("[Webhook KPay] Erreur interne", { message: error?.message, externalId, kpayPaymentId });
       return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
     }
   }
@@ -437,9 +443,11 @@ export async function POST(req) {
       if (transactionResult.handled) return transactionResult.response;
 
       console.error("[Webhook KPay] Ni commande ni transaction introuvable pour externalId/paymentId (échec)", externalId, kpayPaymentId);
+      captureCriticalPaymentError("[Webhook KPay] Ni commande ni transaction introuvable (échec)", { externalId, kpayPaymentId });
       return NextResponse.json({ received: true, warning: "not_found" });
     } catch (error) {
       console.error("[Webhook KPay] Erreur interne (échec) :", error);
+      captureCriticalPaymentError("[Webhook KPay] Erreur interne (échec)", { message: error?.message, externalId, kpayPaymentId });
       return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
     }
   }

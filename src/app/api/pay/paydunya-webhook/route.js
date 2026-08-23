@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { enqueueWebhookJob } from "@/lib/queueProducers";
+import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 /**
  * Filtre bon marché conforme à la doc officielle
@@ -124,6 +125,7 @@ export async function POST(req) {
       confirmed = await confirmPayDunyaInvoice(invoiceToken);
     } catch (err) {
       console.error("[PayDunya Webhook] Échec de la confirmation serveur-à-serveur:", err.message);
+      captureCriticalPaymentError("[PayDunya Webhook] Échec de la confirmation serveur-à-serveur", { message: err.message, invoiceToken });
       return NextResponse.json({ error: "Confirmation failed" }, { status: 502 });
     }
 
@@ -148,6 +150,7 @@ export async function POST(req) {
     return NextResponse.json({ received: true, eventId });
   } catch (err) {
     console.error("[PayDunya Webhook Route] Erreur réception webhook:", err);
+    captureCriticalPaymentError("[PayDunya Webhook Route] Erreur réception webhook", { message: err?.message });
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
