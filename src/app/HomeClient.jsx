@@ -209,7 +209,6 @@ Les candidat(e)s intéressé(e)s répondant au profil sont invité(e)s à envoye
     image: "/sdt_chauffeur_professionnel.png",
     image_url: "/sdt_chauffeur_professionnel.png",
     deadline: "2026-10-15",
-    pinned: true,
   },
   {
     id: "8e7bdec1-c693-43a8-af11-d5515f733a4c",
@@ -253,7 +252,6 @@ Nous recrutons des conseillers clients en réception d’appels qui auront pour 
     image: "/foundever_conseiller_client.jpg",
     image_url: "/foundever_conseiller_client.jpg",
     deadline: "2026-09-30",
-    pinned: true,
     is_sponsored: true,
     sponsor_priority: 1000,
   },
@@ -295,7 +293,6 @@ Send application detailing experience and residence to: maaguysarr@hotmail.com`,
     recruiterEmail: "maaguysarr@hotmail.com",
     externalLink: "mailto:maaguysarr@hotmail.com?subject=Candidature%20Chauffeur%20-%20Dexintec",
     image: "/dexintec_chauffeur.png",
-    pinned: true,
     is_sponsored: true,
     sponsor_priority: 999,
   },
@@ -341,7 +338,6 @@ Send application detailing experience and residence to: maaguysarr@hotmail.com`,
     image: "/ods_business_analyst_dakar.jpg",
     image_url: "/ods_business_analyst_dakar.jpg",
     deadline: "2026-08-20",
-    pinned: true,
     is_sponsored: true,
     sponsor_priority: 21,
   },
@@ -391,7 +387,6 @@ Send application detailing experience and residence to: maaguysarr@hotmail.com`,
     image: "/ageroute_recrutement_comptable_pcza.jpg",
     image_url: "/ageroute_recrutement_comptable_pcza.jpg",
     deadline: "2026-08-31",
-    pinned: true,
     is_sponsored: true,
     sponsor_priority: 22,
   },
@@ -439,7 +434,6 @@ Send application detailing experience and residence to: maaguysarr@hotmail.com`,
     image: "/simplon_senegal_chauffeur_kedougou.jpg",
     image_url: "/simplon_senegal_chauffeur_kedougou.jpg",
     deadline: "2026-08-20",
-    pinned: true,
     is_sponsored: true,
     sponsor_priority: 20,
   },
@@ -474,7 +468,6 @@ The Youth Linguists Programme for the Dakar 2026 Youth Olympic Games is now open
     image: "/joj_dakar_2026_youth_linguists.jpg",
     image_url: "/joj_dakar_2026_youth_linguists.jpg",
     deadline: "2026-08-23",
-    pinned: true,
     is_sponsored: true,
     sponsor_priority: 25,
   },
@@ -512,7 +505,6 @@ Envoyez votre dossier de candidature par e-mail : crewcoordinator@icsindustrial.
     image: "/recrutement_massif_btp_30_profils.png",
     image_url: "/recrutement_massif_btp_30_profils.png",
     deadline: "2026-09-30",
-    pinned: true
   },
   {
     id: "962a37cc-55ff-422f-87d4-402f096483f4",
@@ -560,7 +552,6 @@ Ou postulez directement via Facilité avec votre CV !`,
     image: "/mobilite_senegal_livreur_coursier.jpg",
     image_url: "/mobilite_senegal_livreur_coursier.jpg",
     deadline: "2026-09-15",
-    pinned: true
   },
   {
     id: "000d9a92-0af4-4c51-af40-e748db51c89d",
@@ -607,7 +598,6 @@ Envoyez votre CV à : rh@ziac.sn
     image: "/ziac_stagiaire_informaticien.jpg",
     image_url: "/ziac_stagiaire_informaticien.jpg",
     deadline: "2026-08-23",
-    pinned: true
   },
   {
     id: "8119367c-e0e0-4279-ba9f-ec1a6063bae0",
@@ -652,7 +642,6 @@ https://lnkd.in/gv6pvNJq`,
     image: "/cadre_infirmier_infections.jpg",
     image_url: "/cadre_infirmier_infections.jpg",
     deadline: "2026-09-30",
-    pinned: true
   },
   {
     id: "df1477a7-88df-4817-a130-25b681c32413",
@@ -699,7 +688,6 @@ Envoyez votre CV à : sarrsoda@semisenegal.sn
     image: "/semi_sarl_chef_chantier.jpg",
     image_url: "/semi_sarl_chef_chantier.jpg",
     deadline: "2026-09-15",
-    pinned: true
   },
   {
     id: "72ce49fa-efa7-4aa4-95ec-b1f73e6c581f",
@@ -746,7 +734,6 @@ https://docs.google.com/forms/d/e/1FAIpQLScGI6d43s6A-rrjORx8BlwuN_K-gTRYgcYw3MCf
     image: "/terrou_bi_reservation.jpg",
     image_url: "/terrou_bi_reservation.jpg",
     deadline: "2026-08-31",
-    pinned: true
   },
   {
     id: "9d28564d-7084-4f71-8a71-f1c8a7796ff9",
@@ -793,7 +780,6 @@ https://bceao2.tzportal.io//fr/jobs/1960-64`,
     image: "/bceao_assistant_direction.jpg",
     image_url: "/bceao_assistant_direction.jpg",
     deadline: "2026-08-24",
-    pinned: true
   },
   {
     id: "ddc8c73d-7d1e-4ff0-a7af-153e5b5aa8a6",
@@ -852,7 +838,6 @@ https://bceao2.tzportal.io//fr/jobs/1960-64`,
     image: "/secam_chantier_kedougou.jpg",
     image_url: "/secam_chantier_kedougou.jpg",
     deadline: "2026-08-20",
-    pinned: true
   },
   {
     id: "f302e044-0ff5-4d60-9b33-b9db11fa2df7",
@@ -895,7 +880,6 @@ https://erajobs.state.gov/dos-era/vacancy/viewVacancyDetail.hms?_ref=vtb5rmp3pt0
     image: "/chauffeur_ambassade_usa.jpg",
     image_url: "/chauffeur_ambassade_usa.jpg",
     deadline: "2026-09-30",
-    pinned: true
   },
   {
     id: "82dd1b8a-8234-4862-8580-dfe4e47897b0",
@@ -928,7 +912,6 @@ https://youthmedia.net/opportunites/programme-de-stages-unicef-2026`,
     image: "/unicef_stage_2026.jpg",
     image_url: "/unicef_stage_2026.jpg",
     deadline: "2026-12-31",
-    pinned: true
   },
   {
     id: "77177373-1111-4444-8888-000000000001",
@@ -967,7 +950,6 @@ Join a major audiovisual production with EvenProd!`,
     externalButtonLabel: "Postuler sur WhatsApp",
     image: "/casting_evenprod.jpg",
     image_url: "/casting_evenprod.jpg",
-    pinned: true
   },
   {
     id: "9b125270-1234-4567-89ab-cdef25272026",
@@ -1016,7 +998,6 @@ Join a major audiovisual production with EvenProd!`,
     externalLink: "https://mirador.education.gouv.sn/recr26",
     image: "/concours_enseignants_2026.png",
     deadline: "2026-08-28",
-    pinned: true
   },
   {
     id: 101,
