@@ -127,6 +127,14 @@ export const AiChatPayloadSchema = z
     customSystemPrompt: z.string().max(25_000).optional(),
     temperature: z.number().min(0).max(2).optional(),
     attachments: z.array(AttachmentSchema).max(5).optional(),
+    // Confirmation explicite d'un outil proposé au tour précédent (registre
+    // src/lib/aiTools/) — seul moyen d'exécuter un outil requiresConfirmation.
+    confirmToolCall: z
+      .object({
+        toolName: z.string().max(100),
+        args: z.record(z.string(), z.unknown()).optional(),
+      })
+      .optional(),
   })
   .refine((d) => (d.messages && d.messages.length > 0) || d.message, {
     message: "Un message ou un historique de messages est requis.",

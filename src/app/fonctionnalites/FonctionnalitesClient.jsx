@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { PDFDocument, degrees } from "pdf-lib";
 import JSZip from "jszip";
+import { compressPdfFile } from "@/lib/pdfCompression";
 
 // Helper pour charger dynamiquement le moteur PDF.js de Mozilla dans le navigateur
 async function getPdfJsEngine() {
@@ -433,76 +434,20 @@ export default function FonctionnalitesPage() {
 
     try {
       if (activeItem.type === "compress") {
-        // --- 1. VÉRITABLE COMPRESSION HAUTE PERFORMANCE ---
+        // --- 1. VÉRITABLE COMPRESSION HAUTE PERFORMANCE (factorisée, voir src/lib/pdfCompression.js) ---
         const file = selectedFiles[0];
-        const arrayBuffer = await file.arrayBuffer();
-        setProcessingProgress(20);
-
-        // Chargement du moteur Mozilla PDF.js
-        const pdfjs = await getPdfJsEngine();
-        setProcessingProgress(35);
-
-        const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) });
-        const srcPdf = await loadingTask.promise;
-        const numPages = srcPdf.numPages;
-
-        const compressedPdfDoc = await PDFDocument.create();
-
-        // Réglage intelligent selon le mode choisi par l'utilisateur
-        // 'recommended': échelle 1.35, qualité 0.60 -> Compresse jusqu'à 85-95% en gardant un texte ultra net
-        // 'low': échelle 1.65, qualité 0.78 -> Compresse modérément
-        const scale = compressionMode === "recommended" ? 1.35 : 1.65;
-        const jpegQuality = compressionMode === "recommended" ? 0.60 : 0.78;
-
-        for (let i = 1; i <= numPages; i++) {
-          setProcessingProgress(35 + Math.round((i / numPages) * 55));
-          const page = await srcPdf.getPage(i);
-          const viewport = page.getViewport({ scale });
-
-          const canvas = document.createElement("canvas");
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext("2d", { willReadFrequently: true });
-
-          await page.render({ canvasContext: ctx, viewport }).promise;
-
-          // Encodage en JPEG compressé
-          const dataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
-          const binaryString = atob(dataUrl.split(",")[1]);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let j = 0; j < binaryString.length; j++) {
-            bytes[j] = binaryString.charCodeAt(j);
-          }
-
-          const embeddedJpg = await compressedPdfDoc.embedJpg(bytes);
-
-          const origWidth = page.view[2] - page.view[0];
-          const origHeight = page.view[3] - page.view[1];
-
-          const newPage = compressedPdfDoc.addPage([origWidth, origHeight]);
-          newPage.drawImage(embeddedJpg, {
-            x: 0,
-            y: 0,
-            width: origWidth,
-            height: origHeight,
-          });
-        }
-
-        setProcessingProgress(95);
-        const finalPdfBytes = await compressedPdfDoc.save({ useObjectStreams: true });
-        const blob = new Blob([finalPdfBytes], { type: "application/pdf" });
-        const downloadUrl = URL.createObjectURL(blob);
-
-        const originalSizeBytes = file.size;
-        const newSizeBytes = finalPdfBytes.byteLength;
-        const savings = Math.max(5, Math.round(((originalSizeBytes - newSizeBytes) / originalSizeBytes) * 100));
+        const result = await compressPdfFile(file, {
+          mode: compressionMode,
+          onProgress: setProcessingProgress,
+        });
+        const downloadUrl = URL.createObjectURL(result.blob);
 
         setProcessResult({
           downloadUrl,
-          fileName: `compressed_${file.name}`,
-          originalSize: formatBytes(originalSizeBytes),
-          newSize: formatBytes(newSizeBytes),
-          savingsPercent: `${savings}%`,
+          fileName: result.fileName,
+          originalSize: result.originalSizeLabel,
+          newSize: result.newSizeLabel,
+          savingsPercent: `${result.savingsPercent}%`,
           message: `Les PDF ont été compressés !`
         });
 

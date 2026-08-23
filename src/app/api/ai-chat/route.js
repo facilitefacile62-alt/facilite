@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
 import { AiChatPayloadSchema } from "@/lib/validation";
 import { extractTextFromFile } from "@/lib/documentParser";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
+import { getGeminiFunctionDeclarations, getTool, runToolCall } from "@/lib/aiTools";
 
 export const runtime = "nodejs";
 
@@ -313,7 +316,17 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { messages, message, customSystemPrompt, temperature, attachments } = parsed.data;
+    const { messages, message, customSystemPrompt, temperature, attachments, confirmToolCall } = parsed.data;
+
+    // Client scopé par le token de l'appelant — jamais service_role — pour
+    // que tout outil exécuté (src/lib/aiTools/) passe par la même RLS que
+    // l'utilisateur lui-même. Construit systématiquement (coût négligible),
+    // utilisé uniquement quand des outils entrent en jeu.
+    const authHeader = req.headers.get("authorization") || "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    const userScopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${bearerToken}` } },
+    });
 
     // Normalisation des deux formes acceptées vers un historique unique.
     const historique =
@@ -340,6 +353,80 @@ export async function POST(req) {
     const systemPromptAvecEtape = useTunnelStateMachine
       ? `${systemPrompt}\n\n[MACHINE À ÉTATS DU TUNNEL — CONTRÔLE IMPÉRATIF]\n${STEP_INSTRUCTIONS[currentStep]}\n\nRègle absolue, au-dessus de toute autre instruction ci-dessus : ne pose JAMAIS plus d'une question par message.`
       : systemPrompt;
+
+    // Outils (registre src/lib/aiTools/) : jamais en mode machine à états —
+    // l'API Gemini n'accepte pas simultanément responseSchema (imposé par
+    // le tunnel) et des déclarations de function calling dans le même
+    // appel. Disponibles uniquement hors tunnel (aujourd'hui : le
+    // Playground admin, customSystemPrompt fourni).
+    const toolsActifs = !useTunnelStateMachine;
+    const geminiTools = toolsActifs ? [{ functionDeclarations: getGeminiFunctionDeclarations() }] : undefined;
+    const tempEffectif = typeof temperature === "number" ? temperature : 0.7;
+    const geminiKeyPourOutils = process.env.GEMINI_API_KEY;
+
+    // 2bis. Confirmation explicite d'un outil proposé au tour précédent
+    // (registre src/lib/aiTools/, tools requiresConfirmation). Court-
+    // circuite le reste du traitement : exécute l'outil sous la RLS de
+    // l'utilisateur, puis un second appel Gemini synthétise la réponse
+    // finale à partir du résultat réel.
+    if (confirmToolCall?.toolName && toolsActifs) {
+      const toolResult = await runToolCall(confirmToolCall.toolName, confirmToolCall.args || {}, {
+        user,
+        supabase: userScopedSupabase,
+      });
+
+      if (!geminiKeyPourOutils) {
+        return NextResponse.json(
+          { error: "L'assistant IA est temporairement indisponible." },
+          { status: 503 }
+        );
+      }
+
+      const contentsConfirmation = historique.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
+      contentsConfirmation.push({
+        role: "model",
+        parts: [{ functionCall: { name: confirmToolCall.toolName, args: confirmToolCall.args || {} } }],
+      });
+      contentsConfirmation.push({
+        role: "user",
+        parts: [{ functionResponse: { name: confirmToolCall.toolName, response: toolResult } }],
+      });
+
+      try {
+        const synthRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKeyPourOutils },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents: contentsConfirmation,
+              tools: geminiTools,
+              generationConfig: { temperature: tempEffectif },
+            }),
+          }
+        );
+        if (synthRes.ok) {
+          const synthData = await synthRes.json();
+          const reply = synthData.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
+          if (reply) return NextResponse.json({ reply, toolResult });
+        }
+      } catch (err) {
+        console.error("ai-chat: échec synthèse post-confirmation outil:", err.message);
+      }
+
+      // La synthèse a échoué mais l'action a bien été tentée : message
+      // honnête reflétant toolResult, jamais un faux succès générique.
+      return NextResponse.json({
+        reply: toolResult.success
+          ? "C'est fait."
+          : `Je n'ai pas pu terminer cette action : ${toolResult.error || "erreur inconnue"}.`,
+        toolResult,
+      });
+    }
 
     // 3. Pièces jointes
     const images = (attachments || []).filter((a) => a.type === "image");
@@ -384,8 +471,6 @@ export async function POST(req) {
       });
     }
 
-    const temp = typeof temperature === "number" ? temperature : 0.7;
-
     // Gemini seul (point 1, 2026-08-22) : DeepSeek et Groq retirés de cette
     // route. Seuls appelants de /api/ai-chat dans le dépôt : le Playground
     // admin (AdminAIStudio.jsx) et le fil "Support RH Facilité" réel
@@ -405,10 +490,11 @@ export async function POST(req) {
         // (responseSchema) plutôt qu'un texte libre — c'est ce format
         // structuré qui permet au code de valider (ou de rejeter) la
         // transition proposée avant de l'écrire dans
-        // assistant_conversation_state.
+        // assistant_conversation_state. Hors tunnel, les outils (registre
+        // aiTools) sont proposés à la place.
         const generationConfig = useTunnelStateMachine
-          ? { temperature: temp, responseMimeType: "application/json", responseSchema: TUNNEL_RESPONSE_SCHEMA }
-          : { temperature: temp };
+          ? { temperature: tempEffectif, responseMimeType: "application/json", responseSchema: TUNNEL_RESPONSE_SCHEMA }
+          : { temperature: tempEffectif };
 
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
@@ -421,6 +507,7 @@ export async function POST(req) {
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: systemPromptAvecEtape }] },
               contents,
+              tools: geminiTools,
               generationConfig,
             }),
           }
@@ -428,7 +515,67 @@ export async function POST(req) {
 
         if (geminiRes.ok) {
           const geminiData = await geminiRes.json();
-          const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+          const responsePart = geminiData.candidates?.[0]?.content?.parts?.[0];
+          const rawText = responsePart?.text;
+
+          // Le modèle propose un appel d'outil plutôt qu'une réponse texte
+          // (jamais en mode tunnel, cf. generationConfig ci-dessus).
+          if (responsePart?.functionCall && toolsActifs) {
+            const { name: toolName, args: toolArgs } = responsePart.functionCall;
+            const tool = getTool(toolName);
+
+            if (!tool) {
+              return NextResponse.json({ reply: "Une action a été proposée mais n'a pas pu être reconnue." });
+            }
+
+            if (tool.requiresConfirmation) {
+              // N'exécute rien : le guard est quand même vérifié pour ne
+              // jamais proposer une action que le candidat ne pourrait de
+              // toute façon pas effectuer (CV d'un autre utilisateur, etc.).
+              try {
+                await tool.guard({ user, supabase: userScopedSupabase, args: toolArgs });
+              } catch (err) {
+                return NextResponse.json({ reply: `Je ne peux pas proposer cette action : ${err.message}` });
+              }
+              return NextResponse.json({
+                reply: toolArgs?.resume || "Confirmez-vous cette action ?",
+                pendingConfirmation: { toolName, args: toolArgs },
+              });
+            }
+
+            // Pas de confirmation requise (outil a) : exécution immédiate,
+            // puis un second appel synthétise la réponse finale à partir du
+            // résultat réel.
+            const toolResult = await runToolCall(toolName, toolArgs, { user, supabase: userScopedSupabase });
+            const contentsAvecResultat = [
+              ...contents,
+              { role: "model", parts: [{ functionCall: responsePart.functionCall }] },
+              { role: "user", parts: [{ functionResponse: { name: toolName, response: toolResult } }] },
+            ];
+
+            const synthRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+                body: JSON.stringify({
+                  systemInstruction: { parts: [{ text: systemPromptAvecEtape }] },
+                  contents: contentsAvecResultat,
+                  tools: geminiTools,
+                  generationConfig,
+                }),
+              }
+            );
+            if (synthRes.ok) {
+              const synthData = await synthRes.json();
+              const synthReply = synthData.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
+              if (synthReply) return NextResponse.json({ reply: synthReply, toolResult });
+            }
+            return NextResponse.json({
+              reply: toolResult.success ? "C'est fait." : `Je n'ai pas pu terminer cette action : ${toolResult.error || "erreur inconnue"}.`,
+              toolResult,
+            });
+          }
 
           if (!useTunnelStateMachine) {
             if (rawText) return NextResponse.json({ reply: rawText });
