@@ -1372,6 +1372,30 @@ export default function Home() {
   const [locationFilter, setLocationFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
   const [displayLimit, setDisplayLimit] = useState(30);
+  // Fenêtre de chargement du fil (2026-08-24). L'accueil chargeait les 56
+  // offres actives complètes à chaque visite — 529,3 Ko de JSON mesurés,
+  // pour un travail base de données de 124 ms / 1,6 Ko une fois paginé.
+  //
+  // Valeur DÉRIVÉE et non un état synchronisé par un useEffect : la
+  // fenêtre est une pure fonction du défilement et des filtres, la calculer
+  // évite un aller-retour de rendu et un setState dans un effet.
+  //
+  // Le fil boucle sur les offres chargées (getLoopedJobs, modulo) : il n'a
+  // donc pas besoin d'autant d'offres que de cartes affichées. 12 au
+  // premier rendu, +12 à chaque palier de défilement (displayLimit croît de
+  // 15), plafonné à 96. Dès qu'un filtre est actif on charge tout : la
+  // recherche porte sur allJobs, elle ne filtrerait sinon que la fenêtre.
+  const limiteChargement = useMemo(() => {
+    if (keyword.trim() || locationFilter.trim() || contractFilter.trim()) return 500;
+    const paliers = Math.floor(Math.max(0, displayLimit - 30) / 15);
+    return Math.min(96, 12 + paliers * 12);
+  }, [keyword, locationFilter, contractFilter, displayLimit]);
+  // Pagination du fil (2026-08-24) : l'accueil chargeait les 56 offres
+  // ACTIVES complètes à chaque visite — 529,3 Ko de JSON mesurés, alors que
+  // le travail base de données correspondant est de 124 ms / 1,6 Ko une fois
+  // paginé. On ne charge plus que ce que le fil peut réellement montrer, et
+  // on élargit au fil du défilement.
+
 
   const [formData, setFormData] = useState({
     name: "",
@@ -1426,7 +1450,8 @@ export default function Home() {
           .from("job_offers")
           .select("*")
           .eq("is_active", true)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(limiteChargement);
         if (!error && data) {
           const formatted = data.map((offer) => ({
             id: offer.id,
@@ -1495,7 +1520,11 @@ export default function Home() {
       document.removeEventListener("visibilitychange", handleVisibility);
       clearInterval(pollInterval);
     };
-  }, []);
+    // limiteChargement dans les dépendances : élargir la fenêtre doit
+    // relancer le chargement, sinon le fil resterait bloqué sur les 12
+    // premières offres quel que soit le défilement.
+  }, [limiteChargement]);
+
 
   // Badge de correspondance candidat (point 7) — un seul appel en lot
   // (match_job_offers), même logique que /offres (OffresClient.jsx) et que

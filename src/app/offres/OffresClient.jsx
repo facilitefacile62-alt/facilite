@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -14,6 +14,11 @@ import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/spons
 import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
 
 export const dynamic = "force-dynamic";
+
+// Taille d'une page du catalogue. Mesuré le 2026-08-24 : les 56 offres
+// complètes pèsent 529,3 Ko de JSON par visite, la première page de 12 en
+// pèse 44,5 Ko.
+const TAILLE_PAGE = 12;
 
 
 const FALLBACK_JOB_POSTERS = [
@@ -59,6 +64,13 @@ function OffresContent({ listingType } = {}) {
   const [niveauxEtudes, setNiveauxEtudes] = useState([]);
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Pagination (2026-08-24) : la page chargeait les 56 offres complètes à
+  // chaque visite — 529,3 Ko de JSON mesurés, pour un travail base de
+  // données de 124 ms / 1,6 Ko une fois paginé. La première page ne coûte
+  // plus que 44,5 Ko.
+  const [totalOffres, setTotalOffres] = useState(null);
+  const [toutCharge, setToutCharge] = useState(false);
+  const [chargementSuite, setChargementSuite] = useState(false);
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [locationFilter, setLocationFilter] = useState("");
   const [applyingOffer, setApplyingOffer] = useState(null);
@@ -121,23 +133,88 @@ function OffresContent({ listingType } = {}) {
     }
   }, [searchParams, offers]);
 
+  // Une seule construction de requête pour les trois chemins (première
+  // page, page suivante, chargement complet) : le filtre serveur sur
+  // listing_type des pages /concours et /formations ne peut pas diverger
+  // d'un chemin à l'autre.
+  const requeteOffres = useCallback(
+    async (debut, fin) => {
+      let query = supabase
+        .from("job_offers")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false });
+      if (listingType) {
+        query = query.eq("listing_type", listingType);
+      }
+      return query.range(debut, fin);
+    },
+    [listingType]
+  );
+
+  const chargerPageSuivante = useCallback(async () => {
+    if (chargementSuite || toutCharge) return;
+    setChargementSuite(true);
+    try {
+      const { data, count, error } = await requeteOffres(offers.length, offers.length + TAILLE_PAGE - 1);
+      if (!error) {
+        const nouvelles = (data || []).filter((o) => o.is_active !== false);
+        setOffers((prev) => {
+          // Dédoublonnage : une offre publiée entre deux pages décale la
+          // fenêtre et pourrait renvoyer une ligne déjà affichée.
+          const vus = new Set(prev.map((o) => String(o.id)));
+          const cumul = [...prev, ...nouvelles.filter((o) => !vus.has(String(o.id)))];
+          if (typeof count === "number" && cumul.length >= count) setToutCharge(true);
+          return cumul;
+        });
+        if (typeof count === "number") setTotalOffres(count);
+        if (!data || data.length === 0) setToutCharge(true);
+      }
+    } finally {
+      setChargementSuite(false);
+    }
+  }, [chargementSuite, toutCharge, offers.length, requeteOffres]);
+
+  // Recherche et filtres travaillent sur le tableau complet : dès que
+  // l'utilisateur en active un, on charge tout une fois pour toutes plutôt
+  // que de chercher dans une page partielle. La grande majorité des visites
+  // ne cherche rien et ne paie donc jamais les 529 Ko.
+  const chargerToutesLesOffres = useCallback(async () => {
+    if (toutCharge) return;
+    setChargementSuite(true);
+    try {
+      const { data, count, error } = await requeteOffres(0, Math.max((totalOffres || 1000) - 1, TAILLE_PAGE - 1));
+      if (!error) {
+        setOffers((data || []).filter((o) => o.is_active !== false));
+        if (typeof count === "number") setTotalOffres(count);
+        setToutCharge(true);
+      }
+    } finally {
+      setChargementSuite(false);
+    }
+  }, [toutCharge, totalOffres, requeteOffres]);
+
+  useEffect(() => {
+    if (searchQuery.trim() || locationFilter.trim()) {
+      chargerToutesLesOffres();
+    }
+  }, [searchQuery, locationFilter, chargerToutesLesOffres]);
+
   useEffect(() => {
     async function loadData() {
       try {
-        let query = supabase.from("job_offers").select("*").order("created_at", { ascending: false });
-        // Filtre serveur sur listing_type pour une page catégorie dédiée
-        // (/concours, /formations...) — même requête que /offres, juste
-        // restreinte à un type. /offres (listingType absent) reste inchangé.
-        if (listingType) {
-          query = query.eq("listing_type", listingType);
-        }
-        const { data, error } = await query;
+        // Première page seulement : le tri et les filtres restent appliqués
+        // côté client (filteredOffers, interleaveSponsoredOffers), donc
+        // toute recherche déclenche d'abord chargerToutesLesOffres() —
+        // sans quoi on ne chercherait que dans la page affichée.
+        const { data, count, error } = await requeteOffres(0, TAILLE_PAGE - 1);
 
         if (error) {
           console.error("Erreur chargement des offres:", error);
         } else {
           const activeOffers = (data || []).filter((o) => o.is_active !== false);
           setOffers(activeOffers);
+          setTotalOffres(typeof count === "number" ? count : null);
+          setToutCharge(typeof count === "number" ? activeOffers.length >= count : true);
         }
       } catch (err) {
         console.error("Exception chargement des offres:", err);
@@ -162,7 +239,11 @@ function OffresContent({ listingType } = {}) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [listingType]);
+    // requeteOffres est mémoïsée sur listingType : sans elle dans les
+    // dépendances, loadData garderait une fermeture obsolète et pourrait
+    // interroger le mauvais listing_type après une navigation
+    // /offres -> /concours.
+  }, [listingType, requeteOffres]);
 
   // Scores de correspondance candidat pour toutes les offres de la page —
   // un seul appel batch (comme candidat/page.js loadRecommendedOffers), pas
@@ -626,6 +707,30 @@ function OffresContent({ listingType } = {}) {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination : le catalogue ne charge plus les 56 offres complètes
+            (529,3 Ko) à chaque visite, mais 12 à la fois (44,5 Ko pour la
+            première page). Le bouton disparaît dès qu'une recherche ou un
+            filtre est actif : dans ce cas tout est déjà chargé, sans quoi on
+            ne chercherait que dans la page affichée. */}
+        {!loading && !toutCharge && !searchQuery.trim() && !locationFilter.trim() && (
+          <div className="flex flex-col items-center gap-2 py-8">
+            <button
+              type="button"
+              onClick={chargerPageSuivante}
+              disabled={chargementSuite}
+              className="px-6 py-3 bg-white hover:bg-gray-50 border border-gray-300 text-gray-800 font-black text-sm rounded-2xl shadow-xs transition disabled:opacity-50 cursor-pointer flex items-center gap-2"
+            >
+              <i className={`fa-solid ${chargementSuite ? "fa-spinner fa-spin" : "fa-arrow-down"}`}></i>
+              <span>{chargementSuite ? "Chargement..." : "Voir plus d'offres"}</span>
+            </button>
+            {typeof totalOffres === "number" && (
+              <span className="text-xs font-bold text-gray-500">
+                {offers.length} offre{offers.length > 1 ? "s" : ""} affichée{offers.length > 1 ? "s" : ""} sur {totalOffres}
+              </span>
+            )}
           </div>
         )}
       </main>
