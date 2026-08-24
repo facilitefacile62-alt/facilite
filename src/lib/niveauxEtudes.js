@@ -106,3 +106,62 @@ export function comparerNiveaux(niveaux, codeCandidat, codeExige) {
     ecart: candidat.rang - exige.rang,
   };
 }
+
+/**
+ * Déduit le niveau d'études d'un CV à partir des formations extraites par
+ * l'import (profil/page.js, mapExtractedFieldsToScannedData).
+ *
+ * Règle INVERSE de celle des offres, et c'est volontaire : une offre
+ * déclare un PLANCHER (on retient le niveau le plus bas énuméré), un CV
+ * déclare un PARCOURS (on retient le niveau le plus haut atteint). Un CV
+ * qui liste « BFEM 2015, BAC 2018, Licence 2021 » correspond à une
+ * Licence, pas à un BFEM.
+ *
+ * La reconnaissance elle-même n'est pas réimplémentée ici : elle appelle
+ * la MÊME fonction SQL normaliser_niveau_etudes() que la reprise des
+ * offres (20260824101000). Dupliquer ces règles en JavaScript recréerait
+ * exactement la situation que ce chantier corrige — deux échelles qui
+ * divergent.
+ *
+ * Jamais bloquant : en cas d'échec réseau ou d'absence de correspondance,
+ * renvoie null et le menu déroulant reste sur la valeur précédente.
+ */
+export async function deduireNiveauDepuisFormations(formations) {
+  if (!Array.isArray(formations) || formations.length === 0) return null;
+
+  const textes = Array.from(
+    new Set(
+      formations
+        .map((f) => [f?.degree, f?.field].filter(Boolean).join(" ").trim())
+        .filter((t) => t.length > 0)
+    )
+  );
+  if (textes.length === 0) return null;
+
+  try {
+    const niveaux = await chargerNiveauxEtudes();
+    if (niveaux.length === 0) return null;
+
+    const codes = await Promise.all(
+      textes.map(async (texte) => {
+        const { data, error } = await supabase.rpc("normaliser_niveau_etudes", { p_texte: texte });
+        return error ? null : data;
+      })
+    );
+
+    const trouves = codes.filter(Boolean).map((c) => trouverNiveau(niveaux, c)).filter(Boolean);
+    if (trouves.length === 0) return null;
+
+    const comparables = trouves.filter((n) => n.comparable && n.rang !== null);
+    if (comparables.length > 0) {
+      return comparables.reduce((a, b) => (b.rang > a.rang ? b : a)).code;
+    }
+
+    // Uniquement une formation hors échelle (Daara) : proposée telle
+    // quelle plutôt que rien — le candidat garde la main sur le menu.
+    return trouves[0].code;
+  } catch (err) {
+    console.error("[niveauxEtudes] Déduction du niveau impossible :", err?.message);
+    return null;
+  }
+}

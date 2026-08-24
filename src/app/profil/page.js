@@ -19,7 +19,7 @@ import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityTabContent from "@/components/SecurityTabContent";
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
-import { chargerNiveauxEtudes, grouperParCategorie, trouverNiveau } from "@/lib/niveauxEtudes";
+import { chargerNiveauxEtudes, grouperParCategorie, trouverNiveau, deduireNiveauDepuisFormations } from "@/lib/niveauxEtudes";
 
 /**
  * Convertit une data URI base64 (sortie de canvas.toDataURL) en Blob, sans
@@ -1294,6 +1294,13 @@ export default function ProfilPage() {
     if (!scannedData || !userSession?.user || savingScanData) return;
     setSavingScanData(true);
 
+    // Niveau d'études structuré déduit des formations extraites du CV
+    // (point 2d) : le menu déroulant "Niveau" est pré-sélectionné sans que
+    // le candidat ait à le renseigner une seconde fois. Déduction faite ici
+    // et pas dans mapExtractedFieldsToScannedData(), qui est synchrone.
+    const codeNiveauDeduit = await deduireNiveauDepuisFormations(scannedData.educations);
+    const niveauDeduit = trouverNiveau(niveauxEtudes, codeNiveauDeduit);
+
     // 1. Écraser et remplacer directement les anciennes informations dans l'état de l'application
     setFirstName(scannedData.firstName);
     setLastName(scannedData.lastName);
@@ -1307,6 +1314,10 @@ export default function ProfilPage() {
     setUserSkills(scannedData.skills);
     setExperiences(scannedData.experiences);
     setEducations(scannedData.educations);
+    if (codeNiveauDeduit) {
+      setEducationLevelCode(codeNiveauDeduit);
+      setEducationLevel(niveauDeduit?.libelle || "");
+    }
     if (scannedData.phone) setPhone(scannedData.phone);
     if (scannedData.email) setContactEmail(scannedData.email);
     if (scannedData.interests && scannedData.interests.length > 0) {
@@ -1347,6 +1358,12 @@ export default function ProfilPage() {
         interests: scannedData.interests && scannedData.interests.length > 0 ? scannedData.interests : userInterests,
         experiences: scannedData.experiences,
         educations: scannedData.educations,
+        // Rien n'est écrit quand la déduction n'aboutit pas : un CV sans
+        // diplôme reconnaissable ne doit pas effacer un niveau que le
+        // candidat avait renseigné à la main.
+        ...(codeNiveauDeduit
+          ? { education_level_code: codeNiveauDeduit, education_level: niveauDeduit?.libelle || null }
+          : {}),
         languages: scannedData.languages,
         cv_url: scannedData.docUrl || cvUrl,
         cv_name: scannedData.docName,
