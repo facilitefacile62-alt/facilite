@@ -1036,7 +1036,6 @@ You will pilot the digital communication strategy of Campus France Senegal (webs
     recruiterEmail: "recrutement@ifs.sn",
     externalLink: "https://lnkd.in/dp9s3CFt",
     image: "",
-    pinned: true
   },
   {
     id: 102,
@@ -1068,7 +1067,6 @@ Deadline: August 31, 2026`,
     tags: ["Bourse", "Études", "STEM"],
     recruiterEmail: "",
     image: "/pub4.jpg",
-    pinned: true
   },
   {
     id: 7,
@@ -1179,7 +1177,6 @@ Please send BOTH versions of your CV (French and English) to: recrutement@c2ksta
     tags: ["Sabodala", "Mines", "HSE", "Logistique", "Intérim"],
     recruiterEmail: "recrutement@c2kstaffing.com",
     image: "/c2k_sabodala.jpg",
-    pinned: true
   },
 
   {
