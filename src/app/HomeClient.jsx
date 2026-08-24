@@ -1471,24 +1471,32 @@ export default function Home() {
       )
       .subscribe();
 
-    // Filet de sécurité pour un onglet resté ouvert longtemps : un
+    // Filets de sécurité pour un onglet resté ouvert longtemps : un
     // WebSocket Realtime peut se déconnecter silencieusement (veille,
     // changement de réseau) sans se reconnecter à temps pour capter un
     // INSERT récent — trouvé le 2026-08-24 en diagnostiquant une offre
     // fraîchement publiée absente du fil malgré un tri created_at DESC
     // déjà correct (confirmé en base et sur un rechargement forcé, qui
-    // résolvait systématiquement le problème). Re-fetch dès que l'onglet
-    // redevient visible, pas de polling en continu.
+    // résolvait systématiquement le problème).
+    // 1. Re-fetch au retour de visibilité (onglet remis au premier plan).
+    // 2. Re-fetch toutes les 60s même si l'onglet reste au premier plan en
+    //    continu (jamais de changement de visibilité à détecter dans ce
+    //    cas) — borne le pire scénario à 1 min de retard maximum, "quasi
+    //    immédiat" pour un fil d'offres, sans transformer ça en polling
+    //    agressif (Realtime reste la voie principale, ceci n'est qu'un
+    //    filet de repli à 60s).
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
         loadDynamicJobs();
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
+    const pollInterval = setInterval(loadDynamicJobs, 60000);
 
     return () => {
       supabase.removeChannel(jobsChannel);
       document.removeEventListener("visibilitychange", handleVisibility);
+      clearInterval(pollInterval);
     };
   }, []);
 
