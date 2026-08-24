@@ -207,13 +207,24 @@ Extrais méticuleusement et organise :
 3. Localisation (ex: Dakar, Thiès, Diamniadio, Sénégal, etc.)
 4. Type de contrat (ex: CDI, CDD, Stage, Casting / Tournage, Freelance, Intérim, Bourse d'études, Plein Temps)
 5. Numéro de téléphone ou WhatsApp pour postuler (très important : extraire avec l'indicatif ou au format standard ex: +221 77 717 73 73)
-6. Adresse e-mail de contact ou de recrutement (ex: recrutement@domaine.com)
-7. Lien externe / site officiel ou lien de postulation (si mentionné)
-8. Date limite de candidature (au format AAAA-MM-JJ si mentionnée, sinon chaîne vide)
-9. Niveau d'études requis (ex: BAC, Licence, Master, Doctorat, Aucun, Professionnel / Technique)
-10. Fourchette salariale / Indemnité (si mentionnée, ex: 'Selon profil', ou laisser vide)
-11. Description structurée, attrayante et aérée avec des emojis adaptés (présentation du poste, missions détaillées avec puces, profil recherché, comment postuler, contacts).
-12. Type de publication (listing_type) — classe cette publication dans EXACTEMENT une de ces 6 catégories, choisis la plus précise :
+6. Adresse e-mail de CONTACT GÉNÉRAL de l'annonceur (renseignements, secrétariat) — PAS l'adresse où envoyer sa candidature, qui est demandée séparément au point 8.
+7. Site officiel / lien institutionnel de l'organisation (ex: https://www.ucad.sn) — PAS le lien où postuler, qui est demandé séparément au point 8.
+
+8. ADRESSE DE CANDIDATURE — c'est le point le PLUS IMPORTANT, lis l'annonce littéralement :
+   - "application_url" : l'URL que l'annonce désigne EXPLICITEMENT pour postuler ("postulez sur…", "candidatures en ligne sur…", "déposez votre dossier ici…", "lien de candidature :…"). Exemple typique : https://recrutement.ucad.sn
+   - "application_email" : l'adresse e-mail que l'annonce désigne EXPLICITEMENT pour recevoir les candidatures ("envoyez votre CV à…", "candidatures à adresser à…").
+   RÈGLES STRICTES :
+   - N'INVENTE JAMAIS ces deux valeurs. Si l'annonce ne désigne aucune adresse de candidature, renvoie une chaîne vide — c'est une réponse correcte et attendue.
+   - Ne recopie PAS ici le site institutionnel du point 7 ni l'e-mail de contact du point 6 simplement parce qu'ils existent : seul ce qui est présenté comme le moyen de POSTULER compte.
+   - Un lien vers un DOCUMENT (fiche de poste, formulaire PDF, termes de référence, dossier à télécharger) n'est JAMAIS une adresse de candidature : il va dans "additional_info".
+
+9. "additional_info" : toutes les autres informations utiles qui ne rentrent dans aucun champ ci-dessus — liens annexes, documents à télécharger ou à fournir, pièces à joindre, précisions logistiques, références de concours. Recopie les URL EN ENTIER, telles quelles. Chaîne vide s'il n'y a rien.
+
+10. Date limite de candidature (au format AAAA-MM-JJ si mentionnée, sinon chaîne vide)
+11. Niveau d'études requis (ex: BAC, Licence, Master, Doctorat, Aucun, Professionnel / Technique)
+12. Fourchette salariale / Indemnité (si mentionnée, ex: 'Selon profil', ou laisser vide)
+13. Description structurée, attrayante et aérée avec des emojis adaptés (présentation du poste, missions détaillées avec puces, profil recherché, comment postuler, contacts).
+14. Type de publication (listing_type) — classe cette publication dans EXACTEMENT une de ces 6 catégories, choisis la plus précise :
    - "offre_emploi" : un poste précis à pourvoir (CDI, CDD, stage, intérim, freelance...) proposé par une entreprise qui recrute.
    - "concours" : un concours (fonction publique, concours d'entrée dans une école/administration, bourse compétitive avec épreuves de sélection).
    - "formation" : une formation, un cursus, une certification ou un programme d'apprentissage — PAS un poste à pourvoir.
@@ -232,6 +243,9 @@ Réponds STRICTEMENT en JSON valide sans aucun texte avant ou après sous le for
   "contact_phone": "...",
   "contact_email": "...",
   "external_link": "...",
+  "application_url": "...",
+  "application_email": "...",
+  "additional_info": "...",
   "deadline": "...",
   "min_education_level": "...",
   "salary_range": "...",

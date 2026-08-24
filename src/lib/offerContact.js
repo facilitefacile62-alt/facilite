@@ -182,6 +182,64 @@ export function resolveOfferAction(offer = {}, options = {}) {
   const extLink = offer?.external_link || offer?.externalLink || offer?.apply_url || offer?.source_url || offer?.url;
   const email = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
 
+  // 0. ADRESSE DE CANDIDATURE EXPLICITE (20260824120000_offre_adresse_candidature.sql)
+  //
+  // Ce que l'annonce désigne elle-même comme moyen de postuler l'emporte
+  // sur toute déduction. Les branches 1 à 6 ci-dessous devinent la
+  // destination à partir de mots-clés d'URL (vacancy|sigof|forms|jobs|
+  // apply…) et d'un repli « pas d'email => tout lien externe est un
+  // portail » : deux erreurs symétriques mesurées le 2026-08-24 —
+  // https://recrutement.ucad.sn accompagné d'un simple email de contact
+  // était ignoré au profit d'un mailto générique, et à l'inverse un
+  // https://…/fiche-poste.pdf sans email devenait la destination du
+  // bouton « Postuler ». Elles restent en place pour les offres publiées
+  // AVANT l'Examinateur, qui n'ont pas ces champs.
+  const applicationUrl = typeof offer?.application_url === "string" ? offer.application_url.trim() : "";
+  const applicationEmail = typeof offer?.application_email === "string" ? offer.application_email.trim() : "";
+
+  if (applicationUrl && !applicationUrl.startsWith("mailto:")) {
+    if (applicationUrl.includes("wa.me") || applicationUrl.includes("whatsapp")) {
+      return {
+        type: "whatsapp",
+        isWhatsApp: true,
+        isEmail: false,
+        url: applicationUrl,
+        phoneNumber: normalizePhoneNumber(applicationUrl),
+        label: customLabel || "Postuler sur WhatsApp",
+        buttonColorClass: "bg-[#25D366] hover:bg-[#20bd5a] text-white",
+        iconClass: "fa-brands fa-whatsapp",
+      };
+    }
+    return {
+      type: "external",
+      isWhatsApp: false,
+      isEmail: false,
+      url: applicationUrl,
+      phoneNumber: null,
+      label: customLabel || "Postuler sur le site officiel",
+      buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
+      iconClass: "fa-solid fa-arrow-up-right-from-square",
+    };
+  }
+
+  // Le lien de candidature prime sur l'e-mail quand les deux sont donnés :
+  // un portail dédié est l'instruction la plus précise de l'annonce.
+  if (applicationEmail && applicationEmail.includes("@")) {
+    const titreOffre = offer?.title || offer?.titleFR || "Offre d'emploi";
+    return {
+      type: "email",
+      isWhatsApp: false,
+      isEmail: true,
+      email: applicationEmail,
+      mailtoUrl: `mailto:${applicationEmail}?subject=${encodeURIComponent(`Candidature - ${titreOffre}`)}`,
+      url: null, // url null déclenche ApplyModal (candidature directe Facilité)
+      phoneNumber: null,
+      label: customLabel || "Postuler via Facilité",
+      buttonColorClass: "bg-blue-600 hover:bg-blue-700 text-white",
+      iconClass: "fa-solid fa-paper-plane",
+    };
+  }
+
   // 1. WhatsApp explicite dans l'URL
   if (typeof extLink === "string" && (extLink.includes("wa.me") || extLink.includes("whatsapp"))) {
     return {

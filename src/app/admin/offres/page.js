@@ -25,6 +25,13 @@ const EMPTY_OFFER = {
   contact_email: "",
   contact_phone: "",
   external_link: "",
+  // Adresse de candidature explicitement désignée par l'annonce
+  // (20260824120000_offre_adresse_candidature.sql) — distincte de
+  // contact_email/external_link, qui restent le contact général et le site
+  // institutionnel. Vide = l'annonce n'en donne pas, ce n'est pas une erreur.
+  application_url: "",
+  application_email: "",
+  additional_info: "",
   listing_type: "offre_emploi",
 };
 
@@ -221,6 +228,9 @@ export default function AdminOffresPage() {
           contact_email: extracted.contact_email || "",
           contact_phone: extracted.contact_phone || "",
           external_link: extracted.external_link || "",
+          application_url: extracted.application_url || "",
+          application_email: extracted.application_email || "",
+          additional_info: extracted.additional_info || "",
           listing_type: extracted.listing_type || "offre_emploi",
         });
 

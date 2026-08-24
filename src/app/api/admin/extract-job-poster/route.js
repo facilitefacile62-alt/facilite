@@ -119,6 +119,12 @@ export async function POST(req) {
         contact_phone: detectedPhone ? `+${detectedPhone}` : rawPhone,
         contact_email: extracted.contact_email || "",
         external_link: autoExternalLink,
+        // Adresse de candidature explicitement désignée par l'annonce —
+        // jamais devinée, jamais remplacée par un repli générique. Vide est
+        // une valeur correcte : elle signifie « l'annonce n'en donne pas ».
+        application_url: extracted.application_url || "",
+        application_email: extracted.application_email || "",
+        additional_info: extracted.additional_info || "",
         deadline: extracted.deadline || "",
         min_education_level: extracted.min_education_level || "Aucun",
         salary_range: extracted.salary_range || "",
