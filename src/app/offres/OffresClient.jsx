@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { chargerNiveauxEtudes, comparerNiveaux } from "@/lib/niveauxEtudes";
 import { useAuth } from "@/context/AuthContext";
 import ApplyModal from "@/components/ApplyModal";
 import SocialShareButtons from "@/components/SocialShareButtons";
@@ -14,11 +15,6 @@ import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
 
 export const dynamic = "force-dynamic";
 
-const EDUCATION_LEVELS = ["Aucun", "CM2", "Brevet", "BAC", "Licence", "Master", "Doctorat"];
-const levelRank = (level) => {
-  const idx = EDUCATION_LEVELS.indexOf(level || "Aucun");
-  return idx === -1 ? 0 : idx;
-};
 
 const FALLBACK_JOB_POSTERS = [
   "/affichedoffre.jpeg",
@@ -59,7 +55,8 @@ function OffresContent({ listingType } = {}) {
   // à cette page ; candidateEducationLevel dérivé directement du profil déjà
   // en contexte.
   const { session: userSession, profile: authProfile } = useAuth();
-  const candidateEducationLevel = authProfile?.education_level || authProfile?.degree || "Aucun";
+  const candidateEducationCode = authProfile?.education_level_code || "";
+  const [niveauxEtudes, setNiveauxEtudes] = useState([]);
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(queryParam);
@@ -96,6 +93,17 @@ function OffresContent({ listingType } = {}) {
     setToast(msg);
     setTimeout(() => setToast(""), 3500);
   };
+
+
+  useEffect(() => {
+    let monte = true;
+    chargerNiveauxEtudes().then((liste) => {
+      if (monte) setNiveauxEtudes(liste);
+    });
+    return () => {
+      monte = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (queryParam) {
@@ -437,9 +445,13 @@ function OffresContent({ listingType } = {}) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {feedOffers.map((offer, idx) => {
-              const reqRank = levelRank(offer.required_education_level);
-              const candRank = levelRank(candidateEducationLevel);
-              const eligible = candRank >= reqRank;
+              // `offer.required_education_level` n'existe pas : la colonne
+              // s'appelle min_education_level. Cette lecture renvoyait donc
+              // toujours undefined — la puce "Niveau …" ne s'affichait
+              // jamais et `eligible` était vrai pour tout le monde, quelle
+              // que soit l'exigence réelle de l'offre.
+              const verdictNiveau = comparerNiveaux(niveauxEtudes, candidateEducationCode, offer.min_education_level_code);
+              const eligible = verdictNiveau.statut !== "insuffisant";
               const offerImg = getOfferImage(offer, idx);
               const initials = offer.company ? offer.company.substring(0, 2).toUpperCase() : "CO";
               const logoColor = COMPANY_COLORS[idx % COMPANY_COLORS.length];
@@ -514,10 +526,10 @@ function OffresContent({ listingType } = {}) {
                           <span>Jusqu'au {new Date(offer.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
                         </>
                       )}
-                      {offer.required_education_level && (
+                      {verdictNiveau.exige && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span>Niveau {offer.required_education_level}</span>
+                          <span>Niveau {verdictNiveau.exige.libelle}</span>
                         </>
                       )}
                       {offer.listing_type && offer.listing_type !== "offre_emploi" && (
@@ -590,7 +602,7 @@ function OffresContent({ listingType } = {}) {
                       variant="feed"
                       onApply={() => {
                         if (userSession && !eligible && !offer.is_spontaneous) {
-                          triggerToast("Niveau d'études requis insuffisant pour cette offre.");
+                          triggerToast(`Niveau requis : ${verdictNiveau.exige.libelle}. Votre profil indique ${verdictNiveau.candidat.libelle}.`);
                           return;
                         }
                         setApplyingOffer(offer);

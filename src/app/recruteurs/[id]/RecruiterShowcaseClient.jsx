@@ -5,14 +5,10 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { chargerNiveauxEtudes, comparerNiveaux } from "@/lib/niveauxEtudes";
 import ApplyModal from "@/components/ApplyModal";
 import BadgeDisplay from "@/components/BadgeDisplay";
 
-const EDUCATION_LEVELS = ["Aucun", "CM2", "Brevet", "BAC", "Licence", "Master", "Doctorat"];
-const levelRank = (level) => {
-  const idx = EDUCATION_LEVELS.indexOf(level || "Aucun");
-  return idx === -1 ? 0 : idx;
-};
 
 function formatDeadline(deadline) {
   if (!deadline) return null;
@@ -36,7 +32,8 @@ export default function RecruiterShowcasePage() {
   const recruiterId = params?.id;
 
   const [userSession, setUserSession] = useState(null);
-  const [candidateEducationLevel, setCandidateEducationLevel] = useState("Aucun");
+  const [candidateEducationCode, setCandidateEducationCode] = useState("");
+  const [niveauxEtudes, setNiveauxEtudes] = useState([]);
   const [recruiterProfile, setRecruiterProfile] = useState(null);
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +48,17 @@ export default function RecruiterShowcasePage() {
     setTimeout(() => setToast(""), 3500);
   }, []);
 
+
+  useEffect(() => {
+    let monte = true;
+    chargerNiveauxEtudes().then((liste) => {
+      if (monte) setNiveauxEtudes(liste);
+    });
+    return () => {
+      monte = false;
+    };
+  }, []);
+
   useEffect(() => {
     async function loadShowcase() {
       if (!recruiterId) return;
@@ -63,10 +71,10 @@ export default function RecruiterShowcasePage() {
         if (session?.user?.id) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("education_level")
+            .select("education_level_code")
             .eq("id", session.user.id)
             .single();
-          setCandidateEducationLevel(profile?.education_level || "Aucun");
+          setCandidateEducationCode(profile?.education_level_code || "");
         }
 
         // Lecture publique (RLS "Lecture publique des profils recruteurs") :
@@ -112,13 +120,20 @@ export default function RecruiterShowcasePage() {
     loadShowcase();
   }, [recruiterId]);
 
+  // Un seul point de vérité pour les 3 endroits qui gataient l'accès
+  // (bouton, message, disabled) — auparavant la même expression
+  // levelRank(...) >= levelRank(...) était recopiée trois fois.
+  const verdictNiveauPour = (offer) =>
+    comparerNiveaux(niveauxEtudes, candidateEducationCode, offer?.min_education_level_code);
+
   const handleApplyClick = (offer) => {
     if (!userSession) {
       router.push("/login");
       return;
     }
-    const eligible = levelRank(candidateEducationLevel) >= levelRank(offer.min_education_level);
-    if (!eligible || isExpired(offer.deadline)) return;
+    // Seul "insuffisant" ferme la porte : un niveau non renseigné ou hors
+    // échelle (Daara) ne permet pas de conclure, il ne doit pas bloquer.
+    if (verdictNiveauPour(offer).statut === "insuffisant" || isExpired(offer.deadline)) return;
     setSelectedOffer(null);
     setApplyingOffer(offer);
   };
@@ -415,10 +430,19 @@ export default function RecruiterShowcasePage() {
                 </p>
               )}
 
-              {userSession && levelRank(candidateEducationLevel) < levelRank(selectedOffer.min_education_level) && (
+              {userSession && verdictNiveauPour(selectedOffer).statut === "insuffisant" && (
                 <p className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 flex items-center gap-1.5">
                   <i className="fa-solid fa-triangle-exclamation"></i>
-                  Niveau requis : {selectedOffer.min_education_level}. Complétez votre profil pour postuler.
+                  Niveau requis : {verdictNiveauPour(selectedOffer).exige.libelle}. Votre profil indique{" "}
+                  {verdictNiveauPour(selectedOffer).candidat.libelle}.
+                </p>
+              )}
+
+              {userSession && verdictNiveauPour(selectedOffer).statut === "inconnu" && verdictNiveauPour(selectedOffer).exige && (
+                <p className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-2.5 flex items-center gap-1.5">
+                  <i className="fa-solid fa-circle-info"></i>
+                  Niveau demandé : {verdictNiveauPour(selectedOffer).exige.libelle}. Renseignez le vôtre sur votre profil
+                  pour savoir si vous y correspondez.
                 </p>
               )}
 
@@ -435,7 +459,7 @@ export default function RecruiterShowcasePage() {
                   onClick={() => handleApplyClick(selectedOffer)}
                   disabled={
                     isExpired(selectedOffer.deadline) ||
-                    (userSession && levelRank(candidateEducationLevel) < levelRank(selectedOffer.min_education_level))
+                    (userSession && verdictNiveauPour(selectedOffer).statut === "insuffisant")
                   }
                   className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-300 disabled:bg-gray-300"
                 >

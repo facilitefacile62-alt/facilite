@@ -73,7 +73,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
           if (job?.id && !job.isSpontaneous && UUID_RE.test(String(job.id))) {
             const { data: offerRow } = await supabase
               .from("job_offers")
-              .select("description, min_education_level")
+              .select("description, min_education_level, min_education_level_code")
               .eq("id", job.id)
               .single();
             setOfferDetails(offerRow || null);
@@ -191,6 +191,8 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
           offerDescription: offerDetails.description,
           requiredEducation: offerDetails.min_education_level,
           candidateEducation: candidateProfile?.education_level,
+          requiredEducationCode: offerDetails.min_education_level_code,
+          candidateEducationCode: candidateProfile?.education_level_code,
           candidateSkills: candidateProfile?.skills,
           candidateBio: candidateProfile?.bio,
         });
@@ -383,7 +385,36 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
                 <div className="flex items-start gap-2 text-xs font-bold text-amber-800">
                   <i className="fa-solid fa-circle-exclamation mt-0.5"></i>
-                  <span>Correspondance limitée avec cette offre ({matchWarning.score}%)</span>
+                  <span>Correspondance limitée avec cette offre</span>
+                </div>
+
+                {/* Deux signaux affichés SÉPARÉMENT (point 2e). Le score
+                    sémantique ne mesure que la proximité de thème : mesuré
+                    le 2026-08-24, un CV CM2 de manœuvre obtient 57% face à
+                    une offre de développeur exigeant une Licence, et une
+                    recette de cuisine 50%. Le niveau d'études est donc un
+                    signal explicite À CÔTÉ du score, jamais moyenné avec
+                    lui — sinon l'un maquille l'autre. */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white/70 border border-amber-200 rounded-lg px-2.5 py-2">
+                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-wide">Profil / offre</p>
+                    <p className="text-sm font-black text-amber-900">{matchWarning.score}%</p>
+                    <p className="text-[10px] text-amber-700 font-medium">proximité de contenu</p>
+                  </div>
+                  <div className="bg-white/70 border border-amber-200 rounded-lg px-2.5 py-2">
+                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-wide">Niveau d&apos;études</p>
+                    <p className="text-sm font-black text-amber-900">
+                      {matchWarning.niveau?.statut === "suffisant" && "Suffisant"}
+                      {matchWarning.niveau?.statut === "insuffisant" && "Insuffisant"}
+                      {matchWarning.niveau?.statut === "inconnu" && "Non renseigné"}
+                      {(!matchWarning.niveau || matchWarning.niveau.statut === "non_applicable") && "Non exigé"}
+                    </p>
+                    <p className="text-[10px] text-amber-700 font-medium">
+                      {matchWarning.niveau?.exige
+                        ? `demandé : ${matchWarning.niveau.exige.libelle}`
+                        : "aucun niveau demandé"}
+                    </p>
+                  </div>
                 </div>
                 <ul className="text-[11px] text-amber-700 font-medium list-disc list-inside space-y-0.5">
                   {matchWarning.reasons.map((reason, idx) => (

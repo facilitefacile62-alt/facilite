@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { calculateCvMatchScore, isEducationEligible } from "@/lib/eligibility";
+import { chargerNiveauxEtudes, comparerNiveaux } from "@/lib/niveauxEtudes";
 
 // Même seuil que la recommandation candidat (candidat/page.js,
 // match_job_offers match_threshold: 0.4) — un seul seuil "correspondance
@@ -15,7 +16,17 @@ export const MATCH_WARNING_THRESHOLD = 40;
  * mot-à-mot (calculateCvMatchScore) sinon — jamais un second algorithme
  * inventé pour ce seul avertissement.
  */
-export async function computeApplicationMatch({ resumeId, offerId, offerDescription, requiredEducation, candidateEducation, candidateSkills, candidateBio }) {
+export async function computeApplicationMatch({
+  resumeId,
+  offerId,
+  offerDescription,
+  requiredEducation,
+  candidateEducation,
+  requiredEducationCode,
+  candidateEducationCode,
+  candidateSkills,
+  candidateBio,
+}) {
   let score = null;
 
   if (resumeId && offerId) {
@@ -33,12 +44,41 @@ export async function computeApplicationMatch({ resumeId, offerId, offerDescript
   }
 
   const reasons = [];
-  if (requiredEducation && requiredEducation !== "Aucun" && !isEducationEligible(candidateEducation, requiredEducation)) {
+
+  // Signal NIVEAU D'ÉTUDES — explicite, structuré, et calculé séparément du
+  // score sémantique (mesures du 2026-08-24, point 1 : un embedding ne
+  // capte que le thème, jamais le niveau ; un CM2 manœuvre obtenait 57%
+  // face à une offre exigeant une Licence, et dépassait même le titulaire
+  // de Licence sur 2 offres sur 3). Les deux signaux sont rendus l'un À
+  // CÔTÉ de l'autre, jamais fusionnés en un seul pourcentage.
+  let niveau = { statut: "inconnu", exige: null, candidat: null, ecart: 0 };
+  try {
+    const niveaux = await chargerNiveauxEtudes();
+    niveau = comparerNiveaux(niveaux, candidateEducationCode, requiredEducationCode);
+  } catch (err) {
+    console.error("[matchScore] Référentiel des niveaux indisponible :", err?.message);
+  }
+
+  if (niveau.statut === "insuffisant") {
+    reasons.push(
+      `le niveau d'études demandé (${niveau.exige.libelle}) est supérieur à celui indiqué sur votre profil (${niveau.candidat.libelle})`
+    );
+  } else if (niveau.statut === "inconnu" && requiredEducationCode) {
+    // Ne bloque pas et ne se présente pas comme une vérification faite :
+    // on ne peut pas conclure, on le dit.
+    reasons.push(
+      "votre niveau d'études n'est pas renseigné sur votre profil : cette offre en demande un, il n'a pas pu être vérifié"
+    );
+  } else if (!requiredEducationCode && requiredEducation && requiredEducation !== "Aucun" && !isEducationEligible(candidateEducation, requiredEducation)) {
+    // Repli sur l'ancienne comparaison en texte libre UNIQUEMENT pour une
+    // offre dont la saisie n'a pas pu être normalisée (min_education_level_code
+    // NULL) — jamais en doublon du signal structuré ci-dessus.
     reasons.push(`le niveau d'études demandé (${requiredEducation}) est supérieur à celui indiqué sur votre profil (${candidateEducation || "non renseigné"})`);
   }
+
   if (score < MATCH_WARNING_THRESHOLD) {
     reasons.push("peu de points communs entre votre profil (compétences, expérience) et la description de cette offre");
   }
 
-  return { score, reasons };
+  return { score, reasons, niveau };
 }

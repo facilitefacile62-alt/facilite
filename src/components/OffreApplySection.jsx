@@ -4,12 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import ApplyModal from "@/components/ApplyModal";
 import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
+import { chargerNiveauxEtudes, comparerNiveaux } from "@/lib/niveauxEtudes";
 
-const EDUCATION_LEVELS = ["Aucun", "CM2", "Brevet", "BAC", "Licence", "Master", "Doctorat"];
-const levelRank = (level) => {
-  const idx = EDUCATION_LEVELS.indexOf(level || "Aucun");
-  return idx === -1 ? 0 : idx;
-};
 
 // Composant client autonome : reçoit l'offre déjà chargée côté serveur
 // (SEO/generateMetadata), mais recalcule lui-même la session et l'éligibilité
@@ -17,7 +13,8 @@ const levelRank = (level) => {
 // visiteur courant et n'ont pas de sens dans le rendu serveur partagé.
 export default function OffreApplySection({ offer }) {
   const [userSession, setUserSession] = useState(null);
-  const [candidateEducationLevel, setCandidateEducationLevel] = useState("Aucun");
+  const [candidateEducationCode, setCandidateEducationCode] = useState("");
+  const [niveauxEtudes, setNiveauxEtudes] = useState([]);
   const [applyOpen, setApplyOpen] = useState(false);
   const [toast, setToast] = useState("");
 
@@ -31,10 +28,20 @@ export default function OffreApplySection({ offer }) {
           .select("*")
           .eq("id", session.user.id)
           .single();
-        setCandidateEducationLevel(profile?.degree || profile?.education_level || "Aucun");
+        setCandidateEducationCode(profile?.education_level_code || "");
       }
     }
     loadSession();
+  }, []);
+
+  useEffect(() => {
+    let monte = true;
+    chargerNiveauxEtudes().then((liste) => {
+      if (monte) setNiveauxEtudes(liste);
+    });
+    return () => {
+      monte = false;
+    };
   }, []);
 
   const triggerToast = (msg) => {
@@ -42,8 +49,17 @@ export default function OffreApplySection({ offer }) {
     setTimeout(() => setToast(""), 3500);
   };
 
-  const eligible = levelRank(candidateEducationLevel) >= levelRank(offer.min_education_level);
-  const blocked = !!userSession && !eligible;
+  // Comparaison sur le référentiel niveaux_etudes plutôt que sur l'ancien
+  // indexOf() de 7 entrées. Mesuré le 2026-08-24 sur les 63 offres actives :
+  // cet indexOf ne posait de barrière que sur 12 d'entre elles — les 51
+  // autres ("Bac+3", "Bac+5 (Ingénieur / Master…)", "Bac+2 à Bac+4"…)
+  // tombaient au rang 0, et un candidat CM2 y passait sans obstacle.
+  const verdictNiveau = comparerNiveaux(niveauxEtudes, candidateEducationCode, offer.min_education_level_code);
+  // Seul "insuffisant" bloque : "inconnu" (niveau non renseigné, ou
+  // formation hors échelle comme le Daara) et "non_applicable" (l'offre
+  // n'exige rien d'interprétable) ne permettent pas de conclure, donc ne
+  // ferment jamais la porte.
+  const blocked = !!userSession && verdictNiveau.statut === "insuffisant";
 
   // Stabilise la référence de l'objet job passé à ApplyModal
   const stableJob = useMemo(
@@ -87,7 +103,20 @@ export default function OffreApplySection({ offer }) {
       {blocked && !isWhatsApp && (
         <p className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-3">
           <i className="fa-solid fa-triangle-exclamation mr-1"></i>
-          Niveau requis : {offer.min_education_level}. Complétez votre profil pour postuler.
+          Niveau requis : {verdictNiveau.exige.libelle}. Votre profil indique {verdictNiveau.candidat.libelle}.
+        </p>
+      )}
+
+      {/* Niveau demandé mais impossible à vérifier : on le dit au lieu de
+          laisser croire à une vérification réussie, et on n'empêche pas de
+          postuler pour autant. */}
+      {!blocked && !isWhatsApp && !!userSession && verdictNiveau.statut === "inconnu" && verdictNiveau.exige && (
+        <p className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-2.5 mb-3">
+          <i className="fa-solid fa-circle-info mr-1"></i>
+          Cette offre demande le niveau {verdictNiveau.exige.libelle}.{" "}
+          {verdictNiveau.candidat
+            ? `Votre profil indique « ${verdictNiveau.candidat.libelle} », qui ne se compare pas à l'échelle académique.`
+            : "Renseignez votre niveau d'études sur votre profil pour savoir si vous y correspondez."}
         </p>
       )}
 
