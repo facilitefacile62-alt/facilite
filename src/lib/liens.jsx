@@ -38,8 +38,18 @@ export function raccourcirPourAffichage(url) {
     } else {
       dernierSegment = decodeURIComponent(u.pathname.split("/").filter(Boolean).pop() || "");
     }
-    const court = dernierSegment ? `${u.host}/…/${dernierSegment}` : u.host;
-    return court.length < url.length ? court : `${url.slice(0, LONGUEUR_MAX_AFFICHEE - 1)}…`;
+    // Le raccourci doit tenir dans le BUDGET D'AFFICHAGE, pas seulement
+    // être plus court que l'URL d'origine : un identifiant opaque (un
+    // `?id=` Google Drive fait 44 caractères) produisait un
+    // « drive.google.com/…/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms »
+    // de 62 caractères, plus long que le budget et moins lisible que
+    // l'hôte seul. On dégrade donc par paliers : segment complet, puis
+    // hôte seul, puis coupe franche. Le href et l'attribut title portent
+    // toujours l'URL entière, rien n'est perdu pour l'utilisateur.
+    const avecSegment = dernierSegment ? `${u.host}/…/${dernierSegment}` : u.host;
+    if (avecSegment.length <= LONGUEUR_MAX_AFFICHEE) return avecSegment;
+    if (u.host.length <= LONGUEUR_MAX_AFFICHEE) return u.host;
+    return `${url.slice(0, LONGUEUR_MAX_AFFICHEE - 1)}…`;
   } catch {
     return `${url.slice(0, LONGUEUR_MAX_AFFICHEE - 1)}…`;
   }
@@ -54,7 +64,7 @@ function hrefDe(fragment) {
 /**
  * Rend un texte en conservant ses sauts de ligne, chaque URL/e-mail devenant
  * un vrai lien cliquable. `rel="noopener noreferrer"` sur tous les liens
- * externes.
+ * externes : ce texte vient d'une affiche envoyée par un tiers.
  */
 export function TexteAvecLiens({ texte, className = "" }) {
   if (!texte || typeof texte !== "string") return null;
@@ -62,9 +72,11 @@ export function TexteAvecLiens({ texte, className = "" }) {
   const fragments = texte.split(MOTIF_LIENS);
 
   return (
-    <span className={`whitespace-pre-line break-words max-w-full overflow-hidden ${className}`}>
+    <span className={`whitespace-pre-line break-words max-w-full ${className}`}>
       {fragments.map((fragment, i) => {
         if (!fragment) return null;
+        // split() avec un groupe capturant place les correspondances aux
+        // index impairs — inutile de re-tester le motif sur chaque fragment.
         if (i % 2 === 1) {
           const href = hrefDe(fragment);
           return (
