@@ -11,6 +11,7 @@ import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { detectWhatsAppNumber, buildWhatsAppLink, resolveOfferAction } from "@/lib/offerContact";
 import { isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
+import { TexteAvecLiens } from "@/lib/liens";
 
 const EMPTY_OFFER = {
   title: "",
@@ -1172,7 +1173,7 @@ export default function AdminOffresPage() {
                     </p>
                     <div className="border border-gray-100 rounded-xl px-3 py-2 text-xs break-words">
                       {offerForm.additional_info ? (
-                        <span className="text-gray-900 whitespace-pre-line">{offerForm.additional_info}</span>
+                        <TexteAvecLiens texte={offerForm.additional_info} className="text-gray-900" />
                       ) : (
                         <span className="italic text-gray-400">aucune</span>
                       )}

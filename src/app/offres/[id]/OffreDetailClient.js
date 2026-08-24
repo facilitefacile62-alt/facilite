@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { TexteAvecLiens } from "@/lib/liens";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -567,9 +568,17 @@ export default function OffreDetailClient({ initialOffer }) {
 
                       return (
                         <>
-                          <div className="text-gray-900 dark:text-gray-100 leading-relaxed">
-                            {displayText}
-                          </div>
+                          {/* Sous-point 3 : les URL de la description
+                              étaient rendues en texte nu, non cliquables, et
+                              débordaient horizontalement de la carte (aucun
+                              break-words sur cette page). TexteAvecLiens
+                              conserve les sauts de ligne, rend chaque URL et
+                              chaque e-mail cliquables, et coupe l'AFFICHAGE
+                              sans jamais tronquer le href. */}
+                          <TexteAvecLiens
+                            texte={displayText}
+                            className="block text-gray-900 dark:text-gray-100 leading-relaxed"
+                          />
                           {shouldTruncate && (
                             <div className="pt-3">
                               <button
@@ -587,6 +596,24 @@ export default function OffreDetailClient({ initialOffer }) {
                     })()}
                   </div>
                 </div>
+
+                {/* Informations complémentaires (sous-points 2 et 3) :
+                    documents à fournir, liens annexes, précisions
+                    logistiques. Volontairement SÉPARÉ de la description et
+                    de l'adresse de candidature — rien de ce qui est ici
+                    n'est utilisé comme destination du bouton Postuler. */}
+                {offer.additional_info && (
+                  <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-xs">
+                    <h3 className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-3">
+                      <i className="fa-solid fa-circle-info text-blue-600"></i>
+                      <span>Informations complémentaires</span>
+                    </h3>
+                    <TexteAvecLiens
+                      texte={offer.additional_info}
+                      className="block text-sm text-gray-800 dark:text-gray-200 leading-relaxed"
+                    />
+                  </div>
+                )}
 
                 {/* Modale de Candidature Rapide Facilité */}
                 <ApplyModal
