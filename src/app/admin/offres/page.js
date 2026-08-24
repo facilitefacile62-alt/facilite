@@ -345,6 +345,14 @@ export default function AdminOffresPage() {
       return;
     }
 
+    // Sous-point 4 : rien ne part sur le Fil d'Actualité sans revue. Ce
+    // chemin scannait ET publiait dans le même clic (« Publication directe
+    // en 1 Clic ») : l'extraction n'était donc jamais relue par personne.
+    if (!examenPasse) {
+      triggerToast("Lancez l'Examinateur et vérifiez les informations avant de publier.", "fa-triangle-exclamation");
+      return;
+    }
+
     setSavingOffer(true);
     triggerToast("⚡ Analyse IA et publication directe en cours...", "fa-wand-magic-sparkles");
 
@@ -466,6 +474,14 @@ export default function AdminOffresPage() {
 
     if (!offerForm.title || !offerForm.company) {
       triggerToast("Le titre du poste et l'entreprise sont obligatoires.", "fa-triangle-exclamation");
+      return;
+    }
+
+    // Même verrou que la publication « 1 clic » : le bouton est déjà
+    // désactivé, cette garde couvre un submit déclenché autrement
+    // (touche Entrée dans un champ du formulaire).
+    if (!examenPasse) {
+      triggerToast("Vérifiez les informations dans le panneau de revue avant de publier.", "fa-triangle-exclamation");
       return;
     }
 
@@ -1073,8 +1089,9 @@ export default function AdminOffresPage() {
 
                   <button
                     type="button"
-                    disabled={savingOffer || isScanningAI || (!offerImageFile && !accompanyingText.trim() && !offerForm.title.trim())}
+                    disabled={savingOffer || isScanningAI || !examenPasse || (!offerImageFile && !accompanyingText.trim() && !offerForm.title.trim())}
                     onClick={handleInstantAiPublish}
+                    title={examenPasse ? "Publier sur le Fil d'Actualité" : "Passez d'abord par l'Examinateur"}
                     className="px-4 py-2.5 bg-gradient-to-r from-[#10E688] to-emerald-600 hover:from-[#0fd57d] hover:to-emerald-700 disabled:opacity-50 text-gray-950 text-xs font-black rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                   >
                     <i className={`fa-solid ${savingOffer ? "fa-spinner fa-spin" : "fa-bolt-lightning"}`}></i>
@@ -1107,12 +1124,14 @@ export default function AdminOffresPage() {
                 Auparavant le seul retour était un toast « formulaire
                 pré-rempli » : il fallait relire soi-même les 14 champs du
                 formulaire pour savoir ce que l'IA avait compris. */}
-            {examenPasse && (
-              <div className="rounded-2xl border border-emerald-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-200 flex items-center gap-2">
-                  <i className="fa-solid fa-clipboard-check text-emerald-600"></i>
-                  <span className="text-xs font-black text-emerald-900 uppercase tracking-wide">
-                    Résultat de l&apos;Examinateur — à vérifier avant publication
+            {(examenPasse || offerForm.title.trim()) && (
+              <div className={`rounded-2xl border bg-white overflow-hidden ${examenPasse ? "border-emerald-200" : "border-amber-300"}`}>
+                <div className={`px-4 py-3 border-b flex items-center gap-2 ${examenPasse ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+                  <i className={`fa-solid ${examenPasse ? "fa-clipboard-check text-emerald-600" : "fa-triangle-exclamation text-amber-600"}`}></i>
+                  <span className={`text-xs font-black uppercase tracking-wide ${examenPasse ? "text-emerald-900" : "text-amber-900"}`}>
+                    {examenPasse
+                      ? "Résultat de l'Examinateur — à vérifier avant publication"
+                      : "Revue obligatoire avant publication"}
                   </span>
                 </div>
 
@@ -1202,9 +1221,31 @@ export default function AdminOffresPage() {
                     );
                   })()}
 
-                  <p className="text-[11px] text-gray-500 font-medium">
-                    Corrigez ce qui est faux dans le formulaire ci-dessous, puis publiez.
-                  </p>
+                  {examenPasse ? (
+                    <p className="text-[11px] text-gray-500 font-medium">
+                      Corrigez ce qui est faux dans le formulaire ci-dessous, puis publiez.
+                    </p>
+                  ) : (
+                    // Chemin 100% manuel : l'Examinateur ne peut pas tourner
+                    // (il analyse une affiche ou un texte, et il n'y en a
+                    // pas). Sans cette porte de sortie, une offre saisie à la
+                    // main serait impossible à publier. La revue reste
+                    // obligatoire, elle est juste confirmée à la main.
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-amber-800 font-bold">
+                        La publication est verrouillée tant que ces informations n&apos;ont pas été revues. Lancez
+                        l&apos;Examinateur sur l&apos;affiche ou la description, ou confirmez la revue ci-dessous.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setExamenPasse(true)}
+                        className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <i className="fa-solid fa-check"></i>
+                        <span>J&apos;ai vérifié ces informations</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1378,11 +1419,18 @@ export default function AdminOffresPage() {
 
                 <button
                   type="submit"
-                  disabled={savingOffer || isScanningAI}
-                  className="px-6 py-3.5 bg-gradient-to-r from-[#10E688] to-emerald-600 hover:from-[#0fd57d] hover:to-emerald-700 disabled:opacity-50 text-gray-950 font-black text-sm rounded-2xl transition shadow-md shadow-emerald-500/20 flex items-center gap-2 cursor-pointer active:scale-98"
+                  disabled={savingOffer || isScanningAI || !examenPasse}
+                  title={examenPasse ? "Publier sur le Fil d'Actualité" : "Passez d'abord par la revue (Examinateur)"}
+                  className="px-6 py-3.5 bg-gradient-to-r from-[#10E688] to-emerald-600 hover:from-[#0fd57d] hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-950 font-black text-sm rounded-2xl transition shadow-md shadow-emerald-500/20 flex items-center gap-2 cursor-pointer active:scale-98"
                 >
-                  <i className={`fa-solid ${savingOffer ? "fa-spinner fa-spin" : "fa-paper-plane"}`}></i>
-                  <span>{savingOffer ? "Publication en cours..." : "🚀 Publier sur le Fil d'Actualité"}</span>
+                  <i className={`fa-solid ${savingOffer ? "fa-spinner fa-spin" : examenPasse ? "fa-paper-plane" : "fa-lock"}`}></i>
+                  <span>
+                    {savingOffer
+                      ? "Publication en cours..."
+                      : examenPasse
+                      ? "🚀 Publier sur le Fil d'Actualité"
+                      : "Revue requise avant publication"}
+                  </span>
                 </button>
               </div>
             </form>
