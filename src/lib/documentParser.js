@@ -207,15 +207,18 @@ Extrais méticuleusement et organise :
 3. Localisation (ex: Dakar, Thiès, Diamniadio, Sénégal, etc.)
 4. Type de contrat (ex: CDI, CDD, Stage, Casting / Tournage, Freelance, Intérim, Bourse d'études, Plein Temps)
 5. Numéro de téléphone ou WhatsApp pour postuler (très important : extraire avec l'indicatif ou au format standard ex: +221 77 717 73 73)
-6. Adresse e-mail de CONTACT GÉNÉRAL de l'annonceur (renseignements, secrétariat) — PAS l'adresse où envoyer sa candidature, qui est demandée séparément au point 8.
-7. Site officiel / lien institutionnel de l'organisation (ex: https://www.ucad.sn) — PAS le lien où postuler, qui est demandé séparément au point 8.
+6. Adresse e-mail du recruteur / contact (contact_email & application_email) — TRÈS IMPORTANT :
+   - Extrais systématiquement TOUTE adresse e-mail présente sur l'affiche ou dans le texte (ex: recrutement@..., rh@..., contact@..., candidature@..., info@..., nom@domaine.com).
+   - Renseigne "contact_email" avec l'adresse e-mail trouvée.
+   - Si cette adresse sert à postuler ou recevoir les CVs, renseigne également "application_email" avec la même adresse e-mail.
+   - Ne laisse JAMAIS vide si une adresse e-mail avec un @ apparaît dans l'image ou le texte.
+7. Site officiel / lien institutionnel de l'organisation (ex: https://www.ucad.sn)
 
-8. ADRESSE DE CANDIDATURE — c'est le point le PLUS IMPORTANT, lis l'annonce littéralement :
+8. ADRESSE DE CANDIDATURE :
    - "application_url" : l'URL que l'annonce désigne EXPLICITEMENT pour postuler ("postulez sur…", "candidatures en ligne sur…", "déposez votre dossier ici…", "lien de candidature :…"). Exemple typique : https://recrutement.ucad.sn
-   - "application_email" : l'adresse e-mail que l'annonce désigne EXPLICITEMENT pour recevoir les candidatures ("envoyez votre CV à…", "candidatures à adresser à…").
+   - "application_email" : l'adresse e-mail désignée pour recevoir les candidatures ("envoyez votre CV à…", "candidatures à adresser à…"). Si un email recruteur est mentionné sur l'annonce, renseigne-le ici.
    RÈGLES STRICTES :
-   - N'INVENTE JAMAIS ces deux valeurs. Si l'annonce ne désigne aucune adresse de candidature, renvoie une chaîne vide — c'est une réponse correcte et attendue.
-   - Ne recopie PAS ici le site institutionnel du point 7 ni l'e-mail de contact du point 6 simplement parce qu'ils existent : seul ce qui est présenté comme le moyen de POSTULER compte.
+   - N'INVENTE JAMAIS ces valeurs. Si aucune URL ni aucun e-mail de candidature n'est mentionné, renvoie une chaîne vide.
    - Un lien vers un DOCUMENT (fiche de poste, formulaire PDF, termes de référence, dossier à télécharger) n'est JAMAIS une adresse de candidature : il va dans "additional_info".
 
 9. "additional_info" : toutes les autres informations utiles qui ne rentrent dans aucun champ ci-dessus — liens annexes, documents à télécharger ou à fournir, pièces à joindre, précisions logistiques, références de concours. Recopie les URL EN ENTIER, telles quelles. Chaîne vide s'il n'y a rien.
@@ -311,6 +314,31 @@ Réponds STRICTEMENT en JSON valide sans aucun texte avant ou après sous le for
       try {
         const parsed = JSON.parse(cleanedJson);
         if (parsed && (parsed.title || parsed.company || parsed.description)) {
+          // Normalisation et synchronisation des emails extraits
+          let contactEmail = typeof parsed.contact_email === "string" ? parsed.contact_email.trim() : "";
+          let applicationEmail = typeof parsed.application_email === "string" ? parsed.application_email.trim() : "";
+
+          // Si un des deux champs contient un email mais pas l'autre, synchroniser
+          if (!contactEmail && applicationEmail) {
+            contactEmail = applicationEmail;
+          } else if (!applicationEmail && contactEmail) {
+            applicationEmail = contactEmail;
+          }
+
+          // Fallback regex sur le texte d'accompagnement ou la description si aucun email n'a été capturé
+          if (!contactEmail && !applicationEmail) {
+            const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/;
+            const textToSearch = `${accompanyingText || ""} ${parsed.description || ""}`;
+            const match = textToSearch.match(emailRegex);
+            if (match && match[0]) {
+              contactEmail = match[0].trim();
+              applicationEmail = match[0].trim();
+            }
+          }
+
+          parsed.contact_email = contactEmail;
+          parsed.application_email = applicationEmail;
+
           return { success: true, ...parsed };
         }
       } catch (jsonErr) {

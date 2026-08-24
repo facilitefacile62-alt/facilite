@@ -418,6 +418,8 @@ export default function AdminOffresPage() {
         });
       }
 
+      const finalEmail = (currentOfferData.contact_email || currentOfferData.application_email || "").trim();
+
       const payload = {
         title: (currentOfferData.title || "Opportunité de recrutement").trim(),
         company: (currentOfferData.company || "Entreprise").trim(),
@@ -428,7 +430,10 @@ export default function AdminOffresPage() {
         description: currentOfferData.description || "",
         image_url: finalImageUrl || null,
         deadline: currentOfferData.deadline || null,
-        contact_email: currentOfferData.contact_email ? currentOfferData.contact_email.trim() : null,
+        contact_email: finalEmail || null,
+        application_email: (currentOfferData.application_email || finalEmail || "").trim() || null,
+        application_url: currentOfferData.application_url ? currentOfferData.application_url.trim() : null,
+        additional_info: currentOfferData.additional_info ? currentOfferData.additional_info.trim() : null,
         contact_phone: currentOfferData.contact_phone ? currentOfferData.contact_phone.trim() : (phoneDigits ? `+${phoneDigits}` : null),
         external_link: externalLink || null,
         listing_type: LISTING_TYPE_LABELS[currentOfferData.listing_type] ? currentOfferData.listing_type : "offre_emploi",
@@ -521,6 +526,8 @@ export default function AdminOffresPage() {
         });
       }
 
+      const formEmail = (offerForm.contact_email || offerForm.application_email || "").trim();
+
       const payload = {
         title: offerForm.title.trim(),
         company: offerForm.company.trim(),
@@ -531,7 +538,10 @@ export default function AdminOffresPage() {
         description: offerForm.description || "",
         image_url: imageUrl || null,
         deadline: offerForm.deadline || null,
-        contact_email: offerForm.contact_email ? offerForm.contact_email.trim() : null,
+        contact_email: formEmail || null,
+        application_email: (offerForm.application_email || formEmail || "").trim() || null,
+        application_url: offerForm.application_url ? offerForm.application_url.trim() : null,
+        additional_info: offerForm.additional_info ? offerForm.additional_info.trim() : null,
         contact_phone: offerForm.contact_phone ? offerForm.contact_phone.trim() : (phoneDigits ? `+${phoneDigits}` : null),
         external_link: externalLink || null,
         listing_type: LISTING_TYPE_LABELS[offerForm.listing_type] ? offerForm.listing_type : "offre_emploi",

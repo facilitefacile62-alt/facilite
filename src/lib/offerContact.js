@@ -141,7 +141,7 @@ export function extractOfferContactMethods(offer = {}) {
 
   // 2. Détection Email
   let emailUrl = null;
-  const emailCandidate = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
+  const emailCandidate = offer?.application_email || offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
   if (emailCandidate && typeof emailCandidate === "string" && emailCandidate.includes("@")) {
     const title = offer?.title || offer?.titleFR || "Offre d'emploi";
     emailUrl = `mailto:${emailCandidate.trim()}?subject=${encodeURIComponent(`Candidature - ${title}`)}`;
@@ -180,7 +180,7 @@ export function resolveOfferAction(offer = {}, options = {}) {
   const { customLabel } = options;
 
   const extLink = offer?.external_link || offer?.externalLink || offer?.apply_url || offer?.source_url || offer?.url;
-  const email = offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
+  const email = offer?.application_email || offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail;
 
   // 0. ADRESSE DE CANDIDATURE EXPLICITE (20260824120000_offre_adresse_candidature.sql)
   //

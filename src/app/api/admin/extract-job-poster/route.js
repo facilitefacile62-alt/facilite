@@ -92,7 +92,7 @@ export async function POST(req) {
       );
     }
 
-    // 3. Normalisation & Détection WhatsApp automatique
+    // 3. Normalisation Email & Détection WhatsApp automatique
     const rawPhone = extracted.contact_phone || "";
     const detectedPhone = detectWhatsAppNumber({
       contact_phone: rawPhone,
@@ -109,6 +109,17 @@ export async function POST(req) {
       });
     }
 
+    // Détection email de secours si vide
+    let emailFound = extracted.contact_email || extracted.application_email || "";
+    if (!emailFound) {
+      const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/;
+      const textToSearch = `${accompanyingText || ""} ${extracted.description || ""}`;
+      const match = textToSearch.match(emailRegex);
+      if (match && match[0]) {
+        emailFound = match[0].trim();
+      }
+    }
+
     return NextResponse.json({
       success: true,
       offer: {
@@ -117,13 +128,13 @@ export async function POST(req) {
         location: extracted.location || "Sénégal",
         contract_type: extracted.contract_type || "CDI",
         contact_phone: detectedPhone ? `+${detectedPhone}` : rawPhone,
-        contact_email: extracted.contact_email || "",
+        contact_email: emailFound,
         external_link: autoExternalLink,
         // Adresse de candidature explicitement désignée par l'annonce —
         // jamais devinée, jamais remplacée par un repli générique. Vide est
         // une valeur correcte : elle signifie « l'annonce n'en donne pas ».
         application_url: extracted.application_url || "",
-        application_email: extracted.application_email || "",
+        application_email: extracted.application_email || emailFound || "",
         additional_info: extracted.additional_info || "",
         deadline: extracted.deadline || "",
         min_education_level: extracted.min_education_level || "Aucun",
