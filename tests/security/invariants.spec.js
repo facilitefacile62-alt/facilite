@@ -411,6 +411,19 @@ test.describe("Invariants de sécurité", () => {
       // current_user_role() (policy UPDATE séparée). Décision écrite le
       // 2026-08-17, migration 20260817000000_feature_flags_table.sql.
       "public.feature_flags:Lecture publique des indicateurs de fonctionnalites",
+      // Référentiel des niveaux d'études du système éducatif sénégalais
+      // (CI → Doctorat, CAP/BEP/BT/BTS, certificats pédagogiques, Daara) :
+      // 36 lignes de code/libellé/rang, aucune donnée personnelle, aucun
+      // lien avec un utilisateur. Le menu déroulant "Niveau" du profil et
+      // l'affichage du niveau requis sur la fiche d'offre doivent
+      // fonctionner pour un visiteur NON connecté — /offres et /offres/[id]
+      // sont publiques. Écriture verrouillée dans le même mouvement :
+      // aucune policy INSERT/UPDATE/DELETE, et REVOKE explicite sur
+      // anon/authenticated (le contenu ne change que par migration).
+      // Même classe que feature_flags ci-dessus : métadonnées de
+      // configuration, pas des données utilisateur. Décision écrite le
+      // 2026-08-24, migration 20260824100000_niveaux_etudes.sql.
+      "public.niveaux_etudes:Référentiel des niveaux lisible par tous",
     ]);
 
     const rows = await runIntrospectionSql(`
