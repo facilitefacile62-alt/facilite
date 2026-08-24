@@ -92,8 +92,13 @@ const RATE_LIMIT_MAX_REQUESTS = 20;
 // quand même pipeline().exec() sur ce client invalide, qui échoue au bout
 // de ~4.3s (retries internes du SDK avant l'erreur "Failed to parse URL")
 // avant de retomber sur le mode mémoire — 4+ secondes ajoutées à CHAQUE
-// requête API authentifiée tant qu'Upstash n'est pas configuré (constaté en
-// production : ni UPSTASH_REDIS_REST_URL ni _TOKEN n'y sont renseignés).
+// requête API authentifiée tant qu'Upstash n'est pas configuré.
+//
+// Mise à jour 2026-08-24 : les deux variables SONT désormais présentes dans
+// l'environnement Vercel (Production + Preview, ajoutées le 02/08/2026) et
+// le déploiement servant ffacilite.com leur est postérieur — la production
+// tourne donc bien sur le chemin Redis distribué, plus sur le repli mémoire.
+// Le repli reste en place pour le dev local et pour une panne d'Upstash.
 let redis;
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
   try {
@@ -118,9 +123,16 @@ export async function checkRateLimit(identifier) {
     try {
       const key = `rate-limit:${identifier}`;
       
+      // `NX` est indispensable : sans lui, EXPIRE repositionne le TTL à 60s
+      // à CHAQUE requête, donc la clé n'expire jamais tant que l'utilisateur
+      // continue d'appeler l'API, et INCR ne repart jamais de zéro — un
+      // utilisateur actif est alors bloqué DÉFINITIVEMENT dès sa 20e requête
+      // (et non pendant une minute), jusqu'à ce qu'il cesse tout appel
+      // pendant 60s d'affilée. Avec NX, le TTL n'est posé qu'à la création
+      // de la clé : la fenêtre glisse réellement de minute en minute.
       const [current] = await redis.pipeline()
         .incr(key)
-        .expire(key, RATE_LIMIT_WINDOW_S)
+        .expire(key, RATE_LIMIT_WINDOW_S, "NX")
         .exec();
         
       if (current > RATE_LIMIT_MAX_REQUESTS) {
