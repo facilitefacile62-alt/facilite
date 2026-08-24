@@ -19,6 +19,7 @@ import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityTabContent from "@/components/SecurityTabContent";
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
+import { chargerNiveauxEtudes, grouperParCategorie, trouverNiveau } from "@/lib/niveauxEtudes";
 
 /**
  * Convertit une data URI base64 (sortie de canvas.toDataURL) en Blob, sans
@@ -85,6 +86,11 @@ export default function ProfilPage() {
   const [phone, setPhone] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [educationLevel, setEducationLevel] = useState("Aucun");
+  // Niveau d'études STRUCTURÉ (code du référentiel niveaux_etudes). La
+  // chaîne educationLevel ci-dessus reste écrite en base pour l'affichage
+  // et pour les lecteurs historiques qui ne lisent que du texte.
+  const [educationLevelCode, setEducationLevelCode] = useState("");
+  const [niveauxEtudes, setNiveauxEtudes] = useState([]);
   const [activeSection, setActiveSection] = useState("info_perso");
   const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
   const aboutDropdownRef = useRef(null);
@@ -210,6 +216,20 @@ export default function ProfilPage() {
   // Formations / Éducation dynamique (Supabase + localStorage)
   const [educations, setEducations] = useState([]);
   const [educationModalOpen, setEducationModalOpen] = useState(false);
+
+  // Référentiel des niveaux d'études : lecture publique, une seule requête
+  // par session (cache dans src/lib/niveauxEtudes.js). Un échec n'est
+  // jamais bloquant — le menu reste simplement vide et le champ texte
+  // existant continue de fonctionner.
+  useEffect(() => {
+    let monte = true;
+    chargerNiveauxEtudes().then((liste) => {
+      if (monte) setNiveauxEtudes(liste);
+    });
+    return () => {
+      monte = false;
+    };
+  }, []);
   const [eduSchool, setEduSchool] = useState("");
   const [eduDegree, setEduDegree] = useState("");
   const [eduField, setEduField] = useState("");
@@ -456,6 +476,7 @@ export default function ProfilPage() {
     if (profile) {
       setProfileName(profile.full_name || session.user.email?.split("@")[0] || "");
       setEducationLevel(profile.education_level || "Aucun");
+      setEducationLevelCode(profile.education_level_code || "");
       setProfileSubtitle(profile.headline || "");
       setProfileLocation(profile.location || "");
       setProfileBio(profile.bio || "");
@@ -1752,6 +1773,42 @@ export default function ProfilPage() {
   };
 
   // Enregistrer dynamiquement une information de l'onglet À propos dans Supabase
+  /**
+   * Enregistre le niveau d'études : le CODE structuré (comparable au
+   * min_education_level_code des offres) ET le libellé texte, en une seule
+   * requête. Les deux doivent rester cohérents — un code sans libellé
+   * casserait l'affichage des lecteurs historiques, un libellé sans code
+   * ferait retomber l'éligibilité sur l'ancienne heuristique.
+   */
+  const handleSaveNiveauEtudes = async (code) => {
+    if (!userSession?.user) return;
+    const niveau = trouverNiveau(niveauxEtudes, code);
+    setEducationLevelCode(code);
+    setEducationLevel(niveau?.libelle || "");
+
+    triggerToast("Sauvegarde de la modification...", "fa-spinner fa-spin");
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          education_level_code: code || null,
+          education_level: niveau?.libelle || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userSession.user.id);
+
+      if (error) {
+        console.error("Erreur lors de la mise à jour du niveau d'études:", error);
+        triggerToast("Erreur lors de la sauvegarde dans Supabase", "fa-triangle-exclamation");
+        return;
+      }
+      triggerToast("Information mise à jour avec succès !", "fa-circle-check");
+    } catch (err) {
+      console.error("Exception sauvegarde niveau d'études:", err);
+      triggerToast("Erreur lors de la sauvegarde", "fa-triangle-exclamation");
+    }
+  };
+
   const handleSaveAboutField = async (fieldKey, fieldValue) => {
     if (!userSession?.user) return;
 
@@ -3133,23 +3190,29 @@ export default function ProfilPage() {
                             <select
                               id="profil-education-level"
                               name="profil-education-level"
-                              value={educationLevel}
-                              onChange={(e) => {
-                                const newLevel = e.target.value;
-                                setEducationLevel(newLevel);
-                                handleSaveAboutField("education_level", newLevel);
-                              }}
-                              className="mt-1 text-sm font-extrabold text-gray-900 bg-transparent border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                              value={educationLevelCode}
+                              onChange={(e) => handleSaveNiveauEtudes(e.target.value)}
+                              disabled={niveauxEtudes.length === 0}
+                              className="mt-1 text-sm font-extrabold text-gray-900 bg-transparent border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer disabled:opacity-60"
                             >
-                              <option value="Aucun">Aucun</option>
-                              <option value="CM2">CM2</option>
-                              <option value="Brevet">Brevet</option>
-                              <option value="BAC">BAC</option>
-                              <option value="Licence">Licence</option>
-                              <option value="Master">Master</option>
-                              <option value="Doctorat">Doctorat</option>
+                              <option value="">
+                                {niveauxEtudes.length === 0 ? "Chargement des niveaux…" : "Non renseigné"}
+                              </option>
+                              {grouperParCategorie(niveauxEtudes).map((groupe) => (
+                                <optgroup key={groupe.categorie} label={groupe.libelle}>
+                                  {groupe.niveaux.map((n) => (
+                                    <option key={n.code} value={n.code}>
+                                      {n.libelle}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
                             </select>
-                            <p className="text-[11px] text-gray-500 font-medium mt-1">Utilisé pour vérifier votre éligibilité aux offres d'emploi</p>
+                            <p className="text-[11px] text-gray-500 font-medium mt-1">
+                              {trouverNiveau(niveauxEtudes, educationLevelCode)?.comparable === false
+                                ? "Formation religieuse ou traditionnelle : affichée sur votre profil, jamais comparée à une exigence de diplôme."
+                                : "Utilisé pour vérifier votre éligibilité aux offres d'emploi"}
+                            </p>
                           </div>
                         </div>
                       </div>
