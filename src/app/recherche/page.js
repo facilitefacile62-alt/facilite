@@ -195,20 +195,44 @@ function RechercheContent() {
         console.error("Erreur recherche offres Supabase:", err);
       }
 
-      // 4. Requête Supabase pour les Recruteurs / Membres
+      // 4. Recruteurs / Membres — via la projection PUBLIQUE et consentie.
+      //
+      // Diagnostic du 2026-08-24 : cette section interrogeait directement
+      // public.profiles en `select("id, full_name, avatar_url, email")`.
+      // Or les policies SELECT de profiles sont « son propre profil »,
+      // « un admin lit tous les profils » et « un agent lit ses candidats
+      // assignés » — AUCUNE ne permet à un utilisateur ordinaire de lire le
+      // profil d'un autre. La section ne renvoyait donc jamais rien, ni
+      // pour un visiteur anonyme NI pour un candidat ou un recruteur
+      // connecté : elle était vide en silence pour tout le monde sauf les
+      // admins.
+      //
+      // Deux corrections en une :
+      //   * on ne demande plus `email` depuis le client. Si la RLS de
+      //     profiles était un jour relâchée par erreur, cette requête
+      //     exposerait les adresses e-mail de 86 comptes — exactement la
+      //     classe d'incident déjà enregistrée par
+      //     20260806123000_incident_profiles_public_read.sql ;
+      //   * on passe par get_profils_publics(), la projection SECURITY
+      //     DEFINER déjà utilisée par /in/[username], qui ne renvoie que
+      //     les profils dont le propriétaire a activé la visibilité
+      //     publique. La recherche devient donc réellement publique, sans
+      //     rien exposer que son propriétaire n'ait choisi de publier.
       let matchedRecruiters = [];
       try {
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("id, full_name, avatar_url, email")
+        const { data: profileData, error: profileError } = await supabase
+          .rpc("get_profils_publics")
+          .select("id, full_name, avatar_url, slug")
           .ilike("full_name", `%${q}%`)
           .limit(20);
 
-        if (profileData) {
+        if (profileError) {
+          console.error("Erreur recherche profils publics:", profileError.message);
+        } else if (profileData) {
           matchedRecruiters = profileData;
         }
       } catch (err) {
-        console.error("Erreur recherche recruteurs Supabase:", err);
+        console.error("Erreur recherche profils publics:", err);
       }
 
       if (isMounted) {
@@ -521,6 +545,23 @@ function RechercheContent() {
                     </div>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {/* Section vide EXPLICITE : jusqu'ici, aucun résultat = aucune
+                section, donc rien ne distinguait « personne ne correspond »
+                d'une fonctionnalité cassée. L'onglet Recruteurs affiche
+                désormais toujours une explication quand il est vide. */}
+            {activeTab === "recruiters" && results.recruiters.length === 0 && !loading && (
+              <section className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 text-center">
+                <span className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-800 inline-flex items-center justify-center text-base mb-3">
+                  <i className="fa-solid fa-id-card"></i>
+                </span>
+                <p className="text-sm font-extrabold text-gray-900">Aucun profil public ne correspond à cette recherche</p>
+                <p className="text-xs text-gray-600 font-medium mt-1.5 max-w-md mx-auto">
+                  Seuls les profils dont le titulaire a activé la visibilité publique apparaissent ici. Les autres
+                  restent privés, y compris pour les recruteurs connectés.
+                </p>
               </section>
             )}
 
