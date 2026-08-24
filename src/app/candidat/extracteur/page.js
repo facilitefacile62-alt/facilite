@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import AuthRequiredModal from "@/components/AuthRequiredModal";
 
 // Filet de sécurité : si le serveur renvoie malgré tout une erreur brute
 // (JSON stringifié d'un SDK, objet imbriqué...) plutôt qu'une phrase lisible,
@@ -39,6 +40,7 @@ function ExtracteurContent() {
   const posterId = searchParams.get("posterId");
 
   const [userSession, setUserSession] = useState(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -167,6 +169,11 @@ function ExtracteurContent() {
   }, [extractedEmail, extractedData, posterOffer]);
 
   const handleFileSelect = (e) => {
+    if (!userSession?.user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -192,6 +199,10 @@ function ExtracteurContent() {
   };
 
   const handleExtractEmail = async () => {
+    if (!userSession?.user) {
+      setAuthModalOpen(true);
+      return;
+    }
     if (!selectedFile) return;
 
     setIsExtracting(true);
@@ -767,6 +778,15 @@ function ExtracteurContent() {
       <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs font-medium text-gray-500">
         © 2026 Facilite - L'Extracteur de Candidature Instantané.
       </footer>
+
+      {/* Modale d'inscription requise pour les visiteurs */}
+      <AuthRequiredModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        featureName="l'extracteur d'affiche de recrutement"
+        featureIcon="fa-solid fa-wand-magic-sparkles"
+        redirectUrl="/candidat/extracteur"
+      />
     </div>
   );
 }

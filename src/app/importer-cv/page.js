@@ -9,6 +9,7 @@ import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
+import AuthRequiredModal from "@/components/AuthRequiredModal";
 
 const translations = {
   FR: {
@@ -178,6 +179,7 @@ export default function ImporterCvPage() {
   const plusDropdownRef = useRef(null);
   const userMenuRef = useRef(null);
   const [userSession, setUserSession] = useState(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [userAvatarUrl, setUserAvatarUrl] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
 
@@ -271,6 +273,11 @@ export default function ImporterCvPage() {
 
   // Parse files, upload to Supabase & simulate advanced extraction
   const processFile = (selectedFile) => {
+    if (!userSession?.user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
     const validExtensions = ["pdf", "doc", "docx"];
     const extension = selectedFile.name.split(".").pop().toLowerCase();
 
@@ -1945,6 +1952,15 @@ export default function ImporterCvPage() {
           </div>
         </div>
       )}
+
+      {/* Modale d'inscription requise pour les visiteurs */}
+      <AuthRequiredModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        featureName="l'analyseur & scanner IA de CV"
+        featureIcon="fa-solid fa-file-import"
+        redirectUrl="/importer-cv"
+      />
 
     </div>
   );

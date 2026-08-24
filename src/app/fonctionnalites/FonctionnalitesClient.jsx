@@ -5,6 +5,8 @@ import Link from "next/link";
 import { PDFDocument, degrees } from "pdf-lib";
 import JSZip from "jszip";
 import { compressPdfFile } from "@/lib/pdfCompression";
+import { useAuth } from "@/context/AuthContext";
+import AuthRequiredModal from "@/components/AuthRequiredModal";
 
 // Helper pour charger dynamiquement le moteur PDF.js de Mozilla dans le navigateur
 async function getPdfJsEngine() {
@@ -308,13 +310,19 @@ const SIDEBAR_ITEMS = [
       { title: "Carrousel 360° immersif", desc: "Testez et visualisez les modèles sous tous les angles", icon: "fa-solid fa-rotate" },
       { title: "Tarifs transparents", desc: "Offres claires et accompagnement personnalisé", icon: "fa-solid fa-tag" }
     ],
-    footerHint: "Templates haute définition • Prêts à l'emploi et 100% personnalisables"
+    footerHint: "Templates haute définition • Prêts à l'emploi"
   }
 ];
 
 export default function FonctionnalitesPage() {
+  const { session: userSession } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalFeature, setAuthModalFeature] = useState("");
+  const [authModalIcon, setAuthModalIcon] = useState("fa-solid fa-lock");
+
+  // Navigation & Vues
+  const [selectedCategory, setSelectedCategory] = useState("all"); // 'all' | 'pdf' | 'ia'
   const [activeTabId, setActiveTabId] = useState("compresser-pdf");
-  const [selectedCategory, setSelectedCategory] = useState("all");
   const [mobileView, setMobileView] = useState("list"); // 'list' | 'tool'
   const [dragOver, setDragOver] = useState(false);
 
@@ -335,6 +343,16 @@ export default function FonctionnalitesPage() {
 
   const fileInputRef = useRef(null);
 
+  const triggerAuthGuard = (featureName, icon) => {
+    if (!userSession?.user) {
+      setAuthModalFeature(featureName || activeItem.name);
+      setAuthModalIcon(icon || activeItem.icon);
+      setAuthModalOpen(true);
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -343,6 +361,10 @@ export default function FonctionnalitesPage() {
       const match = SIDEBAR_ITEMS.find((item) => item.id === toolParam);
       if (match) {
         if (match.link) {
+          if (!userSession?.user) {
+            triggerAuthGuard(match.name, match.icon);
+            return;
+          }
           window.location.href = match.link;
           return;
         }
@@ -350,7 +372,7 @@ export default function FonctionnalitesPage() {
         setMobileView("tool");
       }
     }
-  }, []);
+  }, [userSession]);
 
   const filteredItems = SIDEBAR_ITEMS.filter((item) => {
     if (selectedCategory === "all") return true;
@@ -371,6 +393,7 @@ export default function FonctionnalitesPage() {
 
   const handleSelectTab = (item) => {
     if (item.link) {
+      if (!triggerAuthGuard(item.name, item.icon)) return;
       window.location.href = item.link;
       return;
     }
@@ -383,6 +406,7 @@ export default function FonctionnalitesPage() {
   };
 
   const handleFilesAdded = async (filesList) => {
+    if (!triggerAuthGuard(activeItem.name, activeItem.icon)) return;
     if (!filesList || filesList.length === 0) return;
     const newFiles = Array.from(filesList);
     
@@ -1086,16 +1110,25 @@ export default function FonctionnalitesPage() {
                     {/* Bouton Principal de Sélection de Fichier */}
                     <div className="flex items-center justify-center mb-3">
                       {activeItem.link ? (
-                        <Link
-                          href={activeItem.link}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (triggerAuthGuard(activeItem.name, activeItem.icon)) {
+                              window.location.href = activeItem.link;
+                            }
+                          }}
                           className="inline-flex items-center justify-center px-8 sm:px-12 py-4 sm:py-5 rounded-2xl bg-[#E5322D] hover:bg-[#C92520] text-white text-base sm:text-lg font-black shadow-xl shadow-red-600/25 transition-all transform hover:scale-[1.02] cursor-pointer"
                         >
                           <span>{activeItem.selectLabel}</span>
-                        </Link>
+                        </button>
                       ) : (
                         <button
                           type="button"
-                          onClick={() => fileInputRef.current?.click()}
+                          onClick={() => {
+                            if (triggerAuthGuard(activeItem.name, activeItem.icon)) {
+                              fileInputRef.current?.click();
+                            }
+                          }}
                           className="inline-flex items-center justify-center px-8 sm:px-12 py-4 sm:py-5 rounded-2xl bg-[#E5322D] hover:bg-[#C92520] text-white text-base sm:text-lg font-black shadow-xl shadow-red-600/25 transition-all transform hover:scale-[1.02] cursor-pointer"
                         >
                           <span>{activeItem.selectLabel}</span>
@@ -1237,6 +1270,15 @@ export default function FonctionnalitesPage() {
         </main>
 
       </div>
+
+      {/* Modale d'inscription requise pour les visiteurs */}
+      <AuthRequiredModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        featureName={authModalFeature || activeItem.name}
+        featureIcon={authModalIcon || activeItem.icon}
+        redirectUrl={`/fonctionnalites?tool=${activeTabId}`}
+      />
 
     </div>
   );
