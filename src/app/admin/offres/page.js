@@ -8,7 +8,7 @@ import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
-import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
+import { detectWhatsAppNumber, buildWhatsAppLink, resolveOfferAction } from "@/lib/offerContact";
 import { isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 
@@ -57,6 +57,11 @@ export default function AdminOffresPage() {
   // États du Scanner IA
   const [isScanningAI, setIsScanningAI] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
+  // Sous-point 1 : l'Examinateur est une ÉTAPE, pas un raccourci. Passe à
+  // true uniquement après une analyse réussie de la source courante
+  // (affiche et/ou texte), et retombe à false dès que cette source change —
+  // une nouvelle affiche n'a jamais été examinée.
+  const [examenPasse, setExamenPasse] = useState(false);
   const [scanMessage, setScanMessage] = useState("");
   const [savingOffer, setSavingOffer] = useState(false);
 
@@ -147,6 +152,7 @@ export default function AdminOffresPage() {
   const handleFileDropSelect = (file) => {
     if (!file) return;
     setOfferImageFile(file);
+    setExamenPasse(false);
     const previewUrl = URL.createObjectURL(file);
     setOfferImagePreview(previewUrl);
     setScanSuccess(false);
@@ -235,6 +241,7 @@ export default function AdminOffresPage() {
         });
 
         setScanSuccess(true);
+        setExamenPasse(true);
         setScanMessage(
           hasFile && hasText
             ? "✨ Affiche et description fusionnées avec succès ! Tous les champs ont été organisés."
@@ -295,6 +302,9 @@ export default function AdminOffresPage() {
         setOfferImagePreview(data.imageUrl);
         setOfferForm((prev) => ({ ...prev, image_url: data.imageUrl }));
         setScanSuccess(true);
+        // Volontairement PAS setExamenPasse(true) : générer une affiche
+        // n'examine pas le contenu de l'offre. L'étape Examinateur reste à
+        // franchir.
         setScanMessage("✨ Affiche format carré 1:1 générée avec succès et attachée à l'offre !");
         triggerToast("🎉 Affiche 1:1 générée avec succès !", "fa-circle-check");
       } else {
@@ -1026,7 +1036,10 @@ export default function AdminOffresPage() {
               <textarea
                 rows={3}
                 value={accompanyingText}
-                onChange={(e) => setAccompanyingText(e.target.value)}
+                onChange={(e) => {
+                  setAccompanyingText(e.target.value);
+                  setExamenPasse(false);
+                }}
                 placeholder="Ex: 🚨 RECRUTEMENT URGENT : Nous recherchons un Ingénieur / Juriste / Commercial à Dakar. Envoyez votre candidature à recrutement@exemple.com avant le 31 août..."
                 className="w-full p-3.5 bg-white border border-emerald-200/80 rounded-2xl text-xs font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition resize-none placeholder:text-gray-400 shadow-2xs"
               />
@@ -1051,10 +1064,10 @@ export default function AdminOffresPage() {
                     disabled={isScanningAI || (!offerImageFile && !accompanyingText.trim())}
                     onClick={() => runAIScanner(offerImageFile, accompanyingText)}
                     className="px-3.5 py-2.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 disabled:opacity-50 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
-                    title="Remplir le formulaire ci-dessous pour vérification manuelle"
+                    title="Analyser l'affiche et la description, puis ranger chaque information dans son champ — à vérifier avant publication"
                   >
-                    <i className="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
-                    <span>Organiser formulaire</span>
+                    <i className={`fa-solid ${isScanningAI ? "fa-spinner fa-spin" : "fa-clipboard-check"} text-emerald-600`}></i>
+                    <span>{isScanningAI ? "Examen en cours..." : "Examinateur"}</span>
                   </button>
 
                   <button
@@ -1085,6 +1098,113 @@ export default function AdminOffresPage() {
                   }`}
                 ></i>
                 <span>{scanMessage}</span>
+              </div>
+            )}
+
+            {/* RÉSULTAT DE L'EXAMINATEUR (sous-point 1) — l'IA a rangé chaque
+                information dans son champ, on l'affiche AVANT publication.
+                Auparavant le seul retour était un toast « formulaire
+                pré-rempli » : il fallait relire soi-même les 14 champs du
+                formulaire pour savoir ce que l'IA avait compris. */}
+            {examenPasse && (
+              <div className="rounded-2xl border border-emerald-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-200 flex items-center gap-2">
+                  <i className="fa-solid fa-clipboard-check text-emerald-600"></i>
+                  <span className="text-xs font-black text-emerald-900 uppercase tracking-wide">
+                    Résultat de l&apos;Examinateur — à vérifier avant publication
+                  </span>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {[
+                    {
+                      titre: "Poste",
+                      champs: [
+                        ["Titre", offerForm.title],
+                        ["Entreprise / organisation", offerForm.company],
+                        ["Lieu", offerForm.location],
+                        ["Type de contrat", offerForm.contract_type],
+                        ["Type de publication", offerForm.listing_type],
+                        ["Rémunération", offerForm.salary_range],
+                      ],
+                    },
+                    {
+                      titre: "Conditions",
+                      champs: [
+                        ["Niveau d'études requis", offerForm.min_education_level],
+                        ["Date limite", offerForm.deadline],
+                      ],
+                    },
+                    {
+                      titre: "Adresse de candidature (destination du bouton Postuler)",
+                      champs: [
+                        ["Lien de candidature", offerForm.application_url],
+                        ["E-mail de candidature", offerForm.application_email],
+                      ],
+                    },
+                    {
+                      titre: "Contact & site (jamais utilisés comme destination)",
+                      champs: [
+                        ["E-mail de contact", offerForm.contact_email],
+                        ["Téléphone / WhatsApp", offerForm.contact_phone],
+                        ["Site officiel", offerForm.external_link],
+                      ],
+                    },
+                  ].map((groupe) => (
+                    <div key={groupe.titre}>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">{groupe.titre}</p>
+                      <dl className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+                        {groupe.champs.map(([libelle, valeur]) => (
+                          <div key={libelle} className="grid grid-cols-3 gap-2 px-3 py-2 text-xs">
+                            <dt className="font-bold text-gray-500 col-span-1">{libelle}</dt>
+                            <dd className={`col-span-2 break-words ${valeur ? "font-semibold text-gray-900" : "italic text-gray-400"}`}>
+                              {valeur || "non renseigné"}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  ))}
+
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">
+                      Informations complémentaires
+                    </p>
+                    <div className="border border-gray-100 rounded-xl px-3 py-2 text-xs break-words">
+                      {offerForm.additional_info ? (
+                        <span className="text-gray-900 whitespace-pre-line">{offerForm.additional_info}</span>
+                      ) : (
+                        <span className="italic text-gray-400">aucune</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Ce que fera RÉELLEMENT le bouton, calculé par la même
+                      fonction que la fiche publique — pas une promesse. */}
+                  {(() => {
+                    const action = resolveOfferAction(offerForm);
+                    const destination =
+                      action.type === "email"
+                        ? `e-mail : ${action.email}`
+                        : action.type === "whatsapp"
+                        ? `WhatsApp : ${action.url}`
+                        : action.type === "external"
+                        ? `lien : ${action.url}`
+                        : "candidature interne Facilité (CV du candidat)";
+                    return (
+                      <div className="rounded-xl bg-blue-50 border border-blue-200 px-3 py-2.5">
+                        <p className="text-[10px] font-black text-blue-800 uppercase tracking-wider">
+                          Le bouton « {action.label} » enverra le candidat vers
+                        </p>
+                        <p className="text-xs font-bold text-blue-900 break-words mt-0.5">{destination}</p>
+                      </div>
+                    );
+                  })()}
+
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    Corrigez ce qui est faux dans le formulaire ci-dessous, puis publiez.
+                  </p>
+                </div>
               </div>
             )}
 
