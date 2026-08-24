@@ -129,28 +129,12 @@ async function callGeminiVision(base64Data, mimeType, customRules = null) {
 async function callAITextModel(extractedText, customRules = null) {
   const systemPrompt = customRules ? buildDiagnosticSystemPrompt(customRules) : DEFAULT_SYSTEM_PROMPT;
 
-  // Essayons avec Groq en premier
-  const groqKey = process.env.GROQ_API_KEY;
-  if (groqKey && !groqKey.includes("[") && groqKey.trim() !== "") {
-    try {
-      console.log("Diagnostic: Appel Groq (llama-3.3-70b-versatile)...");
-      const response = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Voici le texte brut du CV à analyser :\n\n${extractedText}` }
-        ],
-        temperature: 0.2,
-        response_format: { type: "json_object" }
-      });
-      const content = response.choices[0]?.message?.content;
-      return cleanAndParseJSON(content);
-    } catch (err) {
-      console.error("Diagnostic: Échec Groq, essai avec DeepSeek...", err.message);
-    }
-  }
-
-  // Fallback sur DeepSeek officiel
+  // DeepSeek en modèle principal (texte pur — réallocation Gemini, point 2
+  // du 2026-08-24 : ce chemin n'appelait déjà jamais Gemini pour du texte
+  // (seul callGeminiVision, image uniquement, y touche), mais restait
+  // Groq-principal/DeepSeek-secondaire — remis dans le même ordre que les
+  // 5 autres usages texte pur déjà basculés (parse-document, classify,
+  // magique, nlp, voice-assistant FAQ), pour une politique cohérente.
   const dsKey = process.env.DEEPSEEK_API_KEY;
   if (dsKey && !dsKey.includes("[") && dsKey.trim() !== "") {
     try {
@@ -167,7 +151,28 @@ async function callAITextModel(extractedText, customRules = null) {
       const content = response.choices[0]?.message?.content;
       return cleanAndParseJSON(content);
     } catch (err) {
-      console.error("Diagnostic: Échec DeepSeek:", err.message);
+      console.error("Diagnostic: Échec DeepSeek, essai avec Groq...", err.message);
+    }
+  }
+
+  // Repli Groq si DeepSeek indisponible ou en échec
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey && !groqKey.includes("[") && groqKey.trim() !== "") {
+    try {
+      console.log("Diagnostic: Appel Groq (llama-3.3-70b-versatile)...");
+      const response = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Voici le texte brut du CV à analyser :\n\n${extractedText}` }
+        ],
+        temperature: 0.2,
+        response_format: { type: "json_object" }
+      });
+      const content = response.choices[0]?.message?.content;
+      return cleanAndParseJSON(content);
+    } catch (err) {
+      console.error("Diagnostic: Échec Groq:", err.message);
     }
   }
 
