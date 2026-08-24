@@ -1471,8 +1471,24 @@ export default function Home() {
       )
       .subscribe();
 
+    // Filet de sécurité pour un onglet resté ouvert longtemps : un
+    // WebSocket Realtime peut se déconnecter silencieusement (veille,
+    // changement de réseau) sans se reconnecter à temps pour capter un
+    // INSERT récent — trouvé le 2026-08-24 en diagnostiquant une offre
+    // fraîchement publiée absente du fil malgré un tri created_at DESC
+    // déjà correct (confirmé en base et sur un rechargement forcé, qui
+    // résolvait systématiquement le problème). Re-fetch dès que l'onglet
+    // redevient visible, pas de polling en continu.
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadDynamicJobs();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       supabase.removeChannel(jobsChannel);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
 
