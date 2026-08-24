@@ -28,7 +28,16 @@ export function raccourcirPourAffichage(url) {
   if (typeof url !== "string" || url.length <= LONGUEUR_MAX_AFFICHEE) return url;
   try {
     const u = new URL(url.startsWith("www.") ? `https://${url}` : url);
-    const dernierSegment = u.pathname.split("/").filter(Boolean).pop() || "";
+    let dernierSegment = "";
+    if (u.searchParams.has("id")) {
+      const idParam = decodeURIComponent(u.searchParams.get("id") || "");
+      dernierSegment = idParam.split("/").filter(Boolean).pop() || "";
+    } else if (u.searchParams.has("file") || u.searchParams.has("filename") || u.searchParams.has("doc")) {
+      const fileParam = decodeURIComponent(u.searchParams.get("file") || u.searchParams.get("filename") || u.searchParams.get("doc") || "");
+      dernierSegment = fileParam.split("/").filter(Boolean).pop() || "";
+    } else {
+      dernierSegment = decodeURIComponent(u.pathname.split("/").filter(Boolean).pop() || "");
+    }
     const court = dernierSegment ? `${u.host}/…/${dernierSegment}` : u.host;
     return court.length < url.length ? court : `${url.slice(0, LONGUEUR_MAX_AFFICHEE - 1)}…`;
   } catch {
@@ -45,7 +54,7 @@ function hrefDe(fragment) {
 /**
  * Rend un texte en conservant ses sauts de ligne, chaque URL/e-mail devenant
  * un vrai lien cliquable. `rel="noopener noreferrer"` sur tous les liens
- * externes : ce texte vient d'une affiche envoyée par un tiers.
+ * externes.
  */
 export function TexteAvecLiens({ texte, className = "" }) {
   if (!texte || typeof texte !== "string") return null;
@@ -53,11 +62,9 @@ export function TexteAvecLiens({ texte, className = "" }) {
   const fragments = texte.split(MOTIF_LIENS);
 
   return (
-    <span className={`whitespace-pre-line break-words ${className}`}>
+    <span className={`whitespace-pre-line break-words max-w-full overflow-hidden ${className}`}>
       {fragments.map((fragment, i) => {
         if (!fragment) return null;
-        // split() avec un groupe capturant place les correspondances aux
-        // index impairs — inutile de re-tester le motif sur chaque fragment.
         if (i % 2 === 1) {
           const href = hrefDe(fragment);
           return (
@@ -67,13 +74,14 @@ export function TexteAvecLiens({ texte, className = "" }) {
               target={href.startsWith("mailto:") ? undefined : "_blank"}
               rel="noopener noreferrer"
               title={fragment}
-              className="text-blue-600 hover:text-blue-800 underline underline-offset-2 font-semibold break-all max-w-full"
+              className="text-blue-600 hover:text-blue-800 underline underline-offset-2 font-semibold break-all max-w-full inline cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
             >
               {raccourcirPourAffichage(fragment)}
             </a>
           );
         }
-        return <span key={i}>{fragment}</span>;
+        return <span key={i} className="break-words">{fragment}</span>;
       })}
     </span>
   );

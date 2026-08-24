@@ -558,7 +558,7 @@ export default function OffreDetailClient({ initialOffer }) {
                     <span>Détails & Description du poste</span>
                   </h3>
                   
-                  <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line leading-relaxed font-normal">
+                  <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line leading-relaxed font-normal break-words overflow-hidden max-w-full">
                     {(() => {
                       const fullText = offer.description || "";
                       const shouldTruncate = fullText.length > 400;

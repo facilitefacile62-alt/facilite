@@ -452,7 +452,7 @@ function RechercheContent() {
                       </h3>
                       <p className="text-xs font-bold text-gray-500 mb-3">{offer.company || "Recruteur"}</p>
 
-                      <p className="text-xs text-gray-600 line-clamp-2 mb-4 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                      <p className="text-xs text-gray-600 line-clamp-2 mb-4 bg-gray-50 p-2.5 rounded-xl border border-gray-100 break-words">
                         {offer.description}
                       </p>
 

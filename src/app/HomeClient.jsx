@@ -19,6 +19,7 @@ import { resolveOfferAction } from "@/lib/offerContact";
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
+import { TexteAvecLiens } from "@/lib/liens";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
@@ -2843,7 +2844,7 @@ export default function Home() {
                     </div>
 
                     {/* Description */}
-                    <div className="text-xs sm:text-sm text-gray-700 font-normal leading-relaxed whitespace-pre-line">
+                    <div className="text-xs sm:text-sm text-gray-700 font-normal leading-relaxed break-words overflow-hidden max-w-full">
                       {(() => {
                         const descText = selectedLang === "FR" ? job.descFR : job.descEN;
                         if (!descText) return null;
@@ -2852,8 +2853,8 @@ export default function Home() {
                         const displayText = shouldTruncate && !isExpanded ? descText.substring(0, 250) + "..." : descText;
                         
                         return (
-                          <>
-                            {displayText}
+                          <div className="break-words max-w-full overflow-hidden">
+                            <TexteAvecLiens texte={displayText} className="text-gray-700 font-normal inline" />
                             {shouldTruncate && (
                               <button
                                 type="button"
@@ -2863,7 +2864,7 @@ export default function Home() {
                                 {isExpanded ? (selectedLang === "FR" ? " Voir moins" : " See less") : (selectedLang === "FR" ? " En voir plus" : " See more")}
                               </button>
                             )}
-                          </>
+                          </div>
                         );
                       })()}
                     </div>
