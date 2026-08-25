@@ -12,6 +12,7 @@ import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
+import { isOfferExpired } from "@/lib/offerExpiration";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,7 @@ function OffresContent({ listingType } = {}) {
   const [totalOffres, setTotalOffres] = useState(null);
   const [toutCharge, setToutCharge] = useState(false);
   const [chargementSuite, setChargementSuite] = useState(false);
+  const [activeTab, setActiveTab] = useState("available"); // "available" | "expired"
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [locationFilter, setLocationFilter] = useState("");
   const [applyingOffer, setApplyingOffer] = useState(null);
@@ -382,10 +384,23 @@ function OffresContent({ listingType } = {}) {
     });
   }
 
-  // Entrelace 1 offre sponsorisée active toutes les 5 offres standard —
-  // interleaveSponsoredOffers revérifie elle-même is_sponsored/sponsored_until,
-  // ne dépend jamais du contenu de filteredOffers pour cette garantie.
-  const feedOffers = interleaveSponsoredOffers(filteredOffers, { everyN: 5 });
+  // Séparation en offres disponibles (actives) et offres expirées (FOMO)
+  const availableOffers = useMemo(() => {
+    return filteredOffers.filter((o) => !isOfferExpired(o));
+  }, [filteredOffers]);
+
+  const expiredOffers = useMemo(() => {
+    return filteredOffers.filter((o) => isOfferExpired(o));
+  }, [filteredOffers]);
+
+  const currentTabOffers = activeTab === "expired" ? expiredOffers : availableOffers;
+
+  // Entrelace 1 offre sponsorisée active toutes les 5 offres standard (uniquement sur le flux des offres disponibles)
+  const feedOffers = useMemo(() => {
+    return activeTab === "available"
+      ? interleaveSponsoredOffers(currentTabOffers, { everyN: 5 })
+      : currentTabOffers;
+  }, [activeTab, currentTabOffers]);
 
   // Bannière hero pilotée par le vrai listing_type (prop) pour une page
   // catégorie dédiée (/concours, /formations...), pas par une détection de
@@ -499,40 +514,116 @@ function OffresContent({ listingType } = {}) {
           )}
         </div>
 
+        {/* Système d'onglets FOMO : Offres disponibles vs Offres expirées */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-white dark:bg-gray-900 p-2 sm:p-2.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+          <div className="flex items-center gap-1.5 p-1 bg-gray-100 dark:bg-gray-800/80 rounded-xl w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setActiveTab("available")}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-black text-xs sm:text-sm transition-all cursor-pointer select-none ${
+                activeTab === "available"
+                  ? "bg-white dark:bg-gray-900 text-emerald-700 dark:text-[#10E688] shadow-xs"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <i className="fa-solid fa-bolt text-emerald-500"></i>
+              <span>Offres disponibles</span>
+              <span
+                className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
+                  activeTab === "available"
+                    ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-[#10E688]"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                }`}
+              >
+                {availableOffers.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("expired")}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-black text-xs sm:text-sm transition-all cursor-pointer select-none ${
+                activeTab === "expired"
+                  ? "bg-white dark:bg-gray-900 text-rose-600 dark:text-rose-400 shadow-xs"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <i className="fa-solid fa-hourglass-end text-rose-500"></i>
+              <span>Offres expirées</span>
+              <span
+                className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
+                  activeTab === "expired"
+                    ? "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-400"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                }`}
+              >
+                {expiredOffers.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Bannière d'incitation & effet FOMO */}
+          {activeTab === "expired" ? (
+            <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-3.5 py-2 rounded-xl border border-rose-200/80 dark:border-rose-900/50">
+              <i className="fa-solid fa-clock-rotate-left"></i>
+              <span>Ces opportunités sont clôturées. Consultez les offres disponibles pour postuler à temps !</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-900/50">
+              <i className="fa-solid fa-fire text-amber-500"></i>
+              <span>Recrutements en cours : postulez rapidement avant clôture !</span>
+            </div>
+          )}
+        </div>
+
         {/* Grille des Offres d'Emploi */}
         {loading ? (
           <div className="py-20 text-center">
             <i className="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-600 mb-3"></i>
             <p className="text-sm font-bold text-gray-500">Chargement des offres d'emploi...</p>
           </div>
-        ) : filteredOffers.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center max-w-lg mx-auto shadow-sm">
-            <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
-              <i className={`fa-solid ${hero.icon}`}></i>
+        ) : feedOffers.length === 0 ? (
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-12 text-center max-w-lg mx-auto shadow-sm">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
+              <i className={`fa-solid ${activeTab === "expired" ? "fa-hourglass-end" : hero.icon}`}></i>
             </div>
-            <h3 className="text-lg font-extrabold text-gray-900 mb-1">
-              {listingType ? `Aucune offre "${LISTING_TYPE_LABELS[listingType] || hero.title}" ne correspond` : "Aucune offre ne correspond"}
+            <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-1">
+              {activeTab === "expired"
+                ? "Aucune offre expirée pour le moment"
+                : listingType
+                ? `Aucune offre "${LISTING_TYPE_LABELS[listingType] || hero.title}" disponible`
+                : "Aucune offre disponible actuellement"}
             </h3>
-            <p className="text-xs text-gray-500 mb-6">
-              Essayez de modifier vos termes de recherche ou réinitialisez les filtres.
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+              {activeTab === "expired"
+                ? "Toutes les offres publiées sont actuellement actives et prêtes pour vos candidatures !"
+                : "Essayez de modifier vos termes de recherche ou réinitialisez les filtres."}
             </p>
-            <button
-              onClick={handleResetSearch}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
-            >
-              Afficher toutes les offres
-            </button>
+            {activeTab === "expired" ? (
+              <button
+                onClick={() => setActiveTab("available")}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-2 mx-auto"
+              >
+                <i className="fa-solid fa-bolt"></i>
+                <span>Voir les offres disponibles</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleResetSearch}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
+              >
+                Afficher toutes les offres
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {feedOffers.map((offer, idx) => {
               // `offer.required_education_level` n'existe pas : la colonne
-              // s'appelle min_education_level. Cette lecture renvoyait donc
-              // toujours undefined — la puce "Niveau …" ne s'affichait
-              // jamais et `eligible` était vrai pour tout le monde, quelle
-              // que soit l'exigence réelle de l'offre.
+              // s'appelle min_education_level.
               const verdictNiveau = comparerNiveaux(niveauxEtudes, candidateEducationCode, offer.min_education_level_code);
               const eligible = verdictNiveau.statut !== "insuffisant";
+              const isExpired = isOfferExpired(offer);
               const offerImg = getOfferImage(offer, idx);
               const initials = offer.company ? offer.company.substring(0, 2).toUpperCase() : "CO";
               const logoColor = COMPANY_COLORS[idx % COMPANY_COLORS.length];
@@ -540,61 +631,60 @@ function OffresContent({ listingType } = {}) {
                 ? new Date(offer.created_at).toLocaleDateString("fr-FR")
                 : "Récent";
 
-              // Une offre sponsorisée peut apparaître plusieurs fois dans feedOffers
-              // (injection round-robin) — offer.id seul comme clé React
-              // provoquerait une collision, d'où l'index de position en plus.
-              // Revérification indépendante de l'expiration réelle : le badge ne
-              // doit jamais s'afficher sur la seule foi de is_sponsored, même si
-              // interleaveSponsoredOffers a déjà filtré en amont.
               const isActivelySponsored = isOfferActivelySponsored(offer);
 
               return (
                 <div
                   key={`${offer.id}-${idx}`}
-                  className="bg-white rounded-2xl border border-gray-200 shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col p-5 group hover:border-emerald-300"
+                  className={`bg-white dark:bg-gray-900 rounded-2xl border shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col p-5 group ${
+                    isExpired
+                      ? "border-rose-200/80 dark:border-rose-950/60 bg-gray-50/40 dark:bg-gray-900/60 hover:border-rose-400"
+                      : "border-gray-200 dark:border-gray-800 hover:border-emerald-300"
+                  }`}
                 >
-                  {/* En-tête façon post Facebook : avatar + nom de la page (entreprise) +
-                      horodatage — pas de badges colorés ici, juste texte gris discret
-                      comme sur un vrai post (nom de page en gras, "27 min" en dessous).
-                      "Sponsorisé" suit la même convention : texte gris discret à côté
-                      de l'horodatage, comme un vrai post sponsorisé Facebook. */}
+                  {/* En-tête : avatar + nom de l'entreprise + horodatage / badge expiré ou sponsorisé */}
                   <div className="flex items-center gap-3 mb-2">
                     <div className={`w-10 h-10 rounded-full ${logoColor} flex items-center justify-center text-white font-extrabold text-xs shadow-xs flex-shrink-0`}>
                       {initials}
                     </div>
                     <div className="flex-grow min-w-0">
-                      <p className="text-sm font-extrabold text-gray-900 truncate">
+                      <p className="text-sm font-extrabold text-gray-900 dark:text-white truncate">
                         {offer.company || "Recruteur Confidentiel"}
                       </p>
-                      <div className="text-[11px] text-gray-500 font-medium flex items-center gap-1">
+                      <div className="text-[11px] text-gray-500 font-medium flex items-center gap-1 flex-wrap">
                         <span>{dateFormatted}</span>
-                        {isActivelySponsored && (
+                        {isExpired ? (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span className="inline-flex items-center gap-1 font-extrabold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-md text-[10px] border border-rose-200/70 dark:border-rose-900/40">
+                              <i className="fa-solid fa-clock-rotate-left text-[9px]"></i>
+                              Expirée
+                            </span>
+                          </>
+                        ) : isActivelySponsored ? (
                           <>
                             <span aria-hidden="true">·</span>
                             <span className="font-bold text-amber-600">
                               <i className="fa-solid fa-star text-[9px] mr-0.5"></i>Sponsorisé
                             </span>
                           </>
-                        )}
+                        ) : null}
                         <span aria-hidden="true">·</span>
                         <i className="fa-solid fa-earth-africa text-[9px]" title="Offre publique"></i>
                       </div>
                     </div>
                   </div>
 
-                  {/* Légende façon post : titre + description en texte simple, puis les
-                      infos (lieu, contrat, date limite, niveau) sur une seule ligne grise
-                      séparée par des points — même contenu qu'avant, sans les pastilles
-                      colorées qui cassaient le look sobre d'un post Facebook. */}
+                  {/* Légende : titre + description + caractéristiques */}
                   <div className="mb-3">
                     <Link
                       href={`/offres/${offer.id}`}
-                      className="text-sm font-extrabold text-gray-900 leading-snug hover:text-emerald-700 transition-colors block line-clamp-1 min-h-[20px]"
+                      className="text-sm font-extrabold text-gray-900 dark:text-white leading-snug hover:text-emerald-700 dark:hover:text-[#10E688] transition-colors block line-clamp-1 min-h-[20px]"
                       title={offer.title}
                     >
                       {offer.title}
                     </Link>
-                    <p className="text-xs text-gray-600 line-clamp-2 mt-1 leading-relaxed min-h-[34px]">
+                    <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2 mt-1 leading-relaxed min-h-[34px]">
                       {offer.description}
                     </p>
                     <p className="text-[11px] text-gray-500 font-medium mt-1.5 flex items-center gap-1.5 flex-wrap min-h-[18px]">
@@ -604,7 +694,10 @@ function OffresContent({ listingType } = {}) {
                       {offer.deadline && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span>Jusqu'au {new Date(offer.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                          <span className={isExpired ? "text-rose-600 dark:text-rose-400 font-bold" : ""}>
+                            {isExpired ? "Clôturée le " : "Jusqu'au "}
+                            {new Date(offer.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                          </span>
                         </>
                       )}
                       {verdictNiveau.exige && (
@@ -616,22 +709,18 @@ function OffresContent({ listingType } = {}) {
                       {offer.listing_type && offer.listing_type !== "offre_emploi" && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span className="font-bold text-purple-700">{LISTING_TYPE_LABELS[offer.listing_type] || offer.listing_type}</span>
+                          <span className="font-bold text-purple-700 dark:text-purple-400">{LISTING_TYPE_LABELS[offer.listing_type] || offer.listing_type}</span>
                         </>
                       )}
                       {semanticResults && offer.id in semanticResults && (
-                        <span className="text-amber-700 font-bold">
+                        <span className="text-amber-700 dark:text-amber-400 font-bold">
                           ⚡ {Math.round(semanticResults[offer.id] * 100)}% pertinence
                         </span>
                       )}
-                      {/* Badge de correspondance candidat (point 7) — masqué pendant une
-                          recherche sémantique active pour ne pas doubler l'information avec
-                          le badge "pertinence" ci-dessus, qui répond à une autre question
-                          (correspondance à la recherche tapée, pas au profil du candidat). */}
                       {!semanticResults && candidateMatchScores && offer.id in candidateMatchScores && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span className="text-emerald-700 font-bold">
+                          <span className="text-emerald-700 dark:text-[#10E688] font-bold">
                             <i className="fa-solid fa-user-check text-[9px] mr-0.5"></i>
                             {Math.round(candidateMatchScores[offer.id] * 100)}% avec votre profil
                           </span>
@@ -640,12 +729,20 @@ function OffresContent({ listingType } = {}) {
                     </p>
                   </div>
 
-                  {/* Visuel Haute Définition de Recrutement (Hauteur Standardisée et Cadrage Homogène) */}
+                  {/* Visuel de l'offre */}
                   <div
                     className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 mb-3 border border-gray-200/90 dark:border-gray-800 group/img cursor-pointer flex items-center justify-center"
                     onClick={() => setViewImageModal({ isOpen: true, url: offerImg })}
                     title="Cliquer pour voir l'affiche complète en plein écran"
                   >
+                    {/* Badge Expirée sur l'image */}
+                    {isExpired && (
+                      <div className="absolute top-2.5 left-2.5 z-20 bg-rose-600/90 backdrop-blur-xs text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1.5 pointer-events-none">
+                        <i className="fa-solid fa-hourglass-end text-[9px]"></i>
+                        <span>Délai dépassé</span>
+                      </div>
+                    )}
+
                     {/* Overlay au survol */}
                     <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/30 transition-colors duration-200 z-10 flex items-center justify-center">
                       <div className="opacity-0 group-hover/img:opacity-100 bg-black/80 text-white rounded-full py-1.5 px-3.5 shadow-xl transform scale-95 group-hover/img:scale-100 transition-all duration-200 flex items-center gap-1.5">
@@ -653,11 +750,11 @@ function OffresContent({ listingType } = {}) {
                         <span className="text-xs font-black">Voir l'affiche</span>
                       </div>
                     </div>
-                    {/* Image principale nette avec cadrage uniforme */}
+                    {/* Image principale */}
                     <img
                       src={offerImg}
                       alt={offer.title}
-                      className="w-full h-full object-cover object-top mx-auto block animate-fade-in transition-transform duration-300 group-hover/img:scale-105"
+                      className={`w-full h-full object-cover object-top mx-auto block animate-fade-in transition-transform duration-300 group-hover/img:scale-105 ${isExpired ? "filter grayscale-[30%]" : ""}`}
                       loading="lazy"
                     />
                     <OfferImageWatermark />
@@ -681,7 +778,9 @@ function OffresContent({ listingType } = {}) {
                         externalLink: offer.external_link,
                       }}
                       variant="feed"
+                      isExpired={isExpired}
                       onApply={() => {
+                        if (isExpired) return;
                         if (userSession && !eligible && !offer.is_spontaneous) {
                           triggerToast(`Niveau requis : ${verdictNiveau.exige.libelle}. Votre profil indique ${verdictNiveau.candidat.libelle}.`);
                           return;
@@ -693,11 +792,11 @@ function OffresContent({ listingType } = {}) {
                       onToast={triggerToast}
                     />
 
-                    {/* Lien secondaire discret vers les détails */}
+                    {/* Lien secondaire vers les détails */}
                     <div className="pt-2 text-center">
                       <Link
                         href={`/offres/${offer.id}`}
-                        className="text-[11px] font-bold text-gray-500 hover:text-emerald-700 transition inline-flex items-center gap-1"
+                        className="text-[11px] font-bold text-gray-500 hover:text-emerald-700 dark:hover:text-[#10E688] transition inline-flex items-center gap-1"
                       >
                         <span>Voir la fiche détaillée</span>
                         <i className="fa-solid fa-arrow-right text-[9px]"></i>

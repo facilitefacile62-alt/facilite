@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
+import { isOfferExpired } from "@/lib/offerExpiration";
 
 const REACTIONS = [
   { id: "like", emoji: "👍", label: "J'aime", color: "text-blue-600", bg: "bg-blue-50" },
@@ -18,16 +19,17 @@ const REACTIONS = [
  * Barre d'Engagement & Partage Réseau Social (Design 3 Actions Ultra-Propre)
  * 1. 👍 J'aime (avec barre de réactions animées au survol)
  * 2. ↪️ Partager (Bouton avec menu déroulant de tous les réseaux sociaux)
- * 3. ✈️ Envoyer / Postuler (WhatsApp / Lien Officiel / Interne)
+ * 3. ✈️ Envoyer / Postuler (WhatsApp / Lien Officiel / Interne) ou Offre expirée (désactivé)
  */
 export default function SocialShareButtons({
   offer,
-  variant = "compact", // "compact" | "banner"
+  variant = "compact", // "compact" | "banner" | "feed"
   className = "",
   onApply,
   externalLink,
   externalButtonLabel,
   onToast,
+  isExpired,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
@@ -35,6 +37,8 @@ export default function SocialShareButtons({
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef(null);
   const reactionsTimeoutRef = useRef(null);
+
+  const offerExpired = typeof isExpired === "boolean" ? isExpired : isOfferExpired(offer);
 
   const offerId = offer?.id || "";
   const title = offer?.title || offer?.titleFR || "Offre d'emploi";
@@ -278,7 +282,17 @@ export default function SocialShareButtons({
           </button>
 
           {/* Bouton 3 : Action de Candidature Principale & Fidèle */}
-          {contactMethods.hasBoth ? (
+          {offerExpired ? (
+            <button
+              type="button"
+              disabled
+              className="flex-1 bg-gray-100 dark:bg-gray-800/80 text-gray-400 dark:text-gray-500 font-extrabold text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl cursor-not-allowed text-center shadow-none flex items-center justify-center gap-2 border border-gray-200 dark:border-gray-700 select-none opacity-85"
+              title="Le délai de candidature pour cette offre est dépassé"
+            >
+              <i className="fa-solid fa-clock-rotate-left text-xs text-rose-400"></i>
+              <span className="truncate">Offre expirée</span>
+            </button>
+          ) : contactMethods.hasBoth ? (
             <div className="flex-1 flex items-center gap-1.5 min-w-0">
               <button
                 type="button"
@@ -596,7 +610,17 @@ export default function SocialShareButtons({
           </button>
 
           {/* Action 3 : Action Externe ou Postuler si fourni */}
-          {effectiveLink && !offer?.contact_email ? (
+          {offerExpired ? (
+            <button
+              type="button"
+              disabled
+              className="flex-1 bg-gray-100 dark:bg-gray-800/80 text-gray-400 dark:text-gray-500 font-extrabold text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl cursor-not-allowed text-center shadow-none flex items-center justify-center gap-2 border border-gray-200 dark:border-gray-700 select-none opacity-85"
+              title="Le délai de candidature pour cette offre est dépassé"
+            >
+              <i className="fa-solid fa-clock-rotate-left text-xs text-rose-400"></i>
+              <span className="truncate">Offre expirée</span>
+            </button>
+          ) : effectiveLink && !offer?.contact_email ? (
             <a
               href={effectiveLink}
               target={effectiveLink.startsWith("mailto:") ? "_self" : "_blank"}

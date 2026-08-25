@@ -229,6 +229,15 @@ export default function RootLayout({ children }) {
             <GlobalModals />
           </AuthProvider>
         </ThemeProvider>
+        <Script id="clarity-script" strategy="afterInteractive">
+          {`
+            (function(c,l,a,r,i,t,y){
+                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            })(window, document, "clarity", "script", "y7wcieqnsj");
+          `}
+        </Script>
         {/* Plausible (point 2, 2026-08-23) — uniquement en production : le
             dépôt lance énormément de trafic Playwright contre ce même code
             (dev local pointe déjà vers la base de production, voir

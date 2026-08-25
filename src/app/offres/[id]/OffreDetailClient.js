@@ -9,6 +9,7 @@ import ApplyModal from "@/components/ApplyModal";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
+import { isOfferExpired } from "@/lib/offerExpiration";
 
 export default function OffreDetailClient({ initialOffer }) {
   const router = useRouter();
@@ -532,7 +533,22 @@ export default function OffreDetailClient({ initialOffer }) {
                   </div>
                 )}
 
-                {/* Barre d'Actions Alignée : [ 👍 J'aime ] [ 📤 Partager ] [ ✈️ Postuler via Facilité ] [ 🔖 Enregistrer ] */}
+                {/* Bandeau Offre Expirée (si la date limite est passée) */}
+                {isOfferExpired(offer) && (
+                  <div className="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-300 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg flex-shrink-0">
+                      <i className="fa-solid fa-hourglass-end"></i>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold">Cette opportunité a expiré</h4>
+                      <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                        Le délai de candidature pour ce poste est dépassé. Consultez les autres offres disponibles sur Facilité pour postuler à temps !
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Barre d'Actions Alignée : [ 👍 J'aime ] [ 📤 Partager ] [ ✈️ Postuler via Facilité / Expirée ] [ 🔖 Enregistrer ] */}
                 <SocialShareButtons
                   offer={{
                     ...offer,
@@ -546,7 +562,11 @@ export default function OffreDetailClient({ initialOffer }) {
                     externalLink: offer.external_link,
                   }}
                   variant="feed"
-                  onApply={() => setApplyOpen(true)}
+                  isExpired={isOfferExpired(offer)}
+                  onApply={() => {
+                    if (isOfferExpired(offer)) return;
+                    setApplyOpen(true);
+                  }}
                   onToast={(msg) => setToast(msg)}
                   className="my-6"
                 />
