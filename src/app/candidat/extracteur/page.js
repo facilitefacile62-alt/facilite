@@ -340,6 +340,20 @@ function ExtracteurContent() {
     }
   };
 
+  const handleResetForNewOffer = () => {
+    setExtractedEmail(null);
+    setExtractedWhatsApp(null);
+    setWhatsappUrl(null);
+    setExtractedFormUrl(null);
+    setExtractedData(null);
+    setSelectedFile(null);
+    setImagePreview(null);
+    setRawOfferText("");
+    setExtractionMessage(null);
+    setSendSuccess(false);
+    setOpenInputMode(null);
+  };
+
   const handleSendOneClickApplication = async () => {
     if ((!extractedEmail && !posterOffer) || !userSession?.user?.id) return;
 
@@ -505,8 +519,8 @@ function ExtracteurContent() {
             </div>
           ) : (
             <>
-              {/* 1. ÉCRAN DE CHOIX INITIAL : 2 CASES CÔTE À CÔTE */}
-              {openInputMode === null && (
+              {/* 1. ÉCRAN DE CHOIX INITIAL : 2 CASES CÔTE À CÔTE (SEULEMENT SI PAS ENCORE DE RÉSULTAT ANALYSÉ) */}
+              {openInputMode === null && !(extractedWhatsApp || extractedFormUrl || extractedEmail || extractedData || posterOffer) && (
                 <div className="space-y-2 animate-fade-in">
                   <p className="text-[11px] font-black text-gray-500 uppercase tracking-wider">
                     Choisissez votre méthode d'importation :
@@ -732,18 +746,30 @@ function ExtracteurContent() {
                   </p>
                 </div>
 
-                {/* BOUTON MENU DÉROULANT DES DÉTAILS */}
-                {(extractedData?.skills || extractedData?.summary || extractedData?.salary || extractedData?.deadline) && (
+                {/* BOUTONS D'ACTION : NOUVELLE ANNONCE & MENU DÉROULANT DES DÉTAILS */}
+                <div className="flex items-center gap-2 flex-wrap self-start sm:self-center">
                   <button
                     type="button"
-                    onClick={() => setShowDetailsDropdown(!showDetailsDropdown)}
-                    className="self-start sm:self-center px-3 py-1.5 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-900 font-extrabold text-[11px] rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                    onClick={handleResetForNewOffer}
+                    className="px-2.5 py-1.5 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-900 font-extrabold text-[11px] rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                    title="Examiner ou importer une autre annonce"
                   >
-                    <i className="fa-solid fa-list-check text-emerald-600"></i>
-                    <span>{showDetailsDropdown ? "Masquer les détails" : "📋 Détails & Critères (menu déroulant)"}</span>
-                    <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${showDetailsDropdown ? "rotate-180" : ""}`}></i>
+                    <i className="fa-solid fa-rotate-left text-emerald-600"></i>
+                    <span>Nouvelle annonce</span>
                   </button>
-                )}
+
+                  {(extractedData?.skills || extractedData?.summary || extractedData?.salary || extractedData?.deadline) && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDetailsDropdown(!showDetailsDropdown)}
+                      className="px-3 py-1.5 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-900 font-extrabold text-[11px] rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                    >
+                      <i className="fa-solid fa-list-check text-emerald-600"></i>
+                      <span>{showDetailsDropdown ? "Masquer les détails" : "📋 Détails & Critères (menu déroulant)"}</span>
+                      <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${showDetailsDropdown ? "rotate-180" : ""}`}></i>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* MENU DÉROULANT : DÉTAILS DU POSTE (ne s'ouvre qu'au clic) */}
