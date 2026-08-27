@@ -44,7 +44,7 @@ function ExtracteurContent() {
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [openInputMode, setOpenInputMode] = useState("photo"); // "photo" | "examinateur" | null
+  const [openInputMode, setOpenInputMode] = useState(null); // null | "photo" | "examinateur"
   const [showDetailsDropdown, setShowDetailsDropdown] = useState(false);
   const [activeChannel, setActiveChannel] = useState("whatsapp"); // "whatsapp" | "email" | "form"
   const [rawOfferText, setRawOfferText] = useState("");
@@ -505,90 +505,90 @@ function ExtracteurContent() {
             </div>
           ) : (
             <>
-              {/* 2 SÉLECTEURS CÔTE À CÔTE SUR TÉLÉPHONE ET PC */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-3.5">
-                
-                {/* BOUTON CÔTE GAUCHE : 1. PHOTO DE L'ANNONCE */}
-                <button
-                  type="button"
-                  onClick={() => setOpenInputMode(openInputMode === "photo" ? null : "photo")}
-                  className={`p-2.5 sm:p-3.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between space-y-1.5 ${
-                    openInputMode === "photo"
-                      ? "bg-emerald-50/80 border-2 border-emerald-500 shadow-xs ring-2 ring-emerald-500/20"
-                      : "bg-white hover:bg-gray-50 border-gray-200"
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs sm:text-sm">
-                      📷
-                    </div>
-                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 bg-white px-1.5 sm:px-2 py-0.5 rounded-md border border-gray-200">
-                      Image
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] sm:text-xs font-black text-gray-900 block truncate">
-                      1. Photo d'annonce
-                    </span>
-                    <span className="text-[9px] sm:text-[10px] text-gray-500 block truncate">
-                      {selectedFile ? "Photo prête" : "Importer image"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between w-full pt-1 border-t border-gray-100 text-[10px] font-extrabold text-emerald-700">
-                    <span>{openInputMode === "photo" ? "Ouvert" : "Ouvrir"}</span>
-                    <i className={`fa-solid fa-chevron-down text-[9px] transition-transform duration-200 ${openInputMode === "photo" ? "rotate-180" : ""}`}></i>
-                  </div>
-                </button>
+              {/* 1. ÉCRAN DE CHOIX INITIAL : 2 CASES CÔTE À CÔTE */}
+              {openInputMode === null && (
+                <div className="space-y-2 animate-fade-in">
+                  <p className="text-[11px] font-black text-gray-500 uppercase tracking-wider">
+                    Choisissez votre méthode d'importation :
+                  </p>
+                  <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
+                    
+                    {/* CHOIX 1 : PHOTO DE L'ANNONCE */}
+                    <button
+                      type="button"
+                      onClick={() => setOpenInputMode("photo")}
+                      className="p-3.5 sm:p-5 rounded-2xl border-2 border-emerald-200 hover:border-emerald-500 bg-gradient-to-b from-white to-emerald-50/30 hover:bg-emerald-50 text-left transition cursor-pointer flex flex-col justify-between space-y-3 group shadow-2xs hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg shadow-inner group-hover:scale-105 transition">
+                          📷
+                        </div>
+                        <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          Image
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs sm:text-sm font-black text-gray-900 block">
+                          1. Photo d'annonce
+                        </span>
+                        <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium mt-0.5 leading-snug">
+                          Importer une capture d'écran, JPEG ou PNG
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-emerald-100 flex items-center justify-between w-full text-xs font-black text-emerald-700 group-hover:text-emerald-800">
+                        <span>Choisir</span>
+                        <i className="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                      </div>
+                    </button>
 
-                {/* BOUTON CÔTE DROIT : 2. EXAMINATEUR TEXTE BRUT */}
-                <button
-                  type="button"
-                  onClick={() => setOpenInputMode(openInputMode === "examinateur" ? null : "examinateur")}
-                  className={`p-2.5 sm:p-3.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between space-y-1.5 ${
-                    openInputMode === "examinateur"
-                      ? "bg-emerald-50/80 border-2 border-emerald-500 shadow-xs ring-2 ring-emerald-500/20"
-                      : "bg-white hover:bg-gray-50 border-gray-200"
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs sm:text-sm shadow-xs">
-                      📝
-                    </div>
-                    <span className="text-[9px] sm:text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-1.5 sm:px-2 py-0.5 rounded-md">
-                      Texte
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] sm:text-xs font-black text-gray-900 block truncate">
-                      2. Examinateur
-                    </span>
-                    <span className="text-[9px] sm:text-[10px] text-gray-500 block truncate">
-                      WhatsApp, Mail...
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between w-full pt-1 border-t border-gray-100 text-[10px] font-extrabold text-emerald-700">
-                    <span>{openInputMode === "examinateur" ? "Ouvert" : "Ouvrir"}</span>
-                    <i className={`fa-solid fa-chevron-down text-[9px] transition-transform duration-200 ${openInputMode === "examinateur" ? "rotate-180" : ""}`}></i>
-                  </div>
-                </button>
+                    {/* CHOIX 2 : EXAMINATEUR TEXTE BRUT */}
+                    <button
+                      type="button"
+                      onClick={() => setOpenInputMode("examinateur")}
+                      className="p-3.5 sm:p-5 rounded-2xl border-2 border-emerald-200 hover:border-emerald-500 bg-gradient-to-b from-white to-emerald-50/30 hover:bg-emerald-50 text-left transition cursor-pointer flex flex-col justify-between space-y-3 group shadow-2xs hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-sm group-hover:scale-105 transition">
+                          📝
+                        </div>
+                        <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          Texte
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs sm:text-sm font-black text-gray-900 block">
+                          2. Examinateur
+                        </span>
+                        <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium mt-0.5 leading-snug">
+                          Coller un texte reçu (WhatsApp, SMS, Mail)
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-emerald-100 flex items-center justify-between w-full text-xs font-black text-emerald-700 group-hover:text-emerald-800">
+                        <span>Choisir</span>
+                        <i className="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                      </div>
+                    </button>
 
-              </div>
+                  </div>
+                </div>
+              )}
 
-              {/* PANNEAU DÉROULANT DE LA CASE 1 : PHOTO */}
+              {/* 2. MODE PHOTO DÉDIÉ (SEUL SUR SA PAGE) */}
               {openInputMode === "photo" && (
-                <div className="p-3.5 sm:p-4 bg-gray-50/80 border border-gray-200 rounded-2xl space-y-3 animate-fade-in">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px]">📷</span>
-                      <span>Importer la photo de l'annonce</span>
-                    </label>
+                <div className="p-4 sm:p-5 bg-gradient-to-b from-white to-emerald-50/20 border-2 border-emerald-500 rounded-2xl space-y-3.5 animate-fade-in shadow-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                     <button
                       type="button"
                       onClick={() => setOpenInputMode(null)}
-                      className="text-[10px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer"
+                      className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs rounded-lg transition cursor-pointer flex items-center gap-1.5"
                     >
-                      Réduire ✕
+                      <i className="fa-solid fa-arrow-left text-[10px]"></i>
+                      <span>Changer de mode</span>
                     </button>
+                    <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                      <span>📷</span>
+                      <span>Photo de l'annonce</span>
+                    </span>
                   </div>
 
                   <input
@@ -600,81 +600,84 @@ function ExtracteurContent() {
                   />
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white rounded-xl p-4 text-center cursor-pointer transition flex flex-col items-center justify-center min-h-[110px] shadow-2xs"
+                    className="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-white rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center min-h-[140px] shadow-inner"
                   >
                     {imagePreview ? (
-                      <div className="relative group max-w-[140px]">
-                        <img src={imagePreview} alt="Aperçu" className="max-h-24 rounded-lg shadow-xs border border-gray-200 mx-auto" />
-                        <span className="mt-1 block text-[10px] font-bold text-emerald-700">Changer la photo</span>
+                      <div className="relative group max-w-[160px]">
+                        <img src={imagePreview} alt="Aperçu" className="max-h-32 rounded-xl shadow-xs border border-gray-200 mx-auto" />
+                        <span className="mt-2 block text-xs font-bold text-emerald-700">Changer la photo</span>
                       </div>
                     ) : (
-                      <div className="space-y-1">
-                        <div className="w-8 h-8 mx-auto bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center text-xs">
+                      <div className="space-y-1.5">
+                        <div className="w-10 h-10 mx-auto bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center text-lg">
                           📷
                         </div>
-                        <p className="text-xs font-black text-gray-800">Cliquez pour choisir une photo</p>
-                        <p className="text-[10px] text-gray-400">PNG, JPG, JPEG acceptés</p>
+                        <p className="text-xs sm:text-sm font-black text-gray-800">Cliquez pour importer la photo de l'annonce</p>
+                        <p className="text-[11px] text-gray-400">PNG, JPG, JPEG acceptés</p>
                       </div>
                     )}
                   </div>
 
-                  {selectedFile && (
-                    <button
-                      type="button"
-                      onClick={handleExtractEmail}
-                      disabled={isExtracting}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-60"
-                    >
-                      {isExtracting ? (
-                        <>
-                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Analyse de la photo...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>🔍 Analyser la photo</span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={handleExtractEmail}
+                    disabled={isExtracting || !selectedFile}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50"
+                  >
+                    {isExtracting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Analyse de la photo en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🔍 Analyser la photo de l'annonce</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
 
-              {/* PANNEAU DÉROULANT DE LA CASE 2 : EXAMINATEUR DE TEXTE */}
+              {/* 3. MODE EXAMINATEUR DE TEXTE DÉDIÉ (SEUL SUR SA PAGE) */}
               {openInputMode === "examinateur" && (
-                <div className="p-3.5 sm:p-4 bg-emerald-50/40 border border-emerald-300 rounded-2xl space-y-2.5 animate-fade-in">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-5 h-5 rounded-md bg-emerald-600 text-white flex items-center justify-center text-[10px]">📝</span>
-                      <span>Coller le texte de l'annonce reçue</span>
-                    </label>
+                <div className="p-4 sm:p-5 bg-gradient-to-b from-white to-emerald-50/30 border-2 border-emerald-500 rounded-2xl space-y-3.5 animate-fade-in shadow-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => setOpenInputMode(null)}
+                      className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs rounded-lg transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <i className="fa-solid fa-arrow-left text-[10px]"></i>
+                      <span>Changer de mode</span>
+                    </button>
                     <div className="flex items-center gap-2">
                       {rawOfferText && (
                         <button
                           type="button"
                           onClick={() => setRawOfferText("")}
-                          className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                          className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
                         >
                           Effacer
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setOpenInputMode(null)}
-                        className="text-[10px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer"
-                      >
-                        Réduire ✕
-                      </button>
+                      <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                        <span>📝</span>
+                        <span>Examinateur de texte</span>
+                      </span>
                     </div>
                   </div>
 
+                  <p className="text-xs text-gray-600 font-medium">
+                    Collez le texte brut de l'offre (reçu sur WhatsApp, SMS ou e-mail) :
+                  </p>
+
                   <textarea
-                    rows={4}
+                    rows={5}
                     value={rawOfferText}
                     onChange={(e) => setRawOfferText(e.target.value)}
-                    placeholder={`Exemple :\n"Urgent ! Entreprise à Dakar recrute un Comptable (CDI). CV à rh@entreprise.sn ou WhatsApp 77 123 45 67 avant le 15 oct."`}
+                    placeholder={`Exemple :\n"Urgent ! Entreprise à Dakar recrute un Comptable (CDI). Expérience 2 ans. Envoyez votre CV à rh@entreprise.sn ou par WhatsApp au 77 123 45 67 avant le 15 octobre."`}
                     disabled={isExtracting}
-                    className="w-full p-2.5 bg-white border border-emerald-200 focus:border-emerald-500 rounded-xl text-xs font-medium text-gray-900 focus:outline-none transition leading-relaxed shadow-inner"
+                    className="w-full p-3 bg-white border border-emerald-200 focus:border-emerald-500 rounded-xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none transition leading-relaxed shadow-inner"
                     autoFocus
                   />
 
@@ -682,12 +685,12 @@ function ExtracteurContent() {
                     type="button"
                     onClick={handleExtractText}
                     disabled={isExtracting || !rawOfferText.trim()}
-                    className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50"
                   >
                     {isExtracting ? (
                       <>
-                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Examen de l'offre...</span>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Examen et classement de l'offre en cours...</span>
                       </>
                     ) : (
                       <>
