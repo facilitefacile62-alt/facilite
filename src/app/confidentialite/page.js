@@ -30,16 +30,18 @@ export default function ConfidentialitePage() {
     <div className="min-h-screen bg-[#FAF6F1] dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans flex flex-col justify-between transition-colors duration-300">
       
       {/* Barre de navigation simplifiée pour les pages légales */}
-      <header className="sticky top-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800 px-4 sm:px-8 py-3.5 shadow-xs">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group" title="Retour à l'accueil Facilité">
-            <img src="/logo.jpeg" alt="Logo Facilité" className="w-9 h-9 rounded-xl object-contain shadow-xs border border-gray-200 dark:border-gray-700 group-hover:scale-105 transition-transform" />
-            <div className="flex flex-col">
-              <span className="text-lg font-black tracking-tight text-gray-950 dark:text-white">Facilité</span>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-[#10E688] -mt-1 tracking-wider uppercase">ffacilite.com</span>
-            </div>
-          </Link>
-
+      {/* Sous-barre de navigation légale (point 3, 2026-08-27).
+          AVANT : un <header sticky top-0 z-40> portant à nouveau le logo et
+          « FFACILITE.COM », alors que le Header global est déjà rendu sur
+          TOUTES les routes par layout.js:228. Deux en-têtes empilés, tous
+          deux collants : sur un écran étroit sans barre d'adresse — le cas
+          d'une WebView Android — le repère de marque se dédoublait et se
+          chevauchait au défilement (remonté par le testeur Google Play).
+          APRÈS : la marque en double est retirée et la barre n'est plus
+          collante ; seuls les liens croisés entre pages légales restent,
+          car eux n'existent pas dans le Header global. */}
+      <nav className="border-b border-gray-200/80 dark:border-gray-800 bg-white/70 dark:bg-gray-900/70 px-4 sm:px-8 py-2.5">
+        <div className="max-w-6xl mx-auto flex items-center justify-end flex-wrap gap-y-2">
           <div className="flex items-center gap-3">
             <Link
               href="/conditions"
@@ -56,7 +58,7 @@ export default function ConfidentialitePage() {
             </Link>
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Contenu Principal */}
       <main className="max-w-6xl mx-auto pt-8 pb-16 px-4 sm:px-6 lg:px-8 flex-1 w-full">
