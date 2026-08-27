@@ -252,6 +252,7 @@ function ExtracteurContent() {
         } else if (data.apply_url || data.form_url) {
           setActiveChannel("form");
         }
+        setOpenInputMode(null); // Se range automatiquement après analyse !
       } else {
         setExtractionMessage(toReadableErrorMessage(data.error) || "Aucun moyen de contact (WhatsApp, email ou formulaire) détecté sur cette affiche.");
       }
@@ -321,7 +322,8 @@ function ExtracteurContent() {
         } else if (data.apply_url || data.form_url) {
           setActiveChannel("form");
         }
-        triggerToast("Annonce examinée ! Chaque information a été classée à sa place.");
+        setOpenInputMode(null); // Se range automatiquement après examen !
+        triggerToast("Annonce examinée ! Résultats classés ci-dessous.");
       } else {
         setExtractionMessage(toReadableErrorMessage(data.error) || "L'examinateur n'a trouvé aucune coordonnée ni information exploitable dans ce texte.");
       }
