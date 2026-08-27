@@ -44,7 +44,7 @@ function ExtracteurContent() {
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [isExaminateurOpen, setIsExaminateurOpen] = useState(false);
+  const [openInputMode, setOpenInputMode] = useState("photo"); // "photo" | "examinateur" | null
   const [showDetailsDropdown, setShowDetailsDropdown] = useState(false);
   const [activeChannel, setActiveChannel] = useState("whatsapp"); // "whatsapp" | "email" | "form"
   const [rawOfferText, setRawOfferText] = useState("");
@@ -503,48 +503,117 @@ function ExtracteurContent() {
             </div>
           ) : (
             <>
-              {/* GRILLE COMPACTE CÔTE À CÔTE (PHOTO VS EXAMINATEUR) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-stretch">
+              {/* 2 SÉLECTEURS CÔTE À CÔTE SUR TÉLÉPHONE ET PC */}
+              <div className="grid grid-cols-2 gap-2 sm:gap-3.5">
                 
-                {/* CASE 1 : PHOTO DE L'ANNONCE D'EMPLOI */}
-                <div className="p-4 bg-gray-50/70 hover:bg-emerald-50/20 border border-gray-200 hover:border-emerald-300 rounded-2xl transition flex flex-col justify-between space-y-2.5">
+                {/* BOUTON CÔTE GAUCHE : 1. PHOTO DE L'ANNONCE */}
+                <button
+                  type="button"
+                  onClick={() => setOpenInputMode(openInputMode === "photo" ? null : "photo")}
+                  className={`p-2.5 sm:p-3.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between space-y-1.5 ${
+                    openInputMode === "photo"
+                      ? "bg-emerald-50/80 border-2 border-emerald-500 shadow-xs ring-2 ring-emerald-500/20"
+                      : "bg-white hover:bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs sm:text-sm">
+                      📷
+                    </div>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 bg-white px-1.5 sm:px-2 py-0.5 rounded-md border border-gray-200">
+                      Image
+                    </span>
+                  </div>
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-[11px] font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px]">📷</span>
-                        <span>1. Photo de l'annonce</span>
-                      </label>
-                      <span className="text-[9px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
-                        PNG, JPG
-                      </span>
-                    </div>
+                    <span className="text-[11px] sm:text-xs font-black text-gray-900 block truncate">
+                      1. Photo d'annonce
+                    </span>
+                    <span className="text-[9px] sm:text-[10px] text-gray-500 block truncate">
+                      {selectedFile ? "Photo prête" : "Importer image"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between w-full pt-1 border-t border-gray-100 text-[10px] font-extrabold text-emerald-700">
+                    <span>{openInputMode === "photo" ? "Ouvert" : "Ouvrir"}</span>
+                    <i className={`fa-solid fa-chevron-down text-[9px] transition-transform duration-200 ${openInputMode === "photo" ? "rotate-180" : ""}`}></i>
+                  </div>
+                </button>
 
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      accept="image/*"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white rounded-xl p-3.5 text-center cursor-pointer transition flex flex-col items-center justify-center min-h-[125px] shadow-2xs"
-                    >
-                      {imagePreview ? (
-                        <div className="relative group max-w-[130px]">
-                          <img src={imagePreview} alt="Aperçu" className="max-h-24 rounded-lg shadow-xs border border-gray-200" />
-                          <span className="mt-1 block text-[10px] font-bold text-emerald-700">Changer la photo</span>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          <div className="w-9 h-9 mx-auto bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center text-sm shadow-inner">
-                            📷
-                          </div>
-                          <p className="text-xs font-black text-gray-800">Cliquez pour importer la photo</p>
-                          <p className="text-[10px] text-gray-400">PNG, JPG, JPEG acceptés</p>
-                        </div>
-                      )}
+                {/* BOUTON CÔTE DROIT : 2. EXAMINATEUR TEXTE BRUT */}
+                <button
+                  type="button"
+                  onClick={() => setOpenInputMode(openInputMode === "examinateur" ? null : "examinateur")}
+                  className={`p-2.5 sm:p-3.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between space-y-1.5 ${
+                    openInputMode === "examinateur"
+                      ? "bg-emerald-50/80 border-2 border-emerald-500 shadow-xs ring-2 ring-emerald-500/20"
+                      : "bg-white hover:bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs sm:text-sm shadow-xs">
+                      📝
                     </div>
+                    <span className="text-[9px] sm:text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-1.5 sm:px-2 py-0.5 rounded-md">
+                      Texte
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] sm:text-xs font-black text-gray-900 block truncate">
+                      2. Examinateur
+                    </span>
+                    <span className="text-[9px] sm:text-[10px] text-gray-500 block truncate">
+                      WhatsApp, Mail...
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between w-full pt-1 border-t border-gray-100 text-[10px] font-extrabold text-emerald-700">
+                    <span>{openInputMode === "examinateur" ? "Ouvert" : "Ouvrir"}</span>
+                    <i className={`fa-solid fa-chevron-down text-[9px] transition-transform duration-200 ${openInputMode === "examinateur" ? "rotate-180" : ""}`}></i>
+                  </div>
+                </button>
+
+              </div>
+
+              {/* PANNEAU DÉROULANT DE LA CASE 1 : PHOTO */}
+              {openInputMode === "photo" && (
+                <div className="p-3.5 sm:p-4 bg-gray-50/80 border border-gray-200 rounded-2xl space-y-3 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px]">📷</span>
+                      <span>Importer la photo de l'annonce</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setOpenInputMode(null)}
+                      className="text-[10px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      Réduire ✕
+                    </button>
+                  </div>
+
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white rounded-xl p-4 text-center cursor-pointer transition flex flex-col items-center justify-center min-h-[110px] shadow-2xs"
+                  >
+                    {imagePreview ? (
+                      <div className="relative group max-w-[140px]">
+                        <img src={imagePreview} alt="Aperçu" className="max-h-24 rounded-lg shadow-xs border border-gray-200 mx-auto" />
+                        <span className="mt-1 block text-[10px] font-bold text-emerald-700">Changer la photo</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="w-8 h-8 mx-auto bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center text-xs">
+                          📷
+                        </div>
+                        <p className="text-xs font-black text-gray-800">Cliquez pour choisir une photo</p>
+                        <p className="text-[10px] text-gray-400">PNG, JPG, JPEG acceptés</p>
+                      </div>
+                    )}
                   </div>
 
                   {selectedFile && (
@@ -567,103 +636,66 @@ function ExtracteurContent() {
                     </button>
                   )}
                 </div>
+              )}
 
-                {/* CASE 2 : EXAMINATEUR DE TEXTE D'ANNONCE */}
-                <div className={`p-4 rounded-2xl transition flex flex-col justify-between space-y-2.5 ${
-                  isExaminateurOpen
-                    ? "bg-gradient-to-b from-emerald-50/70 to-teal-50/30 border-2 border-emerald-500 shadow-xs"
-                    : "bg-white hover:bg-emerald-50/20 border border-emerald-200 hover:border-emerald-400"
-                }`}>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-[11px] font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-md bg-emerald-600 text-white flex items-center justify-center text-[10px]">📝</span>
-                        <span>2. Examinateur (Texte brut)</span>
-                      </label>
-                      <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                        WhatsApp / Mail
-                      </span>
-                    </div>
-
-                    {!isExaminateurOpen ? (
-                      <div
-                        onClick={() => setIsExaminateurOpen(true)}
-                        className="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50/80 rounded-xl p-3.5 text-center cursor-pointer transition flex flex-col items-center justify-center min-h-[125px] group shadow-2xs"
+              {/* PANNEAU DÉROULANT DE LA CASE 2 : EXAMINATEUR DE TEXTE */}
+              {openInputMode === "examinateur" && (
+                <div className="p-3.5 sm:p-4 bg-emerald-50/40 border border-emerald-300 rounded-2xl space-y-2.5 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-md bg-emerald-600 text-white flex items-center justify-center text-[10px]">📝</span>
+                      <span>Coller le texte de l'annonce reçue</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {rawOfferText && (
+                        <button
+                          type="button"
+                          onClick={() => setRawOfferText("")}
+                          className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                        >
+                          Effacer
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setOpenInputMode(null)}
+                        className="text-[10px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer"
                       >
-                        <div className="w-9 h-9 mx-auto bg-emerald-600 text-white rounded-xl flex items-center justify-center text-sm shadow-sm group-hover:scale-105 transition">
-                          <i className="fa-solid fa-file-lines"></i>
-                        </div>
-                        <p className="text-xs font-black text-emerald-950 mt-1.5">Cliquez pour ouvrir l'Examinateur</p>
-                        <p className="text-[10px] text-emerald-700 font-medium">Coller un message d'annonce reçu</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 animate-fade-in">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[11px] text-gray-500 font-medium">Collez le texte de l'offre :</p>
-                          <div className="flex items-center gap-2">
-                            {rawOfferText && (
-                              <button
-                                type="button"
-                                onClick={() => setRawOfferText("")}
-                                className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
-                              >
-                                Effacer
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setIsExaminateurOpen(false)}
-                              className="text-[10px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer"
-                            >
-                              Réduire
-                            </button>
-                          </div>
-                        </div>
-
-                        <textarea
-                          rows={4}
-                          value={rawOfferText}
-                          onChange={(e) => setRawOfferText(e.target.value)}
-                          placeholder={`Exemple :\n"Urgent ! Entreprise à Dakar recrute un Comptable (CDI). CV à rh@entreprise.sn ou WhatsApp 77 123 45 67 avant le 15 oct."`}
-                          disabled={isExtracting}
-                          className="w-full p-2.5 bg-white border border-emerald-200 focus:border-emerald-500 rounded-xl text-xs font-medium text-gray-900 focus:outline-none transition leading-relaxed shadow-inner"
-                          autoFocus
-                        />
-                      </div>
-                    )}
+                        Réduire ✕
+                      </button>
+                    </div>
                   </div>
 
-                  {isExaminateurOpen ? (
-                    <button
-                      type="button"
-                      onClick={handleExtractText}
-                      disabled={isExtracting || !rawOfferText.trim()}
-                      className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50"
-                    >
-                      {isExtracting ? (
-                        <>
-                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Examen de l'offre...</span>
-                        </>
-                      ) : (
-                        <>
-                          <i className="fa-solid fa-wand-magic-sparkles text-emerald-200 text-xs"></i>
-                          <span>Examiner et classer l'annonce</span>
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsExaminateurOpen(true)}
-                      className="w-full py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-extrabold text-[11px] rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <span>✍️ Insérer un texte d'annonce</span>
-                    </button>
-                  )}
-                </div>
+                  <textarea
+                    rows={4}
+                    value={rawOfferText}
+                    onChange={(e) => setRawOfferText(e.target.value)}
+                    placeholder={`Exemple :\n"Urgent ! Entreprise à Dakar recrute un Comptable (CDI). CV à rh@entreprise.sn ou WhatsApp 77 123 45 67 avant le 15 oct."`}
+                    disabled={isExtracting}
+                    className="w-full p-2.5 bg-white border border-emerald-200 focus:border-emerald-500 rounded-xl text-xs font-medium text-gray-900 focus:outline-none transition leading-relaxed shadow-inner"
+                    autoFocus
+                  />
 
-              </div>
+                  <button
+                    type="button"
+                    onClick={handleExtractText}
+                    disabled={isExtracting || !rawOfferText.trim()}
+                    className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                  >
+                    {isExtracting ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Examen de l'offre...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-wand-magic-sparkles text-emerald-200 text-xs"></i>
+                        <span>🔍 Examiner et classer l'annonce</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </>
           )}
 
