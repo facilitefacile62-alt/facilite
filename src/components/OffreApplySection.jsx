@@ -16,6 +16,11 @@ import Link from "next/link";
 export default function OffreApplySection({ offer }) {
   const [userSession, setUserSession] = useState(null);
   const [candidateEducationCode, setCandidateEducationCode] = useState("");
+  // Candidature déjà envoyée sur CETTE offre (point 2). Le déclencheur
+  // trg_candidature_unique_par_offre refuse le doublon côté base ; cet état
+  // évite au candidat de remplir toute la modale pour se voir refuser à
+  // l'envoi.
+  const [dejaPostule, setDejaPostule] = useState(false);
   const [niveauxEtudes, setNiveauxEtudes] = useState([]);
   const [applyOpen, setApplyOpen] = useState(false);
   const [toast, setToast] = useState("");
@@ -31,6 +36,17 @@ export default function OffreApplySection({ offer }) {
           .eq("id", session.user.id)
           .single();
         setCandidateEducationCode(profile?.education_level_code || "");
+
+        // RLS : un candidat lit ses propres candidatures. `head: true` —
+        // seul le compte nous intéresse, jamais les lignes.
+        if (offer?.id) {
+          const { count } = await supabase
+            .from("candidatures")
+            .select("id", { count: "exact", head: true })
+            .eq("job_offer_id", offer.id)
+            .eq("user_id", session.user.id);
+          setDejaPostule((count || 0) > 0);
+        }
       }
     }
     loadSession();
@@ -135,7 +151,14 @@ export default function OffreApplySection({ offer }) {
         </div>
       )}
 
-      {!expiree && blocked && !isWhatsApp && (
+      {!expiree && dejaPostule && (
+        <p className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-2.5 mb-3">
+          <i className="fa-solid fa-circle-check mr-1"></i>
+          Vous avez déjà postulé à cette offre. Le recruteur a bien reçu votre candidature.
+        </p>
+      )}
+
+      {!expiree && !dejaPostule && blocked && !isWhatsApp && (
         <p className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-3">
           <i className="fa-solid fa-triangle-exclamation mr-1"></i>
           Niveau requis : {verdictNiveau.exige.libelle}. Votre profil indique {verdictNiveau.candidat.libelle}.
@@ -162,11 +185,11 @@ export default function OffreApplySection({ offer }) {
             <button
               type="button"
               onClick={() => setApplyOpen(true)}
-              disabled={blocked || expiree}
+              disabled={blocked || expiree || dejaPostule}
               className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50"
             >
               <i className="fa-solid fa-paper-plane text-base sm:text-lg"></i>
-              <span>Postuler via Facilité</span>
+              <span>{dejaPostule ? "Offre déjà postulée" : "Postuler via Facilité"}</span>
             </button>
             {expiree ? (
               <button
@@ -205,11 +228,11 @@ export default function OffreApplySection({ offer }) {
           <button
             type="button"
             onClick={() => setApplyOpen(true)}
-            disabled={blocked || expiree}
+            disabled={blocked || expiree || dejaPostule}
             className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl transition flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/25 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <i className="fa-solid fa-paper-plane text-base"></i>
-            <span>{expiree ? "Candidatures closes" : blocked ? "Niveau insuffisant" : buttonLabel}</span>
+            <span>{expiree ? "Candidatures closes" : dejaPostule ? "Offre déjà postulée" : blocked ? "Niveau insuffisant" : buttonLabel}</span>
           </button>
         )}
       </div>

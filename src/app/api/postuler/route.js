@@ -343,6 +343,16 @@ export async function POST(req) {
       .single();
 
     if (candidatureError) {
+      // Doublon refusé par trg_candidature_unique_par_offre
+      // (20260827130000_candidature_unique_par_offre.sql) : ce n'est pas une
+      // panne, c'est une règle métier. Un 500 « Impossible d'enregistrer »
+      // laisserait le candidat croire à un bug et réessayer indéfiniment.
+      if (candidatureError.code === "23505") {
+        return NextResponse.json(
+          { error: "Vous avez déjà postulé à cette offre.", code: "candidature_doublon" },
+          { status: 409 }
+        );
+      }
       console.error("Erreur enregistrement candidature:", candidatureError.message);
       return NextResponse.json(
         { error: "Impossible d'enregistrer la candidature." },
