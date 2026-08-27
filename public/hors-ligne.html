@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hors ligne — Facilité</title>
+    <link rel="icon" href="/favicon.ico" />
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: #ffffff;
+        color: #111827;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0b1120; color: #e5e7eb; }
+        .carte { background: #111827; border-color: #1f2937; }
+        .sous { color: #9ca3af; }
+      }
+      .carte {
+        max-width: 26rem;
+        width: 100%;
+        text-align: center;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 24px;
+        padding: 32px 24px;
+      }
+      img { width: 72px; height: 72px; border-radius: 18px; }
+      h1 { font-size: 1.15rem; font-weight: 800; margin: 18px 0 8px; }
+      .sous { font-size: 0.875rem; line-height: 1.6; color: #4b5563; margin: 0 0 20px; }
+      button {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 0.875rem;
+        font-weight: 800;
+        color: #ffffff;
+        background: #2563eb;
+        border: 0;
+        border-radius: 14px;
+        cursor: pointer;
+      }
+      button:hover { background: #1d4ed8; }
+    </style>
+  </head>
+  <body>
+    <main class="carte">
+      <img src="/icon-192x192.png" alt="Facilité" />
+      <h1>Vous êtes hors ligne</h1>
+      <p class="sous">
+        Facilité a besoin d'une connexion pour afficher les offres et votre profil. Les pages déjà
+        consultées restent accessibles ; la connexion revenue, tout se recharge automatiquement.
+      </p>
+      <button type="button" onclick="location.reload()">Réessayer</button>
+    </main>
+    <script>
+      // Recharge d'elle-même dès que le réseau revient, pour éviter à
+      // l'utilisateur d'avoir à toucher le bouton.
+      window.addEventListener("online", function () {
+        location.reload();
+      });
+    </script>
+  </body>
+</html>

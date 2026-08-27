@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import GlobalModals from "@/components/GlobalModals";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -229,6 +230,7 @@ export default function RootLayout({ children }) {
             <GlobalModals />
           </AuthProvider>
         </ThemeProvider>
+        <ServiceWorkerRegistration />
         <Script id="clarity-script" strategy="afterInteractive">
           {`
             (function(c,l,a,r,i,t,y){

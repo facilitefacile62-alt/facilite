@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.ffacilite.app",
+    "sha256_cert_fingerprints": ["AB:49:5C:DB:48:98:EE:71:FA:4E:73:59:F2:64:47:8E:01:9C:0F:F1:DD:06:6D:F0:48:E7:9C:65:5B:F3:BF:D4"]
+  }
+}]

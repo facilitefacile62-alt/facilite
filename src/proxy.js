@@ -331,7 +331,18 @@ export const config = {
   matcher: [
     // Tout sauf les assets statiques, les routes /api (celles-ci valident
     // elles-mêmes le jeton Bearer via requireUser dans lib/apiAuth.js), et
-    // robots.txt/sitemap.xml
-    "/((?!api/|_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?)$).*)",
+    // robots.txt/sitemap.xml.
+    //
+    // Ajouts du 2026-08-24, trois fichiers qui DOIVENT répondre en 200 sans
+    // session — mesuré avant correction : /.well-known/assetlinks.json
+    // renvoyait « 307 -> /login?redirect=%2F.well-known%2Fassetlinks.json ».
+    //   * .well-known/ : Google vérifie assetlinks.json SANS cookie pour
+    //     valider une Trusted Web Activity. Une redirection = vérification
+    //     échouée = barre d'URL affichée dans l'app Android.
+    //   * sw.js : un script de service worker qui redirige ne peut pas être
+    //     enregistré du tout — le mode hors ligne ne démarrerait jamais.
+    //   * hors-ligne.html : page de repli servie par le service worker,
+    //     précisément quand il n'y a pas de réseau pour joindre /login.
+    "/((?!api/|_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|\\.well-known/|sw\\.js|hors-ligne\\.html|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?)$).*)",
   ],
 };
