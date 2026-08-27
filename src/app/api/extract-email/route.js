@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { extractJobAnnouncementWithGemini } from "@/lib/documentParser";
+import { extractJobAnnouncementWithGemini, extractJobAnnouncementFromTextWithGemini } from "@/lib/documentParser";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { validateUploadedFile } from "@/lib/validation";
 import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
@@ -22,23 +22,6 @@ export async function POST(req) {
       );
     }
 
-    const formData = await req.formData();
-    const file = formData.get("file");
-
-    if (!file || typeof file === "string") {
-      return NextResponse.json({ error: "Aucune image fournie." }, { status: 400 });
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    const check = validateUploadedFile(buffer, file.type, file.size);
-    if (!check.valid) {
-      return NextResponse.json({ error: check.error }, { status: check.status });
-    }
-    if (!file.type?.startsWith("image/")) {
-      return NextResponse.json({ error: "L'Extracteur ne lit que des images (photo de l'annonce)." }, { status: 415 });
-    }
-
     // Vérification explicite de la clé d'API Gemini
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
     if (!apiKey) {
@@ -51,8 +34,37 @@ export async function POST(req) {
       );
     }
 
-    // Analyse de l'image de recrutement via Gemini Flash
-    const analysis = await extractJobAnnouncementWithGemini(buffer, file.type);
+    let analysis = null;
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      const jsonBody = await req.json().catch(() => ({}));
+      const rawText = jsonBody.text || jsonBody.rawText || "";
+      if (!rawText || typeof rawText !== "string" || rawText.trim().length === 0) {
+        return NextResponse.json({ error: "Veuillez fournir le texte de l'annonce à examiner." }, { status: 400 });
+      }
+      analysis = await extractJobAnnouncementFromTextWithGemini(rawText);
+    } else {
+      const formData = await req.formData();
+      const rawText = formData.get("text");
+      const file = formData.get("file");
+
+      if (rawText && typeof rawText === "string" && rawText.trim().length > 0) {
+        analysis = await extractJobAnnouncementFromTextWithGemini(rawText);
+      } else if (file && typeof file !== "string") {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const check = validateUploadedFile(buffer, file.type, file.size);
+        if (!check.valid) {
+          return NextResponse.json({ error: check.error }, { status: check.status });
+        }
+        if (!file.type?.startsWith("image/")) {
+          return NextResponse.json({ error: "L'Extracteur ne lit que des images (photo de l'annonce) ou du texte brut." }, { status: 415 });
+        }
+        analysis = await extractJobAnnouncementWithGemini(buffer, file.type);
+      } else {
+        return NextResponse.json({ error: "Aucun fichier image ni texte d'annonce fourni." }, { status: 400 });
+      }
+    }
 
     if (analysis?.errorKeyMissing) {
       return NextResponse.json(
@@ -141,6 +153,11 @@ export async function POST(req) {
       job_title: jobTitle,
       company: company,
       contract_type: analysis.contract_type || null,
+      location: analysis.location || null,
+      salary: analysis.salary || null,
+      deadline: analysis.deadline || null,
+      skills: analysis.skills || null,
+      summary: analysis.summary || null,
       instructions: analysis.instructions || null,
       raw_text: analysis.raw_text || null,
     });
@@ -149,7 +166,7 @@ export async function POST(req) {
     return NextResponse.json(
       {
         success: false,
-        error: "Impossible d'analyser l'image pour le moment. Réessayez dans quelques instants.",
+        error: "Impossible d'analyser l'annonce pour le moment. Réessayez dans quelques instants.",
       },
       { status: 400 }
     );

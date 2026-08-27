@@ -44,6 +44,8 @@ function ExtracteurContent() {
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [inputMode, setInputMode] = useState("photo"); // "photo" | "examinateur"
+  const [rawOfferText, setRawOfferText] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedEmail, setExtractedEmail] = useState(null);
   const [extractedWhatsApp, setExtractedWhatsApp] = useState(null);
@@ -257,6 +259,69 @@ function ExtracteurContent() {
     }
   };
 
+  const handleExtractText = async () => {
+    if (!userSession?.user) {
+      setAuthModalOpen(true);
+      return;
+    }
+    if (!rawOfferText || !rawOfferText.trim()) {
+      triggerToast("Veuillez d'abord coller le texte de l'annonce à examiner.");
+      return;
+    }
+
+    setIsExtracting(true);
+    setExtractedEmail(null);
+    setExtractedWhatsApp(null);
+    setWhatsappUrl(null);
+    setExtractedFormUrl(null);
+    setExtractedData(null);
+    setExtractionMessage(null);
+    setSendSuccess(false);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 40000);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/extract-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ text: rawOfferText.trim() }),
+        signal: controller.signal,
+      });
+
+      const data = await res.json();
+
+      if (data.success && (data.email || data.whatsapp || data.phone || data.apply_url || data.form_url || data.job_title)) {
+        if (data.email) setExtractedEmail(data.email);
+        if (data.whatsapp || data.phone) {
+          setExtractedWhatsApp(data.whatsapp || data.phone);
+          setWhatsappUrl(data.whatsapp_url);
+        }
+        if (data.apply_url || data.form_url) {
+          setExtractedFormUrl(data.apply_url || data.form_url);
+        }
+        setExtractedData(data);
+        triggerToast("Annonce examinée ! Chaque information a été classée à sa place.");
+      } else {
+        setExtractionMessage(toReadableErrorMessage(data.error) || "L'examinateur n'a trouvé aucune coordonnée ni information exploitable dans ce texte.");
+      }
+    } catch (err) {
+      console.error("Erreur d'examen du texte:", err);
+      setExtractionMessage(
+        err.name === "AbortError"
+          ? "L'examen a pris trop de temps. Veuillez réessayer."
+          : "Erreur lors de l'examen du texte de l'annonce."
+      );
+    } finally {
+      clearTimeout(timeoutId);
+      setIsExtracting(false);
+    }
+  };
+
   const handleSendOneClickApplication = async () => {
     if ((!extractedEmail && !posterOffer) || !userSession?.user?.id) return;
 
@@ -422,67 +487,147 @@ function ExtracteurContent() {
             </div>
           ) : (
             <>
-              {/* Zone d'importation */}
-              <div>
-                <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-2">
-                  1. Photo de l'annonce d'emploi
-                </label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-gray-50/50 hover:bg-emerald-50/30 rounded-2xl p-8 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-3"
-                >
-                  {imagePreview ? (
-                    <div className="relative group max-w-xs">
-                      <img src={imagePreview} alt="Aperçu de l'annonce" className="max-h-60 rounded-xl shadow-md border border-gray-200" />
-                      <span className="mt-2 block text-xs font-bold text-emerald-700">Changer la photo</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
-                        📷
+              {/* GRILLE DES 2 CASES : PHOTO & EXAMINATEUR DE TEXTE */}
+              <div className="space-y-6">
+                
+                {/* CASE 1 : PHOTO DE L'ANNONCE D'EMPLOI */}
+                <div className="p-5 bg-gray-50/60 hover:bg-emerald-50/20 border-2 border-gray-200 hover:border-emerald-300 rounded-3xl transition space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs">📷</span>
+                      <span>1. Photo de l'annonce d'emploi</span>
+                    </label>
+                    <span className="text-[10px] font-bold text-gray-500 bg-white px-2.5 py-1 rounded-full border border-gray-200">
+                      Format Image (PNG, JPG)
+                    </span>
+                  </div>
+
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-2.5 shadow-2xs"
+                  >
+                    {imagePreview ? (
+                      <div className="relative group max-w-xs">
+                        <img src={imagePreview} alt="Aperçu de l'annonce" className="max-h-56 rounded-xl shadow-md border border-gray-200" />
+                        <span className="mt-2 block text-xs font-bold text-emerald-700">Changer la photo</span>
                       </div>
-                      <div>
-                        <p className="text-sm font-extrabold text-gray-900">Cliquez pour importer la photo de l'annonce</p>
-                        <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG acceptés</p>
-                      </div>
-                    </>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl shadow-inner">
+                          📷
+                        </div>
+                        <div>
+                          <p className="text-xs sm:text-sm font-black text-gray-900">Cliquez pour importer la photo de l'annonce</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">PNG, JPG, JPEG acceptés</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {selectedFile && (
+                    <button
+                      type="button"
+                      onClick={handleExtractEmail}
+                      disabled={isExtracting}
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-60"
+                    >
+                      {isExtracting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Analyse de la photo en cours...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>🔍 Analyser la photo de l'annonce</span>
+                        </>
+                      )}
+                    </button>
                   )}
                 </div>
-              </div>
 
-              {/* Bouton d'Extraction */}
-              {selectedFile && (
-                <div className="pt-2">
+                {/* SÉPARATEUR VISUEL OU */}
+                <div className="relative flex items-center justify-center my-2">
+                  <div className="border-t border-gray-200 w-full"></div>
+                  <div className="bg-[#FAF6F1] px-4 text-[11px] font-black text-gray-500 uppercase tracking-widest absolute rounded-full border border-gray-200 shadow-2xs">
+                    OU
+                  </div>
+                </div>
+
+                {/* CASE 2 : EXAMINATEUR DE TEXTE D'ANNONCE (WHATSAPP / SMS / EMAIL) */}
+                <div className="p-5 bg-gradient-to-b from-emerald-50/50 to-teal-50/20 border-2 border-emerald-300/80 hover:border-emerald-500 rounded-3xl transition space-y-3 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs">📝</span>
+                      <span>2. Examinateur d'annonce (Texte brut)</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
+                        WhatsApp / SMS / Mail
+                      </span>
+                      {rawOfferText && (
+                        <button
+                          type="button"
+                          onClick={() => setRawOfferText("")}
+                          className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline cursor-pointer"
+                        >
+                          Effacer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                    Collez ici le texte brut d'une offre (reçu sur WhatsApp, SMS, LinkedIn ou e-mail). L'examinateur IA analyse l'offre et range automatiquement chaque information à sa place.
+                  </p>
+
+                  <div className="relative">
+                    <textarea
+                      rows={6}
+                      value={rawOfferText}
+                      onChange={(e) => setRawOfferText(e.target.value)}
+                      placeholder={`Collez votre texte ici...\nExemple :\n"Urgent ! Entreprise à Dakar recrute un Comptable (CDI). Expérience 2 ans. Envoyez votre CV à rh@entreprise.sn ou par WhatsApp au 77 123 45 67 avant le 15 octobre."`}
+                      disabled={isExtracting}
+                      className="w-full p-4 bg-white border border-emerald-200 focus:border-emerald-500 rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none transition leading-relaxed shadow-inner"
+                    />
+                    {rawOfferText && (
+                      <div className="absolute bottom-3 right-3 text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200">
+                        {rawOfferText.length} caractères
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     type="button"
-                    onClick={handleExtractEmail}
-                    disabled={isExtracting}
-                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-60"
+                    onClick={handleExtractText}
+                    disabled={isExtracting || !rawOfferText.trim()}
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-700/20 transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50"
                   >
                     {isExtracting ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Analyse de la photo en cours...</span>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Examen et classement de l'offre en cours...</span>
                       </>
                     ) : (
                       <>
-                        <span>🔍 L'Extracteur</span>
+                        <i className="fa-solid fa-wand-magic-sparkles text-emerald-200"></i>
+                        <span>🔍 Examiner et classer l'annonce</span>
                       </>
                     )}
                   </button>
                 </div>
-              )}
+
+              </div>
             </>
           )}
 
-          {/* Message si pas d'email détecté */}
+          {/* Message si pas d'email/contacts détectés */}
           {extractionMessage && (
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs font-bold flex items-center space-x-2">
               <span>⚠️</span>
@@ -490,8 +635,8 @@ function ExtracteurContent() {
             </div>
           )}
 
-          {/* Résultat Détecté : WhatsApp, Formulaire ou Email (mode photo) / Offre chargée (mode ?posterId=) */}
-          {(extractedWhatsApp || extractedFormUrl || extractedEmail || posterOffer) && (
+          {/* Résultat Détecté : WhatsApp, Formulaire ou Email / Offre chargée */}
+          {(extractedWhatsApp || extractedFormUrl || extractedEmail || posterOffer || extractedData) && (
             <div className="space-y-4 animate-fade-in">
               
               {/* 1. CANAL WHATSAPP */}
@@ -583,32 +728,71 @@ function ExtracteurContent() {
                 </div>
               )}
 
-              {/* Détails du Poste & Entreprise détectés */}
-              {extractedData && (extractedData.job_title || extractedData.company || extractedData.contract_type) && (
-                <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
-                  <span className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider block">
-                    Détails identifiés sur l'annonce
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold text-gray-900">
+              {/* Détails du Poste & Informations classées par l'Examinateur */}
+              {extractedData && (extractedData.job_title || extractedData.company || extractedData.contract_type || extractedData.location || extractedData.salary || extractedData.deadline || extractedData.skills || extractedData.summary) && (
+                <div className="p-5 bg-gray-50/90 border border-gray-200 rounded-2xl space-y-3 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <i className="fa-solid fa-clipboard-check text-emerald-600"></i>
+                      <span>Informations classées par l'Examinateur</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      Vérifié par IA
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-xs font-bold text-gray-900">
                     {extractedData.job_title && (
-                      <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
                         <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Poste</span>
-                        <span>{extractedData.job_title}</span>
+                        <span className="text-emerald-950 font-black text-xs">{extractedData.job_title}</span>
                       </div>
                     )}
                     {extractedData.company && (
-                      <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Entreprise / Projet</span>
-                        <span>{extractedData.company}</span>
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Entreprise / Recruteur</span>
+                        <span className="text-gray-800">{extractedData.company}</span>
+                      </div>
+                    )}
+                    {extractedData.location && (
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Lieu / Ville</span>
+                        <span className="text-gray-800">{extractedData.location}</span>
                       </div>
                     )}
                     {extractedData.contract_type && (
-                      <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Type d'opportunité</span>
-                        <span>{extractedData.contract_type}</span>
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Type de contrat</span>
+                        <span className="text-gray-800">{extractedData.contract_type}</span>
+                      </div>
+                    )}
+                    {extractedData.salary && (
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Rémunération / Salaire</span>
+                        <span className="text-emerald-700 font-black">{extractedData.salary}</span>
+                      </div>
+                    )}
+                    {extractedData.deadline && (
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Date limite</span>
+                        <span className="text-rose-600 font-black">{extractedData.deadline}</span>
                       </div>
                     )}
                   </div>
+
+                  {extractedData.skills && (
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs text-xs">
+                      <span className="text-[10px] text-gray-400 font-extrabold block uppercase mb-1">Qualifications / Compétences requises</span>
+                      <p className="text-gray-700 font-medium leading-relaxed">{extractedData.skills}</p>
+                    </div>
+                  )}
+
+                  {extractedData.summary && (
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs text-xs">
+                      <span className="text-[10px] text-gray-400 font-extrabold block uppercase mb-1">Résumé de l'annonce</span>
+                      <p className="text-gray-700 font-medium leading-relaxed">{extractedData.summary}</p>
+                    </div>
+                  )}
                 </div>
               )}
 

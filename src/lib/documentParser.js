@@ -179,6 +179,157 @@ Réponds STRICTEMENT en JSON valide sous la forme :
   };
 }
 
+/**
+ * Examinateur et analyseur d'annonces en texte brut (copié depuis WhatsApp, LinkedIn, e-mail, etc.) :
+ * extrait précisément toutes les informations et les place chacune à leur place (poste, entreprise,
+ * contacts WhatsApp/email/lien, contrat, lieu, salaire, qualifications, consignes).
+ */
+export async function extractJobAnnouncementFromTextWithGemini(rawText) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+
+  if (!apiKey || apiKey.includes("[") || apiKey.trim() === "") {
+    return {
+      errorKeyMissing: true,
+      error: "Clé API Gemini introuvable. Veuillez configurer GEMINI_API_KEY dans Vercel/env.",
+    };
+  }
+
+  if (!rawText || typeof rawText !== "string" || rawText.trim().length === 0) {
+    return {
+      error: "Veuillez coller le texte de l'annonce d'emploi à examiner.",
+    };
+  }
+
+  const prompt = `Tu es l'examinateur IA officiel de Facilité pour les annonces d'emploi et de recrutement.
+Voici le texte brut d'une offre d'emploi (souvent partagée par message WhatsApp, email ou réseau social) :
+"""
+${rawText.trim()}
+"""
+
+Examine minutieusement cette annonce et organise chaque information dans son champ correspondant :
+1. "job_title": Intitulé précis du poste recherché (ex: "Comptable Senior", "Développeur React", "Chauffeur", etc.)
+2. "company": Nom de l'entreprise, recruteur, agence ou organisation (ou null si non mentionné)
+3. "location": Ville, région ou pays (ex: "Dakar, Sénégal", "Thiès", "Télétravail", etc.)
+4. "contract_type": Type de contrat (CDI, CDD, Stage, Freelance, Intérim, etc.)
+5. "email": Adresse e-mail de candidature ou contact RH (ex: "rh@entreprise.com", ou null)
+6. "phone": Numéro de téléphone ou contact WhatsApp pour postuler (ex: "+221 77 123 45 67", ou null)
+7. "apply_url": Lien URL de candidature ou formulaire en ligne (Google Forms, Typeform, lien carrières, ou null)
+8. "salary": Salaire, indemnité ou fourchette salariale si mentionné (ou null)
+9. "deadline": Date limite de candidature si mentionnée (ex: "15 septembre 2026", ou null)
+10. "skills": Compétences clés, diplômes ou qualifications requises (court résumé des exigences)
+11. "instructions": Consignes précises pour postuler (ex: "Envoyer CV et LM par e-mail avec objet COMPTA-2026", "Écrire par WhatsApp", etc.)
+12. "summary": Résumé professionnel et clair de l'offre en 2 ou 3 phrases.
+13. "raw_text": Le texte brut original.
+
+Réponds STRICTEMENT en JSON valide :
+{
+  "job_title": "...",
+  "company": "...",
+  "location": "...",
+  "contract_type": "...",
+  "email": "...",
+  "phone": "...",
+  "apply_url": "...",
+  "salary": "...",
+  "deadline": "...",
+  "skills": "...",
+  "instructions": "...",
+  "summary": "...",
+  "raw_text": "..."
+}`;
+
+  let lastErrorDetail = null;
+
+  for (const model of CANDIDATE_MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.1,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        let errJson;
+        try {
+          errJson = await response.json();
+        } catch {
+          errJson = { raw: await response.text().catch(() => "Corps de réponse illisible.") };
+        }
+        console.error("[Gemini REST Text Exam Error]", response.status, errJson);
+        lastErrorDetail = {
+          model,
+          status: response.status,
+          message: errJson?.error?.message || JSON.stringify(errJson),
+        };
+        continue;
+      }
+
+      const resJson = await response.json();
+      const responseText = resJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      let cleanedJson = responseText.trim();
+      if (cleanedJson.includes("```")) {
+        cleanedJson = cleanedJson.replace(/```json/gi, "").replace(/```/g, "").trim();
+      }
+
+      let parsed = null;
+      try {
+        parsed = JSON.parse(cleanedJson);
+      } catch {
+        const emailMatch = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        const phoneMatch = rawText.match(/(?:\+?221|00221)?[\s.-]?(?:7[05678]|33)[\s.-]?[0-9]{2,3}[\s.-]?[0-9]{2}[\s.-]?[0-9]{2}/);
+        const urlMatch = rawText.match(/https?:\/\/[^\s"'<>]+|forms\.gle\/[^\s"'<>]+/i);
+
+        parsed = {
+          job_title: null,
+          company: null,
+          location: null,
+          contract_type: null,
+          email: emailMatch ? emailMatch[0].toLowerCase() : null,
+          phone: phoneMatch ? phoneMatch[0] : null,
+          apply_url: urlMatch ? urlMatch[0] : null,
+          salary: null,
+          deadline: null,
+          skills: null,
+          instructions: null,
+          summary: null,
+          raw_text: rawText,
+        };
+      }
+
+      if (parsed) return parsed;
+    } catch (err) {
+      console.error(`[Gemini REST] Erreur examen texte avec ${model}:`, err.message);
+      lastErrorDetail = { model, status: null, message: err.message };
+    }
+  }
+
+  const lastErrorText = lastErrorDetail
+    ? `${lastErrorDetail.message} (modèle : ${lastErrorDetail.model}${lastErrorDetail.status ? `, HTTP ${lastErrorDetail.status}` : ""})`
+    : null;
+
+  return {
+    error: lastErrorText
+      ? `Erreur API Gemini : ${lastErrorText}`
+      : "Impossible d'examiner le texte pour le moment. Réessayez dans un instant.",
+  };
+}
+
 export async function extractFullJobOfferFromPosterWithGemini(buffer, mimeType = "image/jpeg", accompanyingText = "") {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
 
