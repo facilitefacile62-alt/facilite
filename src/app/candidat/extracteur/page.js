@@ -46,7 +46,7 @@ function ExtracteurContent() {
   const [imagePreview, setImagePreview] = useState(null);
   const [openInputMode, setOpenInputMode] = useState(null); // null | "photo" | "examinateur"
   const [showDetailsDropdown, setShowDetailsDropdown] = useState(false);
-  const [activeChannel, setActiveChannel] = useState("whatsapp"); // "whatsapp" | "email" | "form"
+  const [activeChannel, setActiveChannel] = useState("email"); // "email" | "whatsapp" | "form"
   const [rawOfferText, setRawOfferText] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedEmail, setExtractedEmail] = useState(null);
@@ -245,10 +245,10 @@ function ExtracteurContent() {
           setExtractedFormUrl(data.apply_url || data.form_url);
         }
         setExtractedData(data);
-        if (data.whatsapp || data.phone) {
+        if (data.email) {
+          setActiveChannel("email"); // Toujours E-mail en 1ère position !
+        } else if (data.whatsapp || data.phone) {
           setActiveChannel("whatsapp");
-        } else if (data.email) {
-          setActiveChannel("email");
         } else if (data.apply_url || data.form_url) {
           setActiveChannel("form");
         }
@@ -315,10 +315,10 @@ function ExtracteurContent() {
           setExtractedFormUrl(data.apply_url || data.form_url);
         }
         setExtractedData(data);
-        if (data.whatsapp || data.phone) {
+        if (data.email) {
+          setActiveChannel("email"); // Toujours E-mail en 1ère position !
+        } else if (data.whatsapp || data.phone) {
           setActiveChannel("whatsapp");
-        } else if (data.email) {
-          setActiveChannel("email");
         } else if (data.apply_url || data.form_url) {
           setActiveChannel("form");
         }
@@ -806,27 +806,13 @@ function ExtracteurContent() {
                 </div>
               )}
 
-              {/* SÉLECTEUR DE CANAL SI LE RECRUTEUR PROPOSE PLUSIEURS OPTIONS (WHATSAPP, EMAIL, LIEN) */}
+              {/* SÉLECTEUR DE CANAL AVEC E-MAIL EN 1ÈRE POSITION */}
               {((extractedWhatsApp && extractedEmail) || extractedFormUrl) && (
                 <div className="space-y-1.5 pt-1">
                   <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider">
                     Choisissez votre canal pour postuler :
                   </label>
                   <div className="flex bg-gray-100 p-1 rounded-xl gap-1 border border-gray-200">
-                    {extractedWhatsApp && (
-                      <button
-                        type="button"
-                        onClick={() => setActiveChannel("whatsapp")}
-                        className={`flex-1 py-2 px-2.5 rounded-lg font-black text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                          activeChannel === "whatsapp"
-                            ? "bg-[#25D366] text-white shadow-xs"
-                            : "text-gray-600 hover:text-gray-900"
-                        }`}
-                      >
-                        <i className="fa-brands fa-whatsapp text-sm"></i>
-                        <span>Par WhatsApp</span>
-                      </button>
-                    )}
                     {extractedEmail && (
                       <button
                         type="button"
@@ -839,6 +825,20 @@ function ExtracteurContent() {
                       >
                         <i className="fa-solid fa-envelope text-xs"></i>
                         <span>Par E-mail</span>
+                      </button>
+                    )}
+                    {extractedWhatsApp && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveChannel("whatsapp")}
+                        className={`flex-1 py-2 px-2.5 rounded-lg font-black text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                          activeChannel === "whatsapp"
+                            ? "bg-[#25D366] text-white shadow-xs"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        <i className="fa-brands fa-whatsapp text-sm"></i>
+                        <span>Par WhatsApp</span>
                       </button>
                     )}
                     {extractedFormUrl && (
@@ -859,7 +859,169 @@ function ExtracteurContent() {
                 </div>
               )}
 
-              {/* 1. CANAL WHATSAPP */}
+              {/* 1. CANAL EMAIL : FORMULAIRE ÉPURÉ CONTENANT UNIQUEMENT L'ESSENTIEL */}
+              {sendSuccess ? (
+                <div className="p-5 bg-emerald-600 text-white rounded-2xl text-center space-y-1.5 shadow-md animate-bounce">
+                  <div className="text-2xl">🎉</div>
+                  <h3 className="text-sm font-black">Candidature transmise avec succès !</h3>
+                  <p className="text-xs text-emerald-100 font-medium">
+                    {posterOffer
+                      ? `Votre candidature a été envoyée pour le poste de ${posterOffer.title}.`
+                      : `Votre CV et votre demande ont été envoyés à ${extractedEmail}.`}
+                  </p>
+                </div>
+              ) : (extractedEmail || posterOffer) && (activeChannel === "email" || (!extractedWhatsApp && !extractedFormUrl) || posterOffer) ? (
+                <div ref={applicationFormRef} className="space-y-3 p-4 bg-gray-50/80 border border-gray-200 rounded-2xl animate-fade-in">
+                  
+                  {/* DESTINATAIRE / ADRESSE EMAIL */}
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">
+                      À qui envoyer (Adresse e-mail du recruteur)
+                    </label>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl">
+                      <span className="text-emerald-600 text-xs">✉️</span>
+                      <span className="font-mono text-xs font-black text-gray-900">{extractedEmail || posterOffer?.contact_email || "Recruteur"}</span>
+                    </div>
+                  </div>
+
+                  {/* OBJET DU MAIL */}
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">
+                      Objet de l'e-mail
+                    </label>
+                    <input
+                      type="text"
+                      value={applicationSubject}
+                      onChange={(e) => setApplicationSubject(e.target.value)}
+                      placeholder="Candidature au poste de..."
+                      disabled={isSending}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 transition"
+                    />
+                  </div>
+
+                  {/* MON CV & LETTRE (MENU DÉROULANT / FICHIER) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10px] font-black text-gray-600 uppercase tracking-wider">
+                        Mon CV & Lettre
+                      </label>
+                      {userResumes.length > 0 && (
+                        <div className="flex gap-2.5 text-[10px] font-bold text-gray-600">
+                          <label className="cursor-pointer flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="cvChoice"
+                              checked={cvChoice === "existing"}
+                              onChange={() => setCvChoice("existing")}
+                              className="accent-emerald-500"
+                              disabled={isSending}
+                            />
+                            <span>CV enregistré</span>
+                          </label>
+                          <label className="cursor-pointer flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name="cvChoice"
+                              checked={cvChoice === "new"}
+                              onChange={() => setCvChoice("new")}
+                              className="accent-emerald-500"
+                              disabled={isSending}
+                            />
+                            <span>Nouveau fichier</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    {cvChoice === "existing" && userResumes.length > 0 ? (
+                      <select
+                        value={selectedCvId}
+                        onChange={(e) => setSelectedCvId(e.target.value)}
+                        disabled={isSending}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-extrabold text-gray-800 focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+                      >
+                        {userResumes.map((cv) => (
+                          <option key={cv.id} value={cv.id}>
+                            📄 {cv.title} ({new Date(cv.created_at).toLocaleDateString("fr-FR")})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div
+                        onClick={() => cvFileInputRef.current?.click()}
+                        className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white rounded-xl p-2.5 text-center cursor-pointer transition"
+                      >
+                        <input
+                          type="file"
+                          ref={cvFileInputRef}
+                          accept=".pdf,.doc,.docx"
+                          onChange={handleCvFileSelect}
+                          className="hidden"
+                          disabled={isSending}
+                        />
+                        {newCvFile ? (
+                          <p className="text-xs font-extrabold text-emerald-800">📄 {newCvFile.name}</p>
+                        ) : (
+                          <p className="text-xs font-bold text-gray-700">Cliquez pour importer votre CV (PDF, DOCX)</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* MESSAGE D'ACCOMPAGNEMENT */}
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">
+                      Message d'accompagnement
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={applicationMessage}
+                      onChange={(e) => setApplicationMessage(e.target.value)}
+                      placeholder="Votre message au recruteur..."
+                      disabled={isSending}
+                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:border-emerald-500 transition leading-relaxed"
+                    />
+                  </div>
+
+                  {sendErrorMessage && (
+                    <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-center space-x-2">
+                      <span>⚠️</span>
+                      <span>{sendErrorMessage}</span>
+                    </div>
+                  )}
+
+                  {/* BOUTON POSTULER EN 1 CLIC */}
+                  <button
+                    type="button"
+                    onClick={handleSendOneClickApplication}
+                    disabled={isSending}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-60"
+                  >
+                    {isSending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Envoi direct en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🚀 Postuler en 1 clic</span>
+                        {extractedEmail && <span className="font-mono text-xs opacity-90">({extractedEmail})</span>}
+                      </>
+                    )}
+                  </button>
+
+                  {extractedEmail && (
+                    <a
+                      href={mailtoHref}
+                      className="block text-center text-[10px] font-bold text-gray-400 hover:text-emerald-700 transition underline"
+                    >
+                      Ou ouvrir dans votre application e-mail
+                    </a>
+                  )}
+                </div>
+              ) : null}
+
+              {/* 2. CANAL WHATSAPP */}
               {extractedWhatsApp && (activeChannel === "whatsapp" || (!extractedEmail && !extractedFormUrl)) && (
                 <div className="p-4 bg-emerald-50/80 border-2 border-[#25D366]/40 rounded-2xl space-y-3 animate-fade-in">
                   <div className="flex items-center justify-between">
@@ -899,7 +1061,7 @@ function ExtracteurContent() {
                 </div>
               )}
 
-              {/* 2. CANAL FORMULAIRE */}
+              {/* 3. CANAL FORMULAIRE */}
               {extractedFormUrl && (activeChannel === "form" || (!extractedWhatsApp && !extractedEmail)) && (
                 <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl space-y-3 animate-fade-in">
                   <div className="flex items-center space-x-2.5">
