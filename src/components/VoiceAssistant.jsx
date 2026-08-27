@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { sendMessage, resolveConversationWith, touchConversation } from '@/lib/messages';
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from '@/lib/featureFlags';
+import { triggerFeatureDisabledModal } from '@/components/FeatureDisabledModal';
 import LiveMapLocation from './LiveMapLocation';
 
 // Mots-clés oui/non — jamais confié au LLM : une confirmation d'envoi de
@@ -74,8 +75,43 @@ export default function VoiceAssistant() {
   const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
   const isAllowed = isFeatureAllowed(featureFlagsTree, "feat_voice_assistant", userRole);
 
-  if (isDashboard || !isAllowed) {
+  // isDashboard reste un MASQUAGE PUR : le widget n'a rien à faire sur le
+  // panneau d'administration, où il recouvrirait les réglages. Ce n'est pas
+  // une désactivation par l'admin, c'est une question de place.
+  if (isDashboard) {
     return null;
+  }
+
+  // Désactivation par l'admin (feat_voice_assistant) : point 4 du
+  // 2026-08-27. Avant, ce cas tombait dans le `return null` ci-dessus et le
+  // widget s'évaporait — seul endroit du produit où une fonctionnalité
+  // destinée à l'utilisateur disparaissait au lieu d'être grisée, alors que
+  // les 51 autres points de consommation des feature_flags (Header,
+  // HomeClient, ServiceClient) la laissent visible et grisée. L'orbe reste
+  // donc à sa place, grisé, et explique au clic pourquoi il ne répond pas —
+  // même dispositif que handleGuardedClick dans Header.jsx.
+  if (!isAllowed) {
+    return (
+      <div className="fixed bottom-32 right-4 sm:right-6 z-[999] flex flex-col items-end gap-3">
+        <button
+          type="button"
+          onClick={() =>
+            triggerFeatureDisabledModal(
+              "Assistant vocal temporairement indisponible",
+              "L'assistant vocal est temporairement désactivé le temps de finaliser les travaux et chantiers sur la plateforme. Merci pour votre patience !"
+            )
+          }
+          aria-label="Assistant vocal temporairement indisponible"
+          title="Assistant vocal temporairement indisponible"
+          className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center cursor-pointer bg-gray-300 opacity-60 grayscale"
+        >
+          <i className="fa-solid fa-microphone-slash text-2xl text-gray-600"></i>
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gray-500 text-white text-[10px] font-black flex items-center justify-center">
+            <i className="fa-solid fa-lock text-[9px]"></i>
+          </span>
+        </button>
+      </div>
+    );
   }
 
   const requireLogin = () => {
