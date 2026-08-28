@@ -1,22 +1,23 @@
--- Ménage des CV en double sur les comptes réels.
+-- Nettoyage des CV en double sur les comptes réels.
 --
 -- Cause racine corrigée par le commit 5804168 (creer-cv/page.js faisait un
 -- .insert() à chaque sauvegarde de brouillon au lieu de mettre à jour la
 -- ligne existante). Cette migration ne traite que les lignes déjà créées.
 --
--- Périmètre volontairement restreint aux deux comptes réels concernés :
---   facilitefacile@gmail.com   « Mon CV Facilité »        3 lignes -> 1
---   sokhnaawan408@gmail.com    « CV_2026-08-22_805.pdf »  2 lignes -> 1
+-- Trois lignes supprimées, sur deux comptes :
 --
--- Le compte de test e2e-test-candidate@facilite-demo.local porte 167 autres
--- doublons ; ils sont LAISSÉS EN PLACE. Deux raisons : une vingtaine de
--- suites Playwright s'appuient sur ce compte, et 32 commandes au statut
--- pending pointent sur ces lignes via orders.resume_id (ON DELETE SET NULL) —
--- les supprimer effacerait la trace du CV associé à ces commandes.
+--   facilitefacile@gmail.com  « Mon CV Facilité »  3 lignes -> 1
+--     conservée  c4a4d270-3e03-45e0-aa46-6b0a2462988e  (2092 o, 02:26)
+--     supprimée  aa127477-b0c3-4808-8672-52e8ace8126a  (2092 o, 02:24)
+--     supprimée  ce540991-3291-4a32-9c31-ad5474183b3c  (2092 o, 02:23)
+--
+--   sokhnaawan408@gmail.com  « CV_2026-08-22_805.pdf »  2 lignes -> 1
+--     conservée  f70cc448-f1fd-44c5-80c2-b00e7e846209  (2 o, 10:58)
+--     supprimée  c67066b6-d944-41de-a029-a9b3c19ac876  (2 o, 10:54)
 --
 -- La ligne conservée dans chaque groupe est la plus complète, et à contenu
--- égal la plus récente. Ici les contenus sont identiques en taille au sein
--- de chaque groupe, la plus récente l'emporte donc.
+-- égal la plus récente. Ici les contenus sont de taille identique au sein de
+-- chaque groupe, la plus récente l'emporte donc.
 
 BEGIN;
 
