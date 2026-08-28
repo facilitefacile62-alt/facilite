@@ -23,6 +23,10 @@ export default function SecuriteConnexionPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
 
+  const [livraisons, setLivraisons] = useState([]);
+  const [documentsRemplacables, setDocumentsRemplacables] = useState([]);
+  const [choixRemplacement, setChoixRemplacement] = useState({});
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -35,7 +39,7 @@ export default function SecuriteConnexionPage() {
         }
         setUserSession(session);
 
-        const [requestsRes, logsRes] = await Promise.all([
+        const [requestsRes, logsRes, livraisonsRes, docsRes] = await Promise.all([
           supabase
             .from("document_access_requests")
             .select("id, admin_id, reason, status, expires_at, created_at")
@@ -46,10 +50,27 @@ export default function SecuriteConnexionPage() {
             .select("id, admin_id, document_type, accessed_at")
             .eq("candidate_id", session.user.id)
             .order("accessed_at", { ascending: false }),
+          supabase
+            .from("document_deliveries")
+            .select("id, title, note, status, created_at, decided_at")
+            .eq("candidate_id", session.user.id)
+            .eq("status", "pending_replacement")
+            .order("created_at", { ascending: false }),
+          // Seuls les documents IMPORTÉS comptent dans le quota : proposer un
+          // CV de l'éditeur ne libèrerait aucune place, la fonction
+          // repondre_livraison le refuserait de toute façon.
+          supabase
+            .from("resumes")
+            .select("id, title, created_at")
+            .eq("user_id", session.user.id)
+            .not("file_url", "is", null)
+            .order("created_at", { ascending: false }),
         ]);
 
         setRequests(requestsRes.data || []);
         setLogs(logsRes.data || []);
+        setLivraisons(livraisonsRes.data || []);
+        setDocumentsRemplacables(docsRes.data || []);
       } catch (err) {
         console.error("Exception /candidat/securite:", err);
       } finally {
@@ -84,6 +105,32 @@ export default function SecuriteConnexionPage() {
 
     return () => supabase.removeChannel(channel);
   }, [userSession?.user?.id]);
+
+  const repondreLivraison = async (livraisonId, decision) => {
+    if (decision === "approved" && !choixRemplacement[livraisonId]) {
+      alert("Choisissez d'abord le document que ce nouveau fichier doit remplacer.");
+      return;
+    }
+    setBusyId(livraisonId);
+    const { error } = await supabase.rpc("repondre_livraison", {
+      p_delivery_id: livraisonId,
+      p_decision: decision,
+      p_resume_id: decision === "approved" ? choixRemplacement[livraisonId] : null,
+    });
+    setBusyId(null);
+
+    if (error) {
+      alert("Impossible d'enregistrer votre réponse : " + error.message);
+      return;
+    }
+    // La ligne disparaît de la liste des demandes en attente ; le document
+    // remplacé disparaît aussi des documents proposables.
+    setLivraisons((prev) => prev.filter((l) => l.id !== livraisonId));
+    if (decision === "approved") {
+      const remplace = choixRemplacement[livraisonId];
+      setDocumentsRemplacables((prev) => prev.filter((d) => d.id !== remplace));
+    }
+  };
 
   const handleRespond = async (requestId, decision) => {
     setBusyId(requestId);
@@ -168,6 +215,74 @@ export default function SecuriteConnexionPage() {
         <p className="text-sm text-gray-500 font-medium mb-8">
           Gérez les demandes d'accès à vos documents et consultez qui y a accédé.
         </p>
+
+        {livraisons.length > 0 && (
+          <div className="bg-white rounded-3xl border border-emerald-200 shadow-xs overflow-hidden mb-8">
+            <div className="p-6 border-b border-gray-100 bg-emerald-50/50">
+              <h2 className="text-lg font-extrabold text-gray-900">
+                Documents qui vous sont destinés ({livraisons.length})
+              </h2>
+              <p className="text-xs text-gray-500 font-medium">
+                Votre espace documentaire est plein. Choisissez le document à remplacer, ou refusez la livraison — rien
+                n&apos;est supprimé sans votre accord.
+              </p>
+            </div>
+
+            <ul className="divide-y divide-gray-100">
+              {livraisons.map((l) => (
+                <li key={l.id} className="p-6">
+                  <p className="text-sm font-extrabold text-gray-900">{l.title}</p>
+                  {l.note && <p className="text-xs text-gray-600 font-medium mt-1">{l.note}</p>}
+                  <p className="text-[11px] text-gray-400 font-medium mt-1">
+                    proposé le {String(l.created_at).slice(0, 10)}
+                  </p>
+
+                  <label
+                    htmlFor={`remplacement-${l.id}`}
+                    className="block text-[11px] uppercase tracking-wider font-bold text-gray-400 mt-4 mb-1.5"
+                  >
+                    Document à remplacer
+                  </label>
+                  <select
+                    id={`remplacement-${l.id}`}
+                    value={choixRemplacement[l.id] || ""}
+                    onChange={(e) => setChoixRemplacement((prev) => ({ ...prev, [l.id]: e.target.value }))}
+                    className="w-full sm:max-w-md text-xs font-medium border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#10E688] bg-white"
+                  >
+                    <option value="">— choisissez un document —</option>
+                    {documentsRemplacables.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.title} (ajouté le {String(d.created_at).slice(0, 10)})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-400 font-medium mt-1.5">
+                    Le document choisi sera définitivement supprimé et remplacé par celui qui vous est proposé.
+                  </p>
+
+                  <div className="flex flex-wrap gap-2.5 mt-4">
+                    <button
+                      type="button"
+                      onClick={() => repondreLivraison(l.id, "approved")}
+                      disabled={busyId === l.id}
+                      className="bg-[#047857] hover:bg-[#036448] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs px-4 py-2.5 rounded-xl"
+                    >
+                      {busyId === l.id ? "Enregistrement…" : "Remplacer et recevoir le document"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => repondreLivraison(l.id, "refused")}
+                      disabled={busyId === l.id}
+                      className="bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 font-extrabold text-xs px-4 py-2.5 rounded-xl"
+                    >
+                      Refuser
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {pendingRequests.length > 0 && (
           <div className="bg-white rounded-3xl border border-amber-200 shadow-xs overflow-hidden mb-8">

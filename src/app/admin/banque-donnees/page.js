@@ -31,6 +31,13 @@ const ONGLETS = [
 
 const PAR_PAGE = 25;
 
+const ETIQUETTES_LIVRAISON = {
+  delivered: { texte: "déposé", classe: "bg-emerald-50 text-[#047857] border-emerald-200" },
+  pending_replacement: { texte: "en attente du candidat", classe: "bg-amber-50 text-amber-800 border-amber-200" },
+  approved: { texte: "accepté", classe: "bg-emerald-50 text-[#047857] border-emerald-200" },
+  refused: { texte: "refusé", classe: "bg-red-50 text-red-700 border-red-200" },
+};
+
 /**
  * Complétude du profil, sur les champs qui servent réellement au matching
  * et à la lisibilité d'une candidature. Volontairement calculée côté
@@ -68,6 +75,12 @@ export default function BanqueDonneesPage() {
   const [motifDemande, setMotifDemande] = useState("");
   const [envoiDemande, setEnvoiDemande] = useState(false);
   const [message, setMessage] = useState(null);
+
+  const [livraisons, setLivraisons] = useState([]);
+  const [fichierLivraison, setFichierLivraison] = useState(null);
+  const [titreLivraison, setTitreLivraison] = useState("");
+  const [noteLivraison, setNoteLivraison] = useState("");
+  const [envoiLivraison, setEnvoiLivraison] = useState(false);
 
   // --- Contrôle du statut administrateur -----------------------------------
   // Même RPC que /admin (admin/page.js) : une seule définition du statut
@@ -167,7 +180,11 @@ export default function BanqueDonneesPage() {
     setCandidatOuvert(candidat);
     setDocumentsCandidat([]);
     setDemandesCandidat([]);
+    setLivraisons([]);
     setMotifDemande("");
+    setFichierLivraison(null);
+    setTitreLivraison("");
+    setNoteLivraison("");
 
     // Ce SELECT ne ramène que ce que la RLS autorise. Une liste vide veut
     // dire « aucun accès accordé », pas « aucun document » — les deux cas
@@ -192,6 +209,15 @@ export default function BanqueDonneesPage() {
         acces_actif: d.status === "approved" && new Date(d.expires_at).getTime() > maintenant,
       }))
     );
+
+    // Journal des livraisons : la policy ne laisse voir que celles faites par
+    // cet administrateur, ce qui suffit à son propre suivi.
+    const { data: livrs } = await supabase
+      .from("document_deliveries")
+      .select("id, title, status, note, created_at, decided_at")
+      .eq("candidate_id", candidat.id)
+      .order("created_at", { ascending: false });
+    setLivraisons(livrs || []);
   };
 
   const demanderAcces = async () => {
@@ -217,6 +243,63 @@ export default function BanqueDonneesPage() {
       setMessage({ type: "erreur", texte: `Envoi impossible : ${err.message}` });
     } finally {
       setEnvoiDemande(false);
+    }
+  };
+
+  // --- Livraison d'un document au candidat ---------------------------------
+  // Deux temps : le fichier part d'abord dans <candidat>/livraisons/ (policy
+  // Storage « Un admin depose un document livre »), puis la RPC
+  // livrer_document décide seule, selon le quota du candidat, entre un dépôt
+  // immédiat et une demande de remplacement. Le client ne tranche jamais :
+  // il ne fait qu'afficher ce que la base a décidé.
+  const livrerDocument = async () => {
+    const fichier = fichierLivraison;
+    const titre = titreLivraison.trim();
+    if (!fichier) {
+      setMessage({ type: "erreur", texte: "Choisissez le fichier à livrer." });
+      return;
+    }
+    if (titre.length < 3) {
+      setMessage({ type: "erreur", texte: "Donnez un titre au document — c'est ce que le candidat verra." });
+      return;
+    }
+
+    setEnvoiLivraison(true);
+    try {
+      const nomSur = fichier.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const chemin = `${candidatOuvert.id}/livraisons/${Date.now()}-${nomSur}`;
+
+      const { error: erreurDepot } = await supabase.storage
+        .from("resumes")
+        .upload(chemin, fichier, { upsert: false, contentType: fichier.type || undefined });
+      if (erreurDepot) throw erreurDepot;
+
+      const { data, error } = await supabase.rpc("livrer_document", {
+        p_candidate_id: candidatOuvert.id,
+        p_title: titre,
+        p_file_path: chemin,
+        p_file_name: fichier.name,
+        p_note: noteLivraison.trim() || null,
+      });
+      if (error) throw error;
+
+      setMessage(
+        data?.statut === "delivered"
+          ? { type: "succes", texte: "Document déposé. Il apparaît dès maintenant dans l'espace du candidat, qui a été notifié." }
+          : {
+              type: "succes",
+              texte:
+                "Espace documentaire du candidat plein. Une demande lui a été envoyée : c'est lui qui choisit quel document céder la place, ou qui refuse. Rien n'est déposé avant sa réponse.",
+            }
+      );
+      setFichierLivraison(null);
+      setTitreLivraison("");
+      setNoteLivraison("");
+      await ouvrirCandidat(candidatOuvert);
+    } catch (err) {
+      setMessage({ type: "erreur", texte: `Livraison impossible : ${err.message}` });
+    } finally {
+      setEnvoiLivraison(false);
     }
   };
 
@@ -361,6 +444,15 @@ export default function BanqueDonneesPage() {
             motif={motifDemande}
             setMotif={setMotifDemande}
             onDemander={demanderAcces}
+            livraisons={livraisons}
+            fichierLivraison={fichierLivraison}
+            setFichierLivraison={setFichierLivraison}
+            titreLivraison={titreLivraison}
+            setTitreLivraison={setTitreLivraison}
+            noteLivraison={noteLivraison}
+            setNoteLivraison={setNoteLivraison}
+            onLivrer={livrerDocument}
+            envoiLivraison={envoiLivraison}
             envoi={envoiDemande}
             onFermer={() => setCandidatOuvert(null)}
           />
@@ -523,7 +615,11 @@ function TableCommandes({ lignes }) {
   );
 }
 
-function FicheCandidat({ candidat, documents, demandes, motif, setMotif, onDemander, envoi, onFermer }) {
+function FicheCandidat({
+  candidat, documents, demandes, motif, setMotif, onDemander, envoi, onFermer,
+  livraisons, fichierLivraison, setFichierLivraison, titreLivraison, setTitreLivraison,
+  noteLivraison, setNoteLivraison, onLivrer, envoiLivraison,
+}) {
   const demandeEnCours = demandes.find((d) => d.status === "pending");
   const accesActif = demandes.find((d) => d.acces_actif === true);
 
@@ -611,6 +707,76 @@ function FicheCandidat({ candidat, documents, demandes, motif, setMotif, onDeman
           </button>
         </div>
       )}
+
+      {/* Livraison — indépendante du consentement de lecture : déposer un
+          document chez quelqu'un ne suppose pas d'avoir le droit de lire les
+          siens. Les deux blocs ne se conditionnent donc pas l'un l'autre. */}
+      <div className="border-t border-gray-100 mt-5 pt-4">
+        <h3 className="text-[11px] uppercase tracking-wider font-bold text-gray-400 mb-1">Livrer un document</h3>
+        <p className="text-[11px] text-gray-500 font-medium mb-3 leading-relaxed">
+          Le fichier est déposé dans l&apos;espace de ce candidat. S&apos;il a déjà 5 documents importés, il n&apos;est
+          rien déposé : une demande lui est envoyée pour qu&apos;il choisisse lui-même quel document céder la place.
+        </p>
+
+        <div className="flex flex-col gap-2.5">
+          <input
+            id="livraison-titre"
+            type="text"
+            value={titreLivraison}
+            onChange={(e) => setTitreLivraison(e.target.value)}
+            placeholder="Titre visible par le candidat — ex. « CV rédigé par Facilité »"
+            className="w-full text-xs font-medium border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#10E688]"
+          />
+          <input
+            id="livraison-fichier"
+            type="file"
+            accept=".pdf,.doc,.docx"
+            onChange={(e) => setFichierLivraison(e.target.files?.[0] || null)}
+            className="w-full text-xs font-medium text-gray-600 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-extrabold file:bg-[#ECFDF5] file:text-[#047857] hover:file:bg-emerald-100"
+          />
+          <textarea
+            id="livraison-note"
+            value={noteLivraison}
+            onChange={(e) => setNoteLivraison(e.target.value)}
+            rows={2}
+            placeholder="Note pour le candidat (facultatif)"
+            className="w-full text-xs font-medium border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#10E688] resize-y"
+          />
+          <button
+            type="button"
+            onClick={onLivrer}
+            disabled={envoiLivraison}
+            className="self-start bg-[#10E688] hover:bg-[#0ed37c] disabled:opacity-50 disabled:cursor-not-allowed text-gray-950 font-extrabold text-xs px-4 py-2.5 rounded-xl"
+          >
+            <i className="fa-solid fa-paper-plane mr-2"></i>
+            {envoiLivraison ? "Envoi…" : "Livrer le document"}
+          </button>
+        </div>
+
+        {livraisons.length > 0 && (
+          <>
+            <h3 className="text-[11px] uppercase tracking-wider font-bold text-gray-400 mt-5 mb-2">
+              Historique des livraisons
+            </h3>
+            <ul className="flex flex-col gap-2">
+              {livraisons.map((l) => (
+                <li key={l.id} className="flex items-center justify-between gap-3 border border-gray-100 rounded-xl px-3.5 py-2.5">
+                  <div>
+                    <p className="text-xs font-extrabold text-gray-900">{l.title}</p>
+                    <p className="text-[11px] text-gray-400 font-medium">
+                      livré le {String(l.created_at).slice(0, 10)}
+                      {l.decided_at ? ` · réponse le ${String(l.decided_at).slice(0, 10)}` : ""}
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${ETIQUETTES_LIVRAISON[l.status].classe}`}>
+                    {ETIQUETTES_LIVRAISON[l.status].texte}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </div>
   );
 }
