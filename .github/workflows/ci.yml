@@ -114,7 +114,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Les 7 invariants (tests/security/invariants.spec.js, voir
+      # INDISPENSABLE : les invariants n'interrogent pas la base en direct,
+      # ils passent par la CLI Supabase — tests/helpers/privilegedSql.js
+      # exécute `npx supabase db query`. La CLI n'est PAS une dépendance npm
+      # du projet (absente de package.json et de node_modules/.bin), donc
+      # sans cette étape `npx` tente un téléchargement à la volée qu'il ne
+      # peut pas confirmer sur un runner non interactif, et le job échoue
+      # avant d'avoir vérifié quoi que ce soit. C'est ce qui rendait la CI
+      # rouge sur chaque commit, et — par `needs: security-invariants` —
+      # empêchait « Lint & Build » de tourner une seule fois.
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
+        with:
+          version: latest
+
+      # Les 13 invariants (tests/security/invariants.spec.js, voir
       # docs/invariants-securite.md) n'utilisent jamais de page/navigateur —
       # ils interrogent la base réelle (CLI Supabase) et lisent le dépôt sur
       # disque. Chromium reste installé par prudence (comportement interne
@@ -138,7 +152,7 @@ jobs:
             exit 1
           fi
 
-      - name: Exécuter les 7 invariants de sécurité
+      - name: Exécuter les 13 invariants de sécurité
         run: npx playwright test tests/security/invariants.spec.js --project=chromium
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
