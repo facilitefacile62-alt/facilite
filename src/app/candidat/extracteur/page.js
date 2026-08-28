@@ -87,6 +87,8 @@ function ExtracteurContent() {
     setTimeout(() => setToast({ show: false, message: "" }), 3500);
   };
 
+  const STORAGE_KEY = "FACILITE_EXTRACTEUR_DRAFT_V2";
+
   const addExistingDocument = (resumeId) => {
     if (!resumeId) return;
     const resume = userResumes.find((r) => r.id === resumeId);
@@ -129,6 +131,44 @@ function ExtracteurContent() {
     setAttachedDocuments((prev) => prev.filter((d) => d.id !== docId));
   };
 
+  // Sauvegarde automatique du brouillon dans localStorage pour ne JAMAIS rien perdre à l'actualisation
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (extractedEmail || extractedWhatsApp || extractedFormUrl || applicationSubject || applicationMessage || rawOfferText) {
+      const existingDocIds = attachedDocuments
+        .filter((d) => d.type === "existing")
+        .map((d) => d.id);
+
+      const draft = {
+        extractedEmail,
+        extractedWhatsApp,
+        whatsappUrl,
+        extractedFormUrl,
+        extractedData,
+        applicationSubject,
+        applicationMessage,
+        rawOfferText,
+        activeChannel,
+        existingDocIds,
+        savedAt: Date.now(),
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+      } catch (e) {}
+    }
+  }, [
+    extractedEmail,
+    extractedWhatsApp,
+    whatsappUrl,
+    extractedFormUrl,
+    extractedData,
+    applicationSubject,
+    applicationMessage,
+    rawOfferText,
+    activeChannel,
+    attachedDocuments,
+  ]);
+
   useEffect(() => {
     async function checkAuth() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -144,7 +184,40 @@ function ExtracteurContent() {
       ]);
 
       setUserResumes(resumesList || []);
-      if (resumesList && resumesList.length > 0) {
+
+      // Restauration du brouillon sauvegardé s'il existe (pour persister à l'actualisation)
+      let restoredFromStorage = false;
+      try {
+        const savedDraft = localStorage.getItem(STORAGE_KEY);
+        if (savedDraft) {
+          const draft = JSON.parse(savedDraft);
+          if (draft && Date.now() - (draft.savedAt || 0) < 7 * 24 * 3600 * 1000) {
+            if (draft.extractedEmail) setExtractedEmail(draft.extractedEmail);
+            if (draft.extractedWhatsApp) setExtractedWhatsApp(draft.extractedWhatsApp);
+            if (draft.whatsappUrl) setWhatsappUrl(draft.whatsappUrl);
+            if (draft.extractedFormUrl) setExtractedFormUrl(draft.extractedFormUrl);
+            if (draft.extractedData) setExtractedData(draft.extractedData);
+            if (draft.applicationSubject) setApplicationSubject(draft.applicationSubject);
+            if (draft.applicationMessage) setApplicationMessage(draft.applicationMessage);
+            if (draft.rawOfferText) setRawOfferText(draft.rawOfferText);
+            if (draft.activeChannel) setActiveChannel(draft.activeChannel);
+
+            if (draft.existingDocIds && Array.isArray(draft.existingDocIds) && resumesList) {
+              const restoredDocs = resumesList
+                .filter((r) => draft.existingDocIds.includes(r.id))
+                .map((r) => ({ id: r.id, title: r.title || "CV.pdf", type: "existing" }));
+              if (restoredDocs.length > 0) {
+                setAttachedDocuments(restoredDocs);
+                restoredFromStorage = true;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Erreur lecture draft extracteur:", err);
+      }
+
+      if (!restoredFromStorage && resumesList && resumesList.length > 0) {
         // Sélectionne le CV principal par défaut
         setAttachedDocuments([
           {
@@ -961,11 +1034,11 @@ function ExtracteurContent() {
                   </div>
 
                   {/* LIGNE PIÈCES JOINTES AVEC GESTION MULTI-DOCUMENTS (CV + LETTRE DE MOTIVATION) */}
-                  <div className="px-3.5 py-2.5 sm:px-4 border-b border-gray-150 bg-[#F8FAFC] flex flex-col gap-2 text-xs">
+                  <div className="px-3.5 py-2.5 sm:px-4 border-b border-gray-150 bg-[#F8FAFC] flex flex-col gap-2.5 text-xs">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <i className="fa-solid fa-paperclip text-emerald-600 text-xs"></i>
-                        <span className="text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
+                        <span className="text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
                           Pièces jointes ({attachedDocuments.length}) :
                         </span>
                       </div>
@@ -1018,7 +1091,7 @@ function ExtracteurContent() {
                     </div>
 
                     {/* LISTE DES DOCUMENTS SÉLECTIONNÉS AVEC CROIX ✕ POUR CHAQUE DOCUMENT */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
                       {attachedDocuments.length > 0 ? (
                         attachedDocuments.map((doc) => (
                           <div
@@ -1050,6 +1123,29 @@ function ExtracteurContent() {
                         </p>
                       )}
                     </div>
+
+                    {/* SUGGESTIONS RAPIDES : PILULES EN 1 CLIC POUR AJOUTER LES AUTRES DOCUMENTS DU PROFIL */}
+                    {userResumes.length > 0 && userResumes.some((cv) => !attachedDocuments.some((d) => d.id === cv.id)) && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-gray-200/60">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                          Ajouter en 1 clic :
+                        </span>
+                        {userResumes
+                          .filter((cv) => !attachedDocuments.some((d) => d.id === cv.id))
+                          .map((cv) => (
+                            <button
+                              key={`quick-add-${cv.id}`}
+                              type="button"
+                              onClick={() => addExistingDocument(cv.id)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-lg text-[11px] font-extrabold transition cursor-pointer active:scale-95 shadow-2xs"
+                              title={`Cliquer pour ajouter ${cv.title}`}
+                            >
+                              <i className="fa-solid fa-plus text-[9px] text-emerald-600"></i>
+                              <span className="truncate max-w-[160px] sm:max-w-[220px]">{cv.title}</span>
+                            </button>
+                          ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* CORPS DU MESSAGE : STYLE ÉDITEUR ÉPURÉ */}
