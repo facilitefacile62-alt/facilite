@@ -958,7 +958,7 @@ function ExtracteurContent() {
                 </div>
               )}
 
-              {/* 1. CANAL EMAIL : FORMULAIRE ÉPURÉ CONTENANT UNIQUEMENT L'ESSENTIEL */}
+              {/* 1. CANAL EMAIL : INTERFACE DE COMPOSITION STYLE CLIENT MAIL / GMAIL */}
               {sendSuccess ? (
                 <div className="p-5 bg-emerald-600 text-white rounded-2xl text-center space-y-1.5 shadow-md animate-bounce">
                   <div className="text-2xl">🎉</div>
@@ -970,150 +970,178 @@ function ExtracteurContent() {
                   </p>
                 </div>
               ) : (extractedEmail || posterOffer) && (activeChannel === "email" || (!extractedWhatsApp && !extractedFormUrl) || posterOffer) ? (
-                <div ref={applicationFormRef} className="space-y-3 p-4 bg-gray-50/80 border border-gray-200 rounded-2xl animate-fade-in">
+                <div ref={applicationFormRef} className="bg-white border border-gray-200/90 rounded-2xl shadow-md overflow-hidden animate-fade-in flex flex-col">
                   
-                  {/* DESTINATAIRE / ADRESSE EMAIL */}
-                  <div>
-                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">
-                      À qui envoyer (Adresse e-mail du recruteur)
-                    </label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl">
-                      <span className="text-emerald-600 text-xs">✉️</span>
-                      <span className="font-mono text-xs font-black text-gray-900">{extractedEmail || posterOffer?.contact_email || "Recruteur"}</span>
+                  {/* BARRE SUPÉRIEURE : STYLE "NEW MESSAGE / NOUVEAU MESSAGE" */}
+                  <div className="bg-[#F2F6FC] px-3.5 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between border-b border-gray-200 text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-envelope text-emerald-600 text-xs"></i>
+                      <span className="text-xs font-bold text-gray-800 tracking-tight">Nouveau message</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-gray-400 text-xs">
+                      <span className="hover:text-gray-700 cursor-pointer select-none text-[11px] font-bold">_</span>
+                      <span className="hover:text-gray-700 cursor-pointer select-none text-[10px]">⤢</span>
+                      <span
+                        onClick={() => {
+                          setExtractedEmail(null);
+                          setExtractedData(null);
+                          setSelectedFile(null);
+                          setImagePreview(null);
+                          setOpenInputMode(null);
+                        }}
+                        className="hover:text-red-500 cursor-pointer select-none text-xs font-bold"
+                        title="Fermer"
+                      >
+                        ✕
+                      </span>
                     </div>
                   </div>
 
-                  {/* OBJET DU MAIL */}
-                  <div>
-                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">
-                      Objet de l'e-mail
-                    </label>
+                  {/* LIGNE DESTINATAIRE : "To | email@entreprise.com" + "Cc Bcc" */}
+                  <div className="px-3.5 py-2 sm:px-4 border-b border-gray-150 flex items-center justify-between gap-2 bg-white">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span className="text-xs font-semibold text-gray-500 w-7 flex-shrink-0">To</span>
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-950 border border-emerald-200 rounded-md font-mono text-xs font-bold truncate max-w-full">
+                        <i className="fa-solid fa-at text-[10px] text-emerald-600"></i>
+                        <span className="truncate">{extractedEmail || posterOffer?.contact_email || "recruteur@entreprise.com"}</span>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-medium text-gray-400 select-none flex-shrink-0">
+                      Cc Bcc
+                    </span>
+                  </div>
+
+                  {/* LIGNE OBJET : "Subject | Candidature au poste de..." */}
+                  <div className="px-3.5 py-2 sm:px-4 border-b border-gray-150 flex items-center gap-2.5 bg-white">
+                    <span className="text-xs font-semibold text-gray-500 w-7 flex-shrink-0">Objet</span>
                     <input
                       type="text"
                       value={applicationSubject}
                       onChange={(e) => setApplicationSubject(e.target.value)}
-                      placeholder="Candidature au poste de..."
+                      placeholder="Objet de votre e-mail de candidature..."
                       disabled={isSending}
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 transition"
+                      className="w-full bg-transparent text-xs sm:text-sm font-semibold text-gray-900 focus:outline-none placeholder-gray-400"
                     />
                   </div>
 
-                  {/* MON CV & LETTRE (MENU DÉROULANT / FICHIER) */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-[10px] font-black text-gray-600 uppercase tracking-wider">
-                        Mon CV & Lettre
-                      </label>
-                      {userResumes.length > 0 && (
-                        <div className="flex gap-2.5 text-[10px] font-bold text-gray-600">
-                          <label className="cursor-pointer flex items-center gap-1">
-                            <input
-                              type="radio"
-                              name="cvChoice"
-                              checked={cvChoice === "existing"}
-                              onChange={() => setCvChoice("existing")}
-                              className="accent-emerald-500"
-                              disabled={isSending}
-                            />
-                            <span>CV enregistré</span>
-                          </label>
-                          <label className="cursor-pointer flex items-center gap-1">
-                            <input
-                              type="radio"
-                              name="cvChoice"
-                              checked={cvChoice === "new"}
-                              onChange={() => setCvChoice("new")}
-                              className="accent-emerald-500"
-                              disabled={isSending}
-                            />
-                            <span>Nouveau fichier</span>
-                          </label>
-                        </div>
+                  {/* PIÈCE JOINTE CV (INTÉGRÉE DANS LE COMPOSITEUR MAIL) */}
+                  <div className="px-3.5 py-2 sm:px-4 border-b border-gray-150 bg-gray-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <i className="fa-solid fa-paperclip text-emerald-600 text-xs"></i>
+                      <span className="text-[11px] font-extrabold text-gray-600 uppercase tracking-wider">Pièce jointe :</span>
+                      {cvChoice === "existing" && userResumes.length > 0 ? (
+                        <span className="text-xs font-bold text-gray-900 truncate">
+                          📄 {userResumes.find(c => c.id === selectedCvId)?.title || "Mon CV"}
+                        </span>
+                      ) : newCvFile ? (
+                        <span className="text-xs font-bold text-emerald-800 truncate">
+                          📄 {newCvFile.name}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-amber-700">
+                          Aucun CV sélectionné
+                        </span>
                       )}
                     </div>
 
-                    {cvChoice === "existing" && userResumes.length > 0 ? (
-                      <select
-                        value={selectedCvId}
-                        onChange={(e) => setSelectedCvId(e.target.value)}
-                        disabled={isSending}
-                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-extrabold text-gray-800 focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                      >
-                        {userResumes.map((cv) => (
-                          <option key={cv.id} value={cv.id}>
-                            📄 {cv.title} ({new Date(cv.created_at).toLocaleDateString("fr-FR")})
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div
-                        onClick={() => cvFileInputRef.current?.click()}
-                        className="border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white rounded-xl p-2.5 text-center cursor-pointer transition"
-                      >
-                        <input
-                          type="file"
-                          ref={cvFileInputRef}
-                          accept=".pdf,.doc,.docx"
-                          onChange={handleCvFileSelect}
-                          className="hidden"
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {userResumes.length > 0 && (
+                        <select
+                          value={selectedCvId}
+                          onChange={(e) => {
+                            setSelectedCvId(e.target.value);
+                            setCvChoice("existing");
+                          }}
                           disabled={isSending}
-                        />
-                        {newCvFile ? (
-                          <p className="text-xs font-extrabold text-emerald-800">📄 {newCvFile.name}</p>
-                        ) : (
-                          <p className="text-xs font-bold text-gray-700">Cliquez pour importer votre CV (PDF, DOCX)</p>
-                        )}
-                      </div>
-                    )}
+                          className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 focus:outline-none cursor-pointer"
+                        >
+                          {userResumes.map((cv) => (
+                            <option key={cv.id} value={cv.id}>
+                              {cv.title}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => cvFileInputRef.current?.click()}
+                        className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-[11px] rounded-lg transition cursor-pointer flex items-center gap-1"
+                      >
+                        <i className="fa-solid fa-upload text-[10px]"></i>
+                        <span>{newCvFile ? "Changer" : "Autre CV"}</span>
+                      </button>
+                      <input
+                        type="file"
+                        ref={cvFileInputRef}
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleCvFileSelect}
+                        className="hidden"
+                        disabled={isSending}
+                      />
+                    </div>
                   </div>
 
-                  {/* MESSAGE D'ACCOMPAGNEMENT */}
-                  <div>
-                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">
-                      Message d'accompagnement
-                    </label>
+                  {/* CORPS DU MESSAGE : STYLE ÉDITEUR ÉPURÉ */}
+                  <div className="p-3.5 sm:p-4 bg-white flex-1 min-h-[140px]">
                     <textarea
-                      rows={3}
+                      rows={5}
                       value={applicationMessage}
                       onChange={(e) => setApplicationMessage(e.target.value)}
-                      placeholder="Votre message au recruteur..."
+                      placeholder="Madame, Monsieur, je vous soumets ma candidature pour ce poste..."
                       disabled={isSending}
-                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:border-emerald-500 transition leading-relaxed"
+                      className="w-full h-full min-h-[120px] bg-transparent text-xs sm:text-sm font-medium text-gray-800 focus:outline-none resize-none leading-relaxed placeholder-gray-400"
                     />
                   </div>
 
                   {sendErrorMessage && (
-                    <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-center space-x-2">
+                    <div className="mx-3.5 sm:mx-4 mb-2 p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-center space-x-2">
                       <span>⚠️</span>
                       <span>{sendErrorMessage}</span>
                     </div>
                   )}
 
-                  {/* BOUTON POSTULER EN 1 CLIC */}
-                  <button
-                    type="button"
-                    onClick={handleSendOneClickApplication}
-                    disabled={isSending}
-                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-60"
-                  >
-                    {isSending ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Envoi direct en cours...</span>
-                      </>
-                    ) : (
-                      <span>🚀 Postuler en 1 clic</span>
-                    )}
-                  </button>
+                  {/* BARRE D'ACTION INFÉRIEURE : BOUTON D'ENVOI & OPTIONS STYLE GMAIL */}
+                  <div className="px-3.5 py-2.5 sm:px-4 bg-[#F8FAFC] border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSendOneClickApplication}
+                        disabled={isSending}
+                        className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-60"
+                      >
+                        {isSending ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span>Envoi en cours...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Envoyer</span>
+                            <i className="fa-solid fa-paper-plane text-xs"></i>
+                          </>
+                        )}
+                      </button>
 
-                  {extractedEmail && (
-                    <a
-                      href={mailtoHref}
-                      className="block text-center text-[10px] font-bold text-gray-400 hover:text-emerald-700 transition underline"
-                    >
-                      Ou ouvrir dans votre application e-mail
-                    </a>
-                  )}
+                      <button
+                        type="button"
+                        onClick={() => cvFileInputRef.current?.click()}
+                        className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition cursor-pointer"
+                        title="Joindre un CV (PDF, DOCX)"
+                      >
+                        <i className="fa-solid fa-paperclip text-sm"></i>
+                      </button>
+                    </div>
+
+                    {extractedEmail && (
+                      <a
+                        href={mailtoHref}
+                        className="text-[11px] font-bold text-gray-500 hover:text-emerald-700 transition underline self-center sm:self-auto"
+                      >
+                        Ouvrir dans votre messagerie externe
+                      </a>
+                    )}
+                  </div>
                 </div>
               ) : null}
 
