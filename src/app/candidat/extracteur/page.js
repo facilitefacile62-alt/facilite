@@ -465,21 +465,61 @@ function ExtracteurContent() {
           </Link>
         </div>
 
-        {/* Banner Section */}
-        <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-2xl p-4 sm:p-5 text-white mb-4 shadow-lg relative overflow-hidden">
-          <div className="relative z-10 max-w-2xl">
-            <span className="text-[10px] font-extrabold text-emerald-300 uppercase tracking-widest block mb-1">
-              Assistant Candidature IA — Postulation Express
-            </span>
-            <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight mb-1.5">
-              Scanner d'Annonces & Candidature Directe
-            </h1>
-            <p className="text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed">
-              {posterId
-                ? "Préparez votre candidature pour cette offre et envoyez votre CV en un clic."
-                : "Importez une photo d'affiche ou collez le texte d'une offre. L'IA extrait les coordonnées certifiées, vous présente l'écran de revue avant validation et prépare votre envoi instantané."}
-            </p>
+        {/* Banner Section Compacte & Menu Déroulant Détails */}
+        <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-2xl p-3 sm:p-4 text-white mb-4 shadow-md relative overflow-hidden transition-all duration-300">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 flex-shrink-0">
+                <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
+              </div>
+              <div className="min-w-0">
+                <span className="text-[9px] font-black text-emerald-300 uppercase tracking-widest block leading-tight">
+                  Assistant Candidature IA — Postulation Express
+                </span>
+                <h1 className="text-sm sm:text-base font-black tracking-tight text-white truncate">
+                  Scanner d'Annonces & Candidature Directe
+                </h1>
+              </div>
+            </div>
+
+            {/* Bouton Menu Déroulant Détails */}
+            <button
+              type="button"
+              onClick={() => setShowDetailsDropdown(!showDetailsDropdown)}
+              className="inline-flex items-center justify-between sm:justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/25 border border-white/15 text-[11px] font-bold text-white transition cursor-pointer self-start sm:self-auto flex-shrink-0"
+              aria-expanded={showDetailsDropdown}
+            >
+              <i className="fa-solid fa-circle-info text-emerald-300 text-xs"></i>
+              <span>{showDetailsDropdown ? "Masquer les détails" : "Voir tous les détails"}</span>
+              <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-300 ${showDetailsDropdown ? "rotate-180" : ""}`}></i>
+            </button>
           </div>
+
+          {/* Contenu Déroulant (Tous les détails révélés au clic sur tous les appareils) */}
+          {showDetailsDropdown && (
+            <div className="mt-3 pt-3 border-t border-emerald-700/60 animate-fade-in text-xs space-y-2.5 text-emerald-100 font-medium">
+              <p className="leading-relaxed">
+                {posterId
+                  ? "Préparez votre candidature pour cette offre et envoyez votre CV directement aux recruteurs en un clic."
+                  : "Importez une photo d'affiche ou collez le texte d'une offre. L'IA extrait automatiquement les coordonnées certifiées (Email, WhatsApp, Lien externe), vous présente l'écran de revue avant validation et prépare votre candidature instantanément."}
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                <div className="p-2 bg-emerald-950/40 rounded-xl border border-emerald-700/40 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-black text-[10px]">1</span>
+                  <span>Photo ou texte brut</span>
+                </div>
+                <div className="p-2 bg-emerald-950/40 rounded-xl border border-emerald-700/40 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-black text-[10px]">2</span>
+                  <span>Extraction IA instantanée</span>
+                </div>
+                <div className="p-2 bg-emerald-950/40 rounded-xl border border-emerald-700/40 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-black text-[10px]">3</span>
+                  <span>Candidature directe en 1 clic</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Card Import & Extraction */}
