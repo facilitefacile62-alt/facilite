@@ -14,7 +14,6 @@ export default function FacturationPage() {
   const [userSession, setUserSession] = useState(null);
   const unreadMessagesCount = useUnreadMessagesBadge(userSession?.user?.id);
   const [orders, setOrders] = useState([]);
-  const [transactions, setTransactions] = useState([]);
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingPayment, setLoadingPayment] = useState(false);
@@ -33,14 +32,12 @@ export default function FacturationPage() {
 
         setUserSession(session);
 
-        const [ordersRes, transRes, subRes] = await Promise.all([
+        // La lecture de `transactions` a été retirée avec la recharge de
+        // crédits (2026-08-28) : plus rien ne l'affichait, c'était une
+        // requête pour rien à chaque ouverture de la page.
+        const [ordersRes, subRes] = await Promise.all([
           supabase
             .from("orders")
-            .select("*")
-            .eq("user_id", session.user.id)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("transactions")
             .select("*")
             .eq("user_id", session.user.id)
             .order("created_at", { ascending: false }),
@@ -53,10 +50,7 @@ export default function FacturationPage() {
 
         if (ordersRes.error) console.error("Erreur chargement des commandes:", ordersRes.error);
         else setOrders(ordersRes.data || []);
-        
-        if (transRes.error) console.error("Erreur chargement transactions:", transRes.error);
-        else setTransactions(transRes.data || []);
-        
+
         if (subRes.data) setSubscription(subRes.data);
       } catch (err) {
         console.error("Exception facturation dashboard:", err);
@@ -67,27 +61,6 @@ export default function FacturationPage() {
 
     loadOrders();
   }, []);
-
-  const handleBuyCredits = async () => {
-    setLoadingPayment(true);
-    try {
-      const res = await fetch("/api/pay/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userSession.access_token}`,
-        },
-        body: JSON.stringify({ description: "Abonnement Premium (1 crédit)" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur de paiement");
-      if (data.checkoutUrl) window.location.href = data.checkoutUrl;
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setLoadingPayment(false);
-    }
-  };
 
   const handleDownloadInvoice = async (order) => {
     if (!order.invoice_url) return;
@@ -222,18 +195,6 @@ export default function FacturationPage() {
               {subscription?.credits || 0} <span className="text-sm font-bold text-gray-500">crédits restants</span>
             </p>
           </div>
-          <button
-            onClick={handleBuyCredits}
-            disabled={loadingPayment}
-            className="px-6 py-3 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 text-sm font-extrabold rounded-2xl transition shadow-md disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-          >
-            {loadingPayment ? (
-              <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
-            ) : (
-              <i className="fa-solid fa-bolt"></i>
-            )}
-            <span>Recharger mon compte (5000 XOF)</span>
-          </button>
         </div>
 
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
@@ -318,70 +279,6 @@ export default function FacturationPage() {
           </div>
         </div>
 
-        {/* Recharges de crédits — jusqu'ici récupérées en state mais jamais
-            affichées : aucun moyen de consulter ni télécharger le reçu
-            d'une recharge de crédits IA sur la plateforme. */}
-        <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden mt-8">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-extrabold text-gray-900">Recharges de crédits ({transactions.length})</h2>
-            <p className="text-xs text-gray-500 font-medium">Historique de vos achats de crédits IA</p>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
-                  <th className="py-4 px-6">Date</th>
-                  <th className="py-4 px-6">Référence</th>
-                  <th className="py-4 px-6">Formule</th>
-                  <th className="py-4 px-6">Montant</th>
-                  <th className="py-4 px-6">Statut</th>
-                  <th className="py-4 px-6 text-right">Reçu</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-xs font-medium">
-                {transactions.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="py-12 text-center text-gray-400 italic">
-                      Vous n'avez encore effectué aucune recharge de crédits.
-                    </td>
-                  </tr>
-                ) : (
-                  transactions.map((transaction) => (
-                    <tr key={transaction.id} className="hover:bg-emerald-50/20 transition">
-                      <td className="py-4 px-6 text-gray-600">
-                        {new Date(transaction.created_at).toLocaleDateString("fr-FR")}
-                      </td>
-                      <td className="py-4 px-6 text-gray-500 font-mono text-[11px]">
-                        {transaction.provider_reference || "—"}
-                      </td>
-                      <td className="py-4 px-6 font-bold text-gray-900">
-                        {transaction.metadata?.plan_name || "Recharge de crédits"}
-                      </td>
-                      <td className="py-4 px-6 font-bold text-gray-900">
-                        {Number(transaction.amount).toLocaleString("fr-FR")} {transaction.currency}
-                      </td>
-                      <td className="py-4 px-6">{getStatusBadge(transaction.status)}</td>
-                      <td className="py-4 px-6 text-right">
-                        {transaction.invoice_url ? (
-                          <button
-                            onClick={() => handleDownloadInvoice(transaction)}
-                            disabled={downloadingOrderId === transaction.id}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer whitespace-nowrap"
-                          >
-                            {downloadingOrderId === transaction.id ? "..." : "Reçu PDF"}
-                          </button>
-                        ) : (
-                          <span className="text-gray-300 text-[11px]">Reçu indisponible</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </main>
     </div>
   );

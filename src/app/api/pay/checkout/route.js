@@ -172,89 +172,28 @@ export async function POST(req) {
       });
     }
 
-    // --- Flux 2 : recharge de crédits générique (table "transactions") ---
-    const parseResult = creditTopupSchema.safeParse(body);
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: "Données de paiement invalides.", details: parseResult.error.format() },
-        { status: 400 }
-      );
-    }
-    const { description } = parseResult.data;
-    const amount = CREDIT_TOPUP_PRICE_XOF;
-    const planName = CREDIT_TOPUP_PLAN_NAME;
-    const currency = "XOF";
-
-    const { data: transaction, error: transactionError } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: user.id,
-        amount,
-        currency,
-        provider: processor,
-        status: "pending",
-        metadata: { plan_name: planName || "credit_topup", description: description || "Recharge" },
-      })
-      .select()
-      .single();
-
-    if (transactionError || !transaction) {
-      console.error("[Checkout] Échec création transaction :", transactionError?.message);
-      captureCriticalPaymentError("[Checkout] Échec création transaction", { message: transactionError?.message });
-      return NextResponse.json({ error: "Impossible de créer la transaction." }, { status: 500 });
-    }
-
-    const creditTopupDescription = description || `Paiement Facilite - ${amount} XOF`;
-    const creditTopupMetadata = { transaction_id: transaction.id, user_id: user.id, plan_name: planName || "credit_topup" };
-
-    let payment;
-    if (processor === "paydunya") {
-      try {
-        const invoice = await createPayDunyaInvoiceCheckout({
-          amount,
-          externalId: transaction.id,
-          returnUrl: `${appUrl}/candidat/facturation`,
-          cancelUrl: `${appUrl}/candidat/facturation`,
-          callbackUrl: `${appUrl}/api/pay/paydunya-webhook`,
-          description: creditTopupDescription,
-          metadata: creditTopupMetadata,
-        });
-        payment = { id: invoice.token, gatewayUrl: invoice.checkoutUrl };
-      } catch (paydunyaError) {
-        console.error("[Checkout] Échec initialisation PayDunya :", paydunyaError.message);
-        captureCriticalPaymentError("[Checkout] Échec initialisation PayDunya (recharge crédits)", { transactionId: transaction.id, message: paydunyaError.message });
-        return NextResponse.json({ error: paydunyaError.message }, { status: 502 });
-      }
-    } else {
-      try {
-        const kpayPayment = await initKpayGatewayPayment({
-          amount,
-          currency,
-          externalId: transaction.id,
-          returnUrl: `${appUrl}/candidat/facturation`,
-          cancelUrl: `${appUrl}/candidat/facturation`,
-          description: creditTopupDescription,
-          metadata: creditTopupMetadata,
-        });
-        payment = { id: kpayPayment.id, gatewayUrl: kpayPayment.gatewayUrl };
-      } catch (kpayError) {
-        console.error("[Checkout] Échec initialisation KPay :", kpayError.message);
-        captureCriticalPaymentError("[Checkout] Échec initialisation KPay (recharge crédits)", { transactionId: transaction.id, message: kpayError.message });
-        return NextResponse.json({ error: kpayError.message }, { status: 502 });
-      }
-    }
-
-    // transactions n'accorde aucune écriture UPDATE à authenticated
-    // (service_role uniquement, voir 20260821120000_transactions_service_role_only_writes.sql)
-    // — contrairement à orders.payment_reference ci-dessus, qui a sa
-    // propre policy candidat dédiée.
-    await getSupabaseAdmin().from("transactions").update({ provider_reference: payment.id }).eq("id", transaction.id);
-
-    return NextResponse.json({
-      checkoutUrl: payment.gatewayUrl,
-      reference: payment.id,
-      transactionId: transaction.id,
-    });
+    // La recharge de crédits (flux 2) a été retirée le 2026-08-28.
+    //
+    // Motif : c'est du CONTENU NUMÉRIQUE consommé dans l'application, ce
+    // qui impose Google Play Billing dès lors qu'elle est proposée depuis
+    // l'app Android — motif de rejet direct du Play Store. Les commandes
+    // de CV (flux 1 ci-dessus) ne sont pas concernées : ce sont des
+    // prestations réalisées par une personne (hasAgentOption), couvertes
+    // par l'exemption « biens et services physiques ».
+    //
+    // Relevé en production avant retrait : 35 transactions, TOUTES
+    // `pending`, dont 31 issues de comptes de démonstration ; 0 aboutie ;
+    // 0 ligne dans subscriptions, 0 crédit jamais attribué. La
+    // fonctionnalité n'a donc jamais rien encaissé ni crédité.
+    //
+    // Les données existantes sont conservées telles quelles (trace des
+    // essais), et le webhook KPay garde son code d'attribution de crédits
+    // — inerte tant qu'aucune transaction de ce type n'est créée, et prêt
+    // à resservir si la recharge revient un jour via Play Billing.
+    return NextResponse.json(
+      { error: "La recharge de crédits n'est plus proposée." },
+      { status: 400 }
+    );
   } catch (error) {
     console.error("[Checkout API Error]", error);
     captureCriticalPaymentError("[Checkout API Error] Exception non gérée", { message: error?.message });
