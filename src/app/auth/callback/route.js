@@ -48,9 +48,50 @@ export async function GET(req) {
     },
   });
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  // INCIDENT DE PRODUCTION 2026-08-28 : 504 FUNCTION_INVOCATION_TIMEOUT sur
+  // cette route précise (GET /auth/callback?code=…&next=%2F, requêtes
+  // lhr1::zdfdx-1787908620542 puis lhr1::5j6fm-1787910021929). L'échange
+  // PKCE était le SEUL await de la fonction et n'était borné par rien :
+  // quand Supabase ne répondait pas, la fonction Edge allait jusqu'à sa
+  // limite et Vercel renvoyait une page blanche 504 — un cul-de-sac, sans
+  // même un lien pour réessayer.
+  //
+  // Toutes les autres portes d'entrée de l'application bornent déjà leurs
+  // appels réseau (withTimeout(…, 1500) dans src/proxy.js) ; celle-ci était
+  // la seule à ne pas le faire, sur le chemin le plus critique qui soit.
+  //
+  // 8 s : très au-delà d'un échange normal (mesuré à 0,3-0,4 s en
+  // production), assez court pour rendre la main avant la limite de la
+  // fonction. Au-delà, on redirige vers /login avec un code d'erreur
+  // explicite plutôt que de laisser mourir la requête.
+  const DELAI_MAX_ECHANGE_MS = 8000;
+  const debut = Date.now();
+
+  let error = null;
+  try {
+    const echange = supabase.auth.exchangeCodeForSession(code);
+    const resultat = await Promise.race([
+      echange,
+      new Promise((resolve) => setTimeout(() => resolve({ __timeout: true }), DELAI_MAX_ECHANGE_MS)),
+    ]);
+
+    if (resultat?.__timeout) {
+      console.error(
+        `[Auth Callback] Échange PKCE non abouti après ${DELAI_MAX_ECHANGE_MS}ms — redirection au lieu d'un 504.`
+      );
+      return NextResponse.redirect(`${origin}/login?oauth_error=timeout`);
+    }
+    error = resultat?.error || null;
+  } catch (err) {
+    console.error("[Auth Callback] Exception pendant l'échange OAuth :", err?.message);
+    return NextResponse.redirect(`${origin}/login?oauth_error=1`);
+  }
+
   if (error) {
-    console.error("[Auth Callback] Échec de l'échange du code OAuth :", error.message);
+    console.error(
+      `[Auth Callback] Échec de l'échange du code OAuth (${Date.now() - debut}ms) :`,
+      error.message
+    );
     return NextResponse.redirect(`${origin}/login?oauth_error=1`);
   }
 

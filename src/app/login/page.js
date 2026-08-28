@@ -54,6 +54,18 @@ export default function LoginPage() {
     if (params.get("suspended") === "true") {
       setShowSuspendedNotice(true);
     }
+    // /auth/callback redirige ici avec un motif quand l'échange OAuth
+    // échoue. Sans ce message, l'utilisateur retombait sur le formulaire
+    // sans la moindre explication et pouvait croire à un mot de passe
+    // refusé — alors que sa connexion Google n'a simplement pas abouti.
+    const motifOauth = params.get("oauth_error");
+    if (motifOauth === "timeout") {
+      setErrorMessage(
+        "La connexion Google n'a pas abouti à temps. Réessayez — si cela se reproduit, connectez-vous avec votre e-mail et votre mot de passe."
+      );
+    } else if (motifOauth) {
+      setErrorMessage("La connexion Google a échoué. Réessayez ou utilisez votre e-mail et votre mot de passe.");
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
