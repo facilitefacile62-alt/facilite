@@ -77,16 +77,31 @@ function ExtracteurContent() {
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [sendErrorMessage, setSendErrorMessage] = useState(null);
+  const [additionalFiles, setAdditionalFiles] = useState([]);
   const [toast, setToast] = useState({ show: false, message: "" });
 
   const fileInputRef = useRef(null);
   const textInputRef = useRef(null);
   const cvFileInputRef = useRef(null);
+  const additionalFileInputRef = useRef(null);
   const applicationFormRef = useRef(null);
 
   const triggerToast = (message) => {
     setToast({ show: true, message });
     setTimeout(() => setToast({ show: false, message: "" }), 3500);
+  };
+
+  const handleAdditionalFilesSelect = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      setAdditionalFiles((prev) => [...prev, ...filesArray]);
+      triggerToast(`${filesArray.length} document(s) supplémentaire(s) ajouté(s)`);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const removeAdditionalFile = (indexToRemove) => {
+    setAdditionalFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   useEffect(() => {
@@ -410,6 +425,11 @@ function ExtracteurContent() {
           formData.append("existingCvId", selectedCvId);
         } else {
           formData.append("cvFile", newCvFile);
+        }
+        if (additionalFiles && additionalFiles.length > 0) {
+          additionalFiles.forEach((file) => {
+            formData.append("additionalFiles", file);
+          });
         }
 
         res = await fetch("/api/send-application", {
@@ -1024,62 +1044,109 @@ function ExtracteurContent() {
                     />
                   </div>
 
-                  {/* PIÈCE JOINTE CV (INTÉGRÉE DANS LE COMPOSITEUR MAIL) */}
-                  <div className="px-3.5 py-2 sm:px-4 border-b border-gray-150 bg-gray-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <i className="fa-solid fa-paperclip text-emerald-600 text-xs"></i>
-                      <span className="text-[11px] font-extrabold text-gray-600 uppercase tracking-wider">Pièce jointe :</span>
-                      {cvChoice === "existing" && userResumes.length > 0 ? (
-                        <span className="text-xs font-bold text-gray-900 truncate">
-                          📄 {userResumes.find(c => c.id === selectedCvId)?.title || "Mon CV"}
-                        </span>
-                      ) : newCvFile ? (
-                        <span className="text-xs font-bold text-emerald-800 truncate">
-                          📄 {newCvFile.name}
-                        </span>
-                      ) : (
-                        <span className="text-xs font-bold text-amber-700">
-                          Aucun CV sélectionné
-                        </span>
-                      )}
-                    </div>
+                  {/* PIÈCE JOINTE CV & DOCUMENTS SUPPLÉMENTAIRES (INTÉGRÉE DANS LE COMPOSITEUR MAIL) */}
+                  <div className="px-3.5 py-2.5 sm:px-4 border-b border-gray-150 bg-gray-50/70 flex flex-col gap-2 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <i className="fa-solid fa-paperclip text-emerald-600 text-xs"></i>
+                        <span className="text-[11px] font-extrabold text-gray-600 uppercase tracking-wider">Pièce jointe :</span>
+                        {cvChoice === "existing" && userResumes.length > 0 ? (
+                          <span className="text-xs font-bold text-gray-900 truncate">
+                            📄 {userResumes.find(c => c.id === selectedCvId)?.title || "Mon CV"}
+                          </span>
+                        ) : newCvFile ? (
+                          <span className="text-xs font-bold text-emerald-800 truncate">
+                            📄 {newCvFile.name}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold text-amber-700">
+                            Aucun CV sélectionné
+                          </span>
+                        )}
+                      </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {userResumes.length > 0 && (
-                        <select
-                          value={selectedCvId}
-                          onChange={(e) => {
-                            setSelectedCvId(e.target.value);
-                            setCvChoice("existing");
-                          }}
-                          disabled={isSending}
-                          className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 focus:outline-none cursor-pointer"
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {userResumes.length > 0 && (
+                          <select
+                            value={selectedCvId}
+                            onChange={(e) => {
+                              setSelectedCvId(e.target.value);
+                              setCvChoice("existing");
+                            }}
+                            disabled={isSending}
+                            className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 focus:outline-none cursor-pointer"
+                          >
+                            {userResumes.map((cv) => (
+                              <option key={cv.id} value={cv.id}>
+                                {cv.title}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => cvFileInputRef.current?.click()}
+                          className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-[11px] rounded-lg transition cursor-pointer flex items-center gap-1"
+                          title="Changer le CV principal"
                         >
-                          {userResumes.map((cv) => (
-                            <option key={cv.id} value={cv.id}>
-                              {cv.title}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                          <i className="fa-solid fa-upload text-[10px]"></i>
+                          <span>{newCvFile ? "Changer" : "Autre CV"}</span>
+                        </button>
+                        <input
+                          type="file"
+                          ref={cvFileInputRef}
+                          accept=".pdf,.doc,.docx"
+                          onChange={handleCvFileSelect}
+                          className="hidden"
+                          disabled={isSending}
+                        />
 
-                      <button
-                        type="button"
-                        onClick={() => cvFileInputRef.current?.click()}
-                        className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-[11px] rounded-lg transition cursor-pointer flex items-center gap-1"
-                      >
-                        <i className="fa-solid fa-upload text-[10px]"></i>
-                        <span>{newCvFile ? "Changer" : "Autre CV"}</span>
-                      </button>
-                      <input
-                        type="file"
-                        ref={cvFileInputRef}
-                        accept=".pdf,.doc,.docx"
-                        onChange={handleCvFileSelect}
-                        className="hidden"
-                        disabled={isSending}
-                      />
+                        {/* PETIT BOUTON "+" POUR AJOUTER UN DOCUMENT EN PLUS (LETTRE, DIPLÔME, ETC.) */}
+                        <button
+                          type="button"
+                          onClick={() => additionalFileInputRef.current?.click()}
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] rounded-lg transition cursor-pointer flex items-center gap-1 shadow-2xs hover:shadow-xs active:scale-95"
+                          title="Ajouter un document en plus (Lettre de motivation, second CV, certificat...)"
+                        >
+                          <i className="fa-solid fa-plus text-[10px]"></i>
+                          <span>Ajouter doc</span>
+                        </button>
+                        <input
+                          type="file"
+                          ref={additionalFileInputRef}
+                          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                          multiple
+                          onChange={handleAdditionalFilesSelect}
+                          className="hidden"
+                          disabled={isSending}
+                        />
+                      </div>
                     </div>
+
+                    {/* LISTE DES DOCUMENTS SUPPLÉMENTAIRES AJOUTÉS */}
+                    {additionalFiles.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-gray-200/60">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Docs en plus :</span>
+                        {additionalFiles.map((file, idx) => (
+                          <div
+                            key={`add-file-${idx}`}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white border border-emerald-300 text-emerald-950 rounded-md text-[11px] font-bold shadow-2xs animate-fade-in"
+                          >
+                            <i className="fa-solid fa-file-lines text-emerald-600 text-[10px]"></i>
+                            <span className="truncate max-w-[130px] sm:max-w-[200px]">{file.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeAdditionalFile(idx)}
+                              className="text-gray-400 hover:text-red-600 p-0.5 rounded cursor-pointer transition"
+                              title="Retirer ce document"
+                            >
+                              <i className="fa-solid fa-xmark text-[10px]"></i>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* CORPS DU MESSAGE : STYLE ÉDITEUR ÉPURÉ */}

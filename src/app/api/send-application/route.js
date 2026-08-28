@@ -183,7 +183,23 @@ export async function POST(req) {
     const sender = process.env.RESEND_FROM_CANDIDATE || (isProd ? "Facilite <noreply@ffacilite.com>" : "Facilite <onboarding@resend.dev>");
     const isResendOnboarding = sender.includes("onboarding@resend.dev");
     const testRecipient = isResendOnboarding ? (process.env.RESEND_TEST_RECIPIENT || process.env.RESEND_VERIFIED_EMAIL || null) : null;
-    const finalRecipient = testRecipient || recipientEmail;
+    // Pièces jointes : CV principal + Documents supplémentaires éventuels (lettres, diplômes)
+    const attachmentsList = [{ filename: cvFileName, content: fileBuffer }];
+    const additionalFiles = formData.getAll("additionalFiles");
+    if (additionalFiles && additionalFiles.length > 0) {
+      for (const extraFile of additionalFiles) {
+        if (extraFile && typeof extraFile !== "string") {
+          const extraBuffer = Buffer.from(await extraFile.arrayBuffer());
+          const check = validateUploadedFile(extraBuffer, extraFile.type, extraFile.size);
+          if (check.valid) {
+            attachmentsList.push({
+              filename: extraFile.name || "document.pdf",
+              content: extraBuffer,
+            });
+          }
+        }
+      }
+    }
 
     const { error: resendError } = await resend.emails.send({
       from: sender,
@@ -191,7 +207,7 @@ export async function POST(req) {
       replyTo: candidateEmail,
       subject: finalSubject,
       html: htmlContent,
-      attachments: [{ filename: cvFileName, content: fileBuffer }],
+      attachments: attachmentsList,
     });
 
     if (resendError) {
