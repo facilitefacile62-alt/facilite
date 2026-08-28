@@ -1,6 +1,7 @@
 import searchOffersByDomain from "./searchOffersByDomain";
 import editCreatedCv from "./editCreatedCv";
 import compressImportedCv from "./compressImportedCv";
+import queryDataBank from "./queryDataBank";
 
 /**
  * Registre d'outils de l'assistant IA — chaque outil est un module qui
@@ -12,7 +13,7 @@ import compressImportedCv from "./compressImportedCv";
  * ni /api/ai-chat, ni le dispatcher, ni le prompt (les déclarations sont
  * envoyées dynamiquement au modèle).
  */
-export const AI_TOOLS = [searchOffersByDomain, editCreatedCv, compressImportedCv];
+export const AI_TOOLS = [searchOffersByDomain, editCreatedCv, compressImportedCv, queryDataBank];
 
 const TOOLS_BY_NAME = new Map(AI_TOOLS.map((t) => [t.name, t]));
 
