@@ -77,10 +77,26 @@ export function AuthProvider({ children }) {
           getSignedCoverUrl(profileData.cover_url),
         ]);
 
+        const validAvatarUrl =
+          avatarUrl ||
+          (profileData.avatar_url?.startsWith("http") ||
+          profileData.avatar_url?.startsWith("data:") ||
+          profileData.avatar_url?.startsWith("/")
+            ? profileData.avatar_url
+            : "/logo.jpeg");
+
+        const validCoverUrl =
+          coverUrl ||
+          (profileData.cover_url?.startsWith("http") ||
+          profileData.cover_url?.startsWith("data:") ||
+          profileData.cover_url?.startsWith("/")
+            ? profileData.cover_url
+            : null);
+
         const fullProfile = {
           ...profileData,
-          avatar_url: avatarUrl || profileData.avatar_url || "/logo.jpeg",
-          cover_url: coverUrl || profileData.cover_url || null,
+          avatar_url: validAvatarUrl,
+          cover_url: validCoverUrl,
         };
         setProfile(fullProfile);
         try {

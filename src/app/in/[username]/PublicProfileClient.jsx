@@ -71,8 +71,20 @@ export default function PublicProfilePage() {
           ]);
           setProfile({
             ...data,
-            avatar_url: resolvedAvatarUrl || data.avatar_url,
-            cover_url: resolvedCoverUrl || data.cover_url,
+            avatar_url:
+              resolvedAvatarUrl ||
+              (data.avatar_url?.startsWith("http") ||
+              data.avatar_url?.startsWith("data:") ||
+              data.avatar_url?.startsWith("/")
+                ? data.avatar_url
+                : "/logo.jpeg"),
+            cover_url:
+              resolvedCoverUrl ||
+              (data.cover_url?.startsWith("http") ||
+              data.cover_url?.startsWith("data:") ||
+              data.cover_url?.startsWith("/")
+                ? data.cover_url
+                : null),
           });
         }
       } catch (err) {
