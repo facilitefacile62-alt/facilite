@@ -1232,36 +1232,7 @@ export default function Header() {
                     </div>
                   </Link>
 
-                  {/* 3. Extraire CV */}
-                  <Link
-                    href="/candidat/extracteur"
-                    onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_plus_extracteur", "Extracteur")}
-                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                      !checkFeatureAllowed("nav_plus_extracteur")
-                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                        : pathname === "/candidat/extracteur"
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                      <i className="fa-solid fa-bolt text-sm"></i>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-extrabold flex items-center gap-1.5 justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span>Extraire CV</span>
-                          <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[8px] font-black rounded-md animate-pulse">1-Click</span>
-                        </div>
-                        {!checkFeatureAllowed("nav_plus_extracteur") && (
-                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-gray-500 font-normal">Extraction IA & Candidature auto</div>
-                    </div>
-                  </Link>
-
-                  {/* 4. Boîte à idées */}
+                  {/* 3. Boîte à idées */}
                   <Link
                     href="/boite-a-idees"
                     onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
