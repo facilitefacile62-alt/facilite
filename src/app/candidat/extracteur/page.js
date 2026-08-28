@@ -80,6 +80,7 @@ function ExtracteurContent() {
   const [toast, setToast] = useState({ show: false, message: "" });
 
   const fileInputRef = useRef(null);
+  const textInputRef = useRef(null);
   const cvFileInputRef = useRef(null);
   const applicationFormRef = useRef(null);
 
@@ -692,13 +693,17 @@ function ExtracteurContent() {
                 </div>
               )}
 
-              {/* 3. MODE EXAMINATEUR DE TEXTE DÉDIÉ (SEUL SUR SA PAGE) */}
+              {/* 3. MODE EXAMINATEUR DE TEXTE DÉDIÉ (SEUL SUR SA PAGE - TAILLE COMPACTE & DÉROULEMENT AUTOMATIQUE) */}
               {openInputMode === "examinateur" && (
-                <div className="p-4 sm:p-5 bg-gradient-to-b from-white to-emerald-50/30 border-2 border-emerald-500 rounded-2xl space-y-3.5 animate-fade-in shadow-xs">
+                <div className="p-3.5 sm:p-4 bg-gradient-to-b from-white to-emerald-50/30 border-2 border-emerald-500 rounded-2xl space-y-2.5 animate-fade-in shadow-xs">
                   <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                     <button
                       type="button"
-                      onClick={() => setOpenInputMode(null)}
+                      onClick={() => {
+                        setOpenInputMode(null);
+                        setRawOfferText("");
+                        if (textInputRef.current) textInputRef.current.style.height = "auto";
+                      }}
                       className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs rounded-lg transition cursor-pointer flex items-center gap-1.5"
                     >
                       <i className="fa-solid fa-arrow-left text-[10px]"></i>
@@ -708,7 +713,10 @@ function ExtracteurContent() {
                       {rawOfferText && (
                         <button
                           type="button"
-                          onClick={() => setRawOfferText("")}
+                          onClick={() => {
+                            setRawOfferText("");
+                            if (textInputRef.current) textInputRef.current.style.height = "auto";
+                          }}
                           className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
                         >
                           Effacer
@@ -721,17 +729,24 @@ function ExtracteurContent() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-600 font-medium">
+                  <p className="text-[11px] sm:text-xs text-gray-600 font-medium leading-snug">
                     Collez le texte brut de l'offre (reçu sur WhatsApp, SMS ou e-mail) :
                   </p>
 
                   <textarea
-                    rows={5}
+                    ref={textInputRef}
+                    rows={2}
                     value={rawOfferText}
-                    onChange={(e) => setRawOfferText(e.target.value)}
-                    placeholder={`Exemple :\n"Urgent ! Entreprise à Dakar recrute un Comptable (CDI). Expérience 2 ans. Envoyez votre CV à rh@entreprise.sn ou par WhatsApp au 77 123 45 67 avant le 15 octobre."`}
+                    onChange={(e) => {
+                      setRawOfferText(e.target.value);
+                      if (textInputRef.current) {
+                        textInputRef.current.style.height = "auto";
+                        textInputRef.current.style.height = `${Math.max(52, textInputRef.current.scrollHeight)}px`;
+                      }
+                    }}
+                    placeholder={`Collez votre annonce ici (ex: Recrutement Comptable CDI à Dakar, contact@entreprise.sn / 77 123 45 67...)`}
                     disabled={isExtracting}
-                    className="w-full p-3 bg-white border border-emerald-200 focus:border-emerald-500 rounded-xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none transition leading-relaxed shadow-inner"
+                    className="w-full min-h-[52px] max-h-[360px] p-2.5 sm:p-3 bg-white border border-emerald-200 focus:border-emerald-500 rounded-xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none transition leading-relaxed shadow-inner resize-none overflow-y-auto"
                     autoFocus
                   />
 
@@ -739,7 +754,7 @@ function ExtracteurContent() {
                     type="button"
                     onClick={handleExtractText}
                     disabled={isExtracting || !rawOfferText.trim()}
-                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50"
+                    className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50"
                   >
                     {isExtracting ? (
                       <>
@@ -749,7 +764,7 @@ function ExtracteurContent() {
                     ) : (
                       <>
                         <i className="fa-solid fa-wand-magic-sparkles text-emerald-200 text-xs"></i>
-                        <span>🔍 Examiner et classer l'annonce</span>
+                        <span>Examiner et classer l'annonce</span>
                       </>
                     )}
                   </button>
