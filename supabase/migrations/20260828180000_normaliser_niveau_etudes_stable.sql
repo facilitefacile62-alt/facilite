@@ -1,0 +1,22 @@
+-- normaliser_niveau_etudes : IMMUTABLE -> STABLE.
+--
+-- La migration 20260824101000 l'a déclarée IMMUTABLE avec ce raisonnement :
+-- « dépend uniquement de son argument et du contenu figé de niveaux_etudes ».
+-- Le raisonnement est faux. Une fonction qui LIT une table ne peut jamais
+-- être IMMUTABLE, même si la table ne change qu'au rythme des migrations :
+-- IMMUTABLE autorise PostgreSQL à évaluer l'appel une seule fois et à
+-- réutiliser le résultat indéfiniment, y compris dans un plan mis en cache
+-- ou une entrée d'index qui survivrait à une modification du référentiel.
+-- STABLE dit exactement ce qui est vrai : résultat constant à l'intérieur
+-- d'une même instruction, pas au-delà.
+--
+-- Détecté par `supabase db lint --level warning`, qui fait échouer le job
+-- « Supabase DB Lint » de la CI depuis le 2026-08-24 :
+--   routine is marked as IMMUTABLE, but expression is STABLE
+--
+-- Aucun index, aucune colonne générée ni contrainte ne s'appuie sur cette
+-- fonction (vérifié en production le 2026-08-28) : abaisser la volatilité
+-- ne casse donc aucune dépendance. ALTER plutôt que CREATE OR REPLACE pour
+-- ne pas réécrire un corps de 120 lignes dont rien d'autre ne change.
+
+ALTER FUNCTION public.normaliser_niveau_etudes(TEXT) STABLE;
