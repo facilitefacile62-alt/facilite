@@ -68,21 +68,17 @@ function ExtracteurContent() {
 
   // --- Formulaire de préparation de candidature (étape 2) ---
   const [userResumes, setUserResumes] = useState([]);
-  const [cvChoice, setCvChoice] = useState("new"); // "existing" | "new"
-  const [selectedCvId, setSelectedCvId] = useState("");
-  const [newCvFile, setNewCvFile] = useState(null);
+  const [attachedDocuments, setAttachedDocuments] = useState([]); // [{ id, title, size, file, type: "existing" | "new" }]
   const [applicationSubject, setApplicationSubject] = useState("");
   const [applicationMessage, setApplicationMessage] = useState("");
 
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [sendErrorMessage, setSendErrorMessage] = useState(null);
-  const [additionalFiles, setAdditionalFiles] = useState([]);
   const [toast, setToast] = useState({ show: false, message: "" });
 
   const fileInputRef = useRef(null);
   const textInputRef = useRef(null);
-  const cvFileInputRef = useRef(null);
   const additionalFileInputRef = useRef(null);
   const applicationFormRef = useRef(null);
 
@@ -91,17 +87,46 @@ function ExtracteurContent() {
     setTimeout(() => setToast({ show: false, message: "" }), 3500);
   };
 
-  const handleAdditionalFilesSelect = (e) => {
+  const addExistingDocument = (resumeId) => {
+    if (!resumeId) return;
+    const resume = userResumes.find((r) => r.id === resumeId);
+    if (!resume) return;
+
+    if (attachedDocuments.some((d) => d.id === resumeId)) {
+      triggerToast("Ce document est déjà joint à votre message.");
+      return;
+    }
+
+    setAttachedDocuments((prev) => [
+      ...prev,
+      {
+        id: resume.id,
+        title: resume.title || "CV.pdf",
+        type: "existing",
+      },
+    ]);
+    triggerToast(`Document ajouté : ${resume.title}`);
+  };
+
+  const handleUploadFiles = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
-      setAdditionalFiles((prev) => [...prev, ...filesArray]);
-      triggerToast(`${filesArray.length} document(s) supplémentaire(s) ajouté(s)`);
+      const newItems = filesArray.map((file) => ({
+        id: `upload-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        title: file.name,
+        size: file.size,
+        file: file,
+        type: "new",
+      }));
+
+      setAttachedDocuments((prev) => [...prev, ...newItems]);
+      triggerToast(`${newItems.length} document(s) importé(s)`);
       if (e.target) e.target.value = "";
     }
   };
 
-  const removeAdditionalFile = (indexToRemove) => {
-    setAdditionalFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  const removeDocument = (docId) => {
+    setAttachedDocuments((prev) => prev.filter((d) => d.id !== docId));
   };
 
   useEffect(() => {
@@ -120,8 +145,14 @@ function ExtracteurContent() {
 
       setUserResumes(resumesList || []);
       if (resumesList && resumesList.length > 0) {
-        setSelectedCvId(resumesList[0].id);
-        setCvChoice("existing");
+        // Sélectionne le CV principal par défaut
+        setAttachedDocuments([
+          {
+            id: resumesList[0].id,
+            title: resumesList[0].title || "Mon CV",
+            type: "existing",
+          },
+        ]);
       }
 
       setCandidateIdentity({
@@ -368,17 +399,24 @@ function ExtracteurContent() {
     setExtractionMessage(null);
     setSendSuccess(false);
     setOpenInputMode(null);
+    if (userResumes && userResumes.length > 0) {
+      setAttachedDocuments([
+        {
+          id: userResumes[0].id,
+          title: userResumes[0].title || "Mon CV",
+          type: "existing",
+        },
+      ]);
+    } else {
+      setAttachedDocuments([]);
+    }
   };
 
   const handleSendOneClickApplication = async () => {
     if ((!extractedEmail && !posterOffer) || !userSession?.user?.id) return;
 
-    if (cvChoice === "existing" && !selectedCvId) {
-      setSendErrorMessage("Sélectionnez un CV existant ou importez-en un nouveau.");
-      return;
-    }
-    if (cvChoice === "new" && !newCvFile) {
-      setSendErrorMessage("Importez un fichier de CV avant d'envoyer votre candidature.");
+    if (attachedDocuments.length === 0) {
+      setSendErrorMessage("Veuillez joindre au moins un document (CV ou lettre) avant d'envoyer.");
       return;
     }
 
@@ -388,10 +426,6 @@ function ExtracteurContent() {
       let res;
 
       if (posterOffer) {
-        // Mode "offre existante" : /api/postuler crée une vraie candidature
-        // (table candidatures) et la conversation associée avec le
-        // recruteur — /api/send-application (simple e-mail Resend) n'aurait
-        // laissé aucune trace exploitable côté recruteur sur la plateforme.
         if (!candidateIdentity.fullName.trim() || !candidateIdentity.email.trim()) {
           setSendErrorMessage("Complétez votre nom et votre e-mail dans votre profil avant de postuler.");
           setIsSending(false);
@@ -405,10 +439,13 @@ function ExtracteurContent() {
         formData.append("fullName", candidateIdentity.fullName);
         formData.append("email", candidateIdentity.email);
         formData.append("coverLetter", applicationMessage);
-        if (cvChoice === "existing") {
-          formData.append("existingCvId", selectedCvId);
-        } else {
-          formData.append("cvFile", newCvFile);
+
+        const firstExisting = attachedDocuments.find((d) => d.type === "existing");
+        const firstNew = attachedDocuments.find((d) => d.type === "new");
+        if (firstExisting) {
+          formData.append("existingCvId", firstExisting.id);
+        } else if (firstNew && firstNew.file) {
+          formData.append("cvFile", firstNew.file);
         }
 
         res = await fetch("/api/postuler", {
@@ -421,16 +458,14 @@ function ExtracteurContent() {
         formData.append("recipientEmail", extractedEmail);
         formData.append("subject", applicationSubject);
         formData.append("message", applicationMessage);
-        if (cvChoice === "existing") {
-          formData.append("existingCvId", selectedCvId);
-        } else {
-          formData.append("cvFile", newCvFile);
-        }
-        if (additionalFiles && additionalFiles.length > 0) {
-          additionalFiles.forEach((file) => {
-            formData.append("additionalFiles", file);
-          });
-        }
+
+        attachedDocuments.forEach((doc) => {
+          if (doc.type === "existing") {
+            formData.append("existingCvIds", doc.id);
+          } else if (doc.type === "new" && doc.file) {
+            formData.append("newFiles", doc.file);
+          }
+        });
 
         res = await fetch("/api/send-application", {
           method: "POST",
@@ -925,109 +960,96 @@ function ExtracteurContent() {
                     />
                   </div>
 
-                  {/* PIÈCE JOINTE CV & DOCUMENTS SUPPLÉMENTAIRES (INTÉGRÉE DANS LE COMPOSITEUR MAIL) */}
-                  <div className="px-3.5 py-2.5 sm:px-4 border-b border-gray-150 bg-gray-50/70 flex flex-col gap-2 text-xs">
+                  {/* LIGNE PIÈCES JOINTES AVEC GESTION MULTI-DOCUMENTS (CV + LETTRE DE MOTIVATION) */}
+                  <div className="px-3.5 py-2.5 sm:px-4 border-b border-gray-150 bg-[#F8FAFC] flex flex-col gap-2 text-xs">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2">
                         <i className="fa-solid fa-paperclip text-emerald-600 text-xs"></i>
-                        <span className="text-[11px] font-extrabold text-gray-600 uppercase tracking-wider">Pièce jointe :</span>
-                        {cvChoice === "existing" && userResumes.length > 0 ? (
-                          <span className="text-xs font-bold text-gray-900 truncate">
-                            📄 {userResumes.find(c => c.id === selectedCvId)?.title || "Mon CV"}
-                          </span>
-                        ) : newCvFile ? (
-                          <span className="text-xs font-bold text-emerald-800 truncate">
-                            📄 {newCvFile.name}
-                          </span>
-                        ) : (
-                          <span className="text-xs font-bold text-amber-700">
-                            Aucun CV sélectionné
-                          </span>
-                        )}
+                        <span className="text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
+                          Pièces jointes ({attachedDocuments.length}) :
+                        </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* MENU DÉROULANT POUR AJOUTER UN DOCUMENT ENREGISTRÉ (CV, LETTRE...) */}
                         {userResumes.length > 0 && (
                           <select
-                            value={selectedCvId}
+                            value=""
                             onChange={(e) => {
-                              setSelectedCvId(e.target.value);
-                              setCvChoice("existing");
+                              if (e.target.value) {
+                                addExistingDocument(e.target.value);
+                              }
                             }}
                             disabled={isSending}
-                            className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 focus:outline-none cursor-pointer"
+                            className="px-2.5 py-1.5 bg-white hover:bg-emerald-50/50 border border-emerald-300 rounded-xl text-xs font-black text-emerald-950 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition cursor-pointer shadow-2xs"
                           >
-                            {userResumes.map((cv) => (
-                              <option key={cv.id} value={cv.id}>
-                                {cv.title}
-                              </option>
-                            ))}
+                            <option value="">+ Ajouter un document (CV, Lettre...)</option>
+                            {userResumes.map((cv) => {
+                              const isAlreadyAttached = attachedDocuments.some((d) => d.id === cv.id);
+                              return (
+                                <option key={cv.id} value={cv.id} disabled={isAlreadyAttached}>
+                                  {isAlreadyAttached ? `✓ ${cv.title} (déjà joint)` : `📄 ${cv.title}`}
+                                </option>
+                              );
+                            })}
                           </select>
                         )}
 
-                        <button
-                          type="button"
-                          onClick={() => cvFileInputRef.current?.click()}
-                          className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold text-[11px] rounded-lg transition cursor-pointer flex items-center gap-1"
-                          title="Changer le CV principal"
-                        >
-                          <i className="fa-solid fa-upload text-[10px]"></i>
-                          <span>{newCvFile ? "Changer" : "Autre CV"}</span>
-                        </button>
-                        <input
-                          type="file"
-                          ref={cvFileInputRef}
-                          accept=".pdf,.doc,.docx"
-                          onChange={handleCvFileSelect}
-                          className="hidden"
-                          disabled={isSending}
-                        />
-
-                        {/* PETIT BOUTON "+" POUR AJOUTER UN DOCUMENT EN PLUS (LETTRE, DIPLÔME, ETC.) */}
+                        {/* BOUTON D'IMPORT DIRECT DEPUIS L'APPAREIL */}
                         <button
                           type="button"
                           onClick={() => additionalFileInputRef.current?.click()}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] rounded-lg transition cursor-pointer flex items-center gap-1 shadow-2xs hover:shadow-xs active:scale-95"
-                          title="Ajouter un document en plus (Lettre de motivation, second CV, certificat...)"
+                          className="px-2.5 py-1.5 bg-white hover:bg-gray-100 border border-gray-300 text-gray-800 font-extrabold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95"
+                          title="Importer un fichier depuis cet appareil (PDF, DOCX)"
                         >
-                          <i className="fa-solid fa-plus text-[10px]"></i>
-                          <span>Ajouter doc</span>
+                          <i className="fa-solid fa-upload text-[11px] text-emerald-600"></i>
+                          <span>Importer fichier</span>
                         </button>
                         <input
                           type="file"
                           ref={additionalFileInputRef}
                           accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
                           multiple
-                          onChange={handleAdditionalFilesSelect}
+                          onChange={handleUploadFiles}
                           className="hidden"
                           disabled={isSending}
                         />
                       </div>
                     </div>
 
-                    {/* LISTE DES DOCUMENTS SUPPLÉMENTAIRES AJOUTÉS */}
-                    {additionalFiles.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-gray-200/60">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Docs en plus :</span>
-                        {additionalFiles.map((file, idx) => (
+                    {/* LISTE DES DOCUMENTS SÉLECTIONNÉS AVEC CROIX ✕ POUR CHAQUE DOCUMENT */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {attachedDocuments.length > 0 ? (
+                        attachedDocuments.map((doc) => (
                           <div
-                            key={`add-file-${idx}`}
-                            className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white border border-emerald-300 text-emerald-950 rounded-md text-[11px] font-bold shadow-2xs animate-fade-in"
+                            key={doc.id}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-emerald-300 text-gray-900 rounded-xl text-xs font-extrabold shadow-2xs hover:border-emerald-400 transition animate-fade-in group"
                           >
-                            <i className="fa-solid fa-file-lines text-emerald-600 text-[10px]"></i>
-                            <span className="truncate max-w-[130px] sm:max-w-[200px]">{file.name}</span>
+                            <i className="fa-solid fa-file-pdf text-emerald-600 text-xs"></i>
+                            <span className="text-blue-600 hover:underline max-w-[180px] sm:max-w-[260px] truncate">
+                              {doc.title}
+                            </span>
+                            {doc.size && (
+                              <span className="text-[10px] text-gray-500 font-semibold">
+                                ({Math.round(doc.size / 1024)} Ko)
+                              </span>
+                            )}
                             <button
                               type="button"
-                              onClick={() => removeAdditionalFile(idx)}
-                              className="text-gray-400 hover:text-red-600 p-0.5 rounded cursor-pointer transition"
+                              onClick={() => removeDocument(doc.id)}
+                              className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded-md cursor-pointer transition ml-0.5"
                               title="Retirer ce document"
                             >
-                              <i className="fa-solid fa-xmark text-[10px]"></i>
+                              <i className="fa-solid fa-xmark text-xs font-black"></i>
                             </button>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        ))
+                      ) : (
+                        <p className="text-[11px] text-amber-700 font-bold italic py-1">
+                          ⚠️ Aucun document joint. Utilisez le menu ci-dessus pour ajouter votre CV et votre lettre.
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* CORPS DU MESSAGE : STYLE ÉDITEUR ÉPURÉ */}
@@ -1073,9 +1095,9 @@ function ExtracteurContent() {
 
                       <button
                         type="button"
-                        onClick={() => cvFileInputRef.current?.click()}
+                        onClick={() => additionalFileInputRef.current?.click()}
                         className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition cursor-pointer"
-                        title="Joindre un CV (PDF, DOCX)"
+                        title="Joindre un document (PDF, DOCX)"
                       >
                         <i className="fa-solid fa-paperclip text-sm"></i>
                       </button>

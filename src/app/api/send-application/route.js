@@ -57,148 +57,99 @@ export async function POST(req) {
     const candidateName = profile.full_name || "Un candidat Facilite";
     const candidateEmail = profile.email || user.email;
 
-    // --- Résolution du CV à joindre : nouveau fichier > CV existant choisi
-    // > CV principal du profil (comportement historique, conservé en repli). ---
-    let fileBuffer = null;
-    let cvFileName = "CV.pdf";
+    // --- Résolution des documents à joindre (CV, Lettre de motivation, Diplômes) ---
+    const attachmentsList = [];
 
-    if (cvFile && typeof cvFile !== "string") {
-      const buffer = Buffer.from(await cvFile.arrayBuffer());
-      const check = validateUploadedFile(buffer, cvFile.type, cvFile.size);
-      if (!check.valid) {
-        return NextResponse.json({ error: check.error }, { status: check.status });
-      }
+    // 1. Documents existants sélectionnés dans le compte du candidat
+    const existingCvIds = [
+      ...formData.getAll("existingCvIds"),
+      ...(formData.get("existingCvId") ? [formData.get("existingCvId")] : []),
+    ].filter(Boolean);
 
-      const storagePath = `${user.id}/cvs/${Date.now()}_${cvFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("resumes")
-        .upload(storagePath, buffer, { contentType: cvFile.type, duplex: "half" });
+    if (existingCvIds.length > 0) {
+      // Dédupliquer les IDs
+      const uniqueIds = [...new Set(existingCvIds)];
+      for (const docId of uniqueIds) {
+        const { data: resumeRecord, error: resumeErr } = await supabase
+          .from("resumes")
+          .select("file_url, title")
+          .eq("id", docId)
+          .eq("user_id", user.id)
+          .single();
 
-      if (uploadError) {
-        console.error("Erreur upload CV send-application:", uploadError.message);
-        return NextResponse.json({ error: "Échec de l'importation du CV." }, { status: 500 });
-      }
+        if (resumeRecord && !resumeErr) {
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from("resumes")
+            .download(resumeRecord.file_url);
 
-      // Le nouveau CV rejoint la bibliothèque du candidat, comme sur
-      // /api/postuler : disponible pour ses prochaines candidatures 1-clic.
-      const { data: insertedResume, error: resumeInsertErr } = await supabase
-        .from("resumes")
-        .insert({
-          user_id: user.id,
-          title: cvFile.name,
-          type: "imported",
-          file_url: storagePath,
-          ats_score: 95,
-        })
-        .select("id")
-        .single();
-      if (resumeInsertErr) {
-        console.error("Erreur enregistrement resume send-application:", resumeInsertErr.message);
-      } else {
-        // Attendu, best-effort au sens erreur uniquement — voir la même
-        // remarque dans /api/postuler.
-        try {
-          await extractAndEmbedResume({
-            supabase,
-            resumeId: insertedResume.id,
-            buffer,
-            filename: cvFile.name,
-            mimeType: cvFile.type,
-            token,
-          });
-        } catch (err) {
-          console.error("Erreur extraction/embedding CV (send-application):", err?.message);
-        }
-      }
-
-      fileBuffer = buffer;
-      cvFileName = cvFile.name;
-    } else if (existingCvId) {
-      const { data: resumeRecord, error: resumeErr } = await supabase
-        .from("resumes")
-        .select("file_url, title")
-        .eq("id", existingCvId)
-        .eq("user_id", user.id)
-        .single();
-
-      if (resumeErr || !resumeRecord) {
-        return NextResponse.json({ error: "Le CV sélectionné est introuvable." }, { status: 404 });
-      }
-
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from("resumes")
-        .download(resumeRecord.file_url);
-
-      if (downloadError || !fileData) {
-        console.error("Erreur téléchargement CV sélectionné:", downloadError?.message);
-        return NextResponse.json({ error: "Impossible de récupérer le CV sélectionné." }, { status: 500 });
-      }
-
-      fileBuffer = Buffer.from(await fileData.arrayBuffer());
-      cvFileName = resumeRecord.title || "CV.pdf";
-    } else if (profile.cv_url) {
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from("resumes")
-        .download(profile.cv_url);
-
-      if (downloadError || !fileData) {
-        console.error("Erreur téléchargement CV pour l'envoi:", downloadError?.message);
-        return NextResponse.json({ error: "Impossible de récupérer votre CV depuis le stockage." }, { status: 500 });
-      }
-
-      fileBuffer = Buffer.from(await fileData.arrayBuffer());
-      cvFileName = profile.cv_name || "CV.pdf";
-    } else {
-      return NextResponse.json(
-        { error: "Sélectionnez un CV existant ou importez-en un pour postuler en 1 clic." },
-        { status: 400 }
-      );
-    }
-
-    const finalSubject = subject || `Candidature de ${candidateName} via Facilite`;
-    const escapedMessage = message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const messageHtml = message
-      ? `<p style="font-size: 14px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${escapedMessage}</p>`
-      : `<p style="font-size: 14px; color: #374151; line-height: 1.6;"><strong>${candidateName}</strong> (${candidateEmail}) vous adresse sa candidature en réponse à votre annonce de recrutement.</p>`;
-
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px; background-color: #ffffff;">
-        <h2 style="color: #059669; font-size: 20px; font-weight: bold; margin-bottom: 16px;">
-          🚀 Nouvelle Candidature via Facilite
-        </h2>
-        <p style="font-size: 14px; color: #374151; line-height: 1.6;">Bonjour,</p>
-        ${messageHtml}
-        <p style="font-size: 13px; color: #6b7280;">Vous trouverez son CV en pièce jointe à cet e-mail.</p>
-        <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 24px 0;" />
-        <p style="font-size: 11px; color: #9ca3af; text-align: center;">
-          Candidature envoyée via la plateforme Facilité · Recrutement Simplifié.
-        </p>
-      </div>
-    `;
-
-    // Même logique de sandbox Resend que /api/postuler : en mode onboarding
-    // (pas de domaine vérifié), l'envoi est redirigé vers l'adresse de test
-    // configurée plutôt que d'échouer silencieusement.
-    const isProd = process.env.NODE_ENV === "production";
-    const sender = process.env.RESEND_FROM_CANDIDATE || (isProd ? "Facilite <noreply@ffacilite.com>" : "Facilite <onboarding@resend.dev>");
-    const isResendOnboarding = sender.includes("onboarding@resend.dev");
-    const testRecipient = isResendOnboarding ? (process.env.RESEND_TEST_RECIPIENT || process.env.RESEND_VERIFIED_EMAIL || null) : null;
-    // Pièces jointes : CV principal + Documents supplémentaires éventuels (lettres, diplômes)
-    const attachmentsList = [{ filename: cvFileName, content: fileBuffer }];
-    const additionalFiles = formData.getAll("additionalFiles");
-    if (additionalFiles && additionalFiles.length > 0) {
-      for (const extraFile of additionalFiles) {
-        if (extraFile && typeof extraFile !== "string") {
-          const extraBuffer = Buffer.from(await extraFile.arrayBuffer());
-          const check = validateUploadedFile(extraBuffer, extraFile.type, extraFile.size);
-          if (check.valid) {
+          if (fileData && !downloadError) {
+            const buf = Buffer.from(await fileData.arrayBuffer());
             attachmentsList.push({
-              filename: extraFile.name || "document.pdf",
-              content: extraBuffer,
+              filename: resumeRecord.title || "Document.pdf",
+              content: buf,
             });
           }
         }
       }
+    }
+
+    // 2. Nouveaux fichiers téléversés
+    const uploadedFiles = [
+      ...(cvFile && typeof cvFile !== "string" ? [cvFile] : []),
+      ...formData.getAll("newFiles"),
+      ...formData.getAll("additionalFiles"),
+    ].filter((f) => f && typeof f !== "string");
+
+    for (const file of uploadedFiles) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const check = validateUploadedFile(buffer, file.type, file.size);
+      if (check.valid) {
+        attachmentsList.push({
+          filename: file.name || "Document.pdf",
+          content: buffer,
+        });
+
+        // Enregistrer automatiquement dans les resumes du candidat pour réutilisation future
+        try {
+          const storagePath = `${user.id}/cvs/${Date.now()}_${file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from("resumes")
+            .upload(storagePath, buffer, { contentType: file.type, duplex: "half" });
+
+          if (!uploadError) {
+            await supabase.from("resumes").insert({
+              user_id: user.id,
+              title: file.name,
+              type: "imported",
+              file_url: storagePath,
+              ats_score: 95,
+            });
+          }
+        } catch (saveErr) {
+          console.warn("Avertissement enregistrement document secondaire:", saveErr?.message);
+        }
+      }
+    }
+
+    // Repli : si aucun document n'a pu être joint et que le profil a un cv_url
+    if (attachmentsList.length === 0 && profile.cv_url) {
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from("resumes")
+        .download(profile.cv_url);
+
+      if (fileData && !downloadError) {
+        attachmentsList.push({
+          filename: profile.cv_name || "CV.pdf",
+          content: Buffer.from(await fileData.arrayBuffer()),
+        });
+      }
+    }
+
+    if (attachmentsList.length === 0) {
+      return NextResponse.json(
+        { error: "Veuillez joindre au moins un document (CV ou lettre) pour postuler." },
+        { status: 400 }
+      );
     }
 
     const { error: resendError } = await resend.emails.send({
