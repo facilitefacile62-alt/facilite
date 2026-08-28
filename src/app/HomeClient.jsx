@@ -248,6 +248,7 @@ export default function Home() {
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
 
   // Search and Filter States for Job Board
+  const [jobsLoading, setJobsLoading] = useState(true);
   const [dynamicJobs, setDynamicJobs] = useState([]);
   // Une seule source, un seul filtre — les mêmes que /offres.
   // Avant : fusion de dynamicJobs avec 31 offres codées en dur, sans aucun
@@ -383,6 +384,8 @@ export default function Home() {
         }
       } catch (err) {
         console.error("Erreur chargement des offres:", err);
+      } finally {
+        setJobsLoading(false);
       }
     }
     loadDynamicJobs();
@@ -1660,7 +1663,24 @@ export default function Home() {
 
             {/* Liste des Offres d'emploi */}
             <div className="space-y-4">
-              {getLoopedJobs().length > 0 ? (
+              {jobsLoading && dynamicJobs.length === 0 ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={`feed-skeleton-${i}`} className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-xs animate-pulse space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-200 rounded-full flex-shrink-0"></div>
+                        <div className="flex-grow space-y-2">
+                          <div className="h-3.5 bg-gray-200 rounded w-1/3"></div>
+                          <div className="h-2.5 bg-gray-200 rounded w-1/4"></div>
+                        </div>
+                      </div>
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      <div className="h-48 bg-gray-100 rounded-2xl"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : getLoopedJobs().length > 0 ? (
                 getLoopedJobs().map((job) => (
                   <div
                     key={job.loopId || job.id}
@@ -1705,11 +1725,17 @@ export default function Home() {
                         <span aria-hidden="true">·</span>
                         <span>{job.sector || job.category || job.project || job.domain || "Opportunité"}</span>
                         <span aria-hidden="true">·</span>
-                        <span>{job.positions_count ? `${job.positions_count} postes` : (job.contract || "12 postes")}</span>
+                        <span>
+                          {job.positions_count && job.positions_count > 1
+                            ? `${job.positions_count} postes (${job.contract})`
+                            : job.contract}
+                        </span>
                         {job.deadline && (
                           <>
                             <span aria-hidden="true">·</span>
-                            <span>Jusqu'au {new Date(job.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                            <span className="text-amber-700 font-bold">
+                              Limite : {new Date(job.deadline).toLocaleDateString("fr-FR")}
+                            </span>
                           </>
                         )}
                         {job.listing_type && job.listing_type !== "offre_emploi" && (
@@ -1730,31 +1756,24 @@ export default function Home() {
                       </p>
                     </div>
 
-                    {/* Description */}
-                    <div className="text-xs sm:text-sm text-gray-700 font-normal leading-relaxed break-words overflow-hidden max-w-full">
-                      {(() => {
-                        const descText = selectedLang === "FR" ? job.descFR : job.descEN;
-                        if (!descText) return null;
-                        const isExpanded = expandedJobs[job.loopId || job.id];
-                        const shouldTruncate = descText.length > 250;
-                        const displayText = shouldTruncate && !isExpanded ? descText.substring(0, 250) + "..." : descText;
-                        
-                        return (
-                          <div className="break-words max-w-full overflow-hidden">
-                            <TexteAvecLiens texte={displayText} className="text-gray-700 font-normal inline" />
-                            {shouldTruncate && (
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); toggleJobExpand(job.loopId || job.id); }}
-                                className="text-gray-900 font-extrabold ml-1 hover:underline cursor-pointer bg-transparent border-none p-0 inline"
-                              >
-                                {isExpanded ? (selectedLang === "FR" ? " Voir moins" : " See less") : (selectedLang === "FR" ? " En voir plus" : " See more")}
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
+                    {/* Description avec Voir plus / Voir moins */}
+                    {job.descFR && (
+                      <div className="text-xs text-gray-700 leading-relaxed break-words whitespace-pre-line font-normal">
+                        <p className={expandedJobs[job.id] ? "" : "line-clamp-3"}>
+                          <TexteAvecLiens texte={selectedLang === "FR" ? job.descFR : job.descEN} />
+                        </p>
+                        {job.descFR.length > 180 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleJobExpand(job.id)}
+                            className="text-blue-600 hover:text-blue-800 font-bold mt-1 text-[11px] hover:underline cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <span>{expandedJobs[job.id] ? "Voir moins" : "...Voir plus"}</span>
+                            <i className={`fa-solid fa-chevron-${expandedJobs[job.id] ? "up" : "down"} text-[9px]`}></i>
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     {/* Visuel de l'offre (Hauteur Standardisée et Cadrage Homogène) */}
                     {(job.image || job.image_url) && (
@@ -1808,9 +1827,23 @@ export default function Home() {
                   </div>
                 ))
               ) : (
-                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-xs text-gray-500 font-bold shadow-xs">
-                  <i className="fa-solid fa-folder-open text-3xl text-gray-300 mb-2"></i>
-                  <p>{t.searchNoResults}</p>
+                <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-xs text-gray-500 font-bold shadow-xs flex flex-col items-center justify-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                    <i className="fa-solid fa-folder-open text-xl"></i>
+                  </div>
+                  <p className="text-gray-700 font-extrabold text-sm">{t.searchNoResults}</p>
+                  {(keyword || locationFilter || contractFilter) && (
+                    <button
+                      onClick={() => {
+                        setKeyword("");
+                        setLocationFilter("");
+                        setContractFilter("");
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                    >
+                      Réinitialiser les filtres
+                    </button>
+                  )}
                 </div>
               )}
             </div>
