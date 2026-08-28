@@ -1,0 +1,25 @@
+-- establishments : retirer à anon et authenticated tout droit autre que la
+-- lecture.
+--
+-- Suite de 20260806140000, qui avait révoqué UPDATE et DELETE mais laissé
+-- INSERT, REFERENCES, TRIGGER et TRUNCATE — les droits que Supabase accorde
+-- par défaut à ces deux rôles sur toute table nouvellement créée.
+--
+-- TRUNCATE est le point qui compte : il n'est PAS soumis à la RLS. Un
+-- visiteur non authentifié pouvait donc vider l'annuaire d'un appel, alors
+-- même que la table n'a qu'une policy de SELECT. INSERT, lui, était déjà
+-- neutralisé par la RLS (aucune policy INSERT), mais un droit qui ne sert à
+-- rien n'a pas à rester : il redeviendrait exploitable le jour où quelqu'un
+-- ajoute une policy permissive sans y penser.
+--
+-- Aucun flux applicatif n'est touché : `establishments` n'est référencée
+-- nulle part dans src/ (vérifié le 2026-08-28), et la table est alimentée
+-- par le backend Python via SQLAlchemy, qui se connecte avec un rôle
+-- privilégié — non concerné par ces révocations. La table compte 0 ligne au
+-- moment de cette migration.
+--
+-- SELECT est conservé : l'annuaire pharmacies/hôpitaux/hôtels a vocation à
+-- être lu publiquement, c'est l'objet de la policy « Lecture publique de
+-- l'annuaire ».
+
+REVOKE INSERT, REFERENCES, TRIGGER, TRUNCATE ON public.establishments FROM anon, authenticated;
