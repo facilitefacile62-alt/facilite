@@ -28,13 +28,22 @@ const isDev = process.env.NODE_ENV !== "production";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://plausible.io",
+  // clarity.ms ajouté le 2026-08-28 : le script Microsoft Clarity est chargé
+  // par src/app/layout.js depuis le début, mais son domaine n'a JAMAIS
+  // figuré dans script-src. La console de tout visiteur affichait donc
+  // « Loading the script 'https://www.clarity.ms/tag/…' violates the
+  // following Content Security Policy directive » et l'analytics ne
+  // remontait rien du tout. script-src-elem n'étant pas défini, script-src
+  // sert de repli — c'est bien lui qu'il faut élargir.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://plausible.io https://www.clarity.ms https://scripts.clarity.ms",
   "worker-src 'self' blob: https://cdnjs.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
   "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com",
   "media-src 'self' blob: data: https://*.supabase.co",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co https://plausible.io",
+  // Clarity renvoie ses mesures par fetch/beacon vers *.clarity.ms : sans
+  // cette entrée, le script se chargerait mais n'enverrait toujours rien.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co https://plausible.io https://*.clarity.ms",
   "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co https://www.youtube.com https://www.youtube-nocookie.com https://maps.google.com https://*.google.com",
   "object-src 'self' blob: data: https://*.supabase.co",
   "base-uri 'self'",

@@ -2,13 +2,28 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 
-// Edge (pas nodejs) : cette route n'utilise aucune API Node spécifique
-// (contrairement à /api/canva/callback, qui a besoin de crypto) — l'Edge
-// Runtime s'exécute au plus proche géographique de la requête au lieu d'une
-// seule région fixe, ce qui réduit la latence de l'appel réseau vers
-// Supabase (exchangeCodeForSession) pour des utilisateurs loin de la région
-// par défaut de la fonction Node.
-export const runtime = "edge";
+// nodejs (et plus edge) depuis le 2026-08-28.
+//
+// L'Edge Runtime avait été choisi pour la latence géographique. Mais il
+// impose une limite d'exécution courte et non ajustable : quand l'échange
+// PKCE dépassait cette limite, Vercel renvoyait une page blanche
+// 504 FUNCTION_INVOCATION_TIMEOUT, sans même un lien pour réessayer.
+//
+// Constat de terrain qui a tranché : après la mise en place de la borne à
+// 8 s, l'utilisateur a vu s'afficher « La connexion Google n'a pas abouti à
+// temps » — donc l'échange prend RÉELLEMENT plus de 8 secondes, alors
+// qu'un code invalide, lui, revient en 0,3 s. Ce n'est pas un blocage
+// infini, c'est un échange lent : le couper court garantissait l'échec.
+//
+// En runtime nodejs on peut déclarer maxDuration et donner à l'échange un
+// budget réaliste. C'est aussi le runtime de toutes les autres routes
+// d'authentification de l'application (/api/auth/*), qui n'ont jamais
+// présenté ce symptôme.
+export const runtime = "nodejs";
+
+// 30 s : très au-dessus de l'échange normal (0,3-0,4 s mesuré), et
+// au-dessus du plafond que l'Edge Runtime imposait silencieusement.
+export const maxDuration = 30;
 
 /**
  * GET /auth/callback — point d'échange PKCE pour l'OAuth Google (et tout
@@ -60,11 +75,12 @@ export async function GET(req) {
   // appels réseau (withTimeout(…, 1500) dans src/proxy.js) ; celle-ci était
   // la seule à ne pas le faire, sur le chemin le plus critique qui soit.
   //
-  // 8 s : très au-delà d'un échange normal (mesuré à 0,3-0,4 s en
-  // production), assez court pour rendre la main avant la limite de la
-  // fonction. Au-delà, on redirige vers /login avec un code d'erreur
-  // explicite plutôt que de laisser mourir la requête.
-  const DELAI_MAX_ECHANGE_MS = 8000;
+  // 20 s, sous les 30 s de maxDuration pour garder la main et répondre
+  // proprement. La borne précédente à 8 s coupait un échange qui, mesuré
+  // sur le terrain, met parfois plus longtemps : elle transformait une
+  // lenteur en échec certain. Ici on laisse le temps d'aboutir, et on ne
+  // renonce que si c'est vraiment perdu.
+  const DELAI_MAX_ECHANGE_MS = 20000;
   const debut = Date.now();
 
   let error = null;
