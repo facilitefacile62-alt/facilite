@@ -74,7 +74,57 @@ export default function LoginPage() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Un visiteur DÉJÀ connecté n'a rien à faire sur cet écran.
+    //
+    // Bug constaté le 2026-08-28 : l'en-tête affichait bien la session
+    // (nom, badge Admin, notifications) tandis que le corps de page montrait
+    // le formulaire de connexion — indéfiniment. Rafraîchir n'y changeait
+    // rien, et le bouton « retour » du navigateur y ramenait à chaque fois.
+    // Cause : /login figure dans PUBLIC_ROUTES, le middleware le laisse donc
+    // passer sans regarder la session, et la page elle-même ne vérifiait
+    // jamais qu'une session existait déjà. On y arrivait par le bouton
+    // retour, un favori ou un lien ?redirect= périmé, et on y restait.
+    //
+    // replace() et non push() : sinon l'écran resterait dans l'historique et
+    // le bouton retour y ramènerait, ce qui est précisément le symptôme
+    // rapporté.
+    //
+    // Le mode récupération de mot de passe (?reset=true, événement
+    // PASSWORD_RECOVERY) est exclu : là, la personne est authentifiée par le
+    // lien reçu par e-mail et DOIT rester ici pour choisir son mot de passe.
+    let redirectionEnCours = false;
+    const sortirSiDejaConnecte = async () => {
+      if (redirectionEnCours) return;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("reset") === "true") return;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      redirectionEnCours = true;
+      const cible = params.get("redirect");
+      window.location.replace(cible && cible.startsWith("/") && !cible.startsWith("//") ? cible : "/");
+    };
+    sortirSiDejaConnecte();
+
+    // Le bouton « retour » ne relance pas les effets React : Chrome restaure
+    // la page depuis son cache avant/arrière (bfcache) telle qu'elle était,
+    // donc l'écran de connexion réapparaîtrait intact pour quelqu'un de
+    // connecté — exactement le symptôme rapporté (« si je clique sur le
+    // retour ça me ramène sur le bug »). `pageshow` avec persisted = true
+    // est le seul signal émis dans ce cas.
+    const surRestauration = (e) => {
+      if (e.persisted) {
+        redirectionEnCours = false;
+        sortirSiDejaConnecte();
+      }
+    };
+    window.addEventListener("pageshow", surRestauration);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("pageshow", surRestauration);
+    };
   }, []);
 
   useEffect(() => {
