@@ -142,9 +142,14 @@ export async function POST(req) {
       whatsappUrl = `https://wa.me/${detectedPhone}?text=${encodeURIComponent(greetingMsg)}`;
     }
 
+    const applicationEmail = (analysis?.application_email && typeof analysis.application_email === "string" && analysis.application_email.includes("@"))
+      ? analysis.application_email.trim().toLowerCase()
+      : rawEmail;
+
     return NextResponse.json({
       success: true,
       email: rawEmail,
+      application_email: applicationEmail,
       phone: detectedPhone,
       whatsapp: detectedPhone,
       whatsapp_url: whatsappUrl,
@@ -159,6 +164,7 @@ export async function POST(req) {
       skills: analysis.skills || null,
       summary: analysis.summary || null,
       instructions: analysis.instructions || null,
+      additional_info: analysis.additional_info || null,
       raw_text: analysis.raw_text || null,
     });
   } catch (error) {

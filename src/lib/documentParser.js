@@ -53,25 +53,36 @@ export async function extractJobAnnouncementWithGemini(buffer, mimeType = "image
   }
 
   const prompt = `Analyse cette affiche d'emploi, recrutement ou casting.
-Extrais précisément les coordonnées et canaux pour postuler :
+Extrais précisément les coordonnées et canaux pour postuler en respectant STRICTEMENT les 3 règles de candidature :
+
+RÈGLES STRICTES D'EXTRACTION D'ADRESSE DE CANDIDATURE :
+1. N'INVENTE JAMAIS une adresse ou un contact. Si aucune URL ni e-mail de candidature n'est mentionné, renvoie null.
+2. Ne recopie JAMAIS le site vitrine général par défaut si l'annonce ne dit pas d'y postuler explicitement.
+3. Un lien vers un DOCUMENT (fiche de poste, PDF, formulaire à télécharger) n'est JAMAIS une adresse de candidature : place-le dans "additional_info".
+
+Champs à extraire :
 1. "email": l'adresse email de contact/recrutement (ou null si absente)
-2. "phone": le numéro de téléphone ou WhatsApp pour postuler ou envoyer sa candidature (ex: "+221 77 717 73 73" ou "77 717 73 73", ou null)
-3. "apply_url": lien de formulaire (Google Forms, Typeform, etc.) ou URL du site web pour postuler (ou null)
-4. "job_title": titre du poste, du casting ou de l'opportunité
-5. "company": nom de l'entreprise, agence ou organisateur
-6. "contract_type": type de contrat ou mission (CDI, CDD, Stage, Freelance, Casting, etc.)
-7. "instructions": consigne spécifique pour postuler (ex: "Envoyer vidéos par WhatsApp", "Envoyer CV par mail", "Remplir le formulaire")
-8. "raw_text": tout le texte lisible sur l'affiche.
+2. "application_email": l'adresse email spécifiquement désignée pour envoyer la candidature (ou null)
+3. "phone": le numéro de téléphone ou WhatsApp pour postuler ou envoyer sa candidature (ex: "+221 77 717 73 73" ou "77 717 73 73", ou null)
+4. "apply_url": lien de formulaire (Google Forms, Typeform, etc.) ou URL du site web pour postuler (ou null)
+5. "job_title": titre du poste, du casting ou de l'opportunité
+6. "company": nom de l'entreprise, agence ou organisateur
+7. "contract_type": type de contrat ou mission (CDI, CDD, Stage, Freelance, Casting, etc.)
+8. "instructions": consigne spécifique pour postuler (ex: "Envoyer vidéos par WhatsApp", "Envoyer CV par mail", "Remplir le formulaire")
+9. "additional_info": documents requis, pièces à joindre ou liens annexes (ou null)
+10. "raw_text": tout le texte lisible sur l'affiche.
 
 Réponds STRICTEMENT en JSON valide sous la forme :
 {
   "email": "...",
+  "application_email": "...",
   "phone": "...",
   "apply_url": "...",
   "job_title": "...",
   "company": "...",
   "contract_type": "...",
   "instructions": "...",
+  "additional_info": "...",
   "raw_text": "..."
 }`;
 
@@ -206,20 +217,29 @@ Voici le texte brut d'une offre d'emploi (souvent partagée par message WhatsApp
 ${rawText.trim()}
 """
 
-Examine minutieusement cette annonce et organise chaque information dans son champ correspondant :
+Examine minutieusement cette annonce et organise chaque information dans son champ correspondant en respectant STRICTEMENT les 3 règles :
+
+RÈGLES STRICTES D'EXTRACTION D'ADRESSE DE CANDIDATURE :
+1. N'INVENTE JAMAIS une adresse ou un contact. Si aucune URL ni e-mail de candidature n'est mentionné, renvoie null.
+2. Ne recopie JAMAIS le site vitrine général par défaut si l'annonce ne dit pas d'y postuler explicitement.
+3. Un lien vers un DOCUMENT (fiche de poste, PDF, formulaire à télécharger) n'est JAMAIS une adresse de candidature : place-le dans "additional_info".
+
+Champs à extraire :
 1. "job_title": Intitulé précis du poste recherché (ex: "Comptable Senior", "Développeur React", "Chauffeur", etc.)
 2. "company": Nom de l'entreprise, recruteur, agence ou organisation (ou null si non mentionné)
 3. "location": Ville, région ou pays (ex: "Dakar, Sénégal", "Thiès", "Télétravail", etc.)
 4. "contract_type": Type de contrat (CDI, CDD, Stage, Freelance, Intérim, etc.)
 5. "email": Adresse e-mail de candidature ou contact RH (ex: "rh@entreprise.com", ou null)
-6. "phone": Numéro de téléphone ou contact WhatsApp pour postuler (ex: "+221 77 123 45 67", ou null)
-7. "apply_url": Lien URL de candidature ou formulaire en ligne (Google Forms, Typeform, lien carrières, ou null)
-8. "salary": Salaire, indemnité ou fourchette salariale si mentionné (ou null)
-9. "deadline": Date limite de candidature si mentionnée (ex: "15 septembre 2026", ou null)
-10. "skills": Compétences clés, diplômes ou qualifications requises (court résumé des exigences)
-11. "instructions": Consignes précises pour postuler (ex: "Envoyer CV et LM par e-mail avec objet COMPTA-2026", "Écrire par WhatsApp", etc.)
-12. "summary": Résumé professionnel et clair de l'offre en 2 ou 3 phrases.
-13. "raw_text": Le texte brut original.
+6. "application_email": Adresse e-mail spécifiquement désignée pour envoyer sa candidature (ou null)
+7. "phone": Numéro de téléphone ou contact WhatsApp pour postuler (ex: "+221 77 123 45 67", ou null)
+8. "apply_url": Lien URL de candidature ou formulaire en ligne (Google Forms, Typeform, lien carrières, ou null)
+9. "salary": Salaire, indemnité ou fourchette salariale si mentionné (ou null)
+10. "deadline": Date limite de candidature si mentionnée (ex: "15 septembre 2026", ou null)
+11. "skills": Compétences clés, diplômes ou qualifications requises (court résumé des exigences)
+12. "instructions": Consignes précises pour postuler (ex: "Envoyer CV et LM par e-mail avec objet COMPTA-2026", "Écrire par WhatsApp", etc.)
+13. "additional_info": Documents requis, pièces à fournir ou liens annexes (ou null)
+14. "summary": Résumé professionnel et clair de l'offre en 2 ou 3 phrases.
+15. "raw_text": Le texte brut original.
 
 Réponds STRICTEMENT en JSON valide :
 {
@@ -228,12 +248,14 @@ Réponds STRICTEMENT en JSON valide :
   "location": "...",
   "contract_type": "...",
   "email": "...",
+  "application_email": "...",
   "phone": "...",
   "apply_url": "...",
   "salary": "...",
   "deadline": "...",
   "skills": "...",
   "instructions": "...",
+  "additional_info": "...",
   "summary": "...",
   "raw_text": "..."
 }`;

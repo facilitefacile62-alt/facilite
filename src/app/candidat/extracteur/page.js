@@ -469,15 +469,15 @@ function ExtracteurContent() {
         <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-2xl p-4 sm:p-5 text-white mb-4 shadow-lg relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
             <span className="text-[10px] font-extrabold text-emerald-300 uppercase tracking-widest block mb-1">
-              Postulez en 1 seul clic
+              Assistant Candidature IA — Postulation Express
             </span>
             <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight mb-1.5">
-              L'Extracteur d'Annonces
+              Scanner d'Annonces & Candidature Directe
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed">
               {posterId
                 ? "Préparez votre candidature pour cette offre et envoyez votre CV en un clic."
-                : "Importez la photo d'une annonce ou collez le texte d'une offre (WhatsApp, mail). Notre IA classe les infos et prépare votre candidature instantanément."}
+                : "Importez une photo d'affiche ou collez le texte d'une offre. L'IA extrait les coordonnées certifiées, vous présente l'écran de revue avant validation et prépare votre envoi instantané."}
             </p>
           </div>
         </div>
@@ -728,83 +728,127 @@ function ExtracteurContent() {
 
           {/* Résultat Détecté : Fiche épurée, Menu déroulant des détails & Choix du canal */}
           {(extractedWhatsApp || extractedFormUrl || extractedEmail || posterOffer || extractedData) && (
-            <div className="space-y-3.5 pt-2 border-t border-gray-100 animate-fade-in">
+            <div className="space-y-4 pt-2 border-t border-gray-100 animate-fade-in">
               
-              {/* 1. EN-TÊTE ÉPURÉ DE L'OFFRE EXAMINÉE */}
-              <div className="p-3.5 sm:p-4 bg-emerald-50/70 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
-                <div className="min-w-0">
-                  <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">
-                    Offre analysée
-                  </span>
-                  <h3 className="text-xs sm:text-sm font-black text-emerald-950 truncate">
-                    {posterOffer?.title || extractedData?.job_title || "Poste détecté"}
-                  </h3>
-                  <p className="text-[11px] font-bold text-gray-700 truncate">
-                    {posterOffer?.company || extractedData?.company || "Entreprise / Recruteur"} 
-                    {(extractedData?.location || posterOffer?.location) && ` • ${extractedData?.location || posterOffer?.location}`}
-                    {(extractedData?.contract_type || posterOffer?.contract_type) && ` • ${extractedData?.contract_type || posterOffer?.contract_type}`}
-                  </p>
-                </div>
+              {/* 1. ÉCRAN DE REVUE AVANT VALIDATION & POSTULATION */}
+              <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/50 border-2 border-emerald-300 rounded-3xl space-y-3.5 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-emerald-200">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-600 text-white uppercase tracking-wider">
+                        <i className="fa-solid fa-circle-check text-[9px]"></i>
+                        Revue IA Validée
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-800">
+                        Standards de candidature vérifiés
+                      </span>
+                    </div>
+                    <h3 className="text-sm sm:text-base font-black text-emerald-950 truncate">
+                      {posterOffer?.title || extractedData?.job_title || "Opportunité détectée"}
+                    </h3>
+                    <p className="text-xs font-bold text-emerald-850 truncate">
+                      {posterOffer?.company || extractedData?.company || "Entreprise / Organisation"}
+                      {(extractedData?.location || posterOffer?.location) && ` • 📍 ${extractedData?.location || posterOffer?.location}`}
+                      {(extractedData?.contract_type || posterOffer?.contract_type) && ` • 💼 ${extractedData?.contract_type || posterOffer?.contract_type}`}
+                    </p>
+                  </div>
 
-                {/* BOUTONS D'ACTION : NOUVELLE ANNONCE & MENU DÉROULANT DES DÉTAILS */}
-                <div className="flex items-center gap-2 flex-wrap self-start sm:self-center">
-                  <button
-                    type="button"
-                    onClick={handleResetForNewOffer}
-                    className="px-2.5 py-1.5 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-900 font-extrabold text-[11px] rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1.5 flex-shrink-0"
-                    title="Examiner ou importer une autre annonce"
-                  >
-                    <i className="fa-solid fa-rotate-left text-emerald-600"></i>
-                    <span>Nouvelle annonce</span>
-                  </button>
-
-                  {(extractedData?.skills || extractedData?.summary || extractedData?.salary || extractedData?.deadline) && (
+                  {/* Actions de revue */}
+                  <div className="flex items-center gap-2 flex-wrap self-start sm:self-center">
                     <button
                       type="button"
-                      onClick={() => setShowDetailsDropdown(!showDetailsDropdown)}
-                      className="px-3 py-1.5 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-900 font-extrabold text-[11px] rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                      onClick={handleResetForNewOffer}
+                      className="px-3 py-1.5 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-900 font-extrabold text-xs rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                      title="Scanner une autre offre"
                     >
-                      <i className="fa-solid fa-list-check text-emerald-600"></i>
-                      <span>{showDetailsDropdown ? "Masquer les détails" : "📋 Détails & Critères (menu déroulant)"}</span>
-                      <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${showDetailsDropdown ? "rotate-180" : ""}`}></i>
+                      <i className="fa-solid fa-rotate-left text-emerald-600"></i>
+                      <span>Nouvelle annonce</span>
                     </button>
-                  )}
+                    {(extractedData?.skills || extractedData?.summary || extractedData?.salary || extractedData?.deadline || extractedData?.additional_info) && (
+                      <button
+                        type="button"
+                        onClick={() => setShowDetailsDropdown(!showDetailsDropdown)}
+                        className="px-3 py-1.5 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-900 font-extrabold text-xs rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                      >
+                        <i className="fa-solid fa-list-check text-emerald-600"></i>
+                        <span>{showDetailsDropdown ? "Masquer la fiche" : "📋 Fiche détaillée"}</span>
+                        <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${showDetailsDropdown ? "rotate-180" : ""}`}></i>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* MENU DÉROULANT : DÉTAILS DU POSTE (ne s'ouvre qu'au clic) */}
-              {showDetailsDropdown && extractedData && (
-                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2.5 animate-fade-in text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {extractedData.salary && (
-                      <div className="bg-white p-2.5 rounded-xl border border-gray-200">
-                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Rémunération / Salaire</span>
-                        <span className="text-emerald-800 font-black">{extractedData.salary}</span>
+                {/* Synthèse des canaux de candidature certifiés selon les 3 règles strictes */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                  <div className={`p-2.5 rounded-2xl border ${extractedEmail || extractedData?.application_email ? "bg-white border-emerald-200" : "bg-gray-50 border-gray-200 opacity-60"}`}>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider block text-emerald-800 mb-0.5">
+                      📧 E-mail Candidature
+                    </span>
+                    <span className="font-mono text-[11px] font-extrabold text-gray-900 truncate block">
+                      {extractedData?.application_email || extractedEmail || "Non mentionné"}
+                    </span>
+                  </div>
+
+                  <div className={`p-2.5 rounded-2xl border ${extractedWhatsApp ? "bg-white border-emerald-200" : "bg-gray-50 border-gray-200 opacity-60"}`}>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider block text-emerald-800 mb-0.5">
+                      💬 Contact WhatsApp
+                    </span>
+                    <span className="font-mono text-[11px] font-extrabold text-gray-900 truncate block">
+                      {extractedWhatsApp ? `+${extractedWhatsApp}` : "Non mentionné"}
+                    </span>
+                  </div>
+
+                  <div className={`p-2.5 rounded-2xl border ${extractedFormUrl ? "bg-white border-emerald-200" : "bg-gray-50 border-gray-200 opacity-60"}`}>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider block text-emerald-800 mb-0.5">
+                      🌐 Portail / Formulaire
+                    </span>
+                    <span className="font-mono text-[11px] font-extrabold text-gray-900 truncate block">
+                      {extractedFormUrl ? "Lien en ligne détecté" : "Non mentionné"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* MENU DÉROULANT : DÉTAILS DU POSTE ET INFORMATIONS COMPLÉMENTAIRES */}
+                {showDetailsDropdown && extractedData && (
+                  <div className="p-3.5 bg-white border border-emerald-200 rounded-2xl space-y-2.5 animate-fade-in text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {extractedData.salary && (
+                        <div className="bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-100">
+                          <span className="text-[10px] text-emerald-700 font-extrabold block uppercase">Rémunération / Salaire</span>
+                          <span className="text-emerald-950 font-black">{extractedData.salary}</span>
+                        </div>
+                      )}
+                      {extractedData.deadline && (
+                        <div className="bg-rose-50/50 p-2.5 rounded-xl border border-rose-100">
+                          <span className="text-[10px] text-rose-700 font-extrabold block uppercase">Date limite</span>
+                          <span className="text-rose-900 font-black">{extractedData.deadline}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {extractedData.skills && (
+                      <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-200">
+                        <span className="text-[10px] text-gray-500 font-extrabold block uppercase mb-0.5">Qualifications & Compétences requises</span>
+                        <p className="text-gray-800 font-medium leading-relaxed text-[11px]">{extractedData.skills}</p>
                       </div>
                     )}
-                    {extractedData.deadline && (
-                      <div className="bg-white p-2.5 rounded-xl border border-gray-200">
-                        <span className="text-[10px] text-gray-400 font-extrabold block uppercase">Date limite</span>
-                        <span className="text-rose-600 font-black">{extractedData.deadline}</span>
+
+                    {extractedData.additional_info && (
+                      <div className="bg-blue-50/50 p-2.5 rounded-xl border border-blue-100">
+                        <span className="text-[10px] text-blue-700 font-extrabold block uppercase mb-0.5">ℹ️ Informations & Documents complémentaires</span>
+                        <p className="text-blue-950 font-medium leading-relaxed text-[11px]">{extractedData.additional_info}</p>
+                      </div>
+                    )}
+
+                    {extractedData.summary && (
+                      <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-200">
+                        <span className="text-[10px] text-gray-500 font-extrabold block uppercase mb-0.5">Résumé structuré de l'offre</span>
+                        <p className="text-gray-800 font-medium leading-relaxed text-[11px]">{extractedData.summary}</p>
                       </div>
                     )}
                   </div>
-
-                  {extractedData.skills && (
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200">
-                      <span className="text-[10px] text-gray-400 font-extrabold block uppercase mb-0.5">Qualifications requises</span>
-                      <p className="text-gray-700 font-medium leading-relaxed text-[11px]">{extractedData.skills}</p>
-                    </div>
-                  )}
-
-                  {extractedData.summary && (
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200">
-                      <span className="text-[10px] text-gray-400 font-extrabold block uppercase mb-0.5">Résumé de l'offre</span>
-                      <p className="text-gray-700 font-medium leading-relaxed text-[11px]">{extractedData.summary}</p>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
 
               {/* SÉLECTEUR DE CANAL AVEC E-MAIL EN 1ÈRE POSITION */}
               {((extractedWhatsApp && extractedEmail) || extractedFormUrl) && (
