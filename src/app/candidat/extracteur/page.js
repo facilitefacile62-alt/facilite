@@ -1102,10 +1102,7 @@ function ExtracteurContent() {
                         <span>Envoi direct en cours...</span>
                       </>
                     ) : (
-                      <>
-                        <span>🚀 Postuler en 1 clic</span>
-                        {extractedEmail && <span className="font-mono text-xs opacity-90">({extractedEmail})</span>}
-                      </>
+                      <span>🚀 Postuler en 1 clic</span>
                     )}
                   </button>
 
@@ -1155,7 +1152,7 @@ function ExtracteurContent() {
                     className="w-full py-3 bg-[#25D366] hover:bg-[#20bd5a] active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer no-underline"
                   >
                     <i className="fa-brands fa-whatsapp text-base"></i>
-                    <span>Envoyer ma candidature sur WhatsApp (+{extractedWhatsApp})</span>
+                    <span>Envoyer ma candidature sur WhatsApp</span>
                   </a>
                 </div>
               )}
