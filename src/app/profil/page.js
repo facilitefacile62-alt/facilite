@@ -1459,13 +1459,12 @@ export default function ProfilPage() {
     const file = e.target.files[0];
     if (!file || !userSession?.user) return;
 
-    // Règle stricte : Limite de 2 documents IMPORTÉS maximum par candidat —
+    // Limite de 5 documents IMPORTÉS maximum par candidat —
     // les CV créés avec l'éditeur (file_url null) ne comptent jamais dans
-    // ce quota, seul le trigger DB check_resume_quota() fait foi en dernier
-    // ressort (non contournable, voir 20260820170000_fix_resume_quota_imported_only.sql).
+    // ce quota, seul le trigger DB check_resume_quota() fait foi en dernier ressort.
     const importedDocsCount = userDocuments.filter((doc) => doc.file_url).length;
-    if (importedDocsCount >= 2) {
-      triggerToast("Limite atteinte : vous pouvez conserver au maximum 2 documents importés (1 CV et 1 lettre de motivation). Supprimez un document pour en ajouter un nouveau.", "fa-triangle-exclamation");
+    if (importedDocsCount >= 5) {
+      triggerToast("Limite atteinte : vous pouvez conserver au maximum 5 documents importés (CVs, lettres de motivation, attestations).", "fa-triangle-exclamation");
       if (cvFileInputRef.current) cvFileInputRef.current.value = "";
       return;
     }
@@ -4065,14 +4064,14 @@ export default function ProfilPage() {
                         <h3 className="text-sm font-extrabold text-gray-900 flex items-center space-x-2">
                           <span>Curriculum vitae & Lettres de motivation</span>
                           <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
-                            userDocuments.length >= 2
+                            userDocuments.length >= 5
                               ? "bg-amber-100 text-amber-900 border-amber-300"
                               : "bg-emerald-100 text-[#047857] border-emerald-200"
                           }`}>
-                            {userDocuments.length}/2 document{userDocuments.length > 1 ? "s" : ""} {userDocuments.length >= 2 ? "(Max atteint)" : ""}
+                            {userDocuments.length}/5 document{userDocuments.length > 1 ? "s" : ""} {userDocuments.length >= 5 ? "(Max atteint)" : ""}
                           </span>
                         </h3>
-                        <p className="text-xs text-gray-500 font-medium">Gérez vos 2 fichiers maximum (1 CV et 1 lettre de motivation).</p>
+                        <p className="text-xs text-gray-500 font-medium">Gérez jusqu'à 5 documents (CVs, lettres de motivation, attestations).</p>
                       </div>
                     </div>
 
@@ -4088,16 +4087,16 @@ export default function ProfilPage() {
 
                     <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                       <Link
-                        href={userDocuments.length >= 2 ? "#" : "/importer-cv"}
+                        href={userDocuments.length >= 5 ? "#" : "/importer-cv"}
                         onClick={(e) => {
-                          if (userDocuments.length >= 2) {
+                          if (userDocuments.length >= 5) {
                             e.preventDefault();
-                            triggerToast("Limite atteinte : vous avez déjà 2 documents. Supprimez un document existant pour en créer ou rédiger un nouveau.", "fa-triangle-exclamation");
+                            triggerToast("Limite atteinte : vous avez atteint le maximum de 5 documents. Supprimez un document existant pour en créer ou rédiger un nouveau.", "fa-triangle-exclamation");
                           }
                         }}
-                        title={userDocuments.length >= 2 ? "Limite de 2 documents atteinte" : "Rédiger ou importer un CV"}
+                        title={userDocuments.length >= 5 ? "Limite de 5 documents atteinte" : "Rédiger ou importer un CV"}
                         className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition justify-center flex-1 sm:flex-none ${
-                          userDocuments.length >= 2
+                          userDocuments.length >= 5
                             ? "bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-60 pointer-events-auto"
                             : "bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 cursor-pointer shadow-xs"
                         }`}
@@ -4108,23 +4107,23 @@ export default function ProfilPage() {
 
                       <button
                         type="button"
-                        disabled={userDocuments.length >= 2}
+                        disabled={userDocuments.length >= 5}
                         onClick={() => {
-                          if (userDocuments.length >= 2) {
-                            triggerToast("Limite atteinte : vous pouvez conserver au maximum 2 documents (1 CV et 1 lettre de motivation). Supprimez un document pour en ajouter un nouveau.", "fa-triangle-exclamation");
+                          if (userDocuments.length >= 5) {
+                            triggerToast("Limite atteinte : vous pouvez conserver au maximum 5 documents (CVs, lettres de motivation). Supprimez un document pour en ajouter un nouveau.", "fa-triangle-exclamation");
                             return;
                           }
                           cvFileInputRef.current?.click();
                         }}
-                        title={userDocuments.length >= 2 ? "Limite de 2 documents atteinte (1 CV et 1 lettre de motivation)" : "Ajouter un document"}
+                        title={userDocuments.length >= 5 ? "Limite de 5 documents atteinte" : "Ajouter un document"}
                         className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition justify-center flex-1 sm:flex-none ${
-                          userDocuments.length >= 2
+                          userDocuments.length >= 5
                             ? "bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-60 pointer-events-auto shadow-none"
                             : "bg-[#047857] hover:bg-[#036448] text-white cursor-pointer shadow-xs active:scale-[0.98]"
                         }`}
                       >
-                        <i className={`text-xs ${userDocuments.length >= 2 ? "fa-solid fa-lock text-gray-400" : "fa-solid fa-plus"}`}></i>
-                        <span>{userDocuments.length >= 2 ? "Ajouter un document (2/2 max)" : "Ajouter un document"}</span>
+                        <i className={`text-xs ${userDocuments.length >= 5 ? "fa-solid fa-lock text-gray-400" : "fa-solid fa-plus"}`}></i>
+                        <span>{userDocuments.length >= 5 ? "Ajouter un document (5/5 max)" : "Ajouter un document"}</span>
                       </button>
                     </div>
                   </div>
