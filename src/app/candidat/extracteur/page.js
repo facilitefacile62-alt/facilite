@@ -1189,14 +1189,7 @@ function ExtracteurContent() {
                         )}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => additionalFileInputRef.current?.click()}
-                        className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition cursor-pointer"
-                        title="Joindre un document (PDF, DOCX)"
-                      >
-                        <i className="fa-solid fa-paperclip text-sm"></i>
-                      </button>
+                      {/* Bouton d'envoi principal */}
                     </div>
 
                     {extractedEmail && (
