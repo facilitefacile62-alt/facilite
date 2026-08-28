@@ -35,7 +35,7 @@ const contentSecurityPolicy = [
   // following Content Security Policy directive » et l'analytics ne
   // remontait rien du tout. script-src-elem n'étant pas défini, script-src
   // sert de repli — c'est bien lui qu'il faut élargir.
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://plausible.io https://www.clarity.ms https://scripts.clarity.ms",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://plausible.io https://www.clarity.ms https://scripts.clarity.ms https://*.clarity.ms https://c.clarity.ms",
   "worker-src 'self' blob: https://cdnjs.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
   "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
