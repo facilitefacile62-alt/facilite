@@ -1894,8 +1894,8 @@ export default function ProfilPage() {
           {/* Groupe Gauche : Logo + Recherche */}
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilité</span>
             </Link>
 
             <div className="hidden md:block relative w-60 lg:w-72">
@@ -1910,7 +1910,7 @@ export default function ProfilPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
-                  placeholder="Rechercher sur Facilite..."
+                  placeholder="Rechercher sur Facilité..."
                 />
               </div>
             </div>
@@ -4385,7 +4385,7 @@ export default function ProfilPage() {
                     value={expCompany}
                     onChange={(e) => setExpCompany(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-600 transition font-medium text-gray-900"
-                    placeholder="Ex: Facilite Inc."
+                    placeholder="Ex: Facilité"
                   />
                 </div>
               </div>

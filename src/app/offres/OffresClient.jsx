@@ -870,7 +870,7 @@ function OffresContent({ listingType } = {}) {
       />
 
       <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs font-medium text-gray-500">
-        © 2026 Facilite. Toutes les offres d'emploi.
+        © 2026 Facilité. Toutes les offres d'emploi.
       </footer>
     </div>
   );

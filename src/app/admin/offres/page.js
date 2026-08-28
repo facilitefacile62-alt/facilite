@@ -715,8 +715,8 @@ export default function AdminOffresPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2">
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-black text-gray-900 tracking-tight hidden sm:inline">Facilite</span>
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="text-xl font-black text-gray-900 tracking-tight hidden sm:inline">Facilité</span>
             </Link>
             <RoleBadge role={userRole} />
             <span className="hidden md:inline-block px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200">

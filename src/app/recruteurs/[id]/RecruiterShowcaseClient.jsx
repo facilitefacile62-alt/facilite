@@ -205,8 +205,8 @@ export default function RecruiterShowcasePage() {
       <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16 shadow-xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
-            <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-            <span className="text-xl font-extrabold text-gray-900 tracking-tight">Facilite</span>
+            <img src="/logo.jpeg" alt="Logo Facilité" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
+            <span className="text-xl font-extrabold text-gray-900 tracking-tight">Facilité</span>
           </Link>
           <Link
             href="/offres"

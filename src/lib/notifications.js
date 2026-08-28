@@ -91,7 +91,7 @@ export async function sendCvReadyEmail({ to, fullName }) {
           <h2 style="color: #10E688;">Bonjour ${fullName || "cher candidat"},</h2>
           <p>Bonne nouvelle : notre expert a terminé la relecture et l'optimisation de votre CV.</p>
           <p>La version finalisée est dès maintenant disponible au téléchargement dans votre espace
-             « Mes CVs » sur Facilite.</p>
+             « Mes CVs » sur Facilité.</p>
           <br/>
           <p style="border-top: 1px solid #eee; padding-top: 15px; font-size: 12px; color: #777;">
             Cordialement,<br/>L'équipe Facilite
@@ -142,7 +142,7 @@ export async function sendReminderEmail({ to, fullName, subject, message, ctaLab
         <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
           <h2 style="color: #10E688;">Bonjour ${fullName || "cher utilisateur"},</h2>
           <p>${message}</p>
-          ${ctaUrl ? `<p><a href="${ctaUrl}" style="display:inline-block;background:#10E688;color:#0a0a0a;font-weight:bold;padding:10px 20px;border-radius:8px;text-decoration:none;">${ctaLabel || "Voir sur Facilite"}</a></p>` : ""}
+          ${ctaUrl ? `<p><a href="${ctaUrl}" style="display:inline-block;background:#10E688;color:#0a0a0a;font-weight:bold;padding:10px 20px;border-radius:8px;text-decoration:none;">${ctaLabel || "Voir sur Facilité"}</a></p>` : ""}
           <br/>
           <p style="border-top: 1px solid #eee; padding-top: 15px; font-size: 12px; color: #777;">
             Cordialement,<br/>L'équipe Facilite

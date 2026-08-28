@@ -121,8 +121,8 @@ export default function AdminDashboardKpiPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link href="/" className="flex items-center space-x-2">
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold text-gray-900 tracking-tight hidden sm:inline">Facilite</span>
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="text-xl font-extrabold text-gray-900 tracking-tight hidden sm:inline">Facilité</span>
             </Link>
             <RoleBadge role={userRole} />
           </div>
@@ -168,7 +168,7 @@ export default function AdminDashboardKpiPage() {
         <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1">
           Dashboard Analytics Global
         </h1>
-        <p className="text-sm text-gray-500 font-medium mb-8">Indicateurs clés de la plateforme Facilite.</p>
+        <p className="text-sm text-gray-500 font-medium mb-8">Indicateurs clés de la plateforme Facilité.</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">

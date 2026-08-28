@@ -431,7 +431,7 @@ export default function RecrutementSpontanePage() {
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-6 text-center text-sm font-medium text-gray-500">
-        © 2026 Facilite. Tous droits réservés.
+        © 2026 Facilité. Tous droits réservés.
       </footer>
     </div>
   );

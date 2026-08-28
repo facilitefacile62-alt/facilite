@@ -672,8 +672,8 @@ export default function ImporterCvPage() {
               href="/"
               className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
             >
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-gray-900">Facilité</span>
             </Link>
 
             {/* Barre de recherche de la Navbar */}
@@ -1547,7 +1547,7 @@ export default function ImporterCvPage() {
       {/* Footer layout */}
       <footer className="bg-gray-900 text-white mt-auto border-t border-gray-800">
         <div className="max-w-[1180px] mx-auto px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-semibold text-gray-400">
-          <div>© 2026 Facilite. Tous droits réservés.</div>
+          <div>© 2026 Facilité. Tous droits réservés.</div>
           <div className="flex space-x-4">
             <Link href="/" className="hover:text-white transition">Accueil</Link>
             <span>•</span>

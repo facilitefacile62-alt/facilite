@@ -180,7 +180,7 @@ const translations = {
     sidebarFooter1: "Conditions d'utilisation",
     sidebarFooter2: "Politique de confidentialité",
     sidebarFooter3: "Nous contacter",
-    sidebarFooterCopyright: "© 2026 Facilite.",
+    sidebarFooterCopyright: "© 2026 Facilité.",
 
     // Actions
     btnBack: "Retour",
@@ -309,7 +309,7 @@ const translations = {
     sidebarFooter1: "Terms of use",
     sidebarFooter2: "Privacy policy",
     sidebarFooter3: "Contact us",
-    sidebarFooterCopyright: "© 2026 Facilite.",
+    sidebarFooterCopyright: "© 2026 Facilité.",
 
     // Actions
     btnBack: "Back",
@@ -2700,8 +2700,8 @@ Laisse vide les champs non trouvés.`;
               href="/"
               className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
             >
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilité</span>
             </Link>
             <div className="hidden sm:flex items-center pl-4 border-l border-gray-300">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">CV Builder Pro</span>

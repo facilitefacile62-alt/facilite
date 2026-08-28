@@ -101,7 +101,7 @@ const SITE_SERVICES = [
     id: "sec_boite",
     title: "Boîte à idées & Suggestions",
     category: "Services",
-    description: "Proposez des idées d'amélioration pour enrichir l'expérience sur la plateforme Facilite.",
+    description: "Proposez des idées d'amélioration pour enrichir l'expérience sur la plateforme Facilité.",
     icon: "fa-lightbulb",
     path: "/boite-a-idees",
   },
@@ -588,7 +588,7 @@ function RechercheContent() {
                       </div>
                       <div>
                         <h4 className="text-sm font-extrabold text-gray-900">{recr.full_name || recr.headline || "Recruteur vérifié"}</h4>
-                        <p className="text-xs text-gray-500 font-medium">Recruteur vérifié Facilite</p>
+                        <p className="text-xs text-gray-500 font-medium">Recruteur vérifié Facilité</p>
                       </div>
                     </div>
                   ))}
@@ -646,7 +646,7 @@ function RechercheContent() {
       />
 
       <footer className="bg-white border-t border-gray-200 py-6 text-center text-xs font-medium text-gray-500">
-        © 2026 Facilite. Moteur de Recherche Global.
+        © 2026 Facilité. Moteur de Recherche Global.
       </footer>
     </div>
   );

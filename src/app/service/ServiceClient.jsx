@@ -82,7 +82,7 @@ const translations = {
     pricingOffer4Feature3: "Focus approfondi sur vos réalisations.",
     pricingOffer4Feature4: "Optimisation pour la compatibilité ATS.",
     chooseOffer: "Choisir cette offre",
-    footerAboutTitle: "À propos de Facilite",
+    footerAboutTitle: "À propos de Facilité",
     footerAboutDesc: "Facilite est votre allié de confiance pour concevoir des CV percutants et professionnels. Grâce à nos outils intuitifs et nos modèles optimisés, propulsez votre carrière et décrochez l'emploi de vos rêves en quelques clics.",
     footerAboutUs: "À propos de nous",
     footerPrivacy: "Politique de confidentialité",
@@ -92,7 +92,7 @@ const translations = {
     footerWeekends: "Samedi - Dimanche",
     footerStayInTouch: "Restez en contact avec nous",
     footerFollowUs: "Suivez-nous sur nos réseaux sociaux pour ne rien rater de nos actualités.",
-    footerCopyright: "© 2026 Facilite. Tous droits réservés.",
+    footerCopyright: "© 2026 Facilité. Tous droits réservés.",
     modalTitle: "Contactez-nous",
     modalSubtitle: "Une question ou une suggestion ? Notre équipe vous répond sous 24h.",
     modalLabelName: "Nom complet",
@@ -193,7 +193,7 @@ const translations = {
     footerWeekends: "Saturday - Sunday",
     footerStayInTouch: "Stay in touch with us",
     footerFollowUs: "Follow us on our social networks to not miss any of our news.",
-    footerCopyright: "© 2026 Facilite. All rights reserved.",
+    footerCopyright: "© 2026 Facilité. All rights reserved.",
     modalTitle: "Contact us",
     modalSubtitle: "A question or suggestion? Our team will reply within 24 hours.",
     modalLabelName: "Full name",
@@ -767,8 +767,8 @@ export default function Home() {
               href="/"
               className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
             >
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-gray-900">Facilité</span>
             </Link>
 
             {/* Barre de recherche Desktop */}
@@ -1810,7 +1810,7 @@ export default function Home() {
           
           {/* Colonne 1 : À Propos */}
           <div className="flex flex-col">
-            <Link href="/" className="flex items-center space-x-2.5 mb-4 group cursor-pointer" title="Aller à l'accueil Facilite">
+            <Link href="/" className="flex items-center space-x-2.5 mb-4 group cursor-pointer" title="Aller à l'accueil Facilité">
               <img src="/logo.jpeg" alt="Logo" className="w-7 h-7 rounded-full object-cover group-hover:opacity-80 transition" />
               <h3 className="text-white text-xl font-extrabold group-hover:text-[#10E688] transition">{t.footerAboutTitle}</h3>
             </Link>

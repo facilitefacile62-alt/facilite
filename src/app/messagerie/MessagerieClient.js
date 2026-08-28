@@ -51,7 +51,7 @@ const translations = {
     modalSuccessTitle: "Message envoyé avec succès !",
     modalSuccessDesc: "Merci pour votre message. Notre équipe d'assistance vous contactera très rapidement.",
     modalClose: "Fermer",
-    footerCopyright: "© 2026 Facilite. Tous droits réservés.",
+    footerCopyright: "© 2026 Facilité. Tous droits réservés.",
     toastLangFR: "Langue modifiée en Français",
     toastLangGB: "Language changed to English",
     
@@ -117,7 +117,7 @@ const translations = {
     modalSuccessTitle: "Message sent successfully!",
     modalSuccessDesc: "Thank you for your message. Our support team will get in touch with you very shortly.",
     modalClose: "Close",
-    footerCopyright: "© 2026 Facilite. All rights reserved.",
+    footerCopyright: "© 2026 Facilité. All rights reserved.",
     toastLangFR: "Language changed to French",
     toastLangGB: "Language changed to English",
     
@@ -172,7 +172,7 @@ const AI_PINNED_CHAT = {
   id: 'ai-assistant',
   name: 'Support RH Facilité',
   title: 'Assistance & Support RH',
-  company: 'Facilite Corporation',
+  company: 'Facilité',
   avatar: '/logo.jpeg',
   avatarInitials: 'FC',
   avatarColor: 'bg-[#10E688]',
@@ -1010,7 +1010,7 @@ export default function MessagerieClient() {
             ...aiConv,
             name: "Support RH Facilité",
             title: "Assistance & Support RH",
-            company: "Facilite Corporation",
+            company: "Facilité",
             avatarColor: "bg-[#10E688]",
             avatarInitials: "FC",
             logo: "/logo.jpeg",
@@ -1886,8 +1886,8 @@ export default function MessagerieClient() {
               href="/"
               className="flex items-center space-x-2.5 cursor-pointer hover:opacity-85 transition"
             >
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-gray-900">Facilité</span>
             </Link>
 
             {/* Barre de recherche */}

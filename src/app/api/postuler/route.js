@@ -486,7 +486,7 @@ export async function POST(req) {
         html: `
           <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
             <h2 style="color: #10E688; border-bottom: 2px solid #eee; padding-bottom: 10px;">Nouvelle candidature reçue</h2>
-            <p>Un candidat vient de postuler à une offre depuis la plateforme Facilite.</p>
+            <p>Un candidat vient de postuler à une offre depuis la plateforme Facilité.</p>
             <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
               <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; width: 170px;">Objet / Poste :</td>

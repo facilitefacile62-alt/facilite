@@ -1259,9 +1259,9 @@ export default function AdminDashboardPage() {
           <Link href="/" className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition" title="Retour à l'accueil">
             <i className="fa-solid fa-chevron-left text-xs"></i>
           </Link>
-          <Link href="/" className="flex items-center space-x-2 group cursor-pointer" title="Aller à l'accueil Facilite">
-            <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover border border-gray-200 group-hover:opacity-80 transition" />
-            <span className="text-base font-extrabold text-gray-900 tracking-tight group-hover:text-orange-600 transition">Facilite</span>
+          <Link href="/" className="flex items-center space-x-2 group cursor-pointer" title="Aller à l'accueil Facilité">
+            <img src="/logo.jpeg" alt="Logo Facilité" className="w-8 h-8 rounded-full object-cover border border-gray-200 group-hover:opacity-80 transition" />
+            <span className="text-base font-extrabold text-gray-900 tracking-tight group-hover:text-orange-600 transition">Facilité</span>
           </Link>
         </div>
 
@@ -1287,9 +1287,9 @@ export default function AdminDashboardPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileNavOpen(false)} />
           <div className="relative w-72 max-w-[85vw] h-full bg-white flex flex-col shadow-2xl animate-in slide-in-from-left duration-200">
             <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
-              <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center gap-2 group cursor-pointer" title="Aller à l'accueil Facilite">
-                <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover border border-gray-200 group-hover:opacity-80 transition" />
-                <span className="text-base font-extrabold text-gray-900 tracking-tight group-hover:text-orange-600 transition">Facilite</span>
+              <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center gap-2 group cursor-pointer" title="Aller à l'accueil Facilité">
+                <img src="/logo.jpeg" alt="Logo Facilité" className="w-8 h-8 rounded-full object-cover border border-gray-200 group-hover:opacity-80 transition" />
+                <span className="text-base font-extrabold text-gray-900 tracking-tight group-hover:text-orange-600 transition">Facilité</span>
               </Link>
               <button
                 type="button"
@@ -1321,7 +1321,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div>
                   <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900 tracking-tight">Administration</h1>
-                  <p className="text-xs text-gray-500 font-medium">Gérez votre plateforme Facilite</p>
+                  <p className="text-xs text-gray-500 font-medium">Gérez votre plateforme Facilité</p>
                 </div>
               </div>
 

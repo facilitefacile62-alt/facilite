@@ -258,7 +258,7 @@ export default function PublicProfilePage() {
                 <span>•</span>
                 <span className="flex items-center space-x-1 text-gray-600">
                   <i className="fa-solid fa-building text-emerald-600"></i>
-                  <span>Facilité Corporation</span>
+                  <span>Facilité</span>
                 </span>
               </div>
             </div>

@@ -1098,7 +1098,7 @@ function ExtracteurContent() {
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs font-medium text-gray-500">
-        © 2026 Facilite - L'Extracteur de Candidature Instantané.
+        © 2026 Facilité - L'Extracteur de Candidature Instantané.
       </footer>
 
       {/* Modale d'inscription requise pour les visiteurs */}

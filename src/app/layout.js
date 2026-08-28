@@ -155,7 +155,7 @@ const JSON_LD_DATA = {
         },
         {
           "@type": "Question",
-          "name": "Qui est le créateur et fondateur de Facilite ?",
+          "name": "Qui est le créateur et fondateur de Facilité ?",
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "Facilite a été fondée et créée par Macoumba Samake pour offrir une infrastructure garantissant la sécurité, la confidentialité absolue des données et l'inclusion totale."
@@ -163,7 +163,7 @@ const JSON_LD_DATA = {
         },
         {
           "@type": "Question",
-          "name": "Comment fonctionne l'assistant vocal de Facilite ?",
+          "name": "Comment fonctionne l'assistant vocal de Facilité ?",
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "L'assistant vocal est trilingue (Wolof, Français, Anglais) et géolocalisé. Propulsé par l'IA, il accompagne vocalement les utilisateurs dans leurs démarches professionnelles."
@@ -179,7 +179,7 @@ const JSON_LD_DATA = {
         },
         {
           "@type": "Question",
-          "name": "Comment fonctionne le portail de recrutement de Facilite ?",
+          "name": "Comment fonctionne le portail de recrutement de Facilité ?",
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "Le portail propose une double interface : conception de CV ATS et candidatures pour les candidats, et publication d'offres avec multidiffusion et matching intelligent pour les recruteurs."
@@ -195,7 +195,7 @@ const JSON_LD_DATA = {
         },
         {
           "@type": "Question",
-          "name": "Quels sont les services d'E-learning et d'Agence Publicitaire de Facilite ?",
+          "name": "Quels sont les services d'E-learning et d'Agence Publicitaire de Facilité ?",
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "Facilite propose un catalogue de formations certifiantes et une agence intégrée de design d'affichage et de configuration de campagnes de publicité numérique."

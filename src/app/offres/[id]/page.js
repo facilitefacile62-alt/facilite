@@ -721,12 +721,12 @@ Date limite : 31 août 2026`,
   },
   "6": {
     id: "6",
-    title: "FACILITE BUSINESS RECRUTE !",
-    company: "Facilite Business",
+    title: "FACILITÉ RECRUTE !",
+    company: "Facilité",
     location: "Abidjan, Côte d'Ivoire",
     contract_type: "CDI",
     salary_range: "Selon profil",
-    description: `Vous cherchez un nouveau challenge professionnel ? Facilite Business grandit et recherche des talents motivés et dynamiques pour rejoindre son équipe !
+    description: `Vous cherchez un nouveau challenge professionnel ? Facilité grandit et recherche des talents motivés et dynamiques pour rejoindre son équipe !
 
 Nous recrutons activement pour les postes suivants :
 - 💻 Informaticiens : Maîtrise du développement, du support technique et de la maintenance IT. Expérience requise.
@@ -759,7 +759,7 @@ Nous recrutons activement pour les postes suivants :
   "2": {
     id: "2",
     title: "Développeur Front-End React / Next.js",
-    company: "Facilite Corporation",
+    company: "Facilité",
     location: "Pikine, Dakar, Sénégal",
     contract_type: "Stage",
     salary_range: "Indemnité de stage",

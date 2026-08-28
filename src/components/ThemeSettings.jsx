@@ -58,7 +58,7 @@ export default function ThemeSettings() {
           </div>
           <div className="min-w-0">
             <p className="font-extrabold text-gray-900 dark:text-gray-100 text-sm">Thème</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Apparence de Facilite</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Apparence de Facilité</p>
           </div>
         </div>
 

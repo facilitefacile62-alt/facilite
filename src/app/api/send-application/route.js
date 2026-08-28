@@ -171,7 +171,7 @@ export async function POST(req) {
         <p style="font-size: 13px; color: #6b7280;">Vous trouverez son CV en pièce jointe à cet e-mail.</p>
         <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 24px 0;" />
         <p style="font-size: 11px; color: #9ca3af; text-align: center;">
-          Candidature envoyée via la plateforme Facilite · Recrutement Simplifié.
+          Candidature envoyée via la plateforme Facilité · Recrutement Simplifié.
         </p>
       </div>
     `;

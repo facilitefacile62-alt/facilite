@@ -656,7 +656,7 @@ export default function LoginPage() {
 
       {/* Footer Minimaliste */}
       <footer className="text-center py-2 text-[11px] text-gray-400">
-        © 2026 Facilite · Tous droits réservés.
+        © 2026 Facilité · Tous droits réservés.
       </footer>
     </div>
   );

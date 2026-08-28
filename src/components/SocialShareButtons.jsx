@@ -65,7 +65,7 @@ export default function SocialShareButtons({
   };
 
   const shareUrl = offerId ? `${getBaseUrl()}/offres/${offerId}` : getBaseUrl();
-  const shareText = `🚀 Recrutement : ${title} chez ${company} (${contract} - ${location}) sur Facilite.\nDécouvrez l'offre et postulez ici :`;
+  const shareText = `🚀 Recrutement : ${title} chez ${company} (${contract} - ${location}) sur Facilité.\nDécouvrez l'offre et postulez ici :`;
 
   // Extraction complète de tous les moyens de contact (Email + WhatsApp + Site)
   const contactMethods = extractOfferContactMethods({

@@ -161,7 +161,7 @@ async function remindAbandonedCvDrafts(admin) {
       to: recipientEmail,
       fullName: profile?.full_name,
       subject: "[Facilite] Votre CV vous attend pour être finalisé",
-      message: `Vous avez commencé un CV (« ${draft.title} ») sur Facilite mais ne l'avez pas encore finalisé. Reprenez-le où vous vous étiez arrêté et téléchargez-le en PDF en quelques clics.`,
+      message: `Vous avez commencé un CV (« ${draft.title} ») sur Facilité mais ne l'avez pas encore finalisé. Reprenez-le où vous vous étiez arrêté et téléchargez-le en PDF en quelques clics.`,
       ctaLabel: "Reprendre mon CV",
       ctaUrl: `${APP_URL}/creer-cv?resumeId=${draft.id}`,
     });

@@ -46,14 +46,14 @@ const translations = {
     modalSuccessTitle: "Message envoyé avec succès !",
     modalSuccessDesc: "Merci pour votre message. Notre équipe d'assistance vous contactera très rapidement.",
     modalClose: "Fermer",
-    footerAboutTitle: "À propos de Facilite",
+    footerAboutTitle: "À propos de Facilité",
     footerAboutDesc: "Facilite est votre allié de confiance pour concevoir des CV percutants et professionnels. Grâce à nos outils intuitifs et nos modèles optimisés, propulsez votre carrière et décrochez l'emploi de vos rêves en quelques clics.",
     footerSupportTitle: "Horaires & Support",
     footerWeekdays: "Lundi - Vendredi",
     footerWeekends: "Samedi - Dimanche",
     footerStayInTouch: "Restez en contact avec nous",
     footerFollowUs: "Suivez-nous sur nos réseaux sociaux pour ne rien rater de nos actualités.",
-    footerCopyright: "© 2026 Facilite. Tous droits réservés.",
+    footerCopyright: "© 2026 Facilité. Tous droits réservés.",
     toastLangFR: "Langue modifiée en Français",
     toastLangGB: "Language changed to English",
     toastOfferSelected: "Offre sélectionnée avec succès !",
@@ -99,7 +99,7 @@ const translations = {
     footerWeekends: "Saturday - Sunday",
     footerStayInTouch: "Stay in touch with us",
     footerFollowUs: "Follow us on our social networks to not miss any of our news.",
-    footerCopyright: "© 2026 Facilite. All rights reserved.",
+    footerCopyright: "© 2026 Facilité. All rights reserved.",
     toastLangFR: "Langue modifiée en Français",
     toastLangGB: "Language changed to English",
     toastOfferSelected: "Offer selected successfully!",
@@ -379,8 +379,8 @@ export default function BoiteAIdees() {
           <div className="flex items-center space-x-3">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
-              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-200" />
+              <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilité</span>
             </Link>
 
             {/* Barre de recherche Desktop */}
@@ -1105,9 +1105,9 @@ export default function BoiteAIdees() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Colonne 1 : À Propos */}
           <div className="flex flex-col">
-            <Link href="/" className="flex items-center space-x-2.5 mb-4 group cursor-pointer" title="Aller à l'accueil Facilite">
+            <Link href="/" className="flex items-center space-x-2.5 mb-4 group cursor-pointer" title="Aller à l'accueil Facilité">
               <img src="/logo.jpeg" alt="Logo" className="w-7 h-7 rounded-full object-cover group-hover:opacity-80 transition" />
-              <h3 className="text-white text-xl font-extrabold group-hover:text-[#10E688] transition">À propos de Facilite</h3>
+              <h3 className="text-white text-xl font-extrabold group-hover:text-[#10E688] transition">À propos de Facilité</h3>
             </Link>
             <p className="text-sm leading-relaxed mb-6 text-gray-400 font-medium">
               Facilite est votre allié de confiance pour concevoir des CV percutants et professionnels. Grâce à nos outils intuitifs et nos modèles optimisés, propulsez votre carrière.
@@ -1207,7 +1207,7 @@ export default function BoiteAIdees() {
         </div>
 
         <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-800/80 text-center text-xs text-gray-500 font-medium">
-          <p>© 2026 Facilite. Tous droits réservés.</p>
+          <p>© 2026 Facilité. Tous droits réservés.</p>
         </div>
       </footer>
 

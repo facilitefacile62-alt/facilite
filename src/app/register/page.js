@@ -121,8 +121,8 @@ function RegisterForm() {
       {/* Navigation En-tête */}
       <header className="w-full max-w-[1180px] px-6 py-5 flex items-center justify-between z-10">
         <Link href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
-          <img src="/logo.jpeg" alt="Logo Facilite" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-          <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilite</span>
+          <img src="/logo.jpeg" alt="Logo Facilité" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
+          <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilité</span>
         </Link>
 
         <Link
@@ -140,8 +140,8 @@ function RegisterForm() {
           
           {/* Logo officiel du site au-dessus de la carte */}
           <div className="flex justify-center mb-5">
-            <Link href="/" className="cursor-pointer hover:opacity-85 transition" title="Retour à l'accueil Facilite">
-              <img src="/logo.jpeg" alt="Logo Facilite" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
+            <Link href="/" className="cursor-pointer hover:opacity-85 transition" title="Retour à l'accueil Facilité">
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
             </Link>
           </div>
 
@@ -344,7 +344,7 @@ function RegisterForm() {
 
       {/* Footer minimaliste */}
       <footer className="w-full text-center py-4 text-xs font-semibold text-gray-400 z-10">
-        © 2026 Facilite. All rights reserved.
+        © 2026 Facilité. All rights reserved.
       </footer>
     </div>
   );

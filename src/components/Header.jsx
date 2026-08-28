@@ -158,7 +158,7 @@ const QUICK_SECTIONS_INDEX = [
     id: "sec_boite",
     title: "Boîte à idées & Suggestions",
     type: "Communauté",
-    subtitle: "Contribuez à l'évolution de la plateforme Facilite",
+    subtitle: "Contribuez à l'évolution de la plateforme Facilité",
     targetUrl: "/boite-a-idees",
     icon: "fa-lightbulb",
     badgeColor: "emerald",
@@ -892,7 +892,7 @@ export default function Header() {
         >
           <img
             src="/logo.jpeg"
-            alt="Logo Facilite"
+            alt="Logo Facilité"
             className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200 dark:border-gray-700 group-hover:scale-105 transition-transform"
           />
           <span className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight group-hover:text-emerald-600 transition-colors hidden sm:inline">
