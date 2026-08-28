@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { notifierConnexion } from "@/lib/confirmerConnexion";
 
 // Liste des pays demandés avec ISO pour les drapeaux réels (FlagCDN)
 const COUNTRIES = [
@@ -153,10 +154,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/" }) {
         // Best-effort, ne bloque jamais la redirection : annule une
         // suppression de compte en attente si la personne se reconnecte
         // (Section 3b "Supprimer le compte" du profil).
-        fetch("/api/auth/confirm-after-login", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-        }).catch(() => {});
+        notifierConnexion(data.session);
         const searchRedirect = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
         const targetUrl = searchRedirect || onSuccessRedirect || "/";
         setTimeout(() => {

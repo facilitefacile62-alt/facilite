@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import RoleNavLink from "@/components/RoleNavLink";
 import { isFeatureAllowed, getFeatureFlagsTreeAsync, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { notifierConnexion } from "@/lib/confirmerConnexion";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 
@@ -546,11 +547,11 @@ export default function Header() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (_event === "SIGNED_IN" && session?.access_token) {
-        fetch("/api/auth/confirm-after-login", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }).catch(() => {});
+      if (_event === "SIGNED_IN") {
+        // notifierConnexion() dédoublonne par session de navigation :
+        // supabase-js émet SIGNED_IN à chaque rafraîchissement de jeton et à
+        // chaque montage de page, pas seulement à une vraie connexion.
+        notifierConnexion(session);
       }
     });
 

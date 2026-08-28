@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { notifierConnexion } from "@/lib/confirmerConnexion";
 import PhoneAuthForm from "@/components/PhoneAuthForm";
 
 // Désactivé temporairement (Twilio non configuré, voir point 5 - inscription
@@ -150,10 +151,7 @@ export default function LoginPage() {
       if (data?.session) {
         setIsSuccess(true);
 
-        fetch("/api/auth/confirm-after-login", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-        }).catch(() => {});
+        notifierConnexion(data.session);
 
         const userId = data.session.user.id;
         let targetRole = "user";
