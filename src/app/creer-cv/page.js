@@ -1706,28 +1706,76 @@ export default function CreerCv() {
         ? `CV - ${cvData.firstName} ${cvData.lastName}`
         : "Mon CV Facilité";
 
-      const { data: savedResume, error: saveError } = await supabase
-        .from("resumes")
-        .insert({
-          user_id: session?.user?.id || null,
-          title: resumeTitle,
-          type: "created",
-          // selectedTemplate/accentColor embarqués aux côtés des champs
-          // cvData habituels : régénérer le PDF après paiement (voir
-          // pdfExport.js) a besoin des trois pour reconstruire le même rendu.
-          // elementStyles/elementOffsets/lockedElementIds ajoutés en même
-          // temps : ces deux derniers existaient déjà (glisser-déposer,
-          // verrouillage) mais n'étaient jamais persistés avant ce point —
-          // les laisser de côté alors qu'on persiste désormais elementStyles
-          // aurait produit un résultat incohérent au rechargement (le style
-          // d'un élément survit, sa position/son verrou non).
-          content: { ...cvData, selectedTemplate, accentColor, elementStyles, elementOffsets, lockedElementIds },
-          ats_score: 95,
-        })
-        .select("id")
-        .single();
+      // UPSERT et non INSERT (correction du 2026-08-28).
+      //
+      // Cette fonction faisait un .insert() À CHAQUE appel. Le garde-fou
+      // `savingDraft` n'empêche qu'un double-clic dans le même appel : dès
+      // que la personne fermait la modale de tarifs et relançait la
+      // sauvegarde, ou revenait éditer son CV, une NOUVELLE ligne était
+      // créée. Relevé en production le 2026-08-28 : 3 comptes portent des
+      // doublons stricts (même compte, même titre), dont « Mon CV Facilité »
+      // ×105 et « CV - Macoumba Samake » ×3 — ces trois-là enregistrés à
+      // 17h41, 17h45 puis 18h06, avec un contenu différent à chaque fois :
+      // c'est bien la même édition resauvegardée, pas trois CV distincts.
+      // Conséquence visible pour l'utilisateur : le quota de documents se
+      // remplit tout seul (« Max atteint », boutons de rédaction et d'ajout
+      // verrouillés) sans aucun moyen de comprendre pourquoi.
+      //
+      // savedResumeId est déjà renseigné dans les deux chemins qui mènent
+      // ici — après une première sauvegarde (plus bas) et au chargement d'un
+      // CV existant (loadResumeById) — il suffisait de s'en servir.
+      const contenu = {
+        // selectedTemplate/accentColor embarqués aux côtés des champs
+        // cvData habituels : régénérer le PDF après paiement (voir
+        // pdfExport.js) a besoin des trois pour reconstruire le même rendu.
+        // elementStyles/elementOffsets/lockedElementIds ajoutés en même
+        // temps : ces deux derniers existaient déjà (glisser-déposer,
+        // verrouillage) mais n'étaient jamais persistés avant ce point —
+        // les laisser de côté alors qu'on persiste désormais elementStyles
+        // aurait produit un résultat incohérent au rechargement (le style
+        // d'un élément survit, sa position/son verrou non).
+        ...cvData,
+        selectedTemplate,
+        accentColor,
+        elementStyles,
+        elementOffsets,
+        lockedElementIds,
+      };
 
-      if (saveError) throw saveError;
+      let savedResume;
+      if (savedResumeId) {
+        // .eq("user_id") en plus de l'id : la RLS l'impose déjà, mais une
+        // mise à jour qui ne cible pas explicitement son propriétaire est
+        // une erreur qui ne se voit qu'en production.
+        const { data, error } = await supabase
+          .from("resumes")
+          .update({
+            title: resumeTitle,
+            content: contenu,
+            ats_score: 95,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", savedResumeId)
+          .eq("user_id", session?.user?.id || "")
+          .select("id")
+          .single();
+        if (error) throw error;
+        savedResume = data;
+      } else {
+        const { data, error } = await supabase
+          .from("resumes")
+          .insert({
+            user_id: session?.user?.id || null,
+            title: resumeTitle,
+            type: "created",
+            content: contenu,
+            ats_score: 95,
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        savedResume = data;
+      }
 
       setSavedResumeId(savedResume.id);
       triggerToast("Brouillon sauvegardé sur votre compte Supabase !", "fa-cloud-arrow-up");
