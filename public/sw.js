@@ -25,7 +25,7 @@
  * et le cache est vidé à chaque changement de VERSION_CACHE.
  */
 
-const VERSION_CACHE = "facilite-v2";
+const VERSION_CACHE = "facilite-v3";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

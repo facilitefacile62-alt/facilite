@@ -39,7 +39,7 @@ const contentSecurityPolicy = [
   "worker-src 'self' blob: https://cdnjs.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
   "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com https://*.clarity.ms https://c.clarity.ms",
   "media-src 'self' blob: data: https://*.supabase.co",
   // Clarity renvoie ses mesures par fetch/beacon vers *.clarity.ms : sans
   // cette entrée, le script se chargerait mais n'enverrait toujours rien.
