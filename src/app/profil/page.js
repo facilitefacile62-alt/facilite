@@ -182,6 +182,22 @@ export default function ProfilPage() {
   const [userDocuments, setUserDocuments] = useState([]);
   const [isCopiedLink, setIsCopiedLink] = useState(false);
 
+  // Quota de documents : SEULS les documents importés comptent, exactement
+  // comme le déclencheur check_resume_quota() en base (voir la migration
+  // 20260828170000_relever_quota_resumes_cinq.sql, qui ne compte que les
+  // lignes dont file_url n'est pas NULL). Les CV rédigés dans l'éditeur ont
+  // file_url à NULL et ne sont donc pas plafonnés.
+  //
+  // L'écran comptait auparavant userDocuments.length, tous documents
+  // confondus. Conséquence constatée le 2026-08-28 : trois CV créés dans
+  // l'éditeur affichaient « 3/2 documents (Max atteint) » et verrouillaient
+  // les boutons de rédaction et d'ajout, alors que la base n'aurait rien
+  // refusé. Relever le plafond de 2 à 5 a reculé le seuil sans supprimer
+  // l'écart : c'est bien la règle de comptage qui devait être alignée.
+  const QUOTA_DOCUMENTS_IMPORTES = 5;
+  const documentsImportes = userDocuments.filter((doc) => doc.file_url).length;
+  const quotaDocumentsAtteint = documentsImportes >= QUOTA_DOCUMENTS_IMPORTES;
+
   // Compétences dynamique (Supabase)
   const [userSkills, setUserSkills] = useState([]);
   const [newSkillInput, setNewSkillInput] = useState("");
@@ -1462,8 +1478,7 @@ export default function ProfilPage() {
     // Limite de 5 documents IMPORTÉS maximum par candidat —
     // les CV créés avec l'éditeur (file_url null) ne comptent jamais dans
     // ce quota, seul le trigger DB check_resume_quota() fait foi en dernier ressort.
-    const importedDocsCount = userDocuments.filter((doc) => doc.file_url).length;
-    if (importedDocsCount >= 5) {
+    if (quotaDocumentsAtteint) {
       triggerToast("Limite atteinte : vous pouvez conserver au maximum 5 documents importés (CVs, lettres de motivation, attestations).", "fa-triangle-exclamation");
       if (cvFileInputRef.current) cvFileInputRef.current.value = "";
       return;
@@ -4064,14 +4079,14 @@ export default function ProfilPage() {
                         <h3 className="text-sm font-extrabold text-gray-900 flex items-center space-x-2">
                           <span>Curriculum vitae & Lettres de motivation</span>
                           <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
-                            userDocuments.length >= 5
+                            quotaDocumentsAtteint
                               ? "bg-amber-100 text-amber-900 border-amber-300"
                               : "bg-emerald-100 text-[#047857] border-emerald-200"
                           }`}>
-                            {userDocuments.length}/5 document{userDocuments.length > 1 ? "s" : ""} {userDocuments.length >= 5 ? "(Max atteint)" : ""}
+                            {documentsImportes}/{QUOTA_DOCUMENTS_IMPORTES} document{documentsImportes > 1 ? "s" : ""} {quotaDocumentsAtteint ? "(Max atteint)" : ""}
                           </span>
                         </h3>
-                        <p className="text-xs text-gray-500 font-medium">Gérez jusqu'à 5 documents (CVs, lettres de motivation, attestations).</p>
+                        <p className="text-xs text-gray-500 font-medium">Gérez jusqu'à 5 documents importés (CVs, lettres de motivation, attestations). Les CV rédigés dans l'éditeur ne comptent pas dans cette limite.</p>
                       </div>
                     </div>
 
@@ -4087,16 +4102,16 @@ export default function ProfilPage() {
 
                     <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                       <Link
-                        href={userDocuments.length >= 5 ? "#" : "/importer-cv"}
+                        href={quotaDocumentsAtteint ? "#" : "/importer-cv"}
                         onClick={(e) => {
-                          if (userDocuments.length >= 5) {
+                          if (quotaDocumentsAtteint) {
                             e.preventDefault();
-                            triggerToast("Limite atteinte : vous avez atteint le maximum de 5 documents. Supprimez un document existant pour en créer ou rédiger un nouveau.", "fa-triangle-exclamation");
+                            triggerToast("Limite atteinte : vous avez 5 documents importés. Supprimez-en un pour en importer un autre — les CV rédigés dans l'éditeur restent illimités.", "fa-triangle-exclamation");
                           }
                         }}
-                        title={userDocuments.length >= 5 ? "Limite de 5 documents atteinte" : "Rédiger ou importer un CV"}
+                        title={quotaDocumentsAtteint ? "Limite de 5 documents importés atteinte" : "Rédiger ou importer un CV"}
                         className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition justify-center flex-1 sm:flex-none ${
-                          userDocuments.length >= 5
+                          quotaDocumentsAtteint
                             ? "bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-60 pointer-events-auto"
                             : "bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 cursor-pointer shadow-xs"
                         }`}
@@ -4107,23 +4122,23 @@ export default function ProfilPage() {
 
                       <button
                         type="button"
-                        disabled={userDocuments.length >= 5}
+                        disabled={quotaDocumentsAtteint}
                         onClick={() => {
-                          if (userDocuments.length >= 5) {
-                            triggerToast("Limite atteinte : vous pouvez conserver au maximum 5 documents (CVs, lettres de motivation). Supprimez un document pour en ajouter un nouveau.", "fa-triangle-exclamation");
+                          if (quotaDocumentsAtteint) {
+                            triggerToast("Limite atteinte : vous pouvez conserver au maximum 5 documents importés. Supprimez-en un pour en ajouter un nouveau.", "fa-triangle-exclamation");
                             return;
                           }
                           cvFileInputRef.current?.click();
                         }}
-                        title={userDocuments.length >= 5 ? "Limite de 5 documents atteinte" : "Ajouter un document"}
+                        title={quotaDocumentsAtteint ? "Limite de 5 documents importés atteinte" : "Ajouter un document"}
                         className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition justify-center flex-1 sm:flex-none ${
-                          userDocuments.length >= 5
+                          quotaDocumentsAtteint
                             ? "bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-60 pointer-events-auto shadow-none"
                             : "bg-[#047857] hover:bg-[#036448] text-white cursor-pointer shadow-xs active:scale-[0.98]"
                         }`}
                       >
-                        <i className={`text-xs ${userDocuments.length >= 5 ? "fa-solid fa-lock text-gray-400" : "fa-solid fa-plus"}`}></i>
-                        <span>{userDocuments.length >= 5 ? "Ajouter un document (5/5 max)" : "Ajouter un document"}</span>
+                        <i className={`text-xs ${quotaDocumentsAtteint ? "fa-solid fa-lock text-gray-400" : "fa-solid fa-plus"}`}></i>
+                        <span>{quotaDocumentsAtteint ? "Ajouter un document (5/5 max)" : "Ajouter un document"}</span>
                       </button>
                     </div>
                   </div>
