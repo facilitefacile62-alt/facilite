@@ -175,7 +175,7 @@ const translations = {
   }
 };
 
-export default function Home() {
+export default function Home({ initialOffers = [] }) {
   const pathname = usePathname();
   const router = useRouter();
   const [previewTemplate, setPreviewTemplate] = useState(null);
@@ -248,8 +248,8 @@ export default function Home() {
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
 
   // Search and Filter States for Job Board
-  const [jobsLoading, setJobsLoading] = useState(true);
-  const [dynamicJobs, setDynamicJobs] = useState([]);
+  const [dynamicJobs, setDynamicJobs] = useState(initialOffers || []);
+  const [jobsLoading, setJobsLoading] = useState((initialOffers || []).length === 0);
   // Une seule source, un seul filtre — les mêmes que /offres.
   // Avant : fusion de dynamicJobs avec 31 offres codées en dur, sans aucun
   // filtre d'expiration. Résultat mesuré le 2026-08-28 : Simplon (date
@@ -381,6 +381,9 @@ export default function Home() {
             domain: offer.domain || null,
           }));
           setDynamicJobs(formatted);
+          try {
+            localStorage.setItem("FACILITE_CACHED_OFFERS_V1", JSON.stringify(formatted.slice(0, 30)));
+          } catch {}
         }
       } catch (err) {
         console.error("Erreur chargement des offres:", err);
@@ -388,6 +391,19 @@ export default function Home() {
         setJobsLoading(false);
       }
     }
+
+    // Hydratation immédiate depuis le cache local si initialOffers était vide
+    try {
+      const cached = localStorage.getItem("FACILITE_CACHED_OFFERS_V1");
+      if (cached && dynamicJobs.length === 0) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setDynamicJobs(parsed);
+          setJobsLoading(false);
+        }
+      }
+    } catch {}
+
     loadDynamicJobs();
 
     const jobsChannel = supabase
