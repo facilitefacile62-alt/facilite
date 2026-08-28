@@ -440,9 +440,8 @@ export default function AdminDashboardPage() {
             .select("id, reporter_id, target_type, target_id, reason, created_at")
             .eq("status", "pending")
             .order("created_at", { ascending: true }),
-          // Numéros déjà masqués côté SQL (mask_phone_number) — le numéro
-          // complet ne transite jamais jusqu'ici, voir 20260808020000.
-          supabase.rpc("get_users_phone_status"),
+          // Statut d'authentification et numéros masqués (get_users_auth_status)
+          supabase.rpc("get_users_auth_status"),
           // Historique de commandes (statuts uniquement, jamais invoice_url)
           // pour la fiche candidat palier 1.
           supabase
@@ -460,15 +459,20 @@ export default function AdminDashboardPage() {
           if (profilesRes.error || rolesRes.error) {
             console.error("Erreur chargement profils/rôles:", profilesRes.error || rolesRes.error);
           } else {
-            if (phoneStatusRes.error) console.error("Erreur chargement statut téléphone:", phoneStatusRes.error);
-            const phoneByUserId = new Map((phoneStatusRes.data || []).map((r) => [r.user_id, r.phone_masked]));
+            if (phoneStatusRes.error) console.error("Erreur chargement statut auth/téléphone:", phoneStatusRes.error);
+            const authByUserId = new Map((phoneStatusRes.data || []).map((r) => [r.user_id, r]));
             const roleByUserId = new Map((rolesRes.data || []).map((r) => [r.user_id, r]));
-            const merged = (profilesRes.data || []).map((p) => ({
-              ...p,
-              role: roleByUserId.get(p.id)?.role || "user",
-              status: roleByUserId.get(p.id)?.status || "active",
-              phone_masked: phoneByUserId.get(p.id) || null,
-            }));
+            const merged = (profilesRes.data || []).map((p) => {
+              const authInfo = authByUserId.get(p.id);
+              return {
+                ...p,
+                role: roleByUserId.get(p.id)?.role || "user",
+                status: roleByUserId.get(p.id)?.status || "active",
+                phone_masked: authInfo?.phone_masked || null,
+                is_email_confirmed: authInfo?.is_email_confirmed ?? true,
+                email_confirmed_at: authInfo?.email_confirmed_at || null,
+              };
+            });
             setUsers(merged);
 
             // Complétude de profil : calculée en SQL (get_profiles_completeness),
@@ -1733,9 +1737,13 @@ export default function AdminDashboardPage() {
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-700">
                                 🔒 Suspendu
                               </span>
+                            ) : user.is_email_confirmed === false ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200" title="Adresse e-mail non encore confirmée par le lien envoyé">
+                                ⏳ En attente de confirmation
+                              </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700">
-                                ✓ Actif
+                                ✓ Actif / Confirmé
                               </span>
                             )}
                           </td>

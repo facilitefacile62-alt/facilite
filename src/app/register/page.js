@@ -47,10 +47,16 @@ function RegisterForm() {
     setIsLoading(true);
 
     try {
+      const redirectOrigin = typeof window !== "undefined" && window.location.origin.includes("ffacilite.com")
+        ? "https://ffacilite.com"
+        : (typeof window !== "undefined" ? window.location.origin : "https://ffacilite.com");
+      const safeRedirect = redirectUrl.startsWith("/") ? redirectUrl : "/";
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
+          emailRedirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
           data: {
             full_name: fullName.trim(),
           },
