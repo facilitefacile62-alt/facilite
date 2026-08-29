@@ -31,6 +31,7 @@
     "@upstash/redis": "^1.38.0",
     "ai": "^7.0.41",
     "amqplib": "^2.0.1",
+    "botid": "^1.5.11",
     "browser-image-compression": "^2.0.2",
     "googleapis": "^174.0.1",
     "html2canvas-pro": "^2.3.3",

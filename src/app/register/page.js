@@ -52,31 +52,36 @@ function RegisterForm() {
         : (typeof window !== "undefined" ? window.location.origin : "https://ffacilite.com");
       const safeRedirect = redirectUrl.startsWith("/") ? redirectUrl : "/";
 
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
+      // Passe par /api/auth/register au lieu d'appeler Supabase directement.
+      // C'est ce détour qui rend Vercel BotID opérant : le challenge est
+      // attaché aux requêtes vers nos propres chemins (déclarés dans
+      // instrumentation-client.js) et vérifié côté serveur. Un appel direct
+      // à supabase.auth.signUp() partait vers *.supabase.co sans traverser
+      // l'application, donc sans aucune vérification possible.
+      const reponse = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          fullName: fullName.trim(),
           emailRedirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
-          data: {
-            full_name: fullName.trim(),
-          },
-        },
+        }),
       });
+      const resultat = await reponse.json().catch(() => ({}));
 
-      if (error) {
+      if (!reponse.ok) {
         setIsLoading(false);
-        setErrorMessage(error.message || "Erreur lors de la création du compte.");
+        setErrorMessage(resultat?.error || "Erreur lors de la création du compte.");
         return;
       }
 
-      if (data?.user) {
-        await supabase.from("profiles").upsert({
-          id: data.user.id,
-          email: email.trim(),
-          full_name: fullName.trim(),
-          updated_at: new Date().toISOString(),
-        });
-      }
+      // L'upsert du profil qui suivait ici a été retiré : le déclencheur
+      // on_auth_user_created (handle_new_user) crée déjà la ligne à partir
+      // de raw_user_meta_data, où full_name est transmis. L'appel client ne
+      // pouvait de toute façon pas aboutir — sans session confirmée, la
+      // policy « Insertion de son propre profil » (auth.uid() = id) le
+      // refusait en silence.
 
       setIsLoading(false);
       setIsSuccess(true);

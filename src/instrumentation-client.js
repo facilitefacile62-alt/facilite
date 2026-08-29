@@ -24,3 +24,29 @@ Sentry.init({
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+
+/**
+ * BotID (Vercel) — challenge invisible sur la création de compte.
+ *
+ * initBotId déclare les chemins que le navigateur doit accompagner des
+ * en-têtes de challenge. Sans cette déclaration, checkBotId() côté serveur
+ * échoue systématiquement : c'est le client qui décide quelles requêtes
+ * sont instrumentées.
+ *
+ * Seule l'inscription est protégée. La connexion appelle Supabase
+ * directement depuis le navigateur (login/page.js, signInWithPassword) :
+ * aucune route de l'application n'est traversée, il n'y a donc rien à
+ * protéger tant que ce flux n'est pas déplacé côté serveur — chantier
+ * volontairement reporté, la gestion de session est entièrement cliente et
+ * a déjà causé deux incidents le 2026-08-28.
+ *
+ * Niveau Basic uniquement : Deep Analysis exige le plan Pro. Basic valide
+ * l'intégrité de la réponse au challenge, ce qui arrête les robots qui
+ * n'exécutent pas de JavaScript ou rejouent une requête brute — l'essentiel
+ * des créations de comptes automatisées.
+ */
+import { initBotId } from "botid/client/core";
+
+initBotId({
+  protect: [{ path: "/api/auth/register", method: "POST" }],
+});

@@ -1,4 +1,10 @@
 import { withSentryConfig } from "@sentry/nextjs";
+// BotID (Vercel) — withBotId injecte les rewrites et en-têtes qui font
+// transiter le challenge par notre propre domaine plutôt que par un domaine
+// tiers : les bloqueurs de publicité et les extensions ne peuvent donc pas
+// le neutraliser. Appliqué AVANT withSentryConfig pour que Sentry enveloppe
+// la configuration déjà complétée par BotID, et non l'inverse.
+import { withBotId } from "botid/next/config";
 
 /** @type {import('next').NextConfig} */
 
@@ -103,7 +109,7 @@ const nextConfig = {
 // configuré) : le plugin webpack de Sentry se contente alors de sauter
 // l'upload des source maps avec un avertissement, sans faire échouer le
 // build (`silent: true` supprime ce bruit plutôt que de le rendre bloquant).
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(withBotId(nextConfig), {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,

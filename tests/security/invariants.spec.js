@@ -327,6 +327,19 @@ test.describe("Invariants de sécurité", () => {
       // (auth.exchangeCodeForSession), est le contrôle réel ici — pas un
       // cookie de session préexistant. Décision écrite le 2026-08-17.
       "src/app/auth/callback/route.js",
+
+      // Création de compte — publique par construction, comme la précédente :
+      // elle est atteinte AVANT qu'un utilisateur existe, c'est elle qui le
+      // crée. Aucun contrôle d'autorisation n'est concevable ici.
+      //
+      // Le contrôle réel est Vercel BotID (checkBotId), qui rejette les
+      // créations automatisées. Il est délibérément ABSENT de AUTH_MARKERS :
+      // BotID n'authentifie personne et ne vérifie aucun droit — il
+      // distingue un humain d'un robot. L'inscrire comme marqueur
+      // d'autorisation permettrait à n'importe quel futur endpoint de se
+      // déclarer protégé en ajoutant un test anti-robot, ce qui viderait cet
+      // invariant de son sens. Décision écrite le 2026-08-29.
+      "src/app/api/auth/register/route.js",
     ]);
 
     const unprotected = [...serverActionFiles, ...routeHandlerFiles].filter((f) => {
