@@ -1153,6 +1153,39 @@ export default function ProfilPage() {
       return "";
     };
 
+    // NORMALISATION DE FORME — corrige le défaut central du 29/08/2026.
+    //
+    // Le prompt d'extraction (api/parse-document/route.js) impose au modèle un
+    // JSON IMBRIQUÉ : etat_civil.nom, contacts.email, langues.detail…
+    // Or tout ce qui suit lit les clés AU PREMIER NIVEAU. Aucune ne
+    // correspondait : identité, titre, bio, compétences et langues
+    // revenaient systématiquement vides, quelle que soit la qualité du CV et
+    // même quand l'extraction avait parfaitement réussi. Seuls les centres
+    // d'intérêt et les expériences tombaient juste, par coïncidence de nom.
+    //
+    // On remonte donc les champs imbriqués au premier niveau. Les clés déjà
+    // présentes au premier niveau gardent la priorité : un autre modèle qui
+    // répondrait à plat continue de fonctionner sans changement.
+    const etatCivil = apiFields?.etat_civil && typeof apiFields.etat_civil === "object" ? apiFields.etat_civil : {};
+    const contacts = apiFields?.contacts && typeof apiFields.contacts === "object" ? apiFields.contacts : {};
+    const listeDe = (v) => (Array.isArray(v) ? v : Array.isArray(v?.detail) ? v.detail : []);
+
+    apiFields = {
+      fullName: etatCivil.nom || undefined,
+      title: etatCivil.titre_professionnel || undefined,
+      summary: apiFields?.profil_professionnel || undefined,
+      email: contacts.email || undefined,
+      phone: contacts.telephone || undefined,
+      city: contacts.localisation || undefined,
+      skills: [
+        ...listeDe(apiFields?.competences_cles_hard_skills),
+        ...listeDe(apiFields?.competences_informatiques),
+        ...listeDe(apiFields?.qualites_personnelles),
+      ].filter(Boolean),
+      languages: listeDe(apiFields?.langues),
+      ...Object.fromEntries(Object.entries(apiFields || {}).filter(([, v]) => v !== undefined && v !== null)),
+    };
+
     const rawExperiences = getValue(apiFields, ["experiences", "experiences_professionnelles", "experience", "parcours_professionnel", "work_experience", "workExperiences"]) || [];
     // « formations » est désormais produite par le prompt d'extraction. Les
     // autres clés restent acceptées au cas où un modèle de secours nomme la
