@@ -9,7 +9,7 @@ export default function ConfidentialitePage() {
   const [copiedEmail, setCopiedEmail] = useState(false);
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText("contact@ffacilite.com");
+    navigator.clipboard.writeText("facilitefacile@gmail.com");
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2500);
   };
@@ -250,7 +250,7 @@ export default function ConfidentialitePage() {
                     <li><strong>Usage exclusif :</strong> Les données reçues de Google sont uniquement utilisées pour l&apos;authentification et la gestion de votre compte Facilité.</li>
                     <li><strong>Aucune revente ni publicité :</strong> Nous ne vendons, ne louons et ne transférons JAMAIS vos données Google à des tiers, courtiers en données ou réseaux publicitaires.</li>
                     <li><strong>Aucun entraînement non sollicité d&apos;IA :</strong> Les données d&apos;authentification Google ne sont en aucun cas utilisées pour entraîner des modèles d&apos;IA généralistes.</li>
-                    <li><strong>Contrôle &amp; Révocation immédiate :</strong> Vous pouvez à tout moment révoquer l&apos;accès accordé à Facilité directement depuis les paramètres de votre compte Google (<a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 underline font-bold">Gérer les autorisations Google</a>) ou demander la suppression intégrale de votre compte en écrivant à <strong>contact@ffacilite.com</strong>.</li>
+                    <li><strong>Contrôle &amp; Révocation immédiate :</strong> Vous pouvez à tout moment révoquer l&apos;accès accordé à Facilité directement depuis les paramètres de votre compte Google (<a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 underline font-bold">Gérer les autorisations Google</a>) ou demander la suppression intégrale de votre compte en écrivant à <strong>facilitefacile@gmail.com</strong>.</li>
                   </ul>
                 </div>
               </div>
@@ -458,7 +458,7 @@ export default function ConfidentialitePage() {
                     </div>
                     <div>
                       <div className="font-extrabold text-gray-900 dark:text-white text-xs">Email du Délégué aux Données :</div>
-                      <div className="text-emerald-700 dark:text-[#10E688] font-bold text-xs">contact@ffacilite.com</div>
+                      <div className="text-emerald-700 dark:text-[#10E688] font-bold text-xs">facilitefacile@gmail.com</div>
                     </div>
                   </div>
 
