@@ -565,51 +565,109 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               />
             </div>
 
-            {/* AVERTISSEMENT DE CORRESPONDANCE LIMITÉE (Positionné en bas devant le bouton d'envoi) */}
-            {matchWarning && (
-              <div ref={matchWarningRef} className="p-3.5 bg-amber-50 border-2 border-amber-300 rounded-2xl space-y-2.5 animate-fade-in shadow-sm">
-                <div className="flex items-start gap-2 text-xs font-bold text-amber-800">
-                  <i className="fa-solid fa-circle-exclamation text-amber-600 text-sm mt-0.5"></i>
-                  <span>Correspondance limitée avec cette offre</span>
-                </div>
+            {/* Bouton de Soumission */}
+            <button
+              type="submit"
+              disabled={loading || checkingMatch}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-black py-3 px-4 rounded-xl text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <i className="fa-solid fa-spinner animate-spin text-sm"></i>
+                  <span>Envoi de votre candidature...</span>
+                </>
+              ) : checkingMatch ? (
+                <>
+                  <i className="fa-solid fa-spinner animate-spin text-sm"></i>
+                  <span>Vérification de la correspondance...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fa-regular fa-paper-plane text-xs"></i>
+                  <span>{job.isSpontaneous ? "Soumettre ma candidature" : "Envoyer ma candidature"}</span>
+                </>
+              )}
+            </button>
+          </form>
+        )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-white/80 border border-amber-200 rounded-xl px-2.5 py-2">
-                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-wide">Profil / offre</p>
-                    <p className="text-sm font-black text-amber-900">{matchWarning.score}%</p>
-                    <p className="text-[10px] text-amber-700 font-medium">proximité de contenu</p>
-                  </div>
-                  <div className="bg-white/80 border border-amber-200 rounded-xl px-2.5 py-2">
-                    <p className="text-[10px] font-black text-amber-800 uppercase tracking-wide">Niveau d&apos;études</p>
-                    <p className="text-sm font-black text-amber-900">
-                      {matchWarning.niveau?.statut === "suffisant" && "Suffisant"}
-                      {matchWarning.niveau?.statut === "insuffisant" && "Insuffisant"}
-                      {matchWarning.niveau?.statut === "inconnu" && "Non renseigné"}
-                      {(!matchWarning.niveau || matchWarning.niveau.statut === "non_applicable") && "Non exigé"}
-                    </p>
-                    <p className="text-[10px] text-amber-700 font-medium">
-                      {matchWarning.niveau?.exige
-                        ? `demandé : ${matchWarning.niveau.exige.libelle}`
-                        : "aucun niveau demandé"}
-                    </p>
-                  </div>
+        {/* MODALE D'AVERTISSEMENT AU PREMIER PLAN (LE FORMULAIRE PASSE EN ARRIÈRE-PLAN) */}
+        {matchWarning && (
+          <div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in">
+            <div className="bg-[#FFFDF5] border-2 border-amber-300 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 animate-fade-in-up relative text-left">
+              {/* Bouton Fermer pour revenir au formulaire */}
+              <button
+                type="button"
+                onClick={() => setMatchWarning(null)}
+                className="absolute top-4 right-4 text-amber-700 hover:text-amber-950 w-8 h-8 rounded-full flex items-center justify-center hover:bg-amber-100 transition cursor-pointer"
+                title="Revenir à mon formulaire"
+              >
+                <i className="fa-solid fa-xmark text-lg"></i>
+              </button>
+
+              {/* En-tête */}
+              <div className="flex items-start gap-3 pr-6">
+                <div className="w-9 h-9 rounded-2xl bg-amber-100 border border-amber-300/60 text-amber-600 flex items-center justify-center flex-shrink-0 text-base shadow-2xs">
+                  <i className="fa-solid fa-circle-exclamation"></i>
                 </div>
-                <ul className="text-[11px] text-amber-800 font-medium list-disc list-inside space-y-0.5 bg-amber-100/50 p-2.5 rounded-xl border border-amber-200/60">
+                <div>
+                  <h4 className="text-sm sm:text-base font-black text-amber-950 leading-snug">
+                    Correspondance limitée avec cette offre
+                  </h4>
+                  <p className="text-[11px] text-amber-700 font-semibold mt-0.5">
+                    L&apos;IA a analysé votre profil par rapport à cette annonce.
+                  </p>
+                </div>
+              </div>
+
+              {/* Cartes statistiques */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="bg-white border border-amber-200 rounded-2xl px-3 py-2.5 shadow-2xs">
+                  <p className="text-[10px] font-black text-amber-800 uppercase tracking-wide">Profil / offre</p>
+                  <p className="text-lg font-black text-amber-900 mt-0.5">{matchWarning.score}%</p>
+                  <p className="text-[10px] text-amber-700 font-medium">proximité de contenu</p>
+                </div>
+                <div className="bg-white border border-amber-200 rounded-2xl px-3 py-2.5 shadow-2xs">
+                  <p className="text-[10px] font-black text-amber-800 uppercase tracking-wide">Niveau d&apos;études</p>
+                  <p className="text-lg font-black text-amber-900 mt-0.5 truncate">
+                    {matchWarning.niveau?.statut === "suffisant" && "Suffisant"}
+                    {matchWarning.niveau?.statut === "insuffisant" && "Insuffisant"}
+                    {matchWarning.niveau?.statut === "inconnu" && "Non renseigné"}
+                    {(!matchWarning.niveau || matchWarning.niveau.statut === "non_applicable") && "Non exigé"}
+                  </p>
+                  <p className="text-[10px] text-amber-700 font-medium truncate">
+                    {matchWarning.niveau?.exige
+                      ? `demandé : ${matchWarning.niveau.exige.libelle}`
+                      : "aucun niveau demandé"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Raisons */}
+              {matchWarning.reasons && matchWarning.reasons.length > 0 && (
+                <ul className="text-xs text-amber-900 font-semibold list-disc list-inside space-y-1 bg-amber-100/60 p-3 rounded-2xl border border-amber-200 leading-relaxed">
                   {matchWarning.reasons.map((reason, idx) => (
                     <li key={idx}>{reason}</li>
                   ))}
                 </ul>
-                <p className="text-[11px] text-amber-800 font-medium">Vous pouvez tout de même postuler si vous le souhaitez.</p>
+              )}
+
+              <p className="text-xs text-amber-800 font-bold text-center">
+                Vous pouvez tout de même postuler si vous le souhaitez.
+              </p>
+
+              {/* Boutons d'action */}
+              <div className="space-y-2 pt-1">
                 <button
                   type="button"
                   onClick={submitApplication}
                   disabled={loading}
-                  className="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-black py-3 rounded-xl text-xs sm:text-sm transition cursor-pointer disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
+                  className="w-full bg-[#E67E22] hover:bg-[#D35400] active:scale-[0.99] text-white font-black py-3 px-4 rounded-2xl text-xs sm:text-sm transition cursor-pointer disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
                       <i className="fa-solid fa-spinner animate-spin text-sm"></i>
-                      <span>Envoi en cours...</span>
+                      <span>Envoi de votre candidature...</span>
                     </>
                   ) : (
                     <>
@@ -618,35 +676,18 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
                     </>
                   )}
                 </button>
-              </div>
-            )}
 
-            {/* Bouton de Soumission Normal (uniquement si aucun avertissement) */}
-            {!matchWarning && (
-              <button
-                type="submit"
-                disabled={loading || checkingMatch}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-black py-3 px-4 rounded-xl text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <i className="fa-solid fa-spinner animate-spin text-sm"></i>
-                    <span>Envoi de votre candidature...</span>
-                  </>
-                ) : checkingMatch ? (
-                  <>
-                    <i className="fa-solid fa-spinner animate-spin text-sm"></i>
-                    <span>Vérification de la correspondance...</span>
-                  </>
-                ) : (
-                  <>
-                    <i className="fa-regular fa-paper-plane text-xs"></i>
-                    <span>{job.isSpontaneous ? "Soumettre ma candidature" : "Envoyer ma candidature"}</span>
-                  </>
-                )}
-              </button>
-            )}
-          </form>
+                <button
+                  type="button"
+                  onClick={() => setMatchWarning(null)}
+                  disabled={loading}
+                  className="w-full bg-white hover:bg-gray-100 text-gray-700 font-extrabold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer border border-gray-200"
+                >
+                  Modifier ma candidature
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
