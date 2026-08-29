@@ -13,6 +13,16 @@ import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
 import { isOfferExpired } from "@/lib/offerExpiration";
+// Import manquant depuis l'ajout des bascules de fonctionnalités sur cette
+// page : les trois symboles étaient utilisés sans jamais être importés, et
+// /offres tombait en production sur « ReferenceError: DEFAULT_FEATURE_TREE
+// is not defined » — page entièrement blanche, aucune offre affichée.
+//
+// Ni `next build` ni ESLint ne l'ont vu : le build ne résout pas les
+// identifiants libres d'un module client, et la règle no-undef n'est pas
+// active dans cette configuration. Seule l'ouverture réelle de la page le
+// révélait.
+import { DEFAULT_FEATURE_TREE, getFeatureFlagsTreeAsync, isFeatureAllowed } from "@/lib/featureFlags";
 
 export const dynamic = "force-dynamic";
 
