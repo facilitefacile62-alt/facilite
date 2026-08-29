@@ -121,6 +121,49 @@ Règles impératives d'extraction :
 - Pour tout champ "dates", conserve le format « Mois Année - Mois Année » tel qu'il
   figure dans le document. Si le poste est en cours, écris « Mois Année - Présent ».`;
 
+/**
+ * Un résultat d'extraction contient-il quoi que ce soit d'utilisable ?
+ *
+ * Doit reconnaître DEUX formes, qui ne se ressemblent pas :
+ *  - la réponse des modèles, imbriquée (etat_civil.nom, contacts.email…),
+ *    telle que SYSTEM_PROMPT l'impose ;
+ *  - celle du repli regex mapTextToProfileFields(), entièrement plate
+ *    (firstName, lastName, email…).
+ *
+ * Le seuil est volontairement bas : un seul signal suffit. Il ne s'agit pas
+ * de juger la qualité de l'extraction — la personne relit tout dans la modale
+ * de vérification — mais de distinguer « quelque chose est remonté » de
+ * « absolument rien », seul cas où renvoyer une erreur est justifié.
+ */
+function extractionExploitable(champs) {
+  if (!champs || typeof champs !== "object") return false;
+
+  const texteUtile = (v) => typeof v === "string" && v.trim() !== "";
+  const listeUtile = (v) => (Array.isArray(v) ? v.length > 0 : Array.isArray(v?.detail) && v.detail.length > 0);
+
+  return (
+    // Forme imbriquée (modèles)
+    texteUtile(champs?.etat_civil?.nom) ||
+    texteUtile(champs?.etat_civil?.titre_professionnel) ||
+    texteUtile(champs?.contacts?.email) ||
+    texteUtile(champs?.contacts?.telephone) ||
+    texteUtile(champs?.profil_professionnel) ||
+    listeUtile(champs?.formations) ||
+    listeUtile(champs?.experiences_professionnelles) ||
+    listeUtile(champs?.competences_cles_hard_skills) ||
+    listeUtile(champs?.langues) ||
+    // Forme plate (repli regex)
+    texteUtile(champs?.firstName) ||
+    texteUtile(champs?.lastName) ||
+    texteUtile(champs?.email) ||
+    texteUtile(champs?.phone) ||
+    texteUtile(champs?.title) ||
+    listeUtile(champs?.skills) ||
+    listeUtile(champs?.experiences) ||
+    listeUtile(champs?.educations)
+  );
+}
+
 export async function POST(req) {
   let documentText = "";
   let filename = "document.txt";
@@ -182,9 +225,20 @@ export async function POST(req) {
     }
 
     if (!documentText) {
-      console.warn("Texte de document vide.");
-      const fallbackFields = mapTextToProfileFields("");
-      return NextResponse.json({ success: true, data: fallbackFields, fields: fallbackFields });
+      // Auparavant : success:true avec des champs vides. Le client ouvrait
+      // alors sa modale de vérification sur un formulaire entièrement blanc,
+      // sans qu'aucun message n'explique pourquoi. C'est le cas typique d'un
+      // PDF scanné sans couche texte dont l'OCR n'a rien tiré.
+      console.warn("Texte de document vide — aucune extraction possible.");
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Aucun texte n'a pu être lu dans ce document. S'il s'agit d'une photo ou d'un scan, réessayez avec une image plus nette ou un PDF contenant du texte.",
+          stage: "extraction_texte",
+        },
+        { status: 422 }
+      );
     }
 
     let parsedData = null;
@@ -240,20 +294,52 @@ export async function POST(req) {
       }
     }
 
-    // Tentative 3 : Fallback regex local si toutes les APIs IA échouent
+    // Tentative 3 : repli regex local si toutes les APIs IA échouent
+    let replisRegex = false;
     if (!parsedData) {
       console.log("Appel regex local fallback.");
       parsedData = mapTextToProfileFields(documentText);
+      replisRegex = true;
     }
 
-    return NextResponse.json({ success: true, data: parsedData, fields: parsedData, rawTextLength: documentText.length });
-  } catch (error) {
-    console.error("[Parsing Route Error]", error);
-    const fallbackFields = mapTextToProfileFields(documentText);
+    // Dernier verrou : un repli qui n'a rien trouvé ne doit PAS ressortir en
+    // succès. C'est ce qui rendait la panne invisible — trois étages pouvaient
+    // échouer d'affilée et la route répondait quand même success:true avec un
+    // objet vide, que le client affichait sous forme de formulaire blanc.
+    if (!extractionExploitable(parsedData)) {
+      console.error("[Parsing] Aucun étage n'a produit de données exploitables.");
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "L'analyse automatique n'a rien pu extraire de ce document. Réessayez dans quelques minutes, ou saisissez vos informations manuellement.",
+          stage: replisRegex ? "modeles_indisponibles" : "extraction_vide",
+        },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      data: fallbackFields,
-      fields: fallbackFields,
+      data: parsedData,
+      fields: parsedData,
+      rawTextLength: documentText.length,
+      // Permet au client de dire que le résultat est partiel plutôt que de
+      // le présenter comme une extraction complète.
+      degraded: replisRegex,
     });
+  } catch (error) {
+    console.error("[Parsing Route Error]", error);
+    // Auparavant : success:true avec les champs du repli regex. Une exception
+    // — quota IA, fichier corrompu, panne réseau — passait donc pour une
+    // extraction réussie mais vide.
+    return NextResponse.json(
+      {
+        success: false,
+        error: "L'analyse du document a échoué. Réessayez, ou saisissez vos informations manuellement.",
+        stage: "exception",
+      },
+      { status: 500 }
+    );
   }
 }

@@ -55,6 +55,15 @@ export const DEFAULT_FEATURE_TREE = [
         description: "Sélecteur d'onglets entre offres actives et offres clôturées (effet FOMO)",
       },
       {
+        id: "feat_matching_ia_postuler",
+        name: "Matching IA Candidat-Offre (Avertisseur)",
+        path: "/offres",
+        icon: "🎯",
+        enabled: true,
+        roles: { user: true, recruiter: true, visitor: true },
+        description: "Analyse de compatibilité et pop-up d'avertissement IA de correspondance lors de la postulation",
+      },
+      {
         id: "nav_extracteur",
         name: "Extracteur / Importer CV",
         path: "/candidat/extracteur",

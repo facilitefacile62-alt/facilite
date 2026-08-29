@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { computeApplicationMatch } from "@/lib/matchScore";
+import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -43,6 +44,12 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       matchWarningRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [matchWarning]);
+
+  const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
+
+  useEffect(() => {
+    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+  }, []);
 
   // Charger la session et les CVs de l'utilisateur sur mount
   useEffect(() => {
@@ -189,7 +196,8 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
     // fois matchWarning affiché, un second clic sur "Postuler" ne
     // recalcule pas indéfiniment, l'utilisateur passe par "Postuler quand
     // même" ou change de CV (ce qui réinitialise matchWarning).
-    if (offerDetails && !matchWarning) {
+    const isMatchingAllowed = isFeatureAllowed(featureFlagsTree, "feat_matching_ia_postuler", currentUser?.role || "user");
+    if (isMatchingAllowed && offerDetails && !matchWarning) {
       setCheckingMatch(true);
       try {
         const result = await computeApplicationMatch({

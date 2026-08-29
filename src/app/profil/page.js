@@ -1411,6 +1411,19 @@ export default function ProfilPage() {
       const rawJsonResponse = await parseResponse.json().catch(() => ({}));
       console.log("Données brutes de l'extraction reçues du backend :", rawJsonResponse);
 
+      // La route distingue désormais un échec d'une extraction vide (elle
+      // renvoyait success:true dans les deux cas). On s'arrête ici plutôt que
+      // d'ouvrir la modale de vérification sur un formulaire entièrement
+      // blanc, qui ne disait rien à personne.
+      if (!parseResponse.ok || rawJsonResponse?.success === false) {
+        setIsParsingCv(false);
+        triggerToast(
+          rawJsonResponse?.error || "L'analyse du document a échoué. Réessayez ou saisissez vos informations manuellement.",
+          "fa-triangle-exclamation"
+        );
+        return;
+      }
+
       const apiFields = rawJsonResponse.fields || rawJsonResponse.data || {};
 
       triggerToast("🤖 Cartographie des données extraites vers le profil...", "fa-wand-magic-sparkles fa-spin");
@@ -1423,7 +1436,12 @@ export default function ProfilPage() {
       // Ouvrir la modale après avoir mis à jour les états
       setIsParsingCv(false);
       setScanModalOpen(true);
-      triggerToast("✓ Document analysé ! Vérifiez les données extraites avant validation.", "fa-wand-magic-sparkles");
+      triggerToast(
+        rawJsonResponse?.degraded
+          ? "Analyse partielle : les modèles d'IA n'étaient pas joignables, seules quelques informations ont pu être devinées. Complétez ce qui manque."
+          : "✓ Document analysé ! Vérifiez les données extraites avant validation.",
+        rawJsonResponse?.degraded ? "fa-triangle-exclamation" : "fa-wand-magic-sparkles"
+      );
     } catch (err) {
       console.error("Erreur dans le flux d'analyse du document :", err);
       setIsParsingCv(false);
