@@ -4017,79 +4017,68 @@ export default function ProfilPage() {
             {/* SECTION MES DOCUMENTS (DIRECTEMENT DANS LA MÊME CARTE) */}
             {activeTab === "documents" && (
               <div id="section-mon-profil-cv" className="p-6 md:p-8 space-y-4 animate-fade-in border-t border-gray-150 dark:border-gray-800">
-                <div>
-                  <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
-                    <button
-                      type="button"
-                      onClick={() => setSectionTitleMenuOpen(!sectionTitleMenuOpen)}
-                      className="flex items-center space-x-2 text-xl md:text-2xl font-black text-gray-900 tracking-tight cursor-pointer hover:text-blue-600 transition"
-                    >
-                      <span>Mes documents</span>
-                      <i className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 ${sectionTitleMenuOpen ? "rotate-180" : ""}`}></i>
-                    </button>
-                    {sectionTitleMenuOpen && (
-                      <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm font-sans">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <div className="relative inline-block text-left" ref={sectionTitleMenuRef}>
                         <button
-                          onClick={() => {
-                            handleSelectTab("about");
-                            setSectionTitleMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                          type="button"
+                          onClick={() => setSectionTitleMenuOpen(!sectionTitleMenuOpen)}
+                          className="flex items-center space-x-2 text-xl md:text-2xl font-black text-gray-900 tracking-tight cursor-pointer hover:text-blue-600 transition"
                         >
-                          <i className="fa-regular fa-user text-gray-400"></i>
-                          <span>À propos</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleSelectTab("documents");
-                            setSectionTitleMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
-                        >
-                          <i className="fa-regular fa-file-lines text-gray-400"></i>
                           <span>Mes documents</span>
+                          <i className={`fa-solid fa-chevron-down text-sm text-gray-400 transition-transform duration-200 ${sectionTitleMenuOpen ? "rotate-180" : ""}`}></i>
                         </button>
-                        <button
-                          onClick={() => {
-                            handleSelectTab("settings");
-                            setSectionTitleMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
-                        >
-                          <i className="fa-solid fa-gear text-gray-400"></i>
-                          <span>Paramètres</span>
-                        </button>
+                        {sectionTitleMenuOpen && (
+                          <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-normal text-sm font-sans">
+                            <button
+                              onClick={() => {
+                                handleSelectTab("about");
+                                setSectionTitleMenuOpen(false);
+                              }}
+                              className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                            >
+                              <i className="fa-regular fa-user text-gray-400"></i>
+                              <span>À propos</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleSelectTab("documents");
+                                setSectionTitleMenuOpen(false);
+                              }}
+                              className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                            >
+                              <i className="fa-regular fa-file-lines text-gray-400"></i>
+                              <span>Mes documents</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleSelectTab("settings");
+                                setSectionTitleMenuOpen(false);
+                              }}
+                              className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer flex items-center space-x-2"
+                            >
+                              <i className="fa-solid fa-gear text-gray-400"></i>
+                              <span>Paramètres</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <p className="text-xs md:text-sm text-gray-500 font-medium mt-1">Gérez vos fichiers réutilisables, CVs et lettres de motivation.</p>
-                </div>
 
-              {/* Carte Principale Formulaire */}
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-6">
-                
-                {/* Section Gestionnaire Multi-Documents (CVs & Lettres de Motivation) */}
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-gray-100">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-2xl bg-[#ECFDF5] border border-[#A7F3D0] flex items-center justify-center text-[#047857]">
-                        <i className="fa-regular fa-file-lines text-xl font-bold"></i>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-extrabold text-gray-900 flex items-center space-x-2">
-                          <span>Curriculum vitae & Lettres de motivation</span>
-                          <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
-                            quotaDocumentsAtteint
-                              ? "bg-amber-100 text-amber-900 border-amber-300"
-                              : "bg-emerald-100 text-[#047857] border-emerald-200"
-                          }`}>
-                            {documentsImportes}/{QUOTA_DOCUMENTS_IMPORTES} document{documentsImportes > 1 ? "s" : ""} {quotaDocumentsAtteint ? "(Max atteint)" : ""}
-                          </span>
-                        </h3>
-                        <p className="text-xs text-gray-500 font-medium">Gérez jusqu'à 5 documents importés (CVs, lettres de motivation, attestations). Les CV rédigés dans l'éditeur ne comptent pas dans cette limite.</p>
-                      </div>
+                      {/* Badge Quota compact */}
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                        quotaDocumentsAtteint
+                          ? "bg-amber-100 text-amber-900 border-amber-300"
+                          : "bg-emerald-100 text-[#047857] border-emerald-200"
+                      }`}>
+                        {documentsImportes}/{QUOTA_DOCUMENTS_IMPORTES} document{documentsImportes > 1 ? "s" : ""} {quotaDocumentsAtteint ? "(Max)" : ""}
+                      </span>
                     </div>
+                    <p className="text-xs md:text-sm text-gray-500 font-medium mt-1">Gérez vos fichiers réutilisables, CVs et lettres de motivation.</p>
+                  </div>
 
+                  {/* BOUTON + AJOUTER DIRECTEMENT À CÔTÉ DU TITRE */}
+                  <div className="flex items-center gap-2">
                     <input
                       id="profil-cv-file-upload"
                       name="profil-cv-file-upload"
@@ -4100,48 +4089,34 @@ export default function ProfilPage() {
                       className="hidden"
                     />
 
-                    <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                      <Link
-                        href={quotaDocumentsAtteint ? "#" : "/importer-cv"}
-                        onClick={(e) => {
-                          if (quotaDocumentsAtteint) {
-                            e.preventDefault();
-                            triggerToast("Limite atteinte : vous avez 5 documents importés. Supprimez-en un pour en importer un autre — les CV rédigés dans l'éditeur restent illimités.", "fa-triangle-exclamation");
-                          }
-                        }}
-                        title={quotaDocumentsAtteint ? "Limite de 5 documents importés atteinte" : "Rédiger ou importer un CV"}
-                        className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition justify-center flex-1 sm:flex-none ${
-                          quotaDocumentsAtteint
-                            ? "bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-60 pointer-events-auto"
-                            : "bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 cursor-pointer shadow-xs"
-                        }`}
-                      >
-                        <i className="fa-solid fa-pen-to-square text-xs"></i>
-                        <span>Rédaction</span>
-                      </Link>
-
-                      <button
-                        type="button"
-                        disabled={quotaDocumentsAtteint}
-                        onClick={() => {
-                          if (quotaDocumentsAtteint) {
-                            triggerToast("Limite atteinte : vous pouvez conserver au maximum 5 documents importés. Supprimez-en un pour en ajouter un nouveau.", "fa-triangle-exclamation");
-                            return;
-                          }
-                          cvFileInputRef.current?.click();
-                        }}
-                        title={quotaDocumentsAtteint ? "Limite de 5 documents importés atteinte" : "Ajouter un document"}
-                        className={`font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-2 transition justify-center flex-1 sm:flex-none ${
-                          quotaDocumentsAtteint
-                            ? "bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-60 pointer-events-auto shadow-none"
-                            : "bg-[#047857] hover:bg-[#036448] text-white cursor-pointer shadow-xs active:scale-[0.98]"
-                        }`}
-                      >
-                        <i className={`text-xs ${quotaDocumentsAtteint ? "fa-solid fa-lock text-gray-400" : "fa-solid fa-plus"}`}></i>
-                        <span>{quotaDocumentsAtteint ? "Ajouter un document (5/5 max)" : "Ajouter un document"}</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      disabled={quotaDocumentsAtteint}
+                      onClick={() => {
+                        if (quotaDocumentsAtteint) {
+                          triggerToast("Limite atteinte : vous pouvez conserver au maximum 5 documents importés. Supprimez-en un pour en ajouter un nouveau.", "fa-triangle-exclamation");
+                          return;
+                        }
+                        cvFileInputRef.current?.click();
+                      }}
+                      title={quotaDocumentsAtteint ? "Limite de 5 documents importés atteinte" : "Ajouter un document"}
+                      className={`font-extrabold px-4 py-2 rounded-xl text-xs flex items-center space-x-2 transition justify-center shadow-xs active:scale-[0.98] cursor-pointer ${
+                        quotaDocumentsAtteint
+                          ? "bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-60 pointer-events-auto shadow-none"
+                          : "bg-[#047857] hover:bg-[#036448] text-white"
+                      }`}
+                    >
+                      <i className={`text-xs ${quotaDocumentsAtteint ? "fa-solid fa-lock text-gray-400" : "fa-solid fa-plus"}`}></i>
+                      <span>{quotaDocumentsAtteint ? "Limite atteinte (5/5)" : "Ajouter un document"}</span>
+                    </button>
                   </div>
+                </div>
+
+              {/* Carte Principale Formulaire */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-xs space-y-4">
+                
+                {/* Section Gestionnaire Multi-Documents (CVs & Lettres de Motivation) */}
+                <div className="space-y-4">
 
                   {/* Invitation à activer la visibilité recruteurs, affichée juste
                       après le dépôt d'un CV — jamais d'activation automatique. */}
