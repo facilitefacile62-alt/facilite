@@ -329,7 +329,7 @@ export default function ConditionsPage() {
                   </div>
                   <div>
                     <div className="font-extrabold text-gray-900 dark:text-white text-xs">Support &amp; Juridique Facilité :</div>
-                    <div className="text-blue-700 dark:text-blue-400 font-bold text-xs">contact@ffacilite.com</div>
+                    <div className="text-blue-700 dark:text-blue-400 font-bold text-xs">facilitefacile@gmail.com</div>
                   </div>
                 </div>
               </div>
