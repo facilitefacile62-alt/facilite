@@ -2,6 +2,7 @@ import searchOffersByDomain from "./searchOffersByDomain";
 import editCreatedCv from "./editCreatedCv";
 import compressImportedCv from "./compressImportedCv";
 import queryDataBank from "./queryDataBank";
+import findTransportRoute from "./findTransportRoute";
 
 /**
  * Registre d'outils de l'assistant IA — chaque outil est un module qui
@@ -13,7 +14,7 @@ import queryDataBank from "./queryDataBank";
  * ni /api/ai-chat, ni le dispatcher, ni le prompt (les déclarations sont
  * envoyées dynamiquement au modèle).
  */
-export const AI_TOOLS = [searchOffersByDomain, editCreatedCv, compressImportedCv, queryDataBank];
+export const AI_TOOLS = [searchOffersByDomain, editCreatedCv, compressImportedCv, queryDataBank, findTransportRoute];
 
 const TOOLS_BY_NAME = new Map(AI_TOOLS.map((t) => [t.name, t]));
 
