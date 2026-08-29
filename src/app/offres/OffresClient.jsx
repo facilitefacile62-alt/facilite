@@ -461,42 +461,40 @@ function OffresContent({ listingType } = {}) {
           </p>
         </div>
 
-        {/* Barre de Recherche & Filtres (Contrôlés individuellement) */}
-        {(checkFeatureAllowed("feat_offres_recherche") ||
-          checkFeatureAllowed("feat_offres_filtre_ville") ||
-          checkFeatureAllowed("feat_offres_recherche_ia")) && (
+        {/* Barre de Recherche & Filtres (Filtres sur les offres d'emploi & Recherche IA) */}
+        {(checkFeatureAllowed("feat_offres_filtres") || checkFeatureAllowed("feat_offres_recherche_ia")) && (
           <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-200 shadow-xs mb-4 sm:mb-8">
             <div className="flex flex-col md:flex-row items-center gap-2.5 sm:gap-4">
-              {checkFeatureAllowed("feat_offres_recherche") && (
-                <div className="relative flex-1 w-full">
-                  <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                  <input
-                    type="text"
-                    placeholder="Mot-clé (titre, compétence, entreprise)..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      if (semanticResults !== null) setSemanticResults(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSemanticSearch();
-                    }}
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-                  />
-                </div>
-              )}
+              {checkFeatureAllowed("feat_offres_filtres") && (
+                <>
+                  <div className="relative flex-1 w-full">
+                    <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input
+                      type="text"
+                      placeholder="Mot-clé (titre, compétence, entreprise)..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        if (semanticResults !== null) setSemanticResults(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSemanticSearch();
+                      }}
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                    />
+                  </div>
 
-              {checkFeatureAllowed("feat_offres_filtre_ville") && (
-                <div className="relative w-full md:w-64">
-                  <i className="fa-solid fa-location-dot absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                  <input
-                    type="text"
-                    placeholder="Ville / Localisation..."
-                    value={locationFilter}
-                    onChange={(e) => setLocationFilter(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-                  />
-                </div>
+                  <div className="relative w-full md:w-64">
+                    <i className="fa-solid fa-location-dot absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input
+                      type="text"
+                      placeholder="Ville / Localisation..."
+                      value={locationFilter}
+                      onChange={(e) => setLocationFilter(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                    />
+                  </div>
+                </>
               )}
 
               {checkFeatureAllowed("feat_offres_recherche_ia") && (
