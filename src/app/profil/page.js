@@ -4229,20 +4229,12 @@ export default function ProfilPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="p-6 text-center bg-gray-50 border border-dashed border-gray-300 rounded-2xl space-y-2">
-                      <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-500 flex items-center justify-center mx-auto text-sm">
+                    <div className="py-6 px-4 text-center bg-gray-50/70 border border-dashed border-gray-200 rounded-2xl space-y-1">
+                      <div className="w-8 h-8 rounded-full bg-pink-50 text-pink-500 flex items-center justify-center mx-auto text-xs">
                         <i className="fa-solid fa-file-circle-xmark"></i>
                       </div>
                       <p className="text-xs font-bold text-gray-700">Aucun document enregistré pour le moment</p>
-                      <p className="text-[11px] text-gray-500">Ajoutez vos CVs ou lettres de motivation au format PDF ou DOCX.</p>
-                      <button
-                        type="button"
-                        onClick={() => cvFileInputRef.current?.click()}
-                        className="mt-2 inline-flex items-center space-x-1.5 bg-[#047857] text-white font-extrabold text-xs px-4 py-2 rounded-xl hover:bg-[#036448] transition cursor-pointer"
-                      >
-                        <i className="fa-solid fa-upload text-xs"></i>
-                        <span>Téléverser mon premier document</span>
-                      </button>
+                      <p className="text-[11px] text-gray-400">Cliquez sur « Ajouter un document » ci-dessus pour importer un CV ou une lettre (PDF, DOCX).</p>
                     </div>
                   )}
                 </div>
