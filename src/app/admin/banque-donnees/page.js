@@ -27,9 +27,25 @@ const ONGLETS = [
   { cle: "candidats", libelle: "Candidats", icone: "fa-users" },
   { cle: "offres", libelle: "Offres", icone: "fa-briefcase" },
   { cle: "commandes", libelle: "Commandes", icone: "fa-receipt" },
+  { cle: "transport", libelle: "Transport", icone: "fa-bus" },
 ];
 
 const PAR_PAGE = 25;
+
+// Miroir exact du CHECK de public.transport_routes : une valeur ajoutee ici
+// sans migration correspondante ferait echouer l'enregistrement en base.
+const MODES_TRANSPORT = [
+  { cle: "tata", libelle: "Tata" },
+  { cle: "ter", libelle: "TER" },
+  { cle: "brt", libelle: "BRT" },
+  { cle: "vtc", libelle: "VTC" },
+  { cle: "car_rapide", libelle: "Car rapide" },
+];
+
+const LIGNE_VIDE = {
+  id: null, mode: "tata", ligne: "", operateur: "", origine: "", destination: "",
+  arrets: [], zones: [], tarif_min: "", tarif_max: "", description: "", actif: true,
+};
 
 const ETIQUETTES_LIVRAISON = {
   delivered: { texte: "déposé", classe: "bg-emerald-50 text-[#047857] border-emerald-200" },
@@ -78,6 +94,10 @@ export default function BanqueDonneesPage() {
   const [motifDemande, setMotifDemande] = useState("");
   const [envoiDemande, setEnvoiDemande] = useState(false);
   const [message, setMessage] = useState(null);
+
+  const [lignesTransport, setLignesTransport] = useState([]);
+  const [ligneEditee, setLigneEditee] = useState(null);
+  const [enregistrementLigne, setEnregistrementLigne] = useState(false);
 
   const [livraisons, setLivraisons] = useState([]);
   const [fichierLivraison, setFichierLivraison] = useState(null);
@@ -150,6 +170,22 @@ export default function BanqueDonneesPage() {
             expiree: o.deadline ? new Date(o.deadline).getTime() < maintenant : false,
           }))
         );
+        setTotal(count || 0);
+      } else if (ongletActif === "transport") {
+        // Un admin voit aussi les lignes desactivees (policy
+        // « Un admin lit toutes les lignes »), pour pouvoir les reactiver.
+        let q = supabase
+          .from("transport_routes")
+          .select(
+            "id, mode, ligne, operateur, origine, destination, arrets, zones, tarif_min, tarif_max, description, actif, updated_at",
+            { count: "exact" }
+          )
+          .order("updated_at", { ascending: false })
+          .range(debut, fin);
+        if (filtre) q = q.or(`origine.ilike.%${filtre}%,destination.ilike.%${filtre}%,ligne.ilike.%${filtre}%`);
+        const { data, count, error } = await q;
+        if (error) throw error;
+        setLignesTransport(data || []);
         setTotal(count || 0);
       } else {
         const { data, count, error } = await supabase
@@ -306,6 +342,61 @@ export default function BanqueDonneesPage() {
     }
   };
 
+  // --- Lignes de transport --------------------------------------------------
+  //
+  // L'ecriture passe par des RPC SECURITY DEFINER, jamais par un INSERT ou un
+  // UPDATE direct : l'invariant 1 interdit tout GRANT UPDATE/DELETE a
+  // `authenticated`, liste blanche volontairement vide. Le controle du role
+  // admin est fait dans la fonction elle-meme, cote base.
+  const enregistrerLigne = async () => {
+    const l = ligneEditee;
+    if (!l?.origine?.trim() || !l?.destination?.trim()) {
+      setMessage({ type: "erreur", texte: "Origine et destination sont obligatoires." });
+      return;
+    }
+    setEnregistrementLigne(true);
+    try {
+      const { error } = await supabase.rpc("enregistrer_ligne_transport", {
+        p_id: l.id,
+        p_mode: l.mode,
+        p_ligne: l.ligne?.trim() || null,
+        p_operateur: l.operateur?.trim() || null,
+        p_origine: l.origine.trim(),
+        p_destination: l.destination.trim(),
+        p_arrets: l.arrets || [],
+        p_zones: l.zones || [],
+        // Champ texte vide -> NULL, jamais 0 : un tarif inconnu et un trajet
+        // gratuit ne veulent pas dire la meme chose pour la personne qui lit.
+        p_tarif_min: l.tarif_min === "" || l.tarif_min == null ? null : Number(l.tarif_min),
+        p_tarif_max: l.tarif_max === "" || l.tarif_max == null ? null : Number(l.tarif_max),
+        p_description: l.description?.trim() || null,
+        p_actif: l.actif !== false,
+      });
+      if (error) throw error;
+      setMessage({ type: "succes", texte: l.id ? "Ligne mise a jour." : "Ligne ajoutee." });
+      setLigneEditee(null);
+      await charger();
+    } catch (err) {
+      setMessage({ type: "erreur", texte: `Enregistrement impossible : ${err.message}` });
+    } finally {
+      setEnregistrementLigne(false);
+    }
+  };
+
+  const supprimerLigne = async (ligne) => {
+    const nom = [ligne.ligne, `${ligne.origine} vers ${ligne.destination}`].filter(Boolean).join(" — ");
+    if (!window.confirm(`Supprimer definitivement la ligne « ${nom} » ? Cette action est irreversible.`)) return;
+    try {
+      const { error } = await supabase.rpc("supprimer_ligne_transport", { p_id: ligne.id });
+      if (error) throw error;
+      setMessage({ type: "succes", texte: "Ligne supprimee." });
+      if (ligneEditee?.id === ligne.id) setLigneEditee(null);
+      await charger();
+    } catch (err) {
+      setMessage({ type: "erreur", texte: `Suppression impossible : ${err.message}` });
+    }
+  };
+
   // --- Rendu ---------------------------------------------------------------
   if (statut === "verification") {
     return (
@@ -404,6 +495,15 @@ export default function BanqueDonneesPage() {
             <span className="text-[11px] font-bold text-gray-400 tabular-nums">
               {chargement ? "chargement…" : `${total} résultat${total > 1 ? "s" : ""}`}
             </span>
+            {ongletActif === "transport" && (
+              <button
+                type="button"
+                onClick={() => setLigneEditee({ ...LIGNE_VIDE })}
+                className="ml-auto bg-[#047857] hover:bg-[#036448] text-white font-extrabold text-xs px-3.5 py-2 rounded-xl"
+              >
+                <i className="fa-solid fa-plus mr-1.5"></i>Nouvelle ligne
+              </button>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -412,6 +512,22 @@ export default function BanqueDonneesPage() {
             )}
             {ongletActif === "offres" && <TableOffres lignes={offres} />}
             {ongletActif === "commandes" && <TableCommandes lignes={commandes} />}
+            {ongletActif === "transport" && (
+              <TableTransport
+                lignes={lignesTransport}
+                onEditer={(l) =>
+                  setLigneEditee({
+                    ...l,
+                    tarif_min: l.tarif_min ?? "",
+                    tarif_max: l.tarif_max ?? "",
+                    arrets: Array.isArray(l.arrets) ? l.arrets : [],
+                    zones: Array.isArray(l.zones) ? l.zones : [],
+                  })
+                }
+                onSupprimer={supprimerLigne}
+                editee={ligneEditee}
+              />
+            )}
           </div>
 
           {nbPages > 1 && (
@@ -438,6 +554,16 @@ export default function BanqueDonneesPage() {
             </div>
           )}
         </div>
+
+        {ongletActif === "transport" && ligneEditee && (
+          <FormulaireLigne
+            ligne={ligneEditee}
+            setLigne={setLigneEditee}
+            onEnregistrer={enregistrerLigne}
+            enregistrement={enregistrementLigne}
+            onFermer={() => setLigneEditee(null)}
+          />
+        )}
 
         {candidatOuvert && (
           <FicheCandidat
@@ -615,6 +741,277 @@ function TableCommandes({ lignes }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+function TableTransport({ lignes, onEditer, onSupprimer, editee }) {
+  if (!lignes.length) {
+    return (
+      <p className="p-8 text-center text-xs font-bold text-gray-400">
+        Aucune ligne enregistrée. L&apos;assistant ne proposera aucun itinéraire tant que rien n&apos;est saisi — il ne
+        doit jamais en inventer.
+      </p>
+    );
+  }
+  return (
+    <table className="w-full text-left min-w-[820px]">
+      <thead>
+        <tr className="text-[10px] uppercase tracking-wider text-gray-400 border-b border-gray-100">
+          <th className="px-4 py-3 font-bold">Ligne</th>
+          <th className="px-4 py-3 font-bold">Mode</th>
+          <th className="px-4 py-3 font-bold">Trajet</th>
+          <th className="px-4 py-3 font-bold">Arrêts</th>
+          <th className="px-4 py-3 font-bold">Tarif</th>
+          <th className="px-4 py-3 font-bold">État</th>
+          <th className="px-4 py-3 font-bold"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {lignes.map((l) => {
+          const arrets = Array.isArray(l.arrets) ? l.arrets : [];
+          const geolocalises = arrets.filter((a) => a?.lat != null && a?.lng != null).length;
+          return (
+            <tr
+              key={l.id}
+              className={`border-b border-gray-50 text-xs ${editee?.id === l.id ? "bg-[#ECFDF5]" : "hover:bg-gray-50"}`}
+            >
+              <td className="px-4 py-3">
+                <p className="font-extrabold text-gray-900">{l.ligne || "—"}</p>
+                <p className="text-[11px] text-gray-400 font-medium">{l.operateur || "opérateur non précisé"}</p>
+              </td>
+              <td className="px-4 py-3 text-gray-600 font-medium">
+                {MODES_TRANSPORT.find((m) => m.cle === l.mode)?.libelle || l.mode}
+              </td>
+              <td className="px-4 py-3 text-gray-600 font-medium">
+                {l.origine} → {l.destination}
+              </td>
+              <td className="px-4 py-3 text-gray-500 font-medium tabular-nums">
+                {arrets.length}
+                {/* Un arrêt sans coordonnées est invisible pour la recherche
+                    par proximité : le signaler ici évite de croire la ligne
+                    exploitable alors qu'elle ne remontera jamais. */}
+                {geolocalises < arrets.length && (
+                  <span className="ml-1.5 text-[10px] font-black text-amber-700">
+                    {arrets.length - geolocalises} sans GPS
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-gray-600 font-medium tabular-nums">
+                {l.tarif_min == null && l.tarif_max == null
+                  ? "—"
+                  : l.tarif_min === l.tarif_max
+                    ? `${l.tarif_min} XOF`
+                    : `${l.tarif_min ?? "?"}–${l.tarif_max ?? "?"} XOF`}
+              </td>
+              <td className="px-4 py-3">
+                <span
+                  className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                    l.actif
+                      ? "bg-emerald-50 text-[#047857] border-emerald-200"
+                      : "bg-gray-100 text-gray-500 border-gray-200"
+                  }`}
+                >
+                  {l.actif ? "active" : "désactivée"}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  onClick={() => onEditer(l)}
+                  className="text-[11px] font-extrabold text-[#047857] hover:underline"
+                >
+                  Modifier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSupprimer(l)}
+                  className="ml-3 text-[11px] font-extrabold text-red-600 hover:underline"
+                >
+                  Supprimer
+                </button>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function FormulaireLigne({ ligne, setLigne, onEnregistrer, enregistrement, onFermer }) {
+  const champ = (cle, valeur) => setLigne({ ...ligne, [cle]: valeur });
+
+  const majArret = (i, cle, valeur) => {
+    const arrets = [...(ligne.arrets || [])];
+    arrets[i] = { ...arrets[i], [cle]: valeur };
+    setLigne({ ...ligne, arrets });
+  };
+
+  return (
+    <div className="mt-4 bg-white rounded-2xl border border-gray-200 p-5">
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <h2 className="text-base font-black text-gray-900">
+          {ligne.id ? "Modifier la ligne" : "Nouvelle ligne de transport"}
+        </h2>
+        <button type="button" onClick={onFermer} className="text-gray-400 hover:text-gray-700" aria-label="Fermer">
+          <i className="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label htmlFor="tr-mode" className="block text-[11px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+            Mode
+          </label>
+          <select
+            id="tr-mode"
+            value={ligne.mode}
+            onChange={(e) => champ("mode", e.target.value)}
+            className="w-full text-xs font-medium border border-gray-200 rounded-xl px-3.5 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#10E688]"
+          >
+            {MODES_TRANSPORT.map((m) => (
+              <option key={m.cle} value={m.cle}>
+                {m.libelle}
+              </option>
+            ))}
+          </select>
+        </div>
+        <ChampTexte id="tr-ligne" libelle="Numéro / nom de ligne" valeur={ligne.ligne} onChange={(v) => champ("ligne", v)} placeholder="ex. 12" />
+        <ChampTexte id="tr-op" libelle="Opérateur" valeur={ligne.operateur} onChange={(v) => champ("operateur", v)} placeholder="ex. Dakar Dem Dikk" />
+        <ChampTexte id="tr-org" libelle="Origine *" valeur={ligne.origine} onChange={(v) => champ("origine", v)} placeholder="ex. Petersen" />
+        <ChampTexte id="tr-dest" libelle="Destination *" valeur={ligne.destination} onChange={(v) => champ("destination", v)} placeholder="ex. Diamniadio" />
+        <ChampTexte
+          id="tr-zones"
+          libelle="Zones desservies (séparées par une virgule)"
+          valeur={(ligne.zones || []).join(", ")}
+          onChange={(v) => champ("zones", v.split(",").map((z) => z.trim()).filter(Boolean))}
+          placeholder="Pikine, Guédiawaye"
+        />
+        <ChampTexte id="tr-tmin" libelle="Tarif minimum (XOF)" valeur={ligne.tarif_min} onChange={(v) => champ("tarif_min", v)} placeholder="laisser vide si inconnu" />
+        <ChampTexte id="tr-tmax" libelle="Tarif maximum (XOF)" valeur={ligne.tarif_max} onChange={(v) => champ("tarif_max", v)} placeholder="laisser vide si inconnu" />
+      </div>
+
+      <div className="mt-3">
+        <label htmlFor="tr-desc" className="block text-[11px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+          Description
+        </label>
+        <textarea
+          id="tr-desc"
+          value={ligne.description || ""}
+          onChange={(e) => champ("description", e.target.value)}
+          rows={2}
+          placeholder="Fréquence, horaires connus, particularités du trajet."
+          className="w-full text-xs font-medium border border-gray-200 rounded-xl px-3.5 py-2.5 resize-y focus:outline-none focus:ring-2 focus:ring-[#10E688]"
+        />
+      </div>
+
+      <div className="mt-4 border-t border-gray-100 pt-4">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-[11px] uppercase tracking-wider font-bold text-gray-400">Arrêts</h3>
+          <button
+            type="button"
+            onClick={() =>
+              setLigne({
+                ...ligne,
+                arrets: [...(ligne.arrets || []), { nom: "", lat: "", lng: "", ordre: (ligne.arrets || []).length + 1 }],
+              })
+            }
+            className="text-[11px] font-extrabold text-[#047857] hover:underline"
+          >
+            + Ajouter un arrêt
+          </button>
+        </div>
+        <p className="text-[11px] text-gray-500 font-medium mb-3 leading-relaxed">
+          Les coordonnées GPS sont ce qui permet de répondre « quelle ligne part d&apos;où je suis ». Un arrêt sans
+          latitude ni longitude reste affiché mais ne sera jamais trouvé par la recherche de proximité.
+        </p>
+
+        {(ligne.arrets || []).length === 0 ? (
+          <p className="text-xs text-gray-400 font-medium italic">Aucun arrêt saisi.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {(ligne.arrets || []).map((a, i) => (
+              <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                <input
+                  type="text"
+                  value={a?.nom || ""}
+                  onChange={(e) => majArret(i, "nom", e.target.value)}
+                  placeholder="Nom de l'arrêt"
+                  aria-label={`Nom de l'arrêt ${i + 1}`}
+                  className="col-span-5 text-xs font-medium border border-gray-200 rounded-lg px-2.5 py-2"
+                />
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={a?.lat ?? ""}
+                  onChange={(e) => majArret(i, "lat", e.target.value)}
+                  placeholder="Latitude"
+                  aria-label={`Latitude de l'arrêt ${i + 1}`}
+                  className="col-span-3 text-xs font-medium border border-gray-200 rounded-lg px-2.5 py-2 tabular-nums"
+                />
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={a?.lng ?? ""}
+                  onChange={(e) => majArret(i, "lng", e.target.value)}
+                  placeholder="Longitude"
+                  aria-label={`Longitude de l'arrêt ${i + 1}`}
+                  className="col-span-3 text-xs font-medium border border-gray-200 rounded-lg px-2.5 py-2 tabular-nums"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLigne({ ...ligne, arrets: (ligne.arrets || []).filter((_, j) => j !== i) })
+                  }
+                  aria-label={`Retirer l'arrêt ${i + 1}`}
+                  className="col-span-1 text-gray-400 hover:text-red-600"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-4">
+        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={ligne.actif !== false}
+            onChange={(e) => champ("actif", e.target.checked)}
+            className="accent-[#10E688]"
+          />
+          <span>Ligne active (visible des candidats et de l&apos;assistant)</span>
+        </label>
+        <button
+          type="button"
+          onClick={onEnregistrer}
+          disabled={enregistrement}
+          className="ml-auto bg-[#047857] hover:bg-[#036448] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs px-4 py-2.5 rounded-xl"
+        >
+          {enregistrement ? "Enregistrement…" : ligne.id ? "Mettre à jour" : "Ajouter la ligne"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ChampTexte({ id, libelle, valeur, onChange, placeholder }) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-[11px] uppercase tracking-wider font-bold text-gray-400 mb-1">
+        {libelle}
+      </label>
+      <input
+        id={id}
+        type="text"
+        value={valeur ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full text-xs font-medium border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#10E688]"
+      />
+    </div>
   );
 }
 
