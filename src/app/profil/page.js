@@ -1073,6 +1073,55 @@ export default function ProfilPage() {
 
   // Convertit les champs extraits par le service serveur (/api/parse-document) vers le
   // format attendu par la modale de prévisualisation. Gère toutes les variations de clés JSON (français, anglais, accents).
+  /**
+   * Découpe une période telle que le modèle la renvoie — le prompt impose
+   * « Mois Année - Mois Année » (voir api/parse-document/route.js).
+   *
+   * Remplace un `.slice(0, 4)` qui supposait que la chaîne COMMENÇAIT par
+   * l'année : sur « Octobre 2025 - Juin 2026 » il produisait « Octo », ce qui
+   * vidait le champ année à l'affichage. Les CV traités ici écrivent la date
+   * en toutes lettres et en français, jamais en ISO.
+   *
+   * Tolère aussi « 2019 - 2021 », « Depuis 2020 », « 2021 » seul, et repère un
+   * poste en cours (« Présent », « Aujourd'hui », « En cours », « Actuel »).
+   */
+  const decouperPeriode = (valeur) => {
+    const vide = { startMonth: "", startYear: "", endMonth: "", endYear: "", isCurrent: false };
+    if (typeof valeur !== "string") return vide;
+    const texte = valeur.trim();
+    if (!texte) return vide;
+
+    const enCours = /présent|present|aujourd|en cours|actuel|current|ongoing/i.test(texte);
+    // Séparateurs réellement rencontrés : tiret, demi-cadratin, cadratin, « à »,
+    // « au », « to ». L'espacement autour n'est jamais garanti.
+    const bornes = texte.split(/\s*(?:[-–—]|\bà\b|\bau\b|\bto\b)\s*/i).filter(Boolean);
+
+    const lireBorne = (fragment) => {
+      if (!fragment) return { mois: "", annee: "" };
+      const annee = (fragment.match(/(?:19|20)\d{2}/) || [""])[0];
+      const mois = (fragment.match(
+        /janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre/i
+      ) || [""])[0];
+      return { mois: mois ? mois.charAt(0).toUpperCase() + mois.slice(1).toLowerCase() : "", annee };
+    };
+
+    const debut = lireBorne(bornes[0]);
+    const fin = bornes.length > 1 ? lireBorne(bornes[bornes.length - 1]) : { mois: "", annee: "" };
+
+    return {
+      startMonth: debut.mois,
+      startYear: debut.annee,
+      endMonth: enCours ? "" : fin.mois,
+      endYear: enCours ? "" : fin.annee,
+      isCurrent: enCours,
+    };
+  };
+
+  // Évite un String() nu sur une valeur qui peut être un objet ou un tableau :
+  // String({}) donne "[object Object]", que le découpage traiterait comme une
+  // date. Tout ce qui n'est ni texte ni nombre devient une chaîne vide.
+  const texteOuVide = (v) => (typeof v === "string" || typeof v === "number" ? String(v) : "");
+
   const mapExtractedFieldsToScannedData = (apiFields, file, docPublicUrl) => {
     // 2. Journalisation de l'objet JSON reçu pour le débogage
     console.log("JSON reçu de l'API de parsing de documents :", apiFields);
@@ -1105,7 +1154,13 @@ export default function ProfilPage() {
     };
 
     const rawExperiences = getValue(apiFields, ["experiences", "experiences_professionnelles", "experience", "parcours_professionnel", "work_experience", "workExperiences"]) || [];
-    const rawEducations = getValue(apiFields, ["educations", "education", "formation", "formations", "parcours_academique", "studies"]) || [];
+    // « formations » est désormais produite par le prompt d'extraction. Les
+    // autres clés restent acceptées au cas où un modèle de secours nomme la
+    // section autrement. Avant le 29/08/2026, AUCUNE de ces clés ne pouvait
+    // exister : le schéma imposé au modèle n'avait pas de section formation,
+    // et ce tableau était donc toujours vide — d'où une section Formation qui
+    // ne se remplissait jamais, quelle que soit la qualité du CV.
+    const rawEducations = getValue(apiFields, ["formations", "educations", "education", "formation", "parcours_academique", "parcours_scolaire", "diplomes", "diplômes", "studies"]) || [];
     const rawLanguages = getValue(apiFields, ["languages", "langues", "langue", "languages_list"]) || [];
     const rawSkills = getValue(apiFields, ["skills", "competences", "compétences", "competence", "compétence", "skills_list"]) || [];
     const rawInterests = getValue(apiFields, ["interests", "centres_interet", "centresInteret", "centres_d_interet", "hobbies", "loisirs"]) || [];
@@ -1115,8 +1170,19 @@ export default function ProfilPage() {
       const employer = getValue(exp, ["employer", "company", "entreprise", "employeur", "societe", "société"]);
       const expCity = getValue(exp, ["city", "location", "lieu", "ville"]);
       const current = getValue(exp, ["current", "enCours", "en_cours", "actuel", "isCurrent", "is_current"]);
-      const startDate = String(getValue(exp, ["startDate", "start_date", "dateDebut", "date_debut", "debut", "début", "startYear", "start_year", "period"]));
-      const endDate = String(getValue(exp, ["endDate", "end_date", "dateFin", "date_fin", "fin", "endYear", "end_year"]));
+      // « dates » est la clé RÉELLEMENT produite par le prompt : une seule
+      // chaîne « Mois Année - Mois Année ». Elle manquait à cette liste, si
+      // bien que les dates étaient extraites par le modèle puis jamais lues.
+      const periode = decouperPeriode(
+        getValue(exp, ["dates", "periode", "période", "period", "duree", "durée"])
+      );
+      // Champs séparés, au cas où un modèle de secours en renvoie.
+      const secoursDebut = decouperPeriode(
+        texteOuVide(getValue(exp, ["startDate", "start_date", "dateDebut", "date_debut", "debut", "début", "startYear", "start_year"]))
+      );
+      const secoursFin = decouperPeriode(
+        texteOuVide(getValue(exp, ["endDate", "end_date", "dateFin", "date_fin", "fin", "endYear", "end_year"]))
+      );
       const description = getValue(exp, ["description", "tasks", "missions", "details", "détails"]);
 
       return {
@@ -1126,10 +1192,11 @@ export default function ProfilPage() {
         location: expCity || "",
         locationType: "",
         employmentType: "",
-        isCurrent: !!current,
-        startMonth: "",
-        startYear: startDate ? startDate.slice(0, 4) : "",
-        endYear: endDate ? endDate.slice(0, 4) : "",
+        isCurrent: !!current || periode.isCurrent,
+        startMonth: periode.startMonth || secoursDebut.startMonth,
+        startYear: periode.startYear || secoursDebut.startYear,
+        endMonth: periode.endMonth || secoursFin.startMonth,
+        endYear: periode.endYear || secoursFin.startYear,
         description: description || "",
         skills: []
       };
@@ -1138,17 +1205,24 @@ export default function ProfilPage() {
     const educations = (Array.isArray(rawEducations) ? rawEducations : [rawEducations].filter(Boolean)).map((edu, idx) => {
       const school = getValue(edu, ["school", "institution", "etablissement", "établissement", "universite", "université", "ecole", "école"]);
       const degree = getValue(edu, ["degree", "diploma", "diplome", "diplôme", "qualification"]);
-      const startYear = String(getValue(edu, ["startYear", "start_year", "anneeDebut", "annee_debut", "debut", "début", "startDate", "start_date"]));
-      const endYear = String(getValue(edu, ["endYear", "end_year", "year", "anneeFin", "annee_fin", "fin", "endDate", "end_date"]));
+      const periodeEdu = decouperPeriode(
+        getValue(edu, ["dates", "periode", "période", "period", "annees", "années"])
+      );
+      const debutEdu = decouperPeriode(
+        texteOuVide(getValue(edu, ["startYear", "start_year", "anneeDebut", "annee_debut", "debut", "début", "startDate", "start_date"]))
+      );
+      const finEdu = decouperPeriode(
+        texteOuVide(getValue(edu, ["endYear", "end_year", "year", "anneeFin", "annee_fin", "fin", "endDate", "end_date"]))
+      );
 
       return {
         id: Date.now() + 100 + idx,
         school: school || "",
         degree: degree || "",
-        field: "",
-        startYear: startYear ? startYear.slice(0, 4) : "",
-        endYear: endYear ? endYear.slice(0, 4) : "",
-        isCurrent: false
+        field: getValue(edu, ["domaine", "field", "filiere", "filière", "specialite", "spécialité"]) || "",
+        startYear: periodeEdu.startYear || debutEdu.startYear,
+        endYear: periodeEdu.endYear || finEdu.startYear,
+        isCurrent: periodeEdu.isCurrent
       };
     });
 
@@ -1222,6 +1296,23 @@ export default function ProfilPage() {
     setIsParsingCv(true);
     triggerToast("🔍 Analyse du contenu réel du document...", "fa-expand fa-spin");
 
+    // Relais de patience : l'extraction serveur peut légitimement durer près
+    // d'une minute (maxDuration = 55 s sur /api/parse-document). Sans ce
+    // message, un spinner muet passe pour une panne au bout de quelques
+    // secondes et la personne recharge la page en plein traitement.
+    const relaisPatience = setTimeout(() => {
+      triggerToast(
+        "Analyse en cours, ça peut prendre jusqu'à une minute sur un document lourd…",
+        "fa-hourglass-half fa-spin"
+      );
+    }, 6000);
+
+    // Borne dure côté navigateur : aucun des deux fetch n'en avait. Si une
+    // fonction serverless atteint son plafond sans répondre, la requête
+    // restait pendante et le spinner tournait sans fin.
+    const arret = new AbortController();
+    const delaiMax = setTimeout(() => arret.abort(), 60000);
+
     try {
       // Garde-fou obligatoire AVANT tout upload Storage ou appel au parseur
       // CV générique : une pièce d'identité (CNI/passeport) ne doit jamais
@@ -1236,6 +1327,7 @@ export default function ProfilPage() {
         method: "POST",
         headers: userSession?.access_token ? { Authorization: `Bearer ${userSession.access_token}` } : undefined,
         body: identityCheckFormData,
+        signal: arret.signal,
       });
       const identityCheckResult = await identityCheckResponse.json().catch(() => ({}));
 
@@ -1279,6 +1371,7 @@ export default function ProfilPage() {
         method: "POST",
         headers: userSession?.access_token ? { Authorization: `Bearer ${userSession.access_token}` } : undefined,
         body: parseFormData,
+        signal: arret.signal,
       });
 
       // Toujours lire et logger la réponse brute, même si le statut HTTP est hors de 200-299
@@ -1301,7 +1394,20 @@ export default function ProfilPage() {
     } catch (err) {
       console.error("Erreur dans le flux d'analyse du document :", err);
       setIsParsingCv(false);
-      triggerToast("Erreur lors de l'analyse du document", "fa-triangle-exclamation");
+      triggerToast(
+        err?.name === "AbortError"
+          ? "L'analyse a dépassé une minute et a été interrompue. Réessayez avec un fichier plus léger."
+          : "Erreur lors de l'analyse du document",
+        "fa-triangle-exclamation"
+      );
+    } finally {
+      clearTimeout(relaisPatience);
+      clearTimeout(delaiMax);
+      // RÉINITIALISATION INDISPENSABLE : sans elle, resélectionner LE MÊME
+      // fichier ne déclenche aucun événement `change`, donc rien ne se passe —
+      // ni spinner, ni erreur, ni message. C'était la cause du « scanner qui
+      // ne charge plus » dès la deuxième tentative.
+      if (aiCvFileInputRef.current) aiCvFileInputRef.current.value = "";
     }
   };
 

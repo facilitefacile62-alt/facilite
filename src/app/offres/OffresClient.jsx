@@ -103,6 +103,30 @@ function OffresContent({ listingType } = {}) {
   // recommandations de candidat/page.js), jamais un appel par carte.
   const [candidateMatchScores, setCandidateMatchScores] = useState(null);
 
+  // Arbre dynamique de feature flags & permissions
+  const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
+
+  useEffect(() => {
+    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+
+    const channel = supabase
+      .channel("public-feature-flags-offres")
+      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
+        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const userRole = !userSession ? "visitor" : authProfile?.role === "admin" ? "admin" : authProfile?.role === "recruiter" ? "recruiter" : "user";
+  const checkFeatureAllowed = useCallback((featureKey) => {
+    if (!featureKey) return true;
+    return isFeatureAllowed(featureFlagsTree, featureKey, userRole);
+  }, [featureFlagsTree, userRole]);
+
   const triggerToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3500);
@@ -438,81 +462,83 @@ function OffresContent({ listingType } = {}) {
         </div>
 
         {/* Barre de Recherche & Filtres */}
-        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-200 shadow-xs mb-4 sm:mb-8">
-          <div className="flex flex-col md:flex-row items-center gap-2.5 sm:gap-4">
-            <div className="relative flex-1 w-full">
-              <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-              <input
-                type="text"
-                placeholder="Mot-clé (titre, compétence, entreprise)..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (semanticResults !== null) setSemanticResults(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSemanticSearch();
-                }}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-              />
-            </div>
+        {checkFeatureAllowed("feat_offres_filtres") && (
+          <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-200 shadow-xs mb-4 sm:mb-8">
+            <div className="flex flex-col md:flex-row items-center gap-2.5 sm:gap-4">
+              <div className="relative flex-1 w-full">
+                <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input
+                  type="text"
+                  placeholder="Mot-clé (titre, compétence, entreprise)..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (semanticResults !== null) setSemanticResults(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSemanticSearch();
+                  }}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                />
+              </div>
 
-            <div className="relative w-full md:w-64">
-              <i className="fa-solid fa-location-dot absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-              <input
-                type="text"
-                placeholder="Ville / Localisation..."
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-              />
-            </div>
+              <div className="relative w-full md:w-64">
+                <i className="fa-solid fa-location-dot absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input
+                  type="text"
+                  placeholder="Ville / Localisation..."
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                />
+              </div>
 
-            <button
-              onClick={handleSemanticSearch}
-              disabled={isSemanticSearching || !searchQuery.trim()}
-              className={`w-full md:w-auto px-5 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs ${
-                isSemanticSearching || !searchQuery.trim()
-                  ? "bg-emerald-200 text-emerald-800 cursor-not-allowed"
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
-              }`}
-            >
-              {isSemanticSearching ? (
-                <>
-                  <i className="fa-solid fa-circle-notch fa-spin"></i>
-                  <span>Recherche IA...</span>
-                </>
-              ) : (
-                <>
-                  <i className="fa-solid fa-wand-magic-sparkles"></i>
-                  <span>Recherche IA</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {semanticSearchError && (
-            <p className="mt-3 text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-100">
-              <i className="fa-solid fa-triangle-exclamation mr-1.5"></i>
-              {semanticSearchError}
-            </p>
-          )}
-
-          {semanticResults !== null && (
-            <div className="mt-3 flex items-center justify-between bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-900 font-medium">
-              <span>
-                <i className="fa-solid fa-brain mr-1.5 text-emerald-700"></i>
-                Résultats triés par pertinence sémantique (IA) pour « <strong>{searchQuery}</strong> »
-              </span>
               <button
-                onClick={() => setSemanticResults(null)}
-                className="text-emerald-700 font-bold underline hover:text-emerald-900 cursor-pointer"
+                onClick={handleSemanticSearch}
+                disabled={isSemanticSearching || !searchQuery.trim()}
+                className={`w-full md:w-auto px-5 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs ${
+                  isSemanticSearching || !searchQuery.trim()
+                    ? "bg-emerald-200 text-emerald-800 cursor-not-allowed"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                }`}
               >
-                Revenir au filtre texte
+                {isSemanticSearching ? (
+                  <>
+                    <i className="fa-solid fa-circle-notch fa-spin"></i>
+                    <span>Recherche IA...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Recherche IA</span>
+                  </>
+                )}
               </button>
             </div>
-          )}
-        </div>
+
+            {semanticSearchError && (
+              <p className="mt-3 text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-100">
+                <i className="fa-solid fa-triangle-exclamation mr-1.5"></i>
+                {semanticSearchError}
+              </p>
+            )}
+
+            {semanticResults !== null && (
+              <div className="mt-3 flex items-center justify-between bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-900 font-medium">
+                <span>
+                  <i className="fa-solid fa-brain mr-1.5 text-emerald-700"></i>
+                  Résultats triés par pertinence sémantique (IA) pour « <strong>{searchQuery}</strong> »
+                </span>
+                <button
+                  onClick={() => setSemanticResults(null)}
+                  className="text-emerald-700 font-bold underline hover:text-emerald-900 cursor-pointer"
+                >
+                  Revenir au filtre texte
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Système d'onglets FOMO : Offres disponibles vs Offres expirées */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-white dark:bg-gray-900 p-2 sm:p-2.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">

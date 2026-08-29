@@ -25,7 +25,16 @@ export const DEFAULT_FEATURE_TREE = [
         icon: "💼",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
-        description: "Filtrage et recherche des offres d'emploi publiques",
+        description: "Accès au catalogue des offres d'emploi publiques",
+      },
+      {
+        id: "feat_offres_filtres",
+        name: "Filtres & Recherche des Offres",
+        path: "/offres",
+        icon: "🔍",
+        enabled: true,
+        roles: { user: true, recruiter: true, visitor: true },
+        description: "Barre de recherche par mots-clés, localisation et recherche sémantique IA sur les offres",
       },
       {
         id: "nav_extracteur",

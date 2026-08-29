@@ -69,6 +69,15 @@ Utilise exactement la structure JSON suivante :
   "centres_d_interet": [
     "string"
   ],
+  "formations": [
+    {
+      "diplome": "string (intitulé exact du diplôme ou de la certification)",
+      "etablissement": "string (école, université, centre de formation)",
+      "dates": "string (ex: Septembre 2018 - Juin 2021, ou 2021 si une seule année)",
+      "domaine": "string (spécialité ou filière, sinon null)",
+      "lieu": "string (ville ou pays, sinon null)"
+    }
+  ],
   "experiences_professionnelles": [
     {
       "dates": "string (ex: Octobre 2025 - Juin 2026)",
@@ -87,7 +96,12 @@ Utilise exactement la structure JSON suivante :
 }
 Règles impératives d'extraction :
 - Si une information est absente, utilise la valeur null ou un tableau vide [].
-- Extrais le texte verbatim.`;
+- Extrais le texte verbatim.
+- "formations" est OBLIGATOIRE dès qu'un diplôme, une école, une université ou une
+  certification apparaît dans le document — y compris si la section s'intitule
+  « Formation », « Études », « Parcours académique » ou « Education ».
+- Pour tout champ "dates", conserve le format « Mois Année - Mois Année » tel qu'il
+  figure dans le document. Si le poste est en cours, écris « Mois Année - Présent ».`;
 
 export async function POST(req) {
   let documentText = "";
