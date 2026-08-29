@@ -166,40 +166,210 @@ compatibilité avant de basculer.
 
 Le dispositif existe et tourne : `.github/workflows/backup.yml`, tous les
 jours à 5 h UTC, base et Storage, chiffré par clé publique, déposé sur Google
-Drive, environ 30 sauvegardes conservées. La procédure détaillée est dans
-`docs/sauvegarde-restauration.md` — ce qui suit en est le résumé
-opérationnel.
+Drive, environ 30 sauvegardes conservées. La procédure de référence est dans
+`docs/sauvegarde-restauration.md`.
 
-**Prérequis, à vérifier AVANT d'en avoir besoin** : la clé privée de
-déchiffrement n'est pas dans le dépôt. Sans elle, aucune sauvegarde n'est
-exploitable. Vérifier aussi que les exécutions récentes du workflow sont
-vertes dans l'onglet Actions — un dispositif rouge depuis des semaines n'est
-pas un filet.
+### 4.0 Règle absolue
 
-```bash
-# 1. Lister les sauvegardes disponibles
-node scripts/backup/download-from-drive.js --list
+**Ne jamais restaurer directement en `public`.** Toujours : schéma isolé,
+puis comparaison manuelle avec l'état réel, puis application sélective de ce
+qui doit l'être. C'est exactement ce qu'a fait le test du 06/08/2026 —
+restauration dans `backup_restore_test_full`, intégrité vérifiée ligne par
+ligne, schéma supprimé ensuite, aucune donnée réelle touchée.
 
-# 2. Récupérer celle qui précède l'incident
-node scripts/backup/download-from-drive.js <nom-du-fichier>
+Trois raisons rendent la restauration directe dangereuse :
 
-# 3. D'ABORD restaurer dans un schéma isolé et vérifier le contenu
-node scripts/backup/restore-database.js <fichier> --schema=verification_incident
+1. **Elle n'efface rien.** La restauration procède par
+   `INSERT ... ON CONFLICT DO NOTHING`. Elle **complète** les tables, elle ne
+   les remplace pas. Les lignes écrites par un attaquant depuis la
+   sauvegarde survivent intégralement. Restaurer ne « remet » donc pas la
+   base dans son état d'avant : ça superpose l'ancien au nouveau.
+2. **Elle peut ressusciter ce qu'on venait de fermer.** Une ligne supprimée
+   pendant l'incident — compte suspendu, document retiré — réapparaît si
+   elle figurait dans la sauvegarde.
+3. **La sauvegarde elle-même peut être compromise.** Si l'intrusion date de
+   plusieurs jours, les sauvegardes récentes contiennent déjà les
+   modifications de l'attaquant. Le schéma isolé est le seul endroit où on
+   peut le constater avant de s'appuyer dessus.
 
-# 4. Seulement ensuite, restaurer pour de vrai
-node scripts/backup/restore-database.js <fichier> --schema=public
+### 4.1 Prérequis, à vérifier AVANT d'en avoir besoin
+
+La clé privée de déchiffrement n'est pas dans le dépôt, pas dans les secrets
+GitHub, et n'existe dans aucune variable d'environnement — c'est délibéré,
+elle ne doit jamais toucher la CI. Elle se passe en argument de ligne de
+commande, uniquement à la restauration.
+
+Nom exact du fichier à retrouver :
+
+```
+facilite-backup-PRIVATE-key-GARDER-EN-LIEU-SUR.pem
 ```
 
-**Ne jamais passer directement à l'étape 4.** L'étape 3 restaure dans un
-schéma séparé sans toucher aux données réelles : c'est le seul moyen de
-vérifier qu'une sauvegarde est saine avant de s'appuyer dessus. Le Storage
-tourne à blanc tant que `--restore-storage` n'est pas passé explicitement.
+Emplacement d'origine : le dossier `Downloads` de la machine de travail, avec
+consigne de la déplacer vers un coffre — gestionnaire de mots de passe
+acceptant les fichiers, clé USB chiffrée — puis de supprimer l'original. Au
+29/08/2026 elle n'est plus dans `Downloads` ni ailleurs sous le profil
+utilisateur : la consigne a bien été suivie, mais **sa présence effective
+dans un coffre reste à confirmer par son détenteur**.
 
-La restauration en `public` procède par `INSERT ... ON CONFLICT DO NOTHING` :
-elle **complète** les tables existantes, elle ne les remplace pas. Les
-données écrites depuis la sauvegarde survivent — y compris celles écrites par
-un attaquant. Si l'objectif est d'effacer une modification malveillante, il
-faut la supprimer explicitement, la restauration ne le fera pas.
+`BACKUP_PUBLIC_KEY_PEM`, le secret GitHub Actions, est la moitié **publique**
+de la paire. Il ne permet que de chiffrer. Sans la clé privée, aucune
+sauvegarde existante n'est récupérable et il n'existe aucun moyen de la
+régénérer — la seule issue serait de produire une nouvelle paire, remplacer
+le secret, et considérer l'historique comme perdu.
+
+Vérifier aussi que les exécutions récentes du workflow « Sauvegarde
+chiffrée » sont vertes dans l'onglet Actions. Un dispositif rouge depuis des
+semaines n'est pas un filet.
+
+### 4.2 Restaurer dans un schéma isolé
+
+```bash
+# 1. Lister, puis récupérer la sauvegarde qui PRÉCÈDE l'incident
+GOOGLE_SERVICE_ACCOUNT_JSON="$(cat service-account.json)" \
+GOOGLE_DRIVE_FOLDER_ID="<id du dossier>" \
+node scripts/backup/download-from-drive.js --list
+
+GOOGLE_SERVICE_ACCOUNT_JSON="$(cat service-account.json)" \
+GOOGLE_DRIVE_FOLDER_ID="<id du dossier>" \
+node scripts/backup/download-from-drive.js --latest --out=backup.enc
+
+# 2. Restaurer dans un schéma isolé.
+#    JAMAIS --schema=public a ce stade, et pas de --restore-storage :
+#    sans ce drapeau, la partie Storage tourne a blanc.
+SUPABASE_DATABASE_URL="<connection string>" \
+node scripts/backup/restore-database.js backup.enc \
+  --private-key=<chemin vers la cle privee> \
+  --schema=incident_20260829
+```
+
+Si la clé est mauvaise, l'échec est propre (`oaep decoding error`) et rien
+n'est déchiffré partiellement — comportement vérifié au test du 06/08.
+
+### 4.3 Comparer avant de toucher à quoi que ce soit
+
+Le schéma isolé donne l'état d'avant. `public` donne l'état actuel. La
+différence est l'incident.
+
+```sql
+-- Volumétrie table par table : un écart brutal signale où regarder
+SELECT 'candidatures' AS t,
+       (SELECT count(*) FROM incident_20260829.candidatures) AS avant,
+       (SELECT count(*) FROM public.candidatures) AS maintenant
+UNION ALL SELECT 'resumes',
+       (SELECT count(*) FROM incident_20260829.resumes),
+       (SELECT count(*) FROM public.resumes)
+UNION ALL SELECT 'transactions',
+       (SELECT count(*) FROM incident_20260829.transactions),
+       (SELECT count(*) FROM public.transactions)
+UNION ALL SELECT 'document_deliveries',
+       (SELECT count(*) FROM incident_20260829.document_deliveries),
+       (SELECT count(*) FROM public.document_deliveries)
+UNION ALL SELECT 'user_roles',
+       (SELECT count(*) FROM incident_20260829.user_roles),
+       (SELECT count(*) FROM public.user_roles);
+
+-- Les lignes apparues depuis la sauvegarde, table par table
+SELECT * FROM public.resumes
+WHERE id NOT IN (SELECT id FROM incident_20260829.resumes);
+```
+
+Ne réinjecter ensuite **que** les lignes manquantes identifiées, une table à
+la fois, jamais par restauration globale.
+
+### 4.4 Nettoyage manuel des écritures suspectes
+
+Ordre de priorité, du plus sensible au moins sensible. Toujours un `SELECT`
+d'abord ; un `DELETE` seulement après avoir lu ce qui sortirait.
+
+**1. `user_roles` — d'abord, toujours.** Une élévation de privilège rend
+tout le reste possible. Un rôle `admin` non prévu est le point de départ,
+pas un détail.
+
+```sql
+SELECT ur.user_id, ur.role, ur.status, ur.updated_at, u.email
+FROM public.user_roles ur
+JOIN auth.users u ON u.id = ur.user_id
+WHERE ur.role = 'admin'
+  AND ur.user_id NOT IN (
+    SELECT user_id FROM incident_20260829.user_roles WHERE role = 'admin'
+  );
+```
+
+Suspendre plutôt que supprimer (`status = 'suspended'`) : la ligne reste
+comme trace de l'incident.
+
+**2. `document_deliveries` — dépôts de fichiers chez des candidats.** Une
+livraison permet à un administrateur de déposer un document dans l'espace
+d'un candidat. Détournée, elle sert à distribuer un fichier piégé sous
+l'identité de Facilité.
+
+```sql
+SELECT id, admin_id, candidate_id, title, file_path, status, created_at
+FROM public.document_deliveries
+WHERE created_at > '<horodatage de la sauvegarde>'
+ORDER BY created_at DESC;
+```
+
+Supprimer la ligne ne retire pas le fichier : il faut aussi effacer l'objet
+Storage désigné par `file_path`, et le CV éventuellement créé, dont
+l'identifiant est dans `created_resume_id`.
+
+**3. `resumes` — documents des candidats.** Vérifier autant les insertions
+que les **suppressions** : un document présent dans le schéma isolé mais
+absent de `public` est une destruction, pas un ajout.
+
+```sql
+-- Ajoutés depuis la sauvegarde
+SELECT id, user_id, title, file_url, created_at FROM public.resumes
+WHERE created_at > '<horodatage>' ORDER BY created_at DESC;
+
+-- Disparus depuis la sauvegarde
+SELECT id, user_id, title FROM incident_20260829.resumes
+WHERE id NOT IN (SELECT id FROM public.resumes);
+```
+
+**4. `transactions` et `orders` — traces financières.** Ne jamais supprimer
+une transaction, même manifestement frauduleuse : c'est une pièce comptable
+et une preuve. Marquer, ne pas effacer.
+
+```sql
+SELECT id, user_id, amount, payment_status, payment_reference, created_at
+FROM public.transactions
+WHERE created_at > '<horodatage>' ORDER BY created_at DESC;
+```
+
+**5. `candidatures` — volume et cohérence.** Le signe d'un abus automatisé
+est une rafale : beaucoup de candidatures en peu de temps, souvent depuis
+peu de comptes.
+
+```sql
+SELECT user_id, count(*) AS n, min(created_at), max(created_at)
+FROM public.candidatures
+WHERE created_at > '<horodatage>'
+GROUP BY user_id HAVING count(*) > 20 ORDER BY n DESC;
+```
+
+Le déclencheur `trg_candidature_unique_par_offre` interdit déjà les doublons
+sur une même offre : une rafale légitime reste donc possible, seul le rythme
+la distingue d'un robot.
+
+**6. `profiles` et Storage.** Vérifier les `avatar_url` et `cover_url`
+modifiés, et les objets déposés dans le bucket `resumes` hors du dossier de
+leur propriétaire :
+
+```sql
+SELECT name, owner, created_at FROM storage.objects
+WHERE bucket_id = 'resumes'
+  AND created_at > '<horodatage>'
+  AND (storage.foldername(name))[1] IS DISTINCT FROM owner::text;
+```
+
+Une fois le nettoyage terminé, supprimer le schéma de travail :
+
+```sql
+DROP SCHEMA incident_20260829 CASCADE;
+```
 
 ---
 
