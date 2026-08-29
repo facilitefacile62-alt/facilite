@@ -212,7 +212,13 @@ export async function POST(req) {
         if (mimeType.startsWith("image/") || mimeType === "application/pdf") {
           try {
             const visionResult = await extractCvWithGeminiVision(buffer, mimeType, SYSTEM_PROMPT);
-            if (visionResult && !visionResult.error) {
+            // `!visionResult.error` ne suffisait pas : un objet sans champ
+            // `error` mais vide passait pour un succès et court-circuitait
+            // DeepSeek et Groq. C'est le chemin PRINCIPAL pour un PDF ou une
+            // photo — donc le cas le plus fréquent. On exige désormais un
+            // contenu réellement exploitable avant de s'arrêter là ; sinon on
+            // laisse la chaîne de repli faire son travail.
+            if (visionResult && !visionResult.error && extractionExploitable(visionResult)) {
               return NextResponse.json({ success: true, data: visionResult, fields: visionResult, rawTextLength: 0 });
             }
           } catch (err) {
