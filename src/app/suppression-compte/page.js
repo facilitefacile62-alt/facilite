@@ -91,10 +91,10 @@ export default function SuppressionComptePage() {
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
             Écrivez à{" "}
             <a
-              href="mailto:contact@ffacilite.com?subject=Demande%20de%20suppression%20de%20compte"
+              href="mailto:facilitefacile@gmail.com?subject=Demande%20de%20suppression%20de%20compte"
               className="font-extrabold text-emerald-700 dark:text-[#10E688] underline underline-offset-2"
             >
-              contact@ffacilite.com
+              facilitefacile@gmail.com
             </a>{" "}
             depuis l&apos;adresse e-mail associée à votre compte, avec « Demande de suppression de compte » en objet.
             Nous répondons sous 30 jours au plus.
@@ -152,10 +152,10 @@ export default function SuppressionComptePage() {
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             Écrivez à{" "}
             <a
-              href="mailto:contact@ffacilite.com"
+              href="mailto:facilitefacile@gmail.com"
               className="font-extrabold text-emerald-700 dark:text-[#10E688] underline underline-offset-2"
             >
-              contact@ffacilite.com
+              facilitefacile@gmail.com
             </a>
             . Le détail des données que nous traitons et des services qui les reçoivent figure dans notre{" "}
             <Link
