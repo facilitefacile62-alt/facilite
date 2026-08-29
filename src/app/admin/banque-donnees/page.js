@@ -44,7 +44,10 @@ const ETIQUETTES_LIVRAISON = {
  * navigateur sur les colonnes déjà chargées : une colonne générée en base
  * serait à maintenir à chaque évolution du formulaire de profil.
  */
-const CHAMPS_COMPLETUDE = ["full_name", "headline", "bio", "city", "education_level", "skills", "experiences"];
+// `headline` est proscrite par scripts/check-invariants.mjs (colonne de
+// profils considérée obsolète, au même titre que role et user_type) : le
+// prebuild casse le build si une requête sur profiles la sollicite.
+const CHAMPS_COMPLETUDE = ["full_name", "bio", "city", "education_level", "skills", "experiences"];
 
 function calculerCompletude(profil) {
   let remplis = 0;
@@ -115,7 +118,7 @@ export default function BanqueDonneesPage() {
         let q = supabase
           .from("profiles")
           .select(
-            "id, full_name, email, city, country, education_level, headline, bio, skills, experiences, is_public, created_at",
+            "id, full_name, email, city, country, education_level, bio, skills, experiences, is_public, created_at",
             { count: "exact" }
           )
           .is("deleted_at", null)
@@ -639,7 +642,6 @@ function FicheCandidat({
         <Info libelle="Ville" valeur={candidat.city || candidat.country} />
         <Info libelle="Niveau d'études" valeur={candidat.education_level} />
         <Info libelle="Complétude du profil" valeur={`${calculerCompletude(candidat)} %`} />
-        <Info libelle="Titre" valeur={candidat.headline} />
         <Info libelle="Profil public" valeur={candidat.is_public ? "oui" : "non"} />
         <Info libelle="Inscrit le" valeur={candidat.created_at ? String(candidat.created_at).slice(0, 10) : null} />
       </div>
