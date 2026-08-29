@@ -1092,12 +1092,36 @@ export default function ProfilPage() {
     if (!texte) return vide;
 
     const enCours = /présent|present|aujourd|en cours|actuel|current|ongoing/i.test(texte);
-    // Séparateurs réellement rencontrés : tiret, demi-cadratin, cadratin, « à »,
-    // « au », « to ». L'espacement autour n'est jamais garanti.
-    const bornes = texte.split(/\s*(?:[-–—]|\bà\b|\bau\b|\bto\b)\s*/i).filter(Boolean);
+    // Séparateurs réellement rencontrés : tiret, demi-cadratin, cadratin,
+    // « à », « au », « to ».
+    //
+    // Le tiret doit être bordé d'au moins un espace. Sans cette exigence, une
+    // date numérique « 17-11-2025 » se ferait couper sur ses propres tirets et
+    // produirait trois bornes absurdes. « 2019 - 2021 » et « 2019- 2021 »
+    // restent correctement séparés.
+    const bornes = texte
+      .split(/\s+[-–—]\s*|\s*[-–—]\s+|\s+(?:à|au|to)\s+/i)
+      .filter(Boolean);
+
+    // Les CV traités ici écrivent aussi bien « Août 2017 » que « 17/11/2025 ».
+    // Sans le second cas, un CV entièrement en dates numériques perdait le
+    // mois, alors qu'il est écrit noir sur blanc dans le document.
+    const MOIS_FR = [
+      "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+      "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+    ];
 
     const lireBorne = (fragment) => {
       if (!fragment) return { mois: "", annee: "" };
+
+      // Format numérique jj/mm/aaaa (ou jj-mm-aaaa, jj.mm.aaaa) : le mois est
+      // le deuxième groupe, pas le premier — l'usage est le jour d'abord.
+      const numerique = fragment.match(/\b(\d{1,2})[/.\-](\d{1,2})[/.\-]((?:19|20)\d{2})\b/);
+      if (numerique) {
+        const rang = parseInt(numerique[2], 10);
+        return { mois: rang >= 1 && rang <= 12 ? MOIS_FR[rang - 1] : "", annee: numerique[3] };
+      }
+
       const annee = (fragment.match(/(?:19|20)\d{2}/) || [""])[0];
       const mois = (fragment.match(
         /janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre/i
@@ -5550,6 +5574,91 @@ export default function ProfilPage() {
                           className="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
                         />
                       </div>
+
+                      {/* Les dates étaient extraites mais n'apparaissaient
+                          nulle part : la modale ne rendait que le poste et
+                          l'entreprise. Invisibles, elles étaient aussi
+                          impossibles à corriger avant enregistrement. */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-0.5">Début</label>
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={exp.startMonth || ""}
+                              placeholder="Mois"
+                              onChange={(e) => {
+                                const updated = [...scannedData.experiences];
+                                updated[i].startMonth = e.target.value;
+                                setScannedData({ ...scannedData, experiences: updated });
+                              }}
+                              className="w-3/5 p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
+                            />
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={exp.startYear || ""}
+                              placeholder="Année"
+                              onChange={(e) => {
+                                const updated = [...scannedData.experiences];
+                                updated[i].startYear = e.target.value;
+                                setScannedData({ ...scannedData, experiences: updated });
+                              }}
+                              className="w-2/5 p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-0.5">
+                            Fin {exp.isCurrent ? "(poste en cours)" : ""}
+                          </label>
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={exp.endMonth || ""}
+                              placeholder={exp.isCurrent ? "—" : "Mois"}
+                              disabled={exp.isCurrent}
+                              onChange={(e) => {
+                                const updated = [...scannedData.experiences];
+                                updated[i].endMonth = e.target.value;
+                                setScannedData({ ...scannedData, experiences: updated });
+                              }}
+                              className="w-3/5 p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium disabled:bg-gray-100 disabled:text-gray-400"
+                            />
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={exp.endYear || ""}
+                              placeholder={exp.isCurrent ? "—" : "Année"}
+                              disabled={exp.isCurrent}
+                              onChange={(e) => {
+                                const updated = [...scannedData.experiences];
+                                updated[i].endYear = e.target.value;
+                                setScannedData({ ...scannedData, experiences: updated });
+                              }}
+                              className="w-2/5 p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium disabled:bg-gray-100 disabled:text-gray-400"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-2 font-bold text-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!exp.isCurrent}
+                          onChange={(e) => {
+                            const updated = [...scannedData.experiences];
+                            updated[i].isCurrent = e.target.checked;
+                            if (e.target.checked) {
+                              updated[i].endMonth = "";
+                              updated[i].endYear = "";
+                            }
+                            setScannedData({ ...scannedData, experiences: updated });
+                          }}
+                          className="accent-[#10E688]"
+                        />
+                        <span>J&apos;occupe encore ce poste</span>
+                      </label>
                     </div>
                   ))}
                 </div>
@@ -5585,6 +5694,43 @@ export default function ProfilPage() {
                           }}
                           className="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
                         />
+                      </div>
+
+                      {/* Même oubli que pour les expériences : les années
+                          étaient extraites mais jamais affichées. Beaucoup de
+                          CV ne portent qu'une seule année par diplôme — celle
+                          de l'obtention — d'où un champ de fin facultatif. */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-0.5">Année de début</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={edu.startYear || ""}
+                            placeholder="ex. 2018"
+                            onChange={(e) => {
+                              const updated = [...scannedData.educations];
+                              updated[i].startYear = e.target.value;
+                              setScannedData({ ...scannedData, educations: updated });
+                            }}
+                            className="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-0.5">Année d&apos;obtention</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={edu.endYear || ""}
+                            placeholder="ex. 2021"
+                            onChange={(e) => {
+                              const updated = [...scannedData.educations];
+                              updated[i].endYear = e.target.value;
+                              setScannedData({ ...scannedData, educations: updated });
+                            }}
+                            className="w-full p-2 bg-white border border-gray-300 rounded-lg text-xs font-medium"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
