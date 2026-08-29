@@ -461,69 +461,77 @@ function OffresContent({ listingType } = {}) {
           </p>
         </div>
 
-        {/* Barre de Recherche & Filtres */}
-        {checkFeatureAllowed("feat_offres_filtres") && (
+        {/* Barre de Recherche & Filtres (Contrôlés individuellement) */}
+        {(checkFeatureAllowed("feat_offres_recherche") ||
+          checkFeatureAllowed("feat_offres_filtre_ville") ||
+          checkFeatureAllowed("feat_offres_recherche_ia")) && (
           <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-200 shadow-xs mb-4 sm:mb-8">
             <div className="flex flex-col md:flex-row items-center gap-2.5 sm:gap-4">
-              <div className="relative flex-1 w-full">
-                <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                <input
-                  type="text"
-                  placeholder="Mot-clé (titre, compétence, entreprise)..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (semanticResults !== null) setSemanticResults(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSemanticSearch();
-                  }}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-                />
-              </div>
+              {checkFeatureAllowed("feat_offres_recherche") && (
+                <div className="relative flex-1 w-full">
+                  <i className="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                  <input
+                    type="text"
+                    placeholder="Mot-clé (titre, compétence, entreprise)..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (semanticResults !== null) setSemanticResults(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSemanticSearch();
+                    }}
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+              )}
 
-              <div className="relative w-full md:w-64">
-                <i className="fa-solid fa-location-dot absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                <input
-                  type="text"
-                  placeholder="Ville / Localisation..."
-                  value={locationFilter}
-                  onChange={(e) => setLocationFilter(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-                />
-              </div>
+              {checkFeatureAllowed("feat_offres_filtre_ville") && (
+                <div className="relative w-full md:w-64">
+                  <i className="fa-solid fa-location-dot absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                  <input
+                    type="text"
+                    placeholder="Ville / Localisation..."
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+              )}
 
-              <button
-                onClick={handleSemanticSearch}
-                disabled={isSemanticSearching || !searchQuery.trim()}
-                className={`w-full md:w-auto px-5 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs ${
-                  isSemanticSearching || !searchQuery.trim()
-                    ? "bg-emerald-200 text-emerald-800 cursor-not-allowed"
-                    : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                }`}
-              >
-                {isSemanticSearching ? (
-                  <>
-                    <i className="fa-solid fa-circle-notch fa-spin"></i>
-                    <span>Recherche IA...</span>
-                  </>
-                ) : (
-                  <>
-                    <i className="fa-solid fa-wand-magic-sparkles"></i>
-                    <span>Recherche IA</span>
-                  </>
-                )}
-              </button>
+              {checkFeatureAllowed("feat_offres_recherche_ia") && (
+                <button
+                  onClick={handleSemanticSearch}
+                  disabled={isSemanticSearching || !searchQuery.trim()}
+                  className={`w-full md:w-auto px-5 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs ${
+                    isSemanticSearching || !searchQuery.trim()
+                      ? "bg-emerald-200 text-emerald-800 cursor-not-allowed"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  }`}
+                >
+                  {isSemanticSearching ? (
+                    <>
+                      <i className="fa-solid fa-circle-notch fa-spin"></i>
+                      <span>Recherche IA...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-wand-magic-sparkles"></i>
+                      <span>Recherche IA</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
-            {semanticSearchError && (
+            {checkFeatureAllowed("feat_offres_recherche_ia") && semanticSearchError && (
               <p className="mt-3 text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-100">
                 <i className="fa-solid fa-triangle-exclamation mr-1.5"></i>
                 {semanticSearchError}
               </p>
             )}
 
-            {semanticResults !== null && (
+            {checkFeatureAllowed("feat_offres_recherche_ia") && semanticResults !== null && (
               <div className="mt-3 flex items-center justify-between bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-900 font-medium">
                 <span>
                   <i className="fa-solid fa-brain mr-1.5 text-emerald-700"></i>
@@ -541,66 +549,68 @@ function OffresContent({ listingType } = {}) {
         )}
 
         {/* Système d'onglets FOMO : Offres disponibles vs Offres expirées */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-white dark:bg-gray-900 p-2 sm:p-2.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
-          <div className="flex items-center gap-1.5 p-1 bg-gray-100 dark:bg-gray-800/80 rounded-xl w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setActiveTab("available")}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-black text-xs sm:text-sm transition-all cursor-pointer select-none ${
-                activeTab === "available"
-                  ? "bg-white dark:bg-gray-900 text-emerald-700 dark:text-[#10E688] shadow-xs"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-            >
-              <i className="fa-solid fa-bolt text-emerald-500"></i>
-              <span>Offres disponibles</span>
-              <span
-                className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
+        {checkFeatureAllowed("feat_offres_onglets_status") && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-white dark:bg-gray-900 p-2 sm:p-2.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+            <div className="flex items-center gap-1.5 p-1 bg-gray-100 dark:bg-gray-800/80 rounded-xl w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setActiveTab("available")}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-black text-xs sm:text-sm transition-all cursor-pointer select-none ${
                   activeTab === "available"
-                    ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-[#10E688]"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    ? "bg-white dark:bg-gray-900 text-emerald-700 dark:text-[#10E688] shadow-xs"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                {availableOffers.length}
-              </span>
-            </button>
+                <i className="fa-solid fa-bolt text-emerald-500"></i>
+                <span>Offres disponibles</span>
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
+                    activeTab === "available"
+                      ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-[#10E688]"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  {availableOffers.length}
+                </span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("expired")}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-black text-xs sm:text-sm transition-all cursor-pointer select-none ${
-                activeTab === "expired"
-                  ? "bg-white dark:bg-gray-900 text-rose-600 dark:text-rose-400 shadow-xs"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-            >
-              <i className="fa-solid fa-hourglass-end text-rose-500"></i>
-              <span>Offres expirées</span>
-              <span
-                className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
+              <button
+                type="button"
+                onClick={() => setActiveTab("expired")}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-black text-xs sm:text-sm transition-all cursor-pointer select-none ${
                   activeTab === "expired"
-                    ? "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-400"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    ? "bg-white dark:bg-gray-900 text-rose-600 dark:text-rose-400 shadow-xs"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                {expiredOffers.length}
-              </span>
-            </button>
-          </div>
+                <i className="fa-solid fa-hourglass-end text-rose-500"></i>
+                <span>Offres expirées</span>
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
+                    activeTab === "expired"
+                      ? "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-400"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  {expiredOffers.length}
+                </span>
+              </button>
+            </div>
 
-          {/* Bannière d'incitation & effet FOMO */}
-          {activeTab === "expired" ? (
-            <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-3.5 py-2 rounded-xl border border-rose-200/80 dark:border-rose-900/50">
-              <i className="fa-solid fa-clock-rotate-left"></i>
-              <span>Ces opportunités sont clôturées. Consultez les offres disponibles pour postuler à temps !</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-900/50">
-              <i className="fa-solid fa-fire text-amber-500"></i>
-              <span>Recrutements en cours : postulez rapidement avant clôture !</span>
-            </div>
-          )}
-        </div>
+            {/* Bannière d'incitation & effet FOMO */}
+            {activeTab === "expired" ? (
+              <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-3.5 py-2 rounded-xl border border-rose-200/80 dark:border-rose-900/50">
+                <i className="fa-solid fa-clock-rotate-left"></i>
+                <span>Ces opportunités sont clôturées. Consultez les offres disponibles pour postuler à temps !</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-900/50">
+                <i className="fa-solid fa-fire text-amber-500"></i>
+                <span>Recrutements en cours : postulez rapidement avant clôture !</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Grille des Offres d'Emploi */}
         {loading ? (
