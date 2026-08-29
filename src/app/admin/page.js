@@ -73,6 +73,7 @@ const NAV_SECTIONS = [
       { type: "tab", id: "ia_studio", icon: "🧠", label: "Entraînement IA", badge: "Studio" },
       { type: "tab", id: "securite", icon: "🛡️", label: "Sécurité & Failles", badge: "Live" },
       { type: "tab", id: "utilisateurs", icon: "👥", label: "Utilisateurs" },
+      { type: "link", href: "/admin/banque-donnees", icon: "🗃️", label: "Banque d'information" },
       { type: "tab", id: "tarification", icon: "💳", label: "Tarification" },
       { type: "link", href: "/admin/dashboard", icon: "💰", label: "Facturation & Transactions" },
       { type: "link", href: "/admin/commandes-agent", icon: "🧑‍💼", label: "Commandes Agent" },
@@ -210,6 +211,9 @@ export default function AdminDashboardPage() {
   const [userAccessRequests, setUserAccessRequests] = useState([]);
   const [userResumesList, setUserResumesList] = useState([]);
   const [accessReasonDraft, setAccessReasonDraft] = useState("");
+  const [livraisonFichier, setLivraisonFichier] = useState(null);
+  const [livraisonTitre, setLivraisonTitre] = useState("");
+  const [livraisonEnCours, setLivraisonEnCours] = useState(false);
   const [requestingAccess, setRequestingAccess] = useState(false);
   const [viewingDocumentKey, setViewingDocumentKey] = useState(null);
 
@@ -987,6 +991,62 @@ export default function AdminDashboardPage() {
     }
 
     setUserResumesList(collectedResumes);
+  };
+
+  /**
+   * Livraison d'un document a un candidat.
+   *
+   * Le fichier part d'abord dans <candidat>/livraisons/ (policy Storage
+   * « Un admin depose un document livre »), puis livrer_document tranche
+   * seule, selon le quota du candidat, entre depot immediat et demande de
+   * remplacement. Le client n'arbitre jamais : il affiche la decision.
+   *
+   * Volontairement independant de l'autorisation de LECTURE juste en
+   * dessous : deposer un document chez quelqu'un ne suppose pas d'avoir le
+   * droit de lire les siens.
+   */
+  const handleLivrerDocument = async (candidateId) => {
+    const titre = livraisonTitre.trim();
+    if (!livraisonFichier) {
+      triggerToast("Choisissez le fichier a livrer.", "fa-triangle-exclamation");
+      return;
+    }
+    if (titre.length < 3) {
+      triggerToast("Donnez un titre au document — c'est ce que le candidat verra.", "fa-triangle-exclamation");
+      return;
+    }
+    setLivraisonEnCours(true);
+    try {
+      const nomSur = livraisonFichier.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const chemin = `${candidateId}/livraisons/${Date.now()}-${nomSur}`;
+      const { error: erreurDepot } = await supabase.storage
+        .from("resumes")
+        .upload(chemin, livraisonFichier, { upsert: false, contentType: livraisonFichier.type || undefined });
+      if (erreurDepot) throw erreurDepot;
+
+      const { data, error } = await supabase.rpc("livrer_document", {
+        p_candidate_id: candidateId,
+        p_title: titre,
+        p_file_path: chemin,
+        p_file_name: livraisonFichier.name,
+        p_note: null,
+      });
+      if (error) throw error;
+
+      triggerToast(
+        data?.statut === "delivered"
+          ? "Document depose. Il apparait des maintenant chez le candidat, qui a ete notifie."
+          : "Espace du candidat plein. Une demande lui a ete envoyee : il choisit quel document remplacer, ou refuse. Rien n'est depose avant sa reponse.",
+        "fa-paper-plane"
+      );
+      setLivraisonFichier(null);
+      setLivraisonTitre("");
+      if (selectedUser?.id === candidateId) await openUserDetail(selectedUser);
+    } catch (err) {
+      triggerToast(`Livraison impossible : ${err.message}`, "fa-triangle-exclamation");
+    } finally {
+      setLivraisonEnCours(false);
+    }
   };
 
   const handleRequestDocumentAccess = async (candidateId) => {
@@ -1859,6 +1919,12 @@ export default function AdminDashboardPage() {
               accessRequests={userAccessRequests}
               resumesList={userResumesList}
               accessReasonDraft={accessReasonDraft}
+              livraisonFichier={livraisonFichier}
+              setLivraisonFichier={setLivraisonFichier}
+              livraisonTitre={livraisonTitre}
+              setLivraisonTitre={setLivraisonTitre}
+              livraisonEnCours={livraisonEnCours}
+              onLivrer={handleLivrerDocument}
               setAccessReasonDraft={setAccessReasonDraft}
               requestingAccess={requestingAccess}
               onRequestAccess={() => handleRequestDocumentAccess(selectedUser.id)}
@@ -2325,6 +2391,12 @@ function UserDetailModal({
   resumesList,
   accessReasonDraft,
   setAccessReasonDraft,
+  livraisonFichier,
+  setLivraisonFichier,
+  livraisonTitre,
+  setLivraisonTitre,
+  livraisonEnCours,
+  onLivrer,
   requestingAccess,
   onRequestAccess,
   viewingDocumentKey,
@@ -2523,7 +2595,7 @@ function UserDetailModal({
                 <textarea
                   value={accessReasonDraft}
                   onChange={(e) => setAccessReasonDraft(e.target.value)}
-                  placeholder="Motif de l'autorisation (optionnel pour admin)..."
+                  placeholder="Motif lu par le candidat — obligatoire..."
                   rows={2}
                   className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 transition resize-none"
                 />
@@ -2534,10 +2606,43 @@ function UserDetailModal({
                   className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
                 >
                   <i className="fa-solid fa-shield-check text-xs"></i>
-                  <span>{requestingAccess ? "Autorisation en cours..." : "Valider l'autorisation d'accès aux documents"}</span>
+                  <span>{requestingAccess ? "Envoi..." : "Demander l'accès aux documents"}</span>
                 </button>
               </div>
             )}
+
+            {/* Livraison — indépendante de l'autorisation de lecture ci-dessus :
+                déposer un document chez quelqu'un ne suppose pas d'avoir le
+                droit de lire les siens. Toujours affichée, donc. */}
+            <div className="mt-4 space-y-2 bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100">
+              <span className="block text-[10px] font-bold text-emerald-800 uppercase">Livrer un document au candidat</span>
+              <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+                S&apos;il a déjà 5 documents importés, rien n&apos;est déposé : une demande lui est envoyée pour qu&apos;il
+                choisisse lui-même quel document céder la place.
+              </p>
+              <input
+                type="text"
+                value={livraisonTitre}
+                onChange={(e) => setLivraisonTitre(e.target.value)}
+                placeholder="Titre visible par le candidat — ex. « CV rédigé par Facilité »"
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-emerald-500 transition"
+              />
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => setLivraisonFichier(e.target.files?.[0] || null)}
+                className="w-full text-[11px] font-medium text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-extrabold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200"
+              />
+              <button
+                type="button"
+                onClick={() => onLivrer(user.id)}
+                disabled={livraisonEnCours}
+                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+              >
+                <i className="fa-solid fa-paper-plane text-xs"></i>
+                <span>{livraisonEnCours ? "Envoi..." : "Livrer le document"}</span>
+              </button>
+            </div>
 
             {accessRequests.length > 0 && (
               <div className="mt-4 pt-4 border-t border-gray-50">
