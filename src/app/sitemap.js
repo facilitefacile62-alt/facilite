@@ -14,6 +14,9 @@ const STATIC_ROUTES = [
   { path: "/boite-a-idees", changeFrequency: "monthly", priority: 0.6 },
   { path: "/faq", changeFrequency: "monthly", priority: 0.7 },
   { path: "/confidentialite", changeFrequency: "monthly", priority: 0.5 },
+  // Exigée par Google Play et devant rester atteignable sans compte : elle
+  // doit donc aussi être annoncée aux moteurs comme les autres pages légales.
+  { path: "/suppression-compte", changeFrequency: "yearly", priority: 0.4 },
   { path: "/conditions", changeFrequency: "monthly", priority: 0.5 },
   { path: "/politique-de-confidentialite", changeFrequency: "monthly", priority: 0.4 },
   { path: "/conditions-utilisation", changeFrequency: "monthly", priority: 0.4 },

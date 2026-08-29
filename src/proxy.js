@@ -32,6 +32,12 @@ const PUBLIC_ROUTES = [
   "/confidentialite",
   "/politique-de-confidentialite",
   "/conditions-utilisation",
+  // Demande de suppression de compte. Google Play exige que cette URL soit
+  // atteignable SANS installer l'application et SANS être connecté : la
+  // laisser hors de cette liste la ferait rediriger vers /login pour un
+  // visiteur anonyme, donc pour l'examinateur, et la fiche Data Safety
+  // serait rejetée.
+  "/suppression-compte",
 ];
 
 // Routes visibles SANS connexion (pour Googlebot et les visiteurs anonymes)
