@@ -4229,13 +4229,9 @@ export default function ProfilPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="py-6 px-4 text-center bg-gray-50/70 border border-dashed border-gray-200 rounded-2xl space-y-1">
-                      <div className="w-8 h-8 rounded-full bg-pink-50 text-pink-500 flex items-center justify-center mx-auto text-xs">
-                        <i className="fa-solid fa-file-circle-xmark"></i>
-                      </div>
-                      <p className="text-xs font-bold text-gray-700">Aucun document enregistré pour le moment</p>
-                      <p className="text-[11px] text-gray-400">Cliquez sur « Ajouter un document » ci-dessus pour importer un CV ou une lettre (PDF, DOCX).</p>
-                    </div>
+                    <p className="text-xs text-gray-400 italic py-3 text-center">
+                      Aucun document enregistré pour le moment.
+                    </p>
                   )}
                 </div>
               </div>
