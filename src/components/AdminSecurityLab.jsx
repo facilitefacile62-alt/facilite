@@ -90,7 +90,12 @@ export default function AdminSecurityLab({
           time: timestamp,
           type: "PROBE_START",
           title: "Simulation d'accès non authentifié à une route Admin",
-          details: "Envoi d'une requête HTTP POST vers /api/admin/users sans jeton JWT...",
+          // Le libellé annonçait /api/admin/users — route qui n'existe pas
+          // (seul /api/admin/users/[id] est défini) alors que la sonde frappe
+          // en réalité /api/admin/security-panel-viewed. Le mécanisme était
+          // bon, la description fausse : elle donnait à croire qu'un endpoint
+          // inexistant avait été testé. Corrigé le 2026-08-29.
+          details: "Envoi d'une requête HTTP POST vers /api/admin/security-panel-viewed avec un jeton invalide...",
           status: "pending",
         },
         ...prev,
