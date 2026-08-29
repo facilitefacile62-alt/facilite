@@ -21,7 +21,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase";
 
 const ONGLETS = [
   { cle: "candidats", libelle: "Candidats", icone: "fa-users" },
