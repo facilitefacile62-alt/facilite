@@ -22,8 +22,35 @@ export default function ConfidentialitePage() {
     { id: "securite-chiffrement", title: "5. Sécurité & Chiffrement", icon: "fa-lock" },
     { id: "droits-utilisateurs", title: "6. Droits des Utilisateurs", icon: "fa-user-check" },
     { id: "conservation", title: "7. Conservation & Suppression", icon: "fa-clock-rotate-left" },
-    { id: "cookies", title: "8. Cookies & Traceurs", icon: "fa-cookie-bite" },
-    { id: "contact", title: "9. Contact & Délégué aux Données", icon: "fa-envelope" },
+    { id: "sous-traitants", title: "8. Destinataires des Données", icon: "fa-share-nodes" },
+    { id: "cookies", title: "9. Cookies & Traceurs", icon: "fa-cookie-bite" },
+    { id: "contact", title: "10. Contact & Délégué aux Données", icon: "fa-envelope" },
+  ];
+
+  /**
+   * Services tiers qui reçoivent réellement des données d'utilisateurs.
+   *
+   * Ajoutée le 2026-08-29 : la politique n'en nommait AUCUN, alors que onze
+   * services en reçoivent. Google recoupe la fiche Data Safety avec la
+   * politique publiée — une déclaration plus détaillée que la politique est
+   * un motif de rejet classique.
+   *
+   * Liste établie en relevant les intégrations réelles du code (variables
+   * d'environnement utilisées, scripts chargés dans layout.js), pas les
+   * intentions. À reprendre à chaque ajout d'un service.
+   */
+  const sousTraitants = [
+    { nom: "Supabase", role: "Hébergement des données", detail: "Authentification, base de données et stockage des fichiers. Reçoit le profil, les CV et les messages." },
+    { nom: "Vercel", role: "Hébergement de l'application", detail: "Exécution des pages et des fonctions serveur, journaux techniques de requêtes." },
+    { nom: "Microsoft Clarity", role: "Analyse d'audience", detail: "Enregistre les interactions et rejoue les sessions de navigation pour comprendre les difficultés d'usage." },
+    { nom: "Plausible", role: "Mesure d'audience", detail: "Statistiques de fréquentation, sans cookie ni identifiant persistant." },
+    { nom: "Sentry", role: "Rapports d'erreur", detail: "Reçoit les erreurs techniques. Les champs sensibles sont retirés avant envoi." },
+    { nom: "Google (Gemini)", role: "Traitement par intelligence artificielle", detail: "Assistant, analyse de CV, extraction d'annonces et lecture des pièces d'identité." },
+    { nom: "Groq et DeepSeek", role: "Traitement par intelligence artificielle", detail: "Modèles de secours lorsque le service principal est indisponible." },
+    { nom: "KPay et PayDunya", role: "Paiement", detail: "Encaissement des commandes. Vos coordonnées bancaires sont saisies chez eux et ne transitent jamais par Facilité." },
+    { nom: "Resend", role: "Envoi des e-mails", detail: "Confirmations d'inscription, alertes et notifications de candidature." },
+    { nom: "Daily.co", role: "Entretiens vidéo", detail: "Transport des flux audio et vidéo pendant un entretien." },
+    { nom: "Cloudflare R2", role: "Stockage de fichiers", detail: "Stockage complémentaire des documents." },
   ];
 
   return (
@@ -75,9 +102,9 @@ export default function ConfidentialitePage() {
             La protection de vos données personnelles et de votre vie privée est une priorité absolue pour <strong>Facilité</strong> (ffacilite.com). Découvrez nos engagements en matière de transparence, de sécurité et d&apos;utilisation responsable.
           </p>
           <div className="mt-4 flex items-center justify-center gap-4 text-xs font-bold text-gray-500 dark:text-gray-400 flex-wrap">
-            <span><i className="fa-regular fa-calendar-check mr-1.5 text-emerald-600"></i> Dernière mise à jour : 17 Août 2026</span>
+            <span><i className="fa-regular fa-calendar-check mr-1.5 text-emerald-600"></i> Dernière mise à jour : 29 Août 2026</span>
             <span>•</span>
-            <span><i className="fa-solid fa-building-shield mr-1.5 text-emerald-600"></i> Version 2.5</span>
+            <span><i className="fa-solid fa-building-shield mr-1.5 text-emerald-600"></i> Version 2.6</span>
           </div>
         </div>
 
@@ -331,31 +358,90 @@ export default function ConfidentialitePage() {
                 <p>
                   Vos données sont conservées aussi longtemps que votre compte reste actif. En cas d&apos;inactivité prolongée supérieure à 24 mois sans connexion, ou sur simple demande de suppression de votre part, vos données personnelles et CVs sont intégralement et définitivement effacés de nos serveurs.
                 </p>
+                <p>
+                  La suppression est demandée depuis votre profil, onglet « Sécurité &amp; Connexion », ou par e-mail si vous n&apos;avez plus accès à votre compte. Le compte est désactivé immédiatement et effacé définitivement 30 jours plus tard — ce délai vous laisse revenir sur une suppression demandée par erreur. La procédure complète, ce qui est effacé et ce que la loi nous impose de conserver, figure sur la page{" "}
+                  <Link href="/suppression-compte" className="font-extrabold text-emerald-700 dark:text-[#10E688] underline underline-offset-2">
+                    Supprimer mon compte
+                  </Link>
+                  , accessible sans connexion.
+                </p>
               </div>
             </section>
 
-            {/* Section 8 : Cookies */}
-            <section id="cookies" className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
+            {/* Section 8 : Destinataires des données */}
+            <section id="sous-traitants" className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-[#10E688] flex items-center justify-center font-black">
                   8
                 </div>
                 <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white">
-                  Cookies &amp; Traceurs
+                  Destinataires de vos Données
                 </h2>
               </div>
               <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed space-y-3">
                 <p>
-                  Facilité utilise uniquement des cookies strictement nécessaires au maintien de votre session de connexion sécurisée et à la mémorisation de vos préférences (ex. thème d&apos;affichage, langue). Nous n&apos;utilisons aucun cookie de ciblage publicitaire intrusif.
+                  Facilité ne vend ni ne loue vos données. Pour fonctionner, l&apos;application s&apos;appuie sur les prestataires ci-dessous, qui traitent des données pour notre compte et selon nos instructions. Chacun n&apos;en reçoit que ce qui lui est nécessaire.
+                </p>
+              </div>
+
+              <ul className="space-y-3">
+                {sousTraitants.map((s) => (
+                  <li
+                    key={s.nom}
+                    className="border-l-2 border-emerald-200 dark:border-emerald-900/60 pl-4 py-0.5"
+                  >
+                    <p className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
+                      {s.nom}
+                      <span className="font-bold text-gray-400 dark:text-gray-500"> — {s.role}</span>
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mt-0.5">{s.detail}</p>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed space-y-3 pt-1">
+                <p>
+                  Certains de ces prestataires hébergent leurs serveurs hors du Sénégal, notamment en Europe et aux États-Unis. Vos données peuvent donc y être transférées pour être traitées.
+                </p>
+                <p>
+                  Les recruteurs vérifiés constituent une catégorie distincte : ils accèdent à votre CV uniquement si vous avez rendu votre profil visible aux recruteurs, ou si vous avez postulé à leur offre. Vous gardez la main sur ce réglage depuis votre profil.
                 </p>
               </div>
             </section>
 
-            {/* Section 9 : Contact DPO */}
-            <section id="contact" className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
+            {/* Section 9 : Cookies */}
+            <section id="cookies" className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-[#10E688] flex items-center justify-center font-black">
                   9
+                </div>
+                <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white">
+                  Cookies &amp; Traceurs
+                </h2>
+              </div>
+              {/* Réécrit le 2026-08-29. Le texte précédent affirmait « uniquement
+                  des cookies strictement nécessaires » : c'était inexact, Microsoft
+                  Clarity dépose un identifiant de session et enregistre la
+                  navigation. Une politique qui minimise ce qui est réellement posé
+                  est un motif de rejet Google Play, au même titre qu'une omission. */}
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed space-y-3">
+                <p>
+                  Facilité dépose des cookies strictement nécessaires au maintien de votre session de connexion et à la mémorisation de vos préférences d&apos;affichage. Nous n&apos;utilisons <strong>aucun cookie publicitaire</strong> et ne pratiquons aucun ciblage.
+                </p>
+                <p>
+                  À des fins de mesure et d&apos;amélioration, deux outils d&apos;analyse sont également actifs. <strong>Microsoft Clarity</strong> associe un identifiant à votre session et enregistre vos interactions — clics, défilement, parcours — afin que nous puissions repérer les écrans qui posent problème. <strong>Plausible</strong> mesure la fréquentation sans cookie ni identifiant persistant.
+                </p>
+                <p>
+                  Vous pouvez bloquer ces outils depuis les réglages de votre navigateur ou une extension dédiée, sans que cela n&apos;empêche l&apos;usage de Facilité.
+                </p>
+              </div>
+            </section>
+
+            {/* Section 10 : Contact DPO */}
+            <section id="contact" className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-[#10E688] flex items-center justify-center font-black">
+                  10
                 </div>
                 <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white">
                   Contact &amp; Délégué à la Protection des Données
