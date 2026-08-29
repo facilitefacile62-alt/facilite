@@ -20,6 +20,24 @@ const deepseek = new OpenAI({
   baseURL: "https://api.deepseek.com",
 });
 
+// Modèle Groq du filet de secours.
+//
+// llama-3.3-70b-versatile a été retiré du catalogue : l'API répondait 404 à
+// chaque appel (vérifié le 2026-08-29 en interrogeant GET /openai/v1/models —
+// plus aucun modèle Llama de conversation n'y figure). Le repli était donc
+// mort sans que rien ne le signale, puisque l'échec était avalé par le
+// catch et que la route renvoyait quand même success:true.
+//
+// Choisi parmi les modèles réellement servis, sur deux critères testés en
+// conditions réelles : mode JSON strict fonctionnel — openai/gpt-oss-120b et
+// gpt-oss-20b échouent sur `response_format: json_object` avec « Failed to
+// validate JSON » — et respect du schéma imposé par SYSTEM_PROMPT, vérifié
+// sur un CV complet (10 clés attendues, 3 formations, dates au format
+// « Septembre 2018 - Juin 2021 »). groq/compound-mini passait aussi, mais
+// c'est un système agentique à outils, imprévisible pour de l'extraction
+// pure.
+const MODELE_GROQ = "qwen/qwen3.8-27b";
+
 // Nettoyage impératif pour les modèles de la famille DeepSeek-R1 / Gemini
 function extractAndParseJSON(rawText) {
   if (!rawText) throw new Error("Réponse vide du modèle");
@@ -202,9 +220,9 @@ export async function POST(req) {
       const groqKey = process.env.GROQ_API_KEY;
       if (groqKey && !groqKey.includes("[") && groqKey.trim() !== "") {
         try {
-          console.log("Appel Groq OpenAI Client (llama-3.3-70b-versatile)...");
+          console.log(`Appel Groq OpenAI Client (${MODELE_GROQ})...`);
           const groqResponse = await groq.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
+            model: MODELE_GROQ,
             messages: [
               { role: "system", content: SYSTEM_PROMPT },
               { role: "user", content: `Voici le texte du document à analyser :\n\n${documentText}` },
