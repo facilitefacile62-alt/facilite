@@ -62,6 +62,40 @@ export async function getSignedCvUrl(pathOrUrl, expiresInSeconds = 3600) {
 }
 
 /**
+ * URL signée qui force le TÉLÉCHARGEMENT du document plutôt que son
+ * affichage, en conservant un nom de fichier lisible.
+ *
+ * Distincte de getSignedCvUrl : l'option `download` de createSignedUrl ajoute
+ * un Content-Disposition: attachment côté Supabase. Sans elle, le navigateur
+ * ouvre le PDF dans un onglet et l'enregistrement dépend du lecteur intégré —
+ * sur mobile, il n'y a souvent aucun moyen de récupérer le fichier.
+ *
+ * Renvoie null si le chemin n'est pas dans le bucket : l'appelant retombe
+ * alors sur un téléchargement par blob, seul moyen d'imposer le nom de
+ * fichier sur une URL qu'on ne contrôle pas.
+ */
+export async function getSignedCvDownloadUrl(pathOrUrl, fileName, expiresInSeconds = 300) {
+  if (!pathOrUrl || typeof pathOrUrl !== "string") return null;
+  const cleanPath = pathOrUrl.trim();
+  if (!cleanPath || !cleanPath.includes("/")) return null;
+  if (cleanPath.startsWith("http") || cleanPath.startsWith("data:") || cleanPath.startsWith("blob:") || cleanPath.startsWith("/")) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase.storage
+      .from("resumes")
+      .createSignedUrl(cleanPath, expiresInSeconds, {
+        download: fileName || cleanPath.split("/").pop() || "document.pdf",
+      });
+    if (error) return null;
+    return data?.signedUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Résout un avatar_url/cover_url de `profiles` en URL affichable.
  *
  * Trois cas, jamais de tentative de signature en dehors du troisième :

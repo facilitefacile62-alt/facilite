@@ -8,7 +8,7 @@ import Link from "next/link";
 // le fichier (piège rencontré en testant : "Image is not a constructor").
 import NextImage from "next/image";
 import { usePathname } from "next/navigation";
-import { supabase, handleGlobalSignOut, getSignedCvUrl, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
+import { supabase, handleGlobalSignOut, getSignedCvUrl, getSignedCvDownloadUrl, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import RoleBadge from "@/components/RoleBadge";
 import RoleNavLink from "@/components/RoleNavLink";
@@ -157,6 +157,7 @@ export default function ProfilPage() {
   const cvFileInputRef = useRef(null);
   const aiCvFileInputRef = useRef(null);
   const [isParsingCv, setIsParsingCv] = useState(false);
+  const [downloadingDocId, setDownloadingDocId] = useState(null);
   const [scanModalOpen, setScanModalOpen] = useState(false);
   const [savingScanData, setSavingScanData] = useState(false);
   const [scanModalActiveTab, setScanModalActiveTab] = useState("general");
@@ -1346,6 +1347,68 @@ export default function ProfilPage() {
   // Importation Universelle & Analyse IA des Documents (CV, lettres de motivation, justificatifs)
   // L'extraction s'appuie sur le contenu textuel réel du document (PDF/DOCX/Image via OCR),
   // jamais sur le nom du fichier.
+  // Un <a download> créé à la volée : c'est le seul déclencheur de
+  // téléchargement que tous les navigateurs mobiles honorent. window.open
+  // ouvre un onglet que le lecteur PDF intégré capture souvent, sans jamais
+  // proposer d'enregistrer.
+  const declencherTelechargement = (url, nomFichier) => {
+    const lien = document.createElement("a");
+    lien.href = url;
+    lien.download = nomFichier;
+    lien.rel = "noopener";
+    document.body.appendChild(lien);
+    lien.click();
+    lien.remove();
+  };
+
+  /**
+   * Télécharge un document de la personne sur son appareil.
+   *
+   * « Voir » ouvrait le fichier dans une modale de prévisualisation sans
+   * jamais permettre de le récupérer. Or ce sont ses CV et ses lettres : elle
+   * doit pouvoir les ressortir, ne serait-ce que pour les envoyer ailleurs
+   * que par Facilité.
+   *
+   * Deux chemins. Le bucket privé produit une URL signée qui force le
+   * téléchargement avec un nom lisible — c'est le cas courant. Pour les
+   * anciennes valeurs stockées en URL directe, la signature est impossible :
+   * on récupère alors le fichier et on l'enregistre depuis un blob, seul
+   * moyen d'imposer le nom au lieu de laisser le navigateur inventer.
+   */
+  const handleDownloadDocument = async (doc) => {
+    const chemin = doc?.file_url;
+    const nom = doc?.title || "document.pdf";
+    if (!chemin) {
+      triggerToast("Ce document n'a pas de fichier associé.", "fa-triangle-exclamation");
+      return;
+    }
+
+    setDownloadingDocId(doc.id);
+    try {
+      const urlSignee = await getSignedCvDownloadUrl(chemin, nom);
+      if (urlSignee) {
+        declencherTelechargement(urlSignee, nom);
+        return;
+      }
+
+      const urlDirecte = await getSignedCvUrl(chemin);
+      if (!urlDirecte) throw new Error("lien introuvable");
+      const reponse = await fetch(urlDirecte);
+      if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);
+      const blob = await reponse.blob();
+      const urlBlob = URL.createObjectURL(blob);
+      declencherTelechargement(urlBlob, nom);
+      // Révocation différée : révoquer tout de suite annulerait le
+      // téléchargement que le clic vient de lancer.
+      setTimeout(() => URL.revokeObjectURL(urlBlob), 60000);
+    } catch (err) {
+      console.error("Téléchargement du document impossible :", err);
+      triggerToast("Le téléchargement a échoué. Réessayez dans un instant.", "fa-triangle-exclamation");
+    } finally {
+      setDownloadingDocId(null);
+    }
+  };
+
   const handleImportAndParseCv = async (e) => {
     const file = e.target.files[0];
     if (!file || !userSession?.user) return;
@@ -4380,7 +4443,7 @@ export default function ProfilPage() {
                             </div>
                           </div>
 
-                          {/* Groupe de boutons d'action : Voir & Supprimer */}
+                          {/* Groupe de boutons d'action : Voir, Télécharger & Supprimer */}
                           <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
                             <button
                               type="button"
@@ -4394,6 +4457,17 @@ export default function ProfilPage() {
                             >
                               <i className="fa-solid fa-eye text-xs"></i>
                               <span>Voir</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadDocument(doc)}
+                              disabled={downloadingDocId === doc.id}
+                              className="bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Télécharger ce document sur votre appareil"
+                            >
+                              <i className={`fa-solid ${downloadingDocId === doc.id ? "fa-circle-notch fa-spin" : "fa-download"} text-xs`}></i>
+                              <span>{downloadingDocId === doc.id ? "..." : "Télécharger"}</span>
                             </button>
 
                             <button
