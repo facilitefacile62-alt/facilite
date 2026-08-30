@@ -42,6 +42,19 @@ async function getPdfJsEngine() {
   });
 }
 
+/**
+ * Erreur dont le message est écrit POUR la personne qui utilise l'outil, et
+ * peut donc être affiché tel quel. Distingue « ce fichier ne convient pas »
+ * — que l'utilisateur peut corriger — d'un plantage technique, où un message
+ * générique reste préférable.
+ */
+class ErreurOutil extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ErreurOutil";
+  }
+}
+
 const CATEGORIES = [
   { id: "all", name: "Tous les outils" },
   { id: "pdf", name: "Outils PDF & Documents" },
@@ -389,6 +402,13 @@ export default function FonctionnalitesPage() {
     setPageRotations({});
     setDeletedPages({});
     setPageCount(1);
+    // Ces deux-là manquaient. Une plage saisie dans « Diviser » survivait au
+    // changement d'outil : on revenait avec un autre PDF, la plage périmée
+    // s'appliquait, et le repli silencieux d'alors la transformait en
+    // page 1. Le niveau de compression traînait de la même façon d'un
+    // document à l'autre.
+    setPageRange("1");
+    setCompressionMode("recommended");
   };
 
   const handleSelectTab = (item) => {
@@ -514,6 +534,12 @@ export default function FonctionnalitesPage() {
         const newPdf = await PDFDocument.create();
 
         const indicesToKeep = parsePageRange(pageRange, totalPages);
+        if (indicesToKeep.length === 0) {
+          throw new ErreurOutil(
+            `Aucune page ne correspond à « ${pageRange.trim() || "(vide)"} ». ` +
+              `Ce document compte ${totalPages} page${totalPages > 1 ? "s" : ""} : indiquez un numéro ou une plage dans cet intervalle, par exemple « 1-${totalPages} ».`
+          );
+        }
         const copiedPages = await newPdf.copyPages(srcPdf, indicesToKeep);
         copiedPages.forEach((page) => newPdf.addPage(page));
 
@@ -675,7 +701,11 @@ export default function FonctionnalitesPage() {
       setProcessingProgress(100);
     } catch (error) {
       console.error("Erreur lors de l'exécution PDF:", error);
-      alert("Une erreur est survenue lors du traitement du fichier. Veuillez vérifier que le PDF n'est pas protégé par un mot de passe.");
+      alert(
+        error instanceof ErreurOutil
+          ? error.message
+          : "Une erreur est survenue lors du traitement du fichier. Veuillez vérifier que le PDF n'est pas protégé par un mot de passe."
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -703,8 +733,16 @@ export default function FonctionnalitesPage() {
       }
     });
 
-    const result = Array.from(indices).sort((a, b) => a - b);
-    return result.length > 0 ? result : [0];
+    // Retourne un tableau VIDE quand rien n'est exploitable, au lieu du
+    // [0] d'avant. Ce repli silencieux sur la page 1 était le pire des
+    // comportements : « 3-5 » sur un document de 2 pages, « 99 », « abc »,
+    // « 5-3 » et le champ vide donnaient tous la page 1, annoncée comme un
+    // succès — « 1 page extraite ». La personne repartait avec un extrait
+    // qu'elle n'avait pas demandé, sans le moindre avertissement.
+    //
+    // C'est à l'appelant de refuser explicitement, pas à ce lecteur de
+    // deviner une intention.
+    return Array.from(indices).sort((a, b) => a - b);
   }
 
   function formatBytes(bytes) {
