@@ -135,6 +135,22 @@ const TUNNEL_TRANSITIONS = {
 const TUNNEL_STEPS = Object.keys(TUNNEL_TRANSITIONS);
 
 /**
+ * Retire la ponctuation parasite en tête de réponse.
+ *
+ * Le modèle préfixe régulièrement ses réponses d'un point isolé — « .Madame,
+ * Monsieur, bonjour… ». Constaté sur les DEUX chemins d'appel, celui du
+ * tunnel comme celui de la synthèse post-outil, et absent de la configuration
+ * en base : c'est donc une scorie de génération, pas une consigne.
+ *
+ * Une réponse ne commence jamais légitimement par un point ou une virgule ;
+ * le reste du texte n'est pas touché.
+ */
+function nettoyerReponse(texte) {
+  if (typeof texte !== "string") return texte;
+  return texte.replace(/^[\s.,;:]+/, "");
+}
+
+/**
  * Règles ajoutées SOUS la consigne d'étape, donc au rang le plus élevé.
  *
  * La langue d'abord : le prompt enregistré en base précise bien que
@@ -564,7 +580,7 @@ export async function POST(req) {
                   // L'étape du tunnel n'est délibérément PAS avancée : la
                   // personne a posé une question de côté, elle reprendra son
                   // parcours CV là où elle l'avait laissé.
-                  return NextResponse.json({ reply, toolResult: resultat, toolName: nomOutil });
+                  return NextResponse.json({ reply: nettoyerReponse(reply), toolResult: resultat, toolName: nomOutil });
                 }
               }
             }
@@ -793,7 +809,7 @@ export async function POST(req) {
               if (reply) {
                 const resolvedNextStep = resolveNextStep(currentStep, proposedNextStep, informationObtenue);
                 await saveConversationStep(user.id, resolvedNextStep);
-                return NextResponse.json({ reply });
+                return NextResponse.json({ reply: nettoyerReponse(reply) });
               }
             } catch (parseErr) {
               // Le modèle n'a pas respecté le format JSON malgré
@@ -801,7 +817,7 @@ export async function POST(req) {
               // de bloquer la conversation, sans faire avancer l'étape (on
               // reste sur currentStep, la prochaine requête re-tentera).
               console.error("ai-chat: réponse hors format JSON attendu:", parseErr.message);
-              return NextResponse.json({ reply: rawText });
+              return NextResponse.json({ reply: nettoyerReponse(rawText) });
             }
           }
         } else {
