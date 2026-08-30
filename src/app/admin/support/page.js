@@ -34,6 +34,7 @@ export default function AdminSupportPage() {
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [changementMode, setChangementMode] = useState(false);
 
   const chatBottomRef = useRef(null);
 
@@ -223,6 +224,38 @@ export default function AdminSupportPage() {
     triggerToast(`Statut mis à jour : ${STATUS_META[newStatus]?.label || newStatus}`);
   };
 
+  /**
+   * Prend la main sur la conversation, ou la rend à l'assistant.
+   *
+   * Passe par la fonction repondre_escalade plutôt que par un UPDATE direct :
+   * la colonne `mode` de support_threads n'est modifiable que par elle, et
+   * c'est elle qui prévient la personne du changement. Un UPDATE ici aurait
+   * changé le bandeau sans que l'intéressé en soit informé.
+   */
+  const basculerMode = async (nouveauMode) => {
+    if (!selectedUserId) return;
+    setChangementMode(true);
+    try {
+      const { data, error } = await supabase.rpc("repondre_escalade", {
+        p_user_id: selectedUserId,
+        p_mode: nouveauMode,
+      });
+      if (error) throw error;
+      if (data !== true) throw new Error("Aucun fil de support pour cette personne.");
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.user_id === selectedUserId
+            ? { ...t, mode: nouveauMode, status: nouveauMode === "humain" ? "in_progress" : t.status }
+            : t
+        )
+      );
+    } catch (err) {
+      alert(`Changement impossible : ${err.message}`);
+    } finally {
+      setChangementMode(false);
+    }
+  };
+
   const filteredThreads = threads.filter((t) => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (!searchQuery) return true;
@@ -369,6 +402,51 @@ export default function AdminSupportPage() {
                     <option value="in_progress">🟠 En cours</option>
                     <option value="resolved">🟢 Résolu</option>
                   </select>
+                </div>
+
+                {/* Qui répond dans cette conversation. Distinct du statut du
+                    ticket juste au-dessus : « en cours » dit que quelqu'un
+                    s'en occupe, « mode » dit si l'assistant parle encore. */}
+                <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-gray-600">
+                    {selectedThread?.mode === "humain" ? (
+                      <>
+                        <i className="fa-solid fa-user-check text-emerald-600 mr-1.5"></i>
+                        Vous tenez cette conversation — l&apos;assistant est en pause.
+                      </>
+                    ) : selectedThread?.mode === "attente_humain" ? (
+                      <>
+                        <i className="fa-solid fa-hourglass-half text-amber-600 mr-1.5"></i>
+                        Cette personne a demandé un conseiller
+                        {selectedThread?.mode_motif ? ` — « ${selectedThread.mode_motif} »` : ""}
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-robot text-gray-400 mr-1.5"></i>
+                        L&apos;assistant répond automatiquement.
+                      </>
+                    )}
+                  </span>
+
+                  {selectedThread?.mode === "humain" ? (
+                    <button
+                      type="button"
+                      onClick={() => basculerMode("ia")}
+                      disabled={changementMode}
+                      className="px-3 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-xs font-extrabold hover:bg-gray-100 disabled:opacity-50 cursor-pointer"
+                    >
+                      {changementMode ? "…" : "Rendre la main à l'assistant"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => basculerMode("humain")}
+                      disabled={changementMode}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold disabled:opacity-50 cursor-pointer"
+                    >
+                      {changementMode ? "…" : "Prendre la main"}
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
