@@ -123,11 +123,23 @@ const MO = 1024 * 1024;
 const LIMITES_OUTIL = {
   compress: { octets: 25 * MO, cumul: false },
   split: { octets: 25 * MO, cumul: false },
-  organize: { octets: 25 * MO, cumul: false },
+  organize: { octets: 25 * MO, cumul: true },
   merge: { octets: 50 * MO, cumul: true },
   jpgToPdf: { octets: 25 * MO, cumul: true },
   pdfToJpg: { octets: 25 * MO, cumul: false, pagesMax: 50 },
 };
+
+/**
+ * Clé stable d'une page, indépendante de sa position à l'écran.
+ *
+ * Une page est désormais désignée par son fichier ET son rang dans ce
+ * fichier — « 1:3 » = quatrième page du deuxième document. Indexer les
+ * rotations et les suppressions sur la seule position d'affichage aurait
+ * transféré la rotation d'une page à sa voisine dès le premier déplacement.
+ */
+function cleRef(ref) {
+  return `${ref.f}:${ref.p}`;
+}
 
 function formaterTaille(octets) {
   if (octets < MO) return `${Math.max(1, Math.round(octets / 1024))} Ko`;
@@ -243,7 +255,11 @@ const SIDEBAR_ITEMS = [
     selectLabel: "Sélectionner le fichier PDF",
     dropSubtext: "ou déposez le PDF ici",
     acceptFiles: ".pdf,application/pdf",
-    allowMultiple: false,
+    // Multi-fichiers : les pages de plusieurs documents se mélangent dans une
+    // seule grille, comme le fait n'importe quel organiseur de PDF sérieux.
+    // Organiser un document unique restait la moitié du besoin — on veut
+    // aussi intercaler les pages d'un second fichier.
+    allowMultiple: true,
     type: "organize",
     steps: [
       { num: "1", title: "Charger", desc: "Visualisez toutes les pages du document", icon: "fa-solid fa-eye" },
@@ -432,7 +448,7 @@ export default function FonctionnalitesPage() {
   // et deletedPages, qui restent indexés sur la page SOURCE : déplacer une
   // page ne doit pas déplacer sa rotation.
   const [pageOrder, setPageOrder] = useState([]);
-  const [pageThumbs, setPageThumbs] = useState([]);
+  const [pageThumbs, setPageThumbs] = useState({});
   const [thumbsLoading, setThumbsLoading] = useState(false);
   const [draggedPage, setDraggedPage] = useState(null);
 
@@ -493,7 +509,7 @@ export default function FonctionnalitesPage() {
     setDeletedPages({});
     setPageCount(1);
     setPageOrder([]);
-    setPageThumbs([]);
+    setPageThumbs({});
     setThumbsLoading(false);
     setDraggedPage(null);
     // Ces deux-là manquaient. Une plage saisie dans « Diviser » survivait au
@@ -562,9 +578,21 @@ export default function FonctionnalitesPage() {
     }
     setProcessResult(null);
 
-    // Lecture du nombre de pages : nécessaire à l'affichage pour organiser et
-    // diviser, et au plafond de pages pour la conversion en images.
-    const litPages = ["organize", "split", "pdfToJpg"].includes(activeItem.type);
+    // Organiser reconstruit sa grille à partir de la liste COMPLÈTE des
+    // fichiers — ajouter un second document doit intercaler ses pages, pas
+    // remplacer les précédentes. selectedFiles n'est pas encore à jour à cet
+    // instant (setState est asynchrone), d'où le calcul local.
+    if (activeItem.type === "organize") {
+      const tousLesFichiers = activeItem.allowMultiple ? [...selectedFiles, ...newFiles] : [newFiles[0]];
+      setPageRotations({});
+      setDeletedPages({});
+      await chargerPagesOrganisation(tousLesFichiers);
+      return;
+    }
+
+    // Lecture du nombre de pages : nécessaire à l'affichage pour diviser, et
+    // au plafond de pages pour la conversion en images.
+    const litPages = ["split", "pdfToJpg"].includes(activeItem.type);
     if (litPages && newFiles[0]) {
       try {
         const arrayBuffer = await newFiles[0].arrayBuffer();
@@ -583,12 +611,6 @@ export default function FonctionnalitesPage() {
         }
 
         setPageCount(count);
-        if (activeItem.type === "organize") {
-          setPageOrder(Array.from({ length: count }, (_, i) => i));
-          setPageRotations({});
-          setDeletedPages({});
-          genererMiniatures(newFiles[0], count);
-        }
       } catch (err) {
         console.error("Erreur lecture PDF:", err);
         // L'échec était avalé : pageCount gardait la valeur du document
@@ -615,45 +637,68 @@ export default function FonctionnalitesPage() {
    * Le canvas est réutilisé d'une page à l'autre plutôt que recréé : c'est ce
    * qui évite d'accumuler des centaines de contextes graphiques.
    */
-  const genererMiniatures = async (file, total) => {
+  const chargerPagesOrganisation = async (fichiers) => {
     setThumbsLoading(true);
     try {
       const pdfjs = await getPdfJsEngine();
-      const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      const miniatures = [];
+      const ordre = [];
+      const miniatures = {};
 
-      for (let i = 1; i <= Math.min(total, doc.numPages); i++) {
-        const page = await doc.getPage(i);
-        const viewport = page.getViewport({ scale: 0.3 });
-        canvas.width = Math.max(1, Math.floor(viewport.width));
-        canvas.height = Math.max(1, Math.floor(viewport.height));
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        miniatures.push(canvas.toDataURL("image/jpeg", 0.7));
+      for (let f = 0; f < fichiers.length; f++) {
+        const doc = await pdfjs.getDocument({ data: new Uint8Array(await fichiers[f].arrayBuffer()) }).promise;
+        for (let i = 1; i <= doc.numPages; i++) {
+          const ref = { f, p: i - 1 };
+          ordre.push(ref);
+          const page = await doc.getPage(i);
+          const viewport = page.getViewport({ scale: 0.3 });
+          canvas.width = Math.max(1, Math.floor(viewport.width));
+          canvas.height = Math.max(1, Math.floor(viewport.height));
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          miniatures[cleRef(ref)] = canvas.toDataURL("image/jpeg", 0.7);
+        }
       }
+
+      setPageOrder(ordre);
+      setPageCount(ordre.length);
       setPageThumbs(miniatures);
     } catch (err) {
-      // Sans miniature, l'outil reste utilisable : les pages s'affichent
-      // alors sous forme de vignettes numérotées. On ne bloque pas.
-      console.error("Miniatures indisponibles :", err);
-      setPageThumbs([]);
+      // Sans aperçu, l'outil doit rester utilisable : on retombe sur des
+      // vignettes numérotées plutôt que de bloquer. Mais il faut au moins
+      // connaître le nombre de pages, sinon la grille reste vide.
+      console.error("Aperçus indisponibles :", err);
+      setPageThumbs({});
+      try {
+        const ordre = [];
+        for (let f = 0; f < fichiers.length; f++) {
+          const doc = await PDFDocument.load(await fichiers[f].arrayBuffer(), { ignoreEncryption: true });
+          for (let i = 0; i < doc.getPageCount(); i++) ordre.push({ f, p: i });
+        }
+        setPageOrder(ordre);
+        setPageCount(ordre.length);
+      } catch {
+        setPageOrder([]);
+        setPageCount(0);
+      }
     } finally {
       setThumbsLoading(false);
     }
   };
 
-  const rotatePage = (indexOriginal) => {
-    setPageRotations((prev) => ({ ...prev, [indexOriginal]: ((prev[indexOriginal] || 0) + 90) % 360 }));
+  const rotatePage = (ref) => {
+    const cle = cleRef(ref);
+    setPageRotations((prev) => ({ ...prev, [cle]: ((prev[cle] || 0) + 90) % 360 }));
   };
 
-  const togglePageDeleted = (indexOriginal) => {
+  const togglePageDeleted = (ref) => {
+    const cle = cleRef(ref);
     setDeletedPages((prev) => {
       const suivant = { ...prev };
-      if (suivant[indexOriginal]) delete suivant[indexOriginal];
-      else suivant[indexOriginal] = true;
+      if (suivant[cle]) delete suivant[cle];
+      else suivant[cle] = true;
       return suivant;
     });
   };
@@ -793,32 +838,39 @@ export default function FonctionnalitesPage() {
 
       } else if (activeItem.type === "organize") {
         // --- 4. ORGANISATION RÉELLE DE PDF ---
-        const file = selectedFiles[0];
-        const arrayBuffer = await file.arrayBuffer();
-        const srcPdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-        const totalPages = srcPdf.getPageCount();
+        // Chaque document source n'est chargé et déserialisé QU'UNE FOIS,
+        // même si ses pages sont éparpillées dans l'ordre final : recharger
+        // à chaque page ferait exploser le temps de traitement sur un
+        // document réordonné en profondeur.
+        const documentsSources = [];
+        for (const f of selectedFiles) {
+          documentsSources.push(await PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: true }));
+        }
 
         const newPdf = await PDFDocument.create();
 
-        // L'ordre choisi à l'écran fait foi. pageOrder reste vide tant que
-        // rien n'a été chargé : on retombe alors sur l'ordre naturel.
-        const ordre = pageOrder.length > 0 ? pageOrder : Array.from({ length: totalPages }, (_, i) => i);
-        const validIndices = ordre.filter((i) => i < totalPages && !deletedPages[i]);
+        // L'ordre affiché à l'écran fait foi, y compris quand il entremêle
+        // les pages de plusieurs fichiers.
+        const aGarder = pageOrder.filter((ref) => {
+          const doc = documentsSources[ref.f];
+          return doc && ref.p < doc.getPageCount() && !deletedPages[cleRef(ref)];
+        });
 
         // pdf-lib enregistre sans broncher un document de zéro page : vérifié,
         // save() rend 582 octets et ne lève rien. Le téléchargement se
         // proposait donc normalement et la personne repartait avec un fichier
         // qu'aucun lecteur n'ouvre. Mieux vaut refuser ici.
-        if (validIndices.length === 0) {
+        if (aGarder.length === 0) {
           throw new ErreurOutil(
-            "Vous avez supprimé toutes les pages : le document résultant serait vide et illisible. Conservez au moins une page."
+            "Aucune page ne serait conservée : le document résultant serait vide et illisible. Gardez au moins une page."
           );
         }
 
-        const copiedPages = await newPdf.copyPages(srcPdf, validIndices);
-        copiedPages.forEach((page, idx) => {
-          const originalIndex = validIndices[idx];
-          const quartDeTour = pageRotations[originalIndex] || 0;
+        // Page par page plutôt que par lot : c'est le seul moyen de respecter
+        // un ordre qui alterne entre les documents sources.
+        for (const ref of aGarder) {
+          const [page] = await newPdf.copyPages(documentsSources[ref.f], [ref.p]);
+          const quartDeTour = pageRotations[cleRef(ref)] || 0;
           if (quartDeTour !== 0) {
             // ADDITIVE, pas absolue : une page déjà orientée en paysage dans
             // le document source porte une rotation propre. Lui imposer 90°
@@ -828,7 +880,9 @@ export default function FonctionnalitesPage() {
             page.setRotation(degrees((dejaTournee + quartDeTour) % 360));
           }
           newPdf.addPage(page);
-        });
+        }
+        const copiedPages = aGarder;
+        const file = selectedFiles[0];
 
         const organizedBytes = await newPdf.save({ useObjectStreams: true });
         const blob = new Blob([organizedBytes], { type: "application/pdf" });
@@ -1388,14 +1442,15 @@ export default function FonctionnalitesPage() {
                     <div className="mb-6 text-left">
                       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                         <p className="text-xs font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider">
-                          {pageOrder.length - Object.keys(deletedPages).length} page(s) conservée(s) sur {pageCount}
+                          {pageOrder.length - Object.keys(deletedPages).length} page(s) conservée(s) sur {pageOrder.length}
+                          {selectedFiles.length > 1 ? ` · ${selectedFiles.length} documents` : ""}
                         </p>
                         <button
                           type="button"
                           onClick={() => {
-                            setPageOrder(Array.from({ length: pageCount }, (_, i) => i));
                             setPageRotations({});
                             setDeletedPages({});
+                            chargerPagesOrganisation(selectedFiles);
                           }}
                           className="text-[11px] font-extrabold text-gray-500 hover:text-[#E5322D] underline underline-offset-2 cursor-pointer"
                         >
@@ -1416,13 +1471,14 @@ export default function FonctionnalitesPage() {
                       )}
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {pageOrder.map((indexOriginal, position) => {
-                          const supprimee = Boolean(deletedPages[indexOriginal]);
-                          const rotation = pageRotations[indexOriginal] || 0;
-                          const miniature = pageThumbs[indexOriginal];
+                        {pageOrder.map((ref, position) => {
+                          const cle = cleRef(ref);
+                          const supprimee = Boolean(deletedPages[cle]);
+                          const rotation = pageRotations[cle] || 0;
+                          const miniature = pageThumbs[cle];
                           return (
                             <div
-                              key={indexOriginal}
+                              key={cle}
                               draggable={!supprimee}
                               onDragStart={() => setDraggedPage(position)}
                               onDragOver={(e) => e.preventDefault()}
@@ -1447,13 +1503,13 @@ export default function FonctionnalitesPage() {
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
                                     src={miniature}
-                                    alt={`Page ${indexOriginal + 1}`}
+                                    alt={`Page ${ref.p + 1}`}
                                     className="max-h-full max-w-full object-contain transition-transform duration-200"
                                     style={{ transform: `rotate(${rotation}deg)` }}
                                   />
                                 ) : (
                                   <span className="text-2xl font-black text-gray-300 dark:text-gray-600">
-                                    {indexOriginal + 1}
+                                    {ref.p + 1}
                                   </span>
                                 )}
                               </div>
@@ -1464,9 +1520,9 @@ export default function FonctionnalitesPage() {
                                 {!supprimee && (
                                   <button
                                     type="button"
-                                    onClick={() => rotatePage(indexOriginal)}
+                                    onClick={() => rotatePage(ref)}
                                     title="Tourner d'un quart de tour"
-                                    aria-label={`Tourner la page ${indexOriginal + 1}`}
+                                    aria-label={`Tourner la page ${ref.p + 1}`}
                                     className="w-7 h-7 rounded-full bg-white/95 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:text-[#E5322D] shadow-sm flex items-center justify-center cursor-pointer"
                                   >
                                     <i className="fa-solid fa-rotate-right text-[11px]"></i>
@@ -1474,12 +1530,12 @@ export default function FonctionnalitesPage() {
                                 )}
                                 <button
                                   type="button"
-                                  onClick={() => togglePageDeleted(indexOriginal)}
+                                  onClick={() => togglePageDeleted(ref)}
                                   title={supprimee ? "Rétablir cette page" : "Retirer cette page"}
                                   aria-label={
                                     supprimee
-                                      ? `Rétablir la page ${indexOriginal + 1}`
-                                      : `Retirer la page ${indexOriginal + 1}`
+                                      ? `Rétablir la page ${ref.p + 1}`
+                                      : `Retirer la page ${ref.p + 1}`
                                   }
                                   className={`w-7 h-7 rounded-full border shadow-sm flex items-center justify-center cursor-pointer ${
                                     supprimee
@@ -1491,12 +1547,21 @@ export default function FonctionnalitesPage() {
                                 </button>
                               </div>
 
+                              {selectedFiles.length > 1 && (
+                                <span
+                                  className="absolute top-1 left-1 w-6 h-6 rounded-full bg-gray-900/80 text-white text-[10px] font-black flex items-center justify-center"
+                                  title={selectedFiles[ref.f]?.name}
+                                >
+                                  {String.fromCharCode(65 + ref.f)}
+                                </span>
+                              )}
+
                               <div className="flex items-center justify-between mt-2 px-0.5">
                                 <button
                                   type="button"
                                   onClick={() => movePage(position, -1)}
                                   disabled={position === 0}
-                                  aria-label={`Déplacer la page ${indexOriginal + 1} vers la gauche`}
+                                  aria-label={`Déplacer la page ${ref.p + 1} vers la gauche`}
                                   className="w-6 h-6 rounded-lg text-gray-400 hover:text-[#E5322D] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   <i className="fa-solid fa-chevron-left text-[10px]"></i>
@@ -1508,7 +1573,7 @@ export default function FonctionnalitesPage() {
                                   type="button"
                                   onClick={() => movePage(position, 1)}
                                   disabled={position === pageOrder.length - 1}
-                                  aria-label={`Déplacer la page ${indexOriginal + 1} vers la droite`}
+                                  aria-label={`Déplacer la page ${ref.p + 1} vers la droite`}
                                   className="w-6 h-6 rounded-lg text-gray-400 hover:text-[#E5322D] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   <i className="fa-solid fa-chevron-right text-[10px]"></i>
