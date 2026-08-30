@@ -1071,6 +1071,34 @@ export default function FonctionnalitesPage() {
               {/* =========================================================================
                   VUE 1 : RÉSULTAT OBTENU AVEC TÉLÉCHARGEMENT (POST-TRAITEMENT)
                  ========================================================================= */}
+              {/* Champ de sélection de fichiers — MONTÉ EN PERMANENCE.
+                  Il vivait auparavant dans la zone de dépôt (vue 3), rendue
+                  uniquement quand aucun fichier n'est choisi. Dès la première
+                  sélection l'affichage bascule sur la vue 2, l'input était
+                  démonté, fileInputRef.current tombait à null, et le bouton
+                  « Ajouter des fichiers » exécutait un ?.click() sur null :
+                  aucun sélecteur ne s'ouvrait, aucun message. Il devenait donc
+                  impossible d'ajouter un second document à une fusion.
+                  Le sortir de la condition est la seule correction qui tienne :
+                  le champ doit survivre aux changements de vue. */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                multiple={Boolean(activeItem.allowMultiple)}
+                accept={activeItem.acceptFiles || "*"}
+                onChange={(e) => {
+                  const champ = e.target;
+                  if (champ?.files) handleFilesAdded(champ.files);
+                  // Vidé après coup : sans ça, resélectionner LE MÊME fichier
+                  // ne déclenche aucun événement `change` et il ne se passe
+                  // rien. Le cas arrive systématiquement après un refus de
+                  // taille — on corrige le fichier, on le réimporte, et
+                  // l'écran reste muet.
+                  champ.value = "";
+                }}
+              />
+
               {processResult ? (
                 <div className="max-w-lg mx-auto my-6 p-6 sm:p-8 bg-gradient-to-b from-gray-50/80 to-white dark:from-gray-800/40 dark:to-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 text-center animate-in zoom-in-95 duration-200 shadow-sm">
                   
@@ -1318,23 +1346,6 @@ export default function FonctionnalitesPage() {
                         : "border-[#E3DBCC] dark:border-gray-800 hover:border-red-400/80 bg-[#FAF6F1]/50 dark:bg-gray-800/10"
                     }`}
                   >
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      multiple={Boolean(activeItem.allowMultiple)}
-                      accept={activeItem.acceptFiles || "*"}
-                      onChange={(e) => {
-                        const champ = e.target;
-                        if (champ?.files) handleFilesAdded(champ.files);
-                        // Vidé après coup : sans ça, resélectionner LE MÊME
-                        // fichier ne déclenche aucun événement `change` et il
-                        // ne se passe rien. Le cas arrive systématiquement
-                        // après un refus de taille — on corrige le fichier,
-                        // on le réimporte, et l'écran reste muet.
-                        champ.value = "";
-                      }}
-                    />
 
                     {/* Bouton Principal de Sélection de Fichier */}
                     <div className="flex items-center justify-center mb-3">
