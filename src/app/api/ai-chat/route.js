@@ -450,6 +450,15 @@ export async function POST(req) {
     // Coût : un appel de plus par message. Assumé — la seule alternative
     // était un aiguillage par mots-clés, qui aurait raté « comment rejoindre
     // Pikine » aussi sûrement que le tunnel ratait la question d'origine.
+    // Les clés préfixées d'un souligné portent des données d'affichage
+    // (géométrie d'un tracé, par exemple) : utiles à l'interface, inutiles au
+    // modèle, et coûteuses dans son contexte. Elles sont retirées avant chaque
+    // envoi à Gemini, jamais avant l'envoi au navigateur.
+    const pourLeModele = (resultat) => {
+      if (!resultat || typeof resultat !== "object") return resultat;
+      return Object.fromEntries(Object.entries(resultat).filter(([cle]) => !cle.startsWith("_")));
+    };
+
     if (useTunnelStateMachine && geminiKeyPourOutils && !confirmToolCall?.toolName) {
       const declarationsRoutage = getDeclarationsHorsTunnel();
       try {
@@ -554,7 +563,7 @@ export async function POST(req) {
                               // requête quand il manque.
                               ...(partie.functionCall.id ? { id: partie.functionCall.id } : {}),
                               name: nomOutil,
-                              response: resultat,
+                              response: pourLeModele(resultat),
                             },
                           },
                         ],
@@ -580,7 +589,16 @@ export async function POST(req) {
                   // L'étape du tunnel n'est délibérément PAS avancée : la
                   // personne a posé une question de côté, elle reprendra son
                   // parcours CV là où elle l'avait laissé.
-                  return NextResponse.json({ reply: nettoyerReponse(reply), toolResult: resultat, toolName: nomOutil });
+                  return NextResponse.json({
+                    reply: nettoyerReponse(reply),
+                    toolResult: pourLeModele(resultat),
+                    toolName: nomOutil,
+                    // Ce que l'interface doit dessiner sous la réponse. Le nom
+                    // du type est celui qu'attend attachment_type côté message.
+                    ...(resultat?._carte && resultat.aucun_resultat === false
+                      ? { attachmentType: "itineraire", payload: resultat._carte }
+                      : {}),
+                  });
                 }
               }
             }
@@ -616,7 +634,7 @@ export async function POST(req) {
       });
       contentsConfirmation.push({
         role: "user",
-        parts: [{ functionResponse: { name: confirmToolCall.toolName, response: toolResult } }],
+        parts: [{ functionResponse: { name: confirmToolCall.toolName, response: pourLeModele(toolResult) } }],
       });
 
       try {
@@ -774,7 +792,7 @@ export async function POST(req) {
             const contentsAvecResultat = [
               ...contents,
               { role: "model", parts: [{ functionCall: responsePart.functionCall }] },
-              { role: "user", parts: [{ functionResponse: { name: toolName, response: toolResult } }] },
+              { role: "user", parts: [{ functionResponse: { name: toolName, response: pourLeModele(toolResult) } }] },
             ];
 
             const synthRes = await fetch(

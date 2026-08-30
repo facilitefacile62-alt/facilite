@@ -9,6 +9,7 @@ import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessage
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
 import MarkdownLeger from "@/lib/markdownLeger";
+import CarteItineraire from "@/components/CarteItineraire";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
@@ -592,7 +593,11 @@ export default function MessagerieClient() {
             id: row.id,
             role: row.role,
             content: row.content,
-            createdAt: row.created_at
+            createdAt: row.created_at,
+            // Relu tel qu'enregistré : une carte affichée hier doit être
+            // encore là aujourd'hui, sans nouvel appel à l'assistant.
+            attachmentType: row.attachment_type || null,
+            payload: row.payload || null
           }));
         setAssistantMessages([AI_WELCOME_MESSAGE, ...loadedMsgs]);
       } else {
@@ -755,7 +760,12 @@ export default function MessagerieClient() {
         {
           id: `ai-a-${(assistantIdRef.current += 1)}`,
           role: "assistant",
-          content: botReplyText
+          content: botReplyText,
+          // Contenu enrichi éventuel (itinéraire à dessiner). Il accompagne la
+          // réponse au lieu de la remplacer : la carte se place sous le texte,
+          // et la conversation continue juste en dessous, dans le même fil.
+          attachmentType: data.attachmentType || null,
+          payload: data.payload || null
         }
       ]);
 
@@ -766,7 +776,11 @@ export default function MessagerieClient() {
             user_id: userId,
             role: "assistant",
             content: botReplyText,
-            conversation_id: activeConvId
+            conversation_id: activeConvId,
+            // Sans ces deux colonnes, la carte disparaîtrait au premier
+            // rechargement : le fil est relu depuis assistant_messages.
+            attachment_type: data.attachmentType || null,
+            payload: data.payload || null
           });
           if (insertBotErr) {
             console.error("Erreur Sauvegarde Supabase (Message Bot):", insertBotErr);
@@ -806,6 +820,8 @@ export default function MessagerieClient() {
           id: m.id,
           sender: m.role === "user" ? "me" : "them",
           text: m.content,
+          attachment_type: m.attachmentType || m.attachment_type || null,
+          payload: m.payload || null,
           time: m.createdAt
             ? new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
             : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -3282,6 +3298,14 @@ export default function MessagerieClient() {
                                 texte={msg.text}
                                 className="text-xs sm:text-[13px] font-medium leading-relaxed"
                               />
+                            )}
+
+                            {/* Contenu enrichi : la carte se glisse sous le
+                                texte du message, dans la bulle. Le fil
+                                continue normalement en dessous — aucune
+                                nouvelle vue, aucun changement de conversation. */}
+                            {msg.attachment_type === "itineraire" && msg.payload && (
+                              <CarteItineraire payload={msg.payload} />
                             )}
                             
                             {/* Horodatage & Statut Doubles Coches WhatsApp */}

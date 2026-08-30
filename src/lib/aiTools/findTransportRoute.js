@@ -118,12 +118,47 @@ const findTransportRoute = {
       };
     }
 
+    // Géométrie destinée à l'affichage, PAS au modèle.
+    //
+    // Elle est rangée sous une clé préfixée d'un souligné et retirée par la
+    // route avant l'appel de synthèse : soixante paires de coordonnées dans
+    // le contexte du modèle coûtent cher et ne l'aident en rien — il rédige
+    // à partir des noms et des tarifs, pas des latitudes. L'interface, elle,
+    // en a besoin pour tracer la ligne.
+    const carte = {
+      destination,
+      depart: { lat: latitude, lng: longitude },
+      lignes: (data || []).map((r) => ({
+        mode: r.mode,
+        ligne: r.ligne || null,
+        arret_de_depart: r.arret_le_plus_proche,
+        arret: { lat: r.arret_lat, lng: r.arret_lng },
+        distance_a_pied_km: r.distance_km != null ? Math.round(r.distance_km * 10) / 10 : null,
+        // Repris du même calcul que la version texte : la carte et la phrase
+        // de l'assistant doivent annoncer exactement le même tarif.
+        tarif_xof:
+          r.tarif_min == null && r.tarif_max == null
+            ? null
+            : r.tarif_min === r.tarif_max
+              ? String(r.tarif_min)
+              : `${r.tarif_min ?? "?"} à ${r.tarif_max ?? "?"}`,
+        // Les arrêts sans coordonnées existent dans le référentiel (relevé
+        // incomplet). Les garder ferait un tracé qui part au large de
+        // l'Atlantique : on les écarte du dessin, ils restent en base.
+        arrets: (Array.isArray(r.arrets) ? r.arrets : [])
+          .filter((a) => Number.isFinite(Number(a?.lat)) && Number.isFinite(Number(a?.lng)))
+          .sort((a, b) => (Number(a?.ordre) || 0) - (Number(b?.ordre) || 0))
+          .map((a) => ({ nom: a?.nom || null, lat: Number(a.lat), lng: Number(a.lng) })),
+      })),
+    };
+
     return {
       success: true,
       aucun_resultat: false,
       destination,
       nombre: lignes.length,
       lignes,
+      _carte: carte,
       consigne:
         "Présente uniquement les lignes ci-dessus. N'ajoute aucun horaire, aucune correspondance et aucun tarif qui n'y figure pas.",
     };
