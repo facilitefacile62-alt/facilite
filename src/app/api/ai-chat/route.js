@@ -518,7 +518,15 @@ export async function POST(req) {
                         role: m.role === "assistant" ? "model" : "user",
                         parts: [{ text: m.content }],
                       })),
-                      { role: "model", parts: [{ functionCall: partie.functionCall }] },
+                      // La partie du modèle est renvoyée ENTIÈRE, pas
+                      // reconstruite à partir de son seul functionCall.
+                      // Gemini 3 y joint un `thoughtSignature` et refuse la
+                      // requête sans lui : « Function call is missing a
+                      // thought_signature in functionCall parts » (HTTP 400).
+                      // C'est ce qui faisait échouer la synthèse en silence —
+                      // le routage choisissait pourtant le bon outil et
+                      // l'outil s'exécutait correctement.
+                      { role: "model", parts: [partie] },
                       {
                         role: "user",
                         parts: [
