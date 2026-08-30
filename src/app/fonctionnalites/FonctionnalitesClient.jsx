@@ -433,6 +433,10 @@ export default function FonctionnalitesPage() {
   const activeItem = SIDEBAR_ITEMS.find((item) => item.id === activeTabId) || SIDEBAR_ITEMS[0];
 
   const resetToolState = () => {
+    setProcessResult((precedent) => {
+      if (precedent?.downloadUrl) URL.revokeObjectURL(precedent.downloadUrl);
+      return null;
+    });
     setSelectedFiles([]);
     setIsProcessing(false);
     setProcessingProgress(0);
@@ -484,6 +488,14 @@ export default function FonctionnalitesPage() {
         setPageCount(count);
       } catch (err) {
         console.error("Erreur lecture PDF:", err);
+        // L'échec était avalé : pageCount gardait la valeur du document
+        // précédent et l'écran d'organisation affichait un nombre de pages
+        // faux, sur lequel la personne cliquait sans comprendre.
+        setPageCount(1);
+        setSelectedFiles([]);
+        alert(
+          `« ${newFiles[0].name} » n'a pas pu être lu. Vérifiez qu'il s'agit bien d'un PDF valide et non protégé par un mot de passe.`
+        );
       }
     }
   };
@@ -511,6 +523,10 @@ export default function FonctionnalitesPage() {
 
   const executeRealPdfAction = async () => {
     if (selectedFiles.length === 0) return;
+    // Le résultat précédent garde un blob en mémoire tant que son URL n'est
+    // pas révoquée. Sur cette page on enchaîne les traitements sans jamais
+    // recharger : un PDF de 30 Mo compressé cinq fois retenait cinq blobs.
+    if (processResult?.downloadUrl) URL.revokeObjectURL(processResult.downloadUrl);
     setIsProcessing(true);
     setProcessingProgress(10);
 
