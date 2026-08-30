@@ -24,6 +24,37 @@ export default function OffreApplySection({ offer }) {
   const [niveauxEtudes, setNiveauxEtudes] = useState([]);
   const [applyOpen, setApplyOpen] = useState(false);
   const [toast, setToast] = useState("");
+  // null tant que le chiffre n'est pas connu : afficher « 0 » pendant le
+  // chargement laisserait croire que personne n'a postulé.
+  const [nbCandidatures, setNbCandidatures] = useState(null);
+
+  // Compteur de candidatures de CETTE offre.
+  //
+  // Passe par compter_candidatures_par_offre plutôt que par un count() direct :
+  // la RLS de public.candidatures n'autorise que le candidat lui-même et les
+  // administrateurs, un visiteur compterait donc toujours 0. La fonction ne
+  // renvoie qu'un agrégat, et exclut les candidatures des comptes de test.
+  useEffect(() => {
+    const offreId = offer?.id;
+    if (!offreId) return;
+    let annule = false;
+    (async () => {
+      const { data, error } = await supabase.rpc("compter_candidatures_par_offre", {
+        p_offres: [offreId],
+      });
+      if (annule) return;
+      if (error) {
+        // Un compteur indisponible ne doit pas empêcher de postuler : on
+        // n'affiche simplement rien.
+        console.warn("Compteur de candidatures indisponible :", error.message);
+        return;
+      }
+      setNbCandidatures(data?.[0]?.nombre ?? 0);
+    })();
+    return () => {
+      annule = true;
+    };
+  }, [offer?.id]);
 
   useEffect(() => {
     async function loadSession() {
@@ -180,6 +211,25 @@ export default function OffreApplySection({ offer }) {
 
       {/* Section Candidature dans la page */}
       <div className="w-full">
+        {/* Compteur de candidatures — affiché même à zéro.
+            Décision explicite : un recruteur qui consulte sa propre annonce
+            doit lire un chiffre vrai. Masquer les zéros produirait une
+            statistique flatteuse mais fausse, et rendrait le compteur
+            inutilisable comme indicateur. Le chiffre exclut les candidatures
+            des comptes de test, filtrées en base. */}
+        {nbCandidatures !== null && (
+          <p className="mb-3 text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-2">
+            <i className="fa-solid fa-users text-[11px] text-blue-600"></i>
+            {nbCandidatures === 0 ? (
+              <span>Aucune candidature pour le moment — soyez la première personne à postuler.</span>
+            ) : (
+              <span>
+                <strong className="text-gray-900 dark:text-white tabular-nums">{nbCandidatures}</strong>{" "}
+                {nbCandidatures === 1 ? "personne a déjà postulé" : "personnes ont déjà postulé"} via Facilité
+              </span>
+            )}
+          </p>
+        )}
         {contactMethods.hasBoth ? (
           <div className="w-full flex flex-col sm:flex-row gap-3">
             <button
