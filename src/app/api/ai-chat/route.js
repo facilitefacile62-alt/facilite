@@ -436,10 +436,6 @@ export async function POST(req) {
     // Pikine » aussi sûrement que le tunnel ratait la question d'origine.
     if (useTunnelStateMachine && geminiKeyPourOutils && !confirmToolCall?.toolName) {
       const declarationsRoutage = getDeclarationsHorsTunnel();
-      // DIAGNOSTIC TEMPORAIRE — à retirer. Les journaux Vercel ne remontent
-      // pas la sortie console de cette fonction, et le routage échoue en
-      // production alors qu'il réussit en reproduction locale.
-      const diag = { outils: declarationsRoutage.map((d) => d.name) };
       try {
         const routageRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
@@ -473,10 +469,8 @@ export async function POST(req) {
           }
         );
 
-        diag.statut = routageRes.status;
         if (routageRes.ok) {
           const routageData = await routageRes.json();
-          diag.parts = JSON.stringify(routageData.candidates?.[0]?.content?.parts || []).slice(0, 300);
           const partie = routageData.candidates?.[0]?.content?.parts?.find((p) => p.functionCall);
 
           if (partie?.functionCall) {
@@ -525,8 +519,31 @@ export async function POST(req) {
                         parts: [{ text: m.content }],
                       })),
                       { role: "model", parts: [{ functionCall: partie.functionCall }] },
-                      { role: "user", parts: [{ functionResponse: { name: nomOutil, response: resultat } }] },
+                      {
+                        role: "user",
+                        parts: [
+                          {
+                            functionResponse: {
+                              // L'identifiant renvoyé par le modèle est repris tel
+                              // quel : les versions récentes de Gemini apparient
+                              // l'appel et sa réponse par cet id, et rejettent la
+                              // requête quand il manque.
+                              ...(partie.functionCall.id ? { id: partie.functionCall.id } : {}),
+                              name: nomOutil,
+                              response: resultat,
+                            },
+                          },
+                        ],
+                      },
                     ],
+                    // INDISPENSABLE : une conversation qui contient un
+                    // functionCall et son functionResponse doit être accompagnée
+                    // des déclarations d'outils, sinon l'API répond 400. C'est ce
+                    // qui faisait échouer la synthèse en silence : le routage
+                    // choisissait bien chercher_itineraire, l'outil s'exécutait,
+                    // puis cet appel échouait et le tunnel reprenait la main
+                    // comme si rien ne s'était passé.
+                    tools: [{ functionDeclarations: declarationsRoutage }],
                     generationConfig: { temperature: tempEffectif },
                   }),
                 }
@@ -544,14 +561,11 @@ export async function POST(req) {
               }
             }
           }
-        } else {
-          diag.erreur = (await routageRes.text()).slice(0, 300);
-        }
       } catch (err) {
-        diag.exception = err.message;
+        // Un aiguillage en panne ne doit jamais empêcher de répondre : on
+        // retombe silencieusement sur le tunnel, comportement d'avant.
         console.error("ai-chat: routage outil indisponible:", err.message);
       }
-      globalThis.__diagRoutage = diag;
     }
 
     if (confirmToolCall?.toolName && toolsActifs) {
@@ -770,7 +784,7 @@ export async function POST(req) {
               if (reply) {
                 const resolvedNextStep = resolveNextStep(currentStep, proposedNextStep, informationObtenue);
                 await saveConversationStep(user.id, resolvedNextStep);
-                return NextResponse.json({ reply, routageDiag: globalThis.__diagRoutage || null });
+                return NextResponse.json({ reply });
               }
             } catch (parseErr) {
               // Le modèle n'a pas respecté le format JSON malgré
