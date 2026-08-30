@@ -561,6 +561,7 @@ export async function POST(req) {
               }
             }
           }
+        }
       } catch (err) {
         // Un aiguillage en panne ne doit jamais empêcher de répondre : on
         // retombe silencieusement sur le tunnel, comportement d'avant.
