@@ -440,7 +440,14 @@ export default function FonctionnalitesPage() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processResult, setProcessResult] = useState(null); // { downloadUrl, fileName, originalSize, newSize, savingsPercent, message }
   const [compressionMode, setCompressionMode] = useState("recommended"); // 'recommended' | 'low'
-  const [pageRange, setPageRange] = useState("1");
+  // Sélection de « Diviser », en indices de page. Une carte { [index]: true }
+  // plutôt qu'une chaîne « 1-3,5 » : c'est la même donnée que ce que la
+  // personne voit à l'écran, donc rien à analyser ni à resynchroniser.
+  const [splitSelection, setSplitSelection] = useState({});
+  // Bornes conservées en TEXTE : un champ numérique vidé au clavier doit
+  // pouvoir rester vide le temps de la saisie, ce qu'un nombre interdirait.
+  const [splitDe, setSplitDe] = useState("1");
+  const [splitA, setSplitA] = useState("1");
   const [pageRotations, setPageRotations] = useState({}); // { [pageIndex]: degrees }
   const [deletedPages, setDeletedPages] = useState({}); // { [pageIndex]: true }
   const [pageCount, setPageCount] = useState(1);
@@ -517,7 +524,9 @@ export default function FonctionnalitesPage() {
     // s'appliquait, et le repli silencieux d'alors la transformait en
     // page 1. Le niveau de compression traînait de la même façon d'un
     // document à l'autre.
-    setPageRange("1");
+    setSplitSelection({});
+    setSplitDe("1");
+    setSplitA("1");
     setCompressionMode("recommended");
   };
 
@@ -587,6 +596,13 @@ export default function FonctionnalitesPage() {
       setPageRotations({});
       setDeletedPages({});
       await chargerPagesOrganisation(tousLesFichiers);
+      return;
+    }
+
+    // Diviser réutilise le même chargement d'aperçus : voir ses pages est
+    // aussi utile pour choisir un intervalle que pour réordonner.
+    if (activeItem.type === "split") {
+      await chargerPagesOrganisation([newFiles[0]]);
       return;
     }
 
@@ -665,6 +681,13 @@ export default function FonctionnalitesPage() {
       setPageOrder(ordre);
       setPageCount(ordre.length);
       setPageThumbs(miniatures);
+      // Tout est sélectionné au départ : l'état initial doit produire un
+      // résultat valide, pas une erreur sur un choix vide.
+      const tout = {};
+      ordre.forEach((_, i) => { tout[i] = true; });
+      setSplitSelection(tout);
+      setSplitDe("1");
+      setSplitA(String(ordre.length));
     } catch (err) {
       // Sans aperçu, l'outil doit rester utilisable : on retombe sur des
       // vignettes numérotées plutôt que de bloquer. Mais il faut au moins
@@ -686,6 +709,26 @@ export default function FonctionnalitesPage() {
     } finally {
       setThumbsLoading(false);
     }
+  };
+
+  // Applique un intervalle « de la page X à Y ». Les bornes sont ramenées
+  // dans le document et remises dans l'ordre : saisir 5 puis 2 doit
+  // sélectionner 2 à 5, pas rien du tout.
+  const appliquerIntervalle = (debut, fin, total) => {
+    const a = Math.min(Math.max(1, Number(debut) || 1), total);
+    const b = Math.min(Math.max(1, Number(fin) || total), total);
+    const suivant = {};
+    for (let i = Math.min(a, b); i <= Math.max(a, b); i++) suivant[i - 1] = true;
+    setSplitSelection(suivant);
+  };
+
+  const toggleSplitPage = (index) => {
+    setSplitSelection((prev) => {
+      const suivant = { ...prev };
+      if (suivant[index]) delete suivant[index];
+      else suivant[index] = true;
+      return suivant;
+    });
   };
 
   const rotatePage = (ref) => {
@@ -813,11 +856,17 @@ export default function FonctionnalitesPage() {
 
         const newPdf = await PDFDocument.create();
 
-        const indicesToKeep = parsePageRange(pageRange, totalPages);
+        // La sélection affichée fait foi : ce que la personne a coché est
+        // exactement ce qu'elle récupère. Plus d'analyse de chaîne, donc plus
+        // d'écart possible entre ce qu'elle voit et ce qui sort.
+        const indicesToKeep = Object.keys(splitSelection)
+          .map(Number)
+          .filter((i) => i >= 0 && i < totalPages)
+          .sort((a, b) => a - b);
+
         if (indicesToKeep.length === 0) {
           throw new ErreurOutil(
-            `Aucune page ne correspond à « ${pageRange.trim() || "(vide)"} ». ` +
-              `Ce document compte ${totalPages} page${totalPages > 1 ? "s" : ""} : indiquez un numéro ou une plage dans cet intervalle, par exemple « 1-${totalPages} ».`
+            `Aucune page n'est sélectionnée. Choisissez au moins une page à extraire — ce document en compte ${totalPages}.`
           );
         }
         const copiedPages = await newPdf.copyPages(srcPdf, indicesToKeep);
@@ -1047,39 +1096,7 @@ export default function FonctionnalitesPage() {
     return "Le traitement du fichier a échoué. Vérifiez que le document est un PDF valide et non protégé.";
   }
 
-  function parsePageRange(rangeStr, totalPages) {
-    if (!rangeStr || rangeStr.trim() === "") return [0];
-    const parts = rangeStr.split(",");
-    const indices = new Set();
 
-    parts.forEach((p) => {
-      const trimmed = p.trim();
-      if (trimmed.includes("-")) {
-        const [start, end] = trimmed.split("-").map((n) => parseInt(n.trim(), 10));
-        if (!isNaN(start) && !isNaN(end)) {
-          for (let i = Math.max(1, start); i <= Math.min(totalPages, end); i++) {
-            indices.add(i - 1);
-          }
-        }
-      } else {
-        const num = parseInt(trimmed, 10);
-        if (!isNaN(num) && num >= 1 && num <= totalPages) {
-          indices.add(num - 1);
-        }
-      }
-    });
-
-    // Retourne un tableau VIDE quand rien n'est exploitable, au lieu du
-    // [0] d'avant. Ce repli silencieux sur la page 1 était le pire des
-    // comportements : « 3-5 » sur un document de 2 pages, « 99 », « abc »,
-    // « 5-3 » et le champ vide donnaient tous la page 1, annoncée comme un
-    // succès — « 1 page extraite ». La personne repartait avec un extrait
-    // qu'elle n'avait pas demandé, sans le moindre avertissement.
-    //
-    // C'est à l'appelant de refuser explicitement, pas à ce lecteur de
-    // deviner une intention.
-    return Array.from(indices).sort((a, b) => a - b);
-  }
 
   function formatBytes(bytes) {
     if (!bytes || bytes === 0) return "0 KB";
@@ -1586,20 +1603,129 @@ export default function FonctionnalitesPage() {
                     </div>
                   )}
 
-                  {activeItem.type === "split" && (
-                    <div className="mb-6 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 max-w-lg mx-auto text-left">
-                      <label className="block text-xs font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-1">
-                        Pages à extraire (Total : {pageCount} pages)
-                      </label>
-                      <input
-                        type="text"
-                        value={pageRange}
-                        onChange={(e) => setPageRange(e.target.value)}
-                        placeholder="Ex: 1-3 ou 1, 4"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm font-bold text-gray-900 dark:text-white focus:outline-emerald-500"
-                      />
-                      <div className="text-[10px] text-gray-400 mt-1 font-medium">
-                        Indiquez les numéros de pages ou plages séparés par une virgule.
+                  {activeItem.type === "split" && pageOrder.length > 0 && (
+                    <div className="mb-6 text-left">
+                      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+                        <div>
+                          <p className="text-xs font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-2">
+                            Sélectionner l&apos;intervalle
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <label htmlFor="split-de" className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                              de la page
+                            </label>
+                            <input
+                              id="split-de"
+                              type="number"
+                              min={1}
+                              max={pageOrder.length}
+                              value={splitDe}
+                              onChange={(e) => {
+                                setSplitDe(e.target.value);
+                                appliquerIntervalle(e.target.value, splitA, pageOrder.length);
+                              }}
+                              className="w-20 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm font-black text-gray-900 dark:text-white text-center tabular-nums focus:outline-[#E5322D]"
+                            />
+                            <label htmlFor="split-a" className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                              à
+                            </label>
+                            <input
+                              id="split-a"
+                              type="number"
+                              min={1}
+                              max={pageOrder.length}
+                              value={splitA}
+                              onChange={(e) => {
+                                setSplitA(e.target.value);
+                                appliquerIntervalle(splitDe, e.target.value, pageOrder.length);
+                              }}
+                              className="w-20 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm font-black text-gray-900 dark:text-white text-center tabular-nums focus:outline-[#E5322D]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black text-[#E5322D] tabular-nums">
+                            {Object.keys(splitSelection).length} / {pageOrder.length} page(s)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSplitDe("1");
+                              setSplitA(String(pageOrder.length));
+                              appliquerIntervalle(1, pageOrder.length, pageOrder.length);
+                            }}
+                            className="text-[11px] font-extrabold text-gray-500 hover:text-[#E5322D] underline underline-offset-2 cursor-pointer"
+                          >
+                            Tout sélectionner
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-4 leading-relaxed">
+                        Réglez l&apos;intervalle ci-dessus, ou cliquez directement sur les pages pour affiner. Seules les
+                        pages en surbrillance seront extraites.
+                      </p>
+
+                      {thumbsLoading && (
+                        <p className="text-xs font-bold text-gray-400 mb-3">
+                          <i className="fa-solid fa-circle-notch fa-spin mr-2"></i>
+                          Préparation des aperçus…
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {pageOrder.map((ref, index) => {
+                          const choisie = Boolean(splitSelection[index]);
+                          const miniature = pageThumbs[cleRef(ref)];
+                          return (
+                            <button
+                              type="button"
+                              key={cleRef(ref)}
+                              onClick={() => toggleSplitPage(index)}
+                              aria-pressed={choisie}
+                              aria-label={`Page ${index + 1}${choisie ? " — sélectionnée" : ""}`}
+                              className={`relative rounded-2xl border-2 p-2 transition text-left cursor-pointer ${
+                                choisie
+                                  ? "border-[#E5322D] bg-red-50/40 dark:bg-red-950/20"
+                                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 opacity-55 hover:opacity-100"
+                              }`}
+                            >
+                              <div className="aspect-[3/4] w-full rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                                {miniature ? (
+                                  // next/image ne convient pas : la source est une
+                                  // data: URL produite dans le navigateur, jamais un
+                                  // fichier connu à la compilation.
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={miniature}
+                                    alt={`Page ${index + 1}`}
+                                    className="max-h-full max-w-full object-contain"
+                                  />
+                                ) : (
+                                  <span className="text-2xl font-black text-gray-300 dark:text-gray-600">
+                                    {index + 1}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between mt-2 px-0.5">
+                                <span className="text-[11px] font-black text-gray-600 dark:text-gray-300 tabular-nums">
+                                  {index + 1}
+                                </span>
+                                <span
+                                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                                    choisie
+                                      ? "bg-[#E5322D] text-white"
+                                      : "border border-gray-300 dark:border-gray-600 text-transparent"
+                                  }`}
+                                >
+                                  <i className="fa-solid fa-check"></i>
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
