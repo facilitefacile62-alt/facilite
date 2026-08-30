@@ -8,6 +8,7 @@ import { supabase, handleGlobalSignOut, getSignedAvatarUrl } from "@/lib/supabas
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, resolveConversationWith, touchConversation } from "@/lib/messages";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
+import MarkdownLeger from "@/lib/markdownLeger";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
@@ -3169,7 +3170,15 @@ export default function MessagerieClient() {
 
                             {/* Texte du message */}
                             {msg.text && !(msg.attachment_url && msg.attachment_type !== "audio" && msg.text.startsWith("📎")) && (
-                              <p className="text-xs sm:text-[13px] font-medium leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                              // L'assistant répond en markdown : les **gras** et les
+                              // listes s'affichaient auparavant avec leurs astérisques.
+                              // MarkdownLeger rend des éléments React, jamais du HTML
+                              // injecté — ce composant affiche aussi les messages
+                              // écrits par d'autres personnes.
+                              <MarkdownLeger
+                                texte={msg.text}
+                                className="text-xs sm:text-[13px] font-medium leading-relaxed"
+                              />
                             )}
                             
                             {/* Horodatage & Statut Doubles Coches WhatsApp */}
