@@ -55,6 +55,44 @@ class ErreurOutil extends Error {
   }
 }
 
+/**
+ * Convertit en JPEG une image que pdf-lib ne sait pas embarquer directement
+ * (WebP, AVIF…), en la faisant transiter par un canvas.
+ *
+ * createImageBitmap plutôt qu'un <img> et son onload : il décode sans
+ * dépendre du rendu, et rejette proprement sur un format que le navigateur
+ * ne connaît pas — ce qui donne un message utile plutôt qu'une attente sans
+ * fin. Le HEIC des iPhone, par exemple, n'est décodé par aucun navigateur de
+ * bureau : la personne saura qu'il faut convertir en amont.
+ */
+async function convertirEnJpeg(file) {
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new ErreurOutil(
+      `Le format de « ${file.name} » n'est pas reconnu par votre navigateur. Convertissez l'image en JPG ou en PNG avant de réessayer.`
+    );
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext("2d");
+  // Fond blanc : une image à fond transparent deviendrait noire en JPEG, qui
+  // ne gère pas la transparence.
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bitmap, 0, 0);
+  bitmap.close?.();
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+  if (!blob) {
+    throw new ErreurOutil(`La conversion de « ${file.name} » a échoué. Essayez avec un fichier JPG ou PNG.`);
+  }
+  return await blob.arrayBuffer();
+}
+
 const CATEGORIES = [
   { id: "all", name: "Tous les outils" },
   { id: "pdf", name: "Outils PDF & Documents" },
@@ -614,11 +652,20 @@ export default function FonctionnalitesPage() {
           setProcessingProgress(Math.round(((i + 1) / selectedFiles.length) * 80));
           const arrayBuffer = await file.arrayBuffer();
 
+          // pdf-lib n'embarque que du PNG et du JPEG. Le champ de sélection
+          // acceptait pourtant image/webp — format que produisent beaucoup de
+          // téléphones : le fichier partait alors dans embedJpg, échouait, et
+          // l'utilisateur recevait un message parlant de PDF protégé par mot
+          // de passe. On convertit plutôt que de refuser : le format accepté
+          // à l'écran doit être un format réellement traité.
           let image;
           if (file.type === "image/png") {
             image = await pdfDoc.embedPng(arrayBuffer);
-          } else {
+          } else if (file.type === "image/jpeg" || file.type === "image/jpg") {
             image = await pdfDoc.embedJpg(arrayBuffer);
+          } else {
+            const jpegBuffer = await convertirEnJpeg(file);
+            image = await pdfDoc.embedJpg(jpegBuffer);
           }
 
           const { width, height } = image.scale(1);
@@ -711,15 +758,40 @@ export default function FonctionnalitesPage() {
       setProcessingProgress(100);
     } catch (error) {
       console.error("Erreur lors de l'exécution PDF:", error);
-      alert(
-        error instanceof ErreurOutil
-          ? error.message
-          : "Une erreur est survenue lors du traitement du fichier. Veuillez vérifier que le PDF n'est pas protégé par un mot de passe."
-      );
+      alert(error instanceof ErreurOutil ? error.message : messageEchec(activeItem.type, error));
     } finally {
       setIsProcessing(false);
     }
   };
+
+  /**
+   * Message d'échec adapté à l'outil et à la cause réelle.
+   *
+   * Auparavant, les six outils partageaient une seule phrase : « vérifiez que
+   * le PDF n'est pas protégé par un mot de passe ». Elle s'affichait aussi
+   * pour une image au mauvais format, où elle n'a aucun sens et empêche
+   * quiconque de comprendre quoi corriger.
+   */
+  function messageEchec(typeOutil, error) {
+    const brut = String(error?.message || "");
+
+    if (/encrypt|password|protect/i.test(brut)) {
+      return "Ce PDF est protégé par un mot de passe. Retirez la protection avant de l'importer.";
+    }
+    if (/is not a PDF|No PDF header|Failed to parse|Invalid PDF/i.test(brut)) {
+      return "Ce fichier n'est pas un PDF valide, ou il est endommagé. Vérifiez le document et réessayez.";
+    }
+    if (typeOutil === "jpgToPdf") {
+      return "Une des images n'a pas pu être lue. Utilisez des fichiers JPG ou PNG.";
+    }
+    if (typeOutil === "pdfToJpg") {
+      return "La conversion en images a échoué. Si le document est très volumineux, essayez avec moins de pages.";
+    }
+    if (typeOutil === "merge") {
+      return "La fusion a échoué : l'un des fichiers n'est pas un PDF valide ou est protégé.";
+    }
+    return "Le traitement du fichier a échoué. Vérifiez que le document est un PDF valide et non protégé.";
+  }
 
   function parsePageRange(rangeStr, totalPages) {
     if (!rangeStr || rangeStr.trim() === "") return [0];
