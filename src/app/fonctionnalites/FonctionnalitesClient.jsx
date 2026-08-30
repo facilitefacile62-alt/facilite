@@ -93,6 +93,47 @@ async function convertirEnJpeg(file) {
   return await blob.arrayBuffer();
 }
 
+const MO = 1024 * 1024;
+
+/**
+ * Plafonds de taille, par outil.
+ *
+ * La contrainte n'est pas le stockage — tout est traité dans le navigateur,
+ * rien n'est téléversé — mais la MÉMOIRE de l'onglet. pdf-lib charge le
+ * fichier, le déserialise, puis construit une copie en sortie : le pic
+ * approche 3 à 4 fois la taille du document. Sur un Android d'entrée de
+ * gamme, un onglet dispose souvent de 256 à 384 Mo avant que le système ne
+ * le ferme — sans message, ce que la personne lit comme un plantage.
+ *
+ * 25 Mo laisse donc environ 100 Mo de pic, et reste très au-dessus de
+ * l'usage réel : sur les 167 documents du bucket au 2026-08-30, le plus gros
+ * fait 0,92 Mo et la médiane 0,20 Mo. La marge sert au cas qui justifie
+ * l'outil de compression — un dossier de concours scanné.
+ *
+ * `cumul` : pour la fusion et la conversion d'images, tous les fichiers sont
+ * chargés SIMULTANÉMENT. C'est le total qui compte, pas l'unité.
+ *
+ * `pagesMax` : pour PDF en JPG, la mémoire dépend du NOMBRE DE PAGES et non
+ * du poids. Chaque page est rendue dans un canvas d'environ 12 Mo, puis
+ * JSZip conserve toutes les images en base64 en même temps — encodage qui
+ * gonfle encore d'un tiers. Un PDF de 5 Mo à 200 pages est bien plus
+ * dangereux qu'un PDF de 20 Mo à 10 pages : une limite en octets seule ne
+ * protège pas de ce cas.
+ */
+const LIMITES_OUTIL = {
+  compress: { octets: 25 * MO, cumul: false },
+  split: { octets: 25 * MO, cumul: false },
+  organize: { octets: 25 * MO, cumul: false },
+  merge: { octets: 50 * MO, cumul: true },
+  jpgToPdf: { octets: 25 * MO, cumul: true },
+  pdfToJpg: { octets: 25 * MO, cumul: false, pagesMax: 50 },
+};
+
+function formaterTaille(octets) {
+  if (octets < MO) return `${Math.max(1, Math.round(octets / 1024))} Ko`;
+  return `${(octets / MO).toFixed(octets < 10 * MO ? 1 : 0)} Mo`;
+}
+
 const CATEGORIES = [
   { id: "all", name: "Tous les outils" },
   { id: "pdf", name: "Outils PDF & Documents" },
@@ -471,7 +512,38 @@ export default function FonctionnalitesPage() {
     if (!triggerAuthGuard(activeItem.name, activeItem.icon)) return;
     if (!filesList || filesList.length === 0) return;
     const newFiles = Array.from(filesList);
-    
+
+    // Refus AU MOMENT DE LA SÉLECTION, jamais après plusieurs secondes de
+    // traitement : un échec tardif ressemble à une panne, un refus immédiat
+    // se comprend. Le message nomme la taille réelle du fichier, sans quoi la
+    // personne ne sait pas de combien elle dépasse.
+    const limite = LIMITES_OUTIL[activeItem.type];
+    if (limite) {
+      const dejaSelectionne = limite.cumul && activeItem.allowMultiple
+        ? selectedFiles.reduce((total, f) => total + f.size, 0)
+        : 0;
+      const ajout = newFiles.reduce((total, f) => total + f.size, 0);
+
+      if (limite.cumul) {
+        if (dejaSelectionne + ajout > limite.octets) {
+          alert(
+            `Ces fichiers totalisent ${formaterTaille(dejaSelectionne + ajout)}, au-delà de la limite de ${formaterTaille(limite.octets)}. ` +
+              `Tous les fichiers sont traités en même temps dans votre navigateur : au-delà, l'onglet risque de se fermer. Retirez-en ou traitez-les en deux fois.`
+          );
+          return;
+        }
+      } else {
+        const tropGros = newFiles.find((f) => f.size > limite.octets);
+        if (tropGros) {
+          alert(
+            `« ${tropGros.name} » fait ${formaterTaille(tropGros.size)}, la limite est de ${formaterTaille(limite.octets)}. ` +
+              `Le traitement se fait entièrement dans votre navigateur : au-delà, l'onglet risque de se fermer avant la fin.`
+          );
+          return;
+        }
+      }
+    }
+
     if (activeItem.allowMultiple) {
       setSelectedFiles((prev) => [...prev, ...newFiles]);
     } else {
@@ -479,12 +551,26 @@ export default function FonctionnalitesPage() {
     }
     setProcessResult(null);
 
-    // Si on est en mode organiser ou diviser, lire le nombre de pages du premier PDF
-    if ((activeItem.type === "organize" || activeItem.type === "split") && newFiles[0]) {
+    // Lecture du nombre de pages : nécessaire à l'affichage pour organiser et
+    // diviser, et au plafond de pages pour la conversion en images.
+    const litPages = ["organize", "split", "pdfToJpg"].includes(activeItem.type);
+    if (litPages && newFiles[0]) {
       try {
         const arrayBuffer = await newFiles[0].arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
         const count = pdfDoc.getPageCount();
+
+        if (limite?.pagesMax && count > limite.pagesMax) {
+          setSelectedFiles([]);
+          setPageCount(1);
+          alert(
+            `Ce document compte ${count} pages, la limite est de ${limite.pagesMax} pour la conversion en images. ` +
+              `Chaque page est rendue puis compressée en mémoire : au-delà, l'onglet se ferme avant la fin. ` +
+              `Extrayez d'abord un intervalle avec « Diviser PDF ».`
+          );
+          return;
+        }
+
         setPageCount(count);
       } catch (err) {
         console.error("Erreur lecture PDF:", err);
@@ -1239,7 +1325,14 @@ export default function FonctionnalitesPage() {
                       multiple={Boolean(activeItem.allowMultiple)}
                       accept={activeItem.acceptFiles || "*"}
                       onChange={(e) => {
-                        if (e.target?.files) handleFilesAdded(e.target.files);
+                        const champ = e.target;
+                        if (champ?.files) handleFilesAdded(champ.files);
+                        // Vidé après coup : sans ça, resélectionner LE MÊME
+                        // fichier ne déclenche aucun événement `change` et il
+                        // ne se passe rien. Le cas arrive systématiquement
+                        // après un refus de taille — on corrige le fichier,
+                        // on le réimporte, et l'écran reste muet.
+                        champ.value = "";
                       }}
                     />
 
