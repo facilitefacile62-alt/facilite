@@ -340,6 +340,10 @@ export default function MessagerieClient() {
   // Position du navigateur, demandée une seule fois et jamais bloquante :
   // un refus laisse simplement l'assistant demander le quartier de départ.
   const [positionUtilisateur, setPositionUtilisateur] = useState(null);
+  // Qui tient la conversation d'assistance : "ia", "attente_humain" ou
+  // "humain". Lu dans support_threads, écrit uniquement par les fonctions
+  // demander_un_humain (la personne) et repondre_escalade (un administrateur).
+  const [modeSupport, setModeSupport] = useState("ia");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   // Popover "+" (style Messenger) regroupant Stickers/GIF — décoratif pour le
   // moment (aucune bibliothèque de stickers/GIF réelle intégrée), séparé du
@@ -1538,6 +1542,39 @@ export default function MessagerieClient() {
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
     );
   }, []);
+
+  useEffect(() => {
+    const userId = userSession?.user?.id;
+    if (!userId) return;
+    let annule = false;
+
+    const lire = async () => {
+      const { data } = await supabase
+        .from("support_threads")
+        .select("mode")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!annule) setModeSupport(data?.mode || "ia");
+    };
+    lire();
+
+    // Realtime : quand un conseiller prend la main depuis /admin/support, le
+    // bandeau doit changer sans que la personne recharge la page. Sans ça,
+    // elle continuerait de croire qu'elle parle à l'assistant.
+    const canal = supabase
+      .channel(`support-mode:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "support_threads", filter: `user_id=eq.${userId}` },
+        (payload) => setModeSupport(payload.new?.mode || "ia")
+      )
+      .subscribe();
+
+    return () => {
+      annule = true;
+      supabase.removeChannel(canal);
+    };
+  }, [userSession?.user?.id]);
 
   const handleContactSupport = async () => {
     if (!userSession?.user?.id) {
@@ -2911,6 +2948,24 @@ export default function MessagerieClient() {
                     activeConversation?.isCandidature ? "bg-white px-4 sm:px-8 py-5 space-y-6" : "bg-[#EFEAE2] bg-whatsapp-chat p-3 sm:p-4 space-y-2.5 custom-scrollbar"
                   }`}
                 >
+                  {/* Bandeau d'escalade : dit qui répond, dans le fil lui-même.
+                      La conversation ne change jamais de place — c'est le
+                      statut qui change, pas le fil. */}
+                  {activeConvId === "ai-assistant" && modeSupport !== "ia" && (
+                    <div
+                      className={`sticky top-0 z-10 mb-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold shadow-sm ${
+                        modeSupport === "humain"
+                          ? "bg-emerald-50 border-emerald-200 text-[#047857]"
+                          : "bg-amber-50 border-amber-200 text-amber-900"
+                      }`}
+                    >
+                      <i className={`fa-solid ${modeSupport === "humain" ? "fa-user-check" : "fa-hourglass-half"} mr-2`}></i>
+                      {modeSupport === "humain"
+                        ? "Un conseiller Facilité suit cette conversation."
+                        : "Un conseiller a été prévenu et vous répondra ici. L'assistant reste disponible en attendant."}
+                    </div>
+                  )}
+
                   {/* Séparateur visuel entre la zone épinglée et le fil chronologique */}
                   {pinnedMessage && (
                     <div className="flex items-center gap-3 pb-1">
