@@ -572,6 +572,16 @@ export default function FonctionnalitesPage() {
           }
         }
 
+        // pdf-lib enregistre sans broncher un document de zéro page : vérifié,
+        // save() rend 582 octets et ne lève rien. Le téléchargement se
+        // proposait donc normalement et la personne repartait avec un fichier
+        // qu'aucun lecteur n'ouvre. Mieux vaut refuser ici.
+        if (validIndices.length === 0) {
+          throw new ErreurOutil(
+            "Vous avez supprimé toutes les pages : le document résultant serait vide et illisible. Conservez au moins une page."
+          );
+        }
+
         const copiedPages = await newPdf.copyPages(srcPdf, validIndices);
         copiedPages.forEach((page, idx) => {
           const originalIndex = validIndices[idx];
