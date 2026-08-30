@@ -350,6 +350,10 @@ export default function MessagerieClient() {
   // reste de la barre pour ne pas ajouter d'icônes en continu et faire
   // déborder la barre de saisie sur mobile.
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [mapActiveTab, setMapActiveTab] = useState("all"); // 'all' | 'dakar' | 'transport' | 'regions'
+  const [userGpsCoords, setUserGpsCoords] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
   // Panneau "Info" (i) du header de discussion, style Messenger.
   const [conversationInfoOpen, setConversationInfoOpen] = useState(false);
   const [activeInterviewId, setActiveInterviewId] = useState(null);
@@ -3461,6 +3465,17 @@ export default function MessagerieClient() {
                             <i className="fa-solid fa-briefcase text-blue-400 text-xs"></i>
                             <span>Conseils Recrutement Sénégal</span>
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowQuickActions(false);
+                              setMapModalOpen(true);
+                            }}
+                            className="w-full text-left px-2.5 py-2 text-xs font-semibold text-gray-200 hover:bg-white/10 rounded-xl transition flex items-center gap-2 cursor-pointer"
+                          >
+                            <i className="fa-solid fa-location-dot text-rose-400 text-xs"></i>
+                            <span>Carte des Opportunités & Itinéraires</span>
+                          </button>
                         </div>
                       )}
 
@@ -4077,6 +4092,203 @@ export default function MessagerieClient() {
                 }`}
               >
                 {isAiAutoResponseEnabled(activeConversation?.id) ? "Mettre en pause" : "Activer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE CARTE INTERACTIVE DES OPPORTUNITÉS (Style Snap Map / Dakar) */}
+      {mapModalOpen && (
+        <div className="fixed inset-0 z-[950] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in">
+          <div className="bg-[#0e1017] text-white rounded-[28px] max-w-3xl w-full p-4 sm:p-6 shadow-2xl border border-white/10 relative flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Header de la Carte */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center text-lg">
+                  <i className="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                    <span>Carte Snap Opportunités & Itinéraires</span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                      Direct Sénégal
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-gray-400 font-medium">
+                    Explorez les offres d'emploi, zones actives et lignes de transport (TER, BRT, Tata)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMapModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white flex items-center justify-center transition cursor-pointer flex-shrink-0"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            {/* Pilules de filtres style Snap Map (Souvenirs, Footsteps, Visité...) */}
+            <div className="flex items-center gap-2 py-3 overflow-x-auto custom-scrollbar flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setMapActiveTab("all")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
+                  mapActiveTab === "all"
+                    ? "bg-white text-black shadow-md"
+                    : "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10"
+                }`}
+              >
+                <i className="fa-solid fa-earth-africa text-xs"></i>
+                <span>Tout le Sénégal</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapActiveTab("dakar")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
+                  mapActiveTab === "dakar"
+                    ? "bg-white text-black shadow-md"
+                    : "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10"
+                }`}
+              >
+                <i className="fa-solid fa-city text-xs text-blue-400"></i>
+                <span>Pôle Dakar & VDN</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapActiveTab("transport")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
+                  mapActiveTab === "transport"
+                    ? "bg-white text-black shadow-md"
+                    : "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10"
+                }`}
+              >
+                <i className="fa-solid fa-train text-xs text-amber-400"></i>
+                <span>Lignes TER / BRT</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapActiveTab("regions")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
+                  mapActiveTab === "regions"
+                    ? "bg-white text-black shadow-md"
+                    : "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10"
+                }`}
+              >
+                <i className="fa-solid fa-map-pin text-xs text-emerald-400"></i>
+                <span>Régions (Thiès, Saint-Louis, Mbour)</span>
+              </button>
+            </div>
+
+            {/* Vue Carte Interactive & Points d'opportunités */}
+            <div className="relative rounded-2xl overflow-hidden border border-white/10 flex-1 min-h-[260px] sm:min-h-[340px] bg-[#141822]">
+              <iframe
+                title="Carte Dynamique des Opportunités Sénégal"
+                width="100%"
+                height="100%"
+                style={{ border: 0, minHeight: "260px" }}
+                loading="lazy"
+                src={
+                  userGpsCoords
+                    ? `https://maps.google.com/maps?q=${userGpsCoords.lat},${userGpsCoords.lng}&z=14&output=embed`
+                    : mapActiveTab === "dakar"
+                    ? "https://maps.google.com/maps?q=Dakar,Senegal&z=13&output=embed"
+                    : mapActiveTab === "regions"
+                    ? "https://maps.google.com/maps?q=Thies,Senegal&z=10&output=embed"
+                    : "https://maps.google.com/maps?q=Dakar,Senegal&z=12&output=embed"
+                }
+                className="w-full h-full opacity-90 filter contrast-105"
+              />
+
+              {/* Badges flottants d'opportunités style Snap Map (Avatars & Compteurs) */}
+              <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-2 pointer-events-none">
+                <div className="bg-black/80 backdrop-blur-md border border-white/15 px-3 py-1.5 rounded-2xl shadow-xl flex items-center gap-2 pointer-events-auto">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold text-[10px] flex items-center justify-center border border-emerald-400/40">
+                    18
+                  </div>
+                  <div className="text-[11px] font-bold text-white">
+                    Dakar Plateau <span className="text-gray-400 font-normal">• Finance & Tech</span>
+                  </div>
+                </div>
+
+                <div className="bg-black/80 backdrop-blur-md border border-white/15 px-3 py-1.5 rounded-2xl shadow-xl flex items-center gap-2 pointer-events-auto hidden sm:flex">
+                  <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 font-extrabold text-[10px] flex items-center justify-center border border-blue-400/40">
+                    15
+                  </div>
+                  <div className="text-[11px] font-bold text-white">
+                    Diamniadio <span className="text-gray-400 font-normal">• Industrie & Hub Numérique</span>
+                  </div>
+                </div>
+
+                <div className="bg-black/80 backdrop-blur-md border border-white/15 px-3 py-1.5 rounded-2xl shadow-xl flex items-center gap-2 pointer-events-auto hidden md:flex">
+                  <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 font-extrabold text-[10px] flex items-center justify-center border border-amber-400/40">
+                    11
+                  </div>
+                  <div className="text-[11px] font-bold text-white">
+                    Almadies / VDN <span className="text-gray-400 font-normal">• Services & Commerce</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bouton GPS Flottant sur la carte */}
+              <div className="absolute bottom-3 right-3 flex flex-col gap-2 pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!navigator.geolocation) {
+                      triggerToast("Géolocalisation indisponible", "fa-triangle-exclamation");
+                      return;
+                    }
+                    setIsLocating(true);
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        setIsLocating(false);
+                        const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setUserGpsCoords(c);
+                        setPositionUtilisateur(c);
+                        triggerToast("Position GPS actualisée !", "fa-location-dot");
+                      },
+                      () => {
+                        setIsLocating(false);
+                        triggerToast("Autorisez l'accès GPS pour afficher votre position.", "fa-triangle-exclamation");
+                      },
+                      { enableHighAccuracy: true }
+                    );
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-white text-black hover:bg-gray-100 font-bold text-xs shadow-xl flex items-center gap-2 transition cursor-pointer"
+                  title="Me localiser sur la carte"
+                >
+                  <i className={`fa-solid ${isLocating ? "fa-circle-notch fa-spin text-rose-500" : "fa-location-crosshairs text-rose-600"}`}></i>
+                  <span>{isLocating ? "Localisation..." : userGpsCoords ? "GPS Actif" : "Ma Position"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Actions rapides IA intégrées en bas de la carte */}
+            <div className="pt-3.5 flex items-center justify-between gap-2 border-t border-white/10 flex-shrink-0 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setMapModalOpen(false);
+                  handleSendMessage(null, "Quels sont les meilleurs moyens de transport (TER, BRT, Bus Tata) pour me rendre à un entretien d'embauche à Dakar ?");
+                }}
+                className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 cursor-pointer"
+              >
+                <i className="fa-solid fa-route text-amber-400"></i>
+                <span>Itinéraires Transport IA</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMapModalOpen(false);
+                  handleSendMessage(null, "Quelles sont les opportunités de recrutement et entreprises qui embauchent actuellement au Sénégal par zone géographique ?");
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-2 cursor-pointer shadow-md"
+              >
+                <i className="fa-solid fa-briefcase"></i>
+                <span>Explorer les Offres de la zone</span>
               </button>
             </div>
           </div>

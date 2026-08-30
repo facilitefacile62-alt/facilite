@@ -221,3 +221,24 @@ Il reste, dans l'ordre de traitement recommandé :
    repoussée après le mode démo et le funnel KPI). Effort : **moyen à
    élevé** (instrumentation à ajouter dans `apiAuth.js`/`middleware.js`,
    sans ralentir chaque requête).
+
+## 30/08/2026 — HTTP 400 non identifié sur /messagerie (non reproduit)
+
+Relevé une fois pendant un test de bout en bout dans un vrai navigateur sur
+ffacilite.com : la console affichait `Failed to load resource: the server
+responded with a status of 400`, sans URL, pendant une conversation avec
+l'assistant. Le parcours fonctionnait malgré tout — l'outil transport s'est
+déclenché et la réponse s'est affichée.
+
+Deuxième exécution du même test, instrumentée cette fois pour journaliser
+l'URL, la méthode et le code de toute réponse ≥ 400 : **aucune requête en
+échec**. Le défaut n'est donc pas systématique.
+
+Pistes non écartées, par ordre de vraisemblance : un traceur tiers
+(Microsoft Clarity charge des ressources depuis `c.bing.com`, déjà vu en
+échec réseau dans la même session), un rafraîchissement de jeton Supabase
+concurrent, ou une requête annulée par une navigation.
+
+À reprendre si le symptôme réapparaît : le script de test du dossier
+scratchpad journalise désormais `statut + méthode + URL` de toute réponse
+en erreur, ce qui suffira à l'identifier en une exécution.
