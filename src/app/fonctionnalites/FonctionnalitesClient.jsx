@@ -1187,13 +1187,23 @@ export default function FonctionnalitesPage() {
                 accept={activeItem.acceptFiles || "*"}
                 onChange={(e) => {
                   const champ = e.target;
-                  if (champ?.files) handleFilesAdded(champ.files);
-                  // Vidé après coup : sans ça, resélectionner LE MÊME fichier
-                  // ne déclenche aucun événement `change` et il ne se passe
-                  // rien. Le cas arrive systématiquement après un refus de
-                  // taille — on corrige le fichier, on le réimporte, et
-                  // l'écran reste muet.
+                  // ORDRE CRITIQUE : on copie les références de fichiers, on
+                  // vide le champ, ET SEULEMENT ENSUITE on traite.
+                  //
+                  // Vider après l'appel créait une course. handleFilesAdded est
+                  // asynchrone : sur les outils qui lisent le PDF dès la
+                  // sélection — organiser, diviser, PDF en JPG — il suspend sur
+                  // `await arrayBuffer()`, la main revient ici, `value = ""`
+                  // vide la FileList pendant que la lecture est en vol, et
+                  // celle-ci échoue. Le catch effaçait alors la sélection en
+                  // affichant « ce fichier n'a pas pu être lu » : l'outil
+                  // paraissait refuser tout document.
+                  //
+                  // Le vidage reste indispensable : sans lui, resélectionner le
+                  // MÊME fichier n'émet aucun événement `change`.
+                  const fichiers = champ?.files ? Array.from(champ.files) : [];
                   champ.value = "";
+                  if (fichiers.length > 0) handleFilesAdded(fichiers);
                 }}
               />
 
