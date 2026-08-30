@@ -25,7 +25,16 @@
  * et le cache est vidé à chaque changement de VERSION_CACHE.
  */
 
-const VERSION_CACHE = "facilite-v3";
+// Incrémenté le 2026-08-30. Trois fois dans la journée, des corrections
+// déployées et vérifiées présentes dans le bundle servi restaient invisibles
+// côté navigateur. Changer cette valeur fait supprimer TOUS les caches
+// précédents à l'activation (voir l'événement "activate" plus bas), et
+// skipWaiting + clients.claim rendent la purge immédiate plutôt qu'au
+// prochain onglet.
+//
+// À incrémenter à chaque fois qu'un déploiement doit impérativement être vu
+// tout de suite — une correction d'incident, typiquement.
+const VERSION_CACHE = "facilite-v4";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
