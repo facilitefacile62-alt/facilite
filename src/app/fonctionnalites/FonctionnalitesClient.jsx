@@ -428,6 +428,13 @@ export default function FonctionnalitesPage() {
   const [pageRotations, setPageRotations] = useState({}); // { [pageIndex]: degrees }
   const [deletedPages, setDeletedPages] = useState({}); // { [pageIndex]: true }
   const [pageCount, setPageCount] = useState(1);
+  // Ordre d'affichage, exprimé en indices d'origine. Séparé de pageRotations
+  // et deletedPages, qui restent indexés sur la page SOURCE : déplacer une
+  // page ne doit pas déplacer sa rotation.
+  const [pageOrder, setPageOrder] = useState([]);
+  const [pageThumbs, setPageThumbs] = useState([]);
+  const [thumbsLoading, setThumbsLoading] = useState(false);
+  const [draggedPage, setDraggedPage] = useState(null);
 
   // Accordéons
   const [openSteps, setOpenSteps] = useState(false);
@@ -485,6 +492,10 @@ export default function FonctionnalitesPage() {
     setPageRotations({});
     setDeletedPages({});
     setPageCount(1);
+    setPageOrder([]);
+    setPageThumbs([]);
+    setThumbsLoading(false);
+    setDraggedPage(null);
     // Ces deux-là manquaient. Une plage saisie dans « Diviser » survivait au
     // changement d'outil : on revenait avec un autre PDF, la plage périmée
     // s'appliquait, et le repli silencieux d'alors la transformait en
@@ -572,6 +583,12 @@ export default function FonctionnalitesPage() {
         }
 
         setPageCount(count);
+        if (activeItem.type === "organize") {
+          setPageOrder(Array.from({ length: count }, (_, i) => i));
+          setPageRotations({});
+          setDeletedPages({});
+          genererMiniatures(newFiles[0], count);
+        }
       } catch (err) {
         console.error("Erreur lecture PDF:", err);
         // L'échec était avalé : pageCount gardait la valeur du document
@@ -584,6 +601,84 @@ export default function FonctionnalitesPage() {
         );
       }
     }
+  };
+
+  /**
+   * Rend une miniature de chaque page avec pdf.js, pour que la personne
+   * VOIE ce qu'elle organise.
+   *
+   * Échelle volontairement basse : une page A4 à 0,3 fait environ 178×253,
+   * soit ~15 Ko en JPEG. Même sur un document de 200 pages, l'ensemble reste
+   * sous quelques mégaoctets — alors qu'un rendu pleine taille saturerait la
+   * mémoire de l'onglet, exactement le travers évité côté PDF en JPG.
+   *
+   * Le canvas est réutilisé d'une page à l'autre plutôt que recréé : c'est ce
+   * qui évite d'accumuler des centaines de contextes graphiques.
+   */
+  const genererMiniatures = async (file, total) => {
+    setThumbsLoading(true);
+    try {
+      const pdfjs = await getPdfJsEngine();
+      const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const miniatures = [];
+
+      for (let i = 1; i <= Math.min(total, doc.numPages); i++) {
+        const page = await doc.getPage(i);
+        const viewport = page.getViewport({ scale: 0.3 });
+        canvas.width = Math.max(1, Math.floor(viewport.width));
+        canvas.height = Math.max(1, Math.floor(viewport.height));
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        miniatures.push(canvas.toDataURL("image/jpeg", 0.7));
+      }
+      setPageThumbs(miniatures);
+    } catch (err) {
+      // Sans miniature, l'outil reste utilisable : les pages s'affichent
+      // alors sous forme de vignettes numérotées. On ne bloque pas.
+      console.error("Miniatures indisponibles :", err);
+      setPageThumbs([]);
+    } finally {
+      setThumbsLoading(false);
+    }
+  };
+
+  const rotatePage = (indexOriginal) => {
+    setPageRotations((prev) => ({ ...prev, [indexOriginal]: ((prev[indexOriginal] || 0) + 90) % 360 }));
+  };
+
+  const togglePageDeleted = (indexOriginal) => {
+    setDeletedPages((prev) => {
+      const suivant = { ...prev };
+      if (suivant[indexOriginal]) delete suivant[indexOriginal];
+      else suivant[indexOriginal] = true;
+      return suivant;
+    });
+  };
+
+  // Déplacement par bouton, en plus du glisser-déposer : sur téléphone le
+  // glisser est peu fiable, et c'est le support majoritaire ici.
+  const movePage = (positionActuelle, direction) => {
+    setPageOrder((prev) => {
+      const cible = positionActuelle + direction;
+      if (cible < 0 || cible >= prev.length) return prev;
+      const suivant = [...prev];
+      [suivant[positionActuelle], suivant[cible]] = [suivant[cible], suivant[positionActuelle]];
+      return suivant;
+    });
+  };
+
+  const deposerPage = (positionCible) => {
+    if (draggedPage === null || draggedPage === positionCible) return;
+    setPageOrder((prev) => {
+      const suivant = [...prev];
+      const [deplacee] = suivant.splice(draggedPage, 1);
+      suivant.splice(positionCible, 0, deplacee);
+      return suivant;
+    });
+    setDraggedPage(null);
   };
 
   const handleRemoveFile = (index) => {
@@ -705,12 +800,10 @@ export default function FonctionnalitesPage() {
 
         const newPdf = await PDFDocument.create();
 
-        const validIndices = [];
-        for (let i = 0; i < totalPages; i++) {
-          if (!deletedPages[i]) {
-            validIndices.push(i);
-          }
-        }
+        // L'ordre choisi à l'écran fait foi. pageOrder reste vide tant que
+        // rien n'a été chargé : on retombe alors sur l'ordre naturel.
+        const ordre = pageOrder.length > 0 ? pageOrder : Array.from({ length: totalPages }, (_, i) => i);
+        const validIndices = ordre.filter((i) => i < totalPages && !deletedPages[i]);
 
         // pdf-lib enregistre sans broncher un document de zéro page : vérifié,
         // save() rend 582 octets et ne lève rien. Le téléchargement se
@@ -725,9 +818,14 @@ export default function FonctionnalitesPage() {
         const copiedPages = await newPdf.copyPages(srcPdf, validIndices);
         copiedPages.forEach((page, idx) => {
           const originalIndex = validIndices[idx];
-          const rotationAngle = pageRotations[originalIndex] || 0;
-          if (rotationAngle !== 0) {
-            page.setRotation(degrees(rotationAngle));
+          const quartDeTour = pageRotations[originalIndex] || 0;
+          if (quartDeTour !== 0) {
+            // ADDITIVE, pas absolue : une page déjà orientée en paysage dans
+            // le document source porte une rotation propre. Lui imposer 90°
+            // en absolu ne produirait aucun quart de tour visible — la
+            // personne verrait son clic sans effet.
+            const dejaTournee = page.getRotation().angle || 0;
+            page.setRotation(degrees((dejaTournee + quartDeTour) % 360));
           }
           newPdf.addPage(page);
         });
@@ -1272,6 +1370,143 @@ export default function FonctionnalitesPage() {
                           </div>
                           <i className={`fa-solid fa-circle-check text-base ${compressionMode === "low" ? "text-emerald-500" : "text-gray-300"}`}></i>
                         </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeItem.type === "organize" && pageOrder.length > 0 && (
+                    <div className="mb-6 text-left">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <p className="text-xs font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                          {pageOrder.length - Object.keys(deletedPages).length} page(s) conservée(s) sur {pageCount}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPageOrder(Array.from({ length: pageCount }, (_, i) => i));
+                            setPageRotations({});
+                            setDeletedPages({});
+                          }}
+                          className="text-[11px] font-extrabold text-gray-500 hover:text-[#E5322D] underline underline-offset-2 cursor-pointer"
+                        >
+                          Tout réinitialiser
+                        </button>
+                      </div>
+
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-4 leading-relaxed">
+                        Faites glisser une page pour la déplacer, ou utilisez les flèches. Le bouton de rotation tourne
+                        la page d&apos;un quart de tour, la croix la retire du document final.
+                      </p>
+
+                      {thumbsLoading && (
+                        <p className="text-xs font-bold text-gray-400 mb-3">
+                          <i className="fa-solid fa-circle-notch fa-spin mr-2"></i>
+                          Préparation des aperçus…
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {pageOrder.map((indexOriginal, position) => {
+                          const supprimee = Boolean(deletedPages[indexOriginal]);
+                          const rotation = pageRotations[indexOriginal] || 0;
+                          const miniature = pageThumbs[indexOriginal];
+                          return (
+                            <div
+                              key={indexOriginal}
+                              draggable={!supprimee}
+                              onDragStart={() => setDraggedPage(position)}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={() => deposerPage(position)}
+                              onDragEnd={() => setDraggedPage(null)}
+                              className={`group relative rounded-2xl border-2 p-2 transition select-none ${
+                                supprimee
+                                  ? "border-gray-200 dark:border-gray-800 bg-gray-100/70 dark:bg-gray-900/50 opacity-60"
+                                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-[#E5322D] cursor-grab active:cursor-grabbing"
+                              } ${draggedPage === position ? "ring-2 ring-[#E5322D] ring-offset-1" : ""}`}
+                            >
+                              {/* Aperçu réel de la page. Sans miniature — moteur
+                                  indisponible — on affiche une vignette numérotée
+                                  plutôt que de bloquer l'outil. */}
+                              <div className="aspect-[3/4] w-full rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                                {miniature ? (
+                                  // next/image ne convient pas ici : la source est
+                                  // une data: URL produite dans le navigateur au
+                                  // moment du rendu, jamais un fichier connu à la
+                                  // compilation. L'optimiseur ne peut rien en faire,
+                                  // et l'image pèse déjà ~15 Ko.
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={miniature}
+                                    alt={`Page ${indexOriginal + 1}`}
+                                    className="max-h-full max-w-full object-contain transition-transform duration-200"
+                                    style={{ transform: `rotate(${rotation}deg)` }}
+                                  />
+                                ) : (
+                                  <span className="text-2xl font-black text-gray-300 dark:text-gray-600">
+                                    {indexOriginal + 1}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Actions : visibles en permanence sur écran tactile,
+                                  où le survol n'existe pas. */}
+                              <div className="absolute top-1 right-1 flex gap-1">
+                                {!supprimee && (
+                                  <button
+                                    type="button"
+                                    onClick={() => rotatePage(indexOriginal)}
+                                    title="Tourner d'un quart de tour"
+                                    aria-label={`Tourner la page ${indexOriginal + 1}`}
+                                    className="w-7 h-7 rounded-full bg-white/95 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:text-[#E5322D] shadow-sm flex items-center justify-center cursor-pointer"
+                                  >
+                                    <i className="fa-solid fa-rotate-right text-[11px]"></i>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => togglePageDeleted(indexOriginal)}
+                                  title={supprimee ? "Rétablir cette page" : "Retirer cette page"}
+                                  aria-label={
+                                    supprimee
+                                      ? `Rétablir la page ${indexOriginal + 1}`
+                                      : `Retirer la page ${indexOriginal + 1}`
+                                  }
+                                  className={`w-7 h-7 rounded-full border shadow-sm flex items-center justify-center cursor-pointer ${
+                                    supprimee
+                                      ? "bg-emerald-500 border-emerald-500 text-white"
+                                      : "bg-white/95 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:text-[#E5322D]"
+                                  }`}
+                                >
+                                  <i className={`fa-solid ${supprimee ? "fa-rotate-left" : "fa-xmark"} text-[11px]`}></i>
+                                </button>
+                              </div>
+
+                              <div className="flex items-center justify-between mt-2 px-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => movePage(position, -1)}
+                                  disabled={position === 0}
+                                  aria-label={`Déplacer la page ${indexOriginal + 1} vers la gauche`}
+                                  className="w-6 h-6 rounded-lg text-gray-400 hover:text-[#E5322D] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  <i className="fa-solid fa-chevron-left text-[10px]"></i>
+                                </button>
+                                <span className="text-[11px] font-black text-gray-600 dark:text-gray-300 tabular-nums">
+                                  {supprimee ? "retirée" : position + 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => movePage(position, 1)}
+                                  disabled={position === pageOrder.length - 1}
+                                  aria-label={`Déplacer la page ${indexOriginal + 1} vers la droite`}
+                                  className="w-6 h-6 rounded-lg text-gray-400 hover:text-[#E5322D] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  <i className="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
