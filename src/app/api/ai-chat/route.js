@@ -111,25 +111,54 @@ ${productsContext}
 // précisément ce qui manquait à l'agent WhatsApp (prompt détaillé, jamais
 // suivi) : ici, le modèle ne peut pas dériver du plan sans que le code ne
 // rejette la transition proposée.
+// Chaque étape se liste elle-même comme successeur légal : c'est ce qui
+// autorise le tunnel à RESTER sur place quand la réponse n'a pas été
+// comprise. Sans cette boucle, la seule issue possible était d'avancer.
 const TUNNEL_TRANSITIONS = {
-  accueil: ["intention", "cv_existant", "lettre_cv_upload"],
-  intention: ["cv_existant", "lettre_cv_upload"],
-  cv_existant: ["cv_ancien_upload", "infos_personnelles"],
-  cv_ancien_upload: ["resume_cloture"],
-  lettre_cv_upload: ["resume_cloture"],
-  infos_personnelles: ["etudes"],
-  etudes: ["formations_oui_non"],
-  formations_oui_non: ["formations_details", "stages_oui_non"],
-  formations_details: ["stages_oui_non"],
-  stages_oui_non: ["stages_details", "experience_oui_non"],
-  stages_details: ["experience_oui_non"],
-  experience_oui_non: ["experience_details", "resume_cloture"],
-  experience_details: ["resume_cloture"],
+  accueil: ["intention", "cv_existant", "lettre_cv_upload", "accueil"],
+  intention: ["cv_existant", "lettre_cv_upload", "intention"],
+  cv_existant: ["cv_ancien_upload", "infos_personnelles", "cv_existant"],
+  cv_ancien_upload: ["resume_cloture", "cv_ancien_upload"],
+  lettre_cv_upload: ["resume_cloture", "lettre_cv_upload"],
+  infos_personnelles: ["etudes", "infos_personnelles"],
+  etudes: ["formations_oui_non", "etudes"],
+  formations_oui_non: ["formations_details", "stages_oui_non", "formations_oui_non"],
+  formations_details: ["stages_oui_non", "formations_details"],
+  stages_oui_non: ["stages_details", "experience_oui_non", "stages_oui_non"],
+  stages_details: ["experience_oui_non", "stages_details"],
+  experience_oui_non: ["experience_details", "resume_cloture", "experience_oui_non"],
+  experience_details: ["resume_cloture", "experience_details"],
   // Permet de relancer un nouveau tunnel après clôture (candidat qui revient
   // plus tard) plutôt que de rester bloqué sur le message final.
   resume_cloture: ["intention", "cv_existant", "lettre_cv_upload", "resume_cloture"],
 };
 const TUNNEL_STEPS = Object.keys(TUNNEL_TRANSITIONS);
+
+/**
+ * Règles ajoutées SOUS la consigne d'étape, donc au rang le plus élevé.
+ *
+ * La langue d'abord : le prompt enregistré en base précise bien que
+ * l'assistant est trilingue, mais l'ancienne formule « Règle absolue,
+ * au-dessus de toute autre instruction ci-dessus » déclassait explicitement
+ * cette consigne. Un candidat écrivant en wolof recevait donc des réponses en
+ * français à chaque tour, le modèle recopiant les questions du tunnel telles
+ * qu'elles sont rédigées dans la configuration.
+ *
+ * Puis la condition de progression : le modèle doit déclarer honnêtement s'il
+ * a obtenu l'information, et rester sur place sinon. Le code garde le dernier
+ * mot (resolveNextStep), mais le lui dire évite qu'il rédige une réponse de
+ * clôture incohérente avec l'étape réellement conservée.
+ */
+const REGLES_TUNNEL = `
+RÈGLES ABSOLUES, au-dessus de toute autre instruction ci-dessus :
+
+1. LANGUE — Réponds TOUJOURS dans la langue employée par la personne : wolof si elle écrit en wolof, anglais si elle écrit en anglais, français sinon. Les questions du tunnel sont rédigées en français dans ta configuration : traduis-les, ne les recopie pas telles quelles.
+
+2. UNE SEULE QUESTION — Ne pose jamais plus d'une question par message.
+
+3. PROGRESSION — Mets "informationObtenue" à true UNIQUEMENT si la réponse de la personne contient réellement l'information demandée à cette étape et que tu l'as comprise. Mets false dans tous les autres cas : réponse vide, hors sujet, incompréhensible, ou dans une langue que tu n'interprètes pas avec certitude.
+
+4. EN CAS DE DOUTE — Si "informationObtenue" est false, reformule ta question plus simplement, dans la langue de la personne, et redemande. Ne passe jamais à l'étape suivante, ne récapitule rien, et ne propose jamais le paiement : tu n'as rien à récapituler tant que tu n'as rien compris.`;
 
 // Consigne par étape : ne fixe JAMAIS le texte de la question elle-même
 // (toujours puisé dans prompt_text par le modèle), seulement le PÉRIMÈTRE
@@ -157,8 +186,13 @@ const TUNNEL_RESPONSE_SCHEMA = {
   properties: {
     reply: { type: "STRING" },
     nextStep: { type: "STRING", enum: TUNNEL_STEPS },
+    // Le modèle doit DÉCLARER s'il a réellement obtenu l'information de
+    // l'étape courante. Champ obligatoire : sans lui, rien ne distinguait
+    // « le candidat a répondu » de « le candidat a répondu quelque chose
+    // d'exploitable ».
+    informationObtenue: { type: "BOOLEAN" },
   },
-  required: ["reply", "nextStep"],
+  required: ["reply", "nextStep", "informationObtenue"],
 };
 
 /**
@@ -197,10 +231,23 @@ async function saveConversationStep(userId, nextStep) {
  * courante est rejetée — repli sur la première option légale, jamais sur
  * l'idée du modèle. C'est ici, et seulement ici, que "l'ordre" est imposé.
  */
-function resolveNextStep(currentStep, proposedNextStep) {
+function resolveNextStep(currentStep, proposedNextStep, informationObtenue) {
   const legal = TUNNEL_TRANSITIONS[currentStep] || TUNNEL_TRANSITIONS.accueil;
+
+  // Tant que l'information de l'étape n'a pas été comprise, on ne bouge pas.
+  // C'est le verrou central : un candidat répondant en wolof, hors sujet ou
+  // par monosyllabes voyait le tunnel avancer à chaque tour et atteindre
+  // « vos données ont été transmises » sans qu'aucune donnée exploitable
+  // n'ait été recueillie (constaté le 2026-08-30).
+  if (informationObtenue !== true) return currentStep;
+
   if (proposedNextStep && legal.includes(proposedNextStep)) return proposedNextStep;
-  return legal[0];
+
+  // Repli : RESTER sur l'étape courante, jamais avancer. Auparavant
+  // `legal[0]`, c'est-à-dire l'étape suivante : un modèle désorienté, ou dont
+  // la proposition sortait du graphe, faisait donc progresser le tunnel par
+  // défaut. Le doute doit coûter une relance, pas une étape.
+  return currentStep;
 }
 
 /**
@@ -351,7 +398,7 @@ export async function POST(req) {
     const currentStep = useTunnelStateMachine ? await getConversationStep(user.id) : null;
 
     const systemPromptAvecEtape = useTunnelStateMachine
-      ? `${systemPrompt}\n\n[MACHINE À ÉTATS DU TUNNEL — CONTRÔLE IMPÉRATIF]\n${STEP_INSTRUCTIONS[currentStep]}\n\nRègle absolue, au-dessus de toute autre instruction ci-dessus : ne pose JAMAIS plus d'une question par message.`
+      ? `${systemPrompt}\n\n[MACHINE À ÉTATS DU TUNNEL — CONTRÔLE IMPÉRATIF]\n${STEP_INSTRUCTIONS[currentStep]}${REGLES_TUNNEL}`
       : systemPrompt;
 
     // Outils (registre src/lib/aiTools/) : jamais en mode machine à états —
@@ -711,9 +758,9 @@ export async function POST(req) {
             if (rawText) return NextResponse.json({ reply: rawText });
           } else if (rawText) {
             try {
-              const { reply, nextStep: proposedNextStep } = JSON.parse(rawText);
+              const { reply, nextStep: proposedNextStep, informationObtenue } = JSON.parse(rawText);
               if (reply) {
-                const resolvedNextStep = resolveNextStep(currentStep, proposedNextStep);
+                const resolvedNextStep = resolveNextStep(currentStep, proposedNextStep, informationObtenue);
                 await saveConversationStep(user.id, resolvedNextStep);
                 return NextResponse.json({ reply });
               }
