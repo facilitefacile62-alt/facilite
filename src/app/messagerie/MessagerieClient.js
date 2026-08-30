@@ -355,6 +355,7 @@ export default function MessagerieClient() {
   
   // Voice Recording & File Attachment states
   const [isRecording, setIsRecording] = useState(false);
+  const [isVoicePaused, setIsVoicePaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   // useRef plutôt que useState : mediaRecorder est une instance MediaRecorder
   // (API impérative — .stop(), .onstop), jamais lue en JSX ni censée
@@ -1696,6 +1697,7 @@ export default function MessagerieClient() {
       mediaRecorderRef.current = recorder;
       setAudioChunks(chunks);
       setIsRecording(true);
+      setIsVoicePaused(false);
       setRecordingTime(0);
 
       timerRef.current = setInterval(() => {
@@ -1713,13 +1715,30 @@ export default function MessagerieClient() {
     }
   };
 
+  const pauseVoiceRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+    if (recorder.state === "recording") {
+      recorder.pause();
+      if (timerRef.current) clearInterval(timerRef.current);
+      setIsVoicePaused(true);
+    } else if (recorder.state === "paused") {
+      recorder.resume();
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+      setIsVoicePaused(false);
+    }
+  };
+
   const stopVoiceRecording = () => {
     const recorder = mediaRecorderRef.current;
     if (recorder && recorder.state !== "inactive") {
       recorder.stop();
     }
-    clearInterval(timerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
     setIsRecording(false);
+    setIsVoicePaused(false);
   };
 
   const cancelVoiceRecording = () => {
@@ -1731,8 +1750,9 @@ export default function MessagerieClient() {
         recorder.stream.getTracks().forEach((t) => t.stop());
       }
     }
-    clearInterval(timerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
     setIsRecording(false);
+    setIsVoicePaused(false);
     setRecordingTime(0);
   };
 
@@ -3301,27 +3321,60 @@ export default function MessagerieClient() {
                   />
 
                   {isRecording ? (
-                    <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5">
-                      <div className="flex items-center space-x-3">
-                        <span className="w-3 h-3 rounded-full bg-red-600 animate-ping"></span>
-                        <span className="text-xs font-extrabold text-red-700">Enregistrement vocal : {recordingTime}s</span>
+                    <div className="bg-white border border-gray-200/90 rounded-full px-4 py-2.5 shadow-lg flex items-center justify-between gap-3 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      {/* Bouton Corbeille (Annuler) */}
+                      <button
+                        type="button"
+                        onClick={cancelVoiceRecording}
+                        className="text-gray-800 hover:text-red-600 p-1.5 rounded-full hover:bg-gray-100 transition cursor-pointer flex-shrink-0"
+                        title="Supprimer la note vocale"
+                      >
+                        <i className="fa-regular fa-trash-can text-lg"></i>
+                      </button>
+
+                      {/* Point rouge pulsant + Chronomètre */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`w-2.5 h-2.5 rounded-full bg-red-600 ${isVoicePaused ? "opacity-60" : "animate-pulse"}`}></span>
+                        <span className="text-sm font-semibold text-gray-900 font-mono tracking-wide">
+                          {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, "0")}
+                        </span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          type="button"
-                          onClick={cancelVoiceRecording}
-                          className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 bg-white rounded-xl border border-gray-200 transition cursor-pointer"
-                        >
-                          Annuler
-                        </button>
-                        <button
-                          type="button"
-                          onClick={stopVoiceRecording}
-                          className="px-4 py-1.5 text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl transition shadow-xs cursor-pointer"
-                        >
-                          Envoyer la note vocale 🎙️
-                        </button>
+
+                      {/* Onde audio / points dynamiques animés */}
+                      <div className="flex-1 flex items-center justify-center gap-[3px] px-2 overflow-hidden h-6 select-none">
+                        {[4, 8, 14, 6, 18, 10, 22, 12, 16, 8, 20, 14, 18, 10, 6, 12, 16, 22, 14, 8, 18, 12, 6, 14, 10, 16, 8, 12, 4].map((h, i) => (
+                          <span
+                            key={i}
+                            className={`w-[2.5px] rounded-full bg-gray-400/80 transition-all duration-200 ${
+                              !isVoicePaused && (recordingTime % 2 === 0 ? "animate-pulse" : "")
+                            }`}
+                            style={{
+                              height: isVoicePaused ? `${Math.max(4, h * 0.35)}px` : `${h}px`,
+                              animationDelay: `${(i % 6) * 120}ms`,
+                            }}
+                          />
+                        ))}
                       </div>
+
+                      {/* Bouton Pause / Reprendre (Rouge) */}
+                      <button
+                        type="button"
+                        onClick={pauseVoiceRecording}
+                        className="text-red-600 hover:text-red-700 p-1.5 rounded-full hover:bg-red-50 transition cursor-pointer flex-shrink-0"
+                        title={isVoicePaused ? "Reprendre l'enregistrement" : "Mettre en pause"}
+                      >
+                        <i className={`fa-solid ${isVoicePaused ? "fa-microphone text-emerald-600" : "fa-pause"} text-base font-bold`}></i>
+                      </button>
+
+                      {/* Bouton rond noir avec flèche blanche (Envoyer) */}
+                      <button
+                        type="button"
+                        onClick={stopVoiceRecording}
+                        className="w-9 h-9 rounded-full bg-black text-white hover:bg-gray-800 flex items-center justify-center shadow-md transition transform active:scale-95 cursor-pointer flex-shrink-0"
+                        title="Envoyer la note vocale"
+                      >
+                        <i className="fa-solid fa-paper-plane text-xs"></i>
+                      </button>
                     </div>
                   ) : (
                     <form onSubmit={handleSendMessage} className="relative">
