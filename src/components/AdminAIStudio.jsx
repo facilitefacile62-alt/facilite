@@ -1822,19 +1822,14 @@ ${productsContext}
                         <button
                           type="button"
                           onClick={startVoiceInput}
-                          className={`px-2 py-1 text-xs rounded-full transition flex items-center gap-0.5 cursor-pointer ${
+                          className={`px-2 py-1 text-xs rounded-full transition flex items-center justify-center cursor-pointer ${
                             isListeningVoice
                               ? "text-emerald-400 bg-emerald-950/60 border border-emerald-500/50 animate-pulse"
                               : "text-gray-400 hover:text-white"
                           }`}
                           title={isListeningVoice ? "Écoute en cours..." : "Saisie vocale"}
                         >
-                          <span className="inline-flex items-center gap-[2px] h-3">
-                            <span className={`w-[2px] bg-current rounded-full ${isListeningVoice ? "h-3 animate-bounce" : "h-2"}`}></span>
-                            <span className={`w-[2px] bg-current rounded-full ${isListeningVoice ? "h-4 animate-bounce delay-75" : "h-3.5"}`}></span>
-                            <span className={`w-[2px] bg-current rounded-full ${isListeningVoice ? "h-2 animate-bounce delay-150" : "h-1.5"}`}></span>
-                            <span className={`w-[2px] bg-current rounded-full ${isListeningVoice ? "h-3.5 animate-bounce delay-100" : "h-2.5"}`}></span>
-                          </span>
+                          <i className="fa-solid fa-microphone text-sm"></i>
                         </button>
 
                         {/* Bouton Rond Blanc avec Flèche Noire vers le Haut */}

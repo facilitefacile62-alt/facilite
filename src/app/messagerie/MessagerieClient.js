@@ -3415,15 +3415,10 @@ export default function MessagerieClient() {
                             <button
                               type="button"
                               onClick={startVoiceRecording}
-                              className="px-2 py-1 text-xs rounded-full text-gray-400 hover:text-white transition flex items-center gap-0.5 cursor-pointer"
+                              className="px-2 py-1 text-xs rounded-full text-gray-400 hover:text-white transition flex items-center justify-center cursor-pointer"
                               title="Enregistrer une note vocale"
                             >
-                              <span className="inline-flex items-center gap-[2px] h-3">
-                                <span className="w-[2px] bg-current rounded-full h-2"></span>
-                                <span className="w-[2px] bg-current rounded-full h-3.5"></span>
-                                <span className="w-[2px] bg-current rounded-full h-1.5"></span>
-                                <span className="w-[2px] bg-current rounded-full h-2.5"></span>
-                              </span>
+                              <i className="fa-solid fa-microphone text-sm"></i>
                             </button>
 
                             <button

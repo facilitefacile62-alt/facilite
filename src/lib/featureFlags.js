@@ -30,7 +30,7 @@ export const DEFAULT_FEATURE_TREE = [
       {
         id: "feat_offres_filtres",
         name: "Filtres sur les offres d'emploi",
-        path: "/offres",
+        path: null,
         icon: "🔍",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
@@ -39,7 +39,7 @@ export const DEFAULT_FEATURE_TREE = [
       {
         id: "feat_offres_recherche_ia",
         name: "Recherche Sémantique IA sur les Offres",
-        path: "/offres",
+        path: null,
         icon: "🤖",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
@@ -48,7 +48,7 @@ export const DEFAULT_FEATURE_TREE = [
       {
         id: "feat_offres_onglets_status",
         name: "Onglets Offres Disponibles & Expirées",
-        path: "/offres",
+        path: null,
         icon: "⚡",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
@@ -57,7 +57,7 @@ export const DEFAULT_FEATURE_TREE = [
       {
         id: "feat_matching_ia_postuler",
         name: "Matching IA Candidat-Offre (Avertisseur)",
-        path: "/offres",
+        path: null,
         icon: "🎯",
         enabled: true,
         roles: { user: true, recruiter: true, visitor: true },

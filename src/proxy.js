@@ -283,10 +283,19 @@ export default async function proxy(req) {
     try {
       const flagsPromise = supabase
         .from("feature_flags")
-        .select("path, enabled, roles")
+        .select("id, path, enabled, roles")
         .then((r) => r.data || []);
       const rows = await withTimeout(flagsPromise, 1500);
-      const matches = rows.filter((r) => matchesFlagPath(req.nextUrl, r.path));
+      const matches = rows.filter(
+        (r) =>
+          r.path &&
+          !r.id.startsWith("feat_offres_") &&
+          r.id !== "feat_matching_ia_postuler" &&
+          r.id !== "feat_diagnostic_cv" &&
+          r.id !== "feat_card_pret_candidature" &&
+          r.id !== "feat_voice_assistant" &&
+          matchesFlagPath(req.nextUrl, r.path)
+      );
 
       if (matches.length > 0) {
         // Statut recruteur : profiles.badges contient 'verified_recruiter',
