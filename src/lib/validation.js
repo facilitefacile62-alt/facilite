@@ -127,6 +127,17 @@ export const AiChatPayloadSchema = z
     customSystemPrompt: z.string().max(25_000).optional(),
     temperature: z.number().min(0).max(2).optional(),
     attachments: z.array(AttachmentSchema).max(5).optional(),
+    // Position réelle du navigateur, transmise pour les questions de trajet.
+    // Bornes du globe et non de Dakar : quelqu'un en déplacement doit pouvoir
+    // interroger le référentiel, quitte à n'obtenir aucun résultat. Sans cette
+    // valeur, la route efface les coordonnées que le modèle aurait inventées.
+    position: z
+      .object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      })
+      .nullable()
+      .optional(),
     // Confirmation explicite d'un outil proposé au tour précédent (registre
     // src/lib/aiTools/) — seul moyen d'exécuter un outil requiresConfirmation.
     confirmToolCall: z

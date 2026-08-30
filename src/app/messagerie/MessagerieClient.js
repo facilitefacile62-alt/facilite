@@ -337,6 +337,9 @@ export default function MessagerieClient() {
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  // Position du navigateur, demandée une seule fois et jamais bloquante :
+  // un refus laisse simplement l'assistant demander le quartier de départ.
+  const [positionUtilisateur, setPositionUtilisateur] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   // Popover "+" (style Messenger) regroupant Stickers/GIF — décoratif pour le
   // moment (aucune bibliothèque de stickers/GIF réelle intégrée), séparé du
@@ -722,7 +725,12 @@ export default function MessagerieClient() {
         body: JSON.stringify({
           messages: historique
             .filter(m => m.id !== AI_WELCOME_MESSAGE.id)
-            .map(m => ({ role: m.role, content: m.content }))
+            .map(m => ({ role: m.role, content: m.content })),
+          // Position réelle, si la personne l'a autorisée. Sans elle, le
+          // serveur efface les coordonnées que le modèle aurait inventées et
+          // l'assistant demande le quartier de départ plutôt que de calculer
+          // un trajet depuis un point imaginaire.
+          position: positionUtilisateur
         })
       });
 
@@ -1514,6 +1522,22 @@ export default function MessagerieClient() {
   // Admin. Un seul message d'ouverture est envoyé (la première fois) : si un
   // fil SUPPORT existe déjà, on se contente de basculer dessus pour éviter
   // de spammer une nouvelle sollicitation à chaque clic.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    // enableHighAccuracy volontairement à false : la précision du GPS n'a
+    // aucun intérêt pour trouver l'arrêt le plus proche dans un rayon de
+    // 5 km, et l'activer viderait la batterie pour rien.
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        setPositionUtilisateur({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }),
+      () => setPositionUtilisateur(null),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
+    );
+  }, []);
+
   const handleContactSupport = async () => {
     if (!userSession?.user?.id) {
       window.location.href = "/login";

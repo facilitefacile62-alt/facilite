@@ -27,6 +27,30 @@ export function getGeminiFunctionDeclarations() {
   }));
 }
 
+/**
+ * Déclarations des outils utilisables PENDANT le tunnel de conversation CV.
+ *
+ * Le fil candidat est piloté par une machine à états qui impose un
+ * responseSchema à Gemini — or l'API refuse responseSchema et function
+ * calling dans le même appel. Les outils étaient donc purement et simplement
+ * désactivés dans la vraie messagerie : « Je veux aller à Pikine » ne
+ * déclenchait jamais chercher_itineraire, et le tunnel répondait par son
+ * argumentaire CV.
+ *
+ * La route fait désormais un appel de ROUTAGE distinct, sans responseSchema,
+ * avec ces déclarations-ci. Seuls les outils sans confirmation y figurent :
+ * une action qui demande l'accord explicite du candidat (modifier son CV, le
+ * compresser) n'a rien à faire au milieu d'une étape du tunnel, où elle
+ * détournerait la conversation de son fil.
+ */
+export function getDeclarationsHorsTunnel() {
+  return AI_TOOLS.filter((t) => t.requiresConfirmation !== true).map((t) => ({
+    name: t.name,
+    description: t.description,
+    parameters: t.parameters,
+  }));
+}
+
 export function getTool(name) {
   return TOOLS_BY_NAME.get(name) || null;
 }

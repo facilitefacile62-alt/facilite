@@ -6,7 +6,7 @@ import { AiChatPayloadSchema } from "@/lib/validation";
 import { extractTextFromFile } from "@/lib/documentParser";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
-import { getGeminiFunctionDeclarations, getTool, runToolCall } from "@/lib/aiTools";
+import { getGeminiFunctionDeclarations, getDeclarationsHorsTunnel, getTool, runToolCall } from "@/lib/aiTools";
 
 export const runtime = "nodejs";
 
@@ -316,7 +316,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const { messages, message, customSystemPrompt, temperature, attachments, confirmToolCall } = parsed.data;
+    const { messages, message, customSystemPrompt, temperature, attachments, confirmToolCall, position } = parsed.data;
 
     // Client scopé par le token de l'appelant — jamais service_role — pour
     // que tout outil exécuté (src/lib/aiTools/) passe par la même RLS que
@@ -369,6 +369,136 @@ export async function POST(req) {
     // circuite le reste du traitement : exécute l'outil sous la RLS de
     // l'utilisateur, puis un second appel Gemini synthétise la réponse
     // finale à partir du résultat réel.
+    // 2ter. ROUTAGE VERS UN OUTIL, MÊME PENDANT LE TUNNEL.
+    //
+    // Le fil candidat active toujours la machine à états, laquelle impose un
+    // responseSchema à Gemini. Or l'API refuse responseSchema et function
+    // calling dans le même appel : les outils étaient donc désactivés dans la
+    // vraie messagerie. Conséquence constatée en production le 2026-08-30,
+    // « Je veux aller à Pikine » ne déclenchait jamais chercher_itineraire et
+    // recevait l'argumentaire CV du tunnel.
+    //
+    // On fait donc un appel SÉPARÉ, sans responseSchema, dont le seul rôle
+    // est de décider si un outil s'applique. S'il n'en propose aucun — le cas
+    // de très loin le plus fréquent — le tunnel reprend la main exactement
+    // comme avant, à la même étape. Le parcours CV n'est jamais altéré :
+    // répondre à une question de transport ne fait pas avancer d'une étape.
+    //
+    // Coût : un appel de plus par message. Assumé — la seule alternative
+    // était un aiguillage par mots-clés, qui aurait raté « comment rejoindre
+    // Pikine » aussi sûrement que le tunnel ratait la question d'origine.
+    if (useTunnelStateMachine && geminiKeyPourOutils && !confirmToolCall?.toolName) {
+      const declarationsRoutage = getDeclarationsHorsTunnel();
+      try {
+        const routageRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKeyPourOutils },
+            body: JSON.stringify({
+              // Instruction dédiée, volontairement séparée du prompt CV
+              // enregistré en base : celui-ci appartient à l'équipe produit et
+              // n'a pas à être réécrit ici pour faire fonctionner un outil.
+              systemInstruction: {
+                parts: [
+                  {
+                    text:
+                      "Tu es un aiguilleur. Ton unique tâche est de décider si le dernier message de l'utilisateur " +
+                      "appelle l'un des outils disponibles — par exemple une question de déplacement, de trajet ou " +
+                      "de transport à Dakar, ou une recherche d'offres d'emploi.\n\n" +
+                      "Si c'est le cas, appelle l'outil approprié. Sinon, réponds exactement le mot RIEN et rien " +
+                      "d'autre. N'engage jamais la conversation, ne salue pas, ne propose aucun service : un autre " +
+                      "assistant s'en charge.",
+                  },
+                ],
+              },
+              contents: historique.slice(-4).map((m) => ({
+                role: m.role === "assistant" ? "model" : "user",
+                parts: [{ text: m.content }],
+              })),
+              tools: [{ functionDeclarations: declarationsRoutage }],
+              generationConfig: { temperature: 0 },
+            }),
+          }
+        );
+
+        if (routageRes.ok) {
+          const routageData = await routageRes.json();
+          const partie = routageData.candidates?.[0]?.content?.parts?.find((p) => p.functionCall);
+
+          if (partie?.functionCall) {
+            const { name: nomOutil, args: argsOutil } = partie.functionCall;
+            const outil = getTool(nomOutil);
+
+            if (outil && outil.requiresConfirmation !== true) {
+              // Le modèle INVENTE des coordonnées quand on ne lui en donne
+              // pas : interrogé sur « Je veux aller à Pikine », il a proposé
+              // 14.6937 / -17.4441, le centre de Dakar, sans rien en savoir.
+              // Un itinéraire calculé depuis un point faux est pire que pas
+              // d'itinéraire. On impose donc la position réelle transmise par
+              // le navigateur, et à défaut on efface la sienne : l'outil
+              // demande alors son quartier de départ à la personne.
+              const argsSurs = { ...(argsOutil || {}) };
+              if (nomOutil === "chercher_itineraire") {
+                if (Number.isFinite(position?.latitude) && Number.isFinite(position?.longitude)) {
+                  argsSurs.latitude = position.latitude;
+                  argsSurs.longitude = position.longitude;
+                } else {
+                  delete argsSurs.latitude;
+                  delete argsSurs.longitude;
+                }
+              }
+
+              const resultat = await runToolCall(nomOutil, argsSurs, {
+                user,
+                supabase: userScopedSupabase,
+              });
+
+              // Synthèse à partir du résultat RÉEL de l'outil. La consigne
+              // d'interdiction d'invention voyage dans la charge utile de
+              // l'outil lui-même (voir findTransportRoute) : elle arrive donc
+              // au modèle avec les données, pas seulement dans un prompt
+              // qu'il pourrait perdre de vue.
+              const synthese = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKeyPourOutils },
+                  body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [
+                      ...historique.slice(-4).map((m) => ({
+                        role: m.role === "assistant" ? "model" : "user",
+                        parts: [{ text: m.content }],
+                      })),
+                      { role: "model", parts: [{ functionCall: partie.functionCall }] },
+                      { role: "user", parts: [{ functionResponse: { name: nomOutil, response: resultat } }] },
+                    ],
+                    generationConfig: { temperature: tempEffectif },
+                  }),
+                }
+              );
+
+              if (synthese.ok) {
+                const donnees = await synthese.json();
+                const reply = donnees.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
+                if (reply) {
+                  // L'étape du tunnel n'est délibérément PAS avancée : la
+                  // personne a posé une question de côté, elle reprendra son
+                  // parcours CV là où elle l'avait laissé.
+                  return NextResponse.json({ reply, toolResult: resultat, toolName: nomOutil });
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Un aiguillage en panne ne doit jamais empêcher de répondre : on
+        // retombe silencieusement sur le tunnel, comportement d'avant.
+        console.error("ai-chat: routage outil indisponible:", err.message);
+      }
+    }
+
     if (confirmToolCall?.toolName && toolsActifs) {
       const toolResult = await runToolCall(confirmToolCall.toolName, confirmToolCall.args || {}, {
         user,
