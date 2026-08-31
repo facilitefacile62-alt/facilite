@@ -1091,10 +1091,22 @@ export default function Header() {
             <span>Accueil</span>
           </Link>
           <Link
+            href="/modeles"
+            onClick={(e) => handleNavClick(e, "/modeles", "nav_marketplace", "Marketplace")}
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              pathname?.startsWith("/modeles") || pathname?.startsWith("/service")
+                ? "text-sky-600 dark:text-sky-400 font-extrabold"
+                : "text-gray-700 dark:text-gray-300 hover:text-sky-600 dark:hover:text-sky-400"
+            }`}
+          >
+            <img src="/marketplace.svg" alt="" width={16} height={16} className="w-4 h-4 object-contain inline-block" />
+            <span>Marketplace</span>
+          </Link>
+          <Link
             href="/offres"
             onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              pathname.startsWith("/offres")
+              pathname?.startsWith("/offres")
                 ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             }`}
