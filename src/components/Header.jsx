@@ -907,18 +907,18 @@ export default function Header() {
             href="/marketplace"
             onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
             title="Marketplace — Sélection du jour"
-            className={`p-1.5 rounded-xl transition-all duration-200 flex items-center justify-center group flex-shrink-0 cursor-pointer ${
+            className={`p-1 rounded-lg transition-all duration-200 flex items-center justify-center group flex-shrink-0 cursor-pointer ${
               !checkFeatureAllowed("nav_marketplace")
                 ? "opacity-40 grayscale cursor-not-allowed hover:opacity-50"
                 : pathname?.startsWith("/marketplace")
-                ? "bg-sky-100/80 dark:bg-sky-950/60 ring-2 ring-sky-400 shadow-xs"
+                ? "bg-sky-100/80 dark:bg-sky-950/60 ring-1.5 ring-sky-400 shadow-xs"
                 : "hover:bg-sky-50 dark:hover:bg-sky-950/30 hover:scale-105"
             }`}
           >
             <img
               src="/marketplace.svg"
               alt="Marketplace"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain transition-transform group-hover:scale-110 drop-shadow-xs"
+              className="w-5 h-5 sm:w-6 sm:h-6 object-contain transition-transform group-hover:scale-110 drop-shadow-xs"
             />
           </Link>
         </div>
