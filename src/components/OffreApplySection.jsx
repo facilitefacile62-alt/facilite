@@ -104,11 +104,8 @@ export default function OffreApplySection({ offer }) {
   // autres ("Bac+3", "Bac+5 (Ingénieur / Master…)", "Bac+2 à Bac+4"…)
   // tombaient au rang 0, et un candidat CM2 y passait sans obstacle.
   const verdictNiveau = comparerNiveaux(niveauxEtudes, candidateEducationCode, offer.min_education_level_code);
-  // Seul "insuffisant" bloque : "inconnu" (niveau non renseigné, ou
-  // formation hors échelle comme le Daara) et "non_applicable" (l'offre
-  // n'exige rien d'interprétable) ne permettent pas de conclure, donc ne
-  // ferment jamais la porte.
-  const blocked = !!userSession && verdictNiveau.statut === "insuffisant";
+  // Désactivé à la demande de l'administrateur : le niveau d'études ne bloque plus les candidatures
+  const blocked = false;
 
   // Offre expirée (point 1) : isOfferExpired existait déjà et servait aux
   // onglets « disponibles / expirées » de /offres, mais cette fiche ne le

@@ -184,13 +184,8 @@ export async function POST(req) {
 
       const { isEducationEligible, calculateCvMatchScore: computeScore } = await import("@/lib/eligibility");
 
-      // 1. Vérification du niveau d'études
-      if (!isEducationEligible(candidateEducation, requiredEducation)) {
-        return NextResponse.json(
-          { error: "Votre niveau d'étude est inférieur au niveau requis." },
-          { status: 403 }
-        );
-      }
+      // 1. Vérification du niveau d'études (Désactivée : le niveau d'études ne bloque plus les candidatures)
+      // Toutes les candidatures sont acceptées sans restriction de diplôme.
 
       // Calcul du score indicatif d'adéquation CV (sans barrière bloquante).
       // Priorité à la similarité cosinus réelle (embeddings) sur le CV

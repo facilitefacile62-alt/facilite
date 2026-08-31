@@ -33,10 +33,8 @@ export function getEducationRank(levelStr) {
 }
 
 export function isEducationEligible(candidateLevel, requiredLevel) {
-  if (!requiredLevel || requiredLevel === "Aucun") return true;
-  const candidateRank = getEducationRank(candidateLevel);
-  const requiredRank = getEducationRank(requiredLevel);
-  return candidateRank >= requiredRank;
+  // Désactivé à la demande de l'administrateur : ne bloque plus les candidatures
+  return true;
 }
 
 /**

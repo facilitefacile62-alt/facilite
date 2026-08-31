@@ -131,9 +131,7 @@ export default function RecruiterShowcasePage() {
       router.push("/login");
       return;
     }
-    // Seul "insuffisant" ferme la porte : un niveau non renseigné ou hors
-    // échelle (Daara) ne permet pas de conclure, il ne doit pas bloquer.
-    if (verdictNiveauPour(offer).statut === "insuffisant" || isExpired(offer.deadline)) return;
+    if (isExpired(offer.deadline)) return;
     setSelectedOffer(null);
     setApplyingOffer(offer);
   };
@@ -457,10 +455,7 @@ export default function RecruiterShowcasePage() {
                 <button
                   type="button"
                   onClick={() => handleApplyClick(selectedOffer)}
-                  disabled={
-                    isExpired(selectedOffer.deadline) ||
-                    (userSession && verdictNiveauPour(selectedOffer).statut === "insuffisant")
-                  }
+                  disabled={isExpired(selectedOffer.deadline)}
                   className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-300 disabled:bg-gray-300"
                 >
                   <i className="fa-solid fa-paper-plane mr-1.5"></i>
