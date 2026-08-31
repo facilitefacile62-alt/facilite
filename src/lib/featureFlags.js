@@ -28,6 +28,15 @@ export const DEFAULT_FEATURE_TREE = [
         description: "Accès au catalogue des offres d'emploi publiques",
       },
       {
+        id: "nav_marketplace",
+        name: "Marketplace (Sélection du jour & Ventes)",
+        path: "/marketplace",
+        icon: "🏪",
+        enabled: true,
+        roles: { user: true, recruiter: true, visitor: true },
+        description: "Bouton dans l'en-tête, carte du fil d'accueil et accès à la plateforme Marketplace",
+      },
+      {
         id: "feat_offres_filtres",
         name: "Filtres sur les offres d'emploi",
         path: null,

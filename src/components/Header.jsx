@@ -905,9 +905,12 @@ export default function Header() {
           {/* 🏪 Logo / Bouton Marketplace */}
           <Link
             href="/marketplace"
+            onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
             title="Marketplace — Sélection du jour"
-            className={`p-1.5 rounded-xl transition-all duration-200 flex items-center justify-center group flex-shrink-0 ${
-              pathname?.startsWith("/marketplace")
+            className={`p-1.5 rounded-xl transition-all duration-200 flex items-center justify-center group flex-shrink-0 cursor-pointer ${
+              !checkFeatureAllowed("nav_marketplace")
+                ? "opacity-40 grayscale cursor-not-allowed hover:opacity-50"
+                : pathname?.startsWith("/marketplace")
                 ? "bg-sky-100/80 dark:bg-sky-950/60 ring-2 ring-sky-400 shadow-xs"
                 : "hover:bg-sky-50 dark:hover:bg-sky-950/30 hover:scale-105"
             }`}

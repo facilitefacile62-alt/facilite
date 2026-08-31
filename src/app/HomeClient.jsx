@@ -1890,29 +1890,47 @@ export default function Home({ initialOffers = [] }) {
             </div>
 
             {/* 🏪 Carte Marketplace Facilité */}
-            <div className="bg-white rounded-xl border border-gray-200 p-3.5 shadow-xs text-center flex flex-col items-center space-y-2.5 hover:shadow-md transition">
-              <div className="w-9 h-9 rounded-full bg-sky-50 flex items-center justify-center shadow-2xs">
+            <div className={`bg-white rounded-xl border border-gray-200 p-3.5 shadow-xs text-center flex flex-col items-center space-y-2.5 hover:shadow-md transition ${
+              !checkFeatureAllowed("nav_marketplace") ? "opacity-60 grayscale bg-gray-50" : ""
+            }`}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-2xs ${
+                !checkFeatureAllowed("nav_marketplace") ? "bg-gray-200 text-gray-400" : "bg-sky-50"
+              }`}>
                 <img
                   src="/marketplace.svg"
                   alt="Marketplace"
                   width={24}
                   height={24}
-                  className="w-6 h-6 object-contain drop-shadow-xs"
+                  className={`w-6 h-6 object-contain drop-shadow-xs ${!checkFeatureAllowed("nav_marketplace") ? "grayscale opacity-50" : ""}`}
                 />
               </div>
               <div className="flex items-center gap-1.5 justify-center">
                 <h4 className="text-[11px] font-black text-gray-900">Marketplace Facilité</h4>
-                <span className="px-1.5 py-0.5 bg-blue-100 text-[#1877F2] text-[8px] font-black rounded-md uppercase">Nouveau</span>
+                {!checkFeatureAllowed("nav_marketplace") ? (
+                  <span className="px-1.5 py-0.2 bg-gray-200 text-gray-600 text-[8px] font-black rounded-md uppercase">Indisponible</span>
+                ) : (
+                  <span className="px-1.5 py-0.5 bg-blue-100 text-[#1877F2] text-[8px] font-black rounded-md uppercase">Nouveau</span>
+                )}
               </div>
               <p className="text-[9px] text-gray-500 leading-relaxed font-semibold">
                 Découvrez la sélection du jour : téléphones, véhicules, mode, immobilier et services à Dakar.
               </p>
-              <Link
-                href="/marketplace"
-                className="w-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-extrabold py-2 px-3 rounded-lg text-[9px] transition text-center shadow-xs cursor-pointer block active:scale-95"
-              >
-                Explorer le Marketplace →
-              </Link>
+              {!checkFeatureAllowed("nav_marketplace") ? (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full bg-gray-200/90 text-gray-400 font-bold py-2 px-3 rounded-lg text-[9px] cursor-not-allowed opacity-50 grayscale border border-gray-300 pointer-events-none select-none block text-center shadow-none"
+                >
+                  Marketplace (Indisponible)
+                </button>
+              ) : (
+                <Link
+                  href="/marketplace"
+                  className="w-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-extrabold py-2 px-3 rounded-lg text-[9px] transition text-center shadow-xs cursor-pointer block active:scale-95"
+                >
+                  Explorer le Marketplace →
+                </Link>
+              )}
             </div>
 
             {/* Diagnostic CV Gratuit Card */}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 
 // --- DONNÉES INITIALES RÉALISTES CALQUÉES SUR LA SÉLECTION DU JOUR DU SÉNÉGAL ---
 const INITIAL_MARKETPLACE_ITEMS = [
@@ -450,7 +451,25 @@ const CITIES = [
 
 export default function MarketplaceClient() {
   const router = useRouter();
-  const { session, profile } = useAuth();
+  const { session, profile, isAdmin, isRecruiter } = useAuth();
+  const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
+
+  // Écoute en temps réel des modifications de feature flags depuis l'admin
+  useEffect(() => {
+    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+    const channel = supabase
+      .channel("public-feature-flags-marketplace")
+      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
+        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
+  const isMarketplaceAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace", userRole);
 
   // États
   const [items, setItems] = useState(INITIAL_MARKETPLACE_ITEMS);
@@ -599,6 +618,33 @@ export default function MarketplaceClient() {
     );
     window.open(`https://wa.me/${cleanNumber}?text=${message}`, "_blank");
   };
+
+  if (!isMarketplaceAllowed) {
+    return (
+      <div className="min-h-[75vh] flex items-center justify-center px-4 py-16 bg-gray-50 dark:bg-gray-950">
+        <div className="max-w-md w-full text-center bg-white dark:bg-gray-900 rounded-3xl p-8 shadow-xl border border-gray-200 dark:border-gray-800">
+          <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/60 text-[#1877F2] rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-xs">
+            <i className="fa-solid fa-store"></i>
+          </div>
+          <span className="px-2.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px] font-black rounded-md uppercase tracking-wider">
+            Chantier & Maintenance
+          </span>
+          <h2 className="text-xl font-black text-gray-900 dark:text-white mt-3">
+            Marketplace temporairement indisponible
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+            Cette section est temporairement désactivée par l&apos;administration le temps de finaliser les travaux et ajustements.
+          </p>
+          <Link
+            href="/"
+            className="inline-block mt-6 px-6 py-2.5 bg-[#1877F2] hover:bg-blue-700 text-white text-xs font-black rounded-full transition shadow-xs cursor-pointer"
+          >
+            ← Retour à l&apos;accueil
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors">
