@@ -884,27 +884,46 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3" suppressHydrationWarning>
         
         {/* Brand Logo & Name */}
-        <Link
-          href="/"
-          onClick={handleLogoOrHomeClick}
-          className={`items-center space-x-2 group flex-shrink-0 cursor-pointer ${
-            isMobileSearchOpen ? "hidden md:flex" : "flex"
-          }`}
-        >
-          <img
-            src="/logo.jpeg"
-            alt="Logo Facilité"
-            className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200 dark:border-gray-700 group-hover:scale-105 transition-transform"
-          />
-          <span className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight group-hover:text-emerald-600 transition-colors hidden sm:inline">
-            Facilite
-          </span>
-        </Link>
+        <div className={`items-center space-x-2.5 flex-shrink-0 ${
+          isMobileSearchOpen ? "hidden md:flex" : "flex"
+        }`}>
+          <Link
+            href="/"
+            onClick={handleLogoOrHomeClick}
+            className="flex items-center space-x-2 group flex-shrink-0 cursor-pointer"
+          >
+            <img
+              src="/logo.jpeg"
+              alt="Logo Facilité"
+              className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200 dark:border-gray-700 group-hover:scale-105 transition-transform"
+            />
+            <span className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight group-hover:text-emerald-600 transition-colors hidden sm:inline">
+              Facilite
+            </span>
+          </Link>
+
+          {/* 🏪 Logo / Bouton Marketplace */}
+          <Link
+            href="/modeles"
+            title="Marketplace — Modèles de CV & Services"
+            className={`p-1.5 rounded-xl transition-all duration-200 flex items-center justify-center group flex-shrink-0 ${
+              pathname.startsWith("/modeles") || pathname.startsWith("/service")
+                ? "bg-sky-100/80 dark:bg-sky-950/60 ring-1 ring-sky-400/50 shadow-xs"
+                : "hover:bg-sky-50 dark:hover:bg-sky-950/30 hover:scale-105"
+            }`}
+          >
+            <img
+              src="/marketplace.svg"
+              alt="Marketplace"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain transition-transform group-hover:scale-110 drop-shadow-xs"
+            />
+          </Link>
+        </div>
 
         {/* 🔍 BARRE DE RECHERCHE GLOBALE AVEC AUTOCOMPLÉTION FASTAPI */}
         <div
           ref={searchContainerRef}
-          className={`relative md:block md:flex-1 md:max-w-lg md:mx-2 ${
+          className={`relative md:block md:flex-1 md:max-w-[280px] lg:max-w-[340px] md:mx-2 ${
             isMobileSearchOpen ? "flex flex-1 w-full max-w-none mx-0 items-center gap-2" : "hidden"
           }`}
         >

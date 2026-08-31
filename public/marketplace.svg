@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Canopy Top Gradient -->
+    <linearGradient id="canopyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#0EA5E9" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+
+    <!-- Canopy Front Lip Gradient -->
+    <linearGradient id="lipGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0369A1" />
+    </linearGradient>
+
+    <!-- Pillar Gradient -->
+    <linearGradient id="pillarGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#0369A1" />
+    </linearGradient>
+
+    <!-- Shadow -->
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0284C7" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#softGlow)">
+    <!-- Store Pillars & Doorway -->
+    <path d="M12 24 H36 V40 C36 41.1 35.1 42 34 42 H30 C28.9 42 28 41.1 28 40 V32 C28 30.9 27.1 30 26 30 H22 C20.9 30 20 30.9 20 32 V40 C20 41.1 19.1 42 18 42 H14 C12.9 42 12 41.1 12 40 V24 Z" fill="url(#pillarGrad)" />
+    
+    <!-- Pillar Highlights -->
+    <rect x="13" y="24" width="4" height="16" rx="1.5" fill="#38BDF8" fill-opacity="0.3" />
+    <rect x="31" y="24" width="4" height="16" rx="1.5" fill="#38BDF8" fill-opacity="0.2" />
+
+    <!-- Canopy / Roof (Main Slope) -->
+    <path d="M8 20 L13 9 C13.6 7.8 14.8 7 16.2 7 H31.8 C33.2 7 34.4 7.8 35 9 L40 20 Z" fill="url(#canopyGrad)" />
+
+    <!-- Canopy Top Shine -->
+    <path d="M14.5 9.5 C15 8.6 15.9 8 17 8 H31 C32.1 8 33 8.6 33.5 9.5 L37 18 H11 Z" fill="#FFFFFF" fill-opacity="0.25" />
+
+    <!-- Canopy Front Overhang / Valance Wave -->
+    <path d="M7 19 C7 18.2 7.6 17.5 8.4 17.5 H39.6 C40.4 17.5 41 18.2 41 19 L40.5 22.5 C40.5 24.2 38.8 25.5 37 25.2 C35.4 24.9 34 23.5 33.5 22 C33 23.5 31.6 24.9 30 25.2 C28.2 25.5 26.5 24.2 26.5 22.5 C26.5 24.2 24.8 25.5 23 25.2 C21.4 24.9 20 23.5 19.5 22 C19 23.5 17.6 24.9 16 25.2 C14.2 25.5 12.5 24.2 12.5 22.5 L12 22.5 C10.2 22.5 8.5 23.8 8.5 22 L7 19 Z" fill="url(#lipGrad)" />
+  </g>
+</svg>
