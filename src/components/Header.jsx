@@ -901,26 +901,6 @@ export default function Header() {
               Facilite
             </span>
           </Link>
-
-          {/* 🏪 Logo / Bouton Marketplace */}
-          <Link
-            href="/marketplace"
-            onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
-            title="Marketplace — Sélection du jour"
-            className={`p-1 rounded-lg transition-all duration-200 flex items-center justify-center group flex-shrink-0 cursor-pointer ${
-              !checkFeatureAllowed("nav_marketplace")
-                ? "opacity-40 grayscale cursor-not-allowed hover:opacity-50"
-                : pathname?.startsWith("/marketplace")
-                ? "bg-sky-100/80 dark:bg-sky-950/60 ring-1.5 ring-sky-400 shadow-xs"
-                : "hover:bg-sky-50 dark:hover:bg-sky-950/30 hover:scale-105"
-            }`}
-          >
-            <img
-              src="/marketplace.svg"
-              alt="Marketplace"
-              className="w-5 h-5 sm:w-6 sm:h-6 object-contain transition-transform group-hover:scale-110 drop-shadow-xs"
-            />
-          </Link>
         </div>
 
         {/* 🔍 BARRE DE RECHERCHE GLOBALE AVEC AUTOCOMPLÉTION FASTAPI */}
@@ -1340,6 +1320,27 @@ export default function Header() {
               )}
             </div>
           )}
+
+          {/* 🏪 Bouton Marketplace Desktop (à côté de Plus) */}
+          <Link
+            href="/marketplace"
+            onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
+            title="Marketplace — Sélection du jour"
+            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              !checkFeatureAllowed("nav_marketplace")
+                ? "opacity-40 grayscale cursor-not-allowed text-gray-400"
+                : pathname?.startsWith("/marketplace")
+                ? "text-[#1877F2] dark:text-[#1877F2] font-extrabold"
+                : "text-gray-700 dark:text-gray-300 hover:text-[#1877F2] dark:hover:text-[#1877F2]"
+            }`}
+          >
+            <img
+              src="/marketplace.svg"
+              alt="Marketplace"
+              className="w-4.5 h-4.5 sm:w-5 sm:h-5 object-contain transition-transform hover:scale-110 drop-shadow-xs"
+            />
+            <span>Marketplace</span>
+          </Link>
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
