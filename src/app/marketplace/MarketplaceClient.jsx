@@ -548,6 +548,38 @@ export default function MarketplaceClient() {
     if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
+  // 📸 Téléversement et gestion des photos d'annonce (Vendre)
+  const [uploadedPhotos, setUploadedPhotos] = useState([]);
+  const photoInputRef = React.useRef(null);
+
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUploadedPhotos((prev) => [...prev, event.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePhoto = (idx) => {
+    setUploadedPhotos((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleResetForm = () => {
+    setNewTitle("");
+    setNewPrice("");
+    setNewCategory("telephones");
+    setNewCity("Dakar");
+    setNewPhone("");
+    setNewDescription("");
+    setNewImageUrl("");
+    setUploadedPhotos([]);
+  };
+
   // Charger les favoris et annonces utilisateur persistées
   useEffect(() => {
     try {
@@ -615,17 +647,23 @@ export default function MarketplaceClient() {
 
     setIsSubmitting(true);
 
+    const finalImage =
+      uploadedPhotos[0] ||
+      newImageUrl ||
+      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80";
+
     const newItem = {
       id: "user-mkt-" + Date.now(),
       title: newTitle,
       price: Number(newPrice),
       priceFormatted: Number(newPrice).toLocaleString("fr-FR") + " CFA",
       category: newCategory,
-      categoryLabel: CATEGORIES.find(c => c.id === newCategory)?.label || "Général",
+      categoryLabel: CATEGORIES.find((c) => c.id === newCategory)?.label || "Général",
       location: newCity + ", Sénégal",
       city: newCity,
       distance: "1 km",
-      image: newImageUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80",
+      image: finalImage,
+      photos: uploadedPhotos.length > 0 ? uploadedPhotos : [finalImage],
       isRecent: true,
       seller: {
         name: profile?.full_name || session?.user?.user_metadata?.full_name || "Vendeur Facilité",
@@ -634,10 +672,10 @@ export default function MarketplaceClient() {
         rating: 5.0,
         joinedYear: "2026",
         verified: true,
-        isCurrentUser: true
+        isCurrentUser: true,
       },
       description: newDescription || "Annonce publiée récemment sur Facilité Marketplace.",
-      postedAt: "À l'instant"
+      postedAt: "À l'instant",
     };
 
     const updatedItems = [newItem, ...items];
@@ -655,6 +693,7 @@ export default function MarketplaceClient() {
     setNewDescription("");
     setNewImageUrl("");
     setNewPhone("");
+    setUploadedPhotos([]);
 
     setNotificationMsg("🎉 Votre annonce a été publiée avec succès sur Facilité Marketplace !");
     setTimeout(() => setNotificationMsg(""), 5000);
@@ -757,13 +796,14 @@ export default function MarketplaceClient() {
                 <span>{selectedCity} · {distanceKm} km</span>
               </button>
 
-              {/* Bouton Créer une annonce / Vendre */}
+              {/* Bouton Vendre */}
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 bg-[#1877F2] hover:bg-[#166fe5] text-white px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold shadow-sm hover:shadow-md transition active:scale-95 cursor-pointer"
+                className="flex items-center gap-2 bg-[#1877F2] hover:bg-[#166fe5] text-white px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-black shadow-sm hover:shadow-md transition active:scale-95 cursor-pointer"
+                title="Vendre un article sur Marketplace"
               >
                 <i className="fa-solid fa-plus text-xs"></i>
-                <span>Créer une annonce</span>
+                <span>Vendre</span>
               </button>
             </div>
           </div>
@@ -1184,135 +1224,188 @@ export default function MarketplaceClient() {
         </div>
       )}
 
-      {/* ✍️ MODAL CRÉER UNE ANNONCE (PUBLIER) */}
+      {/* ✍️ MODAL PUBLIER UNE ANNONCE / VENDRE (1:1 AVEC LE DESIGN DEMANDÉ) */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-800 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto overscroll-contain animate-in fade-in">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl max-w-xl w-full p-5 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-800 max-h-[94vh] overflow-y-auto no-scrollbar my-auto">
             
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-800">
-              <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
-                <i className="fa-solid fa-store text-[#1877F2]"></i>
-                <span>Créer une annonce de vente</span>
-              </h3>
+            {/* Header: Publier une annonce + Effacer */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800 mb-5">
               <button
+                type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition p-1 cursor-pointer"
+                title="Fermer"
               >
-                <i className="fa-solid fa-xmark"></i>
+                <i className="fa-solid fa-xmark text-lg"></i>
+              </button>
+
+              <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+                Publier une annonce
+              </h3>
+
+              <button
+                type="button"
+                onClick={handleResetForm}
+                className="text-rose-500 hover:text-rose-600 font-extrabold text-xs sm:text-sm transition cursor-pointer"
+              >
+                Effacer
               </button>
             </div>
 
-            <form onSubmit={handleCreateListing} className="space-y-3.5">
+            <form onSubmit={handleCreateListing} className="space-y-4">
               
+              {/* Titre avec compteur 0 / 70 */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                  Titre de l&apos;article *
-                </label>
+                <div className="flex justify-end text-[11px] text-gray-400 font-bold mb-1">
+                  <span>{newTitle.length} / 70</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    maxLength={70}
+                    placeholder="Titre*"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full bg-white dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2] focus:border-transparent transition"
+                  />
+                </div>
+              </div>
+
+              {/* Catégorie* avec chevron > */}
+              <div className="relative">
+                <select
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="w-full appearance-none bg-white dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-[#1877F2] cursor-pointer"
+                >
+                  {CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <i className="fa-solid fa-chevron-right text-xs"></i>
+                </div>
+              </div>
+
+              {/* Sélectionnez l'emplacement* avec chevron > */}
+              <div className="relative">
+                <select
+                  value={newCity}
+                  onChange={(e) => setNewCity(e.target.value)}
+                  className="w-full appearance-none bg-white dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-[#1877F2] cursor-pointer"
+                >
+                  {CITIES.filter((c) => c !== "Toutes les villes").map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <i className="fa-solid fa-chevron-right text-xs"></i>
+                </div>
+              </div>
+
+              {/* Prix & Téléphone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
-                  type="text"
+                  type="number"
                   required
-                  placeholder="ex: iPhone 13 128Go ou Studio Almadies..."
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
+                  placeholder="Prix (en CFA)*"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  className="w-full bg-white dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
                 />
-              </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Prix (en CFA) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="ex: 125000"
-                    value={newPrice}
-                    onChange={(e) => setNewPrice(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Catégorie *
-                  </label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
-                  >
-                    {CATEGORIES.filter(c => c.id !== "all").map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Ville / Région *
-                  </label>
-                  <select
-                    value={newCity}
-                    onChange={(e) => setNewCity(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
-                  >
-                    {CITIES.filter(c => c !== "Toutes les villes").map(city => (
-                      <option key={city} value={city}>{city}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Numéro WhatsApp *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="+221 77 000 00 00"
-                    value={newPhone}
-                    onChange={(e) => setNewPhone(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                  URL de l&apos;image (ou laissez vide pour photo par défaut)
-                </label>
                 <input
-                  type="url"
-                  placeholder="https://..."
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
+                  type="tel"
+                  required
+                  placeholder="Numéro WhatsApp / Tél*"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  className="w-full bg-white dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                  Description détaillée
+              {/* Description */}
+              <textarea
+                rows="2"
+                placeholder="Description de l'article (état, caractéristiques...)"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                className="w-full bg-white dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
+              ></textarea>
+
+              {/* Section Ajouter une photo (1:1 avec screenshot) */}
+              <div className="pt-1">
+                <label className="block text-xs sm:text-sm font-black text-gray-900 dark:text-white mb-1">
+                  Ajouter une photo
                 </label>
-                <textarea
-                  rows="3"
-                  placeholder="Décrivez l'état de l'article, ses caractéristiques..."
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-[#1877F2]"
-                ></textarea>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">La première image est l&apos;image de titre.</span> Vous pouvez modifier l&apos;ordre des photos : il vous suffit de saisir vos photos et de les faire glisser
+                </p>
+
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  multiple
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  id="marketplace-photo-upload-input"
+                />
+
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Bouton Plus (+) carré */}
+                  <label
+                    htmlFor="marketplace-photo-upload-input"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border-2 border-dashed border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-100/60 transition flex items-center justify-center cursor-pointer text-emerald-600 dark:text-emerald-400 text-2xl shadow-2xs active:scale-95"
+                    title="Ajouter des photos"
+                  >
+                    <i className="fa-solid fa-plus"></i>
+                  </label>
+
+                  {/* Aperçus des photos téléversées */}
+                  {uploadedPhotos.map((photo, idx) => (
+                    <div key={idx} className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-2xs group">
+                      <img
+                        src={photo}
+                        alt={`Photo ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {idx === 0 && (
+                        <span className="absolute bottom-1 left-1 right-1 bg-emerald-600/90 text-white text-[9px] font-black text-center py-0.5 rounded">
+                          Titre
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(idx)}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center text-[10px] hover:bg-rose-600 transition cursor-pointer"
+                        title="Supprimer la photo"
+                      >
+                        <i className="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-[10px] text-gray-400 mt-2">
+                  Les formats pris en charge sont *.jpg, *.gif et *.png
+                </p>
               </div>
 
-              <div className="pt-2">
+              {/* Bouton Suivant / Publier */}
+              <div className="pt-3">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-[#1877F2] hover:bg-blue-700 text-white py-3 rounded-2xl text-xs sm:text-sm font-black transition active:scale-98 disabled:opacity-50 cursor-pointer shadow-md"
+                  className="w-full bg-[#1877F2] hover:bg-[#166fe5] active:scale-98 text-white py-3.5 rounded-2xl text-xs sm:text-sm font-black transition cursor-pointer shadow-md disabled:opacity-50"
                 >
-                  {isSubmitting ? "Publication en cours..." : "Publier l'annonce maintenant"}
+                  {isSubmitting ? "Publication en cours..." : "Suivant"}
                 </button>
               </div>
 
