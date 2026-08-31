@@ -904,11 +904,11 @@ export default function Header() {
 
           {/* 🏪 Logo / Bouton Marketplace */}
           <Link
-            href="/modeles"
-            title="Marketplace — Modèles de CV & Services"
+            href="/marketplace"
+            title="Marketplace — Sélection du jour"
             className={`p-1.5 rounded-xl transition-all duration-200 flex items-center justify-center group flex-shrink-0 ${
-              pathname.startsWith("/modeles") || pathname.startsWith("/service")
-                ? "bg-sky-100/80 dark:bg-sky-950/60 ring-1 ring-sky-400/50 shadow-xs"
+              pathname?.startsWith("/marketplace")
+                ? "bg-sky-100/80 dark:bg-sky-950/60 ring-2 ring-sky-400 shadow-xs"
                 : "hover:bg-sky-50 dark:hover:bg-sky-950/30 hover:scale-105"
             }`}
           >
@@ -1091,10 +1091,10 @@ export default function Header() {
             <span>Accueil</span>
           </Link>
           <Link
-            href="/modeles"
-            onClick={(e) => handleNavClick(e, "/modeles", "nav_marketplace", "Marketplace")}
+            href="/marketplace"
+            onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              pathname?.startsWith("/modeles") || pathname?.startsWith("/service")
+              pathname?.startsWith("/marketplace")
                 ? "text-sky-600 dark:text-sky-400 font-extrabold"
                 : "text-gray-700 dark:text-gray-300 hover:text-sky-600 dark:hover:text-sky-400"
             }`}
