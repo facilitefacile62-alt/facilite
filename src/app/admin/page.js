@@ -21,6 +21,7 @@ import {
 import AvatarImage from "@/components/AvatarImage";
 import AdminAIStudio from "@/components/AdminAIStudio";
 import AdminSecurityLab from "@/components/AdminSecurityLab";
+import AdminLiveDashboard from "@/components/AdminLiveDashboard";
 
 // "Utilisateurs", "Tarification" et "Messagerie Support" ont migré dans
 // NAV_SECTIONS (sidebar catégorisée) — les garder ici aurait recréé le
@@ -203,6 +204,7 @@ export default function AdminDashboardPage() {
   const [applications, setApplications] = useState([]);
   const [resumes, setResumes] = useState([]);
   const [badgeRequests, setBadgeRequests] = useState([]);
+  const [allOrdersList, setAllOrdersList] = useState([]);
 
   // --- Fiche détaillée candidat (palier 1 sans consentement + palier 2 avec) ---
   const [ordersByUser, setOrdersByUser] = useState(new Map());
@@ -446,11 +448,11 @@ export default function AdminDashboardPage() {
             .order("created_at", { ascending: true }),
           // Statut d'authentification et numéros masqués (get_users_auth_status)
           supabase.rpc("get_users_auth_status"),
-          // Historique de commandes (statuts uniquement, jamais invoice_url)
-          // pour la fiche candidat palier 1.
+          // Historique complet des commandes et transactions
           supabase
             .from("orders")
-            .select("id, user_id, cv_model_id, has_agent_option, amount, currency, payment_status, created_at"),
+            .select("id, user_id, cv_model_id, has_agent_option, amount, currency, payment_status, payment_method, payment_reference, created_at, updated_at")
+            .order("created_at", { ascending: false }),
         ]);
 
         if (active) {
@@ -511,8 +513,10 @@ export default function AdminDashboardPage() {
           if (ordersRes.error) {
             console.error("Erreur chargement commandes:", ordersRes.error);
           } else {
+            const ords = ordersRes.data || [];
+            setAllOrdersList(ords);
             const grouped = new Map();
-            for (const order of ordersRes.data || []) {
+            for (const order of ords) {
               const list = grouped.get(order.user_id) || [];
               list.push(order);
               grouped.set(order.user_id, list);
@@ -533,9 +537,38 @@ export default function AdminDashboardPage() {
 
     verifyAdminAccessAndLoad();
 
+    // Abonnement Supabase Realtime pour le fil d'activité et finances en direct
+    const liveChannel = supabase
+      .channel("admin-live-dashboard-stream")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          setAllOrdersList((prev) => [payload.new, ...prev.filter((o) => o.id !== payload.new.id)]);
+        } else if (payload.eventType === "UPDATE") {
+          setAllOrdersList((prev) => prev.map((o) => (o.id === payload.new.id ? payload.new : o)));
+        } else if (payload.eventType === "DELETE") {
+          setAllOrdersList((prev) => prev.filter((o) => o.id !== payload.old.id));
+        }
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "candidatures" }, (payload) => {
+        setApplications((prev) => [payload.new, ...prev]);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "resumes" }, (payload) => {
+        setResumes((prev) => [payload.new, ...prev]);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "badge_requests" }, () => {
+        supabase
+          .from("badge_requests")
+          .select("*")
+          .eq("status", "pending")
+          .order("created_at", { ascending: true })
+          .then(({ data }) => data && setBadgeRequests(data));
+      })
+      .subscribe();
+
     return () => {
       active = false;
       clearTimeout(timeoutId);
+      supabase.removeChannel(liveChannel);
     };
   }, [router]);
 
@@ -1647,6 +1680,20 @@ export default function AdminDashboardPage() {
                   </p>
                 </div>
               </div>
+
+              {/* Modules Avancés : Centre d'Action, Tendances & Graphiques, Suivi Financier & Fil d'Activité en Direct */}
+              <AdminLiveDashboard
+                users={users}
+                offers={offers}
+                applications={applications}
+                resumes={resumes}
+                badgeRequests={badgeRequests}
+                orders={allOrdersList}
+                securityAlerts={securityAlerts}
+                periodDays={periodDays}
+                onNavigateTab={(tabId) => handleTabChange(tabId)}
+                triggerToast={triggerToast}
+              />
             </>
           )}
 
