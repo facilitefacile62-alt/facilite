@@ -38,12 +38,30 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
 
   const fileInputRef = useRef(null);
   const matchWarningRef = useRef(null);
+  const modalContainerRef = useRef(null);
 
   useEffect(() => {
     if (matchWarning && matchWarningRef.current) {
       matchWarningRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [matchWarning]);
+
+  // Verrouillage du scroll d'arrière-plan quand la modale est ouverte
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+  // Remontée automatique au sommet du modal quand la candidature est envoyée
+  useEffect(() => {
+    if (success && modalContainerRef.current) {
+      modalContainerRef.current.scrollTop = 0;
+    }
+  }, [success]);
 
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
 
@@ -307,17 +325,20 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
 
   return (
     <div
-      className="fixed inset-0 z-[600] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-fade-in"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/75 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto overscroll-contain animate-fade-in"
       id="apply-modal-overlay"
       onClick={(e) => {
         if (e.target.id === "apply-modal-overlay") onClose();
       }}
     >
-      <div className="bg-white rounded-3xl w-full max-w-lg p-6 md:p-8 relative shadow-2xl flex flex-col border border-gray-100 max-h-[90vh] overflow-y-auto no-scrollbar animate-fade-in-up">
+      <div
+        ref={modalContainerRef}
+        className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg p-5 sm:p-8 relative shadow-2xl flex flex-col border border-gray-100 dark:border-gray-800 max-h-[94vh] sm:max-h-[90vh] overflow-y-auto no-scrollbar animate-fade-in-up my-auto"
+      >
         {/* Bouton Fermer */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer z-10"
           disabled={loading}
         >
           <i className="fa-solid fa-xmark text-xl"></i>
@@ -325,17 +346,15 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
 
         {authChecked && !currentUser ? (
           <div className="text-center py-4 space-y-5">
-            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-xs border border-blue-100">
+            <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-xs border border-blue-100 dark:border-blue-900">
               <i className="fa-solid fa-user-lock"></i>
             </div>
             <div>
-              <h3 className="text-lg font-black text-gray-900">Connexion ou Inscription requise</h3>
-              <p className="text-xs text-gray-600 mt-1.5 max-w-sm mx-auto leading-relaxed">
-                Pour postuler à l&apos;offre <strong className="text-gray-900">{job.titleFR || job.titleEN || job.title}</strong> chez <strong className="text-gray-900">{job.company}</strong>, veuillez vous connecter ou créer votre compte gratuitement.
+              <h3 className="text-lg font-black text-gray-900 dark:text-white">Connexion ou Inscription requise</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-1.5 max-w-sm mx-auto leading-relaxed">
+                Pour postuler à l&apos;offre <strong className="text-gray-900 dark:text-white">{job.titleFR || job.titleEN || job.title}</strong> chez <strong className="text-gray-900 dark:text-white">{job.company}</strong>, veuillez vous connecter ou créer votre compte gratuitement.
               </p>
             </div>
-
-
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 max-w-sm mx-auto">
               <Link
@@ -355,25 +374,28 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
             </div>
           </div>
         ) : success ? (
-          <div className="text-center py-8 space-y-6">
-            <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center border border-emerald-100 shadow-sm mx-auto animate-bounce">
-              <i className="fa-solid fa-circle-check text-4xl"></i>
+          <div className="text-center py-6 sm:py-8 space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-500 rounded-full flex items-center justify-center border-2 border-emerald-100 dark:border-emerald-800 shadow-md mx-auto animate-bounce">
+              <i className="fa-solid fa-circle-check text-4xl sm:text-5xl"></i>
             </div>
-            <div className="space-y-2">
-              <h4 className="text-xl font-black text-gray-900">Candidature Envoyée !</h4>
-              <p className="text-xs font-semibold text-gray-600 max-w-sm mx-auto">
-                Votre candidature pour <span className="text-gray-900 font-extrabold">{subject || (selectedLang === "FR" ? job.titleFR : job.titleEN)}</span> chez <span className="text-gray-900 font-extrabold">{job.company}</span> a bien été transmise avec toutes vos pièces jointes.
+            <div className="space-y-2 px-1">
+              <h4 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">Candidature Envoyée !</h4>
+              <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300 max-w-sm mx-auto leading-relaxed">
+                Votre candidature pour <span className="text-gray-900 dark:text-white font-extrabold">{subject || (selectedLang === "FR" ? job.titleFR : job.titleEN)}</span> chez <span className="text-gray-900 dark:text-white font-extrabold">{job.company}</span> a bien été transmise avec toutes vos pièces jointes.
               </p>
-              <p className="text-[11px] text-gray-400 font-medium pt-2">
-                Vous recevrez un e-mail de confirmation à l'adresse {email}.
+              <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium pt-2">
+                Vous recevrez un e-mail de confirmation à l&apos;adresse <strong className="text-gray-700 dark:text-gray-200">{email}</strong>.
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold py-3.5 px-6 rounded-2xl text-xs transition cursor-pointer shadow-[0_4px_12px_rgba(16,230,136,0.3)] block"
-            >
-              J'ai compris
-            </button>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full bg-[#10E688] hover:bg-[#0fd57d] active:scale-98 text-gray-950 font-black py-4 px-6 rounded-2xl text-xs sm:text-sm transition cursor-pointer shadow-[0_4px_16px_rgba(16,230,136,0.4)] block"
+              >
+                J&apos;ai compris
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5 text-left">
