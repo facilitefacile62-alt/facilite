@@ -17,6 +17,20 @@
 //     qu'un tableau vide, et une `consigne` rappelant la règle dans la charge
 //     utile elle-même. Un tableau vide seul est exactement le genre de silence
 //     qu'un modèle comble de lui-même.
+// Une coordonnée absente doit ressortir null, jamais 0.
+//
+// `Number(null)` vaut 0, et 0 passe Number.isFinite sans broncher : un arrêt
+// dont le relevé GPS manque — il en existe dans le référentiel — se retrouvait
+// dessiné à la latitude 0, longitude 0, dans le golfe de Guinée. La carte
+// s'étirait alors de la Mauritanie au Nigeria et le trajet devenait illisible.
+// Le test automatique ne le voyait pas : le point EXISTAIT bien, il était
+// simplement à trois mille kilomètres.
+const coordonnee = (valeur) => {
+  if (valeur === null || valeur === undefined || valeur === "") return null;
+  const n = Number(valeur);
+  return Number.isFinite(n) ? n : null;
+};
+
 const findTransportRoute = {
   name: "chercher_itineraire",
   description:
@@ -146,9 +160,10 @@ const findTransportRoute = {
         // incomplet). Les garder ferait un tracé qui part au large de
         // l'Atlantique : on les écarte du dessin, ils restent en base.
         arrets: (Array.isArray(r.arrets) ? r.arrets : [])
-          .filter((a) => Number.isFinite(Number(a?.lat)) && Number.isFinite(Number(a?.lng)))
-          .sort((a, b) => (Number(a?.ordre) || 0) - (Number(b?.ordre) || 0))
-          .map((a) => ({ nom: a?.nom || null, lat: Number(a.lat), lng: Number(a.lng) })),
+          .slice()
+          .sort((x, y) => (Number(x?.ordre) || 0) - (Number(y?.ordre) || 0))
+          .map((a) => ({ nom: a?.nom || null, lat: coordonnee(a?.lat), lng: coordonnee(a?.lng) }))
+          .filter((a) => a.lat !== null && a.lng !== null),
       })),
     };
 

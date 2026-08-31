@@ -37,6 +37,18 @@ const ETIQUETTES = {
 };
 const couleurDe = (mode) => COULEURS[mode] || "#334155";
 
+// Même garde que côté outil, et pour la même raison : `Number(null)` vaut 0,
+// donc un arrêt sans relevé GPS se dessinerait au large de l'Afrique. Elle est
+// répétée ici parce que les messages déjà enregistrés en base portent la
+// charge utile telle qu'elle était au moment de l'envoi — les corriger côté
+// outil ne réécrit pas l'historique.
+const point = (a) => {
+  const lat = a?.lat === null || a?.lat === undefined || a?.lat === "" ? null : Number(a.lat);
+  const lng = a?.lng === null || a?.lng === undefined || a?.lng === "" ? null : Number(a.lng);
+  if (lat === null || lng === null || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return [lat, lng];
+};
+
 function distanceLisible(km) {
   if (km == null || !Number.isFinite(Number(km))) return null;
   const v = Number(km);
@@ -81,14 +93,14 @@ export default function CarteItineraire({ payload }) {
 
         for (const l of lignes) {
           const couleur = couleurDe(l?.mode);
-          const arrets = Array.isArray(l?.arrets) ? l.arrets : [];
-          const trace = arrets.map((a) => [a.lat, a.lng]);
+          const arrets = (Array.isArray(l?.arrets) ? l.arrets : []).filter((a) => point(a) !== null);
+          const trace = arrets.map((a) => point(a));
 
           if (trace.length > 1) {
             L.polyline(trace, { color: couleur, weight: 4, opacity: 0.75 }).addTo(carte);
           }
           for (const a of arrets) {
-            L.circleMarker([a.lat, a.lng], {
+            L.circleMarker(point(a), {
               radius: 4,
               color: couleur,
               weight: 2,
@@ -101,8 +113,9 @@ export default function CarteItineraire({ payload }) {
           points.push(...trace);
 
           // L'arrêt où monter : plus gros et plein, c'est l'information utile.
-          if (Number.isFinite(Number(l?.arret?.lat)) && Number.isFinite(Number(l?.arret?.lng))) {
-            L.circleMarker([l.arret.lat, l.arret.lng], {
+          const montee = point(l?.arret);
+          if (montee) {
+            L.circleMarker(montee, {
               radius: 8,
               color: couleur,
               weight: 3,
@@ -113,12 +126,13 @@ export default function CarteItineraire({ payload }) {
               .bindTooltip(`Montez ici : ${l.arret_de_depart || "arrêt le plus proche"}`, {
                 permanent: false,
               });
-            points.push([l.arret.lat, l.arret.lng]);
+            points.push(montee);
           }
         }
 
-        if (Number.isFinite(Number(depart?.lat)) && Number.isFinite(Number(depart?.lng))) {
-          L.circleMarker([depart.lat, depart.lng], {
+        const ici = point(depart);
+        if (ici) {
+          L.circleMarker(ici, {
             radius: 7,
             color: "#dc2626",
             weight: 3,
@@ -127,7 +141,7 @@ export default function CarteItineraire({ payload }) {
           })
             .addTo(carte)
             .bindTooltip("Vous êtes ici");
-          points.push([depart.lat, depart.lng]);
+          points.push(ici);
         }
 
         if (points.length > 0) {
