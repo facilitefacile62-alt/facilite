@@ -1868,27 +1868,21 @@ export default function Header() {
                   </div>
                 </Link>
 
-                {/* 8. Prêt pour votre candidature ? */}
+                {/* 8. Marketplace */}
                 <Link
-                  href="/creer-cv"
-                  onClick={(e) => handleNavClick(e, "/creer-cv", "nav_creer_cv", "Prêt pour votre candidature")}
-                  className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
-                    !checkFeatureAllowed("nav_creer_cv")
-                      ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"
-                      : "bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
-                  }`}
+                  href="/marketplace"
+                  onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
+                  className="rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-sm shadow-2xs">
-                      <i className="fa-solid fa-lightbulb"></i>
+                    <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 text-[#1877F2] flex items-center justify-center text-sm shadow-2xs">
+                      <img src="/marketplace.svg" alt="" width={20} height={20} className="w-5 h-5 object-contain" />
                     </div>
-                    {!checkFeatureAllowed("nav_creer_cv") && (
-                      <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black rounded-md uppercase">Bientôt</span>
-                    )}
+                    <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-[#1877F2] text-[9px] font-black rounded-md uppercase">Nouveau</span>
                   </div>
                   <div>
-                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Prêt pour votre candidature ?</h4>
-                    <p className="text-[10px] text-gray-500 font-medium truncate">Concevoir mon CV</p>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Marketplace</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Sélection du jour & Ventes</p>
                   </div>
                 </Link>
 

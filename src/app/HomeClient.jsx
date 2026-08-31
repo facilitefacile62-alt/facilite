@@ -1889,42 +1889,30 @@ export default function Home({ initialOffers = [] }) {
               </div>
             </div>
 
-            {/* Aide et raccourcis rapides */}
-            <div className={`bg-white rounded-xl border border-gray-200 p-3 shadow-xs text-center flex flex-col items-center space-y-2.5 ${
-              !checkFeatureAllowed("feat_card_pret_candidature") || (!checkFeatureAllowed("feat_creer_cv") && !checkFeatureAllowed("nav_plus_service")) ? "opacity-60 grayscale bg-gray-50" : ""
-            }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                !checkFeatureAllowed("feat_card_pret_candidature") || (!checkFeatureAllowed("feat_creer_cv") && !checkFeatureAllowed("nav_plus_service"))
-                  ? "bg-gray-200 text-gray-400"
-                  : "bg-blue-50 text-blue-500"
-              }`}>
-                <i className="fa-regular fa-lightbulb text-base"></i>
+            {/* 🏪 Carte Marketplace Facilité */}
+            <div className="bg-white rounded-xl border border-gray-200 p-3.5 shadow-xs text-center flex flex-col items-center space-y-2.5 hover:shadow-md transition">
+              <div className="w-9 h-9 rounded-full bg-sky-50 flex items-center justify-center shadow-2xs">
+                <img
+                  src="/marketplace.svg"
+                  alt="Marketplace"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6 object-contain drop-shadow-xs"
+                />
               </div>
               <div className="flex items-center gap-1.5 justify-center">
-                <h4 className="text-[10px] font-extrabold text-gray-800">Prêt pour votre candidature ?</h4>
-                {(!checkFeatureAllowed("feat_card_pret_candidature") || (!checkFeatureAllowed("feat_creer_cv") && !checkFeatureAllowed("nav_plus_service"))) && (
-                  <span className="px-1.5 py-0.2 bg-gray-200 text-gray-600 text-[8px] font-black rounded-md uppercase">Indisponible</span>
-                )}
+                <h4 className="text-[11px] font-black text-gray-900">Marketplace Facilité</h4>
+                <span className="px-1.5 py-0.5 bg-blue-100 text-[#1877F2] text-[8px] font-black rounded-md uppercase">Nouveau</span>
               </div>
               <p className="text-[9px] text-gray-500 leading-relaxed font-semibold">
-                Utilisez nos services de création pour générer des CV percutants optimisés pour les recruteurs.
+                Découvrez la sélection du jour : téléphones, véhicules, mode, immobilier et services à Dakar.
               </p>
-              {!checkFeatureAllowed("feat_card_pret_candidature") || (!checkFeatureAllowed("feat_creer_cv") && !checkFeatureAllowed("nav_plus_service")) ? (
-                <button
-                  type="button"
-                  disabled
-                  className="w-full bg-gray-200/90 text-gray-400 font-bold py-1.5 px-3 rounded-lg text-[9px] cursor-not-allowed opacity-50 grayscale border border-gray-300 pointer-events-none select-none block text-center shadow-none"
-                >
-                  Concevoir mon CV (Indisponible)
-                </button>
-              ) : (
-                <Link
-                  href="/service"
-                  className="w-full bg-[#E4B8F9] hover:bg-[#db9ff7] text-purple-950 font-extrabold py-1.5 px-3 rounded-lg text-[9px] transition text-center shadow-xs cursor-pointer block"
-                >
-                  Concevoir mon CV
-                </Link>
-              )}
+              <Link
+                href="/marketplace"
+                className="w-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-extrabold py-2 px-3 rounded-lg text-[9px] transition text-center shadow-xs cursor-pointer block active:scale-95"
+              >
+                Explorer le Marketplace →
+              </Link>
             </div>
 
             {/* Diagnostic CV Gratuit Card */}
