@@ -10,6 +10,14 @@ import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
 import MarkdownLeger from "@/lib/markdownLeger";
 import CarteItineraire from "@/components/CarteItineraire";
+
+// Retire la position de la personne d'une charge utile avant enregistrement.
+// Le reste (lignes, arrêts, tarifs) est public et peut être relu sans risque.
+function payloadSansPosition(payload) {
+  if (!payload || typeof payload !== "object") return payload || null;
+  const { depart, ...reste } = payload;
+  return reste;
+}
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
@@ -780,7 +788,13 @@ export default function MessagerieClient() {
             // Sans ces deux colonnes, la carte disparaîtrait au premier
             // rechargement : le fil est relu depuis assistant_messages.
             attachment_type: data.attachmentType || null,
-            payload: data.payload || null
+            // La position GPS sert à afficher « Vous êtes ici » sur la carte
+            // pendant la conversation ; elle n'a aucune raison de rester en
+            // base. La conserver reviendrait à tenir un historique des
+            // déplacements de la personne, ce que ni la politique de
+            // confidentialité ni la déclaration Play n'annoncent — et une
+            // position vieille d'un jour serait de toute façon fausse.
+            payload: payloadSansPosition(data.payload)
           });
           if (insertBotErr) {
             console.error("Erreur Sauvegarde Supabase (Message Bot):", insertBotErr);
