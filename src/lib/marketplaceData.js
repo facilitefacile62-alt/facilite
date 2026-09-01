@@ -16,6 +16,21 @@ import { supabase } from "@/lib/supabase";
 
 export const BUCKET = "marketplace-photos";
 
+/**
+ * Une coordonnée absente doit ressortir `null`, jamais 0.
+ *
+ * `Number(null)` vaut 0, et 0 passe `Number.isFinite` sans broncher. Écrite
+ * telle quelle, une boutique sans relevé GPS serait enregistrée à la latitude
+ * 0, longitude 0 — dans le golfe de Guinée, donc absente de toute recherche
+ * de proximité, sans qu'aucune erreur ne soit levée. Le même piège avait déjà
+ * étiré la carte d'itinéraire sur toute l'Afrique de l'Ouest.
+ */
+export function coordonnee(valeur) {
+  if (valeur === null || valeur === undefined || valeur === "") return null;
+  const n = Number(valeur);
+  return Number.isFinite(n) ? n : null;
+}
+
 // Le plafond du bucket est de 2 Mo, imposé par Storage. On vise dix fois moins :
 // à Dakar, une bonne partie du trafic passe par une 3G facturée au mégaoctet,
 // et une annonce de six photos non compressées coûterait à chaque personne qui
@@ -142,8 +157,8 @@ export async function enregistrerBoutique(userId, champs) {
     quartier: champs?.quartier?.trim() || null,
     ville: champs?.ville?.trim() || null,
     telephone_whatsapp: normaliserWhatsapp(champs?.telephone_whatsapp),
-    latitude: Number.isFinite(Number(champs?.latitude)) ? Number(champs.latitude) : null,
-    longitude: Number.isFinite(Number(champs?.longitude)) ? Number(champs.longitude) : null,
+    latitude: coordonnee(champs?.latitude),
+    longitude: coordonnee(champs?.longitude),
   };
   if (!charge.nom) throw new Error("Le nom de la boutique est obligatoire.");
 

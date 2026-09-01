@@ -26,6 +26,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
   chargerMaBoutique,
+  coordonnee,
   chargerMesArticles,
   chercherAutourDeMoi,
   enregistrerBoutique,
@@ -536,7 +537,10 @@ function FormulaireBoutique({ userId, boutique, onEnregistre }) {
     }
   };
 
-  const positionnee = Number.isFinite(Number(champs.latitude)) && Number.isFinite(Number(champs.longitude));
+  // `coordonnee` et non Number.isFinite(Number(...)) : sans relevé GPS, les
+  // champs valent null, et Number(null) vaut 0 — l'écran annonçait « Boutique
+  // localisée » avant toute capture, et la boutique partait à 0°/0°.
+  const positionnee = coordonnee(champs.latitude) !== null && coordonnee(champs.longitude) !== null;
 
   return (
     <form
