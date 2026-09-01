@@ -94,46 +94,52 @@ export default function AdminOffresPage() {
   const fileDropInputRef = useRef(null);
   const additionalFileInputRef = useRef(null);
 
-  async function loadAdminData() {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        window.location.replace("/login");
-        return;
-      }
-
-      const { data: userRoleRow } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .single();
-
-      if (!userRoleRow || userRoleRow.role !== "admin") {
-        window.location.replace("/");
-        return;
-      }
-      setUserRole(userRoleRow.role);
-      setUserSession(session);
-
-      // Fetch all offers
-      const { data: offersData, error } = await supabase
-        .from("job_offers")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (!error) {
-        setAllOffers(offersData || []);
-      }
-    } catch (err) {
-      console.error("Exception loading admin offres:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
+    let isMounted = true;
+
+    async function loadAdminData() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          if (isMounted) router.replace("/login");
+          return;
+        }
+
+        const { data: userRoleRow } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+
+        if (!userRoleRow || userRoleRow.role !== "admin") {
+          if (isMounted) router.replace("/");
+          return;
+        }
+        if (isMounted) {
+          setUserRole(userRoleRow.role);
+          setUserSession(session);
+        }
+
+        // Fetch all offers
+        const { data: offersData, error } = await supabase
+          .from("job_offers")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (!error && isMounted) {
+          setAllOffers(offersData || []);
+        }
+      } catch (err) {
+        console.error("Exception loading admin offres:", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
     loadAdminData();
 
     // Abonnement Realtime Supabase sur la table job_offers
@@ -143,15 +149,16 @@ export default function AdminOffresPage() {
         "postgres_changes",
         { event: "*", schema: "public", table: "job_offers" },
         () => {
-          loadAdminData();
+          if (isMounted) loadAdminData();
         }
       )
       .subscribe();
 
     return () => {
+      isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [router]);
 
   // Gestion du téléversement de plusieurs fichiers photos / affiches
   const handleFilesSelect = (files) => {

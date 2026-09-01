@@ -18,7 +18,7 @@ export default function OfferMediaGallery({
 
   // Gestion des touches du clavier pour naviguer dans la visionneuse
   useEffect(() => {
-    if (lightboxIndex === null) return;
+    if (lightboxIndex === null || !Array.isArray(images) || images.length === 0) return;
 
     const handleKeyDown = (e) => {
       if (e.key === "Escape") setLightboxIndex(null);
@@ -32,12 +32,12 @@ export default function OfferMediaGallery({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [lightboxIndex, images.length]);
+  }, [lightboxIndex, images]);
 
-  if (!images || images.length === 0) return null;
+  if (!images || !Array.isArray(images) || images.length === 0) return null;
 
   const handleOpenLightbox = (index, e) => {
-    e?.stopPropagation();
+    e?.stopPropagation?.();
     if (onEnlarge) {
       onEnlarge(images[index], index, images);
     } else {
@@ -180,7 +180,7 @@ export default function OfferMediaGallery({
       </div>
 
       {/* --- VISIONNEUSE LIGHTBOX PLEIN ÉCRAN INTERACTIVE --- */}
-      {lightboxIndex !== null && (
+      {lightboxIndex !== null && typeof lightboxIndex === "number" && images[lightboxIndex] && (
         <div
           className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-md flex flex-col justify-between p-3 sm:p-6 animate-in fade-in select-none"
           onClick={() => setLightboxIndex(null)}
