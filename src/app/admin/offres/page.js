@@ -13,6 +13,7 @@ import { parseOfferImages, serializeOfferImages } from "@/lib/offerMedia";
 import { detectWhatsAppNumber, buildWhatsAppLink, resolveOfferAction } from "@/lib/offerContact";
 import { isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
+import { DETAILED_EDUCATION_LEVELS } from "@/lib/eligibility";
 import { TexteAvecLiens } from "@/lib/liens";
 
 const EMPTY_OFFER = {
@@ -1473,14 +1474,11 @@ export default function AdminOffresPage() {
                     onChange={(e) => setOfferForm({ ...offerForm, min_education_level: e.target.value })}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
                   >
-                    <option value="Aucun">Aucun diplôme exigé</option>
-                    <option value="CM2">CM2 / Primaire / CFEE</option>
-                    <option value="Brevet">Brevet / BFEM / BEPC</option>
-                    <option value="BAC">BAC / Secondaire</option>
-                    <option value="BAC+2">BAC+2 / BTS / DUT / DEUG</option>
-                    <option value="Licence">Licence / Bachelor (BAC+3)</option>
-                    <option value="Master">Master / Ingénieur / DEA (BAC+5)</option>
-                    <option value="Doctorat">Doctorat / Ph.D / Médecine (BAC+8)</option>
+                    {DETAILED_EDUCATION_LEVELS.map((lvl) => (
+                      <option key={lvl.value} value={lvl.value}>
+                        {lvl.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

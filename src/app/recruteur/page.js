@@ -15,6 +15,7 @@ import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { parseOfferImages, serializeOfferImages } from "@/lib/offerMedia";
 import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
+import { DETAILED_EDUCATION_LEVELS } from "@/lib/eligibility";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 const EMPTY_OFFER = {
@@ -2079,14 +2080,11 @@ export default function RecruteurDashboardPage() {
                           onChange={(e) => handleOfferFieldChange("min_education_level", e.target.value)}
                           className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs cursor-pointer"
                         >
-                          <option value="Aucun">Aucun diplôme exigé</option>
-                          <option value="CM2">CM2 / Primaire / CFEE</option>
-                          <option value="Brevet">Brevet / BFEM / BEPC</option>
-                          <option value="BAC">BAC / Secondaire</option>
-                          <option value="BAC+2">BAC+2 / BTS / DUT / DEUG</option>
-                          <option value="Licence">Licence / Bachelor (BAC+3)</option>
-                          <option value="Master">Master / Ingénieur / DEA (BAC+5)</option>
-                          <option value="Doctorat">Doctorat / Ph.D / Médecine (BAC+8)</option>
+                          {DETAILED_EDUCATION_LEVELS.map((lvl) => (
+                            <option key={lvl.value} value={lvl.value}>
+                              {lvl.label}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
