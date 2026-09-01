@@ -1463,6 +1463,27 @@ export default function AdminOffresPage() {
                   </select>
                 </div>
 
+                {/* Exigence Niveau d'étude */}
+                <div>
+                  <label className="block text-xs font-extrabold text-gray-700 mb-1">
+                    Exigence Niveau d&apos;étude requis
+                  </label>
+                  <select
+                    value={offerForm.min_education_level || "Aucun"}
+                    onChange={(e) => setOfferForm({ ...offerForm, min_education_level: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+                  >
+                    <option value="Aucun">Aucun diplôme exigé</option>
+                    <option value="CM2">CM2 / Primaire / CFEE</option>
+                    <option value="Brevet">Brevet / BFEM / BEPC</option>
+                    <option value="BAC">BAC / Secondaire</option>
+                    <option value="BAC+2">BAC+2 / BTS / DUT / DEUG</option>
+                    <option value="Licence">Licence / Bachelor (BAC+3)</option>
+                    <option value="Master">Master / Ingénieur / DEA (BAC+5)</option>
+                    <option value="Doctorat">Doctorat / Ph.D / Médecine (BAC+8)</option>
+                  </select>
+                </div>
+
                 {/* Type de publication (point 4) — auto-déterminé par le Scanner IA,
                     toujours modifiable manuellement ici avant publication. */}
                 <div>
@@ -1626,10 +1647,16 @@ export default function AdminOffresPage() {
                   <span>Opportunité</span>
                   <span>·</span>
                   <span>{offerForm.contract_type || "CDI"}</span>
+                  {offerForm.min_education_level && offerForm.min_education_level !== "Aucun" && (
+                    <>
+                      <span>·</span>
+                      <span className="text-emerald-700 font-bold">🎓 {offerForm.min_education_level}</span>
+                    </>
+                  )}
                   {offerForm.deadline && (
                     <>
                       <span>·</span>
-                      <span>Jusqu'au {offerForm.deadline}</span>
+                      <span>Jusqu&apos;au {offerForm.deadline}</span>
                     </>
                   )}
                 </p>

@@ -2072,6 +2072,28 @@ export default function RecruteurDashboardPage() {
                       </div>
                       <div>
                         <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                          Exigence Niveau d&apos;étude requis
+                        </label>
+                        <select
+                          value={offerForm.min_education_level || "Aucun"}
+                          onChange={(e) => handleOfferFieldChange("min_education_level", e.target.value)}
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs cursor-pointer"
+                        >
+                          <option value="Aucun">Aucun diplôme exigé</option>
+                          <option value="CM2">CM2 / Primaire / CFEE</option>
+                          <option value="Brevet">Brevet / BFEM / BEPC</option>
+                          <option value="BAC">BAC / Secondaire</option>
+                          <option value="BAC+2">BAC+2 / BTS / DUT / DEUG</option>
+                          <option value="Licence">Licence / Bachelor (BAC+3)</option>
+                          <option value="Master">Master / Ingénieur / DEA (BAC+5)</option>
+                          <option value="Doctorat">Doctorat / Ph.D / Médecine (BAC+8)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
                           Type de publication
                         </label>
                         <select
@@ -2088,9 +2110,6 @@ export default function RecruteurDashboardPage() {
                           <option value="appel_offres">Appel d&apos;offres</option>
                         </select>
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
                           Date limite (optionnel)
@@ -2102,6 +2121,9 @@ export default function RecruteurDashboardPage() {
                           className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs cursor-pointer"
                         />
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
                           Téléphone / WhatsApp
@@ -2114,9 +2136,6 @@ export default function RecruteurDashboardPage() {
                           className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
                         />
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
                           Email recruteur (optionnel)
@@ -2129,18 +2148,19 @@ export default function RecruteurDashboardPage() {
                           className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
                         />
                       </div>
-                      <div>
-                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
-                          Lien externe officiel / WhatsApp URL (optionnel)
-                        </label>
-                        <input
-                          type="url"
-                          value={offerForm.external_link || ""}
-                          onChange={(e) => handleOfferFieldChange("external_link", e.target.value)}
-                          placeholder="Ex: https://wa.me/221770000000 ou https://entreprise.com/jobs/123"
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
-                        />
-                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                        Lien externe officiel / WhatsApp URL (optionnel)
+                      </label>
+                      <input
+                        type="url"
+                        value={offerForm.external_link || ""}
+                        onChange={(e) => handleOfferFieldChange("external_link", e.target.value)}
+                        placeholder="Ex: https://wa.me/221770000000 ou https://entreprise.com/jobs/123"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
+                      />
                     </div>
 
                     <div>
@@ -2238,14 +2258,20 @@ export default function RecruteurDashboardPage() {
                     <h3 className="text-sm font-black text-gray-900 leading-snug">
                       {offerForm.title || "Titre de l'offre d'emploi"}
                     </h3>
-                    <p className="text-[11px] text-gray-500 font-bold mt-0.5">
+                    <p className="text-[11px] text-gray-500 font-bold mt-0.5 flex items-center flex-wrap gap-1">
                       <span>{offerForm.location || "Sénégal"}</span>
-                      <span className="mx-1.5">•</span>
+                      <span>•</span>
                       <span className="text-emerald-700 capitalize">
                         {LISTING_TYPE_LABELS[offerForm.listing_type] || "Opportunité"}
                       </span>
-                      <span className="mx-1.5">•</span>
+                      <span>•</span>
                       <span className="text-gray-700">{offerForm.contract_type || "CDI"}</span>
+                      {offerForm.min_education_level && offerForm.min_education_level !== "Aucun" && (
+                        <>
+                          <span>•</span>
+                          <span className="text-emerald-700 font-extrabold">🎓 {offerForm.min_education_level}</span>
+                        </>
+                      )}
                     </p>
                   </div>
 
