@@ -51,6 +51,7 @@ export default function ConfidentialitePage() {
     { nom: "Resend", role: "Envoi des e-mails", detail: "Confirmations d'inscription, alertes et notifications de candidature." },
     { nom: "Daily.co", role: "Entretiens vidéo", detail: "Transport des flux audio et vidéo pendant un entretien." },
     { nom: "Cloudflare R2", role: "Stockage de fichiers", detail: "Stockage complémentaire des documents." },
+    { nom: "OpenStreetMap", role: "Fonds de carte", detail: "Fournit les images de carte affichées avec un itinéraire de transport. Votre adresse IP et la zone affichée lui parviennent au chargement de la carte ; votre position GPS ne lui est jamais transmise." },
   ];
 
   return (
