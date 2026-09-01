@@ -8,6 +8,8 @@ import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
+import OfferMediaGallery from "@/components/OfferMediaGallery";
+import { parseOfferImages, serializeOfferImages } from "@/lib/offerMedia";
 import { detectWhatsAppNumber, buildWhatsAppLink, resolveOfferAction } from "@/lib/offerContact";
 import { isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
@@ -51,8 +53,9 @@ export default function AdminOffresPage() {
 
   // Formulaire de l'offre
   const [offerForm, setOfferForm] = useState(EMPTY_OFFER);
-  const [offerImageFile, setOfferImageFile] = useState(null);
-  const [offerImagePreview, setOfferImagePreview] = useState(null);
+  // Support Multi-Photos pour une publication
+  const [offerImageFiles, setOfferImageFiles] = useState([]);
+  const [offerImagePreviews, setOfferImagePreviews] = useState([]);
   const [accompanyingText, setAccompanyingText] = useState("");
 
   // États du Scanner IA
@@ -89,6 +92,7 @@ export default function AdminOffresPage() {
   };
 
   const fileDropInputRef = useRef(null);
+  const additionalFileInputRef = useRef(null);
 
   async function loadAdminData() {
     try {
@@ -149,25 +153,35 @@ export default function AdminOffresPage() {
     };
   }, []);
 
-  // Gestion du téléversement de fichier affiche
-  const handleFileDropSelect = (file) => {
-    if (!file) return;
-    setOfferImageFile(file);
+  // Gestion du téléversement de plusieurs fichiers photos / affiches
+  const handleFilesSelect = (files) => {
+    const fileList = Array.from(files || []).filter((f) => f && (f.type?.startsWith("image/") || f.name?.endsWith(".pdf")));
+    if (fileList.length === 0) return;
+
+    const newPreviews = fileList.map((f) => URL.createObjectURL(f));
+
+    setOfferImageFiles((prev) => [...prev, ...fileList]);
+    setOfferImagePreviews((prev) => [...prev, ...newPreviews]);
     setExamenPasse(false);
-    const previewUrl = URL.createObjectURL(file);
-    setOfferImagePreview(previewUrl);
     setScanSuccess(false);
     setScanMessage("");
 
-    // Si on est en mode Scanner IA, lancer l'extraction automatique
+    triggerToast(
+      fileList.length > 1
+        ? `📸 ${fileList.length} photos ajoutées à la publication !`
+        : "📸 1 photo ajoutée à la publication !",
+      "fa-images"
+    );
+
+    // Si on est en mode Scanner IA, lancer l'extraction automatique sur la première photo
     if (publishMode === "ai_scanner") {
-      runAIScanner(file, accompanyingText);
+      runAIScanner(fileList[0], accompanyingText);
     }
   };
 
   const handleFileInputChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileDropSelect(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      handleFilesSelect(e.target.files);
     }
   };
 
@@ -177,13 +191,52 @@ export default function AdminOffresPage() {
 
   const handleDrop = (e) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileDropSelect(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesSelect(e.dataTransfer.files);
     }
   };
 
+  // Supprimer une photo individuelle
+  const handleRemoveSingleImage = (index) => {
+    const updatedFiles = offerImageFiles.filter((_, i) => i !== index);
+    const updatedPreviews = offerImagePreviews.filter((_, i) => i !== index);
+    setOfferImageFiles(updatedFiles);
+    setOfferImagePreviews(updatedPreviews);
+
+    if (updatedPreviews.length === 0) {
+      setOfferForm((prev) => ({ ...prev, image_url: "" }));
+      setScanSuccess(false);
+      setScanMessage("");
+    }
+  };
+
+  // Définir une photo comme photo principale de couverture
+  const handleSetCoverImage = (index) => {
+    if (index === 0) return;
+    setOfferImageFiles((prev) => {
+      const selected = prev[index];
+      const others = prev.filter((_, i) => i !== index);
+      return [selected, ...others];
+    });
+    setOfferImagePreviews((prev) => {
+      const selected = prev[index];
+      const others = prev.filter((_, i) => i !== index);
+      return [selected, ...others];
+    });
+    triggerToast("Photo principale de couverture mise à jour !", "fa-star");
+  };
+
+  // Tout supprimer
+  const handleRemoveAllOfferImages = () => {
+    setOfferImageFiles([]);
+    setOfferImagePreviews([]);
+    setOfferForm((prev) => ({ ...prev, image_url: "" }));
+    setScanSuccess(false);
+    setScanMessage("");
+  };
+
   // Exécution du Scanner / Organisateur IA
-  const runAIScanner = async (fileToScan = offerImageFile, textToInclude = accompanyingText) => {
+  const runAIScanner = async (fileToScan = offerImageFiles[0], textToInclude = accompanyingText) => {
     const hasFile = !!fileToScan;
     const hasText = typeof textToInclude === "string" && textToInclude.trim().length > 0;
 
@@ -264,14 +317,6 @@ export default function AdminOffresPage() {
     }
   };
 
-  const handleRemoveOfferImage = () => {
-    setOfferImageFile(null);
-    setOfferImagePreview(null);
-    setOfferForm((prev) => ({ ...prev, image_url: "" }));
-    setScanSuccess(false);
-    setScanMessage("");
-  };
-
   // Génération d'une affiche de recrutement IA au format 1:1
   const handleGenerateAiPoster = async (customPrompt = aiPrompt) => {
     const promptToUse = (customPrompt || aiPrompt || "").trim();
@@ -300,13 +345,10 @@ export default function AdminOffresPage() {
 
       const data = await res.json();
       if (data.success && data.imageUrl) {
-        setOfferImagePreview(data.imageUrl);
+        setOfferImagePreviews((prev) => [data.imageUrl, ...prev]);
         setOfferForm((prev) => ({ ...prev, image_url: data.imageUrl }));
         setScanSuccess(true);
-        // Volontairement PAS setExamenPasse(true) : générer une affiche
-        // n'examine pas le contenu de l'offre. L'étape Examinateur reste à
-        // franchir.
-        setScanMessage("✨ Affiche format carré 1:1 générée avec succès et attachée à l'offre !");
+        setScanMessage("✨ Affiche format carré 1:1 générée avec succès et attachée à la publication !");
         triggerToast("🎉 Affiche 1:1 générée avec succès !", "fa-circle-check");
       } else {
         triggerToast(data.error || "Erreur lors de la génération de l'image.", "fa-triangle-exclamation");
@@ -330,24 +372,55 @@ export default function AdminOffresPage() {
     triggerToast("Prompt suggéré généré avec succès !", "fa-wand-magic-sparkles");
   };
 
+  // Téléversement parallèle de toutes les photos sur Supabase Storage
+  const uploadAllOfferPhotos = async () => {
+    const uploadedUrls = [];
+
+    // Si on a des fichiers locaux
+    if (offerImageFiles.length > 0) {
+      for (let i = 0; i < offerImageFiles.length; i++) {
+        const file = offerImageFiles[i];
+        const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
+        const storagePath = `${userSession.user.id}/admin-offers-${Date.now()}-${i}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("job-offers")
+          .upload(storagePath, file, { contentType: file.type || "image/jpeg" });
+
+        if (!uploadError) {
+          const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
+          if (publicUrlData?.publicUrl) {
+            uploadedUrls.push(publicUrlData.publicUrl);
+          }
+        }
+      }
+    }
+
+    // Ajouter les URLs distantes préexistantes (ex: générées par IA)
+    const existingRemoteUrls = offerImagePreviews.filter((p) => p && p.startsWith("http"));
+    const combined = [...uploadedUrls, ...existingRemoteUrls.filter((url) => !uploadedUrls.includes(url))];
+
+    if (combined.length > 0) {
+      return serializeOfferImages(combined);
+    }
+    return offerForm.image_url || "";
+  };
+
   // Publication directe en 1 Clic assistée par IA (depuis image et/ou description)
   const handleInstantAiPublish = async () => {
     if (!userSession?.user?.id) {
       triggerToast("Veuillez vous connecter en tant qu'administrateur.", "fa-triangle-exclamation");
       return;
     }
-    const hasFile = !!offerImageFile;
+    const hasFiles = offerImageFiles.length > 0 || offerImagePreviews.length > 0;
     const hasText = typeof accompanyingText === "string" && accompanyingText.trim().length > 0;
     const hasFormFilled = offerForm.title?.trim() && offerForm.company?.trim();
 
-    if (!hasFile && !hasText && !hasFormFilled) {
-      triggerToast("Veuillez déposer une image ou saisir une description.", "fa-triangle-exclamation");
+    if (!hasFiles && !hasText && !hasFormFilled) {
+      triggerToast("Veuillez déposer une ou plusieurs photos ou saisir une description.", "fa-triangle-exclamation");
       return;
     }
 
-    // Sous-point 4 : rien ne part sur le Fil d'Actualité sans revue. Ce
-    // chemin scannait ET publiait dans le même clic (« Publication directe
-    // en 1 Clic ») : l'extraction n'était donc jamais relue par personne.
     if (!examenPasse) {
       triggerToast("Lancez l'Examinateur et vérifiez les informations avant de publier.", "fa-triangle-exclamation");
       return;
@@ -360,9 +433,9 @@ export default function AdminOffresPage() {
       let currentOfferData = { ...offerForm };
 
       // Si le formulaire n'a pas encore été analysé / pré-rempli, lancer l'IA
-      if (!hasFormFilled || hasFile || hasText) {
+      if (!hasFormFilled || hasFiles || hasText) {
         const formData = new FormData();
-        if (hasFile) formData.append("file", offerImageFile);
+        if (offerImageFiles.length > 0) formData.append("file", offerImageFiles[0]);
         if (hasText) formData.append("accompanying_text", accompanyingText.trim());
 
         const extRes = await fetch("/api/admin/extract-job-poster", {
@@ -386,21 +459,8 @@ export default function AdminOffresPage() {
         }
       }
 
-      // Upload de l'image si elle n'est pas encore stockée
-      let finalImageUrl = currentOfferData.image_url || "";
-      if (offerImageFile && (!finalImageUrl || finalImageUrl.startsWith("blob:"))) {
-        const ext = offerImageFile.name.split(".").pop().toLowerCase();
-        const storagePath = `${userSession.user.id}/admin-offers-${Date.now()}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("job-offers")
-          .upload(storagePath, offerImageFile, { contentType: offerImageFile.type });
-
-        if (!uploadError) {
-          const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
-          finalImageUrl = publicUrlData?.publicUrl || "";
-        }
-      }
+      // Upload de toutes les photos attachées
+      const finalImageUrl = await uploadAllOfferPhotos();
 
       // Détection WhatsApp automatique
       let externalLink = currentOfferData.external_link || "";
@@ -456,10 +516,10 @@ export default function AdminOffresPage() {
         triggerToast(resData.error || "Erreur lors de la publication.", "fa-circle-xmark");
       } else {
         setAllOffers((prev) => [resData.offer, ...prev]);
-        triggerToast("🎉 Offre analysée et publiée en direct sur le Fil d'Actualité !", "fa-bullhorn");
+        triggerToast("🎉 Publication multi-photos mise en ligne avec succès sur le Fil !", "fa-bullhorn");
         setOfferForm(EMPTY_OFFER);
-        setOfferImageFile(null);
-        setOfferImagePreview(null);
+        setOfferImageFiles([]);
+        setOfferImagePreviews([]);
         setAccompanyingText("");
         setScanSuccess(false);
         setScanMessage("");
@@ -482,9 +542,6 @@ export default function AdminOffresPage() {
       return;
     }
 
-    // Même verrou que la publication « 1 clic » : le bouton est déjà
-    // désactivé, cette garde couvre un submit déclenché autrement
-    // (touche Entrée dans un champ du formulaire).
     if (!examenPasse) {
       triggerToast("Vérifiez les informations dans le panneau de revue avant de publier.", "fa-triangle-exclamation");
       return;
@@ -493,24 +550,10 @@ export default function AdminOffresPage() {
     setSavingOffer(true);
 
     try {
-      let imageUrl = offerForm.image_url || "";
+      // Upload de toutes les photos sélectionnées
+      const finalImageUrl = await uploadAllOfferPhotos();
 
-      // Si l'image n'est pas encore téléversée sur Supabase Storage
-      if (offerImageFile && (!imageUrl || imageUrl.startsWith("blob:"))) {
-        const ext = offerImageFile.name.split(".").pop().toLowerCase();
-        const storagePath = `${userSession.user.id}/admin-offers-${Date.now()}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("job-offers")
-          .upload(storagePath, offerImageFile, { contentType: offerImageFile.type });
-
-        if (!uploadError) {
-          const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
-          imageUrl = publicUrlData?.publicUrl || "";
-        }
-      }
-
-      // Si un numéro WhatsApp / Téléphone est renseigné et aucun lien externe défini, générer le lien wa.me
+      // Détection WhatsApp automatique
       let externalLink = offerForm.external_link || "";
       const phoneDigits = detectWhatsAppNumber({
         contact_phone: offerForm.contact_phone,
@@ -536,7 +579,7 @@ export default function AdminOffresPage() {
         salary_range: offerForm.salary_range || null,
         min_education_level: offerForm.min_education_level || "Aucun",
         description: offerForm.description || "",
-        image_url: imageUrl || null,
+        image_url: finalImageUrl || null,
         deadline: offerForm.deadline || null,
         contact_email: formEmail || null,
         application_email: (offerForm.application_email || formEmail || "").trim() || null,
@@ -566,12 +609,12 @@ export default function AdminOffresPage() {
         console.error(resData);
       } else {
         setAllOffers((prev) => [resData.offer, ...prev]);
-        triggerToast("🎉 Offre publiée en direct sur le Fil d'Actualité !", "fa-bullhorn");
+        triggerToast("🎉 Publication multi-photos mise en ligne avec succès sur le Fil !", "fa-bullhorn");
         
         // Reset
         setOfferForm(EMPTY_OFFER);
-        setOfferImageFile(null);
-        setOfferImagePreview(null);
+        setOfferImageFiles([]);
+        setOfferImagePreviews([]);
         setAccompanyingText("");
         setScanSuccess(false);
         setScanMessage("");
@@ -837,20 +880,20 @@ export default function AdminOffresPage() {
                   </button>
                 </div>
 
-                {offerImagePreview && (
+                {offerImagePreviews.length > 0 && (
                   <button
                     type="button"
-                    onClick={handleRemoveOfferImage}
+                    onClick={handleRemoveAllOfferImages}
                     className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer flex items-center gap-1"
                   >
                     <i className="fa-solid fa-trash-can"></i>
-                    <span>Supprimer</span>
+                    <span>Tout supprimer ({offerImagePreviews.length})</span>
                   </button>
                 )}
               </div>
 
               {/* Contenu selon l'onglet choisi */}
-              {imageTab === "ai_generate" && !offerImagePreview && (
+              {imageTab === "ai_generate" && offerImagePreviews.length === 0 && (
                 <div className="p-5 bg-gradient-to-br from-emerald-50/70 via-teal-50/40 to-cyan-50/30 border border-emerald-200 rounded-3xl space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -934,8 +977,8 @@ export default function AdminOffresPage() {
                 </div>
               )}
 
-              {/* Mode Upload / Drag & Drop classique */}
-              {imageTab === "upload" && !offerImagePreview && (
+              {/* Mode Upload / Drag & Drop Multi-Photos */}
+              {imageTab === "upload" && offerImagePreviews.length === 0 && (
                 <div
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
@@ -945,47 +988,62 @@ export default function AdminOffresPage() {
                   <input
                     ref={fileDropInputRef}
                     type="file"
+                    multiple
                     accept="image/*,.pdf"
                     onChange={handleFileInputChange}
                     className="hidden"
                   />
                   <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform">
-                    <i className="fa-solid fa-cloud-arrow-up"></i>
+                    <i className="fa-solid fa-images"></i>
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-gray-900">
-                      Glissez-déposez l'affiche ici, ou cliquez pour parcourir
+                      Glissez-déposez vos photos ou affiches ici, ou cliquez pour parcourir
                     </h3>
                     <p className="text-[11px] text-gray-500 font-medium mt-1">
-                      Formats supportés : JPG, PNG, WEBP, PDF (l'IA analysera automatiquement le texte)
+                      Formats supportés : JPG, PNG, WEBP, PDF (Vous pouvez sélectionner <strong>plusieurs photos à la fois</strong>)
                     </p>
                   </div>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white text-emerald-800 text-[11px] font-extrabold rounded-full border border-emerald-200 shadow-2xs">
-                    <i className="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
-                    <span>Extraction automatique en 1 seconde</span>
-                  </span>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white text-emerald-800 text-[11px] font-extrabold rounded-full border border-emerald-200 shadow-2xs">
+                      <i className="fa-solid fa-layer-group text-emerald-600"></i>
+                      <span>Support Multi-Photos</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white text-emerald-800 text-[11px] font-extrabold rounded-full border border-emerald-200 shadow-2xs">
+                      <i className="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
+                      <span>Extraction automatique IA</span>
+                    </span>
+                  </div>
                 </div>
               )}
 
-              {/* Aperçu de l'Affiche (qu'elle soit issue d'upload ou générée par IA) */}
-              {offerImagePreview && (
-                <div className="relative rounded-3xl overflow-hidden border border-gray-200 bg-gray-950 flex flex-col items-center group">
-                  <div className="relative w-full aspect-square max-h-[380px] flex items-center justify-center overflow-hidden bg-black/40">
+              {/* Galerie Multi-Photos & Gestionnaire de Couverture */}
+              {offerImagePreviews.length > 0 && (
+                <div className="rounded-3xl overflow-hidden border border-gray-200 bg-gray-950 flex flex-col items-center shadow-md">
+                  
+                  {/* Photo de Couverture (Principale) */}
+                  <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] max-h-[380px] flex items-center justify-center overflow-hidden bg-black/40 group">
                     <img
-                      src={offerImagePreview}
-                      alt="Affiche de recrutement"
+                      src={offerImagePreviews[0]}
+                      alt="Photo principale de couverture"
                       className="w-full h-full object-cover transition group-hover:scale-[1.01]"
                     />
-                    
-                    {/* Badge Format 1:1 */}
-                    <div className="absolute top-3 left-3 bg-black/80 text-white text-[10px] font-black px-2.5 py-1 rounded-lg backdrop-blur-xs border border-white/10 flex items-center gap-1 shadow-md">
-                      <i className="fa-solid fa-crop-simple text-[#10E688]"></i>
-                      <span>Format 1:1</span>
+
+                    {/* Badge Photo Principale */}
+                    <div className="absolute top-3 left-3 bg-emerald-600/90 text-white text-[10px] font-black px-2.5 py-1 rounded-lg backdrop-blur-xs border border-emerald-400/40 flex items-center gap-1 shadow-md">
+                      <i className="fa-solid fa-star text-amber-300"></i>
+                      <span>Photo de couverture principale</span>
+                    </div>
+
+                    {/* Badge Compteur Total */}
+                    <div className="absolute top-3 right-3 bg-black/80 text-white text-[10px] font-black px-2.5 py-1 rounded-lg backdrop-blur-xs border border-white/10 flex items-center gap-1 shadow-md">
+                      <i className="fa-solid fa-images text-[#10E688]"></i>
+                      <span>{offerImagePreviews.length} photo{offerImagePreviews.length > 1 ? "s" : ""}</span>
                     </div>
 
                     {/* Animation Laser Scanner IA */}
                     {isScanningAI && (
-                      <div className="absolute inset-0 bg-emerald-950/40 backdrop-blur-xs flex flex-col items-center justify-center text-white z-30">
+                      <div className="absolute inset-0 bg-emerald-950/50 backdrop-blur-xs flex flex-col items-center justify-center text-white z-30">
                         <div className="w-full h-1 bg-gradient-to-r from-transparent via-[#10E688] to-transparent absolute top-0 animate-bounce"></div>
                         <div className="w-12 h-12 border-4 border-[#10E688] border-t-transparent rounded-full animate-spin mb-3"></div>
                         <p className="text-xs font-black text-[#10E688] uppercase tracking-wider animate-pulse">
@@ -996,7 +1054,7 @@ export default function AdminOffresPage() {
 
                     <button
                       type="button"
-                      onClick={() => setViewImageModal({ isOpen: true, url: offerImagePreview || offerForm.image_url })}
+                      onClick={() => setViewImageModal({ isOpen: true, url: offerImagePreviews[0] })}
                       className="absolute bottom-3 right-3 bg-black/70 hover:bg-black text-white text-[11px] font-bold px-3 py-1.5 rounded-xl backdrop-blur-xs flex items-center gap-1.5 shadow-md cursor-pointer"
                     >
                       <i className="fa-solid fa-magnifying-glass-plus"></i>
@@ -1004,11 +1062,84 @@ export default function AdminOffresPage() {
                     </button>
                   </div>
 
-                  {/* Barre d'action sous l'image */}
-                  <div className="w-full bg-gray-900 p-3 px-4 flex items-center justify-between border-t border-gray-800">
+                  {/* Grille des vignettes pour toutes les photos (Reclassement & Suppression) */}
+                  <div className="w-full bg-gray-900/95 p-3 sm:p-4 border-t border-gray-800">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-black text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i className="fa-solid fa-table-cells text-emerald-400"></i>
+                        <span>Toutes les photos attachées ({offerImagePreviews.length})</span>
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-medium hidden sm:inline">
+                        Cliquez sur une photo pour la mettre en couverture
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      {offerImagePreviews.map((previewUrl, idx) => (
+                        <div
+                          key={idx}
+                          className={`relative group/thumb w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
+                            idx === 0
+                              ? "border-[#10E688] ring-2 ring-[#10E688]/30 shadow-md"
+                              : "border-gray-700 hover:border-gray-400 opacity-75 hover:opacity-100"
+                          }`}
+                          onClick={() => handleSetCoverImage(idx)}
+                          title={idx === 0 ? "Photo principale (Couverture)" : "Cliquer pour définir comme couverture"}
+                        >
+                          <img
+                            src={previewUrl}
+                            alt={`Photo ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+
+                          {/* Badge Étoile sur la 1ère */}
+                          {idx === 0 && (
+                            <div className="absolute top-1 left-1 bg-emerald-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[8px] shadow-xs">
+                              <i className="fa-solid fa-star text-amber-300"></i>
+                            </div>
+                          )}
+
+                          {/* Bouton de suppression individuelle */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveSingleImage(idx);
+                            }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-600/90 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover/thumb:opacity-100 transition shadow-xs cursor-pointer z-10"
+                            title="Supprimer cette photo"
+                          >
+                            <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Bouton + Ajouter d'autres photos */}
+                      <button
+                        type="button"
+                        onClick={() => additionalFileInputRef.current?.click()}
+                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-dashed border-emerald-500/50 hover:border-emerald-400 bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-400 flex flex-col items-center justify-center gap-1 transition cursor-pointer group"
+                        title="Ajouter d'autres photos à cette publication"
+                      >
+                        <input
+                          ref={additionalFileInputRef}
+                          type="file"
+                          multiple
+                          accept="image/*,.pdf"
+                          onChange={handleFileInputChange}
+                          className="hidden"
+                        />
+                        <i className="fa-solid fa-plus text-base group-hover:scale-110 transition-transform"></i>
+                        <span className="text-[9px] font-bold">Ajouter</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Barre d'action sous la galerie */}
+                  <div className="w-full bg-gray-950 p-3 px-4 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-gray-800">
                     <div className="flex items-center space-x-2 text-xs font-bold text-gray-300">
-                      <i className="fa-solid fa-check text-emerald-400"></i>
-                      <span>Affiche attachée à la publication</span>
+                      <i className="fa-solid fa-circle-check text-emerald-400"></i>
+                      <span>{offerImagePreviews.length} photo{offerImagePreviews.length > 1 ? "s" : ""} prête{offerImagePreviews.length > 1 ? "s" : ""} pour la publication</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1020,7 +1151,7 @@ export default function AdminOffresPage() {
                           className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-black rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                         >
                           <i className="fa-solid fa-wand-magic-sparkles text-amber-300 text-[11px]"></i>
-                          <span>Régénérer</span>
+                          <span>Générer encore</span>
                         </button>
                       )}
                       <button
@@ -1502,16 +1633,13 @@ export default function AdminOffresPage() {
                 {offerForm.description || "La description détaillée de votre offre apparaîtra ici avec ses emojis et sa mise en page."}
               </div>
 
-              {/* Affiche Visuelle */}
-              {(offerImagePreview || offerForm.image_url) && (
-                <div className="relative w-full rounded-2xl overflow-hidden bg-gray-950 border border-gray-200 flex items-center justify-center min-h-[180px] max-h-[300px]">
-                  <img
-                    src={offerImagePreview || offerForm.image_url}
-                    alt="Aperçu"
-                    className="w-full h-auto max-h-[300px] object-contain mx-auto block"
-                  />
-                  <OfferImageWatermark />
-                </div>
+              {/* Affiche Visuelle Multi-Photos */}
+              {(offerImagePreviews.length > 0 || offerForm.image_url) && (
+                <OfferMediaGallery
+                  media={offerImagePreviews.length > 0 ? offerImagePreviews : offerForm.image_url}
+                  title={offerForm.title || "Aperçu de l'offre"}
+                  onEnlarge={(url) => setViewImageModal({ isOpen: true, url })}
+                />
               )}
 
               {/* Bouton d'action calculé par le moteur de contact */}
@@ -1570,6 +1698,7 @@ export default function AdminOffresPage() {
             <div className="divide-y divide-gray-100">
               {filteredOffers.map((offer) => {
                 const isActivelySponsored = isOfferActivelySponsored(offer);
+                const offerPhotos = parseOfferImages(offer.image_url);
                 return (
                 <div
                   key={offer.id}
@@ -1577,12 +1706,22 @@ export default function AdminOffresPage() {
                 >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-start space-x-3.5">
-                    {offer.image_url ? (
-                      <img
-                        src={offer.image_url}
-                        alt={offer.title}
-                        className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0 shadow-2xs"
-                      />
+                    {offerPhotos.length > 0 ? (
+                      <div
+                        onClick={() => setViewImageModal({ isOpen: true, url: offerPhotos[0] })}
+                        className="relative w-12 h-12 rounded-xl overflow-hidden border border-gray-200 shrink-0 shadow-2xs cursor-pointer group"
+                      >
+                        <img
+                          src={offerPhotos[0]}
+                          alt={offer.title}
+                          className="w-full h-full object-cover"
+                        />
+                        {offerPhotos.length > 1 && (
+                          <div className="absolute bottom-0 right-0 bg-black/80 text-[8px] font-black text-white px-1 rounded-tl-md">
+                            +{offerPhotos.length - 1}
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center shrink-0">
                         {offer.company ? offer.company.substring(0, 2).toUpperCase() : "CO"}

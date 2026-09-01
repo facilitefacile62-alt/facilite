@@ -9,6 +9,7 @@ import ApplyModal from "@/components/ApplyModal";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
+import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { isOfferExpired } from "@/lib/offerExpiration";
 
 export default function OffreDetailClient({ initialOffer }) {
@@ -221,16 +222,15 @@ export default function OffreDetailClient({ initialOffer }) {
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8">
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
-          {/* S'il n'est pas en cours d'édition, on affiche l'image de l'offre (Style Facebook propre) */}
+          {/* S'il n'est pas en cours d'édition, on affiche la galerie d'images de l'offre */}
           {!isEditing && offer.image_url && (
-            <div className="relative w-full rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 flex items-center justify-center min-h-[260px] sm:min-h-[380px] max-h-[580px]">
-              <img
-                src={offer.image_url}
-                alt={offer.title}
-                className="w-full h-auto max-h-[580px] object-contain mx-auto block"
-                loading="lazy"
+            <div className="w-full">
+              <OfferMediaGallery
+                media={offer.image_url}
+                title={offer.title}
+                maxHeight="max-h-[580px]"
+                className="rounded-none border-x-0 border-t-0"
               />
-              <OfferImageWatermark />
             </div>
           )}
 

@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import ApplyModal from "@/components/ApplyModal";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
+import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
 import { isOfferExpired } from "@/lib/offerExpiration";
@@ -773,36 +774,22 @@ function OffresContent({ listingType } = {}) {
                     </p>
                   </div>
 
-                  {/* Visuel de l'offre */}
-                  <div
-                    className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 mb-3 border border-gray-200/90 dark:border-gray-800 group/img cursor-pointer flex items-center justify-center"
-                    onClick={() => setViewImageModal({ isOpen: true, url: offerImg })}
-                    title="Cliquer pour voir l'affiche complète en plein écran"
-                  >
-                    {/* Badge Expirée sur l'image */}
-                    {isExpired && (
-                      <div className="absolute top-2.5 left-2.5 z-20 bg-rose-600/90 backdrop-blur-xs text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1.5 pointer-events-none">
-                        <i className="fa-solid fa-hourglass-end text-[9px]"></i>
-                        <span>Délai dépassé</span>
-                      </div>
-                    )}
-
-                    {/* Overlay au survol */}
-                    <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/30 transition-colors duration-200 z-10 flex items-center justify-center">
-                      <div className="opacity-0 group-hover/img:opacity-100 bg-black/80 text-white rounded-full py-1.5 px-3.5 shadow-xl transform scale-95 group-hover/img:scale-100 transition-all duration-200 flex items-center gap-1.5">
-                        <i className="fa-solid fa-expand text-xs text-emerald-400"></i>
-                        <span className="text-xs font-black">Voir l'affiche</span>
-                      </div>
+                  {/* Visuel de l'offre (Support Multi-Photos avec Grille & Visionneuse Plein Écran) */}
+                  {(offer.image_url || offer.image) && (
+                    <div className="relative mb-3">
+                      {isExpired && (
+                        <div className="absolute top-2.5 left-2.5 z-20 bg-rose-600/90 backdrop-blur-xs text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1.5 pointer-events-none">
+                          <i className="fa-solid fa-hourglass-end text-[9px]"></i>
+                          <span>Délai dépassé</span>
+                        </div>
+                      )}
+                      <OfferMediaGallery
+                        media={offer.image_url || offer.image}
+                        title={offer.title}
+                        maxHeight="max-h-64 sm:max-h-80"
+                      />
                     </div>
-                    {/* Image principale */}
-                    <img
-                      src={offerImg}
-                      alt={offer.title}
-                      className={`w-full h-full object-cover object-top mx-auto block animate-fade-in transition-transform duration-300 group-hover/img:scale-105 ${isExpired ? "filter grayscale-[30%]" : ""}`}
-                      loading="lazy"
-                    />
-                    <OfferImageWatermark />
-                  </div>
+                  )}
 
                   {/* Barre d'Actions Réseau Social & Postuler */}
                   <div className="mt-auto">

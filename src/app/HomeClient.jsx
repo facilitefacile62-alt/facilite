@@ -15,6 +15,7 @@ import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { safeJsonLdString } from "@/lib/jsonLd";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
+import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { resolveOfferAction } from "@/lib/offerContact";
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
@@ -1791,25 +1792,14 @@ export default function Home({ initialOffers = [] }) {
                       </div>
                     )}
 
-                    {/* Visuel de l'offre (Hauteur Standardisée et Cadrage Homogène) */}
+                    {/* Visuel de l'offre (Support Multi-Photos avec Grille & Visionneuse Plein Écran) */}
                     {(job.image || job.image_url) && (
-                      <div
-                        className="relative w-full h-64 sm:h-80 rounded-2xl overflow-hidden bg-gray-900/90 dark:bg-black/90 border border-gray-200/80 dark:border-gray-800 group cursor-pointer flex items-center justify-center"
-                        onClick={() => setViewImageModal({ isOpen: true, url: job.image || job.image_url })}
-                        title="Cliquer pour voir l'affiche complète en plein écran"
-                      >
-                        <div className="absolute top-2.5 right-2.5 bg-black/60 hover:bg-black/80 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1.5 z-20 pointer-events-none transition opacity-90 group-hover:opacity-100">
-                          <i className="fa-solid fa-magnifying-glass-plus text-xs"></i>
-                          <span>Agrandir</span>
-                        </div>
-                        <img
-                          src={job.image || job.image_url}
-                          alt={selectedLang === "FR" ? job.titleFR : job.titleEN || "Affiche de recrutement"}
-                          className="w-full h-full object-cover object-top mx-auto block animate-fade-in transition-transform duration-300 group-hover:scale-105"
-                          loading="eager"
-                        />
-                        <OfferImageWatermark />
-                      </div>
+                      <OfferMediaGallery
+                        media={job.image || job.image_url}
+                        title={selectedLang === "FR" ? job.titleFR : job.titleEN || "Affiche de recrutement"}
+                        className="my-1"
+                        maxHeight="max-h-80 sm:max-h-96"
+                      />
                     )}
 
                     {/* Barre d'Actions & Stats (Style Demandé 1:1 : [ Postuler ] [ 🔖 ] [ 🔗 ] + 👁 2.4k vues 💬 327) */}
