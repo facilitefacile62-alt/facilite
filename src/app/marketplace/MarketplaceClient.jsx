@@ -444,13 +444,15 @@ const INITIAL_MARKETPLACE_ITEMS = [
 ];
 
 const CATEGORIES = [
-  { id: "all", label: "Toutes les annonces", icon: "fa-solid fa-border-all" },
+  { id: "all", label: "Toutes les annonces", icon: "fa-solid fa-bars" },
   { id: "telephones", label: "Téléphones & Tech", icon: "fa-solid fa-mobile-screen-button" },
   { id: "vehicules", label: "Véhicules & Motos", icon: "fa-solid fa-car" },
   { id: "immobilier", label: "Immobilier & Logements", icon: "fa-solid fa-house" },
   { id: "mode", label: "Mode & Vêtements", icon: "fa-solid fa-shirt" },
   { id: "maison", label: "Maison & Électro", icon: "fa-solid fa-couch" },
   { id: "electronique", label: "Électronique & Son", icon: "fa-solid fa-tv" },
+  { id: "informatique", label: "Informatique & PC", icon: "fa-solid fa-laptop" },
+  { id: "services", label: "Services & Emploi", icon: "fa-solid fa-briefcase" },
 ];
 
 const CITIES = [
@@ -504,6 +506,7 @@ export default function MarketplaceClient() {
 
   // Modals & sélection
   const [selectedItem, setSelectedItem] = useState(null);
+  const [isAllCategoriesDrawerOpen, setIsAllCategoriesDrawerOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -1173,13 +1176,31 @@ export default function MarketplaceClient() {
 
           {/* 🔍 BARRE DE FILTRES PAR CATÉGORIES & TRI */}
           <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 dark:border-gray-800">
-            {/* Pilules de Catégories scrollables */}
+            {/* Pilules de Catégories scrollables avec bouton '☰ Toutes' en tête */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 flex-1">
-              {CATEGORIES.map((cat) => (
+              {/* Bouton "☰ Toutes" (Style officiel de la capture) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory("all");
+                  setIsAllCategoriesDrawerOpen(true);
+                }}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer shadow-xs border shrink-0 ${
+                  selectedCategory === "all"
+                    ? "bg-[#131921] text-white border-white ring-2 ring-[#1877F2]/40"
+                    : "bg-[#1c2431] hover:bg-[#232f3e] text-white border-gray-500/60"
+                }`}
+                title="Ouvrir toutes les catégories"
+              >
+                <i className="fa-solid fa-bars text-sm text-white"></i>
+                <span className="text-sm font-bold text-white tracking-wide">Toutes</span>
+              </button>
+
+              {CATEGORIES.filter((cat) => cat.id !== "all").map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                     selectedCategory === cat.id
                       ? "bg-[#1877F2] text-white shadow-xs"
                       : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -2060,6 +2081,133 @@ export default function MarketplaceClient() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📁 MODAL / DRAWER TOUTES LES CATÉGORIES (☰ TOUTES) */}
+      {isAllCategoriesDrawerOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in"
+          onClick={() => setIsAllCategoriesDrawerOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden space-y-5 animate-in zoom-in-95 max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Drawer */}
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#131921] text-white flex items-center justify-center text-base shadow-sm border border-gray-700">
+                  <i className="fa-solid fa-bars"></i>
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+                    Toutes les catégories & rayons
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Explorez toutes les annonces publiées sur Facilité Marketplace
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAllCategoriesDrawerOpen(false)}
+                className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            {/* Grille de toutes les catégories */}
+            <div className="overflow-y-auto pr-1 py-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Option "Toutes les annonces" */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory("all");
+                  setIsAllCategoriesDrawerOpen(false);
+                }}
+                className={`p-3.5 rounded-2xl border text-left transition flex items-center justify-between group cursor-pointer ${
+                  selectedCategory === "all"
+                    ? "bg-[#131921] text-white border-blue-400 ring-2 ring-blue-400/30"
+                    : "bg-gray-50 dark:bg-gray-800/60 hover:bg-blue-50 dark:hover:bg-blue-950/40 border-gray-200 dark:border-gray-700"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#1877F2]/15 text-[#1877F2] flex items-center justify-center text-sm font-black">
+                    <i className="fa-solid fa-border-all"></i>
+                  </div>
+                  <div>
+                    <h4 className={`text-xs font-black ${selectedCategory === "all" ? "text-white" : "text-gray-900 dark:text-white"}`}>
+                      Toutes les annonces
+                    </h4>
+                    <p className={`text-[10px] ${selectedCategory === "all" ? "text-gray-300" : "text-gray-500"}`}>
+                      Tout le catalogue Sénégal
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-black px-2 py-0.5 rounded-full bg-[#1877F2] text-white">
+                  {items.length}
+                </span>
+              </button>
+
+              {/* Autres catégories */}
+              {CATEGORIES.filter((c) => c.id !== "all").map((cat) => {
+                const count = items.filter((it) => it.category === cat.id).length;
+                const isSelected = selectedCategory === cat.id;
+
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(cat.id);
+                      setIsAllCategoriesDrawerOpen(false);
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left transition flex items-center justify-between group cursor-pointer ${
+                      isSelected
+                        ? "bg-[#1877F2] text-white border-[#1877F2] shadow-sm"
+                        : "bg-gray-50 dark:bg-gray-800/60 hover:bg-blue-50 dark:hover:bg-blue-950/40 border-gray-200 dark:border-gray-700"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm ${
+                        isSelected ? "bg-white/20 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 group-hover:text-[#1877F2]"
+                      }`}>
+                        <i className={cat.icon}></i>
+                      </div>
+                      <div>
+                        <h4 className={`text-xs font-black ${isSelected ? "text-white" : "text-gray-900 dark:text-white"}`}>
+                          {cat.label}
+                        </h4>
+                        <p className={`text-[10px] ${isSelected ? "text-blue-100" : "text-gray-500"}`}>
+                          {count} article{count !== 1 ? "s" : ""} disponible{count !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <i className={`fa-solid fa-chevron-right text-xs ${isSelected ? "text-white" : "text-gray-400 group-hover:text-[#1877F2]"}`}></i>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Footer Drawer */}
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-3 flex items-center justify-between">
+              <span className="text-[11px] text-gray-500">
+                {items.length} annonces actives dans {selectedCity}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory("all");
+                  setIsAllCategoriesDrawerOpen(false);
+                }}
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
         </div>
       )}
