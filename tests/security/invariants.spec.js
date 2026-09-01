@@ -286,7 +286,15 @@ test.describe("Invariants de sécurité", () => {
     //
     // "resumes" n'a PLUS vocation à jamais y figurer, même temporairement :
     // s'il redevient public un jour, ce test doit rester rouge.
-    const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers"]);
+    //   - "marketplace-photos" : photos des articles mis en vente. Déposées
+    //     par un vendeur dans un dossier à son nom (policy INSERT préfixée
+    //     par auth.uid()), affichées publiquement sur les fiches d'articles
+    //     — c'est leur seule raison d'être. Aucune donnée personnelle : ni
+    //     document d'identité, ni CV, ni pièce jointe de conversation. Même
+    //     classe que "job-offers" ci-dessus. Le bucket plafonne chaque
+    //     fichier à 2 Mo et n'accepte que jpeg/png/webp. Décision écrite le
+    //     2026-09-01, migration 20260901190000_marketplace_reelle.sql.
+    const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers", "marketplace-photos"]);
 
     const rows = await runIntrospectionSql(`SELECT id, public FROM storage.buckets ORDER BY id;`);
     const violations = rows.filter((r) => r.public === true && !JUSTIFIED_PUBLIC_BUCKETS.has(r.id));
