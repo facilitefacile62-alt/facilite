@@ -9,18 +9,31 @@ import { sendMessage } from "@/lib/messages";
 import RoleBadge from "@/components/RoleBadge";
 import UnreadBadge from "@/components/UnreadBadge";
 import VideoInterviewModal from "@/components/VideoInterviewModal";
+import SocialShareButtons from "@/components/SocialShareButtons";
+import OfferImageWatermark from "@/components/OfferImageWatermark";
+import OfferMediaGallery from "@/components/OfferMediaGallery";
+import { parseOfferImages, serializeOfferImages } from "@/lib/offerMedia";
+import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
+import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 const EMPTY_OFFER = {
   title: "",
   company: "",
-  location: "",
+  location: "Sénégal",
   contract_type: "CDI",
+  listing_type: "offre_emploi",
   salary_range: "",
   min_education_level: "Aucun",
   description: "",
   image_url: "",
   deadline: "",
+  contact_email: "",
+  contact_phone: "",
+  external_link: "",
+  application_url: "",
+  application_email: "",
+  additional_info: "",
   requires_cover_letter: false,
 };
 
@@ -108,17 +121,28 @@ export default function RecruteurDashboardPage() {
   const logoInputRef = useRef(null);
   const bannerInputRef = useRef(null);
 
-  // --- Onglet Offres ---
+  // --- Onglet Offres / Publieur IA & Multi-Photos ---
   const [myOffers, setMyOffers] = useState([]);
+  const [offerSearchQuery, setOfferSearchQuery] = useState("");
+  const [publishMode, setPublishMode] = useState("ai_scanner"); // "ai_scanner" | "manual"
+  const [imageTab, setImageTab] = useState("upload"); // "upload" | "ai_generate"
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGeneratingAiPoster, setIsGeneratingAiPoster] = useState(false);
+  const [isScanningAI, setIsScanningAI] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
+  const [examenPasse, setExamenPasse] = useState(false);
+  const [scanMessage, setScanMessage] = useState("");
+  const [offerImageFiles, setOfferImageFiles] = useState([]);
+  const [offerImagePreviews, setOfferImagePreviews] = useState([]);
+  const [accompanyingText, setAccompanyingText] = useState("");
   const [offerForm, setOfferForm] = useState(EMPTY_OFFER);
   const [editingOfferId, setEditingOfferId] = useState(null);
   const [savingOffer, setSavingOffer] = useState(false);
   const [togglingOfferId, setTogglingOfferId] = useState(null);
-  const [offerImageFile, setOfferImageFile] = useState(null);
-  const [offerImagePreview, setOfferImagePreview] = useState(null);
-  const [offerImageDragOver, setOfferImageDragOver] = useState(false);
+  const [viewImageModal, setViewImageModal] = useState({ isOpen: false, url: null });
   const [lightboxImage, setLightboxImage] = useState(null);
-  const offerImageInputRef = useRef(null);
+  const fileDropInputRef = useRef(null);
+  const additionalFileInputRef = useRef(null);
 
   // --- Onglet Candidatures reçues ---
   const [applications, setApplications] = useState([]);
@@ -530,64 +554,65 @@ export default function RecruteurDashboardPage() {
     setOfferForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleEditOffer = (offer) => {
-    setActiveTab("offres");
-    setEditingOfferId(offer.id);
-    setOfferForm({
-      title: offer.title || "",
-      company: offer.company || "",
-      location: offer.location || "",
-      contract_type: offer.contract_type || "CDI",
-      salary_range: offer.salary_range || "",
-      min_education_level: offer.min_education_level || "Aucun",
-      description: offer.description || "",
-      image_url: offer.image_url || "",
-      deadline: offer.deadline || "",
-      requires_cover_letter: offer.requires_cover_letter || false,
+  const handleFilesSelect = (files) => {
+    const fileList = Array.from(files || []).filter(
+      (f) => f && (f.type?.startsWith("image/") || f.name?.endsWith(".pdf"))
+    );
+    if (fileList.length === 0) return;
+
+    const newPreviews = fileList.map((f) => URL.createObjectURL(f));
+    setOfferImageFiles((prev) => [...prev, ...fileList]);
+    setOfferImagePreviews((prev) => [...prev, ...newPreviews]);
+    setExamenPasse(false);
+    setScanSuccess(false);
+    setScanMessage("");
+
+    triggerToast(
+      fileList.length > 1
+        ? `📸 ${fileList.length} photos ajoutées à l'offre !`
+        : "📸 1 photo ajoutée à l'offre !",
+      "fa-images"
+    );
+
+    if (publishMode === "ai_scanner") {
+      runAIScanner(fileList[0], accompanyingText);
+    }
+  };
+
+  const handleRemoveSingleImage = (index) => {
+    const updatedFiles = offerImageFiles.filter((_, i) => i !== index);
+    const updatedPreviews = offerImagePreviews.filter((_, i) => i !== index);
+    setOfferImageFiles(updatedFiles);
+    setOfferImagePreviews(updatedPreviews);
+
+    if (updatedPreviews.length === 0) {
+      setOfferForm((prev) => ({ ...prev, image_url: "" }));
+      setScanSuccess(false);
+      setScanMessage("");
+    }
+  };
+
+  const handleSetCoverImage = (index) => {
+    if (index === 0) return;
+    setOfferImageFiles((prev) => {
+      const selected = prev[index];
+      const others = prev.filter((_, i) => i !== index);
+      return [selected, ...others];
     });
-    setOfferImageFile(null);
-    setOfferImagePreview(offer.image_url || null);
-    setTimeout(() => offerFormRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    setOfferImagePreviews((prev) => {
+      const selected = prev[index];
+      const others = prev.filter((_, i) => i !== index);
+      return [selected, ...others];
+    });
+    triggerToast("Photo de couverture mise à jour !");
   };
 
-  const handleCancelEditOffer = () => {
-    setEditingOfferId(null);
-    setOfferForm(EMPTY_OFFER);
-    setOfferImageFile(null);
-    setOfferImagePreview(null);
-  };
-
-  const applyOfferImageFile = (file) => {
-    if (!file) return;
-    if (!OFFER_IMAGE_TYPES.includes(file.type)) {
-      triggerToast("Format d'image non supporté (PNG, JPG ou WEBP uniquement).");
-      return;
-    }
-    if (file.size > MAX_OFFER_IMAGE_BYTES) {
-      triggerToast("Image trop volumineuse (5 Mo maximum).");
-      return;
-    }
-    setOfferImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setOfferImagePreview(reader.result);
-    reader.readAsDataURL(file);
-  };
-
-  const handleOfferImageSelect = (e) => {
-    applyOfferImageFile(e.target.files?.[0]);
-  };
-
-  const handleOfferImageDrop = (e) => {
-    e.preventDefault();
-    setOfferImageDragOver(false);
-    applyOfferImageFile(e.dataTransfer.files?.[0]);
-  };
-
-  const handleRemoveOfferImage = () => {
-    setOfferImageFile(null);
-    setOfferImagePreview(null);
+  const handleRemoveAllOfferImages = () => {
+    setOfferImageFiles([]);
+    setOfferImagePreviews([]);
     setOfferForm((prev) => ({ ...prev, image_url: "" }));
-    if (offerImageInputRef.current) offerImageInputRef.current.value = "";
+    setScanSuccess(false);
+    setScanMessage("");
   };
 
   // --- Onglet Profil Entreprise ---
@@ -709,16 +734,6 @@ export default function RecruteurDashboardPage() {
     setTimeout(() => offerFormRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   };
 
-  // Sans ceci, match_job_offers (RPC utilisée par la recherche sémantique
-  // côté /offres) ne renverrait jamais aucun résultat : la colonne
-  // job_offers.embedding resterait NULL pour toute nouvelle offre. Appelé en
-  // tâche de fond (non "await"-é par l'appelant) pour ne pas retarder le
-  // toast de confirmation de publication/modification.
-  // L'embedding se calcule et s'écrit côté serveur (route dédiée, service_role)
-  // depuis la Vague 3 (Partie 1 du chantier) : job_offers.embedding n'est
-  // plus accordée en UPDATE à authenticated, pour empêcher un recruteur
-  // d'écrire directement un vecteur arbitraire et manipuler son classement
-  // dans la recherche sémantique.
   const generateOfferEmbedding = async (offerId, title, description) => {
     try {
       const text = `${title || ""}\n\n${description || ""}`.trim();
@@ -726,7 +741,7 @@ export default function RecruteurDashboardPage() {
 
       const res = await fetch(`/api/recruteur/offres/${offerId}/embedding`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${userSession.access_token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${userSession?.access_token || ""}` },
         body: JSON.stringify({ title, description }),
       });
 
@@ -739,37 +754,321 @@ export default function RecruteurDashboardPage() {
     }
   };
 
+  const runAIScanner = async (fileToScan = offerImageFiles[0], textToInclude = accompanyingText) => {
+    const hasFile = !!fileToScan;
+    const hasText = typeof textToInclude === "string" && textToInclude.trim().length > 0;
+
+    if (!hasFile && !hasText) {
+      triggerToast("Veuillez déposer une photo/affiche ou coller une description.");
+      return;
+    }
+
+    setIsScanningAI(true);
+    setScanSuccess(false);
+    setScanMessage(
+      hasFile && hasText
+        ? "✨ Fusion et organisation intelligente de l'affiche et du texte par l'IA..."
+        : hasFile
+        ? "🔍 Analyse et extraction automatique de l'affiche par l'IA..."
+        : "📝 Analyse et structuration intelligente de la description par l'IA..."
+    );
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const formData = new FormData();
+      if (hasFile) formData.append("file", fileToScan);
+      if (hasText) formData.append("accompanying_text", textToInclude.trim());
+
+      const res = await fetch("/api/admin/extract-job-poster", {
+        method: "POST",
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.offer) {
+        const extracted = data.offer;
+        setOfferForm((prev) => ({
+          ...prev,
+          title: extracted.title || prev.title || "",
+          company: extracted.company || recruiterProfileForm.company_name || prev.company || "",
+          location: extracted.location || prev.location || "Sénégal",
+          contract_type: extracted.contract_type || prev.contract_type || "CDI",
+          salary_range: extracted.salary_range || prev.salary_range || "",
+          min_education_level: extracted.min_education_level || prev.min_education_level || "Aucun",
+          description: extracted.description || prev.description || "",
+          image_url: extracted.image_url || prev.image_url || "",
+          deadline: extracted.deadline || prev.deadline || "",
+          contact_email: extracted.contact_email || prev.contact_email || "",
+          contact_phone: extracted.contact_phone || prev.contact_phone || "",
+          external_link: extracted.external_link || prev.external_link || "",
+          application_url: extracted.application_url || prev.application_url || "",
+          application_email: extracted.application_email || prev.application_email || "",
+          additional_info: extracted.additional_info || prev.additional_info || "",
+          listing_type: extracted.listing_type || prev.listing_type || "offre_emploi",
+        }));
+
+        setScanSuccess(true);
+        setExamenPasse(true);
+        setScanMessage(
+          hasFile && hasText
+            ? "✨ Affiche et description fusionnées avec succès ! Tous les champs ont été organisés."
+            : hasFile
+            ? "✨ Affiche scannée et formulaire pré-rempli avec succès par l'IA !"
+            : "✨ Texte structuré et formulaire pré-rempli avec succès par l'IA !"
+        );
+        triggerToast("Informations organisées par l'IA !");
+      } else {
+        setScanMessage(data.error || "L'IA n'a pas pu extraire toutes les informations.");
+        triggerToast(data.error || "Extraction partielle.");
+      }
+    } catch (err) {
+      console.error("Erreur Scanner IA:", err);
+      setScanMessage("Erreur réseau lors de l'analyse.");
+      triggerToast("Erreur lors de l'analyse IA.");
+    } finally {
+      setIsScanningAI(false);
+    }
+  };
+
+  const handleGenerateAiPoster = async (customPrompt = aiPrompt) => {
+    const promptToUse = (customPrompt || aiPrompt || "").trim();
+    if (!promptToUse && !offerForm.title.trim()) {
+      triggerToast("Veuillez saisir un prompt ou renseigner le titre du poste.");
+      return;
+    }
+
+    setIsGeneratingAiPoster(true);
+    triggerToast("🎨 Génération de l'affiche 1:1 en cours par l'IA...");
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/generate-job-poster", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: session?.access_token ? `Bearer ${session.access_token}` : "",
+        },
+        body: JSON.stringify({
+          prompt: promptToUse,
+          title: offerForm.title,
+          company: offerForm.company || recruiterProfileForm.company_name,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.imageUrl) {
+        setOfferImagePreviews((prev) => [data.imageUrl, ...prev]);
+        setOfferForm((prev) => ({ ...prev, image_url: data.imageUrl }));
+        setScanSuccess(true);
+        setScanMessage("✨ Affiche format carré 1:1 générée avec succès et attachée à l'offre !");
+        triggerToast("🎉 Affiche 1:1 générée avec succès !");
+      } else {
+        triggerToast(data.error || "Erreur lors de la génération de l'image.");
+      }
+    } catch (err) {
+      console.error("Erreur génération image IA:", err);
+      triggerToast("Erreur de connexion avec le générateur d'image.");
+    } finally {
+      setIsGeneratingAiPoster(false);
+    }
+  };
+
+  const handleSuggestPrompt = () => {
+    const title = offerForm.title || "Offre d'emploi";
+    const company = offerForm.company || recruiterProfileForm.company_name || "Entreprise";
+    const location = offerForm.location || "Dakar, Sénégal";
+    const suggested = `Affiche de recrutement professionnelle et percutante pour le poste de ${title} chez ${company} à ${location}. Style corporate moderne, design soigné, mise en valeur du métier, format carré 1:1`;
+    setAiPrompt(suggested);
+    triggerToast("Prompt suggéré généré avec succès !");
+  };
+
+  const uploadAllOfferPhotos = async () => {
+    const uploadedUrls = [];
+    if (offerImageFiles.length > 0) {
+      for (let i = 0; i < offerImageFiles.length; i++) {
+        const file = offerImageFiles[i];
+        const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
+        const storagePath = `${userSession.user.id}/offers-${Date.now()}-${i}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("job-offers")
+          .upload(storagePath, file, { contentType: file.type || "image/jpeg" });
+        if (!uploadError) {
+          const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
+          if (publicUrlData?.publicUrl) uploadedUrls.push(publicUrlData.publicUrl);
+        }
+      }
+    }
+    const existingRemoteUrls = offerImagePreviews.filter((p) => p && p.startsWith("http"));
+    const combined = [...uploadedUrls, ...existingRemoteUrls.filter((url) => !uploadedUrls.includes(url))];
+    if (combined.length > 0) return serializeOfferImages(combined);
+    return offerForm.image_url || "";
+  };
+
+  const handleInstantAiPublish = async () => {
+    if (!userSession?.user?.id) {
+      triggerToast("Veuillez vous connecter en tant que recruteur.");
+      return;
+    }
+    const hasFiles = offerImageFiles.length > 0 || offerImagePreviews.length > 0;
+    const hasText = typeof accompanyingText === "string" && accompanyingText.trim().length > 0;
+    const hasFormFilled = offerForm.title?.trim() && (offerForm.company?.trim() || recruiterProfileForm.company_name?.trim());
+
+    if (!hasFiles && !hasText && !hasFormFilled) {
+      triggerToast("Veuillez déposer une ou plusieurs photos ou saisir une description.");
+      return;
+    }
+
+    if (!examenPasse) {
+      triggerToast("Lancez l'Examinateur et vérifiez les informations avant de publier.");
+      return;
+    }
+
+    setSavingOffer(true);
+    triggerToast("⚡ Analyse IA et publication en direct...");
+
+    try {
+      let currentOfferData = { ...offerForm };
+      if (!currentOfferData.company?.trim() && recruiterProfileForm.company_name?.trim()) {
+        currentOfferData.company = recruiterProfileForm.company_name.trim();
+      }
+
+      if (!hasFormFilled || hasFiles || hasText) {
+        const formData = new FormData();
+        if (offerImageFiles.length > 0) formData.append("file", offerImageFiles[0]);
+        if (hasText) formData.append("accompanying_text", accompanyingText.trim());
+
+        const extRes = await fetch("/api/admin/extract-job-poster", {
+          method: "POST",
+          headers: userSession?.access_token ? { Authorization: `Bearer ${userSession.access_token}` } : undefined,
+          body: formData,
+        });
+        const extJson = await extRes.json();
+
+        if (extJson.success && extJson.offer) {
+          currentOfferData = {
+            ...currentOfferData,
+            ...extJson.offer,
+            company: extJson.offer.company || currentOfferData.company || recruiterProfileForm.company_name || "Entreprise",
+            image_url: extJson.offer.image_url || offerForm.image_url || "",
+          };
+          setOfferForm(currentOfferData);
+        }
+      }
+
+      const finalImageUrl = await uploadAllOfferPhotos();
+
+      let externalLink = currentOfferData.external_link || "";
+      const phoneDigits = detectWhatsAppNumber({
+        contact_phone: currentOfferData.contact_phone,
+        description: currentOfferData.description,
+        title: currentOfferData.title,
+        company: currentOfferData.company,
+      });
+
+      if (phoneDigits && (!externalLink || externalLink.includes("wa.me"))) {
+        externalLink = buildWhatsAppLink(phoneDigits, {
+          title: currentOfferData.title,
+          company: currentOfferData.company,
+        });
+      }
+
+      const finalEmail = (currentOfferData.contact_email || currentOfferData.application_email || "").trim();
+
+      const payload = {
+        title: (currentOfferData.title || "Opportunité de recrutement").trim(),
+        company: (currentOfferData.company || recruiterProfileForm.company_name || "Entreprise").trim(),
+        location: (currentOfferData.location || "Sénégal").trim(),
+        contract_type: currentOfferData.contract_type || "CDI",
+        salary_range: currentOfferData.salary_range || null,
+        min_education_level: currentOfferData.min_education_level || "Aucun",
+        description: currentOfferData.description || "",
+        image_url: finalImageUrl || null,
+        deadline: currentOfferData.deadline || null,
+        contact_email: finalEmail || null,
+        application_email: (currentOfferData.application_email || finalEmail || "").trim() || null,
+        application_url: currentOfferData.application_url ? currentOfferData.application_url.trim() : null,
+        additional_info: currentOfferData.additional_info ? currentOfferData.additional_info.trim() : null,
+        contact_phone: currentOfferData.contact_phone ? currentOfferData.contact_phone.trim() : (phoneDigits ? `+${phoneDigits}` : null),
+        external_link: externalLink || null,
+        listing_type: LISTING_TYPE_LABELS[currentOfferData.listing_type] ? currentOfferData.listing_type : "offre_emploi",
+        requires_cover_letter: !!currentOfferData.requires_cover_letter,
+        is_active: true,
+        recruiter_id: userSession.user.id,
+      };
+
+      const { data: insertedOffer, error: insertError } = await supabase
+        .from("job_offers")
+        .insert(payload)
+        .select()
+        .single();
+
+      if (insertError) {
+        triggerToast("Erreur lors de la publication de l'offre.");
+      } else {
+        setMyOffers((prev) => [insertedOffer, ...prev]);
+        generateOfferEmbedding(insertedOffer.id, payload.title, payload.description);
+        triggerToast("🎉 Offre publiée avec succès sur le fil d'actualité !");
+        setOfferForm(EMPTY_OFFER);
+        setOfferImageFiles([]);
+        setOfferImagePreviews([]);
+        setAccompanyingText("");
+        setScanSuccess(false);
+        setScanMessage("");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast("Erreur lors de la publication automatique.");
+    } finally {
+      setSavingOffer(false);
+    }
+  };
+
   const handleSubmitOffer = async (e) => {
     e.preventDefault();
     if (!userSession?.user?.id) return;
     setSavingOffer(true);
 
     try {
-      let imageUrl = offerForm.image_url || "";
+      const finalImageUrl = await uploadAllOfferPhotos();
 
-      if (offerImageFile) {
-        const ext = offerImageFile.name.split(".").pop().toLowerCase();
-        const storagePath = buildStoragePath(userSession.user.id, ext);
+      let externalLink = offerForm.external_link || "";
+      const phoneDigits = detectWhatsAppNumber({
+        contact_phone: offerForm.contact_phone,
+        description: offerForm.description,
+        title: offerForm.title,
+        company: offerForm.company,
+      });
 
-        const { error: uploadError } = await supabase.storage
-          .from("job-offers")
-          .upload(storagePath, offerImageFile, { upsert: true, contentType: offerImageFile.type });
-
-        if (uploadError) {
-          console.error("Erreur upload image offre:", uploadError);
-          triggerToast("Erreur lors du téléversement de l'image.");
-          setSavingOffer(false);
-          return;
-        }
-
-        const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
-        imageUrl = publicUrlData?.publicUrl || "";
+      if (phoneDigits && (!externalLink || externalLink.includes("wa.me"))) {
+        externalLink = buildWhatsAppLink(phoneDigits, {
+          title: offerForm.title,
+          company: offerForm.company,
+        });
       }
 
-      // deadline est une colonne DATE : une chaîne vide ("" par défaut dans le
-      // formulaire) ferait échouer l'insert/update avec une erreur de type
-      // Postgres ("invalid input syntax for type date"), il faut null.
-      const payload = { ...offerForm, image_url: imageUrl, deadline: offerForm.deadline || null };
+      const finalEmail = (offerForm.contact_email || offerForm.application_email || "").trim();
+
+      const payload = {
+        title: (offerForm.title || "Opportunité de recrutement").trim(),
+        company: (offerForm.company || recruiterProfileForm.company_name || "Entreprise").trim(),
+        location: (offerForm.location || "Sénégal").trim(),
+        contract_type: offerForm.contract_type || "CDI",
+        salary_range: offerForm.salary_range || null,
+        min_education_level: offerForm.min_education_level || "Aucun",
+        description: offerForm.description || "",
+        image_url: finalImageUrl || null,
+        deadline: offerForm.deadline || null,
+        contact_email: finalEmail || null,
+        application_email: (offerForm.application_email || finalEmail || "").trim() || null,
+        application_url: offerForm.application_url ? offerForm.application_url.trim() : null,
+        additional_info: offerForm.additional_info ? offerForm.additional_info.trim() : null,
+        contact_phone: offerForm.contact_phone ? offerForm.contact_phone.trim() : (phoneDigits ? `+${phoneDigits}` : null),
+        external_link: externalLink || null,
+        listing_type: LISTING_TYPE_LABELS[offerForm.listing_type] ? offerForm.listing_type : "offre_emploi",
+        requires_cover_letter: !!offerForm.requires_cover_letter,
+        recruiter_id: userSession.user.id,
+      };
 
       if (editingOfferId) {
         const { error } = await supabase
@@ -789,7 +1088,7 @@ export default function RecruteurDashboardPage() {
       } else {
         const { data, error } = await supabase
           .from("job_offers")
-          .insert({ ...payload, recruiter_id: userSession.user.id })
+          .insert({ ...payload, is_active: true })
           .select()
           .single();
 
@@ -799,9 +1098,7 @@ export default function RecruteurDashboardPage() {
           setMyOffers((prev) => [data, ...prev]);
           triggerToast("Offre publiée !");
           generateOfferEmbedding(data.id, payload.title, payload.description);
-          setOfferForm(EMPTY_OFFER);
-          setOfferImageFile(null);
-          setOfferImagePreview(null);
+          handleCancelEditOffer();
         }
       }
     } catch (err) {
@@ -810,6 +1107,42 @@ export default function RecruteurDashboardPage() {
     } finally {
       setSavingOffer(false);
     }
+  };
+
+  const handleEditOffer = (offer) => {
+    setEditingOfferId(offer.id);
+    setOfferForm({
+      title: offer.title || "",
+      company: offer.company || "",
+      location: offer.location || "Sénégal",
+      contract_type: offer.contract_type || "CDI",
+      listing_type: offer.listing_type || "offre_emploi",
+      salary_range: offer.salary_range || "",
+      min_education_level: offer.min_education_level || "Aucun",
+      description: offer.description || "",
+      image_url: offer.image_url || "",
+      deadline: offer.deadline || "",
+      contact_email: offer.contact_email || "",
+      contact_phone: offer.contact_phone || "",
+      external_link: offer.external_link || "",
+      application_url: offer.application_url || "",
+      application_email: offer.application_email || "",
+      additional_info: offer.additional_info || "",
+      requires_cover_letter: !!offer.requires_cover_letter,
+    });
+    setOfferImageFiles([]);
+    setOfferImagePreviews(parseOfferImages(offer.image_url));
+    setExamenPasse(true);
+    setTimeout(() => offerFormRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+  };
+
+  const handleCancelEditOffer = () => {
+    setEditingOfferId(null);
+    setOfferForm(EMPTY_OFFER);
+    setOfferImageFiles([]);
+    setOfferImagePreviews([]);
+    setAccompanyingText("");
+    setExamenPasse(false);
   };
 
   const handleDeleteOffer = async (offerId) => {
@@ -1296,266 +1629,820 @@ export default function RecruteurDashboardPage() {
         )}
 
         {activeTab === "offres" && (
-          <div className="space-y-8">
-            {/* Formulaire de publication */}
-            <div ref={offerFormRef} className="bg-white rounded-3xl border border-gray-200 shadow-xs p-6 sm:p-8">
-              <h2 className="text-lg font-extrabold text-gray-900 mb-1">
-                {editingOfferId ? "Modifier l'offre" : "Publier une nouvelle offre"}
-              </h2>
-              <p className="text-xs text-gray-500 font-medium mb-6">
-                {editingOfferId ? "Mettez à jour les informations puis enregistrez." : "Renseignez les détails du poste à pourvoir."}
-              </p>
-
-              <form onSubmit={handleSubmitOffer} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Intitulé du poste</label>
-                  <input
-                    type="text"
-                    required
-                    value={offerForm.title}
-                    onChange={(e) => handleOfferFieldChange("title", e.target.value)}
-                    placeholder="Ex. Développeur Front-End React"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
-                  />
+          <div className="space-y-8 animate-fade-in">
+            {/* EN-TÊTE PUBLEUR D'OFFRES */}
+            <div className="bg-white rounded-3xl border border-gray-200/90 shadow-sm p-5 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-center space-x-4">
+                <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-[#10E688] to-emerald-600 text-white flex items-center justify-center text-2xl shadow-md shadow-emerald-500/20 shrink-0">
+                  <i className="fa-solid fa-bullhorn"></i>
                 </div>
-
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Entreprise</label>
-                  <input
-                    type="text"
-                    required
-                    value={offerForm.company}
-                    onChange={(e) => handleOfferFieldChange("company", e.target.value)}
-                    placeholder="Ex. Facilité"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
-                  />
+                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                    Publieur d&apos;Offres d&apos;Emploi & Scanner IA
+                  </h2>
+                  <p className="text-xs text-gray-500 font-medium mt-0.5">
+                    Glissez une affiche de recrutement : l&apos;IA extrait tout automatiquement et prépare la publication en 1 clic.
+                  </p>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Localisation</label>
-                  <input
-                    type="text"
-                    required
-                    value={offerForm.location}
-                    onChange={(e) => handleOfferFieldChange("location", e.target.value)}
-                    placeholder="Ex. Dakar, Sénégal"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Type de contrat</label>
-                  <select
-                    value={offerForm.contract_type}
-                    onChange={(e) => handleOfferFieldChange("contract_type", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
-                  >
-                    <option value="CDI">CDI</option>
-                    <option value="CDD">CDD</option>
-                    <option value="Stage">Stage</option>
-                    <option value="Freelance">Freelance</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Niveau d'étude requis</label>
-                  <select
-                    value={offerForm.min_education_level}
-                    onChange={(e) => handleOfferFieldChange("min_education_level", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
-                  >
-                    <option value="Aucun">Aucun exigé</option>
-                    <option value="CM2">CM2</option>
-                    <option value="Brevet">Brevet / BEPC</option>
-                    <option value="BAC">BAC</option>
-                    <option value="Licence">Licence / Bachelor</option>
-                    <option value="Master">Master</option>
-                    <option value="Doctorat">Doctorat</option>
-                  </select>
-                </div>
-
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Date limite de candidature (optionnel)</label>
-                  <input
-                    type="date"
-                    value={offerForm.deadline}
-                    onChange={(e) => handleOfferFieldChange("deadline", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Photo / affiche de l'annonce (optionnel)</label>
-                  <input
-                    type="file"
-                    ref={offerImageInputRef}
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleOfferImageSelect}
-                    className="hidden"
-                  />
-                  {offerImagePreview ? (
-                    <div className="relative inline-block">
-                      <img
-                        src={offerImagePreview}
-                        alt="Aperçu de l'annonce"
-                        className="max-h-48 rounded-xl border border-gray-200 shadow-xs object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleRemoveOfferImage}
-                        className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-md cursor-pointer"
-                        title="Retirer l'image"
-                      >
-                        <i className="fa-solid fa-xmark text-xs"></i>
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => offerImageInputRef.current?.click()}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setOfferImageDragOver(true);
-                      }}
-                      onDragLeave={() => setOfferImageDragOver(false)}
-                      onDrop={handleOfferImageDrop}
-                      className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition ${
-                        offerImageDragOver ? "border-emerald-500 bg-emerald-50" : "border-gray-300 hover:border-emerald-400 bg-gray-50/50"
-                      }`}
-                    >
-                      <i className="fa-solid fa-image text-2xl text-gray-400 mb-2"></i>
-                      <p className="text-xs font-bold text-gray-600">Glissez-déposez une image ou cliquez pour en choisir une</p>
-                      <p className="text-[10px] text-gray-400 mt-1">PNG, JPG ou WEBP — 5 Mo maximum</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Description du poste & Compétences requises</label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={offerForm.description}
-                    onChange={(e) => handleOfferFieldChange("description", e.target.value)}
-                    placeholder="Missions, compétences requises, profil recherché, avantages..."
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition resize-none"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={offerForm.requires_cover_letter}
-                      onChange={(e) => handleOfferFieldChange("requires_cover_letter", e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="text-xs font-bold text-gray-700">Lettre de motivation obligatoire pour candidater à cette offre</span>
-                  </label>
-                </div>
-
-                <div className="sm:col-span-2 flex items-center gap-3 pt-2">
-                  <button
-                    type="submit"
-                    disabled={savingOffer}
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl shadow-xs transition cursor-pointer disabled:opacity-60"
-                  >
-                    {savingOffer ? "Enregistrement..." : editingOfferId ? "Enregistrer les modifications" : "Publier l'offre"}
-                  </button>
-                  {editingOfferId && (
-                    <button
-                      type="button"
-                      onClick={handleCancelEditOffer}
-                      className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm rounded-xl transition cursor-pointer"
-                    >
-                      Annuler
-                    </button>
-                  )}
-                </div>
-              </form>
+              {/* Boutons de Mode */}
+              <div className="flex items-center bg-gray-100/90 p-1 rounded-2xl border border-gray-200/80 self-start md:self-auto shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => setPublishMode("ai_scanner")}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                    publishMode === "ai_scanner"
+                      ? "bg-emerald-600 text-white shadow-md"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                  <span>Scanner Affiche IA</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPublishMode("manual")}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                    publishMode === "manual"
+                      ? "bg-white text-gray-900 shadow-md border border-gray-200"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  <i className="fa-solid fa-pen-to-square text-xs"></i>
+                  <span>Saisie Manuelle</span>
+                </button>
+              </div>
             </div>
 
-            {/* Mes offres */}
-            <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-extrabold text-gray-900">Mes Offres ({myOffers.length})</h2>
-              </div>
-              {myOffers.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 italic text-xs">Aucune offre publiée pour le moment.</div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {myOffers.map((offer) => {
-                    const offerApplicationsCount = applications.filter((a) => a.job_offer_id === offer.id).length;
-                    return (
-                      <div key={offer.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-start space-x-4 min-w-0">
-                          {offer.image_url && (
-                            <img
-                              src={offer.image_url}
-                              alt={offer.title}
-                              onClick={() => setLightboxImage(offer.image_url)}
-                              className="w-16 h-16 rounded-2xl object-cover border border-gray-200 shadow-xs cursor-pointer hover:opacity-90 transition flex-shrink-0"
-                              title="Cliquer pour agrandir"
-                            />
-                          )}
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-extrabold text-gray-900 text-sm">{offer.title}</h3>
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                                  offer.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"
-                                }`}
-                              >
-                                {offer.is_active ? "Active" : "Fermée"}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-500 font-medium">
-                              {offer.company} — {offer.location} · {offer.contract_type}
-                            </p>
-                            <p className="text-[11px] text-gray-400 font-semibold mt-1">
-                              <i className="fa-solid fa-inbox mr-1"></i>
-                              {offerApplicationsCount} candidature{offerApplicationsCount !== 1 ? "s" : ""} reçue{offerApplicationsCount !== 1 ? "s" : ""}
-                            </p>
-                          </div>
+            {/* GRILLE PRINCIPALE : SCANNER/FORMULAIRE À GAUCHE + APERÇU EN DIRECT À DROITE */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* COLONNE GAUCHE : DÉPÔT MULTI-PHOTOS & FORMULAIRE */}
+              <div ref={offerFormRef} className="lg:col-span-7 space-y-6">
+                
+                {/* SECTION SCANNER & PHOTOS */}
+                <div className="bg-white rounded-3xl border border-gray-200/90 shadow-sm p-6 sm:p-7 space-y-6">
+                  {/* Onglets Choix Médias */}
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setImageTab("upload")}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-2 ${
+                          imageTab === "upload"
+                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                            : "text-gray-500 hover:bg-gray-100"
+                        }`}
+                      >
+                        <i className="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Scanner / Déposer</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageTab("ai_generate")}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-2 ${
+                          imageTab === "ai_generate"
+                            ? "bg-amber-50 text-amber-900 border border-amber-200"
+                            : "text-gray-500 hover:bg-gray-100"
+                        }`}
+                      >
+                        <i className="fa-solid fa-wand-magic-sparkles text-amber-600"></i>
+                        <span>Générateur IA (Format 1:1)</span>
+                      </button>
+                    </div>
+
+                    {offerImagePreviews.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveAllOfferImages}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 transition flex items-center gap-1.5 cursor-pointer"
+                        title="Supprimer toutes les photos"
+                      >
+                        <i className="fa-regular fa-trash-can"></i>
+                        <span>Tout supprimer ({offerImagePreviews.length})</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 1. GÉNÉRATEUR D'AFFICHE IA */}
+                  {imageTab === "ai_generate" && offerImagePreviews.length === 0 && (
+                    <div className="p-5 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-200 rounded-2xl space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+                            <span>🎨 Studio Créatif IA — Format Carré 1:1</span>
+                            <span className="px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full text-[10px] font-extrabold">HD</span>
+                          </h4>
+                          <p className="text-[11px] text-amber-800/80 mt-1 font-medium">
+                            Décrivez le style visuel souhaité, ou laissez l&apos;IA s&apos;inspirer de votre intitulé et entreprise.
+                          </p>
                         </div>
-                        <div className="flex items-center space-x-2 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleSuggestPrompt}
+                          className="px-2.5 py-1.5 bg-white text-amber-900 hover:bg-amber-100 border border-amber-300 rounded-lg text-[10px] font-extrabold transition shrink-0 cursor-pointer shadow-2xs"
+                        >
+                          <i className="fa-solid fa-lightbulb text-amber-600 mr-1"></i>
+                          Suggérer prompt
+                        </button>
+                      </div>
+
+                      <div className="relative">
+                        <textarea
+                          rows={2}
+                          value={aiPrompt}
+                          onChange={(e) => setAiPrompt(e.target.value)}
+                          placeholder="Ex: Affiche de recrutement moderne et percutante pour un Responsable Commercial chez Facilité à Dakar, avec couleurs vives et style LinkedIn..."
+                          className="w-full p-3 bg-white border border-amber-200 rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-300 transition resize-none placeholder:text-gray-400"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[11px] text-amber-900 font-bold">
+                          <i className="fa-solid fa-crop-simple text-amber-600"></i>
+                          <span>Format 1024x1024 (Réseaux & Fil)</span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isGeneratingAiPoster}
+                          onClick={() => handleGenerateAiPoster()}
+                          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-extrabold rounded-xl transition shadow-md flex items-center gap-2 cursor-pointer"
+                        >
+                          <i className={`fa-solid ${isGeneratingAiPoster ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"}`}></i>
+                          <span>{isGeneratingAiPoster ? "Génération 1:1..." : "Générer l'affiche 1:1"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. ZONE DE GLISSER-DÉPOSER MULTI-PHOTOS */}
+                  {imageTab === "upload" && offerImagePreviews.length === 0 && (
+                    <div
+                      onClick={() => fileDropInputRef.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleFilesSelect(e.dataTransfer.files);
+                      }}
+                      className="border-2 border-dashed border-emerald-400/80 hover:border-emerald-600 bg-emerald-50/20 hover:bg-emerald-50/40 rounded-3xl p-8 sm:p-10 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-3 group"
+                    >
+                      <input
+                        ref={fileDropInputRef}
+                        type="file"
+                        multiple
+                        accept="image/*,application/pdf"
+                        onChange={(e) => handleFilesSelect(e.target.files)}
+                        className="hidden"
+                      />
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#10E688] to-emerald-500 text-white flex items-center justify-center text-2xl shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition duration-300">
+                        <i className="fa-solid fa-images"></i>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-gray-900">
+                          Glissez-déposez vos photos ou affiches ici, ou cliquez pour parcourir
+                        </h4>
+                        <p className="text-xs text-gray-500 font-medium mt-1">
+                          Formats supportés : JPG, PNG, WEBP, PDF (Vous pouvez sélectionner plusieurs photos à la fois)
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 pt-2">
+                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[11px] font-extrabold flex items-center gap-1.5">
+                          <i className="fa-solid fa-layer-group"></i> Support Multi-Photos
+                        </span>
+                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[11px] font-extrabold flex items-center gap-1.5">
+                          <i className="fa-solid fa-wand-magic-sparkles"></i> Extraction automatique IA
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. GALERIE DE PHOTOS ATTACHÉES */}
+                  {offerImagePreviews.length > 0 && (
+                    <div className="space-y-3 p-4 bg-gray-50/90 rounded-2xl border border-gray-200">
+                      <div className="relative rounded-2xl overflow-hidden bg-gray-950 max-h-[300px] flex items-center justify-center group shadow-md">
+                        <img
+                          src={offerImagePreviews[0]}
+                          alt="Photo principale"
+                          className="max-h-[300px] w-full object-contain mx-auto"
+                        />
+                        <OfferImageWatermark />
+                        <div className="absolute top-3 left-3 bg-emerald-600/90 text-white text-[11px] font-black px-3 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1.5 shadow-md">
+                          <i className="fa-solid fa-star text-amber-300"></i>
+                          <span>Photo Principale (Couverture)</span>
+                        </div>
+                        <div className="absolute top-3 right-3 flex items-center gap-2">
+                          <span className="bg-black/60 text-white text-[11px] font-black px-2.5 py-1 rounded-lg backdrop-blur-xs">
+                            {offerImagePreviews.length} photo{offerImagePreviews.length > 1 ? "s" : ""}
+                          </span>
                           <button
                             type="button"
-                            onClick={() => {
-                              setSelectedOfferForRag(offer.id);
-                              setActiveTab("rag-matching");
-                              handleRunRagMatching(offer.id, null);
-                            }}
-                            className="px-3 py-2 text-xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-emerald-200"
-                            title="Lancer le matching IA RAG sur cette offre"
+                            onClick={() => setViewImageModal({ isOpen: true, url: offerImagePreviews[0] })}
+                            className="w-8 h-8 rounded-lg bg-black/60 hover:bg-black text-white flex items-center justify-center text-xs transition cursor-pointer"
+                            title="Agrandir"
                           >
-                            <i className="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
-                            <span className="hidden sm:inline">Matching IA (RAG)</span>
-                          </button>
-                          <button
-                            onClick={() => handleEditOffer(offer)}
-                            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition cursor-pointer text-xs font-bold"
-                            title="Modifier"
-                          >
-                            <i className="fa-solid fa-pen-to-square"></i>
-                          </button>
-                          <button
-                            onClick={() => handleToggleOfferActive(offer)}
-                            disabled={togglingOfferId === offer.id}
-                            className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-60"
-                          >
-                            {offer.is_active ? "Pause" : "Activer"}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteOffer(offer.id)}
-                            className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl transition cursor-pointer"
-                          >
-                            Archiver
+                            <i className="fa-solid fa-expand"></i>
                           </button>
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {/* Miniatures des photos */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-700 mb-2 px-1">
+                          <span>Toutes les photos attachées ({offerImagePreviews.length})</span>
+                          <span className="text-[11px] text-gray-400 font-normal">Cliquez sur une photo pour la définir comme couverture</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
+                          <input
+                            ref={additionalFileInputRef}
+                            type="file"
+                            multiple
+                            accept="image/*,application/pdf"
+                            onChange={(e) => handleFilesSelect(e.target.files)}
+                            className="hidden"
+                          />
+                          {offerImagePreviews.map((previewUrl, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleSetCoverImage(idx)}
+                              className={`relative group rounded-xl overflow-hidden w-20 h-20 shrink-0 border-2 cursor-pointer transition ${
+                                idx === 0 ? "border-emerald-500 shadow-md ring-2 ring-emerald-300" : "border-gray-200 hover:border-gray-400"
+                              }`}
+                              title={idx === 0 ? "Photo de couverture" : "Cliquer pour définir comme couverture"}
+                            >
+                              <img src={previewUrl} alt={`Vignette ${idx + 1}`} className="w-full h-full object-cover" />
+                              {idx === 0 && (
+                                <span className="absolute bottom-1 left-1 bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded">
+                                  1ère
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveSingleImage(idx);
+                                }}
+                                className="absolute top-1 right-1 w-5 h-5 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition shadow-md"
+                                title="Supprimer cette photo"
+                              >
+                                <i className="fa-solid fa-xmark"></i>
+                              </button>
+                            </div>
+                          ))}
+
+                          <button
+                            type="button"
+                            onClick={() => additionalFileInputRef.current?.click()}
+                            className="w-20 h-20 shrink-0 border-2 border-dashed border-gray-300 hover:border-emerald-500 bg-white hover:bg-emerald-50/50 rounded-xl flex flex-col items-center justify-center text-gray-500 hover:text-emerald-700 text-xs font-bold transition cursor-pointer"
+                            title="Ajouter d'autres photos"
+                          >
+                            <i className="fa-solid fa-plus text-base mb-1"></i>
+                            <span className="text-[10px]">Ajouter</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-gray-600 pt-1">
+                        <span className="flex items-center gap-1.5">
+                          <i className="fa-solid fa-circle-check text-emerald-600"></i>
+                          <span>{offerImagePreviews.length} photo{offerImagePreviews.length > 1 ? "s" : ""} prête{offerImagePreviews.length > 1 ? "s" : ""} pour la publication</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => runAIScanner(offerImageFiles[0] || offerImagePreviews[0], accompanyingText)}
+                          disabled={isScanningAI}
+                          className="text-emerald-700 hover:text-emerald-900 font-extrabold flex items-center gap-1 cursor-pointer"
+                        >
+                          <i className="fa-solid fa-rotate text-xs"></i>
+                          <span>Re-scanner avec l&apos;IA</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. TEXTE D'ACCOMPAGNEMENT & BOUTONS D'ACTION IA */}
+                  <div className="p-4 sm:p-5 bg-emerald-50/40 border border-emerald-200/80 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs">
+                          <i className="fa-solid fa-file-lines"></i>
+                        </span>
+                        <span>Texte & Description d&apos;accompagnement</span>
+                      </label>
+                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-black uppercase">
+                        Optionnel
+                      </span>
+                    </div>
+
+                    <textarea
+                      rows={3}
+                      value={accompanyingText}
+                      onChange={(e) => {
+                        setAccompanyingText(e.target.value);
+                        setExamenPasse(false);
+                      }}
+                      placeholder="Ex: 🚨 RECRUTEMENT : Nous recherchons un Développeur / Commercial à Dakar. Envoyez votre candidature à recrutement@exemple.com avant le 31 août..."
+                      className="w-full p-3.5 bg-white border border-emerald-200/80 rounded-2xl text-xs font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition resize-none placeholder:text-gray-400 shadow-2xs"
+                    />
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-t border-emerald-200/60">
+                      <span className="text-[11px] text-gray-600 font-medium flex items-center gap-1.5">
+                        <i className="fa-solid fa-circle-info text-emerald-600 text-xs"></i>
+                        <span>
+                          {offerImageFiles.length > 0 && accompanyingText.trim()
+                            ? "Photos + Description détectées : l'IA fusionne et publie tout."
+                            : offerImageFiles.length > 0
+                            ? "Photos prêtes : la description est facultative."
+                            : accompanyingText.trim()
+                            ? "Texte prêt : l'IA structurera tout le formulaire."
+                            : "Glissez vos photos, écrivez une description (optionnelle), puis publiez !"}
+                        </span>
+                      </span>
+
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                        <button
+                          type="button"
+                          disabled={isScanningAI || (offerImageFiles.length === 0 && offerImagePreviews.length === 0 && !accompanyingText.trim())}
+                          onClick={() => runAIScanner(offerImageFiles[0] || offerImagePreviews[0], accompanyingText)}
+                          className="px-3.5 py-2.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 disabled:opacity-50 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                          title="Analyser l'affiche et la description, puis ranger chaque information dans son champ"
+                        >
+                          <i className={`fa-solid ${isScanningAI ? "fa-spinner fa-spin" : "fa-clipboard-check"} text-emerald-600`}></i>
+                          <span>{isScanningAI ? "Examen en cours..." : "Examinateur"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={savingOffer || isScanningAI || !examenPasse || (offerImageFiles.length === 0 && offerImagePreviews.length === 0 && !accompanyingText.trim() && !offerForm.title.trim())}
+                          onClick={handleInstantAiPublish}
+                          title={examenPasse ? "Publier sur le Fil d'Actualité" : "Passez d'abord par l'Examinateur"}
+                          className="px-4 py-2.5 bg-gradient-to-r from-[#10E688] to-emerald-600 hover:from-[#0fd57d] hover:to-emerald-700 disabled:opacity-50 text-gray-950 text-xs font-black rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                        >
+                          <i className={`fa-solid ${savingOffer ? "fa-spinner fa-spin" : "fa-bolt-lightning"}`}></i>
+                          <span>{savingOffer ? "Publication IA..." : "🚀 Publier avec l'IA"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Message de statut du Scanner */}
+                  {scanMessage && (
+                    <div
+                      className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 ${
+                        scanSuccess
+                          ? "bg-emerald-50 text-emerald-900 border border-emerald-200"
+                          : "bg-amber-50 text-amber-900 border border-amber-200"
+                      }`}
+                    >
+                      <i className={`fa-solid ${scanSuccess ? "fa-circle-check text-emerald-600" : "fa-circle-exclamation text-amber-600"} text-base`}></i>
+                      <span>{scanMessage}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* FORMULAIRE DE SAISIE STRUCTURÉE */}
+                <form onSubmit={handleSubmitOffer} className="bg-white rounded-3xl border border-gray-200/90 shadow-sm p-6 sm:p-7 space-y-5">
+                  <div className="border-b border-gray-100 pb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-black text-gray-900 tracking-tight flex items-center gap-2">
+                      <i className="fa-solid fa-list-check text-emerald-600"></i>
+                      <span>Champs Détaillés de l&apos;Offre</span>
+                    </h3>
+                    <span className="text-[11px] text-gray-400 font-medium">* Champs obligatoires</span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                        Titre du poste ou de l&apos;offre *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={offerForm.title}
+                        onChange={(e) => handleOfferFieldChange("title", e.target.value)}
+                        placeholder="Ex: Développeur Full-Stack Senior / Juriste d'entreprise"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                          Entreprise / Organisation *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={offerForm.company}
+                          onChange={(e) => handleOfferFieldChange("company", e.target.value)}
+                          placeholder="Ex: Facilité Recrutement"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                          Localisation
+                        </label>
+                        <input
+                          type="text"
+                          value={offerForm.location}
+                          onChange={(e) => handleOfferFieldChange("location", e.target.value)}
+                          placeholder="Ex: Dakar, Sénégal / Télétravail"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                          Type de contrat
+                        </label>
+                        <select
+                          value={offerForm.contract_type}
+                          onChange={(e) => handleOfferFieldChange("contract_type", e.target.value)}
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs cursor-pointer"
+                        >
+                          <option value="CDI">CDI</option>
+                          <option value="CDD">CDD</option>
+                          <option value="Stage">Stage</option>
+                          <option value="Freelance">Freelance / Prestation</option>
+                          <option value="Alternance">Alternance</option>
+                          <option value="Temps partiel">Temps partiel</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                          Type de publication
+                        </label>
+                        <select
+                          value={offerForm.listing_type}
+                          onChange={(e) => handleOfferFieldChange("listing_type", e.target.value)}
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs cursor-pointer"
+                        >
+                          <option value="offre_emploi">Offre d&apos;emploi</option>
+                          <option value="stage">Stage</option>
+                          <option value="formation">Formation</option>
+                          <option value="avis_recrutement">Avis de recrutement</option>
+                          <option value="concours">Concours</option>
+                          <option value="bourse">Bourse d&apos;études</option>
+                          <option value="appel_offres">Appel d&apos;offres</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                          Date limite (optionnel)
+                        </label>
+                        <input
+                          type="date"
+                          value={offerForm.deadline || ""}
+                          onChange={(e) => handleOfferFieldChange("deadline", e.target.value)}
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                          Téléphone / WhatsApp
+                        </label>
+                        <input
+                          type="text"
+                          value={offerForm.contact_phone || ""}
+                          onChange={(e) => handleOfferFieldChange("contact_phone", e.target.value)}
+                          placeholder="Ex: +221 77 000 00 00"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                          Email recruteur (optionnel)
+                        </label>
+                        <input
+                          type="email"
+                          value={offerForm.contact_email || ""}
+                          onChange={(e) => handleOfferFieldChange("contact_email", e.target.value)}
+                          placeholder="Ex: recrutement@entreprise.com"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                          Lien externe officiel / WhatsApp URL (optionnel)
+                        </label>
+                        <input
+                          type="url"
+                          value={offerForm.external_link || ""}
+                          onChange={(e) => handleOfferFieldChange("external_link", e.target.value)}
+                          placeholder="Ex: https://wa.me/221770000000 ou https://entreprise.com/jobs/123"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                        Description de l&apos;offre *
+                      </label>
+                      <textarea
+                        rows={6}
+                        required
+                        value={offerForm.description}
+                        onChange={(e) => handleOfferFieldChange("description", e.target.value)}
+                        placeholder="Décrivez les missions, le profil recherché et les instructions de candidature..."
+                        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition resize-y shadow-2xs"
+                      />
+                    </div>
+
+                    <div className="pt-1">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={offerForm.requires_cover_letter}
+                          onChange={(e) => handleOfferFieldChange("requires_cover_letter", e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-xs font-bold text-gray-700">
+                          Lettre de motivation obligatoire pour postuler à cette offre
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Actions formulaire */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={handleCancelEditOffer}
+                      className="text-xs font-bold text-gray-500 hover:text-gray-800 transition cursor-pointer"
+                    >
+                      Réinitialiser
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={savingOffer}
+                      className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-2xl transition shadow-md flex items-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      <i className={`fa-solid ${savingOffer ? "fa-spinner fa-spin" : "fa-check"}`}></i>
+                      <span>{savingOffer ? "Enregistrement..." : editingOfferId ? "Enregistrer les modifications" : "Publier sur le Fil d'Actualité"}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* COLONNE DROITE : APERÇU EN DIRECT SUR LE FIL (RENDU 1:1 CANDIDATS) */}
+              <div className="lg:col-span-5 sticky top-24 space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                      Aperçu en direct sur le fil
+                    </span>
+                  </div>
+                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-black uppercase">
+                    Rendu 1:1 Candidats
+                  </span>
+                </div>
+
+                {/* CARTE D'APERÇU FEED LINKEDIN / SAAS */}
+                <div className="bg-white rounded-3xl border border-gray-200/90 shadow-md p-5 sm:p-6 space-y-4">
+                  {/* Header En-tête Recruteur */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-black text-sm uppercase shadow-xs overflow-hidden">
+                        {recruiterProfileForm.logo_url ? (
+                          <img src={recruiterProfileForm.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                        ) : (
+                          (offerForm.company || "E").substring(0, 2)
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-gray-900">
+                          {offerForm.company || recruiterProfileForm.company_name || "Nom de l'entreprise"}
+                        </h4>
+                        <p className="text-[10px] text-gray-400 font-bold flex items-center gap-1.5">
+                          <span>À l&apos;instant</span>
+                          <span>•</span>
+                          <i className="fa-solid fa-globe text-[9px]"></i>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Titre & Détails */}
+                  <div>
+                    <h3 className="text-sm font-black text-gray-900 leading-snug">
+                      {offerForm.title || "Titre de l'offre d'emploi"}
+                    </h3>
+                    <p className="text-[11px] text-gray-500 font-bold mt-0.5">
+                      <span>{offerForm.location || "Sénégal"}</span>
+                      <span className="mx-1.5">•</span>
+                      <span className="text-emerald-700 capitalize">
+                        {LISTING_TYPE_LABELS[offerForm.listing_type] || "Opportunité"}
+                      </span>
+                      <span className="mx-1.5">•</span>
+                      <span className="text-gray-700">{offerForm.contract_type || "CDI"}</span>
+                    </p>
+                  </div>
+
+                  {/* Description avec liens */}
+                  <div className="text-xs text-gray-700 font-normal leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto pr-1">
+                    {offerForm.description || "La description détaillée de votre offre apparaîtra ici avec ses emojis et sa mise en page."}
+                  </div>
+
+                  {/* Affiche Visuelle Multi-Photos */}
+                  {(offerImagePreviews.length > 0 || offerForm.image_url) && (
+                    <OfferMediaGallery
+                      media={offerImagePreviews.length > 0 ? offerImagePreviews : offerForm.image_url}
+                      title={offerForm.title || "Aperçu de l'offre"}
+                      onEnlarge={(url) => setViewImageModal({ isOpen: true, url })}
+                    />
+                  )}
+
+                  {/* Boutons d'Action & Partage */}
+                  <div className="pt-2">
+                    <SocialShareButtons
+                      offer={{
+                        id: "preview-id",
+                        title: offerForm.title || "Offre d'emploi",
+                        company: offerForm.company || recruiterProfileForm.company_name || "Entreprise",
+                        location: offerForm.location || "Sénégal",
+                        contract: offerForm.contract_type || "CDI",
+                        description: offerForm.description,
+                        contact_phone: offerForm.contact_phone,
+                        contact_email: offerForm.contact_email,
+                        external_link: offerForm.external_link,
+                      }}
+                      variant="feed"
+                      onApply={() => triggerToast("Prévisualisation : le candidat sera redirigé vers ce lien.")}
+                      onToast={triggerToast}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 2 : TOUTES MES OFFRES EN BASE DE DONNÉES */}
+            <div className="bg-white rounded-3xl border border-gray-200/90 shadow-sm p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                <div>
+                  <h3 className="text-lg font-black text-gray-900 tracking-tight">
+                    Mes Offres d&apos;Emploi ({myOffers.length})
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Gérez, activez ou modifiez vos offres visibles par tous les candidats.
+                  </p>
+                </div>
+
+                <div className="relative w-full sm:w-72">
+                  <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                  <input
+                    type="text"
+                    value={offerSearchQuery}
+                    onChange={(e) => setOfferSearchQuery(e.target.value)}
+                    placeholder="Rechercher une offre..."
+                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              {myOffers.length === 0 ? (
+                <div className="text-center py-12 text-gray-400 italic text-xs">
+                  Aucune offre publiée pour le moment.
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {myOffers
+                    .filter((o) => {
+                      if (!offerSearchQuery.trim()) return true;
+                      const q = offerSearchQuery.toLowerCase();
+                      return (
+                        (o.title || "").toLowerCase().includes(q) ||
+                        (o.company || "").toLowerCase().includes(q) ||
+                        (o.location || "").toLowerCase().includes(q)
+                      );
+                    })
+                    .map((offer) => {
+                      const offerPhotos = parseOfferImages(offer.image_url);
+                      const offerApplicationsCount = applications.filter((a) => a.job_offer_id === offer.id).length;
+
+                      return (
+                        <div
+                          key={offer.id}
+                          className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/60 rounded-2xl px-3 transition"
+                        >
+                          <div className="flex items-start space-x-3.5 min-w-0">
+                            {offerPhotos.length > 0 ? (
+                              <div
+                                onClick={() => setViewImageModal({ isOpen: true, url: offerPhotos[0] })}
+                                className="relative w-14 h-14 rounded-2xl overflow-hidden bg-gray-900 shrink-0 border border-gray-200 cursor-pointer group shadow-2xs"
+                              >
+                                <img
+                                  src={offerPhotos[0]}
+                                  alt={offer.title}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition"
+                                />
+                                {offerPhotos.length > 1 && (
+                                  <span className="absolute bottom-1 right-1 bg-black/75 text-white text-[9px] font-black px-1 rounded">
+                                    +{offerPhotos.length - 1}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center text-xl shrink-0">
+                                <i className="fa-solid fa-briefcase"></i>
+                              </div>
+                            )}
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="text-xs font-black text-gray-900 truncate max-w-xs sm:max-w-md">
+                                  {offer.title}
+                                </h4>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                    offer.is_active
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : "bg-gray-200 text-gray-600"
+                                  }`}
+                                >
+                                  {offer.is_active ? "Active" : "En pause"}
+                                </span>
+                              </div>
+                              <p className="text-xs font-bold text-gray-600 mt-0.5">
+                                {offer.company} — <span className="text-emerald-700">{offer.contract_type || "CDI"}</span>
+                              </p>
+                              <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-2">
+                                <span>
+                                  <i className="fa-solid fa-location-dot mr-1"></i> {offer.location || "Sénégal"}
+                                </span>
+                                <span>•</span>
+                                <span>
+                                  <i className="fa-solid fa-inbox mr-1"></i> {offerApplicationsCount} candidature{offerApplicationsCount !== 1 ? "s" : ""}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedOfferForRag(offer.id);
+                                setActiveTab("rag-matching");
+                                handleRunRagMatching(offer.id, null);
+                              }}
+                              className="px-3 py-2 text-xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-emerald-200"
+                              title="Lancer le matching IA RAG sur cette offre"
+                            >
+                              <i className="fa-solid fa-wand-magic-sparkles text-emerald-600"></i>
+                              <span className="hidden sm:inline">Matching IA (RAG)</span>
+                            </button>
+                            <Link
+                              href={`/offres/${offer.id}`}
+                              target="_blank"
+                              className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 border border-gray-200 flex items-center justify-center transition"
+                              title="Voir la fiche détaillée"
+                            >
+                              <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleEditOffer(offer)}
+                              className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 flex items-center justify-center transition"
+                              title="Modifier"
+                            >
+                              <i className="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleOfferActive(offer)}
+                              disabled={togglingOfferId === offer.id}
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center transition border ${
+                                offer.is_active
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                  : "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200"
+                              }`}
+                              title={offer.is_active ? "Mettre en pause" : "Activer l'offre"}
+                            >
+                              <i className={`fa-solid ${offer.is_active ? "fa-eye" : "fa-eye-slash"} text-xs`}></i>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteOffer(offer.id)}
+                              className="w-9 h-9 rounded-xl bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 flex items-center justify-center transition"
+                              title="Archiver l'offre"
+                            >
+                              <i className="fa-regular fa-trash-can text-xs"></i>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </div>
@@ -2422,6 +3309,31 @@ export default function RecruteurDashboardPage() {
       )}
 
       {/* Modal Agrandissement Photo de l'Offre (Lightbox) */}
+      {viewImageModal.isOpen && (
+        <div
+          className="fixed inset-0 z-[800] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setViewImageModal({ isOpen: false, url: null })}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-gray-950 rounded-3xl p-2 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setViewImageModal({ isOpen: false, url: null })}
+              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-sm shadow-md transition cursor-pointer"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+            <img
+              src={viewImageModal.url}
+              alt="Affiche en grand"
+              className="max-h-[85vh] w-auto object-contain mx-auto rounded-2xl"
+            />
+          </div>
+        </div>
+      )}
+
       {lightboxImage && (
         <div
           onClick={() => setLightboxImage(null)}

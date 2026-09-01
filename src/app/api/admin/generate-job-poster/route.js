@@ -15,15 +15,15 @@ export async function POST(req) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    // Vérifier rôle admin
+    // Vérifier rôle admin ou recruteur
     const { data: roleRow } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .single();
 
-    if (!roleRow || roleRow.role !== "admin") {
-      return NextResponse.json({ error: "Accès réservé aux administrateurs." }, { status: 403 });
+    if (!roleRow || (roleRow.role !== "admin" && roleRow.role !== "recruiter")) {
+      return NextResponse.json({ error: "Accès réservé aux administrateurs et recruteurs." }, { status: 403 });
     }
 
     const body = await req.json();
