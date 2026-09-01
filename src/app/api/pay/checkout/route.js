@@ -177,9 +177,17 @@ export async function POST(req) {
     // Motif : c'est du CONTENU NUMÉRIQUE consommé dans l'application, ce
     // qui impose Google Play Billing dès lors qu'elle est proposée depuis
     // l'app Android — motif de rejet direct du Play Store. Les commandes
-    // de CV (flux 1 ci-dessus) ne sont pas concernées : ce sont des
-    // prestations réalisées par une personne (hasAgentOption), couvertes
-    // par l'exemption « biens et services physiques ».
+    // de CV (flux 1 ci-dessus) le sont tout autant — correction du
+    // 01/09/2026. L'exemption « biens et services physiques » avait été
+    // invoquée au motif qu'une personne réalise la prestation, mais
+    // hasAgentOption est FACULTATIF : la formule de base à 1500 FCFA ne
+    // déclenche aucune intervention humaine (agent_assignments n'est créé
+    // que si l'option est prise, voir kpay-webhook). C'est donc bien du
+    // contenu numérique produit et livré dans l'application.
+    //
+    // Décision retenue : l'achat reste sur le web et disparaît dans l'app
+    // Android, sans qu'aucun autre moyen de paiement n'y soit suggéré —
+    // la règle anti-steering l'interdit. Voir src/lib/contextePlay.js.
     //
     // Relevé en production avant retrait : 35 transactions, TOUTES
     // `pending`, dont 31 issues de comptes de démonstration ; 0 aboutie ;
