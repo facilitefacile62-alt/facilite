@@ -138,7 +138,6 @@ export async function enregistrerBoutique(userId, champs) {
   if (!userId) throw new Error("Connexion requise.");
 
   const charge = {
-    owner_id: userId,
     nom: String(champs?.nom || "").trim(),
     quartier: champs?.quartier?.trim() || null,
     ville: champs?.ville?.trim() || null,
@@ -148,12 +147,17 @@ export async function enregistrerBoutique(userId, champs) {
   };
   if (!charge.nom) throw new Error("Le nom de la boutique est obligatoire.");
 
-  const existante = await chargerMaBoutique(userId);
-  const requete = existante
-    ? supabase.from("marketplace_stores").update(charge).eq("id", existante.id)
-    : supabase.from("marketplace_stores").insert(charge);
-
-  const { data, error } = await requete.select("*").single();
+  // Écriture par fonction SECURITY DEFINER, jamais en direct : aucune table de
+  // ce dépôt n'accorde UPDATE ou DELETE à `authenticated` (invariant 1, liste
+  // blanche vide). La fonction déduit le propriétaire de auth.uid().
+  const { data, error } = await supabase.rpc("enregistrer_ma_boutique", {
+    p_nom: charge.nom,
+    p_quartier: charge.quartier,
+    p_ville: charge.ville,
+    p_whatsapp: charge.telephone_whatsapp,
+    p_lat: charge.latitude,
+    p_lng: charge.longitude,
+  });
   if (error) throw new Error(error.message);
   return data;
 }
@@ -201,20 +205,21 @@ export async function chargerMesArticles(storeId) {
 export async function publierArticle(storeId, champs) {
   if (!storeId) throw new Error("Créez d'abord votre boutique.");
 
-  const charge = {
-    store_id: storeId,
-    titre: String(champs?.titre || "").trim(),
-    description: champs?.description?.trim() || null,
-    categorie: champs?.categorie || "autre",
-    prix_xof: Math.max(0, Math.round(Number(champs?.prix_xof) || 0)),
-    quantite: Math.max(0, Math.round(Number(champs?.quantite) || 0)),
+  const titre = String(champs?.titre || "").trim();
+  if (!titre) throw new Error("Le titre est obligatoire.");
+
+  // La boutique n'est pas transmise : la fonction la déduit de l'identité de
+  // l'appelant. Envoyer un store_id rouvrirait la brèche que la fonction ferme.
+  const { data, error } = await supabase.rpc("publier_mon_article", {
+    p_titre: titre,
+    p_categorie: champs?.categorie || "autre",
+    p_prix: Math.max(0, Math.round(Number(champs?.prix_xof) || 0)),
+    p_quantite: Math.max(0, Math.round(Number(champs?.quantite) || 0)),
+    p_description: champs?.description?.trim() || null,
     // Uniquement des chemins de bucket. Le CHECK de la table refuse toute
     // autre forme, base64 compris.
-    photos: Array.isArray(champs?.photos) ? champs.photos.slice(0, 6) : [],
-  };
-  if (!charge.titre) throw new Error("Le titre est obligatoire.");
-
-  const { data, error } = await supabase.from("marketplace_items").insert(charge).select("*").single();
+    p_photos: Array.isArray(champs?.photos) ? champs.photos.slice(0, 6) : [],
+  });
   if (error) throw new Error(error.message);
   return data;
 }
@@ -226,18 +231,16 @@ export async function publierArticle(storeId, champs) {
  * déplacement, elle ne doit pas dépendre de l'horloge d'un téléphone.
  */
 export async function majStock(itemId, quantite) {
-  const { data, error } = await supabase
-    .from("marketplace_items")
-    .update({ quantite: Math.max(0, Math.round(Number(quantite) || 0)) })
-    .eq("id", itemId)
-    .select("*")
-    .single();
+  const { data, error } = await supabase.rpc("maj_stock_article", {
+    p_id: itemId,
+    p_quantite: Math.max(0, Math.round(Number(quantite) || 0)),
+  });
   if (error) throw new Error(error.message);
   return data;
 }
 
 export async function retirerArticle(itemId) {
-  const { error } = await supabase.from("marketplace_items").update({ actif: false }).eq("id", itemId);
+  const { error } = await supabase.rpc("retirer_mon_article", { p_id: itemId });
   if (error) throw new Error(error.message);
 }
 
