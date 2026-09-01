@@ -1213,21 +1213,21 @@ export default function AdminOffresPage() {
                 <span className="text-[11px] text-gray-600 font-medium flex items-center gap-1.5">
                   <i className="fa-solid fa-circle-info text-emerald-600 text-xs"></i>
                   <span>
-                    {offerImageFile && accompanyingText.trim()
-                      ? "Affiche + Description détectées : l'IA fusionne et publie tout."
-                      : offerImageFile
-                      ? "Affiche prête : la description est facultative."
+                    {offerImageFiles.length > 0 && accompanyingText.trim()
+                      ? "Photos + Description détectées : l'IA fusionne et publie tout."
+                      : offerImageFiles.length > 0
+                      ? "Photos prêtes : la description est facultative."
                       : accompanyingText.trim()
                       ? "Texte prêt : l'IA structurera tout le formulaire."
-                      : "Glissez une image, écrivez une description (optionnelle), puis publiez !"}
+                      : "Glissez vos photos, écrivez une description (optionnelle), puis publiez !"}
                   </span>
                 </span>
 
                 <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   <button
                     type="button"
-                    disabled={isScanningAI || (!offerImageFile && !accompanyingText.trim())}
-                    onClick={() => runAIScanner(offerImageFile, accompanyingText)}
+                    disabled={isScanningAI || (offerImageFiles.length === 0 && !accompanyingText.trim())}
+                    onClick={() => runAIScanner(offerImageFiles[0], accompanyingText)}
                     className="px-3.5 py-2.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 disabled:opacity-50 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
                     title="Analyser l'affiche et la description, puis ranger chaque information dans son champ — à vérifier avant publication"
                   >
@@ -1237,7 +1237,7 @@ export default function AdminOffresPage() {
 
                   <button
                     type="button"
-                    disabled={savingOffer || isScanningAI || !examenPasse || (!offerImageFile && !accompanyingText.trim() && !offerForm.title.trim())}
+                    disabled={savingOffer || isScanningAI || !examenPasse || (offerImageFiles.length === 0 && !accompanyingText.trim() && !offerForm.title.trim())}
                     onClick={handleInstantAiPublish}
                     title={examenPasse ? "Publier sur le Fil d'Actualité" : "Passez d'abord par l'Examinateur"}
                     className="px-4 py-2.5 bg-gradient-to-r from-[#10E688] to-emerald-600 hover:from-[#0fd57d] hover:to-emerald-700 disabled:opacity-50 text-gray-950 text-xs font-black rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98"
