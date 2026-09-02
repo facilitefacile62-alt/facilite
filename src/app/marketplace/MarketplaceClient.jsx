@@ -30,6 +30,7 @@ import {
   chargerMesBoutiques,
   BOUTIQUES_OFFERTES,
   coordonnee,
+  departementLePlusProche,
   MOTIFS_SIGNALEMENT,
   signalerAnnonce,
   chargerMesArticles,
@@ -134,6 +135,41 @@ function depuis(dateIso) {
 export default function MarketplaceClient() {
   const { session, isAdmin, isRecruiter } = useAuth();
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
+  const [onglet, setOnglet] = useState("acheter"); // 'acheter' | 'vendre'
+  const [boutiques, setBoutiques] = useState([]);
+  const [maBoutiqueActive, setMaBoutiqueActive] = useState(null);
+  const [mesArticles, setMesArticles] = useState([]);
+  const [chargementBoutique, setChargementBoutique] = useState(true);
+
+  const userId = session?.user?.id || null;
+  const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
+  const isMarketplaceAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace", userRole);
+
+  const rechargerBoutique = useCallback(async () => {
+    if (!userId) {
+      setBoutiques([]);
+      setMaBoutiqueActive(null);
+      setMesArticles([]);
+      setChargementBoutique(false);
+      return;
+    }
+    try {
+      const liste = await chargerMesBoutiques(userId);
+      setBoutiques(liste);
+      const active = liste[0] || null;
+      setMaBoutiqueActive(active);
+      if (active) {
+        const arts = await chargerMesArticles(active.id);
+        setMesArticles(arts);
+      } else {
+        setMesArticles([]);
+      }
+    } catch {
+      // best-effort
+    } finally {
+      setChargementBoutique(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
     getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
@@ -148,11 +184,9 @@ export default function MarketplaceClient() {
     };
   }, []);
 
-  const userId = session?.user?.id || null;
-  const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
-  const isMarketplaceAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace", userRole);
-
-  const [onglet, setOnglet] = useState("acheter");
+  useEffect(() => {
+    rechargerBoutique();
+  }, [rechargerBoutique]);
 
   if (!isMarketplaceAllowed) {
     return (
@@ -183,38 +217,105 @@ export default function MarketplaceClient() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="max-w-6xl mx-auto px-3 sm:px-5 py-5">
-        <header className="mb-5">
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-            Marketplace
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Trouvez ce qu&apos;il vous faut, en stock, dans une boutique près de chez vous.
-          </p>
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 py-5">
+        <header className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+              Marketplace
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Trouvez ce qu&apos;il vous faut, en stock, dans une boutique près de chez vous.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            {[
+              { id: "acheter", label: "Acheter (Catalogue)", icon: "fa-magnifying-glass" },
+              { id: "vendre", label: "Ma Boutique (Vendre)", icon: "fa-store" },
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setOnglet(t.id)}
+                className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition cursor-pointer flex items-center ${
+                  onglet === t.id
+                    ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md"
+                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
+                }`}
+              >
+                <i className={`fa-solid ${t.icon} mr-2`}></i>
+                {t.label}
+              </button>
+            ))}
+          </div>
         </header>
 
-        <div className="flex gap-2 mb-5">
-          {[
-            { id: "acheter", label: "Acheter", icon: "fa-magnifying-glass" },
-            { id: "vendre", label: "Vendre", icon: "fa-store" },
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setOnglet(t.id)}
-              className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition cursor-pointer ${
-                onglet === t.id
-                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md"
-                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
-              }`}
-            >
-              <i className={`fa-solid ${t.icon} mr-2`}></i>
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {/* Layout en Split 2 Colonnes (LinkedIn Style) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* BARRE DU PROFIL GAUCHE : "Ma Boutique" */}
+          <aside className="lg:col-span-4 space-y-3">
+            {chargementBoutique ? (
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse space-y-3">
+                <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                <div className="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto -mt-6"></div>
+                <div className="h-4 w-28 bg-gray-200 dark:bg-gray-800 rounded mx-auto"></div>
+                <div className="h-3 w-40 bg-gray-100 dark:bg-gray-800/60 rounded mx-auto"></div>
+              </div>
+            ) : maBoutiqueActive ? (
+              <>
+                <CarteProfilBoutique
+                  boutique={maBoutiqueActive}
+                  onAjouterArticle={() => setOnglet("vendre")}
+                  onModifierBoutique={() => setOnglet("vendre")}
+                />
+                <CarteArticlesVente articles={mesArticles} onChange={rechargerBoutique} />
+                <CarteStatistiquesBoutique boutique={maBoutiqueActive} articles={mesArticles} />
+              </>
+            ) : userId ? (
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-center space-y-3 shadow-xs">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950 text-[#1877F2] flex items-center justify-center mx-auto text-xl">
+                  <i className="fa-solid fa-store"></i>
+                </div>
+                <h3 className="text-xs font-black text-gray-900 dark:text-white">Ouvrez votre boutique</h3>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Publiez vos articles et vendez directement aux acheteurs de votre quartier sur WhatsApp.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setOnglet("vendre")}
+                  className="w-full py-2 bg-[#1877F2] text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer"
+                >
+                  + Créer ma boutique en 1 clic
+                </button>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
+                <div className="flex items-center space-x-2">
+                  <span className="p-1.5 bg-[#10E688]/20 text-[#10E688] rounded-lg text-sm">🚀</span>
+                  <h3 className="text-xs font-black text-white leading-tight">Vendez sur Facilité</h3>
+                </div>
+                <p className="text-[11px] text-gray-300 font-medium leading-relaxed">
+                  Ouvrez votre boutique gratuitement, publiez vos articles avec l&apos;Assistant IA et recevez les commandes sur WhatsApp.
+                </p>
+                <Link
+                  href="/login?redirect=%2Fmarketplace"
+                  className="block w-full py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs text-center rounded-xl transition shadow-sm"
+                >
+                  Se connecter / Créer un compte
+                </Link>
+              </div>
+            )}
+          </aside>
 
-        {onglet === "acheter" ? <VueAcheteur /> : <VueVendeur userId={userId} />}
+          {/* ZONE PRINCIPALE : Catalogue ou Gestion Vendeur */}
+          <main className="lg:col-span-8">
+            {onglet === "acheter" ? (
+              <VueAcheteur />
+            ) : (
+              <VueVendeur userId={userId} onBoutiqueChange={rechargerBoutique} />
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );
@@ -683,47 +784,38 @@ function DialogueSignalement({ article, onFermer }) {
 /* VENDEUR                                                                     */
 /* ========================================================================== */
 
-function VueVendeur({ userId }) {
+function VueVendeur({ userId, onBoutiqueChange }) {
   const [boutiques, setBoutiques] = useState([]);
   const [choisie, setChoisie] = useState(null);
   const [articles, setArticles] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
+  const [ongletVendeur, setOngletVendeur] = useState("publier"); // 'publier' | 'parametres'
 
-  // Aucun setState synchrone ici : le premier geste est un `return` ou un
-  // `await`. Sans cette précaution, React signale des rendus en cascade — et
-  // il a raison, l'effet redéclencherait un rendu avant même la requête.
-  // Le cas « non connecté » n'a pas besoin de toucher à l'état : le rendu
-  // renvoie l'écran de connexion avant de regarder `chargement`.
   const recharger = useCallback(async () => {
     if (!userId) return;
     try {
       const liste = await chargerMesBoutiques(userId);
       setBoutiques(liste);
-      // On garde la boutique déjà sélectionnée si elle existe encore : sinon
-      // publier un article ferait sauter la sélection à chaque rechargement.
       const active = liste.find((b) => b.id === choisie) || liste[0] || null;
       setChoisie(active?.id || null);
       setArticles(active ? await chargerMesArticles(active.id) : []);
+      onBoutiqueChange?.();
     } catch (e) {
       setErreur(e.message);
     } finally {
       setChargement(false);
     }
-  }, [userId, choisie]);
+  }, [userId, choisie, onBoutiqueChange]);
 
   useEffect(() => {
-    // La règle ne peut pas voir que `recharger` n'écrit rien avant son premier
-    // `await` : elle signale tout appel à une fonction contenant un setState.
-    // Même dérogation que les autres pages du dépôt qui chargent leurs données
-    // au montage (admin/dashboard, boite-a-idees…).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     recharger();
   }, [recharger]);
 
   if (!userId) {
     return (
-      <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800">
+      <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
         <i className="fa-solid fa-store text-4xl text-gray-300 dark:text-gray-700"></i>
         <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mt-4">
           Connectez-vous pour ouvrir votre boutique
@@ -747,6 +839,8 @@ function VueVendeur({ userId }) {
     );
   }
 
+  const boutiqueActive = boutiques.find((b) => b.id === choisie) || boutiques[0] || null;
+
   return (
     <div className="space-y-5">
       {erreur && (
@@ -755,8 +849,7 @@ function VueVendeur({ userId }) {
         </div>
       )}
 
-      {/* Sélecteur : n'apparaît qu'à partir de deux points de vente. Avec une
-          seule boutique, il n'y a rien à choisir. */}
+      {/* Sélecteur si plusieurs points de vente */}
       {boutiques.length > 1 && (
         <div className="flex flex-wrap gap-2">
           {boutiques.map((b) => (
@@ -766,7 +859,7 @@ function VueVendeur({ userId }) {
               onClick={() => setChoisie(b.id)}
               className={`px-4 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer ${
                 choisie === b.id
-                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent"
+                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent shadow-sm"
                   : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800"
               }`}
             >
@@ -778,19 +871,284 @@ function VueVendeur({ userId }) {
         </div>
       )}
 
-      <FormulaireBoutique
-        userId={userId}
-        boutique={boutiques.find((b) => b.id === choisie) || null}
-        nombreBoutiques={boutiques.length}
-        onEnregistre={recharger}
-      />
+      {boutiqueActive ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* COLONNE GAUCHE : Cartes Style Profil LinkedIn (Boutique, Articles, Stats) */}
+          <div className="lg:col-span-4 space-y-3">
+            {/* 1. Carte d'Identité de la Boutique */}
+            <CarteProfilBoutique
+              boutique={boutiqueActive}
+              onAjouterArticle={() => setOngletVendeur("publier")}
+              onModifierBoutique={() => setOngletVendeur("parametres")}
+            />
 
-      {choisie && (
-        <>
-          <FormulaireArticle userId={userId} storeId={choisie} onPublie={recharger} />
-          <ListeMesArticles articles={articles} onChange={recharger} />
-        </>
+            {/* 2. Carte Articles en vente (Style EXPÉRIENCE) */}
+            <CarteArticlesVente articles={articles} onChange={recharger} />
+
+            {/* 3. Carte Statistiques (Style STATISTIQUES) */}
+            <CarteStatistiquesBoutique boutique={boutiqueActive} articles={articles} />
+          </div>
+
+          {/* COLONNE DROITE : Formulaires de publication ou de gestion */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("publier")}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  ongletVendeur === "publier"
+                    ? "bg-[#1877F2] text-white shadow-sm"
+                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
+                }`}
+              >
+                <i className="fa-solid fa-plus-circle mr-1.5"></i>
+                Publier un article (Assistant IA)
+              </button>
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("parametres")}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  ongletVendeur === "parametres"
+                    ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm"
+                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
+                }`}
+              >
+                <i className="fa-solid fa-gear mr-1.5"></i>
+                Paramètres de la boutique
+              </button>
+            </div>
+
+            {ongletVendeur === "publier" ? (
+              <FormulaireArticle userId={userId} storeId={boutiqueActive.id} onPublie={recharger} />
+            ) : (
+              <FormulaireBoutique
+                userId={userId}
+                boutique={boutiqueActive}
+                nombreBoutiques={boutiques.length}
+                onEnregistre={recharger}
+              />
+            )}
+          </div>
+        </div>
+      ) : (
+        <FormulaireBoutique
+          userId={userId}
+          boutique={null}
+          nombreBoutiques={boutiques.length}
+          onEnregistre={recharger}
+        />
       )}
+    </div>
+  );
+}
+
+/** 
+ * Carte Profil de la Boutique (Style LinkedIn / Facilité 1:1)
+ */
+function CarteProfilBoutique({ boutique, onAjouterArticle, onModifierBoutique }) {
+  const initiales = (boutique?.nom || "B").substring(0, 2).toUpperCase();
+  const adresse = `${boutique?.quartier ? `${boutique.quartier}, ` : ""}${boutique?.ville || "Dakar"}, Sénégal`;
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
+      {/* Image de couverture en hauteur avec dégradé sombre et filigrane */}
+      <div className="h-16 bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#0F172A] relative flex items-center justify-end px-3">
+        <span className="text-white/10 font-black text-4xl tracking-tighter select-none pointer-events-none">
+          CV
+        </span>
+      </div>
+
+      <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
+        {/* Photo / Logo de la Boutique */}
+        <div className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-slate-900 text-white flex items-center justify-center font-black text-lg">
+          {initiales}
+        </div>
+
+        <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight">
+          {boutique?.nom || "Ma boutique"}
+        </h2>
+
+        <p className="text-[10px] text-gray-500 font-bold mt-0.5">
+          Boutique vérifiée · Facilité Marketplace
+        </p>
+
+        <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-2">
+          {adresse}
+        </p>
+
+        {/* Bouton Ajouter Article (Style "+ + Expérience") */}
+        <button
+          type="button"
+          onClick={onAjouterArticle}
+          className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
+        >
+          <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
+          <span>+ Ajouter un article</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 
+ * Carte Liste d'Articles (Style EXPÉRIENCE (7) avec dépliable, miniatures carrées et bouton Voir plus)
+ */
+function CarteArticlesVente({ articles, onChange }) {
+  const [deplie, setDeplie] = useState(true);
+  const [toutAfficher, setToutAfficher] = useState(false);
+  const [enCours, setEnCours] = useState(null);
+
+  const changerStock = async (id, quantite) => {
+    setEnCours(id);
+    try {
+      await majStock(id, quantite);
+      await onChange();
+    } finally {
+      setEnCours(null);
+    }
+  };
+
+  const articlesAffiches = toutAfficher ? articles : articles.slice(0, 2);
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs flex flex-col space-y-2.5">
+      <button
+        type="button"
+        onClick={() => setDeplie((v) => !v)}
+        className="w-full flex justify-between items-center pb-1.5 border-b border-gray-100 dark:border-gray-800 cursor-pointer bg-transparent border-x-0 border-t-0 p-0 text-left group"
+      >
+        <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider group-hover:text-blue-600 transition">
+          ARTICLES EN VENTE
+          <span className="ml-1 text-gray-400 font-bold normal-case tracking-normal">
+            ({articles.length})
+          </span>
+        </h3>
+        <i
+          className={`fa-solid fa-chevron-down text-gray-400 text-[10px] transition-transform duration-200 ${
+            deplie ? "rotate-180" : ""
+          }`}
+        ></i>
+      </button>
+
+      {deplie && (
+        <div className="space-y-3">
+          {articles.length === 0 ? (
+            <p className="text-[10px] text-gray-400 text-center py-2">
+              Aucun article pour l&apos;instant.
+            </p>
+          ) : (
+            articlesAffiches.map((a) => (
+              <div key={a.id} className="relative flex items-start space-x-2 text-left">
+                {/* Vignette carrée Style "RA" */}
+                <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center flex-shrink-0 text-[10px] font-bold border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {a.photos?.[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={urlPhoto(a.photos[0])} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    a.titre.substring(0, 2).toUpperCase()
+                  )}
+                </div>
+
+                <div className="flex-grow min-w-0 pr-5">
+                  <h4 className="text-[10px] font-extrabold text-gray-900 dark:text-white truncate">
+                    {a.titre}
+                  </h4>
+                  <p className="text-[9px] text-[#1877F2] font-bold truncate">
+                    {prixLisible(a.prix_xof)} FCFA
+                  </p>
+                  <p className="text-[8px] text-gray-400 font-semibold mt-0.5">
+                    — {a.statut === "en_stock" ? `En stock (${a.quantite})` : "Épuisé"}
+                  </p>
+
+                  {/* Gestion rapide du stock */}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => changerStock(a.id, Math.max(0, a.quantite - 1))}
+                      disabled={enCours === a.id || a.quantite === 0}
+                      className="w-4 h-4 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[9px] font-black flex items-center justify-center disabled:opacity-40 cursor-pointer"
+                    >
+                      −
+                    </button>
+                    <span className="text-[9px] font-bold text-gray-700 dark:text-gray-300">
+                      {a.quantite}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => changerStock(a.id, a.quantite + 1)}
+                      disabled={enCours === a.id}
+                      className="w-4 h-4 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[9px] font-black flex items-center justify-center disabled:opacity-40 cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bouton de suppression */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await retirerArticle(a.id);
+                    await onChange();
+                  }}
+                  className="text-gray-300 hover:text-red-500 transition p-0.5 cursor-pointer absolute top-0 right-0"
+                  title="Supprimer cet article"
+                >
+                  <i className="fa-solid fa-trash-can text-[9px]"></i>
+                </button>
+              </div>
+            ))
+          )}
+
+          {articles.length > 2 && (
+            <button
+              type="button"
+              onClick={() => setToutAfficher((v) => !v)}
+              className="w-full pt-1.5 border-t border-gray-100 dark:border-gray-800 text-[9px] font-extrabold text-blue-600 hover:text-blue-800 transition cursor-pointer bg-transparent border-x-0 border-b-0 flex items-center justify-center space-x-1"
+            >
+              <span>{toutAfficher ? "Voir moins" : `Voir plus (+${articles.length - 2})`}</span>
+              <i
+                className={`fa-solid fa-chevron-down text-[7px] transition-transform duration-200 ${
+                  toutAfficher ? "rotate-180" : ""
+                }`}
+              ></i>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 
+ * Carte Statistiques Boutique (Style STATISTIQUES 1:1)
+ */
+function CarteStatistiquesBoutique({ boutique, articles }) {
+  const totalArticles = articles.reduce((acc, a) => acc + (Number(a.quantite) || 0), 0);
+  const valeurStock = articles.reduce((acc, a) => acc + ((Number(a.prix_xof) || 0) * (Number(a.quantite) || 0)), 0);
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+          STATISTIQUES
+        </h3>
+        <i className="fa-solid fa-chevron-right text-gray-400 text-[10px]"></i>
+      </div>
+      <div className="space-y-2 font-bold text-[11px]">
+        <div className="flex justify-between items-center py-0.5">
+          <span className="text-gray-500 dark:text-gray-400">Articles en stock</span>
+          <span className="text-blue-600 font-extrabold text-xs">{totalArticles}</span>
+        </div>
+        <div className="flex justify-between items-center py-0.5 border-t border-gray-100 dark:border-gray-800">
+          <span className="text-gray-500 dark:text-gray-400">Valeur estimée</span>
+          <span className="text-blue-600 font-extrabold text-xs">{prixLisible(valeurStock)} FCFA</span>
+        </div>
+        <div className="flex justify-between items-center py-0.5 border-t border-gray-100 dark:border-gray-800">
+          <span className="text-gray-500 dark:text-gray-400">Zone de livraison</span>
+          <span className="text-gray-800 dark:text-gray-200 font-extrabold text-[10px]">{boutique?.ville || "Dakar"}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -838,7 +1196,7 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
           return;
         }
         await creerBoutique(userId, champs);
-        setMessage("Boutique créée. Son emplacement est désormais fixé.");
+        setMessage("Boutique créée. Son emplacement est désormais fixé et ne changera plus.");
       }
       await onEnregistre();
     } catch (err) {
@@ -883,7 +1241,9 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
         )}
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-        Vos coordonnées et votre localisation permettent aux acheteurs de vous trouver et de vous contacter directement sur WhatsApp.
+        Vos coordonnées et votre localisation permettent aux acheteurs de vous trouver et de vous
+        contacter directement sur WhatsApp.
+        {!boutique && " Le département est rempli automatiquement à partir du relevé."}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -927,13 +1287,23 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
           verrouillee={positionVerrouillee}
           definieLe={boutique?.position_definie_le}
           onReleve={(p) => {
+            // Le relevé renseigne le département à la place du commerçant :
+            // il vient de sortir son téléphone dans sa boutique, lui demander
+            // ensuite de retrouver « Pikine » dans une liste de 45 entrées est
+            // une occasion de se tromper pour rien. Il peut toujours corriger.
+            const dep = departementLePlusProche(p.latitude, p.longitude);
             setChamps((c) => ({
               ...c,
               latitude: p.latitude,
               longitude: p.longitude,
               precisionM: p.precisionM,
+              ville: dep && VILLES.includes(dep.nom) ? dep.nom : c.ville,
             }));
-            setMessage("Position GPS relevée. Cliquez sur 'Enregistrer' pour la valider.");
+            setMessage(
+              dep
+                ? `Position relevée — département ${dep.nom}. Vérifiez-le, puis créez votre boutique.`
+                : "Position relevée. Créez votre boutique pour la fixer."
+            );
           }}
         />
       </div>
@@ -947,7 +1317,7 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
         className="mt-4 w-full sm:w-auto px-6 py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-black disabled:opacity-50 cursor-pointer shadow-md hover:opacity-95 transition"
       >
         <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"} mr-2`}></i>
-        {envoi ? "Enregistrement rapide…" : boutique ? "Mettre à jour ma boutique" : "Créer ma boutique instantanément"}
+        {envoi ? "Enregistrement…" : boutique ? "Mettre à jour ma boutique" : "Créer ma boutique"}
       </button>
     </form>
   );
