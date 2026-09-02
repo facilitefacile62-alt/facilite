@@ -1890,6 +1890,23 @@ export default function Header() {
                   </div>
                 </Link>
 
+                {/* 9. Mon activité — statut en direct des établissements */}
+                <Link
+                  href="/mon-activite"
+                  className="rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-sm shadow-2xs">
+                      <i className="fa-solid fa-store"></i>
+                    </div>
+                    <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-[9px] font-black rounded-md uppercase">Nouveau</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Mon activité</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate">Point Wave, pharmacie, clinique</p>
+                  </div>
+                </Link>
+
                 {/* 11. Boîte à idées & Suggestions */}
                 <Link
                   href="/boite-a-idees"
