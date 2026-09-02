@@ -54,14 +54,14 @@ const contentSecurityPolicy = [
   "object-src 'self' blob: data: https://*.supabase.co",
   "base-uri 'self'",
   "form-action 'self'",
-  "frame-ancestors 'none'",
+  isDev ? "frame-ancestors 'self' vscode-webview: http://localhost:* http://127.0.0.1:*" : "frame-ancestors 'none'",
 ].join("; ");
 
 const nextConfig = {
   devIndicators: false,
   poweredByHeader: false,
   serverExternalPackages: ["unpdf", "mammoth", "tesseract.js", "@napi-rs/canvas", "canvas"],
-  allowedDevOrigins: ["127.0.0.1"],
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co" },
@@ -75,10 +75,14 @@ const nextConfig = {
       {
         source: "/(.*)",
         headers: [
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
+          ...(isDev
+            ? []
+            : [
+                {
+                  key: "X-Frame-Options",
+                  value: "DENY",
+                },
+              ]),
           {
             key: "X-Content-Type-Options",
             value: "nosniff",

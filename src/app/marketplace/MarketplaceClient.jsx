@@ -27,6 +27,8 @@ import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from
 import {
   chargerMaBoutique,
   coordonnee,
+  MOTIFS_SIGNALEMENT,
+  signalerAnnonce,
   chargerMesArticles,
   chercherAutourDeMoi,
   enregistrerBoutique,
@@ -353,6 +355,7 @@ function VueAcheteur() {
 }
 
 function CarteArticle({ article }) {
+  const [signalementOuvert, setSignalementOuvert] = useState(false);
   const enStock = article.statut === "en_stock";
   const photo = article.photos?.[0] || null;
 
@@ -409,8 +412,133 @@ function CarteArticle({ article }) {
         ) : (
           <p className="mt-4 text-[11px] text-gray-400 text-center">Aucun contact renseigné</p>
         )}
+
+        {/* Volontairement discret : le signalement doit être trouvable sans
+            concurrencer le bouton de contact. Une annonce honnête est la
+            règle, pas l'exception. */}
+        <button
+          type="button"
+          onClick={() => setSignalementOuvert(true)}
+          className="mt-2 w-full text-[11px] font-semibold text-gray-400 hover:text-red-600 transition cursor-pointer"
+        >
+          <i className="fa-regular fa-flag mr-1.5"></i>
+          Signaler cette annonce
+        </button>
       </div>
+
+      {signalementOuvert && (
+        <DialogueSignalement
+          article={article}
+          onFermer={() => setSignalementOuvert(false)}
+        />
+      )}
     </article>
+  );
+}
+
+/**
+ * Boîte de signalement. Elle ne dit jamais au vendeur qu'il a été signalé —
+ * la policy de lecture réserve la table aux administrateurs, précisément pour
+ * qu'un signalement ne se transforme pas en règlement de comptes.
+ */
+function DialogueSignalement({ article, onFermer }) {
+  const [motif, setMotif] = useState(MOTIFS_SIGNALEMENT[0].id);
+  const [details, setDetails] = useState("");
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
+  const [envoye, setEnvoye] = useState(false);
+
+  const envoyer = async () => {
+    setEnvoi(true);
+    setErreur("");
+    try {
+      await signalerAnnonce(article.id, motif, details);
+      setEnvoye(true);
+    } catch (e) {
+      setErreur(e.message);
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-md p-6 relative">
+        <button
+          type="button"
+          onClick={onFermer}
+          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-pointer"
+          aria-label="Fermer"
+        >
+          <i className="fa-solid fa-xmark"></i>
+        </button>
+
+        {envoye ? (
+          <div className="text-center py-4">
+            <i className="fa-solid fa-circle-check text-3xl text-emerald-500"></i>
+            <h3 className="text-base font-black text-gray-900 dark:text-white mt-3">Signalement transmis</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+              Une personne de l&apos;équipe va l&apos;examiner. Le vendeur ne saura pas
+              que vous êtes à l&apos;origine du signalement.
+            </p>
+            <button
+              type="button"
+              onClick={onFermer}
+              className="mt-5 w-full py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-sm cursor-pointer"
+            >
+              Fermer
+            </button>
+          </div>
+        ) : (
+          <>
+            <h3 className="text-base font-black text-gray-900 dark:text-white pr-8">Signaler cette annonce</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 truncate">{article.titre}</p>
+
+            <div className="space-y-2">
+              {MOTIFS_SIGNALEMENT.map((m) => (
+                <label
+                  key={m.id}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  <input
+                    type="radio"
+                    name="motif"
+                    value={m.id}
+                    checked={motif === m.id}
+                    onChange={() => setMotif(m.id)}
+                    className="accent-red-600 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-gray-800 dark:text-gray-200">{m.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <textarea
+              rows={2}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder="Précisions (facultatif)"
+              className="mt-3 w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs resize-none"
+            />
+
+            {erreur && <p className="text-xs font-bold text-red-600 mt-3">{erreur}</p>}
+
+            <button
+              type="button"
+              onClick={envoyer}
+              disabled={envoi}
+              className="mt-4 w-full py-3 rounded-2xl bg-red-600 text-white text-sm font-black disabled:opacity-50 cursor-pointer"
+            >
+              {envoi ? "Envoi…" : "Envoyer le signalement"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

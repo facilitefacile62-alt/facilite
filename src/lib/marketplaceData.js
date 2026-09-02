@@ -192,6 +192,38 @@ export function normaliserWhatsapp(saisie) {
   return `+${brut}`;
 }
 
+// ---------------------------------------------------------------------------
+// Signalement
+// ---------------------------------------------------------------------------
+
+/**
+ * Motifs proposés à l'acheteur. Volontairement courts et concrets : une liste
+ * abstraite (« contenu inapproprié ») produit des signalements qu'un
+ * administrateur ne sait pas trancher.
+ */
+export const MOTIFS_SIGNALEMENT = [
+  { id: "inexistant", label: "L'article n'existe pas / plus" },
+  { id: "prix_trompeur", label: "Le prix affiché est faux" },
+  { id: "contrefacon", label: "Contrefaçon" },
+  { id: "interdit", label: "Produit interdit ou dangereux" },
+  { id: "autre", label: "Autre" },
+];
+
+/**
+ * Signale une annonce. La fonction refuse le signalement de sa propre annonce
+ * et n'accepte qu'un signalement par personne : réenvoyer le même remplace le
+ * précédent au lieu d'en créer un second.
+ */
+export async function signalerAnnonce(itemId, motif, details) {
+  const { data, error } = await supabase.rpc("signaler_annonce", {
+    p_item_id: itemId,
+    p_motif: motif,
+    p_details: details?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /** Lien de conversation pré-rempli, avec le titre de l'article. */
 export function lienWhatsapp(numero, titreArticle) {
   const n = normaliserWhatsapp(numero);
