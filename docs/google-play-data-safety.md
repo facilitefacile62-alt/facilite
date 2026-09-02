@@ -209,3 +209,74 @@ un oubli :
 3. Vérifier que `https://ffacilite.com/suppression-compte` répond en 200 sans
    connexion : Google teste ce lien.
 4. Ne déclarer qu'**une** URL de politique de confidentialité.
+
+---
+
+## 6. Feuille de réponses, dans l'ordre du formulaire
+
+Section ajoutée le 02/09/2026 pour la saisie. Les libellés Google changent
+parfois de formulation ; l'intention, elle, ne change pas.
+
+### Écran 1 — « Collecte et sécurité des données »
+
+| Question | Réponse |
+|---|---|
+| Votre application collecte-t-elle ou partage-t-elle l'un des types de données utilisateur requis ? | **Oui** |
+| Toutes les données utilisateur collectées sont-elles chiffrées en transit ? | **Oui** |
+| Proposez-vous un moyen de demander la suppression des données ? | **Oui** — `https://ffacilite.com/suppression-compte` |
+| Votre application est-elle destinée aux familles / enfants ? | **Non** |
+| Avez-vous fait l'objet d'un examen de sécurité indépendant ? | **Non** (question facultative) |
+
+### Écran 2 — cases à cocher, catégorie par catégorie
+
+Google présente les catégories dans cet ordre. **Ne cocher que ce qui suit** ;
+tout le reste doit rester vide.
+
+| Catégorie | À cocher | À laisser vide |
+|---|---|---|
+| Position | Position précise | Position approximative |
+| Informations personnelles | Nom · Adresse e-mail · Identifiants utilisateur · Adresse · Numéro de téléphone · Autres informations | Race et origine ethnique · Opinions politiques ou religieuses · Orientation sexuelle |
+| Informations financières | Historique d'achats | **Informations de paiement** · Historique de solvabilité · Autres |
+| Santé et remise en forme | — | tout |
+| Messages | Autres messages dans l'application | E-mails · SMS |
+| Photos et vidéos | Photos · Vidéos | — |
+| Fichiers audio | Enregistrements vocaux ou sonores | Fichiers musicaux · Autres |
+| Fichiers et documents | Fichiers et documents | — |
+| Agenda | — | tout |
+| Contacts | — | tout |
+| Activité dans l'application | Interactions dans l'application · Autres contenus générés par l'utilisateur | Historique de recherche · Applications installées · Autres actions |
+| Recherche sur le Web | — | tout |
+| Informations et performances | Journaux de plantage · Diagnostics | Autres données de performances |
+| Appareil ou autres identifiants | Identifiants d'appareil ou autres | — |
+
+### Écran 3 — détail, pour chaque case cochée
+
+Quatre questions reviennent à chaque fois. Réponses constantes sauf mention :
+
+* **Collectées ?** → Oui, partout.
+* **Partagées ?** → **Non**, partout (voir §2 : nos tiers sont des
+  prestataires, ce que Google exclut de la notion de partage).
+* **Traitées de façon éphémère ?** → **Non**, partout — y compris pour la
+  position (voir l'encadré du §3 : vrai pour l'acheteur, faux pour le vendeur).
+* **Obligatoires ou facultatives ?** → Obligatoires uniquement pour **Nom**,
+  **Adresse e-mail** et **Identifiants utilisateur**. Facultatives partout
+  ailleurs.
+
+**Finalités** à cocher selon le type :
+
+| Type | Finalités |
+|---|---|
+| Nom, E-mail, Identifiants utilisateur | Fonctionnalité de l'application · Gestion du compte |
+| Adresse, Téléphone, Autres informations | Fonctionnalité de l'application |
+| Position précise | Fonctionnalité de l'application |
+| Historique d'achats | Fonctionnalité de l'application |
+| Messages, Photos, Vidéos, Audio, Fichiers | Fonctionnalité de l'application |
+| Interactions dans l'application | Analyses |
+| Autres contenus générés | Fonctionnalité de l'application |
+| Journaux de plantage, Diagnostics | Fonctionnalité de l'application |
+| Identifiants d'appareil | Analyses |
+
+### Écran 4 — aperçu
+
+Relire, **Enregistrer**, puis **Envoyer pour examen**. Sans ce dernier clic,
+rien n'est transmis.
