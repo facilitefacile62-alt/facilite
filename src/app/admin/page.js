@@ -75,6 +75,7 @@ const NAV_SECTIONS = [
       { type: "tab", id: "securite", icon: "🛡️", label: "Sécurité & Failles", badge: "Live" },
       { type: "tab", id: "utilisateurs", icon: "👥", label: "Utilisateurs" },
       { type: "link", href: "/admin/banque-donnees", icon: "🗃️", label: "Banque d'information" },
+      { type: "link", href: "/admin/signalements", icon: "🚩", label: "Signalements Marketplace" },
       { type: "tab", id: "tarification", icon: "💳", label: "Tarification" },
       { type: "link", href: "/admin/dashboard", icon: "💰", label: "Facturation & Transactions" },
       { type: "link", href: "/admin/commandes-agent", icon: "🧑‍💼", label: "Commandes Agent" },
