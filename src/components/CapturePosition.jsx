@@ -166,9 +166,10 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
         Positionner ma boutique
       </p>
       <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-        Faites-le <strong>depuis votre boutique</strong>, pas de chez vous. Le relevé dure dix
-        secondes : c&apos;est le temps qu&apos;il faut au GPS pour être précis, et l&apos;emplacement
-        ne pourra plus être changé gratuitement.
+        Faites-le <strong>depuis votre boutique</strong>, avec un <strong>téléphone</strong> : un
+        ordinateur n&apos;a pas de GPS et devine sa position par le réseau, souvent à plusieurs
+        centaines de mètres près. Le relevé dure dix secondes, et l&apos;emplacement ne pourra plus
+        être changé gratuitement.
       </p>
 
       {/* Dire AVANT ce que le navigateur va demander.
@@ -177,9 +178,14 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
           application d'emploi veut sa position, et elle refuse par réflexe.
           Annoncer la demande et sa raison change complètement le taux
           d'acceptation. */}
-      {!enCours && autorisation !== "granted" && (
+      {!enCours && (
         <div className="mt-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2.5">
-          {autorisation === "denied" ? (
+          {autorisation === "granted" ? (
+            <p className="text-[11px] font-black text-emerald-700 dark:text-emerald-400">
+              <i className="fa-solid fa-circle-check mr-1.5"></i>
+              Localisation déjà autorisée pour ce site — le relevé démarrera sans rien demander.
+            </p>
+          ) : autorisation === "denied" ? (
             <>
               <p className="text-[11px] font-black text-red-600 dark:text-red-400">
                 <i className="fa-solid fa-ban mr-1.5"></i>
@@ -231,11 +237,31 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
       ) : (
         <>
           {meilleur && (
-            <p className="text-[11px] mt-2">
-              Relevé obtenu — précision <span className={`font-black ${q.couleur}`}>{q.texte}</span>
-              {meilleur.precisionM != null ? ` (${meilleur.precisionM} m)` : ""}.
-              {!q.bonne && " Recommencez à l'extérieur pour un meilleur résultat."}
-            </p>
+            <div className="mt-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2.5">
+              <p className="text-[11px] font-black text-gray-900 dark:text-white">
+                <i className="fa-solid fa-location-dot mr-1.5"></i>
+                Coordonnées relevées
+              </p>
+              {/* Les chiffres sont affichés parce qu'ils sont vérifiables : le
+                  commerçant peut les coller dans une carte et voir si le point
+                  tombe sur sa boutique. Cinq décimales valent environ un
+                  mètre — au-delà, ce serait du bruit. */}
+              <p className="text-xs font-mono font-bold text-gray-800 dark:text-gray-200 mt-1 tabular-nums">
+                {meilleur.latitude.toFixed(5)}, {meilleur.longitude.toFixed(5)}
+              </p>
+              <p className="text-[11px] mt-1.5">
+                Précision <span className={`font-black ${q.couleur}`}>{q.texte}</span>
+                {meilleur.precisionM != null ? ` — environ ${meilleur.precisionM} m` : ""}.
+              </p>
+              {!q.bonne && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1.5 leading-relaxed">
+                  <i className="fa-solid fa-triangle-exclamation mr-1"></i>
+                  {meilleur.precisionM != null && meilleur.precisionM > 150
+                    ? "Cette position ne vient pas du GPS mais du réseau — c'est ce qui arrive sur un ordinateur, ou à l'intérieur d'un bâtiment. Refaites le relevé depuis un téléphone, dehors, devant la boutique."
+                    : "Sortez devant la boutique et refaites le relevé pour gagner en précision."}
+                </p>
+              )}
+            </div>
           )}
           <button
             type="button"
