@@ -140,6 +140,7 @@ export default function MarketplaceClient() {
   const [maBoutiqueActive, setMaBoutiqueActive] = useState(null);
   const [mesArticles, setMesArticles] = useState([]);
   const [chargementBoutique, setChargementBoutique] = useState(true);
+  const [boutiqueModal, setBoutiqueModal] = useState(null);
 
   const userId = session?.user?.id || null;
   const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
@@ -250,10 +251,10 @@ export default function MarketplaceClient() {
           </div>
         </header>
 
-        {/* Layout en Split 2 Colonnes (LinkedIn Style) */}
+        {/* Layout en Split 2 Colonnes : Desktop 2 colonnes / Mobile adapté sans doublon */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* BARRE DU PROFIL GAUCHE : "Ma Boutique" 1:1 Identique et Cliquable */}
-          <aside className="lg:col-span-4 space-y-3">
+          <aside className={`lg:col-span-4 space-y-3 ${onglet === "vendre" ? "block" : "hidden lg:block"}`}>
             {chargementBoutique ? (
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse space-y-3">
                 <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
@@ -268,7 +269,9 @@ export default function MarketplaceClient() {
                   profile={profile}
                   boutique={maBoutiqueActive}
                   onAjouterArticle={() => setOnglet("vendre")}
-                  onBoutiqueClick={() => setOnglet("vendre")}
+                  onBoutiqueClick={() => {
+                    if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
+                  }}
                 />
 
                 {/* 2. Carte Expérience / Articles en Vente (1:1 Identique & Cliquable) */}
@@ -308,12 +311,26 @@ export default function MarketplaceClient() {
           {/* ZONE PRINCIPALE : Catalogue ou Gestion Vendeur */}
           <main className="lg:col-span-8">
             {onglet === "acheter" ? (
-              <VueAcheteur />
+              <VueAcheteur onVoirBoutique={(b) => setBoutiqueModal(b)} />
             ) : (
-              <VueVendeur userId={userId} onBoutiqueChange={rechargerBoutique} />
+              <VueVendeur
+                userId={userId}
+                onBoutiqueChange={rechargerBoutique}
+                boutiqueActive={maBoutiqueActive}
+                boutiques={boutiques}
+              />
             )}
           </main>
         </div>
+
+        {/* Modal / Bottom Sheet Boutique (Style WhatsApp / Topwork) */}
+        {boutiqueModal && (
+          <ModalFicheBoutique
+            boutique={boutiqueModal}
+            articles={mesArticles}
+            onFermer={() => setBoutiqueModal(null)}
+          />
+        )}
       </div>
     </div>
   );
@@ -323,7 +340,7 @@ export default function MarketplaceClient() {
 /* ACHETEUR                                                                    */
 /* ========================================================================== */
 
-function VueAcheteur() {
+function VueAcheteur({ onVoirBoutique }) {
   const [position, setPosition] = useState(null);
   const [texte, setTexte] = useState("");
   const [categorie, setCategorie] = useState(null);
@@ -579,6 +596,7 @@ function VueAcheteur() {
           <CarteArticle
             key={a.id}
             article={a}
+            onVoirBoutique={onVoirBoutique}
             ancre={resultats.findIndex((x) => x.boutique_id === a.boutique_id) === i}
           />
         ))}
@@ -587,7 +605,7 @@ function VueAcheteur() {
   );
 }
 
-function CarteArticle({ article, ancre = false }) {
+function CarteArticle({ article, onVoirBoutique, ancre = false }) {
   const [signalementOuvert, setSignalementOuvert] = useState(false);
   const enStock = article.statut === "en_stock";
   const photo = article.photos?.[0] || null;
@@ -625,11 +643,25 @@ function CarteArticle({ article, ancre = false }) {
         </h3>
         <p className="text-lg font-black text-[#1877F2] mt-1">{prixLisible(article.prix_xof)} FCFA</p>
 
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        <button
+          type="button"
+          onClick={() =>
+            onVoirBoutique?.({
+              id: article.boutique_id,
+              nom: article.boutique_nom,
+              quartier: article.quartier,
+              ville: article.ville,
+              telephone_whatsapp: article.telephone_whatsapp,
+              whatsappUrl: article.whatsappUrl,
+            })
+          }
+          className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center cursor-pointer hover:text-[#1877F2] transition"
+        >
           <i className="fa-solid fa-shop mr-1.5"></i>
           {article.boutique_nom}
           {article.quartier ? ` · ${article.quartier}` : ""}
-        </p>
+        </button>
+
         {/* La fraîcheur est ce qui justifie — ou non — un déplacement. */}
         <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
           Stock confirmé {depuis(article.maj_le)}
@@ -870,63 +902,46 @@ function VueVendeur({ userId, onBoutiqueChange }) {
       )}
 
       {boutiqueActive ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* COLONNE GAUCHE : Cartes Style Profil LinkedIn (Boutique, Articles, Stats) */}
-          <div className="lg:col-span-4 space-y-3">
-            {/* 1. Carte d'Identité de la Boutique */}
-            <CarteProfilBoutique
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("publier")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                ongletVendeur === "publier"
+                  ? "bg-[#1877F2] text-white shadow-sm"
+                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-plus-circle mr-1.5"></i>
+              Publier un article (Assistant IA)
+            </button>
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("parametres")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                ongletVendeur === "parametres"
+                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm"
+                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-gear mr-1.5"></i>
+              Paramètres de la boutique
+            </button>
+          </div>
+
+          {ongletVendeur === "publier" ? (
+            <FormulaireArticle userId={userId} storeId={boutiqueActive.id} onPublie={recharger} />
+          ) : (
+            <FormulaireBoutique
+              userId={userId}
               boutique={boutiqueActive}
-              onAjouterArticle={() => setOngletVendeur("publier")}
-              onModifierBoutique={() => setOngletVendeur("parametres")}
+              nombreBoutiques={boutiques.length}
+              onEnregistre={recharger}
             />
+          )}
 
-            {/* 2. Carte Articles en vente (Style EXPÉRIENCE) */}
-            <CarteArticlesVente articles={articles} onChange={recharger} />
-
-            {/* 3. Carte Statistiques (Style STATISTIQUES) */}
-            <CarteStatistiquesBoutique boutique={boutiqueActive} articles={articles} />
-          </div>
-
-          {/* COLONNE DROITE : Formulaires de publication ou de gestion */}
-          <div className="lg:col-span-8 space-y-4">
-            <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("publier")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  ongletVendeur === "publier"
-                    ? "bg-[#1877F2] text-white shadow-sm"
-                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
-                }`}
-              >
-                <i className="fa-solid fa-plus-circle mr-1.5"></i>
-                Publier un article (Assistant IA)
-              </button>
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("parametres")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  ongletVendeur === "parametres"
-                    ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm"
-                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
-                }`}
-              >
-                <i className="fa-solid fa-gear mr-1.5"></i>
-                Paramètres de la boutique
-              </button>
-            </div>
-
-            {ongletVendeur === "publier" ? (
-              <FormulaireArticle userId={userId} storeId={boutiqueActive.id} onPublie={recharger} />
-            ) : (
-              <FormulaireBoutique
-                userId={userId}
-                boutique={boutiqueActive}
-                nombreBoutiques={boutiques.length}
-                onEnregistre={recharger}
-              />
-            )}
-          </div>
+          <ListeMesArticles articles={articles} onChange={recharger} />
         </div>
       ) : (
         <FormulaireBoutique
@@ -944,9 +959,14 @@ function VueVendeur({ userId, onBoutiqueChange }) {
  * Carte Profil Boutique / Utilisateur (1:1 Identique au profil Facilité & Cliquable)
  */
 function CarteProfilBoutique({ profile, boutique, onAjouterArticle, onBoutiqueClick }) {
-  const nom = profile?.full_name || boutique?.nom || "facile demo";
-  const titre = profile?.headline || (boutique ? "Boutique Officielle · Marketplace" : "Juriste Droit Privé & Droits Humains");
-  const localisation = profile?.location || (boutique ? `${boutique?.quartier ? `${boutique.quartier}, ` : ""}${boutique?.ville || "Dakar"}, Sénégal` : "Dakar, Sénégal");
+  // Le nom de la boutique a la priorité pour afficher la boutique du commerçant
+  const nom = boutique?.nom || profile?.full_name || "Ma boutique";
+  const titre = boutique
+    ? `Boutique Officielle · ${boutique.quartier ? `${boutique.quartier}, ` : ""}${boutique.ville || "Dakar"}`
+    : (profile?.headline || "Vendeur Facilité Marketplace");
+  const localisation = boutique?.ville
+    ? `${boutique.quartier ? `${boutique.quartier}, ` : ""}${boutique.ville}, Sénégal`
+    : (profile?.location || "Dakar, Sénégal");
   const avatarUrl = profile?.avatar_url || "/logo.jpeg";
   const coverUrl = profile?.cover_url || "/stellar-cover.png";
 
@@ -1010,7 +1030,7 @@ function CarteProfilBoutique({ profile, boutique, onAjouterArticle, onBoutiqueCl
 }
 
 /** 
- * Carte Liste d'Articles / Expérience (1:1 Identique avec dépliable, miniatures carrées "RA" et Voir plus)
+ * Carte Liste d'Articles / Expérience (1:1 Identique avec dépliable, miniatures carrées et Voir plus)
  */
 function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
   const [deplie, setDeplie] = useState(true);
@@ -1029,7 +1049,6 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
 
   const aDesArticles = articles && articles.length > 0;
   const listeAffichee = toutAfficher ? articles : articles.slice(0, 2);
-  const countAffiche = aDesArticles ? articles.length : 7;
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs flex flex-col space-y-2.5">
@@ -1040,9 +1059,9 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
         className="w-full flex justify-between items-center pb-1.5 border-b border-gray-100 dark:border-gray-800 cursor-pointer bg-transparent border-x-0 border-t-0 p-0 text-left group"
       >
         <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider group-hover:text-blue-600 transition">
-          EXPÉRIENCE
+          EXPÉRIENCE &amp; ARTICLES
           <span className="ml-1 text-gray-400 font-bold normal-case tracking-normal">
-            ({countAffiche})
+            ({articles.length})
           </span>
         </h3>
         <i
@@ -1057,7 +1076,7 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
           {aDesArticles ? (
             listeAffichee.map((a) => (
               <div key={a.id} className="relative flex items-start space-x-2 text-left">
-                {/* Vignette carrée Style "RA" */}
+                {/* Vignette carrée */}
                 <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {a.photos?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -1075,8 +1094,31 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
                     {prixLisible(a.prix_xof)} FCFA
                   </p>
                   <p className="text-[8px] text-gray-400 font-semibold mt-0.5">
-                    — {a.statut === "en_stock" ? `En stock (${a.quantite})` : "Terminé"}
+                    — {a.statut === "en_stock" ? `En stock (${a.quantite})` : "Épuisé"}
                   </p>
+
+                  {/* Gestion rapide du stock */}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => changerStock(a.id, Math.max(0, a.quantite - 1))}
+                      disabled={enCours === a.id || a.quantite === 0}
+                      className="w-4 h-4 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[9px] font-black flex items-center justify-center disabled:opacity-40 cursor-pointer"
+                    >
+                      −
+                    </button>
+                    <span className="text-[9px] font-bold text-gray-700 dark:text-gray-300">
+                      {a.quantite}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => changerStock(a.id, a.quantite + 1)}
+                      disabled={enCours === a.id}
+                      className="w-4 h-4 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[9px] font-black flex items-center justify-center disabled:opacity-40 cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
 
                 {/* Bouton de suppression cliquable */}
@@ -1087,80 +1129,151 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
                     await onChange?.();
                   }}
                   className="text-gray-300 hover:text-red-500 transition p-0.5 cursor-pointer absolute top-0 right-0"
-                  title="Supprimer"
+                  title="Supprimer cet article"
                 >
                   <i className="fa-solid fa-trash-can text-[9px]"></i>
                 </button>
               </div>
             ))
           ) : (
-            <>
-              {/* Entrées modèles 1:1 identiques au profil */}
-              <div className="relative flex items-start space-x-2 text-left">
-                <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-gray-200 dark:border-gray-700">
-                  RA
-                </div>
-                <div className="flex-grow min-w-0 pr-4">
-                  <h4 className="text-[10px] font-extrabold text-gray-900 dark:text-white truncate">
-                    Coordonnatrice du dép...
-                  </h4>
-                  <p className="text-[9px] text-gray-700 dark:text-gray-300 font-bold truncate">
-                    RADDHO (Sénégal)
-                  </p>
-                  <p className="text-[8px] text-gray-400 font-semibold mt-0.5">
-                    — Terminé
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onAjouterClick}
-                  className="text-gray-300 hover:text-red-500 transition p-0.5 cursor-pointer absolute top-0 right-0"
-                >
-                  <i className="fa-solid fa-trash-can text-[9px]"></i>
-                </button>
-              </div>
-
-              <div className="relative flex items-start space-x-2 text-left">
-                <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-gray-200 dark:border-gray-700">
-                  RA
-                </div>
-                <div className="flex-grow min-w-0 pr-4">
-                  <h4 className="text-[10px] font-extrabold text-gray-900 dark:text-white truncate">
-                    Stagiaire
-                  </h4>
-                  <p className="text-[9px] text-gray-700 dark:text-gray-300 font-bold truncate">
-                    RADDHO (Sénégal)
-                  </p>
-                  <p className="text-[8px] text-gray-400 font-semibold mt-0.5">
-                    — Terminé
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onAjouterClick}
-                  className="text-gray-300 hover:text-red-500 transition p-0.5 cursor-pointer absolute top-0 right-0"
-                >
-                  <i className="fa-solid fa-trash-can text-[9px]"></i>
-                </button>
-              </div>
-            </>
+            <div className="text-center py-2">
+              <p className="text-[10px] text-gray-400">Aucun article publié pour l&apos;instant.</p>
+              <button
+                type="button"
+                onClick={onAjouterClick}
+                className="mt-1 text-[9px] font-bold text-[#1877F2] hover:underline cursor-pointer"
+              >
+                + Publier mon premier article
+              </button>
+            </div>
           )}
 
-          {/* Bouton Voir plus (+5) */}
-          <button
-            type="button"
-            onClick={() => setToutAfficher((v) => !v)}
-            className="w-full pt-1.5 border-t border-gray-100 dark:border-gray-800 text-[9px] font-extrabold text-blue-600 hover:text-blue-800 transition cursor-pointer bg-transparent border-x-0 border-b-0 flex items-center justify-center space-x-1"
-          >
-            <span>{toutAfficher ? "Voir moins" : "Voir plus (+5)"}</span>
-            <i
-              className={`fa-solid fa-chevron-down text-[7px] transition-transform duration-200 ${
-                toutAfficher ? "rotate-180" : ""
-              }`}
-            ></i>
-          </button>
+          {articles.length > 2 && (
+            <button
+              type="button"
+              onClick={() => setToutAfficher((v) => !v)}
+              className="w-full pt-1.5 border-t border-gray-100 dark:border-gray-800 text-[9px] font-extrabold text-blue-600 hover:text-blue-800 transition cursor-pointer bg-transparent border-x-0 border-b-0 flex items-center justify-center space-x-1"
+            >
+              <span>{toutAfficher ? "Voir moins" : `Voir plus (+${articles.length - 2})`}</span>
+              <i
+                className={`fa-solid fa-chevron-down text-[7px] transition-transform duration-200 ${
+                  toutAfficher ? "rotate-180" : ""
+                }`}
+              ></i>
+            </button>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Modal Fiche Boutique Dédiée (Style WhatsApp / Bottom Sheet - Inspiré Image 1)
+ */
+function ModalFicheBoutique({ boutique, articles = [], onFermer }) {
+  const nom = boutique?.nom || boutique?.boutique_nom || "Boutique";
+  const quartier = boutique?.quartier || "";
+  const ville = boutique?.ville || "Dakar";
+  const telephone = boutique?.telephone_whatsapp || "";
+  const whatsappUrl =
+    boutique?.whatsappUrl ||
+    (telephone ? `https://wa.me/221${telephone.replace(/\D/g, "")}` : null);
+  const initiales = nom.substring(0, 2).toUpperCase();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
+      <div className="w-full sm:max-w-lg bg-[#0F172A] text-white rounded-t-3xl sm:rounded-3xl border border-gray-800 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-slideUp">
+        {/* Poignée de drag mobile */}
+        <div className="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mt-3 sm:hidden"></div>
+
+        {/* Bouton Fermer */}
+        <div className="flex justify-between items-center px-5 pt-3">
+          <button
+            type="button"
+            onClick={onFermer}
+            className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition cursor-pointer"
+            aria-label="Fermer"
+          >
+            <i className="fa-solid fa-xmark text-sm"></i>
+          </button>
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2.5 py-0.5 rounded-full">
+            Boutique Vérifiée
+          </span>
+        </div>
+
+        {/* Contenu Profil Boutique */}
+        <div className="p-6 text-center flex flex-col items-center">
+          {/* Logo / Avatar Circulaire */}
+          <div className="w-20 h-20 rounded-full border-4 border-gray-800 bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-2xl font-black shadow-xl mb-3 text-white">
+            {initiales}
+          </div>
+
+          <h3 className="text-xl font-black tracking-tight text-white">{nom}</h3>
+          <p className="text-xs text-gray-400 mt-1 flex items-center gap-1.5">
+            <i className="fa-solid fa-location-dot text-[#1877F2]"></i>
+            {quartier ? `${quartier}, ` : ""}{ville} · Sénégal
+          </p>
+
+          <p className="text-xs text-gray-300 font-medium mt-3 max-w-sm leading-relaxed">
+            Bienvenue dans notre boutique officielle Facilité. Retrouvez tous nos articles en stock et commandez directement par message WhatsApp.
+          </p>
+
+          {/* Bouton WhatsApp Vert Grand Format */}
+          {whatsappUrl ? (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 w-full py-3.5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-sm font-black flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-900/40 transition cursor-pointer"
+            >
+              <i className="fa-brands fa-whatsapp text-lg"></i>
+              Discuter avec le boutiquier sur WhatsApp
+            </a>
+          ) : (
+            <p className="mt-4 text-xs text-gray-400">WhatsApp non disponible</p>
+          )}
+        </div>
+
+        {/* Articles de la boutique */}
+        {articles.length > 0 && (
+          <div className="px-5 pb-6 overflow-y-auto flex-1">
+            <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3 border-t border-gray-800 pt-4 flex items-center gap-2">
+              <i className="fa-solid fa-box-open text-[#1877F2]"></i>
+              Articles disponibles ({articles.length})
+            </h4>
+            <div className="space-y-2">
+              {articles.map((art) => (
+                <div
+                  key={art.id}
+                  className="p-2.5 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-400 shrink-0 overflow-hidden">
+                      {art.photos?.[0] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={urlPhoto(art.photos[0])} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        art.titre.substring(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white truncate">{art.titre}</p>
+                      <p className="text-[11px] font-black text-[#1877F2]">
+                        {prixLisible(art.prix_xof)} FCFA
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-950 text-emerald-400 shrink-0">
+                    En stock
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
