@@ -42,6 +42,11 @@ function qualite(precisionM) {
  * @param {string=} definieLe    date ISO du relevé existant
  */
 export default function CapturePosition({ onReleve, verrouillee = false, definieLe = null }) {
+  // État de l'autorisation, quand le navigateur sait le dire. Il permet de
+  // parler juste : proposer « Autoriser » à quelqu'un qui a déjà refusé ne
+  // sert à rien — la boîte de dialogue ne réapparaîtra pas, il faut passer
+  // par les réglages du navigateur.
+  const [autorisation, setAutorisation] = useState("inconnu");
   const [enCours, setEnCours] = useState(false);
   const [restant, setRestant] = useState(DUREE_S);
   const [meilleur, setMeilleur] = useState(null);
@@ -62,6 +67,26 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
   // Un relevé en cours doit s'arrêter si la personne quitte la page : sinon le
   // GPS reste allumé et vide la batterie sans que rien ne l'utilise.
   useEffect(() => arreter, []);
+
+  // L'API Permissions n'existe pas partout (Safari iOS notamment). Son absence
+  // n'est pas une erreur : on reste sur « inconnu » et on explique quand même
+  // ce qui va se passer.
+  useEffect(() => {
+    let vivant = true;
+    (async () => {
+      try {
+        const p = await navigator.permissions.query({ name: "geolocation" });
+        if (!vivant) return;
+        setAutorisation(p.state);
+        p.onchange = () => setAutorisation(p.state);
+      } catch {
+        // Navigateur sans API Permissions : rien à faire.
+      }
+    })();
+    return () => {
+      vivant = false;
+    };
+  }, []);
 
   const lancer = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -146,6 +171,42 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
         ne pourra plus être changé gratuitement.
       </p>
 
+      {/* Dire AVANT ce que le navigateur va demander.
+          Une boîte de dialogue système qui surgit sans prévenir est le
+          premier motif de refus : la personne ne comprend pas pourquoi une
+          application d'emploi veut sa position, et elle refuse par réflexe.
+          Annoncer la demande et sa raison change complètement le taux
+          d'acceptation. */}
+      {!enCours && autorisation !== "granted" && (
+        <div className="mt-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2.5">
+          {autorisation === "denied" ? (
+            <>
+              <p className="text-[11px] font-black text-red-600 dark:text-red-400">
+                <i className="fa-solid fa-ban mr-1.5"></i>
+                La localisation est bloquée pour ce site
+              </p>
+              <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                Votre navigateur ne redemandera plus. Touchez le cadenas (ou l&apos;icône ⓘ) à côté
+                de l&apos;adresse du site, puis autorisez la position, et revenez ici.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-[11px] font-black text-gray-900 dark:text-white">
+                <i className="fa-solid fa-shield-halved mr-1.5"></i>
+                Votre téléphone va vous demander l&apos;autorisation
+              </p>
+              <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                Répondez <strong>Autoriser</strong>. La position sert uniquement à placer votre
+                boutique sur la carte, une seule fois. Nous ne suivons pas vos déplacements et la
+                position n&apos;est pas partagée avec les acheteurs — ils voient seulement la
+                distance qui les sépare de vous.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
       {enCours ? (
         <div className="mt-3">
           <div className="flex items-center gap-3">
@@ -182,7 +243,11 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
             className="mt-3 w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-[#1877F2] text-white text-xs font-black cursor-pointer"
           >
             <i className="fa-solid fa-satellite-dish mr-2"></i>
-            {meilleur ? "Refaire le relevé" : "Démarrer le relevé (10 s)"}
+            {meilleur
+              ? "Refaire le relevé"
+              : autorisation === "granted"
+                ? "Démarrer le relevé (10 s)"
+                : "Autoriser et démarrer le relevé (10 s)"}
           </button>
         </>
       )}
