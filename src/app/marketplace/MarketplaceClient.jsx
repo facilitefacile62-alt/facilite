@@ -23,6 +23,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import CarteBoutiques from "@/components/CarteBoutiques";
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
   chargerMaBoutique,
@@ -54,11 +55,57 @@ const CATEGORIES = [
   { id: "services", label: "Services", icon: "fa-briefcase" },
   { id: "alimentation", label: "Alimentation", icon: "fa-basket-shopping" },
   { id: "autre", label: "Autre", icon: "fa-tag" },
+export const DEPARTEMENTS_SENEGAL = [
+  "Dakar",
+  "Guédiawaye",
+  "Pikine",
+  "Rufisque",
+  "Keur Massar",
+  "Thiès",
+  "Mbour",
+  "Tivaouane",
+  "Diourbel",
+  "Bambey",
+  "Mbacké",
+  "Touba",
+  "Fatick",
+  "Foundiougne",
+  "Gossas",
+  "Kaolack",
+  "Guinguinéo",
+  "Nioro du Rip",
+  "Kaffrine",
+  "Birkelane",
+  "Koungheul",
+  "Malem-Hodar",
+  "Saint-Louis",
+  "Dagana",
+  "Podor",
+  "Louga",
+  "Kébémer",
+  "Linguère",
+  "Matam",
+  "Kanel",
+  "Ranérou-Ferlo",
+  "Tambacounda",
+  "Bakel",
+  "Goudiry",
+  "Koumpentoum",
+  "Kédougou",
+  "Salémata",
+  "Saraya",
+  "Kolda",
+  "Médina Yoro Foulah",
+  "Vélingara",
+  "Sédhiou",
+  "Bounkiling",
+  "Goudomp",
+  "Ziguinchor",
+  "Bignona",
+  "Oussouye",
 ];
 
-const VILLES = ["Dakar", "Guédiawaye", "Pikine", "Rufisque", "Thiès", "Mbour", "Saint-Louis", "Touba", "Ziguinchor"];
-
-// Rayons proposés. 2 km couvre le quartier — le cas d'usage principal ; 50 km
+const VILLES = DEPARTEMENTS_SENEGAL;
 // sert aux zones où les commerces sont dispersés.
 const RAYONS = [2, 5, 10, 25, 50];
 
@@ -345,22 +392,45 @@ function VueAcheteur() {
         </div>
       )}
 
+      {resultats.length > 0 && (
+        <CarteBoutiques
+          articles={resultats}
+          depart={position}
+          onChoisirBoutique={(id) => {
+            // La carte situe, la liste détaille : cliquer un point amène au
+            // premier article de cette boutique plutôt que d'ouvrir une fiche
+            // par-dessus la carte.
+            const cible = document.getElementById(`boutique-${id}`);
+            if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+        />
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {resultats.map((a) => (
-          <CarteArticle key={a.id} article={a} />
+        {resultats.map((a, i) => (
+          <CarteArticle
+            key={a.id}
+            article={a}
+            // Ancre posée sur le PREMIER article de chaque boutique : c'est là
+            // que la carte fait défiler.
+            ancre={resultats.findIndex((x) => x.boutique_id === a.boutique_id) === i}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function CarteArticle({ article }) {
+function CarteArticle({ article, ancre = false }) {
   const [signalementOuvert, setSignalementOuvert] = useState(false);
   const enStock = article.statut === "en_stock";
   const photo = article.photos?.[0] || null;
 
   return (
-    <article className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+    <article
+      id={ancre ? `boutique-${article.boutique_id}` : undefined}
+      className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col scroll-mt-24"
+    >
       <div className="relative aspect-4/3 bg-gray-100 dark:bg-gray-800">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
