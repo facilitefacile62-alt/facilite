@@ -192,6 +192,13 @@ export default function ConfidentialitePage() {
                   <li><strong>Coordonnées :</strong> Numéro de téléphone / WhatsApp (si renseigné pour recevoir des notifications d&apos;offres), ville de résidence.</li>
                   <li><strong>Communications &amp; Candidatures :</strong> Messages envoyés via la messagerie interne aux recruteurs et formulaires de candidature.</li>
                   <li><strong>Transactions &amp; Commandes :</strong> Historique des factures de services sans aucun stockage d&apos;informations bancaires confidentielles (gérées par nos passerelles agréées).</li>
+                  {/* Ajoutées le 2026-09-02. La liste ne mentionnait ni la
+                      géolocalisation ni la Marketplace, alors que les deux
+                      collectent. Google recoupe la fiche Data Safety avec cette
+                      page : une donnée déclarée là et absente ici est un motif
+                      de rejet. */}
+                  <li><strong>Position :</strong> Votre position GPS est demandée uniquement pour calculer un itinéraire de transport ou trouver une boutique proche. Elle sert au calcul puis est <strong>immédiatement oubliée</strong> : elle n&apos;est jamais enregistrée dans votre historique.</li>
+                  <li><strong>Boutique &amp; annonces (Marketplace) :</strong> Si vous ouvrez une boutique, son nom, son quartier, son numéro WhatsApp et sa position sont enregistrés et <strong>rendus publics</strong> — c&apos;est ce qui permet aux acheteurs de vous trouver. Vos annonces comprennent photos, prix et disponibilité.</li>
                 </ul>
               </div>
             </section>

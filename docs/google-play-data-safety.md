@@ -8,8 +8,11 @@ Les sources sont citées pour qu'un relecteur puisse vérifier sans faire confia
 > **Règle de maintenance.** Cette déclaration et la liste des sous-traitants de
 > `src/app/confidentialite/page.js` doivent dire la même chose. Une divergence
 > entre les deux est un motif de rejet à elle seule. À reprendre **à chaque
-> ajout d'un service tiers** — l'oubli d'OpenStreetMap le 30/08/2026, corrigé le
-> 01/09, montre que la vigilance ne tient pas toute seule.
+> ajout d'un service tiers, ET à chaque fonctionnalité qui collecte** — deux
+> rappels : l'oubli d'OpenStreetMap le 30/08/2026, corrigé le 01/09 ; et la
+> Marketplace, ouverte le 01/09, qui a rendu fausse la mention « position
+> traitée de façon éphémère » sans qu'aucun service tiers ne soit ajouté.
+> Corrigée le 02/09.
 
 ---
 
@@ -60,7 +63,7 @@ Légende : **O** = optionnel (la personne peut utiliser l'application sans),
 | Nom | Oui | R | Fonctionnalité, Gestion du compte | `profiles.full_name` |
 | Adresse e-mail | Oui | R | Fonctionnalité, Gestion du compte | `profiles.email`, `auth.users` |
 | Identifiants utilisateur | Oui | R | Fonctionnalité, Gestion du compte | `profiles.id` |
-| Numéro de téléphone | Oui | O | Fonctionnalité | `profiles.phone` |
+| Numéro de téléphone | Oui | O | Fonctionnalité | `profiles.phone` ; `marketplace_stores.telephone_whatsapp`, **publié** sur les fiches d'articles pour permettre le contact |
 | Adresse | Oui | O | Fonctionnalité | `profiles.city`, `country`, `quartier`, `location` — **saisies par la personne**, jamais déduites de l'appareil |
 | Autres informations | Oui | O | Fonctionnalité | `profiles.date_naissance`, `gender`, `bio`, `headline`, `languages`, `skills`, `interests`, `website_url`, `education_level` |
 
@@ -78,15 +81,30 @@ Légende : **O** = optionnel (la personne peut utiliser l'application sans),
 
 | Type Play | Collectée | Éphémère | O/R | Finalités | Source |
 |---|---|---|---|---|---|
-| Position précise | Oui | **Oui** | O | Fonctionnalité | Géolocalisation du navigateur, demandée uniquement pour calculer un itinéraire de transport (`MessagerieClient`, outil `chercher_itineraire`) |
+| Position précise | Oui | **Oui** pour l'acheteur, **Non** pour le vendeur | O | Fonctionnalité | Géolocalisation du navigateur : itinéraire de transport et recherche de boutiques proches (`MessagerieClient`, `MarketplaceClient`, outil `chercher_itineraire`) ; position de boutique enregistrée dans `marketplace_stores` |
 
-Trois précisions à retenir, car elles peuvent être contrôlées :
+> **Attention à la case « traitée de façon éphémère ».** Elle ne couvre PAS
+> tous les usages depuis l'ouverture de la Marketplace (01/09/2026). Deux cas
+> distincts, à déclarer comme un seul type mais à savoir expliquer :
+>
+> * **Acheteur** — la position sert à trier les résultats par distance puis
+>   est oubliée. Rien n'est écrit. Éphémère au sens de Google.
+> * **Vendeur** — la position de sa boutique est **enregistrée durablement**
+>   (`marketplace_stores.latitude/longitude`) et **rendue publique** : c'est
+>   ce qui permet aux acheteurs de la trouver. Ce n'est pas éphémère.
+>
+> Google n'offrant qu'une case par type de données, cocher « éphémère » serait
+> inexact. **Laisser la case décochée** et s'appuyer sur la politique, qui
+> distingue explicitement les deux depuis le 02/09/2026.
 
-- La position **n'est pas conservée**. Elle sert à trouver l'arrêt le plus
-  proche puis à placer le repère « Vous êtes ici » pendant la conversation.
-  Elle est retirée avant l'enregistrement du message
-  (`payloadSansPosition`, migration `20260901120000`). C'est ce qui autorise à
-  cocher « traitée de façon éphémère ».
+Quatre précisions à retenir, car elles peuvent être contrôlées :
+
+- Côté **itinéraire**, la position n'est pas conservée. Elle sert à trouver
+  l'arrêt le plus proche puis à placer le repère « Vous êtes ici » pendant la
+  conversation, et elle est retirée avant l'enregistrement du message
+  (`payloadSansPosition`, migration `20260901120000`).
+- Côté **boutique**, elle l'est — voir l'encadré ci-dessus. La personne la
+  saisit elle-même, en connaissance de cause, pour être trouvée.
 - Elle **n'est jamais transmise au modèle d'IA**. Les coordonnées envoyées à
   Gemini sont celles qu'il a lui-même produites ; le serveur les remplace par
   les vraies au moment d'exécuter l'outil, après l'appel au modèle.
@@ -107,7 +125,7 @@ produire la réponse. À dire tel quel si Google pose la question.
 
 | Type Play | Collectée | O/R | Finalités | Source |
 |---|---|---|---|---|
-| Photos | Oui | O | Fonctionnalité | Buckets `avatars`, `covers`, `chat-attachments`, `badge-documents` |
+| Photos | Oui | O | Fonctionnalité | Buckets `avatars`, `covers`, `chat-attachments`, `badge-documents`, `marketplace-photos` |
 | Vidéos | Oui | O | Fonctionnalité | Pièces jointes de conversation |
 
 `badge-documents` contient des **pièces d'identité**, lues par Gemini pour la
@@ -136,7 +154,7 @@ Le contenu des CV est analysé par Gemini (et, en secours, Groq ou DeepSeek).
 | Type Play | Collectée | O/R | Finalités | Source |
 |---|---|---|---|---|
 | Interactions dans l'application | Oui | O | Analyses | Microsoft Clarity — **rejoue les sessions** : clics, défilement, parcours (`src/app/layout.js`) ; Plausible pour la fréquentation |
-| Autres contenus générés | Oui | O | Fonctionnalité | Publications, commentaires, profil public |
+| Autres contenus générés | Oui | O | Fonctionnalité | Publications, commentaires, profil public, annonces Marketplace (titre, description, prix, stock) |
 
 Clarity enregistre le parcours de navigation. Le minimiser serait un motif de
 rejet ; la politique le dit déjà explicitement.
