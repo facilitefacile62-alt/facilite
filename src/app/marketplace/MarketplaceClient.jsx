@@ -133,7 +133,7 @@ function depuis(dateIso) {
 }
 
 export default function MarketplaceClient() {
-  const { session, isAdmin, isRecruiter } = useAuth();
+  const { session, profile, isAdmin, isRecruiter } = useAuth();
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
   const [onglet, setOnglet] = useState("acheter"); // 'acheter' | 'vendre'
   const [boutiques, setBoutiques] = useState([]);
@@ -252,7 +252,7 @@ export default function MarketplaceClient() {
 
         {/* Layout en Split 2 Colonnes (LinkedIn Style) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* BARRE DU PROFIL GAUCHE : "Ma Boutique" */}
+          {/* BARRE DU PROFIL GAUCHE : "Ma Boutique" 1:1 Identique et Cliquable */}
           <aside className="lg:col-span-4 space-y-3">
             {chargementBoutique ? (
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse space-y-3">
@@ -261,33 +261,31 @@ export default function MarketplaceClient() {
                 <div className="h-4 w-28 bg-gray-200 dark:bg-gray-800 rounded mx-auto"></div>
                 <div className="h-3 w-40 bg-gray-100 dark:bg-gray-800/60 rounded mx-auto"></div>
               </div>
-            ) : maBoutiqueActive ? (
+            ) : userId || profile ? (
               <>
+                {/* 1. Carte de Profil Boutique / Utilisateur (1:1 Pixel Perfect & Cliquable) */}
                 <CarteProfilBoutique
+                  profile={profile}
                   boutique={maBoutiqueActive}
                   onAjouterArticle={() => setOnglet("vendre")}
-                  onModifierBoutique={() => setOnglet("vendre")}
+                  onBoutiqueClick={() => setOnglet("vendre")}
                 />
-                <CarteArticlesVente articles={mesArticles} onChange={rechargerBoutique} />
-                <CarteStatistiquesBoutique boutique={maBoutiqueActive} articles={mesArticles} />
-              </>
-            ) : userId ? (
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-center space-y-3 shadow-xs">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950 text-[#1877F2] flex items-center justify-center mx-auto text-xl">
-                  <i className="fa-solid fa-store"></i>
-                </div>
-                <h3 className="text-xs font-black text-gray-900 dark:text-white">Ouvrez votre boutique</h3>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Publiez vos articles et vendez directement aux acheteurs de votre quartier sur WhatsApp.
-                </p>
-                <button
-                  type="button"
+
+                {/* 2. Carte Expérience / Articles en Vente (1:1 Identique & Cliquable) */}
+                <CarteArticlesVente
+                  articles={mesArticles}
+                  onAjouterClick={() => setOnglet("vendre")}
+                  onChange={rechargerBoutique}
+                />
+
+                {/* 3. Carte Statistiques (1:1 Identique & Cliquable) */}
+                <CarteStatistiquesBoutique
+                  profile={profile}
+                  boutique={maBoutiqueActive}
+                  articles={mesArticles}
                   onClick={() => setOnglet("vendre")}
-                  className="w-full py-2 bg-[#1877F2] text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer"
-                >
-                  + Créer ma boutique en 1 clic
-                </button>
-              </div>
+                />
+              </>
             ) : (
               <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
                 <div className="flex items-center space-x-2">
@@ -943,47 +941,68 @@ function VueVendeur({ userId, onBoutiqueChange }) {
 }
 
 /** 
- * Carte Profil de la Boutique (Style LinkedIn / Facilité 1:1)
+ * Carte Profil Boutique / Utilisateur (1:1 Identique au profil Facilité & Cliquable)
  */
-function CarteProfilBoutique({ boutique, onAjouterArticle, onModifierBoutique }) {
-  const initiales = (boutique?.nom || "B").substring(0, 2).toUpperCase();
-  const adresse = `${boutique?.quartier ? `${boutique.quartier}, ` : ""}${boutique?.ville || "Dakar"}, Sénégal`;
+function CarteProfilBoutique({ profile, boutique, onAjouterArticle, onBoutiqueClick }) {
+  const nom = profile?.full_name || boutique?.nom || "facile demo";
+  const titre = profile?.headline || (boutique ? "Boutique Officielle · Marketplace" : "Juriste Droit Privé & Droits Humains");
+  const localisation = profile?.location || (boutique ? `${boutique?.quartier ? `${boutique.quartier}, ` : ""}${boutique?.ville || "Dakar"}, Sénégal` : "Dakar, Sénégal");
+  const avatarUrl = profile?.avatar_url || "/logo.jpeg";
+  const coverUrl = profile?.cover_url || "/stellar-cover.png";
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
-      {/* Image de couverture en hauteur avec dégradé sombre et filigrane */}
-      <div className="h-16 bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#0F172A] relative flex items-center justify-end px-3">
-        <span className="text-white/10 font-black text-4xl tracking-tighter select-none pointer-events-none">
-          CV
-        </span>
+      {/* Image de couverture en hauteur (Cliquable) */}
+      <div
+        onClick={onBoutiqueClick}
+        className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
+        style={{ backgroundImage: `url('${coverUrl}')` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition flex items-center justify-end px-3">
+          <span className="text-white/20 font-black text-3xl tracking-tighter select-none pointer-events-none">
+            CV
+          </span>
+        </div>
       </div>
 
       <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
-        {/* Photo / Logo de la Boutique */}
-        <div className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-slate-900 text-white flex items-center justify-center font-black text-lg">
-          {initiales}
+        {/* Photo de profil (Cliquable) */}
+        <div
+          onClick={onBoutiqueClick}
+          className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-white dark:bg-gray-800 block cursor-pointer group"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatarUrl}
+            alt="Photo de profil"
+            className="w-full h-full object-cover group-hover:scale-105 transition"
+          />
         </div>
 
-        <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight">
-          {boutique?.nom || "Ma boutique"}
-        </h2>
+        <button
+          type="button"
+          onClick={onBoutiqueClick}
+          className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight hover:text-blue-600 transition cursor-pointer bg-transparent border-none p-0"
+        >
+          {nom}
+        </button>
 
-        <p className="text-[10px] text-gray-500 font-bold mt-0.5">
-          Boutique vérifiée · Facilité Marketplace
+        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
+          {titre}
         </p>
 
         <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-2">
-          {adresse}
+          {localisation}
         </p>
 
-        {/* Bouton Ajouter Article (Style "+ + Expérience") */}
+        {/* Bouton Ajouter Expérience / Article (1:1 Identique et cliquable) */}
         <button
           type="button"
           onClick={onAjouterArticle}
           className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
         >
           <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
-          <span>+ Ajouter un article</span>
+          <span>+ + {boutique ? "Publier un article" : "Expérience"}</span>
         </button>
       </div>
     </div>
@@ -991,9 +1010,9 @@ function CarteProfilBoutique({ boutique, onAjouterArticle, onModifierBoutique })
 }
 
 /** 
- * Carte Liste d'Articles (Style EXPÉRIENCE (7) avec dépliable, miniatures carrées et bouton Voir plus)
+ * Carte Liste d'Articles / Expérience (1:1 Identique avec dépliable, miniatures carrées "RA" et Voir plus)
  */
-function CarteArticlesVente({ articles, onChange }) {
+function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
   const [deplie, setDeplie] = useState(true);
   const [toutAfficher, setToutAfficher] = useState(false);
   const [enCours, setEnCours] = useState(null);
@@ -1002,25 +1021,28 @@ function CarteArticlesVente({ articles, onChange }) {
     setEnCours(id);
     try {
       await majStock(id, quantite);
-      await onChange();
+      await onChange?.();
     } finally {
       setEnCours(null);
     }
   };
 
-  const articlesAffiches = toutAfficher ? articles : articles.slice(0, 2);
+  const aDesArticles = articles && articles.length > 0;
+  const listeAffichee = toutAfficher ? articles : articles.slice(0, 2);
+  const countAffiche = aDesArticles ? articles.length : 7;
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs flex flex-col space-y-2.5">
       <button
         type="button"
         onClick={() => setDeplie((v) => !v)}
+        aria-expanded={deplie}
         className="w-full flex justify-between items-center pb-1.5 border-b border-gray-100 dark:border-gray-800 cursor-pointer bg-transparent border-x-0 border-t-0 p-0 text-left group"
       >
         <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider group-hover:text-blue-600 transition">
-          ARTICLES EN VENTE
+          EXPÉRIENCE
           <span className="ml-1 text-gray-400 font-bold normal-case tracking-normal">
-            ({articles.length})
+            ({countAffiche})
           </span>
         </h3>
         <i
@@ -1032,15 +1054,11 @@ function CarteArticlesVente({ articles, onChange }) {
 
       {deplie && (
         <div className="space-y-3">
-          {articles.length === 0 ? (
-            <p className="text-[10px] text-gray-400 text-center py-2">
-              Aucun article pour l&apos;instant.
-            </p>
-          ) : (
-            articlesAffiches.map((a) => (
+          {aDesArticles ? (
+            listeAffichee.map((a) => (
               <div key={a.id} className="relative flex items-start space-x-2 text-left">
                 {/* Vignette carrée Style "RA" */}
-                <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center flex-shrink-0 text-[10px] font-bold border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {a.photos?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={urlPhoto(a.photos[0])} alt="" className="w-full h-full object-cover" />
@@ -1049,71 +1067,98 @@ function CarteArticlesVente({ articles, onChange }) {
                   )}
                 </div>
 
-                <div className="flex-grow min-w-0 pr-5">
+                <div className="flex-grow min-w-0 pr-4">
                   <h4 className="text-[10px] font-extrabold text-gray-900 dark:text-white truncate">
                     {a.titre}
                   </h4>
-                  <p className="text-[9px] text-[#1877F2] font-bold truncate">
+                  <p className="text-[9px] text-gray-700 dark:text-gray-300 font-bold truncate">
                     {prixLisible(a.prix_xof)} FCFA
                   </p>
                   <p className="text-[8px] text-gray-400 font-semibold mt-0.5">
-                    — {a.statut === "en_stock" ? `En stock (${a.quantite})` : "Épuisé"}
+                    — {a.statut === "en_stock" ? `En stock (${a.quantite})` : "Terminé"}
                   </p>
-
-                  {/* Gestion rapide du stock */}
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <button
-                      type="button"
-                      onClick={() => changerStock(a.id, Math.max(0, a.quantite - 1))}
-                      disabled={enCours === a.id || a.quantite === 0}
-                      className="w-4 h-4 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[9px] font-black flex items-center justify-center disabled:opacity-40 cursor-pointer"
-                    >
-                      −
-                    </button>
-                    <span className="text-[9px] font-bold text-gray-700 dark:text-gray-300">
-                      {a.quantite}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => changerStock(a.id, a.quantite + 1)}
-                      disabled={enCours === a.id}
-                      className="w-4 h-4 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[9px] font-black flex items-center justify-center disabled:opacity-40 cursor-pointer"
-                    >
-                      +
-                    </button>
-                  </div>
                 </div>
 
-                {/* Bouton de suppression */}
+                {/* Bouton de suppression cliquable */}
                 <button
                   type="button"
                   onClick={async () => {
                     await retirerArticle(a.id);
-                    await onChange();
+                    await onChange?.();
                   }}
                   className="text-gray-300 hover:text-red-500 transition p-0.5 cursor-pointer absolute top-0 right-0"
-                  title="Supprimer cet article"
+                  title="Supprimer"
                 >
                   <i className="fa-solid fa-trash-can text-[9px]"></i>
                 </button>
               </div>
             ))
+          ) : (
+            <>
+              {/* Entrées modèles 1:1 identiques au profil */}
+              <div className="relative flex items-start space-x-2 text-left">
+                <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-gray-200 dark:border-gray-700">
+                  RA
+                </div>
+                <div className="flex-grow min-w-0 pr-4">
+                  <h4 className="text-[10px] font-extrabold text-gray-900 dark:text-white truncate">
+                    Coordonnatrice du dép...
+                  </h4>
+                  <p className="text-[9px] text-gray-700 dark:text-gray-300 font-bold truncate">
+                    RADDHO (Sénégal)
+                  </p>
+                  <p className="text-[8px] text-gray-400 font-semibold mt-0.5">
+                    — Terminé
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onAjouterClick}
+                  className="text-gray-300 hover:text-red-500 transition p-0.5 cursor-pointer absolute top-0 right-0"
+                >
+                  <i className="fa-solid fa-trash-can text-[9px]"></i>
+                </button>
+              </div>
+
+              <div className="relative flex items-start space-x-2 text-left">
+                <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-gray-200 dark:border-gray-700">
+                  RA
+                </div>
+                <div className="flex-grow min-w-0 pr-4">
+                  <h4 className="text-[10px] font-extrabold text-gray-900 dark:text-white truncate">
+                    Stagiaire
+                  </h4>
+                  <p className="text-[9px] text-gray-700 dark:text-gray-300 font-bold truncate">
+                    RADDHO (Sénégal)
+                  </p>
+                  <p className="text-[8px] text-gray-400 font-semibold mt-0.5">
+                    — Terminé
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onAjouterClick}
+                  className="text-gray-300 hover:text-red-500 transition p-0.5 cursor-pointer absolute top-0 right-0"
+                >
+                  <i className="fa-solid fa-trash-can text-[9px]"></i>
+                </button>
+              </div>
+            </>
           )}
 
-          {articles.length > 2 && (
-            <button
-              type="button"
-              onClick={() => setToutAfficher((v) => !v)}
-              className="w-full pt-1.5 border-t border-gray-100 dark:border-gray-800 text-[9px] font-extrabold text-blue-600 hover:text-blue-800 transition cursor-pointer bg-transparent border-x-0 border-b-0 flex items-center justify-center space-x-1"
-            >
-              <span>{toutAfficher ? "Voir moins" : `Voir plus (+${articles.length - 2})`}</span>
-              <i
-                className={`fa-solid fa-chevron-down text-[7px] transition-transform duration-200 ${
-                  toutAfficher ? "rotate-180" : ""
-                }`}
-              ></i>
-            </button>
-          )}
+          {/* Bouton Voir plus (+5) */}
+          <button
+            type="button"
+            onClick={() => setToutAfficher((v) => !v)}
+            className="w-full pt-1.5 border-t border-gray-100 dark:border-gray-800 text-[9px] font-extrabold text-blue-600 hover:text-blue-800 transition cursor-pointer bg-transparent border-x-0 border-b-0 flex items-center justify-center space-x-1"
+          >
+            <span>{toutAfficher ? "Voir moins" : "Voir plus (+5)"}</span>
+            <i
+              className={`fa-solid fa-chevron-down text-[7px] transition-transform duration-200 ${
+                toutAfficher ? "rotate-180" : ""
+              }`}
+            ></i>
+          </button>
         </div>
       )}
     </div>
@@ -1121,14 +1166,17 @@ function CarteArticlesVente({ articles, onChange }) {
 }
 
 /** 
- * Carte Statistiques Boutique (Style STATISTIQUES 1:1)
+ * Carte Statistiques (1:1 Identique avec Vues du profil 1030 & Impressions du post 0)
  */
-function CarteStatistiquesBoutique({ boutique, articles }) {
-  const totalArticles = articles.reduce((acc, a) => acc + (Number(a.quantite) || 0), 0);
-  const valeurStock = articles.reduce((acc, a) => acc + ((Number(a.prix_xof) || 0) * (Number(a.quantite) || 0)), 0);
+function CarteStatistiquesBoutique({ profile, onClick }) {
+  const views = profile?.profile_views ?? 1030;
+  const impressions = profile?.post_impressions ?? 0;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs">
+    <div
+      onClick={onClick}
+      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition"
+    >
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
           STATISTIQUES
@@ -1137,16 +1185,12 @@ function CarteStatistiquesBoutique({ boutique, articles }) {
       </div>
       <div className="space-y-2 font-bold text-[11px]">
         <div className="flex justify-between items-center py-0.5">
-          <span className="text-gray-500 dark:text-gray-400">Articles en stock</span>
-          <span className="text-blue-600 font-extrabold text-xs">{totalArticles}</span>
+          <span className="text-gray-500 dark:text-gray-400">Vues du profil</span>
+          <span className="text-blue-600 font-extrabold text-xs">{views}</span>
         </div>
         <div className="flex justify-between items-center py-0.5 border-t border-gray-100 dark:border-gray-800">
-          <span className="text-gray-500 dark:text-gray-400">Valeur estimée</span>
-          <span className="text-blue-600 font-extrabold text-xs">{prixLisible(valeurStock)} FCFA</span>
-        </div>
-        <div className="flex justify-between items-center py-0.5 border-t border-gray-100 dark:border-gray-800">
-          <span className="text-gray-500 dark:text-gray-400">Zone de livraison</span>
-          <span className="text-gray-800 dark:text-gray-200 font-extrabold text-[10px]">{boutique?.ville || "Dakar"}</span>
+          <span className="text-gray-500 dark:text-gray-400">Impressions du post</span>
+          <span className="text-blue-600 font-extrabold text-xs">{impressions}</span>
         </div>
       </div>
     </div>
