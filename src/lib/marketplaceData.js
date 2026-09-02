@@ -296,6 +296,84 @@ export async function retirerArticle(itemId) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Charge l'ensemble des articles actifs récents de la plateforme (flux global).
+ * Utilisé par défaut dès l'arrivée sur la Marketplace pour que tous les produits
+ * soient immédiatement visibles sans obliger l'activation préalable du GPS.
+ */
+export async function chargerTousLesArticles({
+  categorie = null,
+  texte = null,
+  seulementEnStock = false,
+  limite = 60,
+} = {}) {
+  let query = supabase
+    .from("marketplace_items")
+    .select(`
+      id,
+      titre,
+      description,
+      categorie,
+      prix_xof,
+      quantite,
+      statut,
+      photos,
+      updated_at,
+      store:marketplace_stores!inner (
+        id,
+        nom,
+        quartier,
+        ville,
+        telephone_whatsapp,
+        latitude,
+        longitude
+      )
+    `)
+    .eq("actif", true)
+    .eq("store.actif", true)
+    .order("updated_at", { ascending: false })
+    .limit(limite);
+
+  if (categorie) {
+    query = query.eq("categorie", categorie);
+  }
+  if (seulementEnStock) {
+    query = query.gt("quantite", 0);
+  }
+  if (texte && texte.trim()) {
+    query = query.ilike("titre", `%${texte.trim()}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((r) => ({
+    id: r.id,
+    titre: r.titre,
+    description: r.description,
+    categorie: r.categorie,
+    prix_xof: r.prix_xof,
+    quantite: r.quantite,
+    statut: r.statut,
+    photos: Array.isArray(r.photos) ? r.photos.map(urlPhoto) : [],
+    maj_le: r.updated_at,
+    boutique_id: r.store?.id,
+    boutique_nom: r.store?.nom,
+    boutique_quartier: r.store?.quartier,
+    boutique_ville: r.store?.ville,
+    boutique_lat: r.store?.latitude,
+    boutique_lng: r.store?.longitude,
+    whatsapp: r.store?.telephone_whatsapp,
+    whatsappUrl: lienWhatsapp(r.store?.telephone_whatsapp, r.titre),
+    distance_km: null,
+    distanceLisible: r.store?.ville
+      ? r.store?.quartier
+        ? `${r.store.quartier}, ${r.store.ville}`
+        : r.store.ville
+      : "Sénégal",
+  }));
+}
+
+/**
  * Articles triés du plus proche au plus éloigné.
  *
  * Le tri est fait par la base (fonction rechercher_articles_proches), pas par

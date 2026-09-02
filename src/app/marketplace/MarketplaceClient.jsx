@@ -31,6 +31,7 @@ import {
   MOTIFS_SIGNALEMENT,
   signalerAnnonce,
   chargerMesArticles,
+  chargerTousLesArticles,
   chercherAutourDeMoi,
   enregistrerBoutique,
   envoyerPhoto,
@@ -227,35 +228,42 @@ function VueAcheteur() {
   const [rayonKm, setRayonKm] = useState(10);
   const [seulementEnStock, setSeulementEnStock] = useState(false);
   const [resultats, setResultats] = useState([]);
-  const [chargement, setChargement] = useState(false);
+  const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
-  const [aCherche, setACherche] = useState(false);
 
   const lancerRecherche = useCallback(
     async (pos) => {
-      const p = pos || position;
-      if (!p) return;
       setChargement(true);
       setErreur("");
       try {
-        const r = await chercherAutourDeMoi({
-          latitude: p.latitude,
-          longitude: p.longitude,
-          rayonKm,
-          categorie,
-          texte: texte.trim() || null,
-          seulementEnStock,
-        });
-        setResultats(r);
-        setACherche(true);
+        if (pos?.latitude && pos?.longitude) {
+          // Mode Proximité : trié par distance géographique (les plus proches en tête)
+          const r = await chercherAutourDeMoi({
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            rayonKm,
+            categorie,
+            texte: texte.trim() || null,
+            seulementEnStock,
+          });
+          setResultats(r);
+        } else {
+          // Mode Global : affiche tous les articles de la plateforme (les plus récents en premier)
+          const r = await chargerTousLesArticles({
+            categorie,
+            texte: texte.trim() || null,
+            seulementEnStock,
+          });
+          setResultats(r);
+        }
       } catch (e) {
-        setErreur(e.message);
+        setErreur(e.message || "Erreur lors du chargement des articles.");
         setResultats([]);
       } finally {
         setChargement(false);
       }
     },
-    [position, rayonKm, categorie, texte, seulementEnStock]
+    [rayonKm, categorie, texte, seulementEnStock]
   );
 
   const localiser = async () => {
@@ -266,29 +274,28 @@ function VueAcheteur() {
       setPosition(p);
       await lancerRecherche(p);
     } catch (e) {
-      // Sans position, aucun tri par proximité n'a de sens : on le dit au lieu
-      // d'afficher une liste dans un ordre arbitraire qui ferait croire à une
-      // pertinence géographique.
       setErreur(e.message);
       setChargement(false);
     }
   };
 
-  // Une fois la position connue, tout changement de filtre relance la requête.
-  // Le tri par distance est fait par la base : filtrer ici supposerait d'avoir
-  // déjà téléchargé tout le catalogue.
+  const reinitialiserPosition = () => {
+    setPosition(null);
+    setErreur("");
+    lancerRecherche(null);
+  };
+
+  // Chargement automatique au démarrage et lors de la modification des filtres
   useEffect(() => {
-    if (!position) return;
     const t = setTimeout(() => {
       lancerRecherche(position);
-    }, 350);
+    }, 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categorie, rayonKm, seulementEnStock, texte, position]);
+  }, [categorie, rayonKm, seulementEnStock, texte, position, lancerRecherche]);
 
   return (
     <div>
-      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 mb-5">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 mb-5 shadow-sm">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
@@ -296,7 +303,7 @@ function VueAcheteur() {
               type="text"
               value={texte}
               onChange={(e) => setTexte(e.target.value)}
-              placeholder="Que cherchez-vous ? (téléphone, ventilateur, ciment…)"
+              placeholder="Que cherchez-vous ? (téléphone, ventilateur, ciment, masque…)"
               className="w-full pl-11 pr-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#1877F2]/40"
             />
           </div>
@@ -304,10 +311,14 @@ function VueAcheteur() {
             type="button"
             onClick={localiser}
             disabled={chargement}
-            className="px-5 py-3 rounded-2xl bg-[#1877F2] text-white text-sm font-bold whitespace-nowrap disabled:opacity-60 cursor-pointer"
+            className={`px-5 py-3 rounded-2xl text-sm font-bold whitespace-nowrap transition cursor-pointer disabled:opacity-60 ${
+              position
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
+                : "bg-[#1877F2] hover:bg-blue-600 text-white shadow-md shadow-blue-500/20"
+            }`}
           >
-            <i className={`fa-solid ${chargement ? "fa-spinner fa-spin" : "fa-location-crosshairs"} mr-2`}></i>
-            {position ? "Actualiser" : "Autour de moi"}
+            <i className={`fa-solid ${chargement ? "fa-spinner fa-spin" : position ? "fa-location-dot" : "fa-location-crosshairs"} mr-2`}></i>
+            {position ? "Actualiser ma position" : "Autour de moi"}
           </button>
         </div>
 
@@ -318,7 +329,7 @@ function VueAcheteur() {
             className={`px-3 py-1.5 rounded-full text-xs font-bold border transition cursor-pointer ${
               categorie === null
                 ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent"
-                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700"
+                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"
             }`}
           >
             Toutes
@@ -331,7 +342,7 @@ function VueAcheteur() {
               className={`px-3 py-1.5 rounded-full text-xs font-bold border transition cursor-pointer ${
                 categorie === c.id
                   ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"
               }`}
             >
               <i className={`fa-solid ${c.icon} mr-1.5`}></i>
@@ -340,84 +351,121 @@ function VueAcheteur() {
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <label className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-400">
-            Rayon
-            <select
-              value={rayonKm}
-              onChange={(e) => setRayonKm(Number(e.target.value))}
-              className="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold cursor-pointer"
-            >
-              {RAYONS.map((r) => (
-                <option key={r} value={r}>
-                  {r} km
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex flex-wrap items-center gap-4">
+            {position && (
+              <label className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-400">
+                Rayon
+                <select
+                  value={rayonKm}
+                  onChange={(e) => setRayonKm(Number(e.target.value))}
+                  className="px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold cursor-pointer"
+                >
+                  {RAYONS.map((r) => (
+                    <option key={r} value={r}>
+                      {r} km
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
-          <label className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-400 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={seulementEnStock}
-              onChange={(e) => setSeulementEnStock(e.target.checked)}
-              className="w-4 h-4 accent-[#1877F2] cursor-pointer"
-            />
-            En stock uniquement
-          </label>
+            <label className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={seulementEnStock}
+                onChange={(e) => setSeulementEnStock(e.target.checked)}
+                className="w-4 h-4 accent-[#1877F2] cursor-pointer"
+              />
+              En stock uniquement
+            </label>
+          </div>
+
+          {position ? (
+            <button
+              type="button"
+              onClick={reinitialiserPosition}
+              className="text-xs font-bold text-[#1877F2] hover:underline cursor-pointer flex items-center gap-1.5"
+            >
+              <i className="fa-solid fa-globe"></i>
+              Afficher tout le catalogue (Sénégal)
+            </button>
+          ) : (
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              <i className="fa-solid fa-sparkles text-amber-500 mr-1"></i>
+              Catalogue global · Cliquez sur <strong>« Autour de moi »</strong> pour trier par proximité
+            </p>
+          )}
         </div>
       </div>
 
       {erreur && (
-        <div className="mb-4 px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs font-bold text-amber-900 dark:text-amber-200">
-          <i className="fa-solid fa-triangle-exclamation mr-2"></i>
-          {erreur}
-        </div>
-      )}
-
-      {!position && !erreur && (
-        <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 p-8 my-4">
-          <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#1877F2] flex items-center justify-center mx-auto mb-4 text-2xl">
-            <i className="fa-solid fa-location-dot"></i>
+        <div className="mb-4 px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <i className="fa-solid fa-triangle-exclamation"></i>
+            <span>{erreur}</span>
           </div>
-          <p className="text-base font-bold text-gray-900 dark:text-white">
-            Activez votre position pour voir les articles disponibles
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 max-w-sm mx-auto">
-            La géolocalisation permet de vous afficher les articles en stock dans les boutiques les plus proches de chez vous.
-          </p>
           <button
             type="button"
-            onClick={localiser}
-            disabled={chargement}
-            className="mt-6 px-6 py-3 rounded-2xl bg-[#1877F2] hover:bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20 transition cursor-pointer disabled:opacity-60"
+            onClick={() => setErreur("")}
+            className="text-amber-800 dark:text-amber-300 hover:underline text-xs"
           >
-            <i className={`fa-solid ${chargement ? "fa-spinner fa-spin" : "fa-location-crosshairs"} mr-2`}></i>
-            {chargement ? "Recherche en cours..." : "Afficher les articles autour de moi"}
+            Fermer
           </button>
         </div>
       )}
 
-      {position && aCherche && resultats.length === 0 && !chargement && (
-        <div className="text-center py-16">
-          <i className="fa-solid fa-store-slash text-4xl text-gray-300 dark:text-gray-700"></i>
-          <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mt-4">
-            Aucun article trouvé dans ce rayon
+      {/* En-tête de résultats */}
+      <div className="flex items-center justify-between mb-4 px-1">
+        <h2 className="text-sm font-black text-gray-800 dark:text-gray-200 flex items-center gap-2">
+          {position ? (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Articles proches de vous ({resultats.length})
+            </>
+          ) : (
+            <>
+              <i className="fa-solid fa-store text-[#1877F2]"></i>
+              Tous les articles publiés ({resultats.length})
+            </>
+          )}
+        </h2>
+        {chargement && (
+          <span className="text-xs text-gray-400 flex items-center gap-1.5">
+            <i className="fa-solid fa-spinner fa-spin"></i>
+            Chargement...
+          </span>
+        )}
+      </div>
+
+      {resultats.length === 0 && !chargement && (
+        <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-8 my-4">
+          <i className="fa-solid fa-box-open text-4xl text-gray-300 dark:text-gray-700"></i>
+          <p className="text-base font-bold text-gray-700 dark:text-gray-300 mt-4">
+            Aucun article trouvé
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-            Élargissez le rayon, ou retirez le filtre « en stock ».
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1 max-w-sm mx-auto">
+            {position
+              ? "Élargissez le rayon de recherche ou affichez tout le catalogue."
+              : "Soyez le premier à publier un article sur la Marketplace !"}
           </p>
+          {position && (
+            <button
+              type="button"
+              onClick={reinitialiserPosition}
+              className="mt-5 px-5 py-2.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold"
+            >
+              Voir tout le catalogue
+            </button>
+          )}
         </div>
       )}
 
-      {resultats.length > 0 && (
+      {position && resultats.length > 0 && (
         <CarteBoutiques
           articles={resultats}
           depart={position}
           onChoisirBoutique={(id) => {
-            // La carte situe, la liste détaille : cliquer un point amène au
-            // premier article de cette boutique plutôt que d'ouvrir une fiche
-            // par-dessus la carte.
             const cible = document.getElementById(`boutique-${id}`);
             if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
           }}
@@ -429,8 +477,6 @@ function VueAcheteur() {
           <CarteArticle
             key={a.id}
             article={a}
-            // Ancre posée sur le PREMIER article de chaque boutique : c'est là
-            // que la carte fait défiler.
             ancre={resultats.findIndex((x) => x.boutique_id === a.boutique_id) === i}
           />
         ))}
