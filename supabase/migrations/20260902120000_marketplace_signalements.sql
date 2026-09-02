@@ -36,6 +36,10 @@ ALTER TABLE public.marketplace_reports ENABLE ROW LEVEL SECURITY;
 -- Lecture réservée aux administrateurs. Un signalement contient l'identité de
 -- la personne qui l'a émis : le vendeur visé ne doit jamais pouvoir la lire,
 -- sous peine de représailles hors de l'application.
+-- DROP avant CREATE : CREATE POLICY n'a pas de forme IF NOT EXISTS, et une
+-- migration qui ne se rejoue pas empêche de reconstruire une base de test à
+-- partir du dossier migrations.
+DROP POLICY IF EXISTS "un admin lit les signalements" ON public.marketplace_reports;
 CREATE POLICY "un admin lit les signalements"
   ON public.marketplace_reports FOR SELECT
   TO authenticated
