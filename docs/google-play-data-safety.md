@@ -1,6 +1,17 @@
 # Déclaration Data Safety — Google Play
 
-Document de travail à recopier dans **Play Console → Règles → Sécurité des données**.
+Document de travail à recopier dans Play Console.
+
+**Où le saisir** — faire défiler la colonne de gauche jusqu'à **Règles et
+programmes** (elle est sous « Monétiser avec Play », hors de l'écran au
+premier coup d'œil), puis **Contenu de l'application**, puis **Sécurité des
+données**. La barre de recherche en haut de Play Console y mène aussi :
+taper « Sécurité des données ».
+
+Le formulaire suit le même ordre que ce document : les trois questions
+d'ouverture (§1), puis les types de données à cocher (§3), puis un détail par
+type coché. Rien n'est pris en compte tant que **Envoyer pour examen** n'a pas
+été cliqué à la fin.
 
 Chaque ligne a été établie en relevant le code et la base réels, pas les intentions.
 Les sources sont citées pour qu'un relecteur puisse vérifier sans faire confiance.
