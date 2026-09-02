@@ -55,6 +55,11 @@ const CATEGORIES = [
   { id: "services", label: "Services", icon: "fa-briefcase" },
   { id: "alimentation", label: "Alimentation", icon: "fa-basket-shopping" },
   { id: "autre", label: "Autre", icon: "fa-tag" },
+];
+
+// Les 45 départements du Sénégal. Un commerçant se situe par son département,
+// pas par une poignée de grandes villes : « Keur Massar » ou « Bignona » ne
+// rentraient dans aucune des neuf entrées précédentes.
 export const DEPARTEMENTS_SENEGAL = [
   "Dakar",
   "Guédiawaye",
@@ -106,6 +111,8 @@ export const DEPARTEMENTS_SENEGAL = [
 ];
 
 const VILLES = DEPARTEMENTS_SENEGAL;
+
+// Rayons proposés. 2 km couvre le quartier — le cas d'usage principal ; 50 km
 // sert aux zones où les commerces sont dispersés.
 const RAYONS = [2, 5, 10, 25, 50];
 
@@ -369,14 +376,25 @@ function VueAcheteur() {
       )}
 
       {!position && !erreur && (
-        <div className="text-center py-16">
-          <i className="fa-solid fa-location-dot text-4xl text-gray-300 dark:text-gray-700"></i>
-          <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mt-4">
-            Activez votre position pour voir les boutiques proches
+        <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 p-8 my-4">
+          <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#1877F2] flex items-center justify-center mx-auto mb-4 text-2xl">
+            <i className="fa-solid fa-location-dot"></i>
+          </div>
+          <p className="text-base font-bold text-gray-900 dark:text-white">
+            Activez votre position pour voir les articles disponibles
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-            Elle sert uniquement à trier les résultats par distance. Elle n&apos;est pas enregistrée.
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 max-w-sm mx-auto">
+            La géolocalisation permet de vous afficher les articles en stock dans les boutiques les plus proches de chez vous.
           </p>
+          <button
+            type="button"
+            onClick={localiser}
+            disabled={chargement}
+            className="mt-6 px-6 py-3 rounded-2xl bg-[#1877F2] hover:bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20 transition cursor-pointer disabled:opacity-60"
+          >
+            <i className={`fa-solid ${chargement ? "fa-spinner fa-spin" : "fa-location-crosshairs"} mr-2`}></i>
+            {chargement ? "Recherche en cours..." : "Afficher les articles autour de moi"}
+          </button>
         </div>
       )}
 
