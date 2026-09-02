@@ -27,14 +27,16 @@ import CarteBoutiques from "@/components/CarteBoutiques";
 import CapturePosition from "@/components/CapturePosition";
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
-  chargerMaBoutique,
+  chargerMesBoutiques,
+  BOUTIQUES_OFFERTES,
   coordonnee,
   MOTIFS_SIGNALEMENT,
   signalerAnnonce,
   chargerMesArticles,
   chargerTousLesArticles,
   chercherAutourDeMoi,
-  enregistrerBoutique,
+  creerBoutique,
+  modifierBoutique,
   envoyerPhoto,
   majStock,
   positionActuelle,
@@ -682,7 +684,8 @@ function DialogueSignalement({ article, onFermer }) {
 /* ========================================================================== */
 
 function VueVendeur({ userId }) {
-  const [boutique, setBoutique] = useState(null);
+  const [boutiques, setBoutiques] = useState([]);
+  const [choisie, setChoisie] = useState(null);
   const [articles, setArticles] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
@@ -695,15 +698,19 @@ function VueVendeur({ userId }) {
   const recharger = useCallback(async () => {
     if (!userId) return;
     try {
-      const b = await chargerMaBoutique(userId);
-      setBoutique(b);
-      setArticles(b ? await chargerMesArticles(b.id) : []);
+      const liste = await chargerMesBoutiques(userId);
+      setBoutiques(liste);
+      // On garde la boutique déjà sélectionnée si elle existe encore : sinon
+      // publier un article ferait sauter la sélection à chaque rechargement.
+      const active = liste.find((b) => b.id === choisie) || liste[0] || null;
+      setChoisie(active?.id || null);
+      setArticles(active ? await chargerMesArticles(active.id) : []);
     } catch (e) {
       setErreur(e.message);
     } finally {
       setChargement(false);
     }
-  }, [userId]);
+  }, [userId, choisie]);
 
   useEffect(() => {
     // La règle ne peut pas voir que `recharger` n'écrit rien avant son premier
@@ -748,11 +755,39 @@ function VueVendeur({ userId }) {
         </div>
       )}
 
-      <FormulaireBoutique userId={userId} boutique={boutique} onEnregistre={recharger} />
+      {/* Sélecteur : n'apparaît qu'à partir de deux points de vente. Avec une
+          seule boutique, il n'y a rien à choisir. */}
+      {boutiques.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {boutiques.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => setChoisie(b.id)}
+              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer ${
+                choisie === b.id
+                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent"
+                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-shop mr-1.5"></i>
+              {b.nom}
+              {b.quartier ? ` · ${b.quartier}` : ""}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {boutique && (
+      <FormulaireBoutique
+        userId={userId}
+        boutique={boutiques.find((b) => b.id === choisie) || null}
+        nombreBoutiques={boutiques.length}
+        onEnregistre={recharger}
+      />
+
+      {choisie && (
         <>
-          <FormulaireArticle userId={userId} storeId={boutique.id} onPublie={recharger} />
+          <FormulaireArticle userId={userId} storeId={choisie} onPublie={recharger} />
           <ListeMesArticles articles={articles} onChange={recharger} />
         </>
       )}
@@ -760,57 +795,8 @@ function VueVendeur({ userId }) {
   );
 }
 
-const COORDONNEES_DEFAUT_VILLES = {
-  Dakar: { lat: 14.6928, lng: -17.4467 },
-  Guédiawaye: { lat: 14.7708, lng: -17.3872 },
-  Pikine: { lat: 14.7547, lng: -17.3997 },
-  Rufisque: { lat: 14.7167, lng: -17.2667 },
-  "Keur Massar": { lat: 14.7833, lng: -17.3167 },
-  Thiès: { lat: 14.791, lng: -16.925 },
-  Mbour: { lat: 14.422, lng: -16.963 },
-  Tivaouane: { lat: 14.954, lng: -16.812 },
-  Diourbel: { lat: 14.653, lng: -16.234 },
-  Bambey: { lat: 14.7, lng: -16.45 },
-  Mbacké: { lat: 14.79, lng: -15.9 },
-  Touba: { lat: 14.864, lng: -15.875 },
-  Fatick: { lat: 14.333, lng: -16.4 },
-  Foundiougne: { lat: 14.133, lng: -16.467 },
-  Gossas: { lat: 14.5, lng: -16.067 },
-  Kaolack: { lat: 14.15, lng: -16.083 },
-  Guinguinéo: { lat: 14.267, lng: -15.95 },
-  "Nioro du Rip": { lat: 13.75, lng: -15.767 },
-  Kaffrine: { lat: 14.105, lng: -15.542 },
-  Birkelane: { lat: 14.133, lng: -15.75 },
-  Koungheul: { lat: 13.983, lng: -14.8 },
-  "Malem-Hodar": { lat: 14.1, lng: -15.3 },
-  "Saint-Louis": { lat: 16.032, lng: -16.489 },
-  Dagana: { lat: 16.517, lng: -15.5 },
-  Podor: { lat: 16.65, lng: -14.967 },
-  Louga: { lat: 15.618, lng: -16.224 },
-  Kébémer: { lat: 15.367, lng: -16.45 },
-  Linguère: { lat: 15.395, lng: -15.119 },
-  Matam: { lat: 15.655, lng: -13.255 },
-  Kanel: { lat: 15.483, lng: -13.167 },
-  "Ranérou-Ferlo": { lat: 15.3, lng: -13.967 },
-  Tambacounda: { lat: 13.768, lng: -13.667 },
-  Bakel: { lat: 14.9, lng: -12.467 },
-  Goudiry: { lat: 14.183, lng: -12.717 },
-  Koumpentoum: { lat: 13.983, lng: -14.567 },
-  Kédougou: { lat: 12.556, lng: -12.174 },
-  Salémata: { lat: 12.633, lng: -12.817 },
-  Saraya: { lat: 12.833, lng: -11.75 },
-  Kolda: { lat: 12.883, lng: -14.95 },
-  "Médina Yoro Foulah": { lat: 13.3, lng: -15.0 },
-  Vélingara: { lat: 13.15, lng: -14.117 },
-  Sédhiou: { lat: 12.708, lng: -15.556 },
-  Bounkiling: { lat: 13.033, lng: -15.7 },
-  Goudomp: { lat: 12.583, lng: -15.867 },
-  Ziguinchor: { lat: 12.583, lng: -16.271 },
-  Bignona: { lat: 12.81, lng: -16.23 },
-  Oussouye: { lat: 12.483, lng: -16.55 },
-};
 
-function FormulaireBoutique({ userId, boutique, onEnregistre }) {
+function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistre }) {
   const [champs, setChamps] = useState({
     nom: boutique?.nom || "",
     quartier: boutique?.quartier || "",
@@ -832,18 +818,28 @@ function FormulaireBoutique({ userId, boutique, onEnregistre }) {
     setErreur("");
     setMessage("");
 
-    // Si aucune position GPS n'a été capturée, attribution automatique des coordonnées de la ville
-    let lat = champs.latitude;
-    let lng = champs.longitude;
-    if (lat === null || lng === null) {
-      const def = COORDONNEES_DEFAUT_VILLES[champs.ville] || COORDONNEES_DEFAUT_VILLES["Dakar"];
-      lat = def.lat;
-      lng = def.lng;
-    }
-
     try {
-      await enregistrerBoutique(userId, { ...champs, latitude: lat, longitude: lng });
-      setMessage("✓ Boutique enregistrée instantanément !");
+      if (boutique) {
+        // Modification : nom, quartier, ville, WhatsApp. Jamais la position.
+        await modifierBoutique(boutique.id, champs);
+        setMessage("Boutique mise à jour.");
+      } else {
+        // Création : la position doit venir d'un VRAI relevé.
+        //
+        // Un repli sur les coordonnées du centre-ville existait ici. Il partait
+        // d'une bonne intention — ne pas bloquer quelqu'un sans GPS — mais il
+        // détruisait la promesse du service : toutes les boutiques sans relevé
+        // se seraient retrouvées au même point, et l'acheteur aurait marché
+        // jusqu'à un endroit où il n'y a rien. Mieux vaut refuser la création
+        // que placer une boutique là où elle n'est pas.
+        if (coordonnee(champs.latitude) === null || coordonnee(champs.longitude) === null) {
+          setErreur("Relevez d'abord la position, depuis votre boutique.");
+          setEnvoi(false);
+          return;
+        }
+        await creerBoutique(userId, champs);
+        setMessage("Boutique créée. Son emplacement est désormais fixé.");
+      }
       await onEnregistre();
     } catch (err) {
       setErreur(err.message);
@@ -852,6 +848,24 @@ function FormulaireBoutique({ userId, boutique, onEnregistre }) {
     }
   };
 
+  // Quota atteint : on n'affiche pas un formulaire qui ne peut qu'échouer.
+  const quotaAtteint = !boutique && nombreBoutiques >= BOUTIQUES_OFFERTES;
+  if (quotaAtteint) {
+    return (
+      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5">
+        <h2 className="text-base font-black text-gray-900 dark:text-white">
+          Ouvrir un autre point de vente
+        </h2>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">
+          Vous avez déjà {nombreBoutiques} boutique{nombreBoutiques > 1 ? "s" : ""}. Chaque point de
+          vente a son propre emplacement et son propre stock — vous pouvez garder la même enseigne.
+          L&apos;ouverture d&apos;un point supplémentaire fait l&apos;objet d&apos;une option payante,
+          pas encore disponible.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form
       onSubmit={soumettre}
@@ -859,7 +873,7 @@ function FormulaireBoutique({ userId, boutique, onEnregistre }) {
     >
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-base font-black text-gray-900 dark:text-white">
-          {boutique ? "Ma boutique" : "Ouvrir ma boutique"}
+          {boutique ? boutique.nom || "Ma boutique" : "Ouvrir ma boutique"}
         </h2>
         {boutique && (
           <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">

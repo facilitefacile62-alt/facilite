@@ -133,49 +133,63 @@ export async function supprimerPhoto(chemin) {
 // Boutique du vendeur
 // ---------------------------------------------------------------------------
 
-export async function chargerMaBoutique(userId) {
-  if (!userId) return null;
+export async function chargerMesBoutiques(userId) {
+  if (!userId) return [];
   const { data, error } = await supabase
     .from("marketplace_stores")
     .select("*")
     .eq("owner_id", userId)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  return data;
+  return data || [];
 }
+
+/** Nombre de boutiques offertes avant l'option payante. */
+export const BOUTIQUES_OFFERTES = 1;
 
 /**
  * Crée ou met à jour la boutique. La position vient de la géolocalisation du
  * navigateur, saisie une seule fois : c'est elle qui permet ensuite de trier
  * tout le stock par proximité, sans jamais géolocaliser un article.
  */
-export async function enregistrerBoutique(userId, champs) {
+export async function creerBoutique(userId, champs) {
   if (!userId) throw new Error("Connexion requise.");
 
-  const charge = {
-    nom: String(champs?.nom || "").trim(),
-    quartier: champs?.quartier?.trim() || null,
-    ville: champs?.ville?.trim() || null,
-    telephone_whatsapp: normaliserWhatsapp(champs?.telephone_whatsapp),
-    latitude: coordonnee(champs?.latitude),
-    longitude: coordonnee(champs?.longitude),
-  };
-  if (!charge.nom) throw new Error("Le nom de la boutique est obligatoire.");
+  const nom = String(champs?.nom || "").trim();
+  if (!nom) throw new Error("Le nom de la boutique est obligatoire.");
 
   // Écriture par fonction SECURITY DEFINER, jamais en direct : aucune table de
-  // ce dépôt n'accorde UPDATE ou DELETE à `authenticated` (invariant 1, liste
-  // blanche vide). La fonction déduit le propriétaire de auth.uid().
-  const { data, error } = await supabase.rpc("enregistrer_ma_boutique", {
-    p_nom: charge.nom,
-    p_quartier: charge.quartier,
-    p_ville: charge.ville,
-    p_whatsapp: charge.telephone_whatsapp,
-    p_lat: charge.latitude,
-    p_lng: charge.longitude,
-    // Précision annoncée par l'appareil. Conservée pour pouvoir expliquer
-    // plus tard une boutique mal placée : un relevé à 800 m n'a pas la même
-    // valeur qu'un relevé à 12 m.
+  // ce dépôt n'accorde UPDATE ou DELETE à `authenticated` (invariant 1).
+  const { data, error } = await supabase.rpc("creer_ma_boutique", {
+    p_nom: nom,
+    p_quartier: champs?.quartier?.trim() || null,
+    p_ville: champs?.ville?.trim() || null,
+    p_whatsapp: normaliserWhatsapp(champs?.telephone_whatsapp),
+    p_lat: coordonnee(champs?.latitude),
+    p_lng: coordonnee(champs?.longitude),
+    // Précision annoncée par l'appareil. Conservée pour pouvoir expliquer plus
+    // tard une boutique mal placée : un relevé à 800 m n'a pas la même valeur
+    // qu'un relevé à 12 m.
     p_precision_m: coordonnee(champs?.precisionM),
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Corrige l'étiquette d'une boutique : nom, quartier, ville, WhatsApp.
+ * La position n'en fait pas partie — elle est relevée sur place, une fois.
+ */
+export async function modifierBoutique(storeId, champs) {
+  const nom = String(champs?.nom || "").trim();
+  if (!nom) throw new Error("Le nom de la boutique est obligatoire.");
+
+  const { data, error } = await supabase.rpc("modifier_ma_boutique", {
+    p_id: storeId,
+    p_nom: nom,
+    p_quartier: champs?.quartier?.trim() || null,
+    p_ville: champs?.ville?.trim() || null,
+    p_whatsapp: normaliserWhatsapp(champs?.telephone_whatsapp),
   });
   if (error) throw new Error(error.message);
   return data;
@@ -259,9 +273,11 @@ export async function publierArticle(storeId, champs) {
   const titre = String(champs?.titre || "").trim();
   if (!titre) throw new Error("Le titre est obligatoire.");
 
-  // La boutique n'est pas transmise : la fonction la déduit de l'identité de
-  // l'appelant. Envoyer un store_id rouvrirait la brèche que la fonction ferme.
+  // La boutique est transmise, mais son appartenance est vérifiée par la
+  // fonction : avec deux points de vente, la déduire du propriétaire rangeait
+  // tous les articles dans le premier créé, en silence.
   const { data, error } = await supabase.rpc("publier_mon_article", {
+    p_store_id: storeId,
     p_titre: titre,
     p_categorie: champs?.categorie || "autre",
     p_prix: Math.max(0, Math.round(Number(champs?.prix_xof) || 0)),
