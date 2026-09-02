@@ -172,6 +172,10 @@ export async function enregistrerBoutique(userId, champs) {
     p_whatsapp: charge.telephone_whatsapp,
     p_lat: charge.latitude,
     p_lng: charge.longitude,
+    // Précision annoncée par l'appareil. Conservée pour pouvoir expliquer
+    // plus tard une boutique mal placée : un relevé à 800 m n'a pas la même
+    // valeur qu'un relevé à 12 m.
+    p_precision_m: coordonnee(champs?.precisionM),
   });
   if (error) throw new Error(error.message);
   return data;

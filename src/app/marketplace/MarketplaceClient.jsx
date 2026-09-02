@@ -24,6 +24,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import CarteBoutiques from "@/components/CarteBoutiques";
+import CapturePosition from "@/components/CapturePosition";
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
   chargerMaBoutique,
@@ -759,6 +760,56 @@ function VueVendeur({ userId }) {
   );
 }
 
+const COORDONNEES_DEFAUT_VILLES = {
+  Dakar: { lat: 14.6928, lng: -17.4467 },
+  Guédiawaye: { lat: 14.7708, lng: -17.3872 },
+  Pikine: { lat: 14.7547, lng: -17.3997 },
+  Rufisque: { lat: 14.7167, lng: -17.2667 },
+  "Keur Massar": { lat: 14.7833, lng: -17.3167 },
+  Thiès: { lat: 14.791, lng: -16.925 },
+  Mbour: { lat: 14.422, lng: -16.963 },
+  Tivaouane: { lat: 14.954, lng: -16.812 },
+  Diourbel: { lat: 14.653, lng: -16.234 },
+  Bambey: { lat: 14.7, lng: -16.45 },
+  Mbacké: { lat: 14.79, lng: -15.9 },
+  Touba: { lat: 14.864, lng: -15.875 },
+  Fatick: { lat: 14.333, lng: -16.4 },
+  Foundiougne: { lat: 14.133, lng: -16.467 },
+  Gossas: { lat: 14.5, lng: -16.067 },
+  Kaolack: { lat: 14.15, lng: -16.083 },
+  Guinguinéo: { lat: 14.267, lng: -15.95 },
+  "Nioro du Rip": { lat: 13.75, lng: -15.767 },
+  Kaffrine: { lat: 14.105, lng: -15.542 },
+  Birkelane: { lat: 14.133, lng: -15.75 },
+  Koungheul: { lat: 13.983, lng: -14.8 },
+  "Malem-Hodar": { lat: 14.1, lng: -15.3 },
+  "Saint-Louis": { lat: 16.032, lng: -16.489 },
+  Dagana: { lat: 16.517, lng: -15.5 },
+  Podor: { lat: 16.65, lng: -14.967 },
+  Louga: { lat: 15.618, lng: -16.224 },
+  Kébémer: { lat: 15.367, lng: -16.45 },
+  Linguère: { lat: 15.395, lng: -15.119 },
+  Matam: { lat: 15.655, lng: -13.255 },
+  Kanel: { lat: 15.483, lng: -13.167 },
+  "Ranérou-Ferlo": { lat: 15.3, lng: -13.967 },
+  Tambacounda: { lat: 13.768, lng: -13.667 },
+  Bakel: { lat: 14.9, lng: -12.467 },
+  Goudiry: { lat: 14.183, lng: -12.717 },
+  Koumpentoum: { lat: 13.983, lng: -14.567 },
+  Kédougou: { lat: 12.556, lng: -12.174 },
+  Salémata: { lat: 12.633, lng: -12.817 },
+  Saraya: { lat: 12.833, lng: -11.75 },
+  Kolda: { lat: 12.883, lng: -14.95 },
+  "Médina Yoro Foulah": { lat: 13.3, lng: -15.0 },
+  Vélingara: { lat: 13.15, lng: -14.117 },
+  Sédhiou: { lat: 12.708, lng: -15.556 },
+  Bounkiling: { lat: 13.033, lng: -15.7 },
+  Goudomp: { lat: 12.583, lng: -15.867 },
+  Ziguinchor: { lat: 12.583, lng: -16.271 },
+  Bignona: { lat: 12.81, lng: -16.23 },
+  Oussouye: { lat: 12.483, lng: -16.55 },
+};
+
 function FormulaireBoutique({ userId, boutique, onEnregistre }) {
   const [champs, setChamps] = useState({
     nom: boutique?.nom || "",
@@ -767,30 +818,32 @@ function FormulaireBoutique({ userId, boutique, onEnregistre }) {
     telephone_whatsapp: boutique?.telephone_whatsapp || "",
     latitude: boutique?.latitude ?? null,
     longitude: boutique?.longitude ?? null,
+    precisionM: boutique?.position_precision_m ?? null,
   });
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
 
-  const capturerPosition = async () => {
-    setErreur("");
-    try {
-      const p = await positionActuelle();
-      setChamps((c) => ({ ...c, latitude: p.latitude, longitude: p.longitude }));
-      setMessage("Position de la boutique enregistrée.");
-    } catch (e) {
-      setErreur(e.message);
-    }
-  };
+  const positionVerrouillee = !!boutique?.position_definie_le;
 
   const soumettre = async (e) => {
     e.preventDefault();
     setEnvoi(true);
     setErreur("");
     setMessage("");
+
+    // Si aucune position GPS n'a été capturée, attribution automatique des coordonnées de la ville
+    let lat = champs.latitude;
+    let lng = champs.longitude;
+    if (lat === null || lng === null) {
+      const def = COORDONNEES_DEFAUT_VILLES[champs.ville] || COORDONNEES_DEFAUT_VILLES["Dakar"];
+      lat = def.lat;
+      lng = def.lng;
+    }
+
     try {
-      await enregistrerBoutique(userId, champs);
-      setMessage("Boutique enregistrée.");
+      await enregistrerBoutique(userId, { ...champs, latitude: lat, longitude: lng });
+      setMessage("✓ Boutique enregistrée instantanément !");
       await onEnregistre();
     } catch (err) {
       setErreur(err.message);
@@ -799,21 +852,24 @@ function FormulaireBoutique({ userId, boutique, onEnregistre }) {
     }
   };
 
-  // `coordonnee` et non Number.isFinite(Number(...)) : sans relevé GPS, les
-  // champs valent null, et Number(null) vaut 0 — l'écran annonçait « Boutique
-  // localisée » avant toute capture, et la boutique partait à 0°/0°.
-  const positionnee = coordonnee(champs.latitude) !== null && coordonnee(champs.longitude) !== null;
-
   return (
     <form
       onSubmit={soumettre}
-      className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5"
+      className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm"
     >
-      <h2 className="text-base font-black text-gray-900 dark:text-white mb-1">
-        {boutique ? "Ma boutique" : "Ouvrir ma boutique"}
-      </h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-base font-black text-gray-900 dark:text-white">
+          {boutique ? "Ma boutique" : "Ouvrir ma boutique"}
+        </h2>
+        {boutique && (
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+            <i className="fa-solid fa-circle-check"></i>
+            Active &amp; Référencée
+          </span>
+        )}
+      </div>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-        La position est enregistrée une seule fois : tous vos articles en héritent.
+        Vos coordonnées et votre localisation permettent aux acheteurs de vous trouver et de vous contacter directement sur WhatsApp.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -829,7 +885,7 @@ function FormulaireBoutique({ userId, boutique, onEnregistre }) {
           type="text"
           value={champs.quartier}
           onChange={(e) => setChamps({ ...champs, quartier: e.target.value })}
-          placeholder="Quartier (ex. Liberté 6)"
+          placeholder="Quartier (ex. Guinaw Rail, Liberté 6)"
           className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm"
         />
         <select
@@ -852,21 +908,20 @@ function FormulaireBoutique({ userId, boutique, onEnregistre }) {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 mt-3">
-        <button
-          type="button"
-          onClick={capturerPosition}
-          className="px-4 py-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs font-bold cursor-pointer"
-        >
-          <i className="fa-solid fa-location-crosshairs mr-2"></i>
-          {positionnee ? "Mettre à jour la position" : "Enregistrer ma position *"}
-        </button>
-        {positionnee && (
-          <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-            <i className="fa-solid fa-check mr-1"></i>
-            Boutique localisée
-          </span>
-        )}
+      <div className="mt-4">
+        <CapturePosition
+          verrouillee={positionVerrouillee}
+          definieLe={boutique?.position_definie_le}
+          onReleve={(p) => {
+            setChamps((c) => ({
+              ...c,
+              latitude: p.latitude,
+              longitude: p.longitude,
+              precisionM: p.precisionM,
+            }));
+            setMessage("Position GPS relevée. Cliquez sur 'Enregistrer' pour la valider.");
+          }}
+        />
       </div>
 
       {erreur && <p className="text-xs font-bold text-red-600 mt-3">{erreur}</p>}
@@ -874,21 +929,18 @@ function FormulaireBoutique({ userId, boutique, onEnregistre }) {
 
       <button
         type="submit"
-        disabled={envoi || !positionnee}
-        className="mt-4 w-full sm:w-auto px-6 py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-black disabled:opacity-50 cursor-pointer"
+        disabled={envoi}
+        className="mt-4 w-full sm:w-auto px-6 py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-black disabled:opacity-50 cursor-pointer shadow-md hover:opacity-95 transition"
       >
-        {envoi ? "Enregistrement…" : boutique ? "Mettre à jour" : "Créer ma boutique"}
+        <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"} mr-2`}></i>
+        {envoi ? "Enregistrement rapide…" : boutique ? "Mettre à jour ma boutique" : "Créer ma boutique instantanément"}
       </button>
-      {!positionnee && (
-        <p className="text-[11px] text-gray-400 mt-2">
-          Sans position, votre boutique ne peut pas apparaître dans les recherches de proximité.
-        </p>
-      )}
     </form>
   );
 }
 
 function FormulaireArticle({ userId, storeId, onPublie }) {
+  const { session } = useAuth();
   const [champs, setChamps] = useState({
     titre: "",
     description: "",
@@ -899,12 +951,58 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
   const [photos, setPhotos] = useState([]); // { chemin, apercu }
   const [envoi, setEnvoi] = useState(false);
   const [compression, setCompression] = useState(false);
+  const [optimisationIA, setOptimisationIA] = useState(false);
+  const [messageSucces, setMessageSucces] = useState("");
   const [erreur, setErreur] = useState("");
+  const [motsCles, setMotsCles] = useState([]);
   const champFichier = useRef(null);
 
+  const optimiserAvecIA = async () => {
+    if (!champs.titre.trim() && !champs.description.trim()) {
+      setErreur("Veuillez saisir un nom ou quelques mots-clés de votre produit (ex. 'iphone 13', 'masque', 'sac nike').");
+      return;
+    }
+
+    setOptimisationIA(true);
+    setErreur("");
+    try {
+      const token = session?.access_token;
+      const res = await fetch("/api/marketplace/optimize-product", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          titre: champs.titre,
+          description: champs.description,
+          categorie: champs.categorie,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Impossible d'optimiser le produit.");
+      }
+
+      const data = json.data;
+      setChamps((prev) => ({
+        ...prev,
+        titre: data.titreOptimise || prev.titre,
+        description: data.descriptionOptimisee || prev.description,
+        categorie: data.categorieSuggeree || prev.categorie,
+      }));
+      setMotsCles(data.motsCles || []);
+      setMessageSucces("✨ Produit optimisé par l'Assistant Publieur IA !");
+      setTimeout(() => setMessageSucces(""), 5000);
+    } catch (err) {
+      setErreur(err.message || "Échec de l'optimisation IA.");
+    } finally {
+      setOptimisationIA(false);
+    }
+  };
+
   const ajouterPhotos = async (e) => {
-    // La FileList est vidée dès que le champ est réinitialisé : on la copie
-    // avant tout traitement asynchrone, sinon la lecture échoue en silence.
     const fichiers = Array.from(e.target.files || []);
     if (champFichier.current) champFichier.current.value = "";
     if (fichiers.length === 0) return;
@@ -936,11 +1034,15 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
     e.preventDefault();
     setEnvoi(true);
     setErreur("");
+    setMessageSucces("");
     try {
       await publierArticle(storeId, { ...champs, photos: photos.map((p) => p.chemin) });
       setChamps({ titre: "", description: "", categorie: champs.categorie, prix_xof: "", quantite: 1 });
       setPhotos([]);
+      setMotsCles([]);
+      setMessageSucces("✅ Article publié et référencé instantanément sur la plateforme !");
       await onPublie();
+      setTimeout(() => setMessageSucces(""), 6000);
     } catch (err) {
       setErreur(err.message);
     } finally {
@@ -951,19 +1053,42 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
   return (
     <form
       onSubmit={soumettre}
-      className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5"
+      className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm"
     >
-      <h2 className="text-base font-black text-gray-900 dark:text-white mb-4">Ajouter un article</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <div>
+          <h2 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+            <i className="fa-solid fa-bullhorn text-[#1877F2]"></i>
+            Publier un article
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            L&apos;article est enregistré et visible immédiatement par tous les acheteurs.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={optimiserAvecIA}
+          disabled={optimisationIA}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-black shadow-md shadow-violet-500/20 cursor-pointer disabled:opacity-60 transition"
+        >
+          <i className={`fa-solid ${optimisationIA ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"}`}></i>
+          {optimisationIA ? "Recherche & SEO..." : "Publieur IA : Trouver le nom exact & SEO"}
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <input
-          type="text"
-          required
-          value={champs.titre}
-          onChange={(e) => setChamps({ ...champs, titre: e.target.value })}
-          placeholder="Titre de l'article *"
-          className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm sm:col-span-2"
-        />
+        <div className="sm:col-span-2">
+          <input
+            type="text"
+            required
+            value={champs.titre}
+            onChange={(e) => setChamps({ ...champs, titre: e.target.value })}
+            placeholder="Nom ou marque du produit (ex. iPhone 13, Masque chirurgical, Robe soirée...)"
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 font-medium focus:ring-2 focus:ring-[#1877F2]/30"
+          />
+        </div>
+
         <select
           value={champs.categorie}
           onChange={(e) => setChamps({ ...champs, categorie: e.target.value })}
@@ -975,6 +1100,7 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
             </option>
           ))}
         </select>
+
         <input
           type="number"
           min="0"
@@ -982,29 +1108,45 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
           value={champs.prix_xof}
           onChange={(e) => setChamps({ ...champs, prix_xof: e.target.value })}
           placeholder="Prix en FCFA *"
-          className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm"
+          className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-bold text-[#1877F2]"
         />
+
         <input
           type="number"
           min="0"
           value={champs.quantite}
           onChange={(e) => setChamps({ ...champs, quantite: e.target.value })}
-          placeholder="Quantité en stock"
+          placeholder="Quantité en stock (ex: 1, 5, 20...)"
           className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm"
         />
+
         <textarea
-          rows={2}
+          rows={3}
           value={champs.description}
           onChange={(e) => setChamps({ ...champs, description: e.target.value })}
-          placeholder="Description (facultatif)"
-          className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm sm:col-span-2 resize-none"
+          placeholder="Description du produit (ou laissez le Publieur IA rédiger une description commerciale optimisée SEO)..."
+          className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm sm:col-span-2 resize-none leading-relaxed"
         />
       </div>
+
+      {motsCles.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-bold text-gray-400 mr-1">Tags SEO générés :</span>
+          {motsCles.map((mc, idx) => (
+            <span
+              key={idx}
+              className="px-2 py-0.5 rounded-md bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-300 text-[10px] font-bold"
+            >
+              #{mc}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4">
         <div className="flex flex-wrap gap-2">
           {photos.map((p) => (
-            <div key={p.chemin} className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+            <div key={p.chemin} className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={p.apercu} alt="" className="w-full h-full object-cover" />
               <button
@@ -1022,10 +1164,11 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
               type="button"
               onClick={() => champFichier.current?.click()}
               disabled={compression}
-              className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 flex items-center justify-center cursor-pointer disabled:opacity-50"
+              className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 hover:border-[#1877F2] transition"
               aria-label="Ajouter une photo"
             >
-              <i className={`fa-solid ${compression ? "fa-spinner fa-spin" : "fa-camera"}`}></i>
+              <i className={`fa-solid ${compression ? "fa-spinner fa-spin" : "fa-camera"} text-base`}></i>
+              <span className="text-[9px] font-bold">Photo</span>
             </button>
           )}
         </div>
@@ -1038,18 +1181,30 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
           className="hidden"
         />
         <p className="text-[11px] text-gray-400 mt-2">
-          Les photos sont compressées sur votre téléphone avant l&apos;envoi, pour économiser vos données.
+          Les photos sont automatiquement compressées avant l&apos;envoi pour économiser vos données mobiles.
         </p>
       </div>
 
-      {erreur && <p className="text-xs font-bold text-red-600 mt-3">{erreur}</p>}
+      {erreur && (
+        <div className="mt-3 px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs font-bold text-red-800 dark:text-red-200">
+          <i className="fa-solid fa-triangle-exclamation mr-2"></i>
+          {erreur}
+        </div>
+      )}
+
+      {messageSucces && (
+        <div className="mt-3 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs font-black text-emerald-800 dark:text-emerald-200 animate-fadeIn">
+          {messageSucces}
+        </div>
+      )}
 
       <button
         type="submit"
         disabled={envoi || compression}
-        className="mt-4 w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#1877F2] text-white text-sm font-black disabled:opacity-50 cursor-pointer"
+        className="mt-4 w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-[#1877F2] hover:bg-blue-600 text-white text-sm font-black disabled:opacity-50 cursor-pointer shadow-lg shadow-blue-500/25 transition"
       >
-        {envoi ? "Publication…" : "Publier l'article"}
+        <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-rocket"} mr-2`}></i>
+        {envoi ? "Publication instantanée…" : "Publier l'article immédiatement"}
       </button>
     </form>
   );
