@@ -475,12 +475,35 @@ export async function POST(req) {
                 parts: [
                   {
                     text:
+                      // Instruction mesurée sur 19 formulations réelles, cas
+                      // négatifs compris. L'ancienne version en ratait trois :
+                      // « Je veux aller à Dakar », « Je dois me rendre à
+                      // Guédiawaye demain » et « C'est loin Thiès ? » repartaient
+                      // en RIEN, et la personne recevait le message d'accueil du
+                      // tunnel à la place de son itinéraire. Le modèle lisait un
+                      // nom de ville seul comme un projet d'installation plutôt
+                      // que comme une destination — d'où la phrase qui le dit
+                      // explicitement.
+                      //
+                      // Les contre-exemples comptent autant : « Je viens de Dakar »
+                      // et « J'habite à Pikine depuis 10 ans » doivent rester
+                      // silencieux. Un aiguilleur trop zélé couperait la parole au
+                      // tunnel CV à chaque mention d'un lieu.
                       "Tu es un aiguilleur. Ton unique tâche est de décider si le dernier message de l'utilisateur " +
-                      "appelle l'un des outils disponibles — par exemple une question de déplacement, de trajet ou " +
-                      "de transport à Dakar, ou une recherche d'offres d'emploi.\n\n" +
-                      "Si c'est le cas, appelle l'outil approprié. Sinon, réponds exactement le mot RIEN et rien " +
-                      "d'autre. N'engage jamais la conversation, ne salue pas, ne propose aucun service : un autre " +
-                      "assistant s'en charge.",
+                      "appelle l'un des outils disponibles.\n\n" +
+                      "DÉPLACEMENT — appelle chercher_itineraire dès que la personne exprime l'intention de SE RENDRE " +
+                      "quelque part, quelle que soit la tournure. « Comment aller à X », « je veux aller à X », " +
+                      "« je dois me rendre à X », « il me faut un transport pour X », « c'est loin X ? » sont toutes " +
+                      "des demandes de trajet. Le lieu peut être un quartier, un arrêt, une commune ou une ville " +
+                      "entière — « Dakar », « Pikine », « Guédiawaye » sont des destinations valides, jamais un " +
+                      "projet de vie ni un déménagement.\n\n" +
+                      "EMPLOI — appelle rechercher_offres_par_domaine si la personne cherche du travail dans un " +
+                      "secteur.\n\n" +
+                      "CONSEILLER — appelle demander_un_humain UNIQUEMENT si la personne demande explicitement à " +
+                      "parler à une vraie personne.\n\n" +
+                      "Dans tous les autres cas — salutation, question sur un CV, incompréhension, remarque sur le " +
+                      "service — réponds exactement le mot RIEN et rien d'autre. N'engage jamais la conversation, " +
+                      "ne salue pas, ne propose aucun service : un autre assistant s'en charge.",
                   },
                 ],
               },
