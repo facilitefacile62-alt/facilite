@@ -201,6 +201,26 @@ export default function Header() {
   const [mobileHelpOpen, setMobileHelpOpen] = useState(false);
   const [mobileLang, setMobileLang] = useState("FR");
   const [mounted, setMounted] = useState(false);
+  const [maBoutiqueInfo, setMaBoutiqueInfo] = useState(null);
+
+  const isBusinessActive = pathname?.startsWith("/marketplace");
+
+  useEffect(() => {
+    if (!userSession?.user?.id) {
+      setMaBoutiqueInfo(null);
+      return;
+    }
+    supabase
+      .from("stores")
+      .select("id, nom, quartier, ville")
+      .eq("user_id", userSession.user.id)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setMaBoutiqueInfo(data);
+      })
+      .catch(() => {});
+  }, [userSession?.user?.id]);
 
   useEffect(() => {
     setMounted(true);
@@ -1383,72 +1403,178 @@ export default function Header() {
 
           {userSession ? (
             <div className="relative" ref={profileDropdownRef}>
+              {/* Bouton Switcher de Profil & Espace (Style Image 1 1:1 Pixel Perfect avec chevron noir dans rond blanc) */}
               <button
                 type="button"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="px-2 sm:px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer shadow-2xs"
+                className="relative flex items-center gap-2 p-1 rounded-full hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-700 transition cursor-pointer flex-shrink-0 group"
+                title="Basculer entre l'Espace Candidat et l'Espace Marketplace"
+                aria-label="Basculer de compte ou d'espace"
               >
-                {authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
-                  <img
-                    src={authProfile.avatar_url}
-                    alt="Photo de profil"
-                    className="w-5 h-5 rounded-full object-cover border border-emerald-500 shrink-0"
-                  />
-                ) : (
-                  <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
-                    {authProfile?.full_name ? authProfile.full_name.charAt(0).toUpperCase() : "👤"}
+                <div className="relative">
+                  {isBusinessActive ? (
+                    <img
+                      src="/business_avatar.jpg"
+                      alt="Facilité Business"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-[#1877F2] shadow-xs"
+                    />
+                  ) : authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
+                    <img
+                      src={authProfile.avatar_url}
+                      alt="Photo de profil"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-emerald-500 shadow-xs"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-black shrink-0 border-2 border-emerald-500 shadow-xs">
+                      {authProfile?.full_name ? authProfile.full_name.charAt(0).toUpperCase() : "👤"}
+                    </div>
+                  )}
+
+                  {/* Badge rond blanc avec Chevron noir (Exact Image 1) */}
+                  <div className="absolute -bottom-1 -right-1 w-4.5 h-4.5 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center border border-gray-200 dark:border-gray-700 transition group-hover:scale-110">
+                    <i className="fa-solid fa-chevron-down text-[8px] text-gray-900 dark:text-white"></i>
                   </div>
-                )}
-                <span className="max-w-[90px] truncate">{authProfile?.full_name || "Profil"}</span>
+                </div>
+
+                <span className="hidden sm:inline-block max-w-[105px] truncate text-xs font-black text-gray-800 dark:text-gray-200">
+                  {isBusinessActive
+                    ? maBoutiqueInfo?.nom || "Business"
+                    : authProfile?.full_name?.split(" ")[0] || "Candidat"}
+                </span>
               </button>
 
+              {/* Menu Switcher d'Espace 1:1 Pixel Perfect (Exact Image 2) */}
               {profileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl py-2 z-50 animate-fade-in-up font-sans">
-                  <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2.5">
-                    {authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
-                      <img
-                        src={authProfile.avatar_url}
-                        alt="Photo de profil"
-                        className="w-9 h-9 rounded-full object-cover border border-emerald-500 shrink-0"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-black shrink-0">
-                        {authProfile?.full_name ? authProfile.full_name.charAt(0).toUpperCase() : "👤"}
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-black text-gray-900 dark:text-white truncate">
-                        {authProfile?.full_name || "Mon Profil"}
-                      </p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
-                        {userSession?.user?.email}
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/profil"
-                    onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-800 hover:text-emerald-700 transition cursor-pointer"
-                  >
-                    <i className="fa-solid fa-user text-emerald-600 text-sm"></i>
-                    <span>Mon Profil</span>
-                  </Link>
+                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
+                  
+                  {/* OPTION 1 : Facilité Business (Exact Image 2) */}
                   <button
                     type="button"
-                    onClick={async () => {
+                    onClick={() => {
                       setProfileDropdownOpen(false);
-                      if (signOut) {
-                        await signOut();
-                      } else {
-                        await supabase.auth.signOut();
-                      }
-                      window.location.href = "/login";
+                      router.push("/marketplace");
                     }}
-                    className="w-full flex items-center gap-2.5 text-left px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-gray-800 transition cursor-pointer"
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left group ${
+                      isBusinessActive
+                        ? "bg-gray-100/90 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-2xs"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
                   >
-                    <i className="fa-solid fa-arrow-right-from-bracket text-red-500 text-sm"></i>
-                    <span>Se déconnecter</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative shrink-0">
+                        <img
+                          src="/business_avatar.jpg"
+                          alt="Facilité Business"
+                          className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate">
+                          {maBoutiqueInfo?.nom ? `${maBoutiqueInfo.nom} (Business)` : "Facilite Business"}
+                        </h4>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
+                          Espace Vendeur &amp; Marketplace
+                        </p>
+                      </div>
+                    </div>
+
+                    {isBusinessActive && (
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                        ✓
+                      </span>
+                    )}
                   </button>
+
+                  {/* Ligne de séparation (Exact Image 2) */}
+                  <div className="my-1 border-t border-gray-200/70 dark:border-gray-800"></div>
+
+                  {/* OPTION 2 : Facilité Facile (Exact Image 2 avec icône reload/sync) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      router.push("/");
+                    }}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left group ${
+                      !isBusinessActive
+                        ? "bg-gray-100/90 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-2xs"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative shrink-0">
+                        {authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
+                          <img
+                            src={authProfile.avatar_url}
+                            alt="Facilité"
+                            className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-black border border-gray-200 dark:border-gray-700 shadow-xs">
+                            {authProfile?.full_name ? authProfile.full_name.charAt(0).toUpperCase() : "👤"}
+                          </div>
+                        )}
+
+                        {/* Badge cercle synchronisation ⟲ (Exact Image 2) */}
+                        <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 flex items-center justify-center shadow-xs">
+                          <i className="fa-solid fa-arrows-rotate text-[9px] text-gray-700 dark:text-gray-300"></i>
+                        </div>
+                      </div>
+
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate">
+                          {authProfile?.full_name || "Facilite Facile"}
+                        </h4>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
+                          Espace Candidat &amp; CV
+                        </p>
+                      </div>
+                    </div>
+
+                    {!isBusinessActive && (
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Liens supplémentaires de compte */}
+                  <div className="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-800 space-y-0.5">
+                    <Link
+                      href="/profil"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-id-card text-emerald-600 text-xs w-4"></i>
+                      <span>Mon Profil &amp; Mes CVs</span>
+                    </Link>
+
+                    <Link
+                      href="/marketplace"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-store text-blue-600 text-xs w-4"></i>
+                      <span>Ma Boutique &amp; Mes Ventes</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setProfileDropdownOpen(false);
+                        if (signOut) {
+                          await signOut();
+                        } else {
+                          await supabase.auth.signOut();
+                        }
+                        window.location.href = "/login";
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition cursor-pointer text-left"
+                    >
+                      <i className="fa-solid fa-arrow-right-from-bracket text-red-500 text-xs w-4"></i>
+                      <span>Se déconnecter</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1584,40 +1710,126 @@ export default function Header() {
           <div className="flex-1 overflow-y-auto overscroll-contain px-3.5 py-4 space-y-3.5 max-w-lg mx-auto w-full pb-36">
             
             {/* Carte Profil Utilisateur (Style Facebook 1:1) */}
+            {/* Carte Switcher Profil & Espace Mobile (1:1 Inspiré Image 1 & 2) */}
             {userSession ? (
-              <div className="bg-white dark:bg-gray-900 rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs">
-                <Link
-                  href="/profil"
-                  onClick={(e) => handleNavClick(e, "/profil", "nav_profil", "Profil")}
-                  className="flex items-center gap-3 group"
+              <div className="bg-white dark:bg-gray-900 rounded-3xl p-3 border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-2">
+                <div className="flex items-center justify-between px-2 pt-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                    Vos Espaces
+                  </span>
+                  <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                    {isBusinessActive ? "Mode Vendeur" : "Mode Candidat"}
+                  </span>
+                </div>
+
+                {/* Switcher Option 1: Facilité Business */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    router.push("/marketplace");
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left ${
+                    isBusinessActive
+                      ? "bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                  }`}
                 >
-                  <div className="relative">
-                    {authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
-                      <img
-                        src={authProfile.avatar_url}
-                        alt="Photo de profil"
-                        className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-xs"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-lg flex items-center justify-center shadow-xs border-2 border-white dark:border-gray-800">
-                        {(authProfile?.full_name || userSession.user?.email || "U").charAt(0).toUpperCase()}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src="/business_avatar.jpg"
+                      alt="Facilité Business"
+                      className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
+                        {maBoutiqueInfo?.nom ? `${maBoutiqueInfo.nom} (Business)` : "Facilite Business"}
+                      </h4>
+                      <p className="text-[10px] text-gray-500 font-medium">Espace Vendeur &amp; Marketplace</p>
+                    </div>
+                  </div>
+                  {isBusinessActive ? (
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                      ✓
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1 shrink-0">
+                      Basculer <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                    </span>
+                  )}
+                </button>
+
+                {/* Séparateur */}
+                <div className="border-t border-gray-100 dark:border-gray-800 my-0.5"></div>
+
+                {/* Switcher Option 2: Facilité Facile */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    router.push("/");
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left ${
+                    !isBusinessActive
+                      ? "bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative shrink-0">
+                      {authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
+                        <img
+                          src={authProfile.avatar_url}
+                          alt="Photo de profil"
+                          className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-black border border-gray-200 dark:border-gray-700 shadow-xs">
+                          {authProfile?.full_name ? authProfile.full_name.charAt(0).toUpperCase() : "👤"}
+                        </div>
+                      )}
+                      <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 flex items-center justify-center shadow-xs">
+                        <i className="fa-solid fa-arrows-rotate text-[9px] text-gray-700 dark:text-gray-300"></i>
                       </div>
-                    )}
-                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></span>
+                    </div>
+
+                    <div className="min-w-0">
+                      <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
+                        {authProfile?.full_name || "Facilite Facile"}
+                      </h4>
+                      <p className="text-[10px] text-gray-500 font-medium">Espace Candidature &amp; CV</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-black text-gray-900 dark:text-white truncate group-hover:text-emerald-600 transition">
-                      {authProfile?.full_name || userSession.user?.email?.split("@")[0] || "Mon Profil"}
-                    </h3>
-                    <p className="text-xs text-gray-500 font-bold flex items-center gap-1">
-                      <span>Voir votre profil</span>
-                      <i className="fa-solid fa-chevron-right text-[10px] text-gray-400 group-hover:translate-x-0.5 transition-transform"></i>
-                    </p>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300">
-                    <i className="fa-solid fa-chevron-down text-xs"></i>
-                  </div>
-                </Link>
+
+                  {!isBusinessActive ? (
+                    <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                      ✓
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1 shrink-0">
+                      Basculer <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                    </span>
+                  )}
+                </button>
+
+                <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-800 text-[11px] font-bold">
+                  <Link
+                    href="/profil"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-emerald-600 dark:text-emerald-400 hover:underline px-2 py-1"
+                  >
+                    <i className="fa-solid fa-id-card mr-1"></i>
+                    Gérer mon profil
+                  </Link>
+                  <Link
+                    href="/marketplace"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-blue-600 dark:text-blue-400 hover:underline px-2 py-1"
+                  >
+                    <i className="fa-solid fa-store mr-1"></i>
+                    Ma boutique
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-3">
