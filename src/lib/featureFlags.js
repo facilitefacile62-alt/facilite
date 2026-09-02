@@ -32,11 +32,11 @@ export const DEFAULT_FEATURE_TREE = [
         name: "Marketplace (Sélection du jour & Ventes)",
         path: "/marketplace",
         icon: "🏪",
-        // Coupé le 01/09/2026 : le module ne persiste rien (localStorage) et
-        // sa recherche « visuelle » lit le nom du fichier. Voir la migration
-        // 20260901180000. Cette valeur par défaut sert de filet — sans elle,
-        // une remise à zéro des drapeaux republierait un module cassé.
-        enabled: false,
+        // Rouvert le 02/09/2026 (migration 20260902160000) : le module est
+        // branché sur la base, les photos sont compressées et stockées, la
+        // fausse recherche visuelle a disparu, et les annonces peuvent être
+        // signalées puis retirées depuis /admin/signalements.
+        enabled: true,
         roles: { user: true, recruiter: true, visitor: true },
         description: "Bouton dans l'en-tête, carte du fil d'accueil et accès à la plateforme Marketplace",
       },
