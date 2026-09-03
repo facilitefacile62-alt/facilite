@@ -664,8 +664,8 @@ function VueAcheteur({ onVoirBoutique, categorie = null, onSelectCategorie }) {
         />
       )}
 
-      {/* Grille de produits : 2 colonnes sur mobile (1:1 Capture d'écran utilisateur) */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
+      {/* Grille de produits : 1:1 Capture d'écran utilisateur (5 colonnes desktop, 2 colonnes mobile) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">
         {resultats.map((a, i) => (
           <CarteArticle
             key={a.id}
@@ -701,101 +701,92 @@ function CarteArticle({ article, onVoirBoutique, ancre = false }) {
     <article
       id={ancre ? `boutique-${article.boutique_id}` : undefined}
       onClick={ouvrirFiche}
-      className="group relative rounded-2xl sm:rounded-3xl overflow-hidden aspect-3/4 bg-gray-900 border border-gray-200/50 dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer scroll-mt-24 select-none flex flex-col justify-between"
+      className="group flex flex-col cursor-pointer select-none scroll-mt-24 transition duration-150"
     >
-      {/* 1. Photo Plein Écran de l'Article (Arrière-plan complet) */}
-      <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800">
+      {/* 1. Image produit (1:1 Capture Shein/AliExpress style) */}
+      <div className="relative aspect-3/4 w-full rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-100 dark:border-gray-800">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photo}
             alt={article.titre}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-950 to-gray-950 text-white/50 p-3 text-center">
-            <i className="fa-solid fa-shirt text-3xl sm:text-4xl mb-2 text-white/40"></i>
-            <span className="text-[11px] font-bold text-white/80 line-clamp-2">{article.titre}</span>
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-400 p-3 text-center">
+            <i className="fa-solid fa-bag-shopping text-3xl mb-1 text-gray-300 dark:text-gray-600"></i>
+            <span className="text-[10px] font-bold text-gray-500 line-clamp-2">{article.titre}</span>
           </div>
         )}
-        {/* Calque de dégradé pour garantir la lisibilité optimale du texte */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none"></div>
+
+        {/* Badge Épuisé si hors stock */}
+        {!enStock && (
+          <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/75 text-white text-[9px] font-bold shadow-xs">
+            Épuisé
+          </span>
+        )}
+
+        {/* Distance lisible si géolocalisé */}
+        {article.distanceLisible && (
+          <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[9px] font-semibold flex items-center gap-1 shadow-xs">
+            <i className="fa-solid fa-location-dot text-emerald-400 text-[8px]"></i>
+            {article.distanceLisible}
+          </span>
+        )}
+
+        {/* Bouton de signalement discret au survol */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSignalementOuvert(true);
+          }}
+          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition cursor-pointer"
+          title="Signaler cette annonce"
+        >
+          <i className="fa-regular fa-flag"></i>
+        </button>
       </div>
 
-      {/* 2. Badges en haut (Statut Stock & Distance / Signalement) */}
-      <div className="relative z-10 p-2 sm:p-2.5 flex items-center justify-between w-full">
-        <span
-          className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider backdrop-blur-md shadow-xs ${
-            enStock ? "bg-emerald-500/90 text-white" : "bg-gray-800/90 text-gray-300"
-          }`}
+      {/* 2. Informations sous l'image (1:1 Identique à la capture utilisateur) */}
+      <div className="pt-2 px-0.5 flex flex-col">
+        {/* Titre : 1 seule ligne avec points de suspension */}
+        <h3
+          className="text-xs sm:text-[13px] text-gray-700 dark:text-gray-300 font-normal truncate leading-snug hover:text-blue-600 transition"
+          title={article.titre}
         >
-          {enStock ? "En stock" : "Épuisé"}
-        </span>
+          {article.titre}
+        </h3>
 
-        <div className="flex items-center gap-1">
-          {article.distanceLisible && (
-            <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[9px] font-bold shadow-xs">
-              <i className="fa-solid fa-location-dot mr-1 text-[#10E688]"></i>
-              {article.distanceLisible}
+        {/* Ligne Prix & Bouton Panier */}
+        <div className="flex items-center justify-between mt-1">
+          {/* Prix avec montant en grand et devise */}
+          <div className="flex items-baseline truncate pr-1">
+            <span className="text-base sm:text-lg font-black text-gray-950 dark:text-white tracking-tight">
+              {prixLisible(article.prix_xof)}
             </span>
-          )}
+            <span className="text-[10px] sm:text-xs font-extrabold text-gray-900 dark:text-gray-200 ml-0.5">
+              F
+            </span>
+          </div>
+
+          {/* Bouton Panier / Commander (1:1 Bouton ovale avec icône caddie) */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setSignalementOuvert(true);
+              if (article.whatsappUrl) {
+                window.open(article.whatsappUrl, "_blank", "noopener,noreferrer");
+              } else {
+                ouvrirFiche();
+              }
             }}
-            className="w-6 h-6 rounded-full bg-black/40 backdrop-blur-md text-white/70 hover:text-white flex items-center justify-center text-[10px] transition cursor-pointer"
-            title="Signaler cette annonce"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-gray-300 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-400 transition cursor-pointer shrink-0"
+            title="Commander sur WhatsApp / Voir l'article"
           >
-            <i className="fa-regular fa-flag"></i>
+            <i className="fa-solid fa-cart-shopping text-xs"></i>
           </button>
-        </div>
-      </div>
-
-      {/* 3. Panneau Flottant Glassmorphic au bas de la carte (1:1 Identique à la capture mobile) */}
-      <div className="relative z-10 m-2 sm:m-2.5 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl backdrop-blur-md bg-white/25 dark:bg-black/45 border border-white/30 dark:border-white/10 shadow-lg text-white">
-        {/* Ligne 1 : Titre à gauche & Prix à droite */}
-        <div className="flex items-start justify-between gap-1.5">
-          <h3 className="text-xs sm:text-sm font-black text-white leading-tight truncate drop-shadow-xs flex-1">
-            {article.titre}
-          </h3>
-          <span className="text-xs sm:text-sm font-black text-white whitespace-nowrap drop-shadow-xs ml-1">
-            {prixLisible(article.prix_xof)} F
-          </span>
-        </div>
-
-        {/* Ligne 2 : Sous-titre (Boutique & Quartier) */}
-        <p className="text-[10px] sm:text-xs text-white/90 font-medium truncate mt-0.5 drop-shadow-xs">
-          {article.boutique_nom || "Boutique"}
-          {article.quartier ? ` · ${article.quartier}` : article.ville ? ` · ${article.ville}` : ""}
-        </p>
-
-        {/* Ligne 3 : Note ★ 4.5 & Action WhatsApp rapide */}
-        <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-white/20">
-          <div className="flex items-center gap-1 text-[10px] sm:text-xs font-black text-white drop-shadow-xs">
-            <i className="fa-solid fa-star text-white text-[10px]"></i>
-            <span>{note}</span>
-          </div>
-
-          {article.whatsappUrl ? (
-            <a
-              href={article.whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="px-2 py-0.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-[9px] font-black flex items-center gap-1 shadow-xs transition transform active:scale-95"
-              title="Commander sur WhatsApp"
-            >
-              <i className="fa-brands fa-whatsapp text-xs"></i>
-              <span>Commander</span>
-            </a>
-          ) : (
-            <span className="text-[9px] font-bold text-white/90 underline">
-              Voir détails
-            </span>
-          )}
         </div>
       </div>
 
