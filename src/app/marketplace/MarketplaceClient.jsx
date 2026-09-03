@@ -1363,14 +1363,25 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
  * Modal Fiche Produit / Vue d'ensemble du produit (1:1 Capture E-commerce)
  */
 function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
-  const photos = article.photos && article.photos.length > 0 ? article.photos : [];
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const [quantite, setQuantite] = useState(1);
-  const [formatChoisi, setFormatChoisi] = useState(article.categorie || "Format Standard");
-  const [aime, setAime] = useState(false);
-  const [copie, setCopie] = useState(false);
+  const photosBrutes = Array.isArray(article.photos)
+    ? article.photos
+    : typeof article.photos === "string"
+    ? (() => {
+        try {
+          return JSON.parse(article.photos || "[]");
+        } catch {
+          return [article.photos];
+        }
+      })()
+    : article.photo
+    ? [article.photo]
+    : [];
 
-  const photoPrincipale = photos[photoIndex] ? urlPhoto(photos[photoIndex]) : null;
+  const photos = photosBrutes
+    .map((p) => (typeof p === "string" && (p.startsWith("http") || p.startsWith("data:")) ? p : urlPhoto(p)))
+    .filter(Boolean);
+
+  const photoPrincipale = photos[photoIndex] || photos[0] || null;
   const enStock = article.statut === "en_stock" || Number(article.quantite) > 0;
   const prixUnitaire = Number(article.prix_xof) || 0;
   const prixTotal = prixUnitaire * quantite;
@@ -1437,7 +1448,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
                       : "border-transparent opacity-70 hover:opacity-100 hover:border-gray-300"
                   }`}
                 >
-                  <img src={urlPhoto(p)} alt="" className="w-full h-full object-cover" />
+                  <img src={p} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

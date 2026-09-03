@@ -119,6 +119,9 @@ export async function envoyerPhoto(fichier, userId) {
  */
 export function urlPhoto(chemin) {
   if (!chemin) return null;
+  if (typeof chemin === "string" && (chemin.startsWith("http://") || chemin.startsWith("https://") || chemin.startsWith("data:"))) {
+    return chemin;
+  }
   return supabase.storage.from(BUCKET).getPublicUrl(chemin).data.publicUrl;
 }
 
