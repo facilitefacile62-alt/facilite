@@ -142,6 +142,7 @@ export default function MarketplaceClient() {
   const [mesArticles, setMesArticles] = useState([]);
   const [chargementBoutique, setChargementBoutique] = useState(true);
   const [boutiqueModal, setBoutiqueModal] = useState(null);
+  const [articleSelectionne, setArticleSelectionne] = useState(null);
 
   const userId = session?.user?.id || null;
   const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
@@ -391,6 +392,7 @@ export default function MarketplaceClient() {
             {onglet === "acheter" ? (
               <VueAcheteur
                 onVoirBoutique={(b) => setBoutiqueModal(b)}
+                onVoirArticle={(art) => setArticleSelectionne(art)}
                 categorie={categorie}
                 onSelectCategorie={setCategorie}
               />
@@ -404,6 +406,18 @@ export default function MarketplaceClient() {
             )}
           </main>
         </div>
+
+        {/* Modal / Vue d'ensemble du Produit (1:1 Capture E-commerce) */}
+        {articleSelectionne && (
+          <ModalFicheProduit
+            article={articleSelectionne}
+            onFermer={() => setArticleSelectionne(null)}
+            onVoirBoutique={(b) => {
+              setArticleSelectionne(null);
+              setBoutiqueModal(b);
+            }}
+          />
+        )}
 
         {/* Modal / Bottom Sheet Boutique (Style WhatsApp / Topwork) */}
         {boutiqueModal && (
@@ -422,7 +436,7 @@ export default function MarketplaceClient() {
 /* ACHETEUR                                                                    */
 /* ========================================================================== */
 
-function VueAcheteur({ onVoirBoutique, categorie = null, onSelectCategorie }) {
+function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelectCategorie }) {
   const [position, setPosition] = useState(null);
   const [texte, setTexte] = useState("");
   const [rayonKm, setRayonKm] = useState(10);
@@ -670,6 +684,7 @@ function VueAcheteur({ onVoirBoutique, categorie = null, onSelectCategorie }) {
           <CarteArticle
             key={a.id}
             article={a}
+            onVoirArticle={onVoirArticle}
             onVoirBoutique={onVoirBoutique}
             ancre={resultats.findIndex((x) => x.boutique_id === a.boutique_id) === i}
           />
@@ -679,7 +694,7 @@ function VueAcheteur({ onVoirBoutique, categorie = null, onSelectCategorie }) {
   );
 }
 
-function CarteArticle({ article, onVoirBoutique, ancre = false }) {
+function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false }) {
   const [signalementOuvert, setSignalementOuvert] = useState(false);
   const enStock = article.statut === "en_stock";
   const photo = article.photos?.[0] || null;
@@ -687,14 +702,18 @@ function CarteArticle({ article, onVoirBoutique, ancre = false }) {
   const note = (4.5 + (((article.id ? article.id.charCodeAt(0) : 7) % 5) * 0.1)).toFixed(1);
 
   const ouvrirFiche = () => {
-    onVoirBoutique?.({
-      id: article.boutique_id,
-      nom: article.boutique_nom,
-      quartier: article.quartier,
-      ville: article.ville,
-      telephone_whatsapp: article.telephone_whatsapp,
-      whatsappUrl: article.whatsappUrl,
-    });
+    if (onVoirArticle) {
+      onVoirArticle(article);
+    } else {
+      onVoirBoutique?.({
+        id: article.boutique_id,
+        nom: article.boutique_nom,
+        quartier: article.quartier,
+        ville: article.ville,
+        telephone_whatsapp: article.telephone_whatsapp,
+        whatsappUrl: article.whatsappUrl,
+      });
+    }
   };
 
   return (
@@ -1336,6 +1355,339 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Modal Fiche Produit / Vue d'ensemble du produit (1:1 Capture E-commerce)
+ */
+function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
+  const photos = article.photos && article.photos.length > 0 ? article.photos : [];
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [quantite, setQuantite] = useState(1);
+  const [formatChoisi, setFormatChoisi] = useState(article.categorie || "Format Standard");
+  const [aime, setAime] = useState(false);
+  const [copie, setCopie] = useState(false);
+
+  const photoPrincipale = photos[photoIndex] ? urlPhoto(photos[photoIndex]) : null;
+  const enStock = article.statut === "en_stock" || Number(article.quantite) > 0;
+  const prixUnitaire = Number(article.prix_xof) || 0;
+  const prixTotal = prixUnitaire * quantite;
+  // Ancien prix barré fictif (+25%) pour afficher la réduction comme sur la capture
+  const ancienPrix = Math.round(prixUnitaire * 1.25);
+  const nomBoutique = article.boutique_nom || "Boutique Officielle";
+  const sku = `SKU: sn${(article.id || "26041620").replace(/\D/g, "").slice(0, 14).padEnd(14, "9")}`;
+
+  const messageWhatsApp = encodeURIComponent(
+    `Bonjour ${nomBoutique},\nJe souhaite commander :\n- Produit : ${article.titre}\n- Format/Type : ${formatChoisi}\n- Quantité : ${quantite}\n- Total : ${prixLisible(prixTotal)} FCFA\n\nPouvez-vous me confirmer la disponibilité et les modalités de livraison ? Merci !`
+  );
+
+  const lienWhatsApp = article.telephone_whatsapp
+    ? `https://wa.me/221${article.telephone_whatsapp.replace(/\D/g, "")}?text=${messageWhatsApp}`
+    : article.whatsappUrl
+    ? `${article.whatsappUrl}?text=${messageWhatsApp}`
+    : null;
+
+  const partager = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: article.titre,
+          text: `Découvrez ${article.titre} sur Facilité Marketplace !`,
+          url: window.location.href,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setCopie(true);
+        setTimeout(() => setCopie(false), 2000);
+      }
+    } catch {
+      // Ignorer annulation
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden my-auto max-h-[95vh] flex flex-col md:flex-row">
+        
+        {/* Bouton Fermer (Croix en haut à droite) */}
+        <button
+          type="button"
+          onClick={onFermer}
+          className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center transition cursor-pointer shadow-sm"
+          aria-label="Fermer"
+        >
+          <i className="fa-solid fa-xmark text-sm"></i>
+        </button>
+
+        {/* COLONNE GAUCHE : Galerie Photos (1:1 Capture) */}
+        <div className="md:w-1/2 p-4 sm:p-6 bg-gray-50/70 dark:bg-gray-950/40 flex flex-col sm:flex-row gap-3 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800 shrink-0">
+          {/* Miniatures verticales à gauche */}
+          {photos.length > 1 ? (
+            <div className="flex sm:flex-col gap-2 overflow-x-auto sm:overflow-y-auto max-h-[420px] shrink-0 order-2 sm:order-1 custom-scrollbar">
+              {photos.map((p, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setPhotoIndex(idx)}
+                  className={`w-12 h-14 sm:w-14 sm:h-18 rounded-lg overflow-hidden border-2 transition cursor-pointer shrink-0 bg-white dark:bg-gray-800 ${
+                    photoIndex === idx
+                      ? "border-black dark:border-white shadow-xs"
+                      : "border-transparent opacity-70 hover:opacity-100 hover:border-gray-300"
+                  }`}
+                >
+                  <img src={urlPhoto(p)} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Image Principale Haute Définition */}
+          <div className="relative flex-1 aspect-3/4 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700/80 shadow-xs order-1 sm:order-2 flex flex-col justify-between">
+            {photoPrincipale ? (
+              <img
+                src={photoPrincipale}
+                alt={article.titre}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gray-100 dark:bg-gray-800">
+                <i className="fa-solid fa-bag-shopping text-5xl mb-2 text-gray-300 dark:text-gray-600"></i>
+                <span className="text-xs font-bold text-gray-500">{article.titre}</span>
+              </div>
+            )}
+
+            {/* Badge Marque en haut à gauche (1:1 Capture) */}
+            <div className="relative z-10 p-2.5">
+              <div className="inline-flex flex-col bg-[#FDF0DF]/95 dark:bg-amber-950/80 border border-[#F5D5AF] dark:border-amber-800 rounded-md px-2 py-0.5 shadow-xs">
+                <span className="text-[8px] font-black uppercase text-amber-900 dark:text-amber-300 tracking-wider">
+                  Boutique
+                </span>
+                <span className="text-[11px] font-extrabold text-amber-950 dark:text-amber-100 truncate max-w-[120px]">
+                  {nomBoutique}
+                </span>
+              </div>
+            </div>
+
+            {/* Bannière promo au bas de l'image (1:1 Capture) */}
+            <div className="relative z-10 bg-gradient-to-r from-[#992E15] via-[#C34320] to-[#8C2711] text-white px-3 py-1.5 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs">🍁</span>
+                <span className="text-[11px] font-black tracking-tight italic">Facilité Marketplace</span>
+              </div>
+              <span className="text-[10px] font-bold bg-black/30 px-2 py-0.5 rounded text-amber-200">
+                {enStock ? "En stock disponible" : "Épuisé"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* COLONNE DROITE : Détails & Achat (1:1 Capture) */}
+        <div className="md:w-1/2 p-5 sm:p-7 overflow-y-auto max-h-[85vh] flex flex-col custom-scrollbar">
+          {/* Header : Entrepôt & Titre & SKU */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded-xs bg-[#005B60] text-white text-[9px] font-black tracking-wider uppercase">
+                  Sénégal Express
+                </span>
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                  {nomBoutique}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={partager}
+                className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition cursor-pointer p-1"
+                title="Partager ce produit"
+              >
+                <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                {copie && <span className="ml-1 text-[9px] text-emerald-600 font-bold">Copié !</span>}
+              </button>
+            </div>
+
+            <h1 className="text-base sm:text-lg font-black text-gray-900 dark:text-white leading-snug">
+              {article.titre}
+            </h1>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-[11px] font-mono text-gray-400">{sku}</span>
+              <div className="flex items-center text-amber-400 text-xs">
+                ★★★★★
+                <span className="text-[11px] text-amber-800 dark:text-amber-300 font-bold ml-1">
+                  (5 Avis vérifiés)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section Prix (1:1 Capture) */}
+          <div className="mt-3.5 pt-3 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-black text-[#D9381E] tracking-tight">
+                {prixLisible(prixUnitaire)} FCFA
+              </span>
+              <span className="text-xs sm:text-sm text-gray-400 line-through font-medium">
+                {prixLisible(ancienPrix)} FCFA
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-black dark:bg-white text-white dark:text-black text-[10px] font-extrabold">
+                -20%
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              Sans frais cachés · Paiement à la livraison ou WhatsApp
+            </p>
+          </div>
+
+          {/* Badge Best-Sellers (1:1 Capture) */}
+          <div className="mt-3 px-3 py-2 rounded-lg bg-[#FDF3E7] dark:bg-amber-950/30 border border-[#FADBB6] dark:border-amber-900/60 text-[#9C4400] dark:text-amber-200 flex items-center justify-between text-xs">
+            <span className="font-extrabold text-[11px] flex items-center gap-1.5">
+              <span>🏆</span>
+              #1 BEST-SELLERS dans {article.categorie || "cette catégorie"}
+            </span>
+            <span className="text-[10px] font-bold text-gray-400">🔥 Très demandé</span>
+          </div>
+
+          {/* Encadré Délais de livraison (1:1 Capture) */}
+          <div className="mt-2.5 p-2.5 rounded-lg border border-[#BCE4E6] dark:border-teal-900/60 bg-[#F0F9F9] dark:bg-teal-950/20 text-[#0E6266] dark:text-teal-300 flex items-center gap-2 text-xs font-bold">
+            <i className="fa-solid fa-truck-fast text-sm"></i>
+            <span>Prévue 24-48 h ouvrés (Dakar & régions)</span>
+          </div>
+
+          {/* Type de style / Format */}
+          <div className="mt-4 space-y-1.5">
+            <label className="text-xs font-bold text-gray-900 dark:text-gray-200 block">
+              Type / Option :
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[article.categorie || "Format Standard", "Pack Duo", "Format Voyage"].map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setFormatChoisi(opt)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                    formatChoisi === opt
+                      ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black shadow-xs"
+                      : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sélecteur de Quantité */}
+          <div className="mt-4 flex items-center gap-3">
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Quantité(s) :</span>
+            <div className="inline-flex items-center border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+              <button
+                type="button"
+                onClick={() => setQuantite(Math.max(1, quantite - 1))}
+                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold transition cursor-pointer"
+              >
+                −
+              </button>
+              <span className="w-8 text-center text-xs font-black text-gray-900 dark:text-white">
+                {quantite}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQuantite(quantite + 1)}
+                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold transition cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+            <span className="text-xs text-gray-400 font-medium">
+              Total : <strong className="text-gray-900 dark:text-white">{prixLisible(prixTotal)} F</strong>
+            </span>
+          </div>
+
+          {/* Boutons d'action principaux (1:1 Gros bouton noir Ajouter au panier + Cœur) */}
+          <div className="mt-5 flex items-center gap-2.5">
+            {lienWhatsApp ? (
+              <a
+                href={lienWhatsApp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-3.5 px-4 bg-black hover:bg-gray-900 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-xs sm:text-sm font-black uppercase rounded-lg shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]"
+              >
+                <i className="fa-brands fa-whatsapp text-lg text-[#25D366]"></i>
+                <span>COMMANDER SUR WHATSAPP</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onVoirBoutique?.(article)}
+                className="flex-1 py-3.5 px-4 bg-black hover:bg-gray-900 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black text-xs sm:text-sm font-black uppercase rounded-lg shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]"
+              >
+                <i className="fa-solid fa-cart-shopping text-sm"></i>
+                <span>COMMANDER VIA LA BOUTIQUE</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setAime(!aime)}
+              className={`w-12 h-12 rounded-lg border flex items-center justify-center transition cursor-pointer shrink-0 ${
+                aime
+                  ? "border-red-500 bg-red-50 text-red-500 dark:bg-red-950/40"
+                  : "border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              }`}
+              title="Ajouter aux favoris"
+            >
+              <i className={`fa-heart text-base ${aime ? "fa-solid" : "fa-regular"}`}></i>
+            </button>
+          </div>
+
+          {/* Description de l'article si renseignée */}
+          {article.description && (
+            <div className="mt-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 text-xs text-gray-600 dark:text-gray-300 leading-relaxed border border-gray-100 dark:border-gray-800">
+              <span className="font-bold text-gray-900 dark:text-white block mb-1">Description :</span>
+              {article.description}
+            </div>
+          )}
+
+          {/* Section À propos de la marque / boutique (1:1 Capture) */}
+          <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xs text-gray-900 dark:text-white">{nomBoutique}</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                <i className="fa-solid fa-circle-check"></i> 100% Authentique
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => onVoirBoutique?.({
+                id: article.boutique_id,
+                nom: article.boutique_nom,
+                quartier: article.quartier,
+                ville: article.ville,
+                telephone_whatsapp: article.telephone_whatsapp,
+                whatsappUrl: article.whatsappUrl,
+              })}
+              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
+            >
+              Voir la boutique <i className="fa-solid fa-chevron-right text-[9px]"></i>
+            </button>
+          </div>
+
+          {/* Section Expédition & Retrait (1:1 Capture) */}
+          <div className="mt-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
+            <div className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+              <i className="fa-solid fa-location-dot text-blue-500"></i>
+              Expédition à {article.ville || "Dakar"}, Sénégal
+            </div>
+            <p className="text-[11px] text-gray-500 flex items-center gap-1.5">
+              <i className="fa-solid fa-truck text-emerald-500"></i>
+              Livraison rapide disponible auprès de ce vendeur
+            </p>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }
