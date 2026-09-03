@@ -1098,8 +1098,10 @@ export default function Header() {
             <i className="fa-solid fa-house text-sm"></i>
             <span>Accueil</span>
           </Link>
-          <Link
-            href="/offres"
+          {!isBusinessActive && (
+            <>
+              <Link
+                href="/offres"
             onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
               pathname?.startsWith("/offres")
@@ -1345,6 +1347,8 @@ export default function Header() {
               )}
             </div>
           )}
+        </>
+      )}
 
           {/* 🏪 Bouton Marketplace Desktop (à côté de Plus) */}
           <Link
@@ -1692,40 +1696,44 @@ export default function Header() {
             <i className="fa-solid fa-house text-sm sm:text-base"></i>
             <span className="text-[9px] font-bold tracking-tight truncate w-full">Accueil</span>
           </Link>
-          {userSession && (
-            <Link
-              href="/candidat/extracteur"
-              onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
-              className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-                pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-              }`}
-              title="L'Extracteur 1-Click"
-            >
-              <i className="fa-solid fa-bolt text-sm sm:text-base text-amber-500"></i>
-              <span className="text-[9px] font-bold tracking-tight truncate w-full">Extracteur</span>
-            </Link>
-          )}
-          <Link
-            href="/offres"
-            onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
-            className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-              pathname.startsWith("/offres") ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-            }`}
-          >
-            <i className="fa-solid fa-list-check text-sm sm:text-base"></i>
-            <span className="text-[9px] font-bold tracking-tight truncate w-full">Offres</span>
-          </Link>
-          {userSession && (
-            <Link
-              href="/messagerie"
-              onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
-              className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-                pathname === "/messagerie" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-              }`}
-            >
-              <i className="fa-regular fa-comments text-sm sm:text-base"></i>
-              <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
-            </Link>
+          {!isBusinessActive && (
+            <>
+              {userSession && (
+                <Link
+                  href="/candidat/extracteur"
+                  onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
+                  className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
+                    pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                  }`}
+                  title="L'Extracteur 1-Click"
+                >
+                  <i className="fa-solid fa-bolt text-sm sm:text-base text-amber-500"></i>
+                  <span className="text-[9px] font-bold tracking-tight truncate w-full">Extracteur</span>
+                </Link>
+              )}
+              <Link
+                href="/offres"
+                onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
+                className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
+                  pathname.startsWith("/offres") ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                }`}
+              >
+                <i className="fa-solid fa-list-check text-sm sm:text-base"></i>
+                <span className="text-[9px] font-bold tracking-tight truncate w-full">Offres</span>
+              </Link>
+              {userSession && (
+                <Link
+                  href="/messagerie"
+                  onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+                  className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
+                    pathname === "/messagerie" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                  }`}
+                >
+                  <i className="fa-regular fa-comments text-sm sm:text-base"></i>
+                  <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
+                </Link>
+              )}
+            </>
           )}
           {userSession && (
             <button
