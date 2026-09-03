@@ -12,6 +12,7 @@ import { isFeatureAllowed, getFeatureFlagsTreeAsync, DEFAULT_FEATURE_TREE } from
 import { notifierConnexion } from "@/lib/confirmerConnexion";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
+import BoutonInstallerApp from "@/components/BoutonInstallerApp";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
 const QUICK_SECTIONS_INDEX = [
@@ -1381,6 +1382,13 @@ export default function Header() {
             </div>
           )}
 
+          {/* Installer l'application (PWA) — le bouton s'efface tout seul si
+              déjà installée ou si le navigateur ne propose aucune voie
+              d'installation, voir BoutonInstallerApp. */}
+          <div className="hidden sm:flex items-center">
+            <BoutonInstallerApp compact />
+          </div>
+
           {/* Centre de Notifications Interactif avec Compteur Dynamique (Desktop uniquement, seulement si l'utilisateur est connecté) */}
           {userSession && (
             <button
@@ -2284,6 +2292,11 @@ export default function Header() {
                     <p className="text-[10px] text-gray-500 font-medium truncate">Points Wave, pharmacies, cliniques</p>
                   </div>
                 </Link>
+
+                {/* 10bis. Installer l'application — même tuile disparaît
+                    d'elle-même si déjà installée ou hors de portée du
+                    navigateur, voir BoutonInstallerApp. */}
+                <BoutonInstallerApp variant="tuile" />
 
                 {/* 11. Boîte à idées & Suggestions */}
                 <Link
