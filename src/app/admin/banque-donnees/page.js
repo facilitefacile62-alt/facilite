@@ -17,17 +17,30 @@
  * tant que celui-ci n'a pas donné son accord. La page n'a aucun moyen de
  * contourner ça, et n'essaie pas d'en avoir un — elle propose seulement de
  * créer une demande motivée. C'est la seule voie d'accès.
+ *
+ * EXCEPTION délibérée, onglet « Banque de CV » (2026-09-03) : banque_cv
+ * n'accorde RIEN à authenticated, même en lecture (RLS activée, zéro
+ * policy — voir 20260903120000_banque_cv.sql). Ce ne sont pas des CV de
+ * candidats consentants comme resumes, ce sont des CV importés par un
+ * admin sans compte associé : le régime de protection est plus strict, pas
+ * plus permissif. Le client Supabase du navigateur ne PEUT PAS lire cette
+ * table quel que soit le rôle de la personne connectée — la garantie tient
+ * à l'absence totale de grant, pas à une policy contournable. Cet onglet
+ * passe donc par /api/admin/banque-cv/*, seule voie d'accès possible,
+ * jamais par une exception au principe ci-dessus.
  */
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import BanqueCvTab from "@/components/BanqueCvTab";
 
 const ONGLETS = [
   { cle: "candidats", libelle: "Candidats", icone: "fa-users" },
   { cle: "offres", libelle: "Offres", icone: "fa-briefcase" },
   { cle: "commandes", libelle: "Commandes", icone: "fa-receipt" },
   { cle: "transport", libelle: "Transport", icone: "fa-bus" },
+  { cle: "banque_cv", libelle: "Banque de CV", icone: "fa-file-lines" },
 ];
 
 const PAR_PAGE = 25;
@@ -128,6 +141,14 @@ export default function BanqueDonneesPage() {
   // --- Chargement de l'onglet actif ----------------------------------------
   const charger = useCallback(async () => {
     if (statut !== "pret") return;
+    // La Banque de CV gère son propre chargement (routes /api/admin/banque-cv/*,
+    // banque_cv n'étant lisible par aucun rôle authenticated) : la sortir
+    // d'ici évite qu'un changement d'onglet ne déclenche par erreur la
+    // requête « commandes » du dernier bloc else ci-dessous.
+    if (ongletActif === "banque_cv") {
+      setChargement(false);
+      return;
+    }
     setChargement(true);
     const debut = page * PAR_PAGE;
     const fin = debut + PAR_PAGE - 1;
@@ -479,8 +500,8 @@ export default function BanqueDonneesPage() {
             ))}
           </div>
 
-          <div className="p-3 border-b border-gray-100 flex flex-wrap items-center gap-3">
-            {ongletActif !== "commandes" && (
+          <div className={`p-3 border-b border-gray-100 flex flex-wrap items-center gap-3 ${ongletActif === "banque_cv" ? "hidden" : ""}`}>
+            {ongletActif !== "commandes" && ongletActif !== "banque_cv" && (
               <input
                 type="search"
                 value={recherche}
@@ -492,9 +513,11 @@ export default function BanqueDonneesPage() {
                 className="flex-1 min-w-[200px] text-xs font-medium border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#10E688]"
               />
             )}
-            <span className="text-[11px] font-bold text-gray-400 tabular-nums">
-              {chargement ? "chargement…" : `${total} résultat${total > 1 ? "s" : ""}`}
-            </span>
+            {ongletActif !== "banque_cv" && (
+              <span className="text-[11px] font-bold text-gray-400 tabular-nums">
+                {chargement ? "chargement…" : `${total} résultat${total > 1 ? "s" : ""}`}
+              </span>
+            )}
             {ongletActif === "transport" && (
               <button
                 type="button"
@@ -511,6 +534,7 @@ export default function BanqueDonneesPage() {
               <TableCandidats lignes={candidats} onOuvrir={ouvrirCandidat} ouvert={candidatOuvert} />
             )}
             {ongletActif === "offres" && <TableOffres lignes={offres} />}
+            {ongletActif === "banque_cv" && <BanqueCvTab />}
             {ongletActif === "commandes" && <TableCommandes lignes={commandes} />}
             {ongletActif === "transport" && (
               <TableTransport

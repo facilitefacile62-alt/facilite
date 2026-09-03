@@ -215,6 +215,13 @@ test.describe("Invariants de sécurité", () => {
       // lu/écrit exclusivement via service_role, jamais par le client. Voir
       // 20260822180000_assistant_conversation_state.sql.
       "assistant_conversation_state",
+      // Banque de CV admin : CV et lettres de motivation importés par un
+      // administrateur, sans compte candidat associé — pas un profil
+      // consenti comme resumes, un dossier RH. Lecture ET écriture
+      // exclusivement via service_role (routes /api/admin/banque-cv/*),
+      // même doctrine qu'assistant_ai_config ci-dessus. Voir
+      // 20260903120000_banque_cv.sql.
+      "banque_cv",
     ]);
 
     const rows = await runIntrospectionSql(`
