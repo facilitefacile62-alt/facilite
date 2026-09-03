@@ -264,46 +264,75 @@ export default function MarketplaceClient() {
               </div>
             ) : userId || profile ? (
               <>
-                {/* 1. Carte de Profil (Format compact 215px 1:1 comme Capture 2) */}
+                {/* 1. Carte de Profil Boutique (Format compact 215px avec son propre profil boutique) */}
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
-                  <Link
-                    href="/profil"
+                  {/* Bannière Boutique Cliquable (Ouvre la fiche boutique) */}
+                  <div
+                    onClick={() => {
+                      if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
+                      else setOnglet("vendre");
+                    }}
                     className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
                     style={{ backgroundImage: `url('${profile?.cover_url || '/stellar-cover.png'}')` }}
+                    title="Voir le profil de ma boutique"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
                     <div className="absolute inset-0 flex items-center justify-end px-3 pointer-events-none">
-                      <span className="text-white/20 font-black text-2xl tracking-tighter select-none">
-                        CV
+                      <span className="text-white/20 font-black text-xs uppercase tracking-widest select-none">
+                        BOUTIQUE
                       </span>
                     </div>
-                  </Link>
+                  </div>
 
                   <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
-                    <Link
-                      href="/profil"
-                      className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-white dark:bg-gray-800 block cursor-pointer group"
+                    {/* Avatar / Logo de la Boutique Cliquable */}
+                    <div
+                      onClick={() => {
+                        if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
+                        else setOnglet("vendre");
+                      }}
+                      className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
+                      title="Voir le profil de ma boutique"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={profile?.avatar_url || (maBoutiqueActive ? "/logo.jpeg" : "/logo.jpeg")}
-                        alt="Photo de profil"
-                        className="w-full h-full object-cover group-hover:scale-105 transition"
-                      />
-                    </Link>
+                      {maBoutiqueActive?.nom ? (
+                        maBoutiqueActive.nom.substring(0, 2).toUpperCase()
+                      ) : profile?.avatar_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={profile.avatar_url}
+                          alt="Boutique"
+                          className="w-full h-full object-cover group-hover:scale-105 transition"
+                        />
+                      ) : (
+                        <i className="fa-solid fa-store text-xl"></i>
+                      )}
+                    </div>
 
-                    <Link href="/profil" className="group">
+                    {/* Nom de la Boutique (Propre à la boutique) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
+                        else setOnglet("vendre");
+                      }}
+                      className="group cursor-pointer bg-transparent border-none p-0 text-center"
+                      title="Voir le profil de ma boutique"
+                    >
                       <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
-                        {profile?.full_name || profile?.nom || (session?.user?.email ? session.user.email.split("@")[0] : "facilite facile")}
+                        {maBoutiqueActive?.nom || "Ma Boutique Facilité"}
                       </h2>
-                    </Link>
+                    </button>
 
                     <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
-                      {profile?.headline || (maBoutiqueActive ? `Boutique ${maBoutiqueActive.nom}` : "Complétez votre profil")}
+                      {maBoutiqueActive
+                        ? `Boutique Officielle · ${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville || "Dakar"}`
+                        : "Vendeur Facilité Marketplace"}
                     </p>
 
                     <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
-                      {profile?.location || (maBoutiqueActive?.ville ? `${maBoutiqueActive.quartier ? maBoutiqueActive.quartier + ", " : ""}${maBoutiqueActive.ville}` : "Localisation non renseignée")}
+                      {maBoutiqueActive?.ville
+                        ? `${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville}, Sénégal`
+                        : (profile?.location || "Dakar, Sénégal")}
                     </p>
 
                     <button
@@ -312,12 +341,12 @@ export default function MarketplaceClient() {
                       className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
                     >
                       <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
-                      <span>{maBoutiqueActive ? "Publier un article" : "Expérience"}</span>
+                      <span>Publier un article</span>
                     </button>
                   </div>
                 </div>
 
-                {/* 2. Carte Statistiques (1:1 identique Capture 2) */}
+                {/* 2. Carte Statistiques Boutique */}
                 <div
                   onClick={() => setOnglet("vendre")}
                   className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition flex flex-col justify-between"
@@ -330,28 +359,32 @@ export default function MarketplaceClient() {
                   </div>
                   <div className="space-y-1.5 font-bold text-[11px] flex-1 flex flex-col justify-center pt-1">
                     <div className="flex justify-between items-center py-0.5">
-                      <span className="text-gray-500 dark:text-gray-400">Vues du profil</span>
+                      <span className="text-gray-500 dark:text-gray-400">Vues de la boutique</span>
                       <span className="text-blue-600 font-extrabold text-xs">{profile?.profile_views ?? 179}</span>
                     </div>
                     <div className="flex justify-between items-center py-0.5 border-t border-gray-100 dark:border-gray-800">
-                      <span className="text-gray-500 dark:text-gray-400">Impressions du post</span>
-                      <span className="text-blue-600 font-extrabold text-xs">{profile?.post_impressions ?? 0}</span>
+                      <span className="text-gray-500 dark:text-gray-400">Articles en vente</span>
+                      <span className="text-blue-600 font-extrabold text-xs">{mesArticles.length}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* 3. Bouton Mon profil et mon CV (1:1 identique Capture 2) */}
-                <Link
-                  href="/profil"
-                  className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl p-2.5 px-3 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-2.5 group block"
+                {/* 3. Bouton Profil Boutique (Ouvre la fiche boutique dédiée, PAS le profil CV candidat !) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
+                    else setOnglet("vendre");
+                  }}
+                  className="bg-[#ECFDF5] dark:bg-emerald-950/40 border border-[#A7F3D0] dark:border-emerald-800 rounded-xl p-2.5 px-3 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-2.5 group w-full text-left"
                 >
-                  <i className="fa-regular fa-user text-base text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
-                  <span className="text-xs font-bold text-[#047857] tracking-tight">
-                    Mon profil et mon CV
+                  <i className="fa-solid fa-store text-base text-[#047857] dark:text-emerald-400 font-bold group-hover:scale-110 transition transform"></i>
+                  <span className="text-xs font-bold text-[#047857] dark:text-emerald-400 tracking-tight">
+                    {maBoutiqueActive ? "Profil de ma boutique" : "Créer ma boutique"}
                   </span>
-                </Link>
+                </button>
 
-                {/* 4. Bouton Déconnexion (1:1 identique Capture 2) */}
+                {/* 4. Bouton Déconnexion */}
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-2.5 px-3 shadow-xs flex items-center justify-start hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 transition cursor-pointer group">
                   <button
                     type="button"
@@ -1262,6 +1295,16 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
  * Modal Fiche Boutique Dédiée (Style WhatsApp / Bottom Sheet - Inspiré Image 1)
  */
 function ModalFicheBoutique({ boutique, articles = [], onFermer }) {
+  const [listeArticles, setListeArticles] = useState(articles);
+
+  useEffect(() => {
+    if (articles && articles.length > 0) {
+      setListeArticles(articles);
+    } else if (boutique?.id) {
+      chargerMesArticles(boutique.id).then(setListeArticles).catch(() => {});
+    }
+  }, [boutique?.id, articles]);
+
   const nom = boutique?.nom || boutique?.boutique_nom || "Boutique";
   const quartier = boutique?.quartier || "";
   const ville = boutique?.ville || "Dakar";
@@ -1326,14 +1369,14 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer }) {
         </div>
 
         {/* Articles de la boutique */}
-        {articles.length > 0 && (
+        {listeArticles.length > 0 && (
           <div className="px-5 pb-6 overflow-y-auto flex-1">
             <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3 border-t border-gray-800 pt-4 flex items-center gap-2">
               <i className="fa-solid fa-box-open text-[#1877F2]"></i>
-              Articles disponibles ({articles.length})
+              Articles disponibles ({listeArticles.length})
             </h4>
             <div className="space-y-2">
-              {articles.map((art) => (
+              {listeArticles.map((art) => (
                 <div
                   key={art.id}
                   className="p-2.5 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-between gap-3"
