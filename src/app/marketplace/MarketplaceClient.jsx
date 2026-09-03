@@ -1022,7 +1022,7 @@ function CarteProfilBoutique({ profile, boutique, onAjouterArticle, onBoutiqueCl
           className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
         >
           <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
-          <span>+ + {boutique ? "Publier un article" : "Expérience"}</span>
+          <span>{boutique ? "Publier un article" : "Expérience"}</span>
         </button>
       </div>
     </div>
@@ -1051,12 +1051,16 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
   const listeAffichee = toutAfficher ? articles : articles.slice(0, 2);
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs flex flex-col space-y-2.5">
+    <div
+      className={`bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs flex flex-col justify-between ${
+        !aDesArticles ? "h-[108px]" : "min-h-[108px]"
+      }`}
+    >
       <button
         type="button"
         onClick={() => setDeplie((v) => !v)}
         aria-expanded={deplie}
-        className="w-full flex justify-between items-center pb-1.5 border-b border-gray-100 dark:border-gray-800 cursor-pointer bg-transparent border-x-0 border-t-0 p-0 text-left group"
+        className="w-full flex justify-between items-center pb-1.5 border-b border-gray-100 dark:border-gray-800 cursor-pointer bg-transparent border-x-0 border-t-0 p-0 text-left group shrink-0"
       >
         <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider group-hover:text-blue-600 transition">
           EXPÉRIENCE &amp; ARTICLES
@@ -1072,7 +1076,7 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
       </button>
 
       {deplie && (
-        <div className="space-y-3">
+        <div className="flex-1 flex flex-col justify-center pt-1">
           {aDesArticles ? (
             listeAffichee.map((a) => (
               <div key={a.id} className="relative flex items-start space-x-2 text-left">
@@ -1136,7 +1140,7 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
               </div>
             ))
           ) : (
-            <div className="text-center py-2">
+            <div className="text-center py-0.5">
               <p className="text-[10px] text-gray-400">Aucun article publié pour l&apos;instant.</p>
               <button
                 type="button"
@@ -1288,15 +1292,15 @@ function CarteStatistiquesBoutique({ profile, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition"
+      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition h-[108px] flex flex-col justify-between"
     >
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center pb-1.5 border-b border-gray-100 dark:border-gray-800 shrink-0">
         <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
           STATISTIQUES
         </h3>
         <i className="fa-solid fa-chevron-right text-gray-400 text-[10px]"></i>
       </div>
-      <div className="space-y-2 font-bold text-[11px]">
+      <div className="space-y-1 font-bold text-[11px] flex-1 flex flex-col justify-center pt-0.5">
         <div className="flex justify-between items-center py-0.5">
           <span className="text-gray-500 dark:text-gray-400">Vues du profil</span>
           <span className="text-blue-600 font-extrabold text-xs">{views}</span>
