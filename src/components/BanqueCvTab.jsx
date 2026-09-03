@@ -265,6 +265,35 @@ export default function BanqueCvTab() {
     }
   };
 
+  // --- Détail d'un CV, avec accès au fichier d'origine ---
+  //
+  // La liste n'affiche qu'un résumé tronqué (line-clamp-2) : pour juger un
+  // profil, l'admin doit pouvoir lire l'analyse complète ET rouvrir le
+  // document tel qu'il a été déposé — l'IA peut se tromper, le fichier
+  // original reste la référence.
+  const [detail, setDetail] = useState(null); // { ...cv, urlCv, urlLettre }
+  const [detailChargement, setDetailChargement] = useState(false);
+  const [detailErreur, setDetailErreur] = useState("");
+
+  const ouvrirDetail = async (id) => {
+    setDetail({ id }); // ouvre immédiatement le panneau, avec un état de chargement
+    setDetailChargement(true);
+    setDetailErreur("");
+    try {
+      const token = await jeton();
+      const res = await fetch(`/api/admin/banque-cv/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Chargement impossible.");
+      setDetail(data.cv);
+    } catch (err) {
+      setDetailErreur(err.message);
+    } finally {
+      setDetailChargement(false);
+    }
+  };
+
   return (
     <div className="p-4 space-y-6">
       {/* --- Recherche --- */}
@@ -537,7 +566,11 @@ export default function BanqueCvTab() {
         ) : (
           <ul className="divide-y divide-gray-100 border border-gray-200 rounded-2xl overflow-hidden">
             {liste.map((c) => (
-              <li key={c.id} className="p-3 flex items-start gap-3 bg-white">
+              <li
+                key={c.id}
+                onClick={() => ouvrirDetail(c.id)}
+                className="p-3 flex items-start gap-3 bg-white hover:bg-gray-50 cursor-pointer transition"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-black text-gray-900 truncate">{c.nom_complet || "Nom non renseigné"}</span>
@@ -557,7 +590,10 @@ export default function BanqueCvTab() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => supprimer(c.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    supprimer(c.id);
+                  }}
                   disabled={suppressionEnCours === c.id}
                   className="shrink-0 w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer disabled:opacity-40"
                   aria-label="Retirer ce CV"
@@ -590,6 +626,140 @@ export default function BanqueCvTab() {
           </div>
         )}
       </section>
+
+      {detail && (
+        <PanneauDetailCv
+          detail={detail}
+          chargement={detailChargement}
+          erreur={detailErreur}
+          libellesNiveaux={libellesNiveaux}
+          onFermer={() => setDetail(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Panneau plein écran : analyse complète + accès au fichier d'origine. */
+function PanneauDetailCv({ detail, chargement, erreur, libellesNiveaux, onFermer }) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onFermer}
+    >
+      <div
+        className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onFermer}
+          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 cursor-pointer"
+          aria-label="Fermer"
+        >
+          <i className="fa-solid fa-xmark"></i>
+        </button>
+
+        {chargement ? (
+          <div className="py-16 text-center text-gray-400">
+            <i className="fa-solid fa-spinner fa-spin text-2xl"></i>
+          </div>
+        ) : erreur ? (
+          <p className="text-sm font-bold text-red-600 pr-8">{erreur}</p>
+        ) : (
+          <>
+            <h3 className="text-lg font-black text-gray-900 pr-8">{detail.nom_complet || "Nom non renseigné"}</h3>
+            <div className="flex items-center gap-2 flex-wrap mt-2">
+              <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] font-black uppercase">
+                {LIBELLE_CATEGORIE[detail.categorie] || "Non catégorisé"}
+              </span>
+              {detail.niveau_etude_code && (
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] font-bold">
+                  {libellesNiveaux[detail.niveau_etude_code] || detail.niveau_etude_code}
+                </span>
+              )}
+              {detail.annees_experience != null && (
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] font-bold">
+                  {detail.annees_experience} an{detail.annees_experience > 1 ? "s" : ""} d&apos;expérience
+                </span>
+              )}
+            </div>
+
+            {/* Fichiers d'origine EN PREMIER : l'analyse peut se tromper, le
+                document déposé reste la référence pour trancher. */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {detail.urlCv ? (
+                <a
+                  href={detail.urlCv}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-black text-white text-xs font-black cursor-pointer"
+                >
+                  <i className="fa-solid fa-file-pdf mr-1.5"></i>
+                  Voir le CV complet
+                </a>
+              ) : (
+                <span className="text-[11px] text-gray-400 italic">Fichier CV indisponible.</span>
+              )}
+              {detail.urlLettre && (
+                <a
+                  href={detail.urlLettre}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-black cursor-pointer"
+                >
+                  <i className="fa-solid fa-envelope-open-text mr-1.5"></i>
+                  Voir la lettre
+                </a>
+              )}
+            </div>
+
+            {detail.statut === "erreur" && (
+              <p className="text-[11px] font-bold text-red-600 mt-4">
+                <i className="fa-solid fa-triangle-exclamation mr-1"></i>
+                Analyse échouée : {detail.erreur_analyse || "erreur inconnue"}. Le fichier reste consultable
+                ci-dessus.
+              </p>
+            )}
+
+            {detail.resume_profil && (
+              <div className="mt-4">
+                <h4 className="text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Synthèse</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">{detail.resume_profil}</p>
+              </div>
+            )}
+
+            {detail.competences?.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Compétences</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {detail.competences.map((comp, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold">
+                      {comp}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {detail.points_forts?.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Points forts</h4>
+                <ul className="space-y-1">
+                  {detail.points_forts.map((pf, i) => (
+                    <li key={i} className="text-xs text-gray-700 leading-relaxed flex gap-1.5">
+                      <i className="fa-solid fa-check text-emerald-600 mt-0.5 text-[10px]"></i>
+                      <span>{pf}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
