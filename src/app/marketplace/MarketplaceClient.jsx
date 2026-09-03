@@ -1052,8 +1052,12 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
 
   return (
     <div
+      style={{
+        height: !aDesArticles || !deplie ? "112px" : "auto",
+        minHeight: "112px",
+      }}
       className={`bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs flex flex-col justify-between ${
-        !aDesArticles ? "h-[108px]" : "min-h-[108px]"
+        !aDesArticles || !deplie ? "carte-sidebar-equal" : "carte-sidebar-expandable"
       }`}
     >
       <button
@@ -1292,7 +1296,11 @@ function CarteStatistiquesBoutique({ profile, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition h-[108px] flex flex-col justify-between"
+      style={{
+        height: "112px",
+        minHeight: "112px",
+      }}
+      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition flex flex-col justify-between carte-sidebar-equal"
     >
       <div className="flex justify-between items-center pb-1.5 border-b border-gray-100 dark:border-gray-800 shrink-0">
         <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">

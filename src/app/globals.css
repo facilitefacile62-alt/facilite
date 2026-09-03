@@ -234,6 +234,13 @@ html.dark .divide-gray-100 > * + * {
 
 html.dark .bg-whatsapp-chat {
   background-color: #0B141A !important;
-  background-image: radial-gradient(#ffffff08 1px, transparent 1px), radial-gradient(#ffffff05 1px, transparent 1px);
 }
 
+/* Cartes latérales sidebar alignées (Expérience & Statistiques) */
+.carte-sidebar-equal {
+  height: 112px !important;
+  min-height: 112px !important;
+}
+.carte-sidebar-expandable {
+  min-height: 112px !important;
+}
