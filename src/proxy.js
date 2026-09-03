@@ -92,6 +92,21 @@ const PUBLIC_BROWSABLE_ROUTES = [
   // même d'avoir exécuté la recherche — un visiteur qui n'a pas encore de
   // compte doit pouvoir chercher une offre avant de décider de s'inscrire.
   "/recherche",
+  // Trouvé le 02/09/2026 en testant /etablissements dans un vrai navigateur,
+  // sans session : /marketplace redirigeait aussi vers /login pour un
+  // visiteur anonyme, alors que son propre drapeau (nav_marketplace) déclare
+  // roles.visitor = true et que l'onglet Acheteur ne demande jamais de
+  // connexion. Le mur d'authentification annulait ce choix depuis toujours —
+  // page absente de cette liste, refus par défaut. PUBLIC_BROWSABLE et non
+  // PUBLIC_ROUTES : le contrôle par fonctionnalité (section 6) doit rester
+  // appliqué, c'est lui qui respecte le drapeau nav_marketplace.
+  "/marketplace",
+  // La mienne : trouver une pharmacie de garde ne doit pas attendre une
+  // création de compte, surtout à l'heure où on en a besoin. Sans cette
+  // entrée, /etablissements héritait du refus par défaut comme toute
+  // nouvelle route — c'est le même oubli que ci-dessus, découvert dans le
+  // même test.
+  "/etablissements",
 ];
 
 // Comparaison par segment de chemin plutôt que préfixe brut
