@@ -11,10 +11,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
-import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isCallerAdmin } from "@/lib/rbac";
-import { diagnostiquerCandidats, embarquerTexte } from "@/lib/banqueCvIA";
+import { diagnostiquerCandidats, embarquerTexte, checkBanqueCvQuota, BANQUE_CV_DAILY_QUOTA } from "@/lib/banqueCvIA";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
@@ -37,9 +36,9 @@ export async function POST(req) {
     return NextResponse.json({ error: "Action réservée aux administrateurs." }, { status: 403 });
   }
 
-  if (!(await checkAiQuota(user.id))) {
+  if (!(await checkBanqueCvQuota(user.id))) {
     return NextResponse.json(
-      { error: `Quota IA quotidien atteint (${AI_DAILY_QUOTA} requêtes/jour). Réessayez demain.` },
+      { error: `Quota d'analyse quotidien atteint (${BANQUE_CV_DAILY_QUOTA}/jour). Réessayez demain.` },
       { status: 429 }
     );
   }

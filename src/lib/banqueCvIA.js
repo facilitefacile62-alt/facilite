@@ -10,6 +10,34 @@
 // du tunnel CV (src/app/api/ai-chat/route.js, TUNNEL_RESPONSE_SCHEMA),
 // éprouvé en production.
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+
+// Plafond dédié, séparé du quota partagé des 6 autres routes IA (40/jour,
+// aiQuota.js) — voir 20260903150000_banque_cv_quota.sql pour le motif
+// complet. Généreux à dessein : « plusieurs dizaines ou centaines » de CV
+// dans une même session doit rester possible sans épuiser les autres
+// fonctionnalités IA de l'admin, tout en gardant un plafond réel en cas de
+// dérèglement (boucle de nouvel essai, par exemple).
+export const BANQUE_CV_DAILY_QUOTA = 500;
+
+/** Miroir de checkAiQuota (aiQuota.js), sur le compteur dédié à la banque. */
+export async function checkBanqueCvQuota(userId) {
+  try {
+    const admin = getSupabaseAdmin();
+    const { data: allowed, error } = await admin.rpc("increment_banque_cv_usage", {
+      p_user_id: userId,
+      p_max_daily: BANQUE_CV_DAILY_QUOTA,
+    });
+    if (error) {
+      console.error("[Banque CV Quota] Échec de la vérification, requête autorisée par défaut :", error.message);
+      return true;
+    }
+    return allowed === true;
+  } catch (err) {
+    console.error("[Banque CV Quota] Exception :", err?.message);
+    return true;
+  }
+}
 
 const CATEGORIES = [
   "informatique_numerique",

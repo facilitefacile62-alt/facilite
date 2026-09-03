@@ -86,7 +86,8 @@ export default function BanqueCvTab() {
     }
   };
 
-  // --- Import ---
+  // --- Import (un seul, ou groupé — les deux appellent la même route) ---
+  const [modeImport, setModeImport] = useState("un"); // "un" | "plusieurs"
   const [fichierCv, setFichierCv] = useState(null);
   const [fichierLettre, setFichierLettre] = useState(null);
   const [nomSaisi, setNomSaisi] = useState("");
@@ -94,6 +95,26 @@ export default function BanqueCvTab() {
   const [messageImport, setMessageImport] = useState(null); // { type: 'ok'|'erreur', texte }
   const champCv = useRef(null);
   const champLettre = useRef(null);
+
+  /**
+   * Un seul appel réseau, réutilisé par l'import simple et par l'import
+   * groupé : c'est la MÊME route, avec la MÊME analyse, quel que soit le
+   * nombre de fichiers déposés en une fois.
+   */
+  const importerUnFichier = async (fichier, nom) => {
+    const token = await jeton();
+    const form = new FormData();
+    form.append("cv", fichier);
+    if (nom?.trim()) form.append("nom", nom.trim());
+    const res = await fetch("/api/admin/banque-cv/importer", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Import impossible.");
+    return data.cv;
+  };
 
   const importer = async (e) => {
     e.preventDefault();
@@ -138,6 +159,65 @@ export default function BanqueCvTab() {
     } finally {
       setImportEnCours(false);
     }
+  };
+
+  // --- Import groupé ---
+  //
+  // Un fichier à la fois, séquentiellement — pas en parallèle. Deux raisons :
+  // chaque import prend déjà 5 à 15 s (extraction + Gemini + embedding), et
+  // envoyer 40 requêtes à la fois saturerait le quota IA dédié et le rate
+  // limit de la route en quelques secondes au lieu de les répartir sur toute
+  // la session. Sans lettre de motivation : deviner quel fichier va avec quel
+  // CV par similarité de nom serait le genre d'invention que ce projet
+  // refuse ailleurs — qui veut associer une lettre le fait un CV à la fois,
+  // dans le formulaire simple.
+  const [fichiersGroupe, setFichiersGroupe] = useState([]); // File[]
+  const [etatsGroupe, setEtatsGroupe] = useState([]); // { nom, statut: 'attente'|'analyse'|'ok'|'erreur', message }
+  const [groupeEnCours, setGroupeEnCours] = useState(false);
+  const champGroupe = useRef(null);
+
+  const choisirFichiersGroupe = (e) => {
+    const fichiers = Array.from(e.target.files || []);
+    if (champGroupe.current) champGroupe.current.value = "";
+    setFichiersGroupe(fichiers);
+    setEtatsGroupe(fichiers.map((f) => ({ nom: f.name, statut: "attente", message: "" })));
+  };
+
+  const lancerImportGroupe = async () => {
+    if (fichiersGroupe.length === 0) return;
+    setGroupeEnCours(true);
+    // Drapeau LOCAL, pas relu depuis l'état React : setEtatsGroupe est
+    // asynchrone, le lire juste après l'avoir appelé renverrait encore
+    // l'ancienne valeur dans la même itération.
+    let quotaAtteint = false;
+    for (let i = 0; i < fichiersGroupe.length && !quotaAtteint; i++) {
+      setEtatsGroupe((prev) => prev.map((e, idx) => (idx === i ? { ...e, statut: "analyse" } : e)));
+      try {
+        const cv = await importerUnFichier(fichiersGroupe[i], null);
+        setEtatsGroupe((prev) =>
+          prev.map((e, idx) =>
+            idx === i
+              ? {
+                  ...e,
+                  statut: cv.statut === "erreur" ? "erreur" : "ok",
+                  message:
+                    cv.statut === "erreur"
+                      ? cv.erreur_analyse || "Analyse échouée, fichier conservé."
+                      : `${cv.nom_complet || "Sans nom"} — ${LIBELLE_CATEGORIE[cv.categorie] || cv.categorie}`,
+                }
+              : e
+          )
+        );
+      } catch (err) {
+        // Un CV en moins ne doit jamais bloquer les suivants — sauf le quota
+        // épuisé : dans ce cas précis, continuer enverrait N requêtes pour
+        // rien, chacune refusée avec le même message.
+        if (/quota/i.test(err.message)) quotaAtteint = true;
+        setEtatsGroupe((prev) => prev.map((e, idx) => (idx === i ? { ...e, statut: "erreur", message: err.message } : e)));
+      }
+    }
+    setGroupeEnCours(false);
+    chargerListe();
   };
 
   // --- Liste des CV déjà importés ---
@@ -286,11 +366,32 @@ export default function BanqueCvTab() {
 
       {/* --- Import --- */}
       <section className="bg-gray-50 rounded-2xl border border-gray-200 p-4">
-        <h3 className="text-sm font-black text-gray-900 mb-1">Importer un CV</h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-sm font-black text-gray-900">Importer des CV</h3>
+          <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-0.5">
+            <button
+              type="button"
+              onClick={() => setModeImport("un")}
+              className={`text-[11px] font-bold px-2.5 py-1 rounded-md cursor-pointer ${modeImport === "un" ? "bg-gray-900 text-white" : "text-gray-500"}`}
+            >
+              Un CV
+            </button>
+            <button
+              type="button"
+              onClick={() => setModeImport("plusieurs")}
+              className={`text-[11px] font-bold px-2.5 py-1 rounded-md cursor-pointer ${modeImport === "plusieurs" ? "bg-gray-900 text-white" : "text-gray-500"}`}
+            >
+              Plusieurs CV
+            </button>
+          </div>
+        </div>
         <p className="text-[11px] text-gray-500 mb-3">
-          L&apos;analyse prend quelques secondes : le classement en catégorie s&apos;appuie sur le
-          texte réel du CV, jamais sur son seul nom de fichier.
+          L&apos;analyse prend quelques secondes par CV : le classement en catégorie s&apos;appuie
+          sur le texte réel, jamais sur son seul nom de fichier.
         </p>
+
+        {modeImport === "un" ? (
+        <>
         <form onSubmit={importer} className="space-y-2.5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <label className="flex items-center gap-2 text-xs font-bold text-gray-700 border border-gray-200 rounded-xl px-3.5 py-2.5 cursor-pointer bg-white">
@@ -341,6 +442,70 @@ export default function BanqueCvTab() {
           <p className={`text-[11px] font-bold mt-3 ${messageImport.type === "ok" ? "text-emerald-700" : "text-red-600"}`}>
             {messageImport.texte}
           </p>
+        )}
+        </>
+        ) : (
+        <div className="space-y-2.5">
+          <label className="flex items-center gap-2 text-xs font-bold text-gray-700 border border-dashed border-gray-300 rounded-xl px-3.5 py-4 cursor-pointer bg-white justify-center">
+            <i className="fa-solid fa-folder-open text-gray-400"></i>
+            <span>
+              {fichiersGroupe.length > 0
+                ? `${fichiersGroupe.length} fichier${fichiersGroupe.length > 1 ? "s" : ""} sélectionné${fichiersGroupe.length > 1 ? "s" : ""}`
+                : "Sélectionner plusieurs CV (PDF, DOCX ou image)"}
+            </span>
+            <input
+              ref={champGroupe}
+              type="file"
+              accept=".pdf,.docx,image/*"
+              multiple
+              onChange={choisirFichiersGroupe}
+              className="hidden"
+            />
+          </label>
+          <p className="text-[11px] text-gray-400">
+            Un fichier à la fois, dans l&apos;ordre. Sans lettre de motivation associée — pour en
+            joindre une à un CV précis, utilisez « Un CV ».
+          </p>
+
+          {etatsGroupe.length > 0 && (
+            <ul className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden bg-white max-h-64 overflow-y-auto">
+              {etatsGroupe.map((e, idx) => (
+                <li key={idx} className="px-3 py-2 flex items-center gap-2.5">
+                  <span className="shrink-0 w-4 text-center">
+                    {e.statut === "attente" && <i className="fa-regular fa-circle text-gray-300 text-[10px]"></i>}
+                    {e.statut === "analyse" && <i className="fa-solid fa-spinner fa-spin text-[#1877F2] text-[10px]"></i>}
+                    {e.statut === "ok" && <i className="fa-solid fa-circle-check text-emerald-600 text-[10px]"></i>}
+                    {e.statut === "erreur" && <i className="fa-solid fa-circle-exclamation text-red-600 text-[10px]"></i>}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-gray-800 truncate">{e.nom}</p>
+                    {e.message && (
+                      <p className={`text-[10px] truncate ${e.statut === "erreur" ? "text-red-600" : "text-gray-500"}`}>
+                        {e.message}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <button
+            type="button"
+            onClick={lancerImportGroupe}
+            disabled={fichiersGroupe.length === 0 || groupeEnCours}
+            className="bg-gray-900 hover:bg-black disabled:opacity-50 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl cursor-pointer"
+          >
+            {groupeEnCours ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin mr-1.5"></i>
+                Import {etatsGroupe.filter((e) => e.statut === "ok" || e.statut === "erreur").length}/{etatsGroupe.length}…
+              </>
+            ) : (
+              <><i className="fa-solid fa-upload mr-1.5"></i>Importer {fichiersGroupe.length || ""} CV</>
+            )}
+          </button>
+        </div>
         )}
       </section>
 

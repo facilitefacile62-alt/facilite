@@ -222,6 +222,11 @@ test.describe("Invariants de sécurité", () => {
       // même doctrine qu'assistant_ai_config ci-dessus. Voir
       // 20260903120000_banque_cv.sql.
       "banque_cv",
+      // Compteur de quota IA dédié à la banque de CV, séparé du quota
+      // partagé des 6 autres routes (ai_usage_daily) — voir
+      // 20260903150000_banque_cv_quota.sql. Même doctrine que banque_cv :
+      // aucune policy, service_role uniquement.
+      "banque_cv_usage_daily",
     ]);
 
     const rows = await runIntrospectionSql(`
