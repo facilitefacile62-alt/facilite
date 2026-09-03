@@ -159,9 +159,9 @@ export default function CapturePosition({
   if (verrouillee) {
     return (
       <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-3">
-        <p className="text-xs font-black text-emerald-800 dark:text-emerald-300 capitalize">
+        <p className="text-xs font-black text-emerald-800 dark:text-emerald-300">
           <i className="fa-solid fa-location-dot mr-2"></i>
-          {entite} positionnée
+          {entite.charAt(0).toUpperCase() + entite.slice(1)} positionnée
           {definieLe ? ` le ${new Date(definieLe).toLocaleDateString("fr-FR")}` : ""}
         </p>
         <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 mt-1 leading-relaxed">
