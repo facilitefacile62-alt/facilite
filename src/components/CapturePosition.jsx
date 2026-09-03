@@ -37,11 +37,26 @@ function qualite(precisionM) {
 }
 
 /**
+ * Générique par construction : la Marketplace et Mon activité partagent le
+ * même relevé, mais pas le même vocabulaire ni la même règle commerciale —
+ * une boutique a un déplacement payant, une activité (Point Wave, pharmacie)
+ * n'en a aucun. Réutiliser le composant sans ces deux props affichait
+ * « Boutique positionnée » et « déplacement de boutique payant » sur l'écran
+ * Point Wave, où il n'existe ni boutique ni option payante.
+ *
  * @param {(p:{latitude:number,longitude:number,precisionM:number}) => void} onReleve
  * @param {boolean} verrouillee  position déjà fixée : on n'en reprend pas
  * @param {string=} definieLe    date ISO du relevé existant
+ * @param {string=} entite       ce qui est positionné, au féminin ("boutique", "activité")
+ * @param {boolean=} optionPayante  existe-t-il un moyen payant de redéplacer ? (faux pour une activité)
  */
-export default function CapturePosition({ onReleve, verrouillee = false, definieLe = null }) {
+export default function CapturePosition({
+  onReleve,
+  verrouillee = false,
+  definieLe = null,
+  entite = "boutique",
+  optionPayante = true,
+}) {
   // État de l'autorisation, quand le navigateur sait le dire. Il permet de
   // parler juste : proposer « Autoriser » à quelqu'un qui a déjà refusé ne
   // sert à rien — la boîte de dialogue ne réapparaîtra pas, il faut passer
@@ -130,7 +145,7 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
         setEnCours(false);
         setErreur(
           err.code === 1
-            ? "Vous avez refusé la localisation. Autorisez-la pour positionner votre boutique."
+            ? `Vous avez refusé la localisation. Autorisez-la pour positionner votre ${entite}.`
             : "Position indisponible. Vérifiez que le GPS est activé."
         );
       },
@@ -144,14 +159,15 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
   if (verrouillee) {
     return (
       <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-3">
-        <p className="text-xs font-black text-emerald-800 dark:text-emerald-300">
+        <p className="text-xs font-black text-emerald-800 dark:text-emerald-300 capitalize">
           <i className="fa-solid fa-location-dot mr-2"></i>
-          Boutique positionnée
+          {entite} positionnée
           {definieLe ? ` le ${new Date(definieLe).toLocaleDateString("fr-FR")}` : ""}
         </p>
         <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 mt-1 leading-relaxed">
-          L&apos;emplacement est fixé. Vous pouvez toujours corriger le nom, le quartier ou le
-          numéro WhatsApp — seul un déplacement de boutique nécessite l&apos;option payante.
+          {optionPayante
+            ? "L'emplacement est fixé. Vous pouvez toujours corriger le nom, le quartier ou le numéro WhatsApp — seul un déplacement nécessite l'option payante."
+            : "L'emplacement est fixé et ne peut plus être déplacé. Vous pouvez toujours changer de métier ou de statut."}
         </p>
       </div>
     );
@@ -163,13 +179,13 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
       <p className="text-xs font-black text-gray-900 dark:text-white">
         <i className="fa-solid fa-location-crosshairs mr-2"></i>
-        Positionner ma boutique
+        Positionner {entite === "boutique" ? "ma boutique" : `mon ${entite}`}
       </p>
       <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-        Faites-le <strong>depuis votre boutique</strong>, avec un <strong>téléphone</strong> : un
-        ordinateur n&apos;a pas de GPS et devine sa position par le réseau, souvent à plusieurs
-        centaines de mètres près. Le relevé dure dix secondes, et l&apos;emplacement ne pourra plus
-        être changé gratuitement.
+        Faites-le <strong>sur place</strong>, avec un <strong>téléphone</strong> : un ordinateur
+        n&apos;a pas de GPS et devine sa position par le réseau, souvent à plusieurs centaines de
+        mètres près. Le relevé dure dix secondes, et l&apos;emplacement ne pourra plus être changé
+        {optionPayante ? " gratuitement" : ""}.
       </p>
 
       {/* Dire AVANT ce que le navigateur va demander.
@@ -204,9 +220,9 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
               </p>
               <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
                 Répondez <strong>Autoriser</strong>. La position sert uniquement à placer votre
-                boutique sur la carte, une seule fois. Nous ne suivons pas vos déplacements et la
-                position n&apos;est pas partagée avec les acheteurs — ils voient seulement la
-                distance qui les sépare de vous.
+                {" "}{entite} sur la carte, une seule fois. Nous ne suivons pas vos déplacements et
+                elle n&apos;est jamais partagée en clair — les personnes qui vous cherchent voient
+                seulement la distance qui les sépare de vous.
               </p>
             </>
           )}
@@ -242,9 +258,9 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
                 <i className="fa-solid fa-location-dot mr-1.5"></i>
                 Coordonnées relevées
               </p>
-              {/* Les chiffres sont affichés parce qu'ils sont vérifiables : le
-                  commerçant peut les coller dans une carte et voir si le point
-                  tombe sur sa boutique. Cinq décimales valent environ un
+              {/* Les chiffres sont affichés parce qu'ils sont vérifiables : la
+                  personne peut les coller dans une carte et voir si le point
+                  tombe au bon endroit. Cinq décimales valent environ un
                   mètre — au-delà, ce serait du bruit. */}
               <p className="text-xs font-mono font-bold text-gray-800 dark:text-gray-200 mt-1 tabular-nums">
                 {meilleur.latitude.toFixed(5)}, {meilleur.longitude.toFixed(5)}
@@ -257,8 +273,8 @@ export default function CapturePosition({ onReleve, verrouillee = false, definie
                 <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1.5 leading-relaxed">
                   <i className="fa-solid fa-triangle-exclamation mr-1"></i>
                   {meilleur.precisionM != null && meilleur.precisionM > 150
-                    ? "Cette position ne vient pas du GPS mais du réseau — c'est ce qui arrive sur un ordinateur, ou à l'intérieur d'un bâtiment. Refaites le relevé depuis un téléphone, dehors, devant la boutique."
-                    : "Sortez devant la boutique et refaites le relevé pour gagner en précision."}
+                    ? `Cette position ne vient pas du GPS mais du réseau — c'est ce qui arrive sur un ordinateur, ou à l'intérieur d'un bâtiment. Refaites le relevé depuis un téléphone, dehors, sur place.`
+                    : `Sortez à l'air libre et refaites le relevé pour gagner en précision.`}
                 </p>
               )}
             </div>

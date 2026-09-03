@@ -242,6 +242,8 @@ export default function MonActivitePage() {
               <CapturePosition
                 verrouillee={positionVerrouillee}
                 definieLe={profil?.activity_position_definie_le}
+                entite="activité"
+                optionPayante={false}
                 onReleve={async (p) => {
                   setEnCours(true);
                   setErreur("");
