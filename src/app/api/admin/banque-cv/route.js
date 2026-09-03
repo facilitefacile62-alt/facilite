@@ -36,13 +36,18 @@ export async function GET(req) {
   const recherche = (url.searchParams.get("q") || "").trim().slice(0, 200);
   const debut = page * PAR_PAGE;
 
+  // Classé par catégorie puis nom : les CV d'une même catégorie se
+  // retrouvent groupés (l'écran affiche un en-tête par catégorie), et à
+  // l'intérieur d'un groupe, l'ordre alphabétique permet de retrouver un
+  // candidat au coup d'œil plutôt qu'en parcourant tout par ordre d'import.
   let requete = admin
     .from("banque_cv")
     .select(
       "id, nom_complet, categorie, niveau_etude_code, annees_experience, competences, resume_profil, statut, erreur_analyse, created_at",
       { count: "exact" }
     )
-    .order("created_at", { ascending: false })
+    .order("categorie", { ascending: true, nullsFirst: false })
+    .order("nom_complet", { ascending: true, nullsFirst: false })
     .range(debut, debut + PAR_PAGE - 1);
 
   if (categorie) requete = requete.eq("categorie", categorie);

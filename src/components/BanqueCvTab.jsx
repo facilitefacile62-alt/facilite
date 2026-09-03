@@ -225,8 +225,19 @@ export default function BanqueCvTab() {
   const [totalListe, setTotalListe] = useState(0);
   const [pageListe, setPageListe] = useState(0);
   const [categorieListe, setCategorieListe] = useState("");
+  const [rechercheNomSaisie, setRechercheNomSaisie] = useState("");
+  const [rechercheNomListe, setRechercheNomListe] = useState("");
   const [chargementListe, setChargementListe] = useState(true);
   const [suppressionEnCours, setSuppressionEnCours] = useState(null);
+
+  // Débounce : un appel réseau par pause de frappe, pas un par lettre tapée.
+  useEffect(() => {
+    const delai = setTimeout(() => {
+      setPageListe(0);
+      setRechercheNomListe(rechercheNomSaisie);
+    }, 350);
+    return () => clearTimeout(delai);
+  }, [rechercheNomSaisie]);
 
   const chargerListe = useCallback(async () => {
     setChargementListe(true);
@@ -234,6 +245,7 @@ export default function BanqueCvTab() {
       const token = await jeton();
       const params = new URLSearchParams({ page: String(pageListe) });
       if (categorieListe) params.set("categorie", categorieListe);
+      if (rechercheNomListe.trim()) params.set("q", rechercheNomListe.trim());
       const res = await fetch(`/api/admin/banque-cv?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -245,7 +257,7 @@ export default function BanqueCvTab() {
     } finally {
       setChargementListe(false);
     }
-  }, [pageListe, categorieListe]);
+  }, [pageListe, categorieListe, rechercheNomListe]);
 
   useEffect(() => {
     chargerListe();
@@ -544,19 +556,31 @@ export default function BanqueCvTab() {
           <h3 className="text-sm font-black text-gray-900">
             Contenu de la banque <span className="text-gray-400 font-bold">({totalListe})</span>
           </h3>
-          <select
-            value={categorieListe}
-            onChange={(e) => {
-              setCategorieListe(e.target.value);
-              setPageListe(0);
-            }}
-            className="ml-auto text-xs font-bold border border-gray-200 rounded-xl px-3 py-2 cursor-pointer"
-          >
-            <option value="">Toutes catégories</option>
-            {CATEGORIES.map((c) => (
-              <option key={c.id} value={c.id}>{c.label}</option>
-            ))}
-          </select>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400"></i>
+              <input
+                type="text"
+                value={rechercheNomSaisie}
+                onChange={(e) => setRechercheNomSaisie(e.target.value)}
+                placeholder="Chercher un nom…"
+                className="text-xs font-medium border border-gray-200 rounded-xl pl-8 pr-3 py-2 w-40 focus:outline-none focus:ring-2 focus:ring-[#10E688]"
+              />
+            </div>
+            <select
+              value={categorieListe}
+              onChange={(e) => {
+                setCategorieListe(e.target.value);
+                setPageListe(0);
+              }}
+              className="text-xs font-bold border border-gray-200 rounded-xl px-3 py-2 cursor-pointer"
+            >
+              <option value="">Toutes catégories</option>
+              {CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {chargementListe ? (
@@ -565,43 +589,59 @@ export default function BanqueCvTab() {
           <p className="text-[11px] text-gray-500">Aucun CV importé pour l&apos;instant.</p>
         ) : (
           <ul className="divide-y divide-gray-100 border border-gray-200 rounded-2xl overflow-hidden">
-            {liste.map((c) => (
-              <li
-                key={c.id}
-                onClick={() => ouvrirDetail(c.id)}
-                className="p-3 flex items-start gap-3 bg-white hover:bg-gray-50 cursor-pointer transition"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-black text-gray-900 truncate">{c.nom_complet || "Nom non renseigné"}</span>
-                    {c.statut === "erreur" ? (
-                      <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 text-[9px] font-black uppercase">
-                        Analyse échouée
-                      </span>
-                    ) : (
-                      <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[9px] font-black uppercase">
+            {liste.map((c, idx) => {
+              // Sans filtre de catégorie, la liste est déjà triée
+              // catégorie puis nom (voir la route) : un en-tête apparaît
+              // simplement quand la catégorie change d'une ligne à l'autre —
+              // pas de requête supplémentaire, le classement retombe du tri.
+              const categoriePrecedente = idx > 0 ? liste[idx - 1].categorie : undefined;
+              const debutDeGroupe = !categorieListe && c.categorie !== categoriePrecedente;
+              return (
+                <li key={c.id}>
+                  {debutDeGroupe && (
+                    <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">
                         {LIBELLE_CATEGORIE[c.categorie] || "Non catégorisé"}
                       </span>
-                    )}
+                    </div>
+                  )}
+                  <div
+                    onClick={() => ouvrirDetail(c.id)}
+                    className="p-3 flex items-start gap-3 bg-white hover:bg-gray-50 cursor-pointer transition"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-gray-900 truncate">{c.nom_complet || "Nom non renseigné"}</span>
+                        {c.statut === "erreur" ? (
+                          <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 text-[9px] font-black uppercase">
+                            Analyse échouée
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[9px] font-black uppercase">
+                            {LIBELLE_CATEGORIE[c.categorie] || "Non catégorisé"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">
+                        {c.resume_profil || c.erreur_analyse || "—"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        supprimer(c.id);
+                      }}
+                      disabled={suppressionEnCours === c.id}
+                      className="shrink-0 w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer disabled:opacity-40"
+                      aria-label="Retirer ce CV"
+                    >
+                      <i className={`fa-solid ${suppressionEnCours === c.id ? "fa-spinner fa-spin" : "fa-trash-can"} text-xs`}></i>
+                    </button>
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">
-                    {c.resume_profil || c.erreur_analyse || "—"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    supprimer(c.id);
-                  }}
-                  disabled={suppressionEnCours === c.id}
-                  className="shrink-0 w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer disabled:opacity-40"
-                  aria-label="Retirer ce CV"
-                >
-                  <i className={`fa-solid ${suppressionEnCours === c.id ? "fa-spinner fa-spin" : "fa-trash-can"} text-xs`}></i>
-                </button>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
 
