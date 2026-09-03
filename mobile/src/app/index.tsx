@@ -1,119 +1,203 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Écran d'accueil natif — direction visuelle inspirée de Yimmo (structure :
-// en-tête + salutation, gros titre, recherche en avant, étapes numérotées),
-// pas copiée : iconographie, texte et données propres à Facilite. Palette
-// validée par l'utilisateur pour l'app mobile uniquement (Bleu Roi #2563EB /
-// Vert Menthe #10B981) — le site web garde ses couleurs actuelles, non
-// touchées ici.
-type Etape = {
-  icone: keyof typeof Ionicons.glyphMap;
-  teinte: string;
-  couleurIcone: string;
+// Fil d'actualité natif — reproduit la mise en page réelle de ffacilite.com
+// (en-tête, stories de modèles, cartes d'offres, barre d'action) en thème
+// sombre dédié avec l'accent Bleu Roi validé pour l'app mobile. Données de
+// démonstration : le branchement sur les vraies offres (table job_offers)
+// suit au point Supabase.
+type Offre = {
+  id: string;
+  entreprise: string;
+  via?: string;
+  logoTeinte: string;
+  logoInitiales: string;
+  date: string;
   titre: string;
-  detail: string;
+  localisation: string;
+  contrat: string;
 };
 
-const ETAPES: Etape[] = [
+const OFFRES: Offre[] = [
   {
-    icone: 'create-outline',
-    teinte: 'bg-blue-100 dark:bg-blue-950',
-    couleurIcone: '#2563EB',
-    titre: 'Décris le poste que tu cherches',
-    detail: 'Secteur, ville, type de contrat.',
+    id: '1',
+    entreprise: 'Challenge 2000 SARL',
+    via: 'C2K Staffing SARL',
+    logoTeinte: 'bg-amber-500',
+    logoInitiales: 'C2',
+    date: '03/09/2026',
+    titre: 'Opérateur Polyvalent — Conducteur de Bétonnière & Tractopelle',
+    localisation: 'Thiès, Sénégal',
+    contrat: 'Plein Temps',
   },
   {
-    icone: 'mail-outline',
-    teinte: 'bg-emerald-100 dark:bg-emerald-950',
-    couleurIcone: '#059669',
-    titre: 'Les recruteurs te proposent des offres',
-    detail: 'Uniquement des postes réellement ouverts.',
+    id: '2',
+    entreprise: 'Teranga Digital',
+    logoTeinte: 'bg-blue-500',
+    logoInitiales: 'TD',
+    date: '02/09/2026',
+    titre: 'Développeur Full Stack',
+    localisation: 'Dakar, Plateau',
+    contrat: 'CDI',
   },
   {
-    icone: 'sparkles-outline',
-    teinte: 'bg-amber-100 dark:bg-amber-950',
-    couleurIcone: '#B45309',
-    titre: 'Les meilleures offres remontent en tête',
-    detail: 'Celles qui te correspondent le plus, en premier.',
+    id: '3',
+    entreprise: 'Clinique Pasteur',
+    logoTeinte: 'bg-emerald-500',
+    logoInitiales: 'CP',
+    date: '01/09/2026',
+    titre: "Infirmier(e) diplômé(e) d'État",
+    localisation: 'Dakar, Fann',
+    contrat: 'CDI',
   },
 ];
 
-export default function HomeScreen() {
-  const [recherche, setRecherche] = useState('');
+const MODELES: { id: string; label: string; teinte: string }[] = [
+  { id: 'moderne', label: 'Moderne', teinte: 'bg-blue-500' },
+  { id: 'minimaliste', label: 'Minimaliste', teinte: 'bg-emerald-500' },
+  { id: 'classique', label: 'Classique', teinte: 'bg-amber-500' },
+];
 
+type NavItem = {
+  id: string;
+  label: string;
+  icone: keyof typeof Ionicons.glyphMap;
+  badge?: number;
+};
+
+const NAV_RAPIDE: NavItem[] = [
+  { id: 'accueil', label: 'Accueil', icone: 'home' },
+  { id: 'offres', label: 'Offres', icone: 'briefcase-outline' },
+  { id: 'messages', label: 'Messages', icone: 'chatbubble-outline' },
+  { id: 'notifications', label: 'Notifs', icone: 'notifications-outline', badge: 2 },
+];
+
+export default function HomeScreen() {
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-gray-950">
+    <View className="flex-1 bg-[#0B0F17]">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <ScrollView
-          className="flex-1 px-5"
-          contentContainerClassName="pb-12"
-          showsVerticalScrollIndicator={false}>
-          <View className="flex-row items-center justify-between pt-2">
-            <Text className="text-xl font-extrabold text-blue-600">Facilité</Text>
-            <View className="flex-row items-center gap-2.5">
-              <Pressable className="w-10 h-10 rounded-full bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 items-center justify-center">
-                <Ionicons name="notifications-outline" size={18} color="#334155" />
-              </Pressable>
-              <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center">
-                <Text className="text-sm font-extrabold text-amber-700">A</Text>
-              </View>
+        <View className="flex-row items-center justify-between px-4 pt-1 pb-3">
+          <Text className="text-lg font-extrabold text-blue-500">Facilité</Text>
+          <View className="flex-row items-center gap-3">
+            <Pressable className="w-9 h-9 rounded-full bg-[#161E2E] items-center justify-center">
+              <Ionicons name="notifications-outline" size={16} color="#94a3b8" />
+              <View className="absolute top-1 right-1.5 w-2 h-2 rounded-full bg-red-500" />
+            </Pressable>
+            <View className="w-9 h-9 rounded-full bg-amber-500 items-center justify-center">
+              <Text className="text-xs font-extrabold text-white">A</Text>
             </View>
           </View>
+        </View>
 
-          <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-4">
-            Bonjour Aïssatou 👋
-          </Text>
-
-          <Text className="text-[26px] leading-[32px] font-extrabold text-gray-900 dark:text-white mt-1 mb-5">
-            Trouve ton{'\n'}prochain emploi
-          </Text>
-
-          <View className="flex-row items-center bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 pl-4 pr-1.5 py-1.5 shadow-sm">
-            <Ionicons name="search" size={17} color="#94a3b8" />
-            <TextInput
-              value={recherche}
-              onChangeText={setRecherche}
-              placeholder="Décris le poste que tu cherches"
-              placeholderTextColor="#94a3b8"
-              className="flex-1 ml-2.5 text-[13.5px] text-gray-900 dark:text-white"
-            />
-            <Pressable className="w-9 h-9 rounded-xl bg-blue-600 items-center justify-center">
-              <Ionicons name="chevron-forward" size={18} color="#ffffff" />
-            </Pressable>
-          </View>
-
-          <Text className="text-amber-500 text-base tracking-[6px] mt-7 mb-6">∿ ∿ ∿</Text>
-
-          <Text className="text-lg font-extrabold text-gray-900 dark:text-white leading-6">
-            Dis-nous ce que tu cherches,{'\n'}on s&apos;occupe du reste.
-          </Text>
-          <Text className="text-[12.5px] font-medium text-gray-500 dark:text-gray-400 mt-1.5 mb-5">
-            Voici comment ça marche.
-          </Text>
-
-          <View className="gap-5">
-            {ETAPES.map((etape, index) => (
-              <View key={etape.titre} className="flex-row gap-3.5">
-                <View
-                  className={`w-10 h-10 rounded-full ${etape.teinte} items-center justify-center shrink-0`}>
-                  <Ionicons name={etape.icone} size={18} color={etape.couleurIcone} />
-                </View>
-                <View className="flex-1 pt-0.5">
-                  <Text className="text-[13.5px] font-bold text-gray-900 dark:text-white">
-                    {index + 1} · {etape.titre}
-                  </Text>
-                  <Text className="text-[12px] text-gray-500 dark:text-gray-400 mt-0.5">
-                    {etape.detail}
-                  </Text>
-                </View>
+        <View className="flex-row justify-around border-b border-[#1B2434] pb-3 mb-1 px-2">
+          {NAV_RAPIDE.map((item) => (
+            <Pressable key={item.id} className="items-center gap-1">
+              <View>
+                <Ionicons
+                  name={item.icone}
+                  size={19}
+                  color={item.id === 'accueil' ? '#2563EB' : '#94a3b8'}
+                />
+                {item.badge ? (
+                  <View className="absolute -top-1 -right-2 min-w-[13px] h-[13px] px-0.5 rounded-full bg-red-500 items-center justify-center">
+                    <Text className="text-[8px] font-bold text-white">{item.badge}</Text>
+                  </View>
+                ) : null}
               </View>
-            ))}
-          </View>
-        </ScrollView>
+              <Text
+                className={`text-[9.5px] font-semibold ${
+                  item.id === 'accueil' ? 'text-blue-500' : 'text-gray-500'
+                }`}>
+                {item.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <FlatList
+          data={OFFRES}
+          keyExtractor={(item) => item.id}
+          contentContainerClassName="px-4 pb-10"
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View className="h-3" />}
+          ListHeaderComponent={
+            <View className="mb-4">
+              <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2.5 mt-1">
+                Modèles de CV
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
+                {MODELES.map((modele) => (
+                  <View key={modele.id} className="items-center mx-2 w-16">
+                    <View
+                      className={`w-14 h-14 rounded-full ${modele.teinte} items-center justify-center border-2 border-[#0B0F17]`}>
+                      <Ionicons name="document-text-outline" size={20} color="#ffffff" />
+                    </View>
+                    <Text className="text-[10px] font-semibold text-gray-300 mt-1.5" numberOfLines={1}>
+                      {modele.label}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          }
+          renderItem={({ item }) => <CarteOffre offre={item} />}
+        />
       </SafeAreaView>
+    </View>
+  );
+}
+
+function CarteOffre({ offre }: { offre: Offre }) {
+  return (
+    <View className="bg-[#161E2E] rounded-2xl border border-[#232D40] p-3.5">
+      <View className="flex-row items-center gap-2.5 mb-3">
+        <View className={`w-9 h-9 rounded-xl ${offre.logoTeinte} items-center justify-center`}>
+          <Text className="text-[11px] font-extrabold text-white">{offre.logoInitiales}</Text>
+        </View>
+        <View className="flex-1">
+          <Text className="text-[12.5px] font-bold text-white" numberOfLines={1}>
+            {offre.entreprise}
+            {offre.via ? ` (via ${offre.via})` : ''}
+          </Text>
+          <Text className="text-[10.5px] text-gray-500">{offre.date}</Text>
+        </View>
+      </View>
+
+      <Text className="text-[14.5px] font-bold text-white leading-5 mb-2">{offre.titre}</Text>
+
+      <View className="flex-row flex-wrap gap-1.5 mb-3">
+        <View className="flex-row items-center gap-1 bg-[#0B0F17] px-2 py-1 rounded-full">
+          <Ionicons name="location-outline" size={11} color="#94a3b8" />
+          <Text className="text-[10.5px] font-medium text-gray-400">{offre.localisation}</Text>
+        </View>
+        <View className="flex-row items-center gap-1 bg-[#0B0F17] px-2 py-1 rounded-full">
+          <Ionicons name="briefcase-outline" size={11} color="#94a3b8" />
+          <Text className="text-[10.5px] font-medium text-gray-400">{offre.contrat}</Text>
+        </View>
+      </View>
+
+      <View className="rounded-xl bg-[#0B0F17] border border-dashed border-[#232D40] h-36 items-center justify-center mb-3.5">
+        <Ionicons name="image-outline" size={22} color="#3d4a61" />
+        <Text className="text-[10px] font-medium text-gray-600 mt-1">Affiche du recrutement</Text>
+      </View>
+
+      <Pressable className="flex-row items-center justify-center gap-2 bg-blue-600 rounded-xl py-3 mb-2.5">
+        <Ionicons name="send" size={14} color="#ffffff" />
+        <Text className="text-[13px] font-bold text-white">Postuler via Facilité</Text>
+      </Pressable>
+
+      <View className="flex-row items-center justify-around pt-1">
+        <Pressable className="py-1 px-4">
+          <Ionicons name="thumbs-up-outline" size={15} color="#94a3b8" />
+        </Pressable>
+        <Pressable className="py-1 px-4">
+          <Ionicons name="share-social-outline" size={15} color="#94a3b8" />
+        </Pressable>
+        <Pressable className="py-1 px-4">
+          <Ionicons name="bookmark-outline" size={15} color="#94a3b8" />
+        </Pressable>
+      </View>
     </View>
   );
 }
