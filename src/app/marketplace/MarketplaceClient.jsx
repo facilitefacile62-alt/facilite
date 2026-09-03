@@ -346,63 +346,6 @@ export default function MarketplaceClient() {
                   </div>
                 </div>
 
-                {/* 2. Carte Statistiques Boutique */}
-                <div
-                  onClick={() => setOnglet("vendre")}
-                  className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition flex flex-col justify-between"
-                >
-                  <div className="flex justify-between items-center pb-1.5 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                    <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
-                      STATISTIQUES
-                    </h3>
-                    <i className="fa-solid fa-chevron-right text-gray-400 text-[10px]"></i>
-                  </div>
-                  <div className="space-y-1.5 font-bold text-[11px] flex-1 flex flex-col justify-center pt-1">
-                    <div className="flex justify-between items-center py-0.5">
-                      <span className="text-gray-500 dark:text-gray-400">Vues de la boutique</span>
-                      <span className="text-blue-600 font-extrabold text-xs">{profile?.profile_views ?? 179}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-0.5 border-t border-gray-100 dark:border-gray-800">
-                      <span className="text-gray-500 dark:text-gray-400">Articles en vente</span>
-                      <span className="text-blue-600 font-extrabold text-xs">{mesArticles.length}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Bouton Profil Boutique (Ouvre la fiche boutique dédiée, PAS le profil CV candidat !) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
-                    else setOnglet("vendre");
-                  }}
-                  className="bg-[#ECFDF5] dark:bg-emerald-950/40 border border-[#A7F3D0] dark:border-emerald-800 rounded-xl p-2.5 px-3 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-2.5 group w-full text-left"
-                >
-                  <i className="fa-solid fa-store text-base text-[#047857] dark:text-emerald-400 font-bold group-hover:scale-110 transition transform"></i>
-                  <span className="text-xs font-bold text-[#047857] dark:text-emerald-400 tracking-tight">
-                    {maBoutiqueActive ? "Profil de ma boutique" : "Créer ma boutique"}
-                  </span>
-                </button>
-
-                {/* 4. Bouton Déconnexion */}
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-2.5 px-3 shadow-xs flex items-center justify-start hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 transition cursor-pointer group">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        if (signOut) await signOut();
-                        else await supabase.auth.signOut();
-                        window.location.href = "/";
-                      } catch (e) {
-                        console.error(e);
-                      }
-                    }}
-                    className="w-full flex items-center space-x-2.5 text-gray-700 dark:text-gray-300 hover:text-red-600 transition cursor-pointer bg-transparent border-none p-0 text-left font-bold text-xs"
-                  >
-                    <i className="fa-solid fa-arrow-right-from-bracket text-gray-400 group-hover:text-red-600 text-sm"></i>
-                    <span>Déconnexion</span>
-                  </button>
-                </div>
               </>
             ) : (
               <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
