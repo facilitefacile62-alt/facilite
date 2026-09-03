@@ -1363,6 +1363,23 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
  * Modal Fiche Produit / Vue d'ensemble du produit (1:1 Capture E-commerce)
  */
 function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [quantite, setQuantite] = useState(1);
+  const [formatChoisi, setFormatChoisi] = useState(article.categorie || "Format Standard");
+  const [aime, setAime] = useState(false);
+  const [copie, setCopie] = useState(false);
+  const [imageErreur, setImageErreur] = useState(false);
+
+  // Fonction d'auto-nettoyage robuste garantissant une URL unique et valide
+  const nettoyerUrl = (u) => {
+    if (!u || typeof u !== "string") return null;
+    const urls = u.match(/https?:\/\/[^\s"'<>\\]+/g);
+    if (urls && urls.length > 0) {
+      return urls[urls.length - 1];
+    }
+    return urlPhoto(u);
+  };
+
   const photosBrutes = Array.isArray(article.photos)
     ? article.photos
     : typeof article.photos === "string"
@@ -1377,10 +1394,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
     ? [article.photo]
     : [];
 
-  const photos = photosBrutes
-    .map((p) => (typeof p === "string" && (p.startsWith("http") || p.startsWith("data:")) ? p : urlPhoto(p)))
-    .filter(Boolean);
-
+  const photos = photosBrutes.map(nettoyerUrl).filter(Boolean);
   const photoPrincipale = photos[photoIndex] || photos[0] || null;
   const enStock = article.statut === "en_stock" || Number(article.quantite) > 0;
   const prixUnitaire = Number(article.prix_xof) || 0;
@@ -1441,7 +1455,10 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setPhotoIndex(idx)}
+                  onClick={() => {
+                    setPhotoIndex(idx);
+                    setImageErreur(false);
+                  }}
                   className={`w-12 h-14 sm:w-14 sm:h-18 rounded-lg overflow-hidden border-2 transition cursor-pointer shrink-0 bg-white dark:bg-gray-800 ${
                     photoIndex === idx
                       ? "border-black dark:border-white shadow-xs"
@@ -1455,17 +1472,21 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
           ) : null}
 
           {/* Image Principale Haute Définition */}
-          <div className="relative flex-1 aspect-3/4 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700/80 shadow-xs order-1 sm:order-2 flex flex-col justify-between">
-            {photoPrincipale ? (
+          <div className="relative flex-1 aspect-3/4 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700/80 shadow-xs order-1 sm:order-2 flex flex-col justify-between min-h-[320px]">
+            {!imageErreur && photoPrincipale ? (
               <img
                 src={photoPrincipale}
                 alt={article.titre}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover z-0"
+                onError={() => setImageErreur(true)}
               />
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gray-100 dark:bg-gray-800">
-                <i className="fa-solid fa-bag-shopping text-5xl mb-2 text-gray-300 dark:text-gray-600"></i>
-                <span className="text-xs font-bold text-gray-500">{article.titre}</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gradient-to-br from-amber-50/40 to-orange-50/30 dark:from-gray-800 dark:to-gray-900 p-6 text-center z-0">
+                <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-gray-800 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 shadow-xs">
+                  <i className="fa-solid fa-bag-shopping text-3xl"></i>
+                </div>
+                <span className="text-sm font-black text-gray-900 dark:text-white line-clamp-2">{article.titre}</span>
+                <span className="text-xs text-gray-500 mt-0.5">{nomBoutique}</span>
               </div>
             )}
 
