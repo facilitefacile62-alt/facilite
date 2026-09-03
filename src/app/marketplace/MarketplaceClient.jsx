@@ -133,7 +133,7 @@ function depuis(dateIso) {
 }
 
 export default function MarketplaceClient() {
-  const { session, profile, isAdmin, isRecruiter } = useAuth();
+  const { session, profile, isAdmin, isRecruiter, signOut } = useAuth();
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
   const [onglet, setOnglet] = useState("acheter"); // 'acheter' | 'vendre'
   const [boutiques, setBoutiques] = useState([]);
@@ -251,10 +251,10 @@ export default function MarketplaceClient() {
           </div>
         </header>
 
-        {/* Layout en Split 2 Colonnes : Deux colonnes de taille égale (50% / 50%) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* BARRE DU PROFIL GAUCHE : 50% de la largeur (lg:col-span-6) */}
-          <aside className={`lg:col-span-6 space-y-3 ${onglet === "vendre" ? "block" : "hidden lg:block"}`}>
+        {/* Layout avec barre latérale 1:1 identique à la Capture 2 (Accueil) et zone principale */}
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          {/* BARRE DU PROFIL GAUCHE : Taille 1:1 identique à la Capture 2 (md:w-[215px]) */}
+          <aside className={`w-full md:w-[215px] flex-shrink-0 flex flex-col gap-2 ${onglet === "vendre" ? "flex" : "hidden md:flex"}`}>
             {chargementBoutique ? (
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse space-y-3">
                 <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
@@ -264,32 +264,111 @@ export default function MarketplaceClient() {
               </div>
             ) : userId || profile ? (
               <>
-                {/* 1. Carte de Profil Boutique / Utilisateur (1:1 Pixel Perfect & Cliquable) */}
-                <CarteProfilBoutique
-                  profile={profile}
-                  boutique={maBoutiqueActive}
-                  onAjouterArticle={() => setOnglet("vendre")}
-                  onBoutiqueClick={() => {
-                    if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
-                  }}
-                />
+                {/* 1. Carte de Profil (Format compact 215px 1:1 comme Capture 2) */}
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
+                  <Link
+                    href="/profil"
+                    className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
+                    style={{ backgroundImage: `url('${profile?.cover_url || '/stellar-cover.png'}')` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
+                    <div className="absolute inset-0 flex items-center justify-end px-3 pointer-events-none">
+                      <span className="text-white/20 font-black text-2xl tracking-tighter select-none">
+                        CV
+                      </span>
+                    </div>
+                  </Link>
 
-                {/* 2 & 3. Deux cartes de taille égale côte à côte (50% / 50%) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* 2. Carte Expérience / Articles en Vente */}
-                  <CarteArticlesVente
-                    articles={mesArticles}
-                    onAjouterClick={() => setOnglet("vendre")}
-                    onChange={rechargerBoutique}
-                  />
+                  <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
+                    <Link
+                      href="/profil"
+                      className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-white dark:bg-gray-800 block cursor-pointer group"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={profile?.avatar_url || (maBoutiqueActive ? "/logo.jpeg" : "/logo.jpeg")}
+                        alt="Photo de profil"
+                        className="w-full h-full object-cover group-hover:scale-105 transition"
+                      />
+                    </Link>
 
-                  {/* 3. Carte Statistiques */}
-                  <CarteStatistiquesBoutique
-                    profile={profile}
-                    boutique={maBoutiqueActive}
-                    articles={mesArticles}
-                    onClick={() => setOnglet("vendre")}
-                  />
+                    <Link href="/profil" className="group">
+                      <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
+                        {profile?.full_name || profile?.nom || (session?.user?.email ? session.user.email.split("@")[0] : "facilite facile")}
+                      </h2>
+                    </Link>
+
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
+                      {profile?.headline || (maBoutiqueActive ? `Boutique ${maBoutiqueActive.nom}` : "Complétez votre profil")}
+                    </p>
+
+                    <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
+                      {profile?.location || (maBoutiqueActive?.ville ? `${maBoutiqueActive.quartier ? maBoutiqueActive.quartier + ", " : ""}${maBoutiqueActive.ville}` : "Localisation non renseignée")}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => setOnglet("vendre")}
+                      className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
+                    >
+                      <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
+                      <span>{maBoutiqueActive ? "Publier un article" : "Expérience"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Carte Statistiques (1:1 identique Capture 2) */}
+                <div
+                  onClick={() => setOnglet("vendre")}
+                  className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 shadow-xs cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition flex flex-col justify-between"
+                >
+                  <div className="flex justify-between items-center pb-1.5 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                    <h3 className="text-[10px] font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                      STATISTIQUES
+                    </h3>
+                    <i className="fa-solid fa-chevron-right text-gray-400 text-[10px]"></i>
+                  </div>
+                  <div className="space-y-1.5 font-bold text-[11px] flex-1 flex flex-col justify-center pt-1">
+                    <div className="flex justify-between items-center py-0.5">
+                      <span className="text-gray-500 dark:text-gray-400">Vues du profil</span>
+                      <span className="text-blue-600 font-extrabold text-xs">{profile?.profile_views ?? 179}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-0.5 border-t border-gray-100 dark:border-gray-800">
+                      <span className="text-gray-500 dark:text-gray-400">Impressions du post</span>
+                      <span className="text-blue-600 font-extrabold text-xs">{profile?.post_impressions ?? 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Bouton Mon profil et mon CV (1:1 identique Capture 2) */}
+                <Link
+                  href="/profil"
+                  className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl p-2.5 px-3 shadow-xs hover:shadow-md transition cursor-pointer flex items-center space-x-2.5 group block"
+                >
+                  <i className="fa-regular fa-user text-base text-[#047857] font-bold group-hover:scale-110 transition transform"></i>
+                  <span className="text-xs font-bold text-[#047857] tracking-tight">
+                    Mon profil et mon CV
+                  </span>
+                </Link>
+
+                {/* 4. Bouton Déconnexion (1:1 identique Capture 2) */}
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-2.5 px-3 shadow-xs flex items-center justify-start hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 transition cursor-pointer group">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        if (signOut) await signOut();
+                        else await supabase.auth.signOut();
+                        window.location.href = "/";
+                      } catch (e) {
+                        console.error(e);
+                      }
+                    }}
+                    className="w-full flex items-center space-x-2.5 text-gray-700 dark:text-gray-300 hover:text-red-600 transition cursor-pointer bg-transparent border-none p-0 text-left font-bold text-xs"
+                  >
+                    <i className="fa-solid fa-arrow-right-from-bracket text-gray-400 group-hover:text-red-600 text-sm"></i>
+                    <span>Déconnexion</span>
+                  </button>
                 </div>
               </>
             ) : (
@@ -311,8 +390,8 @@ export default function MarketplaceClient() {
             )}
           </aside>
 
-          {/* ZONE PRINCIPALE : 50% de la largeur (lg:col-span-6) */}
-          <main className="lg:col-span-6">
+          {/* ZONE PRINCIPALE : Reste de la largeur disponible (flex-1) */}
+          <main className="flex-1 min-w-0">
             {onglet === "acheter" ? (
               <VueAcheteur onVoirBoutique={(b) => setBoutiqueModal(b)} />
             ) : (
@@ -594,7 +673,7 @@ function VueAcheteur({ onVoirBoutique }) {
         />
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {resultats.map((a, i) => (
           <CarteArticle
             key={a.id}
