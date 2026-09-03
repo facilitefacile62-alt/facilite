@@ -136,6 +136,7 @@ export default function MarketplaceClient() {
   const { session, profile, isAdmin, isRecruiter, signOut } = useAuth();
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
   const [onglet, setOnglet] = useState("acheter"); // 'acheter' | 'vendre'
+  const [categorie, setCategorie] = useState(null);
   const [boutiques, setBoutiques] = useState([]);
   const [maBoutiqueActive, setMaBoutiqueActive] = useState(null);
   const [mesArticles, setMesArticles] = useState([]);
@@ -346,30 +347,53 @@ export default function MarketplaceClient() {
                   </div>
                 </div>
 
+                {/* 2. Menu Toutes les catégories (1:1 Identique à la capture d'écran) */}
+                <MenuCategoriesSidebar
+                  categorieActive={categorie}
+                  onSelectCategorie={(cat) => {
+                    setCategorie(cat);
+                    if (onglet !== "acheter") setOnglet("acheter");
+                  }}
+                />
               </>
             ) : (
-              <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
-                <div className="flex items-center space-x-2">
-                  <span className="p-1.5 bg-[#10E688]/20 text-[#10E688] rounded-lg text-sm">🚀</span>
-                  <h3 className="text-xs font-black text-white leading-tight">Vendez sur Facilité</h3>
+              <>
+                <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
+                  <div className="flex items-center space-x-2">
+                    <span className="p-1.5 bg-[#10E688]/20 text-[#10E688] rounded-lg text-sm">🚀</span>
+                    <h3 className="text-xs font-black text-white leading-tight">Vendez sur Facilité</h3>
+                  </div>
+                  <p className="text-[11px] text-gray-300 font-medium leading-relaxed">
+                    Ouvrez votre boutique gratuitement, publiez vos articles avec l&apos;Assistant IA et recevez les commandes sur WhatsApp.
+                  </p>
+                  <Link
+                    href="/login?redirect=%2Fmarketplace"
+                    className="block w-full py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs text-center rounded-xl transition shadow-sm"
+                  >
+                    Se connecter / Créer un compte
+                  </Link>
                 </div>
-                <p className="text-[11px] text-gray-300 font-medium leading-relaxed">
-                  Ouvrez votre boutique gratuitement, publiez vos articles avec l&apos;Assistant IA et recevez les commandes sur WhatsApp.
-                </p>
-                <Link
-                  href="/login?redirect=%2Fmarketplace"
-                  className="block w-full py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs text-center rounded-xl transition shadow-sm"
-                >
-                  Se connecter / Créer un compte
-                </Link>
-              </div>
+
+                {/* Menu Toutes les catégories aussi disponible pour les visiteurs */}
+                <MenuCategoriesSidebar
+                  categorieActive={categorie}
+                  onSelectCategorie={(cat) => {
+                    setCategorie(cat);
+                    if (onglet !== "acheter") setOnglet("acheter");
+                  }}
+                />
+              </>
             )}
           </aside>
 
           {/* ZONE PRINCIPALE : Reste de la largeur disponible (flex-1) */}
           <main className="flex-1 min-w-0">
             {onglet === "acheter" ? (
-              <VueAcheteur onVoirBoutique={(b) => setBoutiqueModal(b)} />
+              <VueAcheteur
+                onVoirBoutique={(b) => setBoutiqueModal(b)}
+                categorie={categorie}
+                onSelectCategorie={setCategorie}
+              />
             ) : (
               <VueVendeur
                 userId={userId}
@@ -398,10 +422,9 @@ export default function MarketplaceClient() {
 /* ACHETEUR                                                                    */
 /* ========================================================================== */
 
-function VueAcheteur({ onVoirBoutique }) {
+function VueAcheteur({ onVoirBoutique, categorie = null, onSelectCategorie }) {
   const [position, setPosition] = useState(null);
   const [texte, setTexte] = useState("");
-  const [categorie, setCategorie] = useState(null);
   const [rayonKm, setRayonKm] = useState(10);
   const [seulementEnStock, setSeulementEnStock] = useState(false);
   const [resultats, setResultats] = useState([]);
@@ -506,7 +529,7 @@ function VueAcheteur({ onVoirBoutique }) {
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
           <button
             type="button"
-            onClick={() => setCategorie(null)}
+            onClick={() => onSelectCategorie?.(null)}
             className={`px-3 py-1 rounded-full text-xs font-bold border transition cursor-pointer ${
               categorie === null
                 ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent"
@@ -519,7 +542,7 @@ function VueAcheteur({ onVoirBoutique }) {
             <button
               key={c.id}
               type="button"
-              onClick={() => setCategorie(categorie === c.id ? null : c.id)}
+              onClick={() => onSelectCategorie?.(categorie === c.id ? null : c.id)}
               className={`px-3 py-1 rounded-full text-xs font-bold border transition cursor-pointer ${
                 categorie === c.id
                   ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent"
@@ -1045,6 +1068,72 @@ function VueVendeur({ userId, onBoutiqueChange }) {
           onEnregistre={recharger}
         />
       )}
+    </div>
+  );
+}
+
+// Liste des catégories affichées dans la barre latérale (1:1 Capture utilisateur)
+export const LISTE_CATEGORIES_SIDEBAR = [
+  { id: "vehicules", label: "Automobile", icon: "fa-car" },
+  { id: "maison", label: "Appareils électroménagers", icon: "fa-blender" },
+  { id: "mode", label: "Vêtements pour femmes", icon: "fa-person-dress" },
+  { id: "mode_hommes", label: "Vêtements pour hommes", icon: "fa-shirt", baseCategory: "mode" },
+  { id: "autre", label: "Jouets et jeux", icon: "fa-gamepad" },
+  { id: "meubles", label: "Meubles", icon: "fa-couch", baseCategory: "maison" },
+  { id: "beaute", label: "Beauté et santé", icon: "fa-pump-soap", baseCategory: "mode" },
+  { id: "chaussures", label: "Chaussures", icon: "fa-shoe-prints", baseCategory: "mode" },
+  { id: "telephones", label: "Téléphones portables et accessoires", icon: "fa-mobile-screen-button" },
+  { id: "informatique", label: "Informatique & PC", icon: "fa-laptop" },
+  { id: "alimentation", label: "Alimentation & Épicerie", icon: "fa-basket-shopping" },
+  { id: "services", label: "Services", icon: "fa-briefcase" },
+  { id: "immobilier", label: "Immobilier", icon: "fa-house" },
+];
+
+/**
+ * Menu Latéral « Toutes les catégories » (1:1 Identique à la capture d'écran)
+ */
+function MenuCategoriesSidebar({ categorieActive, onSelectCategorie }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-2.5 shadow-xs flex flex-col gap-1 w-full overflow-hidden text-left">
+      {/* Bouton Toutes les catégories (Exactement comme dans la capture) */}
+      <button
+        type="button"
+        onClick={() => onSelectCategorie?.(null)}
+        className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-black rounded-full transition cursor-pointer text-left ${
+          categorieActive === null
+            ? "bg-gray-100 dark:bg-gray-800 text-gray-950 dark:text-white"
+            : "hover:bg-gray-50 dark:hover:bg-gray-800/60 text-gray-700 dark:text-gray-300"
+        }`}
+      >
+        <i className="fa-solid fa-bars text-sm text-gray-800 dark:text-gray-200"></i>
+        <span className="truncate">Toutes les catégories</span>
+      </button>
+
+      {/* Liste des catégories avec icônes (1:1 Identique à la capture utilisateur) */}
+      <div className="mt-1 flex flex-col gap-0.5 max-h-[380px] overflow-y-auto pr-1 select-none custom-scrollbar">
+        {LISTE_CATEGORIES_SIDEBAR.map((cat) => {
+          const estActif =
+            categorieActive === cat.id ||
+            (cat.baseCategory && categorieActive === cat.baseCategory);
+          return (
+            <button
+              key={cat.label}
+              type="button"
+              onClick={() => onSelectCategorie?.(cat.baseCategory || cat.id)}
+              className={`w-full flex items-center gap-3 px-2.5 py-2 text-xs font-semibold rounded-xl transition cursor-pointer text-left group ${
+                estActif
+                  ? "bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] font-black"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <span className="w-5 text-center text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white shrink-0">
+                <i className={`fa-solid ${cat.icon}`}></i>
+              </span>
+              <span className="truncate leading-snug">{cat.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
