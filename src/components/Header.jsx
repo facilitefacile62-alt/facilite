@@ -210,10 +210,15 @@ export default function Header() {
       setMaBoutiqueInfo(null);
       return;
     }
+    // Corrigé le 03/09/2026 : interrogeait une table "stores" inexistante
+    // (la vraie table est marketplace_stores, colonne owner_id — voir
+    // 20260901190000_marketplace_reelle.sql) et échouait donc en 404 à
+    // chaque chargement de page, sur tout le site, sans jamais afficher le
+    // nom de la boutique dans le switcher Facilite Business.
     supabase
-      .from("stores")
+      .from("marketplace_stores")
       .select("id, nom, quartier, ville")
-      .eq("user_id", userSession.user.id)
+      .eq("owner_id", userSession.user.id)
       .limit(1)
       .maybeSingle()
       .then(({ data }) => {
