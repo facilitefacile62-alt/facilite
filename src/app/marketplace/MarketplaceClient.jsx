@@ -526,34 +526,22 @@ function VueAcheteur({ onVoirBoutique, categorie = null, onSelectCategorie }) {
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-          <button
-            type="button"
-            onClick={() => onSelectCategorie?.(null)}
-            className={`px-3 py-1 rounded-full text-xs font-bold border transition cursor-pointer ${
-              categorie === null
-                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent"
-                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Toutes
-          </button>
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => onSelectCategorie?.(categorie === c.id ? null : c.id)}
-              className={`px-3 py-1 rounded-full text-xs font-bold border transition cursor-pointer ${
-                categorie === c.id
-                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"
-              }`}
-            >
-              <i className={`fa-solid ${c.icon} mr-1 text-[10px]`}></i>
-              {c.label}
-            </button>
-          ))}
-        </div>
+        {categorie && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs">
+            <span className="text-gray-500 dark:text-gray-400">Catégorie sélectionnée :</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-[#1877F2] font-black text-xs border border-blue-200 dark:border-blue-900">
+              {LISTE_CATEGORIES_SIDEBAR.find((c) => c.id === categorie || c.baseCategory === categorie)?.label || categorie}
+              <button
+                type="button"
+                onClick={() => onSelectCategorie?.(null)}
+                className="hover:text-red-500 transition cursor-pointer ml-1 font-bold"
+                title="Afficher toutes les catégories"
+              >
+                ✕
+              </button>
+            </span>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs">
           <div className="flex items-center gap-3">
@@ -1078,15 +1066,17 @@ export const LISTE_CATEGORIES_SIDEBAR = [
   { id: "maison", label: "Appareils électroménagers", icon: "fa-blender" },
   { id: "mode", label: "Vêtements pour femmes", icon: "fa-person-dress" },
   { id: "mode_hommes", label: "Vêtements pour hommes", icon: "fa-shirt", baseCategory: "mode" },
-  { id: "autre", label: "Jouets et jeux", icon: "fa-gamepad" },
+  { id: "chaussures", label: "Chaussures", icon: "fa-shoe-prints", baseCategory: "mode" },
+  { id: "jouets", label: "Jouets et jeux", icon: "fa-gamepad", baseCategory: "autre" },
   { id: "meubles", label: "Meubles", icon: "fa-couch", baseCategory: "maison" },
   { id: "beaute", label: "Beauté et santé", icon: "fa-pump-soap", baseCategory: "mode" },
-  { id: "chaussures", label: "Chaussures", icon: "fa-shoe-prints", baseCategory: "mode" },
   { id: "telephones", label: "Téléphones portables et accessoires", icon: "fa-mobile-screen-button" },
+  { id: "electronique", label: "Électronique & Son", icon: "fa-tv" },
   { id: "informatique", label: "Informatique & PC", icon: "fa-laptop" },
-  { id: "alimentation", label: "Alimentation & Épicerie", icon: "fa-basket-shopping" },
-  { id: "services", label: "Services", icon: "fa-briefcase" },
   { id: "immobilier", label: "Immobilier", icon: "fa-house" },
+  { id: "alimentation", label: "Alimentation", icon: "fa-basket-shopping" },
+  { id: "services", label: "Services", icon: "fa-briefcase" },
+  { id: "autre", label: "Autre", icon: "fa-tag" },
 ];
 
 /**
