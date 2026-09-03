@@ -251,10 +251,10 @@ export default function MarketplaceClient() {
           </div>
         </header>
 
-        {/* Layout en Split 2 Colonnes : Desktop 2 colonnes / Mobile adapté sans doublon */}
+        {/* Layout en Split 2 Colonnes : Deux colonnes de taille égale (50% / 50%) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* BARRE DU PROFIL GAUCHE : "Ma Boutique" 1:1 Identique et Cliquable */}
-          <aside className={`lg:col-span-4 space-y-3 ${onglet === "vendre" ? "block" : "hidden lg:block"}`}>
+          {/* BARRE DU PROFIL GAUCHE : 50% de la largeur (lg:col-span-6) */}
+          <aside className={`lg:col-span-6 space-y-3 ${onglet === "vendre" ? "block" : "hidden lg:block"}`}>
             {chargementBoutique ? (
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse space-y-3">
                 <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
@@ -274,20 +274,23 @@ export default function MarketplaceClient() {
                   }}
                 />
 
-                {/* 2. Carte Expérience / Articles en Vente (1:1 Identique & Cliquable) */}
-                <CarteArticlesVente
-                  articles={mesArticles}
-                  onAjouterClick={() => setOnglet("vendre")}
-                  onChange={rechargerBoutique}
-                />
+                {/* 2 & 3. Deux cartes de taille égale côte à côte (50% / 50%) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* 2. Carte Expérience / Articles en Vente */}
+                  <CarteArticlesVente
+                    articles={mesArticles}
+                    onAjouterClick={() => setOnglet("vendre")}
+                    onChange={rechargerBoutique}
+                  />
 
-                {/* 3. Carte Statistiques (1:1 Identique & Cliquable) */}
-                <CarteStatistiquesBoutique
-                  profile={profile}
-                  boutique={maBoutiqueActive}
-                  articles={mesArticles}
-                  onClick={() => setOnglet("vendre")}
-                />
+                  {/* 3. Carte Statistiques */}
+                  <CarteStatistiquesBoutique
+                    profile={profile}
+                    boutique={maBoutiqueActive}
+                    articles={mesArticles}
+                    onClick={() => setOnglet("vendre")}
+                  />
+                </div>
               </>
             ) : (
               <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
@@ -308,8 +311,8 @@ export default function MarketplaceClient() {
             )}
           </aside>
 
-          {/* ZONE PRINCIPALE : Catalogue ou Gestion Vendeur */}
-          <main className="lg:col-span-8">
+          {/* ZONE PRINCIPALE : 50% de la largeur (lg:col-span-6) */}
+          <main className="lg:col-span-6">
             {onglet === "acheter" ? (
               <VueAcheteur onVoirBoutique={(b) => setBoutiqueModal(b)} />
             ) : (
@@ -591,7 +594,7 @@ function VueAcheteur({ onVoirBoutique }) {
         />
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {resultats.map((a, i) => (
           <CarteArticle
             key={a.id}
