@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -17,6 +18,7 @@ type Offre = {
   titre: string;
   localisation: string;
   contrat: string;
+  posterUri?: string;
 };
 
 const OFFRES: Offre[] = [
@@ -30,6 +32,10 @@ const OFFRES: Offre[] = [
     titre: 'Opérateur Polyvalent — Conducteur de Bétonnière & Tractopelle',
     localisation: 'Thiès, Sénégal',
     contrat: 'Plein Temps',
+    // Offre réelle et publique, publiée sur ffacilite.com — affiche réelle
+    // du bucket public "job-offers", pas une image inventée.
+    posterUri:
+      'https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788440280838-0.jpg',
   },
   {
     id: '2',
@@ -177,10 +183,20 @@ function CarteOffre({ offre }: { offre: Offre }) {
         </View>
       </View>
 
-      <View className="rounded-xl bg-[#0B0F17] border border-dashed border-[#232D40] h-36 items-center justify-center mb-3.5">
-        <Ionicons name="image-outline" size={22} color="#3d4a61" />
-        <Text className="text-[10px] font-medium text-gray-600 mt-1">Affiche du recrutement</Text>
-      </View>
+      {offre.posterUri ? (
+        <Image
+          source={{ uri: offre.posterUri }}
+          alt={`Affiche de l'offre : ${offre.titre}`}
+          contentFit="cover"
+          transition={150}
+          className="w-full h-48 rounded-xl bg-[#0B0F17] mb-3.5"
+        />
+      ) : (
+        <View className="rounded-xl bg-[#0B0F17] border border-dashed border-[#232D40] h-36 items-center justify-center mb-3.5">
+          <Ionicons name="image-outline" size={22} color="#3d4a61" />
+          <Text className="text-[10px] font-medium text-gray-600 mt-1">Affiche du recrutement</Text>
+        </View>
+      )}
 
       <Pressable className="flex-row items-center justify-center gap-2 bg-blue-600 rounded-xl py-3 mb-2.5">
         <Ionicons name="send" size={14} color="#ffffff" />
