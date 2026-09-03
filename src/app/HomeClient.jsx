@@ -1486,7 +1486,7 @@ export default function Home({ initialOffers = [] }) {
 
             {/* Carte Expériences (Dynamique) */}
             {experiences.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs flex flex-col space-y-2.5">
+              <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs flex flex-col justify-between min-h-[108px]">
                 <button
                   type="button"
                   onClick={() => setExperienceExpanded((v) => !v)}
@@ -1577,12 +1577,12 @@ export default function Home({ initialOffers = [] }) {
             ) : (userSession || userProfile) ? (
               <>
                 {/* Carte Statistiques */}
-                <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
-                  <div className="flex justify-between items-center mb-2">
+                <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs h-[108px] flex flex-col justify-between">
+                  <div className="flex justify-between items-center pb-1.5 border-b border-gray-100 shrink-0">
                     <h3 className="text-[10px] font-extrabold text-gray-800 uppercase tracking-wider">{t.statsTitle}</h3>
                     <i className="fa-solid fa-chevron-right text-gray-400 text-[10px] cursor-pointer"></i>
                   </div>
-                  <div className="space-y-2 font-bold text-[11px]">
+                  <div className="space-y-1 font-bold text-[11px] flex-1 flex flex-col justify-center pt-0.5">
                     <div className="flex justify-between items-center py-0.5">
                       <span className="text-gray-500">{t.statsViews}</span>
                       <span className="text-blue-600 font-extrabold text-xs">{userProfile?.profile_views ?? 0}</span>
