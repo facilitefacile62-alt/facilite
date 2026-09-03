@@ -554,7 +554,12 @@ export default function BanqueDonneesPage() {
             )}
           </div>
 
-          {nbPages > 1 && (
+          {/* La Banque de CV a sa propre pagination (BanqueCvTab, total et
+              page distincts) : sans cette exclusion, ce pied hérite du
+              `total` laissé par le dernier onglet réellement chargé — le
+              chargement pour banque_cv est court-circuité dans charger()
+              et ne remet jamais `total` à jour. */}
+          {ongletActif !== "banque_cv" && nbPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
               <button
                 type="button"
