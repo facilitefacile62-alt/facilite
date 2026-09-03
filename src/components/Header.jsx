@@ -1638,26 +1638,8 @@ export default function Header() {
                     </>
                   )}
 
-                  {/* Liens supplémentaires de compte */}
-                  <div className="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-800 space-y-0.5">
-                    <Link
-                      href="/profil"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition cursor-pointer"
-                    >
-                      <i className="fa-solid fa-id-card text-emerald-600 text-xs w-4"></i>
-                      <span>Mon Profil &amp; Mes CVs</span>
-                    </Link>
-
-                    <Link
-                      href="/marketplace"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition cursor-pointer"
-                    >
-                      <i className="fa-solid fa-store text-blue-600 text-xs w-4"></i>
-                      <span>Ma Boutique &amp; Mes Ventes</span>
-                    </Link>
-
+                  {/* Déconnexion */}
+                  <div className="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-800">
                     <button
                       type="button"
                       onClick={async () => {
