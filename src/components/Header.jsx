@@ -1390,13 +1390,6 @@ export default function Header() {
             </div>
           )}
 
-          {/* Installer l'application (PWA) — le bouton s'efface tout seul si
-              déjà installée ou si le navigateur ne propose aucune voie
-              d'installation, voir BoutonInstallerApp. */}
-          <div className="hidden sm:flex items-center">
-            <BoutonInstallerApp compact />
-          </div>
-
           {/* Centre de Notifications Interactif avec Compteur Dynamique (Desktop uniquement, seulement si l'utilisateur est connecté) */}
           {userSession && (
             <button
