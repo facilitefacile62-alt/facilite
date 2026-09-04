@@ -691,6 +691,26 @@ async function runImageOcr(buffer) {
   }
 }
 
+/**
+ * Rend la première page d'un PDF en image PNG, pour servir de vignette
+ * d'aperçu (liste admin de la banque de CV). Scale réduit par rapport à
+ * l'OCR (qui vise la lisibilité du texte) : une vignette n'a pas besoin de
+ * la même résolution. Ne lève jamais — un aperçu manquant retombe sur une
+ * icône générique côté écran, ce n'est jamais bloquant pour l'import.
+ */
+export async function genererApercuPdf(buffer) {
+  try {
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const image = await renderPageAsImage(pdf, 1, {
+      canvasImport: () => import("@napi-rs/canvas"),
+      scale: 0.6,
+    });
+    return Buffer.from(image);
+  } catch {
+    return null;
+  }
+}
+
 async function ocrPdfPages(pdf, numPages) {
   let combinedText = "";
   for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {

@@ -609,6 +609,18 @@ export default function BanqueCvTab() {
                     onClick={() => ouvrirDetail(c.id)}
                     className="p-3 flex items-start gap-3 bg-white hover:bg-gray-50 cursor-pointer transition"
                   >
+                    {c.apercuUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- vignette d'un fichier privé signé, pas un asset à optimiser par next/image
+                      <img
+                        src={c.apercuUrl}
+                        alt={`Aperçu du CV de ${c.nom_complet || "candidat"}`}
+                        className="shrink-0 w-12 h-16 rounded-lg object-cover border border-gray-200 bg-gray-50"
+                      />
+                    ) : (
+                      <div className="shrink-0 w-12 h-16 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
+                        <i className="fa-solid fa-file-lines text-gray-300"></i>
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-black text-gray-900 truncate">{c.nom_complet || "Nom non renseigné"}</span>

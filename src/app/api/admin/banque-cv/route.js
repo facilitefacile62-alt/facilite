@@ -43,7 +43,7 @@ export async function GET(req) {
   let requete = admin
     .from("banque_cv")
     .select(
-      "id, nom_complet, categorie, niveau_etude_code, annees_experience, competences, resume_profil, statut, erreur_analyse, created_at",
+      "id, nom_complet, categorie, niveau_etude_code, annees_experience, competences, resume_profil, statut, erreur_analyse, created_at, apercu_cv",
       { count: "exact" }
     )
     .order("categorie", { ascending: true, nullsFirst: false })
@@ -58,7 +58,24 @@ export async function GET(req) {
     return NextResponse.json({ error: `Lecture impossible : ${lectureError.message}` }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, cvs: data || [], total: count || 0, page });
+  // Signature en un seul appel batch pour toute la page plutôt qu'un appel
+  // par ligne : le bucket "banque-cv" est privé (voir la migration), aucune
+  // vignette n'est affichable sans URL signée. Courte durée (10 min) : la
+  // liste se recharge de toute façon à chaque changement de page/filtre.
+  const cheminsApercu = (data || []).map((c) => c.apercu_cv).filter(Boolean);
+  let urlsApercu = {};
+  if (cheminsApercu.length > 0) {
+    const { data: signes } = await admin.storage.from("banque-cv").createSignedUrls(cheminsApercu, 600);
+    for (const s of signes || []) {
+      if (s.signedUrl && !s.error) urlsApercu[s.path] = s.signedUrl;
+    }
+  }
+  const cvs = (data || []).map(({ apercu_cv, ...c }) => ({
+    ...c,
+    apercuUrl: apercu_cv ? urlsApercu[apercu_cv] || null : null,
+  }));
+
+  return NextResponse.json({ success: true, cvs, total: count || 0, page });
 }
 
 export async function DELETE(req) {

@@ -12,7 +12,7 @@ import { NextResponse } from "next/server";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isCallerAdmin } from "@/lib/rbac";
-import { extractTextFromFile } from "@/lib/documentParser";
+import { extractTextFromFile, genererApercuPdf } from "@/lib/documentParser";
 import { validateUploadedFile } from "@/lib/validation";
 import { categoriserCv, embarquerTexte, checkBanqueCvQuota, BANQUE_CV_DAILY_QUOTA } from "@/lib/banqueCvIA";
 
@@ -114,6 +114,25 @@ export async function POST(req) {
     return NextResponse.json({ error: `Enregistrement du CV impossible : ${erreurUploadCv.message}` }, { status: 500 });
   }
 
+  // Vignette d'aperçu : rendu de la 1ère page pour un PDF, le fichier
+  // lui-même s'il est déjà une image (rien à générer, juste réutiliser le
+  // chemin déjà envoyé). Un DOCX n'a pas de moteur de rendu dans ce projet —
+  // apercu_cv reste NULL, l'écran retombe sur une icône générique, jamais
+  // une erreur qui ferait échouer l'import pour autant.
+  let cheminApercu = null;
+  if (fichierCv.type === "application/pdf") {
+    const imageApercu = await genererApercuPdf(bufCv);
+    if (imageApercu) {
+      const chemin = `${dossier}-apercu.png`;
+      const { error: erreurUploadApercu } = await admin.storage
+        .from("banque-cv")
+        .upload(chemin, imageApercu, { contentType: "image/png", upsert: false });
+      if (!erreurUploadApercu) cheminApercu = chemin;
+    }
+  } else if (fichierCv.type.startsWith("image/")) {
+    cheminApercu = cheminCv;
+  }
+
   let cheminLettre = null;
   if (bufLettre) {
     const chemin = `${dossier}-lettre.${EXTENSIONS_PAR_MIME[fichierLettre.type] || "bin"}`;
@@ -166,6 +185,7 @@ export async function POST(req) {
       embedding: embedding ? `[${embedding.join(",")}]` : null,
       fichier_cv: cheminCv,
       fichier_lettre: cheminLettre,
+      apercu_cv: cheminApercu,
       statut: analyse ? "analyse" : "erreur",
       erreur_analyse: erreurAnalyse,
     })
