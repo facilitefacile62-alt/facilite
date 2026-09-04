@@ -7,7 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 function RegisterForm() {
-  const [fullName, setFullName] = useState("");
+  const [nom, setNom] = useState("");
+  const [prenom, setPrenom] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [honeypot, setHoneypot] = useState("");
@@ -16,7 +17,6 @@ function RegisterForm() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/";
@@ -34,12 +34,17 @@ function RegisterForm() {
       setErrorMessage("Le mot de passe doit contenir au moins 6 caractères.");
       return;
     }
-    
+
+    // Un seul champ full_name est transmis à Supabase (voir
+    // /api/auth/register et le déclencheur handle_new_user) : Nom/Prénom
+    // ne sont qu'une meilleure saisie côté écran, pas un nouveau schéma.
+    const fullName = `${prenom.trim()} ${nom.trim()}`.trim();
+
     if (honeypot) {
       setIsLoading(true);
       setTimeout(() => {
         setIsLoading(false);
-        setIsSuccess(true); // Fake success for bots
+        router.push(`/verifiez-votre-email?email=${encodeURIComponent(email.trim())}`); // Bot: même parcours, sans le tromper sur l'issue
       }, 1500);
       return;
     }
@@ -64,7 +69,7 @@ function RegisterForm() {
         body: JSON.stringify({
           email: email.trim(),
           password,
-          fullName: fullName.trim(),
+          fullName,
           emailRedirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
         }),
       });
@@ -83,8 +88,13 @@ function RegisterForm() {
       // policy « Insertion de son propre profil » (auth.uid() = id) le
       // refusait en silence.
 
-      setIsLoading(false);
-      setIsSuccess(true);
+      // Nouvelle page dédiée plutôt qu'un message inline : la connexion
+      // exige un e-mail confirmé (voir "Email not confirmed" dans
+      // login/page.js), donc renvoyer vers /login ici reviendrait à faire
+      // remplir le formulaire de connexion pour se faire rejeter.
+      const params = new URLSearchParams({ email: email.trim() });
+      if (redirectUrl && redirectUrl !== "/") params.set("redirect", redirectUrl);
+      router.push(`/verifiez-votre-email?${params.toString()}`);
     } catch (err) {
       setIsLoading(false);
       setErrorMessage("Une erreur imprévue est survenue.");
@@ -161,7 +171,7 @@ function RegisterForm() {
           </div>
 
           {/* Bannière d'incitation quand l'utilisateur vient d'une redirection */}
-          {redirectUrl && redirectUrl !== "/" && !isSuccess && (
+          {redirectUrl && redirectUrl !== "/" && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 mb-6 flex items-start gap-2.5 text-xs text-emerald-900 font-bold animate-fade-in shadow-2xs">
               <i className="fa-solid fa-sparkles text-emerald-600 text-sm mt-0.5 flex-shrink-0"></i>
               <div>
@@ -171,30 +181,6 @@ function RegisterForm() {
             </div>
           )}
 
-          {isSuccess ? (
-            <div className="text-center py-6 animate-fade-in">
-              <div className="w-16 h-16 bg-[#10E688]/20 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                ✓
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Compte créé avec succès !</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Vos informations ont bien été enregistrées sur Supabase. Vous pouvez maintenant vous connecter.
-              </p>
-              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 mb-6 flex items-start gap-2.5 text-left">
-                <i className="fa-solid fa-mobile-screen text-emerald-600 text-sm mt-0.5 flex-shrink-0"></i>
-                <p className="text-xs text-emerald-900 font-semibold">
-                  Pensez à vérifier votre numéro de téléphone une fois connecté (section « Sécurité &amp; Connexion »
-                  de votre profil) : une fois vérifié, il devient une méthode de connexion à part entière.
-                </p>
-              </div>
-              <Link
-                href={`/login${redirectUrl && redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
-                className="inline-block w-full py-3.5 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md transition-all duration-200"
-              >
-                Se connecter et continuer
-              </Link>
-            </div>
-          ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <input
                 type="text"
@@ -206,19 +192,34 @@ function RegisterForm() {
                 autoComplete="off"
               />
 
-              {/* Champ Nom Complet */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  placeholder="Enter your full name"
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
-                />
+              {/* Champs Nom / Prénom, côte à côte */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Nom
+                  </label>
+                  <input
+                    type="text"
+                    value={nom}
+                    onChange={(e) => setNom(e.target.value)}
+                    required
+                    placeholder="Votre nom"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Prénom
+                  </label>
+                  <input
+                    type="text"
+                    value={prenom}
+                    onChange={(e) => setPrenom(e.target.value)}
+                    required
+                    placeholder="Votre prénom"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
+                  />
+                </div>
               </div>
 
               {/* Champ Email */}
@@ -343,7 +344,6 @@ function RegisterForm() {
                 </p>
               </div>
             </form>
-          )}
         </div>
       </main>
 

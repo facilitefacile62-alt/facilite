@@ -17,6 +17,11 @@ const PUBLIC_ROUTES = [
   "/login",
   "/register",
   "/forgot-password",
+  // Atteinte juste après l'inscription, avant toute session confirmée —
+  // même raisonnement que /auth/callback : doit rester publique pour ne
+  // pas rediriger vers /login la personne qu'elle vient d'orienter hors de
+  // /login.
+  "/verifiez-votre-email",
   "/faq",
   // Échange du code OAuth (voir src/app/auth/callback/route.js) : atteint
   // AVANT qu'un cookie de session existe, par construction — doit rester
