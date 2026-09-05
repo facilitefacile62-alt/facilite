@@ -558,7 +558,23 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     const lng = coordonnee(a.boutique_lng);
     if (lat == null || lng == null || idsVus.has(a.boutique_id)) continue;
     idsVus.add(a.boutique_id);
-    boutiquesPourGlobe.push({ lat, lng, nom: a.boutique_nom });
+    const articlesDeBoutique = resultats.filter((r) => r.boutique_id === a.boutique_id);
+    boutiquesPourGlobe.push({
+      id: a.boutique_id,
+      lat,
+      lng,
+      nom: a.boutique_nom,
+      quartier: a.quartier,
+      ville: a.ville,
+      telephone_whatsapp: a.telephone_whatsapp,
+      whatsappUrl: a.whatsappUrl,
+      photo: a.photos?.[0] || null,
+      titre: a.titre,
+      prix_xof: a.prix_xof,
+      statut: a.statut,
+      articlesCount: articlesDeBoutique.length,
+      articles: articlesDeBoutique,
+    });
   }
 
   // Liste complète des catégories affichées dans la barre horizontale mobile (1:1 Identique à la capture et au menu)
@@ -586,6 +602,15 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       {globeOuvert && (
         <GlobeExplorateurBoutiques
           boutiques={boutiquesPourGlobe}
+          tousArticles={resultats}
+          onVoirBoutique={(b) => {
+            setGlobeOuvert(false);
+            onVoirBoutique?.(b);
+          }}
+          onVoirArticle={(art) => {
+            setGlobeOuvert(false);
+            onVoirArticle?.(art);
+          }}
           onFermer={() => setGlobeOuvert(false)}
         />
       )}
