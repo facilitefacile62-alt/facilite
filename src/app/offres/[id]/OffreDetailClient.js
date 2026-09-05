@@ -70,6 +70,53 @@ export default function OffreDetailClient({ initialOffer }) {
   const isAdmin = userRole === "admin";
   const canManage = isOwner || isAdmin;
 
+  // Score de correspondance pour CETTE offre précise — resume_offer_similarity
+  // (même RPC que computeApplicationMatch dans src/lib/matchScore.js, appelé
+  // ici juste pour l'affichage, avant toute candidature), pas match_job_offers
+  // (qui compare une liste entière, inutile pour une seule offre déjà connue).
+  // Seuil à 75% : au-delà, bandeau "correspond parfaitement à votre profil",
+  // même seuil que le badge des listes (voir BadgeMatchingOffre.jsx).
+  const [matchScoreOffre, setMatchScoreOffre] = useState(null);
+  useEffect(() => {
+    let annule = false;
+    async function calculer() {
+      if (!userId || isOwner) {
+        setMatchScoreOffre(null);
+        return;
+      }
+      try {
+        const { data: resume } = await supabase
+          .from("resumes")
+          .select("id")
+          .eq("user_id", userId)
+          .not("embedding", "is", null)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!resume?.id) {
+          if (!annule) setMatchScoreOffre(null);
+          return;
+        }
+
+        const { data: similarity, error } = await supabase.rpc("resume_offer_similarity", {
+          p_resume_id: resume.id,
+          p_offer_id: offer.id,
+        });
+
+        if (!error && typeof similarity === "number" && !annule) {
+          setMatchScoreOffre(similarity);
+        }
+      } catch (err) {
+        console.error("Exception calcul score de correspondance offre:", err);
+      }
+    }
+    calculer();
+    return () => {
+      annule = true;
+    };
+  }, [userId, isOwner, offer.id]);
+
   const [uploading, setUploading] = useState(false);
 
   const handleImageUpload = async (e) => {
@@ -530,6 +577,22 @@ export default function OffreDetailClient({ initialOffer }) {
                   <div className="fixed top-20 right-4 z-[700] bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl animate-fade-in flex items-center gap-2">
                     <i className="fa-solid fa-circle-check text-emerald-400"></i>
                     <span className="text-sm font-semibold">{toast}</span>
+                  </div>
+                )}
+
+                {/* Alerte de correspondance forte — même seuil (75%) que le badge
+                    des listes d'offres, voir BadgeMatchingOffre.jsx. */}
+                {matchScoreOffre != null && matchScoreOffre >= 0.75 && (
+                  <div className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg flex-shrink-0">
+                      <i className="fa-solid fa-star"></i>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold">Cette offre correspond parfaitement à votre profil</h4>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                        {Math.round(matchScoreOffre * 100)}% de compatibilité avec votre CV le plus récent.
+                      </p>
+                    </div>
                   </div>
                 )}
 
