@@ -49,7 +49,11 @@ const contentSecurityPolicy = [
   "media-src 'self' blob: data: https://*.supabase.co",
   // Clarity renvoie ses mesures par fetch/beacon vers *.clarity.ms : sans
   // cette entrée, le script se chargerait mais n'enverrait toujours rien.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co https://plausible.io https://*.clarity.ms",
+  // tiles.openfreemap.org : tuiles vectorielles, sprite et polices du globe
+  // MapLibre du Marketplace — MapLibre récupère tout via fetch/XHR (même les
+  // tuiles "raster"), donc connect-src est la directive qui s'applique, pas
+  // img-src.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co https://plausible.io https://*.clarity.ms https://tiles.openfreemap.org",
   "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co https://www.youtube.com https://www.youtube-nocookie.com https://maps.google.com https://*.google.com",
   "object-src 'self' blob: data: https://*.supabase.co",
   "base-uri 'self'",
