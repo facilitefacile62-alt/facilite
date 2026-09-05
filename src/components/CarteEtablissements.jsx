@@ -8,11 +8,6 @@
 // URL calculée à l'exécution — bloqués par la CSP, sans erreur visible, donc
 // une carte vide sans explication), et la molette désactivée puisque la carte
 // est au milieu d'une page qu'on fait défiler.
-//
-// Une couleur par métier plutôt qu'un simple ouvert/fermé : la question posée
-// par cet écran n'est pas seulement « qui est ouvert » mais « qui est ouvert,
-// PARMI QUOI ». Un point gris (fermé) reste visible mais discret, pour que la
-// carte dise aussi ce qui existe à proximité sans être disponible maintenant.
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const COULEURS = {
@@ -33,6 +28,9 @@ export default function CarteEtablissements({ etablissements, depart }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const [echec, setEchec] = useState(false);
+  
+  const [estPliee, setEstPliee] = useState(false);
+  const [modeCompact, setModeCompact] = useState(false);
 
   const points = useMemo(
     () => (etablissements || []).map((e) => ({ ...e, position: point(e.latitude, e.longitude) })).filter((e) => e.position),
@@ -42,6 +40,14 @@ export default function CarteEtablissements({ etablissements, depart }) {
   useEffect(() => {
     let annule = false;
     let carte = null;
+
+    if (estPliee) {
+      if (carteRef.current) {
+        carteRef.current.remove();
+        carteRef.current = null;
+      }
+      return;
+    }
 
     (async () => {
       if (!conteneur.current || points.length === 0) return;
@@ -107,24 +113,84 @@ export default function CarteEtablissements({ etablissements, depart }) {
       carteRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, depart]);
+  }, [points, depart, estPliee]);
+
+  useEffect(() => {
+    if (!estPliee && carteRef.current) {
+      setTimeout(() => {
+        carteRef.current?.invalidateSize();
+      }, 250);
+    }
+  }, [modeCompact, estPliee]);
 
   if (points.length === 0 || echec) return null;
 
   return (
-    <div className="mb-4 rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-      <div
-        ref={conteneur}
-        className="w-full h-[220px] sm:h-[280px] z-0"
-        style={{ background: "#e5e7eb" }}
-        aria-label="Carte des établissements proches"
-      />
-      <div className="px-4 py-2 flex items-center gap-3 text-[10px] font-bold text-gray-500 dark:text-gray-400">
-        <span><span className="inline-block w-2 h-2 rounded-full bg-[#f97316] mr-1"></span>Point Wave</span>
-        <span><span className="inline-block w-2 h-2 rounded-full bg-[#16a34a] mr-1"></span>Pharmacie</span>
-        <span><span className="inline-block w-2 h-2 rounded-full bg-[#2563eb] mr-1"></span>Clinique</span>
-        <span><span className="inline-block w-2 h-2 rounded-full bg-gray-400 mr-1"></span>Fermé</span>
+    <div className="mb-4 rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300">
+      {/* En-tête avec contrôles */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 sm:px-4 py-2 bg-gray-50/90 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="text-xs font-black text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+            <i className="fa-solid fa-map-location-dot text-[#1877F2]"></i>
+            <span>Établissements ({points.length})</span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 ml-auto">
+          {!estPliee && (
+            <button
+              type="button"
+              onClick={() => setModeCompact(!modeCompact)}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs border ${
+                modeCompact
+                  ? "bg-[#1877F2] text-white border-[#1877F2]"
+                  : "bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
+              }`}
+              title={modeCompact ? "Agrandir la carte" : "Réduire la hauteur pour gagner de l'espace"}
+            >
+              <i className={`fa-solid ${modeCompact ? "fa-up-right-and-down-left-from-center" : "fa-down-left-and-up-right-to-center"} text-[10px] ${modeCompact ? "text-white" : "text-[#1877F2]"}`}></i>
+              <span className="hidden xs:inline sm:inline">
+                {modeCompact ? "Agrandir" : "Gagner de l'espace"}
+              </span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setEstPliee(!estPliee)}
+            className="px-2.5 py-1 rounded-xl bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+            title={estPliee ? "Déplier la carte" : "Plier la carte"}
+          >
+            <i className={`fa-solid ${estPliee ? "fa-chevron-down text-emerald-500" : "fa-chevron-up text-gray-500"} text-[10px]`}></i>
+            <span>{estPliee ? "Déplier la carte" : "Plier la carte"}</span>
+          </button>
+        </div>
       </div>
+
+      {!estPliee && (
+        <div className="animate-in fade-in duration-200">
+          <div
+            ref={conteneur}
+            className={`w-full ${modeCompact ? "h-[135px] sm:h-[150px]" : "h-[220px] sm:h-[280px]"} z-0 transition-all duration-300`}
+            style={{ background: "#e5e7eb" }}
+            aria-label="Carte des établissements proches"
+          />
+          <div className="px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+            <div className="flex items-center gap-3">
+              <span><span className="inline-block w-2 h-2 rounded-full bg-[#f97316] mr-1"></span>Point Wave</span>
+              <span><span className="inline-block w-2 h-2 rounded-full bg-[#16a34a] mr-1"></span>Pharmacie</span>
+              <span><span className="inline-block w-2 h-2 rounded-full bg-[#2563eb] mr-1"></span>Clinique</span>
+              <span><span className="inline-block w-2 h-2 rounded-full bg-gray-400 mr-1"></span>Fermé</span>
+            </div>
+            {modeCompact && (
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                <i className="fa-solid fa-check mr-1"></i>Mode compact
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
