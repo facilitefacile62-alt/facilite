@@ -80,9 +80,17 @@ export default function GlobeExplorateurBoutiques({ boutiques = [], onFermer }) 
     });
     carteRef.current = carte;
 
-    carte.on("style.load", () => {
-      carte.setProjection({ type: "globe" });
-    });
+    // Projection "globe" temporairement désactivée : un écran réel (GPU
+    // Mali, très répandu sur les téléphones Android d'entrée/milieu de
+    // gamme au Sénégal) affichait un canevas noir alors que la même page
+    // fonctionnait normalement sur ordinateur — correspond à un bug connu
+    // de MapLibre sur ce type de GPU (issue #7419 du dépôt officiel). Étape
+    // de diagnostic : la carte plate normale doit rester fiable partout
+    // pendant qu'on confirme précisément l'origine avant de réactiver le
+    // globe, éventuellement de façon conditionnelle selon l'appareil.
+    // carte.on("style.load", () => {
+    //   carte.setProjection({ type: "globe" });
+    // });
 
     carte.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
 
