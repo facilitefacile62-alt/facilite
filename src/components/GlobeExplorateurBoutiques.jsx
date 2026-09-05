@@ -25,7 +25,12 @@
 // développeur indépendant, financé par dons, sans garantie de disponibilité
 // (CGU "AS-IS"). Accepté comme risque connu pour l'instant.
 import { useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
+// Import namespace, pas par défaut : avec l'interop CJS/ESM de ce
+// bundler, `import maplibregl from "maplibre-gl"` laissait maplibregl
+// undefined à l'exécution ("Cannot read properties of undefined
+// (reading 'Map')"), constaté en conditions réelles alors que l'exemple
+// officiel (qui utilise ce même import namespace) fonctionnait.
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { positionActuelle } from "@/lib/marketplaceData";
 
@@ -64,6 +69,14 @@ export default function GlobeExplorateurBoutiques({ boutiques = [], onFermer }) 
       center: CENTRE_SENEGAL,
       zoom: 2,
       attributionControl: { compact: true },
+      // Sans ça, le tampon WebGL est effacé juste après chaque image
+      // affichée — invisible pour une personne qui regarde l'écran en
+      // continu (le navigateur affiche toujours la dernière image rendue),
+      // mais une capture externe (test automatisé, export d'image) tombe
+      // souvent sur un tampon vide. Confirmé par mesure directe des pixels :
+      // le rendu est correct, seule la capture d'écran automatisée le
+      // ratait — même mécanisme déjà rencontré avec le globe cobe.
+      preserveDrawingBuffer: true,
     });
     carteRef.current = carte;
 
