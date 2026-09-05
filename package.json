@@ -33,6 +33,7 @@
     "amqplib": "^2.0.1",
     "botid": "^1.5.11",
     "browser-image-compression": "^2.0.2",
+    "cobe": "^2.0.1",
     "googleapis": "^174.0.1",
     "html2canvas-pro": "^2.3.3",
     "jspdf": "^4.2.1",

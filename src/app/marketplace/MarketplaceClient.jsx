@@ -25,6 +25,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import CarteBoutiques from "@/components/CarteBoutiques";
 import CapturePosition from "@/components/CapturePosition";
+import GlobeExplorateurBoutiques from "@/components/GlobeExplorateurBoutiques";
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
   chargerMesBoutiques,
@@ -444,6 +445,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   const [resultats, setResultats] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
+  const [globeOuvert, setGlobeOuvert] = useState(false);
 
   const lancerRecherche = useCallback(
     async (pos) => {
@@ -507,8 +509,29 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     return () => clearTimeout(t);
   }, [categorie, rayonKm, seulementEnStock, texte, position, lancerRecherche]);
 
+  const boutiquesPourGlobe = [];
+  const idsVus = new Set();
+  for (const a of resultats) {
+    const lat = coordonnee(a.boutique_lat);
+    const lng = coordonnee(a.boutique_lng);
+    if (lat == null || lng == null || idsVus.has(a.boutique_id)) continue;
+    idsVus.add(a.boutique_id);
+    boutiquesPourGlobe.push({ lat, lng, nom: a.boutique_nom });
+  }
+
   return (
     <div>
+      {globeOuvert && (
+        <GlobeExplorateurBoutiques
+          boutiques={boutiquesPourGlobe}
+          onFermer={() => setGlobeOuvert(false)}
+          onVoirCarte={() => {
+            setGlobeOuvert(false);
+            localiser();
+          }}
+        />
+      )}
+
       {/* Barre de recherche style mobile moderne (Inspirée de la capture) */}
       <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-3 sm:p-4 mb-4 shadow-xs">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -537,6 +560,15 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
             <span className="hidden sm:inline ml-2">
               {position ? "Actualiser ma position" : "Autour de moi"}
             </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setGlobeOuvert(true)}
+            className="w-10 h-10 sm:w-auto sm:px-4 sm:py-3 rounded-full sm:rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition cursor-pointer flex items-center justify-center shrink-0 bg-gray-900 hover:bg-black text-white shadow-xs"
+            title="Explorer les boutiques sur le globe"
+          >
+            <span aria-hidden="true">🌍</span>
+            <span className="hidden sm:inline ml-2">Explorer</span>
           </button>
         </div>
 
