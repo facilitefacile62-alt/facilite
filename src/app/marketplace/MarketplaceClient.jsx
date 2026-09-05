@@ -232,7 +232,7 @@ export default function MarketplaceClient() {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {[
               { id: "acheter", label: "Acheter (Catalogue)", icon: "fa-magnifying-glass" },
               { id: "vendre", label: "Ma Boutique (Vendre)", icon: "fa-store" },
@@ -251,6 +251,17 @@ export default function MarketplaceClient() {
                 {t.label}
               </button>
             ))}
+
+            {/* Bouton + Publier (Ajout d'article rapide dans l'espace à côté) */}
+            <button
+              type="button"
+              onClick={() => setOnglet("vendre")}
+              className="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black bg-[#10E688] hover:bg-[#0fd27c] text-gray-950 transition cursor-pointer flex items-center shadow-md active:scale-95 border border-emerald-400/40"
+              title="Publier un nouvel article sur la Marketplace"
+            >
+              <i className="fa-solid fa-plus mr-1.5 text-xs font-black"></i>
+              <span>Publier</span>
+            </button>
           </div>
         </header>
 
