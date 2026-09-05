@@ -463,6 +463,31 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
   const [globeOuvert, setGlobeOuvert] = useState(false);
+  const [modalEasyReturn, setModalEasyReturn] = useState(false);
+
+  const categoriesScrollRef = useRef(null);
+  const isDraggingCat = useRef(false);
+  const startXCat = useRef(0);
+  const scrollLeftCat = useRef(0);
+
+  const handleCatMouseDown = (e) => {
+    if (!categoriesScrollRef.current) return;
+    isDraggingCat.current = true;
+    startXCat.current = e.pageX - categoriesScrollRef.current.offsetLeft;
+    scrollLeftCat.current = categoriesScrollRef.current.scrollLeft;
+  };
+
+  const handleCatMouseMove = (e) => {
+    if (!isDraggingCat.current || !categoriesScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - categoriesScrollRef.current.offsetLeft;
+    const walk = (x - startXCat.current) * 1.5;
+    categoriesScrollRef.current.scrollLeft = scrollLeftCat.current - walk;
+  };
+
+  const handleCatMouseUp = () => {
+    isDraggingCat.current = false;
+  };
 
   const lancerRecherche = useCallback(
     async (pos) => {
@@ -536,6 +561,21 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     boutiquesPourGlobe.push({ lat, lng, nom: a.boutique_nom });
   }
 
+  // Liste des catégories horizontales défilables (Style 1:1 Capture All, Women, Electronics, Men, Home, Office...)
+  const CATEGORIES_DEFILEMENT = [
+    { id: null, label: "All" },
+    { id: "mode", label: "Women" },
+    { id: "electronique", label: "Electronics" },
+    { id: "telephones", label: "Men & Tech" },
+    { id: "maison", label: "Home" },
+    { id: "informatique", label: "Office" },
+    { id: "alimentation", label: "Food & Drinks" },
+    { id: "vehicules", label: "Vehicles" },
+    { id: "immobilier", label: "Real Estate" },
+    { id: "services", label: "Services" },
+    { id: "autre", label: "Other" },
+  ];
+
   return (
     <div>
       {globeOuvert && (
@@ -543,6 +583,121 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
           boutiques={boutiquesPourGlobe}
           onFermer={() => setGlobeOuvert(false)}
         />
+      )}
+
+      {/* 1. BARRE DE CATÉGORIES HORIZONTALE DÉFILABLE SUR TÉLÉPHONE & PC (Style 1:1 Capture d'écran) */}
+      <div className="w-full mb-2.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-3 pt-2 pb-1 shadow-xs overflow-hidden">
+        <div
+          ref={categoriesScrollRef}
+          onMouseDown={handleCatMouseDown}
+          onMouseMove={handleCatMouseMove}
+          onMouseUp={handleCatMouseUp}
+          onMouseLeave={handleCatMouseUp}
+          className="flex items-center gap-5 sm:gap-7 overflow-x-auto no-scrollbar scroll-smooth py-1 select-none cursor-grab active:cursor-grabbing"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {CATEGORIES_DEFILEMENT.map((cat) => {
+            const estActif = (categorie === null && cat.id === null) || categorie === cat.id;
+            return (
+              <button
+                key={cat.id || "all"}
+                type="button"
+                onClick={() => onSelectCategorie?.(cat.id)}
+                className={`shrink-0 text-sm sm:text-base font-black transition-all pb-1.5 relative cursor-pointer ${
+                  estActif
+                    ? "text-gray-950 dark:text-white"
+                    : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 font-bold"
+                }`}
+              >
+                <span>{cat.label}</span>
+                {estActif && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-black dark:bg-white rounded-full transition-all" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. BANDEAU DE RÉASSURANCE / RETOURS FACILES (1:1 Capture : Easy Return View more) */}
+      <div className="mb-3.5 bg-[#FAF6ED] dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/50 rounded-2xl px-3.5 py-2.5 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-amber-950 dark:text-amber-200">
+          <i className="fa-solid fa-file-lines text-amber-800 dark:text-amber-400 text-sm"></i>
+          <span>Easy Return</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setModalEasyReturn(true)}
+          className="text-xs font-bold text-gray-700 dark:text-amber-300 hover:text-black dark:hover:text-white hover:underline cursor-pointer flex items-center gap-1"
+        >
+          <span>View more</span>
+          <i className="fa-solid fa-chevron-right text-[9px] text-gray-500"></i>
+        </button>
+      </div>
+
+      {/* Modal d'information Easy Return */}
+      {modalEasyReturn && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setModalEasyReturn(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-800 space-y-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                  <i className="fa-solid fa-file-shield text-base"></i>
+                </span>
+                <h3 className="text-base font-black text-gray-900 dark:text-white">
+                  Easy Return &amp; Garanties
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalEasyReturn(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-500 flex items-center justify-center text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              <div className="p-3 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/50 flex items-start gap-2.5">
+                <i className="fa-solid fa-rotate-left text-amber-700 mt-0.5"></i>
+                <div>
+                  <strong className="text-gray-900 dark:text-white block font-bold">Retours &amp; Échanges sous 48h</strong>
+                  <span>Possibilité de retourner ou échanger tout article non conforme auprès de la boutique partenaire.</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/50 flex items-start gap-2.5">
+                <i className="fa-brands fa-whatsapp text-emerald-600 text-base mt-0.5"></i>
+                <div>
+                  <strong className="text-gray-900 dark:text-white block font-bold">Contact WhatsApp Direct</strong>
+                  <span>Échangez directement avec le commerçant pour voir des photos réelles et fixer la livraison.</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/50 flex items-start gap-2.5">
+                <i className="fa-solid fa-handshake text-blue-600 mt-0.5"></i>
+                <div>
+                  <strong className="text-gray-900 dark:text-white block font-bold">Paiement à la livraison</strong>
+                  <span>Vérifiez votre colis sur place avant de régler en espèces, Wave ou Orange Money.</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setModalEasyReturn(false)}
+              className="w-full py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-xs shadow-md"
+            >
+              Compris, continuer mes achats
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Barre de recherche style mobile moderne (Inspirée de la capture) */}
