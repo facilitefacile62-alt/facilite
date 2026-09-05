@@ -22,6 +22,8 @@ import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 import { TexteAvecLiens } from "@/lib/liens";
+import { useCandidateMatchScores } from "@/lib/useCandidateMatchScores";
+import BadgeMatchingOffre from "@/components/BadgeMatchingOffre";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
@@ -439,57 +441,10 @@ export default function Home({ initialOffers = [] }) {
   // les recommandations de candidat/page.js. La map est indexée par UUID
   // job_offers.id : les offres statiques legacy (initialJobs, ids non-UUID)
   // n'y figurent jamais, donc n'affichent jamais ce badge — comportement
-  // voulu, pas un cas à gérer explicitement.
-  const [candidateMatchScores, setCandidateMatchScores] = useState(null);
-  useEffect(() => {
-    async function loadCandidateMatchScores() {
-      const userId = userSession?.user?.id;
-      if (!userId) {
-        setCandidateMatchScores(null);
-        return;
-      }
-      try {
-        const { data: resume } = await supabase
-          .from("resumes")
-          .select("embedding")
-          .eq("user_id", userId)
-          .not("embedding", "is", null)
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!resume?.embedding) {
-          setCandidateMatchScores(null);
-          return;
-        }
-
-        const embeddingLiteral = Array.isArray(resume.embedding)
-          ? `[${resume.embedding.join(",")}]`
-          : resume.embedding;
-
-        const { data: matches, error } = await supabase.rpc("match_job_offers", {
-          query_embedding: embeddingLiteral,
-          match_threshold: 0,
-          match_count: 200,
-        });
-
-        if (error || !matches) {
-          setCandidateMatchScores(null);
-          return;
-        }
-
-        const map = {};
-        matches.forEach((m) => {
-          map[m.id] = m.similarity;
-        });
-        setCandidateMatchScores(map);
-      } catch (err) {
-        console.error("Exception calcul scores de correspondance candidat:", err);
-        setCandidateMatchScores(null);
-      }
-    }
-    loadCandidateMatchScores();
-  }, [userSession?.user?.id]);
+  // voulu, pas un cas à gérer explicitement. Voir
+  // src/lib/useCandidateMatchScores.js pour la logique partagée avec
+  // OffresClient.jsx (avant, ce bloc était copié-collé à l'identique).
+  const candidateMatchScores = useCandidateMatchScores(userSession?.user?.id);
 
   const handleAddExperience = (e) => {
     e.preventDefault();
@@ -1745,6 +1700,11 @@ export default function Home({ initialOffers = [] }) {
                         postes/contrat, date limite) sur une seule ligne grise séparée par
                         des points — même contenu qu'avant, sans les pastilles colorées. */}
                     <div>
+                      {candidateMatchScores && job.id in candidateMatchScores && (
+                        <div className="mb-1.5">
+                          <BadgeMatchingOffre score={candidateMatchScores[job.id]} />
+                        </div>
+                      )}
                       <h4 className="text-sm sm:text-base font-extrabold text-gray-900 leading-snug break-words">
                         {selectedLang === "FR" ? job.titleFR : job.titleEN}
                       </h4>
@@ -1770,15 +1730,6 @@ export default function Home({ initialOffers = [] }) {
                           <>
                             <span aria-hidden="true">·</span>
                             <span className="font-bold text-purple-700">{LISTING_TYPE_LABELS[job.listing_type] || job.listing_type}</span>
-                          </>
-                        )}
-                        {candidateMatchScores && job.id in candidateMatchScores && (
-                          <>
-                            <span aria-hidden="true">·</span>
-                            <span className="text-emerald-700 font-bold">
-                              <i className="fa-solid fa-user-check text-[9px] mr-0.5"></i>
-                              {Math.round(candidateMatchScores[job.id] * 100)}% avec votre profil
-                            </span>
                           </>
                         )}
                       </p>

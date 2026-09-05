@@ -9,6 +9,7 @@ import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { respondToAccessRequest } from "@/lib/documentAccess";
 import { playNotificationSound } from "@/lib/notificationSound";
+import BadgeMatchingOffre from "@/components/BadgeMatchingOffre";
 
 export default function CandidatDashboardPage() {
   const [userSession, setUserSession] = useState(null);
@@ -361,9 +362,7 @@ export default function CandidatDashboardPage() {
                   className="block p-4 rounded-2xl border border-gray-200 hover:border-emerald-300 hover:shadow-md transition group"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      {Math.round(offer.similarity * 100)}% compatible
-                    </span>
+                    <BadgeMatchingOffre score={offer.similarity} />
                   </div>
                   <h3 className="text-sm font-extrabold text-gray-900 group-hover:text-emerald-700 transition line-clamp-2 mb-1">
                     {offer.title}

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BadgeMatchingOffre from '@/components/BadgeMatchingOffre';
 
 // Fil d'actualité natif — reproduit la mise en page réelle de ffacilite.com
 // (en-tête, stories de modèles, cartes d'offres, barre d'action) en thème
@@ -19,6 +20,9 @@ type Offre = {
   localisation: string;
   contrat: string;
   posterUri?: string;
+  // Similarité 0..1 (match_job_offers) — démo ici, branchement réel prévu
+  // avec les vraies offres (voir commentaire de fichier ci-dessus).
+  matchScore?: number;
 };
 
 const OFFRES: Offre[] = [
@@ -46,6 +50,7 @@ const OFFRES: Offre[] = [
     titre: 'Développeur Full Stack',
     localisation: 'Dakar, Plateau',
     contrat: 'CDI',
+    matchScore: 0.88,
   },
   {
     id: '3',
@@ -56,6 +61,7 @@ const OFFRES: Offre[] = [
     titre: "Infirmier(e) diplômé(e) d'État",
     localisation: 'Dakar, Fann',
     contrat: 'CDI',
+    matchScore: 0.58,
   },
 ];
 
@@ -169,6 +175,8 @@ function CarteOffre({ offre }: { offre: Offre }) {
           <Text className="text-[10.5px] text-gray-500">{offre.date}</Text>
         </View>
       </View>
+
+      <BadgeMatchingOffre score={offre.matchScore} />
 
       <Text className="text-[14.5px] font-bold text-white leading-5 mb-2">{offre.titre}</Text>
 

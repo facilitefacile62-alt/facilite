@@ -17,6 +17,7 @@ import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 import { DETAILED_EDUCATION_LEVELS } from "@/lib/eligibility";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import CandidatsPotentielsOffre from "@/components/CandidatsPotentielsOffre";
 
 const EMPTY_OFFER = {
   title: "",
@@ -2355,8 +2356,8 @@ export default function RecruteurDashboardPage() {
                       const offerApplicationsCount = applications.filter((a) => a.job_offer_id === offer.id).length;
 
                       return (
+                        <div key={offer.id}>
                         <div
-                          key={offer.id}
                           className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/60 rounded-2xl px-3 transition"
                         >
                           <div className="flex items-start space-x-3.5 min-w-0">
@@ -2464,6 +2465,8 @@ export default function RecruteurDashboardPage() {
                               <i className="fa-regular fa-trash-can text-xs"></i>
                             </button>
                           </div>
+                        </div>
+                        <CandidatsPotentielsOffre offerId={offer.id} />
                         </div>
                       );
                     })}

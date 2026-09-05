@@ -24,6 +24,8 @@ import { isOfferExpired } from "@/lib/offerExpiration";
 // active dans cette configuration. Seule l'ouverture réelle de la page le
 // révélait.
 import { DEFAULT_FEATURE_TREE, getFeatureFlagsTreeAsync, isFeatureAllowed } from "@/lib/featureFlags";
+import { useCandidateMatchScores } from "@/lib/useCandidateMatchScores";
+import BadgeMatchingOffre from "@/components/BadgeMatchingOffre";
 
 export const dynamic = "force-dynamic";
 
@@ -111,8 +113,10 @@ function OffresContent({ listingType } = {}) {
 
   // Badge de correspondance candidat (point 7) — un seul appel en lot
   // (match_job_offers, même RPC que semanticResults ci-dessus et que les
-  // recommandations de candidat/page.js), jamais un appel par carte.
-  const [candidateMatchScores, setCandidateMatchScores] = useState(null);
+  // recommandations de candidat/page.js), jamais un appel par carte. Voir
+  // src/lib/useCandidateMatchScores.js (partagé avec HomeClient.jsx —
+  // avant, ce bloc était copié-collé à l'identique aux deux endroits).
+  const candidateMatchScores = useCandidateMatchScores(userSession?.user?.id);
 
   // Arbre dynamique de feature flags & permissions
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
@@ -281,62 +285,6 @@ function OffresContent({ listingType } = {}) {
     // interroger le mauvais listing_type après une navigation
     // /offres -> /concours.
   }, [listingType, requeteOffres]);
-
-  // Scores de correspondance candidat pour toutes les offres de la page —
-  // un seul appel batch (comme candidat/page.js loadRecommendedOffers), pas
-  // un appel par carte. Repose sur le CV avec embedding le plus récent ;
-  // reste null (aucun badge affiché) si le candidat n'est pas connecté ou
-  // n'a aucun CV avec embedding — jamais bloquant, jamais un second calcul
-  // par offre.
-  useEffect(() => {
-    async function loadCandidateMatchScores() {
-      const userId = userSession?.user?.id;
-      if (!userId) {
-        setCandidateMatchScores(null);
-        return;
-      }
-      try {
-        const { data: resume } = await supabase
-          .from("resumes")
-          .select("embedding")
-          .eq("user_id", userId)
-          .not("embedding", "is", null)
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!resume?.embedding) {
-          setCandidateMatchScores(null);
-          return;
-        }
-
-        const embeddingLiteral = Array.isArray(resume.embedding)
-          ? `[${resume.embedding.join(",")}]`
-          : resume.embedding;
-
-        const { data: matches, error } = await supabase.rpc("match_job_offers", {
-          query_embedding: embeddingLiteral,
-          match_threshold: 0,
-          match_count: 200,
-        });
-
-        if (error || !matches) {
-          setCandidateMatchScores(null);
-          return;
-        }
-
-        const map = {};
-        matches.forEach((m) => {
-          map[m.id] = m.similarity;
-        });
-        setCandidateMatchScores(map);
-      } catch (err) {
-        console.error("Exception calcul scores de correspondance candidat:", err);
-        setCandidateMatchScores(null);
-      }
-    }
-    loadCandidateMatchScores();
-  }, [userSession?.user?.id]);
 
   const handleSemanticSearch = async () => {
     const query = searchQuery.trim();
@@ -722,6 +670,11 @@ function OffresContent({ listingType } = {}) {
 
                   {/* Légende : titre + description + caractéristiques */}
                   <div className="mb-3">
+                    {!semanticResults && candidateMatchScores && offer.id in candidateMatchScores && (
+                      <div className="mb-1.5">
+                        <BadgeMatchingOffre score={candidateMatchScores[offer.id]} />
+                      </div>
+                    )}
                     <Link
                       href={`/offres/${offer.id}`}
                       className="text-sm font-extrabold text-gray-900 dark:text-white leading-snug hover:text-emerald-700 dark:hover:text-[#10E688] transition-colors block line-clamp-1 min-h-[20px]"
@@ -761,15 +714,6 @@ function OffresContent({ listingType } = {}) {
                         <span className="text-amber-700 dark:text-amber-400 font-bold">
                           ⚡ {Math.round(semanticResults[offer.id] * 100)}% pertinence
                         </span>
-                      )}
-                      {!semanticResults && candidateMatchScores && offer.id in candidateMatchScores && (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <span className="text-emerald-700 dark:text-[#10E688] font-bold">
-                            <i className="fa-solid fa-user-check text-[9px] mr-0.5"></i>
-                            {Math.round(candidateMatchScores[offer.id] * 100)}% avec votre profil
-                          </span>
-                        </>
                       )}
                     </p>
                   </div>
