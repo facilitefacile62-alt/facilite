@@ -561,19 +561,24 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     boutiquesPourGlobe.push({ lat, lng, nom: a.boutique_nom });
   }
 
-  // Liste des catégories horizontales défilables (Style 1:1 Capture All, Women, Electronics, Men, Home, Office...)
-  const CATEGORIES_DEFILEMENT = [
-    { id: null, label: "All" },
-    { id: "mode", label: "Women" },
-    { id: "electronique", label: "Electronics" },
-    { id: "telephones", label: "Men & Tech" },
-    { id: "maison", label: "Home" },
-    { id: "informatique", label: "Office" },
-    { id: "alimentation", label: "Food & Drinks" },
-    { id: "vehicules", label: "Vehicles" },
-    { id: "immobilier", label: "Real Estate" },
-    { id: "services", label: "Services" },
-    { id: "autre", label: "Other" },
+  // Liste complète des catégories affichées dans la barre horizontale mobile (1:1 Identique à la capture et au menu)
+  const CATEGORIES_DEFILEMENT_MOBILE = [
+    { id: null, label: "Toutes", icon: "fa-bars" },
+    { id: "vehicules", label: "Automobile", icon: "fa-car" },
+    { id: "maison", label: "Appareils électroménagers", icon: "fa-blender" },
+    { id: "mode", label: "Vêtements pour femmes", icon: "fa-person-dress" },
+    { id: "mode_hommes", label: "Vêtements pour hommes", icon: "fa-shirt", baseCategory: "mode" },
+    { id: "chaussures", label: "Chaussures", icon: "fa-shoe-prints", baseCategory: "mode" },
+    { id: "jouets", label: "Jouets et jeux", icon: "fa-gamepad", baseCategory: "autre" },
+    { id: "meubles", label: "Meubles", icon: "fa-couch", baseCategory: "maison" },
+    { id: "beaute", label: "Beauté et santé", icon: "fa-pump-soap", baseCategory: "mode" },
+    { id: "telephones", label: "Téléphones portables", icon: "fa-mobile-screen-button" },
+    { id: "electronique", label: "Électronique & Son", icon: "fa-tv" },
+    { id: "informatique", label: "Informatique & PC", icon: "fa-laptop" },
+    { id: "immobilier", label: "Immobilier", icon: "fa-house" },
+    { id: "alimentation", label: "Alimentation", icon: "fa-basket-shopping" },
+    { id: "services", label: "Services", icon: "fa-briefcase" },
+    { id: "autre", label: "Autre", icon: "fa-tag" },
   ];
 
   return (
@@ -585,30 +590,34 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         />
       )}
 
-      {/* 1. BARRE DE CATÉGORIES HORIZONTALE DÉFILABLE SUR TÉLÉPHONE & PC (Style 1:1 Capture d'écran) */}
-      <div className="w-full mb-2.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-3 pt-2 pb-1 shadow-xs overflow-hidden">
+      {/* 1. BARRE DE CATÉGORIES HORIZONTALE DÉFILABLE — EXCLUSIVEMENT POUR UTILISATEUR TÉLÉPHONE (MOBILE ONLY) */}
+      <div className="block md:hidden w-full mb-2.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-3 pt-2.5 pb-1.5 shadow-xs overflow-hidden">
         <div
           ref={categoriesScrollRef}
           onMouseDown={handleCatMouseDown}
           onMouseMove={handleCatMouseMove}
           onMouseUp={handleCatMouseUp}
           onMouseLeave={handleCatMouseUp}
-          className="flex items-center gap-5 sm:gap-7 overflow-x-auto no-scrollbar scroll-smooth py-1 select-none cursor-grab active:cursor-grabbing"
+          className="flex items-center gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-1 select-none cursor-grab active:cursor-grabbing"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {CATEGORIES_DEFILEMENT.map((cat) => {
-            const estActif = (categorie === null && cat.id === null) || categorie === cat.id;
+          {CATEGORIES_DEFILEMENT_MOBILE.map((cat) => {
+            const estActif =
+              (categorie === null && cat.id === null) ||
+              categorie === cat.id ||
+              (cat.baseCategory && categorie === cat.baseCategory && (cat.id === "mode_hommes" ? categorie === "mode" : false));
             return (
               <button
-                key={cat.id || "all"}
+                key={cat.label}
                 type="button"
-                onClick={() => onSelectCategorie?.(cat.id)}
-                className={`shrink-0 text-sm sm:text-base font-black transition-all pb-1.5 relative cursor-pointer ${
+                onClick={() => onSelectCategorie?.(cat.baseCategory || cat.id)}
+                className={`shrink-0 flex items-center gap-1.5 text-xs sm:text-sm font-black transition-all pb-2 relative cursor-pointer whitespace-nowrap ${
                   estActif
                     ? "text-gray-950 dark:text-white"
                     : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 font-bold"
                 }`}
               >
+                <i className={`fa-solid ${cat.icon} text-[11px] ${estActif ? "text-[#1877F2]" : "text-gray-400"}`}></i>
                 <span>{cat.label}</span>
                 {estActif && (
                   <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-black dark:bg-white rounded-full transition-all" />
@@ -619,20 +628,22 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </div>
       </div>
 
-      {/* 2. BANDEAU DE RÉASSURANCE / RETOURS FACILES (1:1 Capture : Easy Return View more) */}
-      <div className="mb-3.5 bg-[#FAF6ED] dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/50 rounded-2xl px-3.5 py-2.5 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-amber-950 dark:text-amber-200">
-          <i className="fa-solid fa-file-lines text-amber-800 dark:text-amber-400 text-sm"></i>
-          <span>Easy Return</span>
+      {/* 2. BANDEAU DE RÉASSURANCE / RETOURS FACILES (MOBILE & TABLETTE) */}
+      <div className="block md:hidden mb-3.5 bg-[#FAF6ED] dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/50 rounded-2xl px-3.5 py-2.5 shadow-xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-extrabold text-amber-950 dark:text-amber-200">
+            <i className="fa-solid fa-file-lines text-amber-800 dark:text-amber-400 text-sm"></i>
+            <span>Easy Return</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setModalEasyReturn(true)}
+            className="text-xs font-bold text-gray-700 dark:text-amber-300 hover:text-black dark:hover:text-white hover:underline cursor-pointer flex items-center gap-1"
+          >
+            <span>View more</span>
+            <i className="fa-solid fa-chevron-right text-[9px] text-gray-500"></i>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setModalEasyReturn(true)}
-          className="text-xs font-bold text-gray-700 dark:text-amber-300 hover:text-black dark:hover:text-white hover:underline cursor-pointer flex items-center gap-1"
-        >
-          <span>View more</span>
-          <i className="fa-solid fa-chevron-right text-[9px] text-gray-500"></i>
-        </button>
       </div>
 
       {/* Modal d'information Easy Return */}
