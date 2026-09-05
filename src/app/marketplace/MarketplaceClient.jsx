@@ -21,11 +21,17 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import CarteBoutiques from "@/components/CarteBoutiques";
 import CapturePosition from "@/components/CapturePosition";
-import GlobeExplorateurBoutiques from "@/components/GlobeExplorateurBoutiques";
+// Chargé en dynamique, sans SSR : maplibre-gl (~257 Ko compressés) touche
+// `window`/WebGL et ne doit être téléchargé que par les personnes qui
+// ouvrent réellement "Explorer", pas par chaque visite du Marketplace.
+const GlobeExplorateurBoutiques = dynamic(() => import("@/components/GlobeExplorateurBoutiques"), {
+  ssr: false,
+});
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
   chargerMesBoutiques,
@@ -536,10 +542,6 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         <GlobeExplorateurBoutiques
           boutiques={boutiquesPourGlobe}
           onFermer={() => setGlobeOuvert(false)}
-          onVoirCarte={() => {
-            setGlobeOuvert(false);
-            localiser();
-          }}
         />
       )}
 

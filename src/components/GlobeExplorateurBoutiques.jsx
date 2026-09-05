@@ -1,163 +1,153 @@
 "use client";
 
-// Écran d'exploration ludique du Marketplace — un globe 3D avec les
-// boutiques actives comme points lumineux, inspiré de la structure des
-// cartes sociales façon "Snap Map" (globe sombre, points groupés par zone
-// dense) mais sans rien reprendre de leur identité visuelle propre (pas
-// d'avatars, pas de charte Snapchat) : juste l'idée d'un globe qui donne
-// envie d'explorer avant de basculer sur l'outil concret.
+// Écran d'exploration du Marketplace — une vraie carte (MapLibre GL +
+// tuiles vectorielles OpenFreeMap) avec projection "globe" : dézoomée, on
+// voit un globe 3D avec les boutiques comme points ; en zoomant, MapLibre
+// bascule tout seul vers une carte Mercator détaillée (rues, noms de lieux)
+// — exactement le comportement Snap Map / Google Earth demandé, géré
+// nativement par la librairie, sans code de transition à écrire.
 //
-// Volontairement un COMPLÉMENT, pas un remplacement de la carte réelle
-// (CarteBoutiques.jsx, Leaflet/OpenStreetMap) : un globe ne montre ni rues
-// ni quartiers exploitables pour s'y rendre — seule la vraie carte permet
-// de trouver un chemin. Le bouton "Voir sur la carte" ferme ce panneau et
-// relance la recherche de proximité réelle (onVoirCarte).
+// Remplace l'ancien globe décoratif (cobe, ~5 Ko, aucune vraie carte) : ce
+// composant-ci pèse ~257 Ko compressés en plus (maplibre-gl) — accepté
+// explicitement par l'utilisateur malgré le coût en données mobiles, parce
+// que c'est maintenant une VRAIE carte navigable, pas un élément décoratif.
+// Chargé en dynamique (next/dynamic, voir MarketplaceClient.jsx) : ce poids
+// n'est payé que par les personnes qui ouvrent réellement "Explorer".
 //
-// cobe (~5 Ko, zéro dépendance) plutôt que Three.js/react-globe.gl : cet
-// écran est purement décoratif, inutile de charger un moteur 3D complet
-// pour quelques points lumineux qui tournent.
-import { useEffect, useRef } from "react";
-import createGlobe from "cobe";
+// Volontairement distinct de CarteBoutiques.jsx (Leaflet, carte compacte
+// intégrée à la liste de résultats "Autour de moi") : ce fichier-là est
+// actuellement modifié par un autre chantier en cours (boutons plier/mode
+// compact), on n'y touche pas ici pour éviter tout conflit. Les deux cartes
+// répondent à des besoins différents — celle-ci est l'écran d'exploration
+// plein écran, l'autre reste la vignette de résultats de recherche.
+//
+// Service de tuiles OpenFreeMap : gratuit, sans clé API, mais géré par un
+// développeur indépendant, financé par dons, sans garantie de disponibilité
+// (CGU "AS-IS"). Accepté comme risque connu pour l'instant.
+import { useEffect, useRef, useState } from "react";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { positionActuelle } from "@/lib/marketplaceData";
 
-const BLEU_FACILITE = [0.094, 0.467, 0.945]; // #1877F2 normalisé 0..1
-// glowColor n'est pas qu'un halo décoratif autour de la sphère : cobe
-// l'utilise aussi comme lumière ambiante de TOUTE la surface du globe.
-// Une couleur saturée et sombre (l'émeraude de marque testée d'abord,
-// [0.063, 0.725, 0.506]) plonge donc le globe entier dans le noir — confirmé
-// par capture d'écran, bissection isolée hors React face à l'exemple
-// officiel qui fonctionne. Un blanc à peine teinté menthe garde la sphère
-// lisible tout en donnant un liseré de couleur cohérent avec la marque.
-const LUEUR = [0.85, 0.95, 0.92];
-// Résolution interne du canvas, fixée d'avance (le conteneur est plafonné à
-// max-w-[440px] côté CSS) plutôt que mesurée via offsetWidth : un canvas
-// sans attributs HTML width/height explicites part sur une taille par
-// défaut différente de celle passée à cobe, et le rendu de la sphère
-// n'aboutissait jamais (seuls les marqueurs, sur un chemin plus simple,
-// s'affichaient) — constaté par bissection face à l'exemple officiel.
-const TAILLE_CANVAS = 880;
+const STYLE_OPENFREEMAP = "https://tiles.openfreemap.org/styles/liberty";
+const COULEUR_BOUTIQUE = "#1877F2";
+const COULEUR_MOI = "#dc2626";
+const CENTRE_SENEGAL = [-14.4524, 14.4974];
 
-export default function GlobeExplorateurBoutiques({ boutiques = [], onFermer, onVoirCarte }) {
-  const canvasRef = useRef(null);
-  const phiRef = useRef(4.2); // cadré sur l'Afrique de l'Ouest au démarrage, pas l'Atlantique vide
+function creerPastille(couleur, taille = 16) {
+  const el = document.createElement("div");
+  el.style.width = `${taille}px`;
+  el.style.height = `${taille}px`;
+  el.style.borderRadius = "50%";
+  el.style.background = couleur;
+  el.style.border = "2px solid white";
+  el.style.boxShadow = "0 1px 4px rgba(0,0,0,0.4)";
+  return el;
+}
 
-  const marqueurs = boutiques
-    .filter((b) => Number.isFinite(b.lat) && Number.isFinite(b.lng) && (b.lat !== 0 || b.lng !== 0))
-    .map((b) => ({
-      location: [b.lat, b.lng],
-      size: 0.045,
-      color: BLEU_FACILITE,
-    }));
+export default function GlobeExplorateurBoutiques({ boutiques = [], onFermer }) {
+  const conteneurRef = useRef(null);
+  const carteRef = useRef(null);
+  const [localisationEnCours, setLocalisationEnCours] = useState(false);
+  const [erreurLocalisation, setErreurLocalisation] = useState("");
+
+  const marqueurs = boutiques.filter(
+    (b) => Number.isFinite(b.lat) && Number.isFinite(b.lng) && (b.lat !== 0 || b.lng !== 0)
+  );
 
   useEffect(() => {
-    if (!canvasRef.current) return undefined;
-    let phi = phiRef.current;
+    if (!conteneurRef.current) return undefined;
 
-    const globe = createGlobe(canvasRef.current, {
-      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-      width: TAILLE_CANVAS,
-      height: TAILLE_CANVAS,
-      // phi DOIT valoir 0 ici, jamais phiRef.current directement : passer une
-      // rotation initiale non nulle dans les options empêche la sphère de se
-      // dessiner (constaté par bissection isolée — seuls la lueur et les
-      // marqueurs restaient visibles, sphère noire). Le cadrage initial sur
-      // l'Afrique de l'Ouest se fait quand même : onRender fixe state.phi à
-      // phiRef.current dès la toute première image, avant le premier rendu
-      // visible.
-      phi: 0,
-      theta: 0.28,
-      dark: 1,
-      diffuse: 1.2,
-      mapSamples: 16000,
-      mapBrightness: 6,
-      baseColor: [0.3, 0.3, 0.35],
-      markerColor: BLEU_FACILITE,
-      glowColor: LUEUR,
-      // scale > 1 casse aussi le rendu de la sphère (même symptôme que phi
-      // non nul dans les options — confirmé par bissection isolée : 1.05
-      // suffit à tout noircir sauf lueur/marqueurs). 1 (la valeur par
-      // défaut) fonctionne, aucune raison de s'en écarter pour un effet de
-      // zoom purement cosmétique.
-      markers: marqueurs,
-      // La taille reste fixée à l'initialisation (pas de re-calcul dans
-      // onRender) : suffisant pour un panneau à largeur plafonnée
-      // (max-w-[440px]), un redimensionnement de fenêtre garde juste une
-      // résolution interne légèrement différente de l'affichage CSS,
-      // imperceptible pour un élément décoratif de cette taille.
-      onRender: (state) => {
-        phi += 0.0028;
-        phiRef.current = phi;
-        state.phi = phi;
-      },
+    const carte = new maplibregl.Map({
+      container: conteneurRef.current,
+      style: STYLE_OPENFREEMAP,
+      center: CENTRE_SENEGAL,
+      zoom: 2,
+      attributionControl: { compact: true },
+    });
+    carteRef.current = carte;
+
+    carte.on("style.load", () => {
+      carte.setProjection({ type: "globe" });
     });
 
-    return () => globe.destroy();
+    carte.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+
+    for (const b of marqueurs) {
+      const popup = new maplibregl.Popup({ offset: 14, closeButton: false }).setText(
+        b.nom || "Boutique Facilité"
+      );
+      new maplibregl.Marker({ element: creerPastille(COULEUR_BOUTIQUE) })
+        .setLngLat([b.lng, b.lat])
+        .setPopup(popup)
+        .addTo(carte);
+    }
+
+    return () => carte.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boutiques.length]);
 
+  const allerAMaPosition = async () => {
+    setErreurLocalisation("");
+    setLocalisationEnCours(true);
+    try {
+      const pos = await positionActuelle();
+      new maplibregl.Marker({ element: creerPastille(COULEUR_MOI, 14) })
+        .setLngLat([pos.longitude, pos.latitude])
+        .addTo(carteRef.current);
+      carteRef.current?.flyTo({ center: [pos.longitude, pos.latitude], zoom: 14, speed: 1.1 });
+    } catch (err) {
+      setErreurLocalisation(err.message || "Localisation indisponible.");
+    } finally {
+      setLocalisationEnCours(false);
+    }
+  };
+
   return (
     <div
-      className="fixed inset-0 z-[70] flex flex-col items-center bg-[#05070c] animate-fadeIn"
+      className="fixed inset-0 z-[70] flex flex-col bg-[#0B0F17]"
       role="dialog"
       aria-modal="true"
-      aria-label="Explorer les boutiques sur le globe"
+      aria-label="Explorer les boutiques sur la carte"
     >
-      {/* Ciel étoilé léger, en CSS pur — pas besoin d'un second calque WebGL */}
-      <div
-        className="absolute inset-0 opacity-70 pointer-events-none"
-        style={{
-          backgroundImage:
-            "radial-gradient(1px 1px at 20% 30%, #fff 100%, transparent), radial-gradient(1px 1px at 65% 12%, #fff 100%, transparent), radial-gradient(1.5px 1.5px at 85% 45%, #fff 100%, transparent), radial-gradient(1px 1px at 40% 70%, #fff 100%, transparent), radial-gradient(1px 1px at 92% 80%, #fff 100%, transparent), radial-gradient(1.5px 1.5px at 10% 85%, #fff 100%, transparent), radial-gradient(1px 1px at 55% 92%, #fff 100%, transparent)",
-          backgroundSize: "100% 100%",
-        }}
-      />
-
-      <div className="relative z-10 w-full flex items-center justify-between px-5 pt-5 sm:pt-6">
-        <div>
-          <p className="text-white font-black text-base flex items-center gap-2">
+      <div className="relative z-10 w-full flex items-center justify-between px-5 pt-5 sm:pt-6 pb-3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
+        <div className="pointer-events-auto">
+          <p className="text-white font-black text-base flex items-center gap-2 drop-shadow">
             <span aria-hidden="true">🌍</span> Explorer les boutiques
           </p>
-          <p className="text-white/50 text-xs font-medium mt-0.5">
+          <p className="text-white/70 text-xs font-medium mt-0.5 drop-shadow">
             {marqueurs.length} boutique{marqueurs.length > 1 ? "s" : ""} active
-            {marqueurs.length > 1 ? "s" : ""} sur Facilité
+            {marqueurs.length > 1 ? "s" : ""} · zoomez pour voir les rues
           </p>
         </div>
         <button
           type="button"
           onClick={onFermer}
-          className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition"
+          className="pointer-events-auto w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer transition backdrop-blur-xs"
           aria-label="Fermer"
         >
           <i className="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <div className="relative z-10 flex-1 w-full flex items-center justify-center px-6 min-h-0">
-        <div className="w-full max-w-[440px] aspect-square">
-          <canvas
-            ref={canvasRef}
-            width={TAILLE_CANVAS}
-            height={TAILLE_CANVAS}
-            style={{ width: "100%", height: "100%", cursor: "grab" }}
-            aria-label="Globe montrant les boutiques Facilité"
-          />
-        </div>
-      </div>
+      <div className="relative flex-1 min-h-0">
+        <div ref={conteneurRef} className="absolute inset-0" />
 
-      <div className="relative z-10 w-full px-5 pb-6 sm:pb-8 flex flex-col items-center gap-3">
-        {boutiques.length === 0 && (
-          <p className="text-white/60 text-xs font-medium text-center max-w-xs">
-            Aucune boutique géolocalisée pour l&apos;instant — reviens quand des vendeurs auront enregistré leur
-            position.
-          </p>
-        )}
         <button
           type="button"
-          onClick={onVoirCarte}
-          className="w-full max-w-sm py-3.5 rounded-2xl bg-[#1877F2] hover:bg-blue-600 text-white text-sm font-black shadow-lg shadow-blue-600/30 cursor-pointer transition flex items-center justify-center gap-2"
+          onClick={allerAMaPosition}
+          disabled={localisationEnCours}
+          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 px-5 py-3.5 rounded-2xl bg-[#1877F2] hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-black shadow-lg shadow-blue-600/30 cursor-pointer transition flex items-center gap-2"
         >
-          <i className="fa-solid fa-location-crosshairs"></i>
-          Voir près de chez moi sur la carte
+          <i className={`fa-solid ${localisationEnCours ? "fa-spinner fa-spin" : "fa-location-crosshairs"}`}></i>
+          {localisationEnCours ? "Localisation…" : "Aller à ma position"}
         </button>
+
+        {erreurLocalisation && (
+          <p className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10 bg-red-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg max-w-[85%] text-center">
+            {erreurLocalisation}
+          </p>
+        )}
       </div>
     </div>
   );
