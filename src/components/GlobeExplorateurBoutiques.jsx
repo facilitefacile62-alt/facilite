@@ -20,7 +20,21 @@ import { useEffect, useRef } from "react";
 import createGlobe from "cobe";
 
 const BLEU_FACILITE = [0.094, 0.467, 0.945]; // #1877F2 normalisé 0..1
-const EMERAUDE = [0.063, 0.725, 0.506]; // #10E688 normalisé 0..1
+// glowColor n'est pas qu'un halo décoratif autour de la sphère : cobe
+// l'utilise aussi comme lumière ambiante de TOUTE la surface du globe.
+// Une couleur saturée et sombre (l'émeraude de marque testée d'abord,
+// [0.063, 0.725, 0.506]) plonge donc le globe entier dans le noir — confirmé
+// par capture d'écran, bissection isolée hors React face à l'exemple
+// officiel qui fonctionne. Un blanc à peine teinté menthe garde la sphère
+// lisible tout en donnant un liseré de couleur cohérent avec la marque.
+const LUEUR = [0.85, 0.95, 0.92];
+// Résolution interne du canvas, fixée d'avance (le conteneur est plafonné à
+// max-w-[440px] côté CSS) plutôt que mesurée via offsetWidth : un canvas
+// sans attributs HTML width/height explicites part sur une taille par
+// défaut différente de celle passée à cobe, et le rendu de la sphère
+// n'aboutissait jamais (seuls les marqueurs, sur un chemin plus simple,
+// s'affichaient) — constaté par bissection face à l'exemple officiel.
+const TAILLE_CANVAS = 880;
 
 export default function GlobeExplorateurBoutiques({ boutiques = [], onFermer, onVoirCarte }) {
   const canvasRef = useRef(null);
@@ -37,41 +51,46 @@ export default function GlobeExplorateurBoutiques({ boutiques = [], onFermer, on
   useEffect(() => {
     if (!canvasRef.current) return undefined;
     let phi = phiRef.current;
-    let largeur = canvasRef.current.offsetWidth;
-
-    const gerer = () => {
-      if (canvasRef.current) largeur = canvasRef.current.offsetWidth;
-    };
-    window.addEventListener("resize", gerer);
 
     const globe = createGlobe(canvasRef.current, {
       devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-      width: largeur * 2,
-      height: largeur * 2,
-      phi,
+      width: TAILLE_CANVAS,
+      height: TAILLE_CANVAS,
+      // phi DOIT valoir 0 ici, jamais phiRef.current directement : passer une
+      // rotation initiale non nulle dans les options empêche la sphère de se
+      // dessiner (constaté par bissection isolée — seuls la lueur et les
+      // marqueurs restaient visibles, sphère noire). Le cadrage initial sur
+      // l'Afrique de l'Ouest se fait quand même : onRender fixe state.phi à
+      // phiRef.current dès la toute première image, avant le premier rendu
+      // visible.
+      phi: 0,
       theta: 0.28,
       dark: 1,
-      diffuse: 1.3,
+      diffuse: 1.2,
       mapSamples: 16000,
-      mapBrightness: 4,
-      baseColor: [0.11, 0.14, 0.2],
+      mapBrightness: 6,
+      baseColor: [0.3, 0.3, 0.35],
       markerColor: BLEU_FACILITE,
-      glowColor: EMERAUDE,
-      scale: 1.05,
+      glowColor: LUEUR,
+      // scale > 1 casse aussi le rendu de la sphère (même symptôme que phi
+      // non nul dans les options — confirmé par bissection isolée : 1.05
+      // suffit à tout noircir sauf lueur/marqueurs). 1 (la valeur par
+      // défaut) fonctionne, aucune raison de s'en écarter pour un effet de
+      // zoom purement cosmétique.
       markers: marqueurs,
+      // La taille reste fixée à l'initialisation (pas de re-calcul dans
+      // onRender) : suffisant pour un panneau à largeur plafonnée
+      // (max-w-[440px]), un redimensionnement de fenêtre garde juste une
+      // résolution interne légèrement différente de l'affichage CSS,
+      // imperceptible pour un élément décoratif de cette taille.
       onRender: (state) => {
         phi += 0.0028;
         phiRef.current = phi;
         state.phi = phi;
-        state.width = largeur * 2;
-        state.height = largeur * 2;
       },
     });
 
-    return () => {
-      globe.destroy();
-      window.removeEventListener("resize", gerer);
-    };
+    return () => globe.destroy();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boutiques.length]);
 
@@ -116,6 +135,8 @@ export default function GlobeExplorateurBoutiques({ boutiques = [], onFermer, on
         <div className="w-full max-w-[440px] aspect-square">
           <canvas
             ref={canvasRef}
+            width={TAILLE_CANVAS}
+            height={TAILLE_CANVAS}
             style={{ width: "100%", height: "100%", cursor: "grab" }}
             aria-label="Globe montrant les boutiques Facilité"
           />
