@@ -1754,13 +1754,14 @@ export default function Home({ initialOffers = [] }) {
                       </div>
                     )}
 
-                    {/* Visuel de l'offre (Support Multi-Photos avec Grille & Visionneuse Plein Écran) */}
-                    {(job.image || job.image_url) && (
+                    {/* Visuel de l'offre (Carrousel Document Multi-Pages Style LinkedIn & Visionneuse Plein Écran) */}
+                    {(job.photos || job.images || job.image || job.image_url) && (
                       <OfferMediaGallery
-                        media={job.image || job.image_url}
+                        media={job.photos || job.images || job.image_url || job.image}
                         title={selectedLang === "FR" ? job.titleFR : job.titleEN || "Affiche de recrutement"}
                         className="my-1"
                         maxHeight="max-h-80 sm:max-h-96"
+                        offer={job}
                       />
                     )}
 

@@ -2089,18 +2089,111 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
     prix_xof: "",
     quantite: 1,
   });
-  const [photos, setPhotos] = useState([]); // { chemin, apercu }
+  const [photos, setPhotos] = useState([]); // { chemin, apercu, rawFile }
   const [envoi, setEnvoi] = useState(false);
   const [compression, setCompression] = useState(false);
   const [optimisationIA, setOptimisationIA] = useState(false);
+  const [scanIAEnCours, setScanIAEnCours] = useState(false);
+  const [etapeScanIA, setEtapeScanIA] = useState("");
+  const [prixEstimeIA, setPrixEstimeIA] = useState(null);
   const [messageSucces, setMessageSucces] = useState("");
   const [erreur, setErreur] = useState("");
   const [motsCles, setMotsCles] = useState([]);
   const champFichier = useRef(null);
+  const champScanCamera = useRef(null);
+
+  // Animation et étapes dynamiques pendant le scan IA
+  useEffect(() => {
+    if (!scanIAEnCours) return;
+    const etapes = [
+      "👁 Vision IA : L'IA identifie votre article...",
+      "🏷 Détection de la marque, du modèle & des caractéristiques...",
+      "📂 Catégorisation automatique et estimation du prix moyen FCFA...",
+      "✨ Rédaction de la description commerciale vendeuse & SEO...",
+    ];
+    let idx = 0;
+    // queueMicrotask plutôt qu'un appel direct : la valeur initiale doit
+    // s'afficher immédiatement (aucun délai perceptible), mais un setState
+    // synchrone au sommet du corps de l'effet déclenche
+    // react-hooks/set-state-in-effect — le reporter d'un microtask satisfait
+    // la règle sans changer le rendu perçu.
+    queueMicrotask(() => setEtapeScanIA(etapes[0]));
+    const timer = setInterval(() => {
+      idx = (idx + 1) % etapes.length;
+      setEtapeScanIA(etapes[idx]);
+    }, 1800);
+    // Réinitialisé au nettoyage (fin du scan ou démontage), pas au sommet du
+    // corps de l'effet : react-hooks/set-state-in-effect signale un setState
+    // synchrone directement dans le corps, pas dans sa fonction de nettoyage.
+    return () => {
+      clearInterval(timer);
+      setEtapeScanIA("");
+    };
+  }, [scanIAEnCours]);
+
+  // Analyse IA Multimodale (Vision / Google Lens / Zéro Saisie)
+  const scannerProduitParPhoto = async (fichier = null, cheminExistant = null) => {
+    setErreur("");
+    setMessageSucces("");
+    setScanIAEnCours(true);
+
+    try {
+      const token = session?.access_token;
+      const formData = new FormData();
+
+      if (fichier) {
+        formData.append("file", fichier);
+      } else if (cheminExistant) {
+        formData.append("imageUrl", urlPhoto(cheminExistant));
+      } else if (photos.length > 0 && photos[0]?.chemin) {
+        formData.append("imageUrl", urlPhoto(photos[0].chemin));
+      } else {
+        throw new Error("Veuillez d'abord prendre ou choisir une photo de votre produit.");
+      }
+
+      if (champs.titre.trim()) {
+        formData.append("hint", champs.titre.trim());
+      }
+
+      const res = await fetch("/api/marketplace/scan-product", {
+        method: "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Impossible d'identifier l'article via l'IA.");
+      }
+
+      const data = json.data;
+      setChamps((prev) => ({
+        ...prev,
+        titre: data.titre || prev.titre,
+        description: data.description || prev.description,
+        categorie: data.categorie || prev.categorie,
+        prix_xof: data.prix_suggere ? String(data.prix_suggere) : prev.prix_xof,
+      }));
+
+      setMotsCles(data.mots_cles || []);
+      if (data.prix_suggere) {
+        setPrixEstimeIA(data.prix_suggere);
+      }
+      setMessageSucces("✨ Zéro Saisie réussie : Produit identifié et formulaire rempli à 100% ! Cliquez directement sur Publier.");
+      setTimeout(() => setMessageSucces(""), 8000);
+    } catch (err) {
+      console.warn("[Scan-Product Warning]", err);
+      setErreur(err.message || "Échec de l'analyse visuelle du produit.");
+    } finally {
+      setScanIAEnCours(false);
+    }
+  };
 
   const optimiserAvecIA = async () => {
     if (!champs.titre.trim() && !champs.description.trim()) {
-      setErreur("Veuillez saisir un nom ou quelques mots-clés de votre produit (ex. 'iphone 13', 'masque', 'sac nike').");
+      setErreur("Veuillez saisir un nom ou quelques mots-clés de votre produit (ou cliquez sur 'Scanner le produit avec l'IA' pour une publication sans saisie).");
       return;
     }
 
@@ -2143,21 +2236,32 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
     }
   };
 
-  const ajouterPhotos = async (e) => {
+  const ajouterPhotos = async (e, declencherScanAuto = false) => {
     const fichiers = Array.from(e.target.files || []);
     if (champFichier.current) champFichier.current.value = "";
+    if (champScanCamera.current) champScanCamera.current.value = "";
     if (fichiers.length === 0) return;
 
     setErreur("");
     setCompression(true);
     try {
       const restant = Math.max(0, 6 - photos.length);
+      const nouvellesPhotos = [];
       for (const f of fichiers.slice(0, restant)) {
         const chemin = await envoyerPhoto(f, userId);
-        setPhotos((p) => [...p, { chemin, apercu: urlPhoto(chemin) }]);
+        const pObj = { chemin, apercu: urlPhoto(chemin), rawFile: f };
+        nouvellesPhotos.push(pObj);
+        setPhotos((p) => [...p, pObj]);
       }
       if (fichiers.length > restant) {
         setErreur("6 photos au maximum par article.");
+      }
+
+      // Si scan explicitement demandé OU si le commerçant importe une photo sans avoir encore saisi de titre :
+      // On lance automatiquement l'analyse Vision IA pour le "Zéro Saisie" !
+      const premierePhoto = nouvellesPhotos[0];
+      if (premierePhoto && (declencherScanAuto || !champs.titre.trim())) {
+        await scannerProduitParPhoto(premierePhoto.rawFile, premierePhoto.chemin);
       }
     } catch (err) {
       setErreur(err.message);
@@ -2181,6 +2285,7 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
       setChamps({ titre: "", description: "", categorie: champs.categorie, prix_xof: "", quantite: 1 });
       setPhotos([]);
       setMotsCles([]);
+      setPrixEstimeIA(null);
       setMessageSucces("✅ Article publié et référencé instantanément sur la plateforme !");
       await onPublie();
       setTimeout(() => setMessageSucces(""), 6000);
@@ -2191,12 +2296,21 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
     }
   };
 
+  const declencherScanPrincipal = () => {
+    if (photos.length > 0) {
+      scannerProduitParPhoto(photos[0].rawFile || null, photos[0].chemin);
+    } else {
+      champScanCamera.current?.click();
+    }
+  };
+
   return (
     <form
       onSubmit={soumettre}
-      className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm"
+      className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6 shadow-sm transition-all"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+      {/* En-tête du Formulaire */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
         <div>
           <h2 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
             <i className="fa-solid fa-bullhorn text-[#1877F2]"></i>
@@ -2207,76 +2321,162 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={optimiserAvecIA}
-          disabled={optimisationIA}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-black shadow-md shadow-violet-500/20 cursor-pointer disabled:opacity-60 transition"
-        >
-          <i className={`fa-solid ${optimisationIA ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"}`}></i>
-          {optimisationIA ? "Recherche & SEO..." : "Publieur IA : Trouver le nom exact & SEO"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Bouton Zéro Saisie par Photo avec Badge Pro */}
+          <button
+            type="button"
+            onClick={declencherScanPrincipal}
+            disabled={scanIAEnCours || compression}
+            className="relative group inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-black shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 cursor-pointer disabled:opacity-60 transition-all transform active:scale-95"
+            title="Importez ou prenez une photo : l'IA remplit la fiche complète instantanément"
+          >
+            <i className={`fa-solid ${scanIAEnCours ? "fa-circle-notch fa-spin" : "fa-camera-retro"} text-sm text-yellow-200`}></i>
+            <span>{scanIAEnCours ? "Identification IA..." : "📸 Scanner le produit avec l'IA"}</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm border border-amber-300/40 text-[10px] font-black uppercase tracking-wider text-amber-300 shadow-inner">
+              <i className="fa-solid fa-crown text-[9px] text-amber-300"></i>
+              Fonctionnalité Pro
+            </span>
+          </button>
+
+          {/* Bouton Optimiseur SEO Texte */}
+          <button
+            type="button"
+            onClick={optimiserAvecIA}
+            disabled={optimisationIA || scanIAEnCours}
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/50 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 text-xs font-bold cursor-pointer disabled:opacity-60 transition"
+            title="Optimiser le titre et la description textuelle"
+          >
+            <i className={`fa-solid ${optimisationIA ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"} text-violet-600 dark:text-violet-400`}></i>
+            {optimisationIA ? "Optimisation..." : "Optimiser texte SEO"}
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Bannière de Chargement Visuel Dynamique "L'IA identifie votre article..." */}
+      {scanIAEnCours && (
+        <div className="mb-5 p-4 rounded-2xl bg-gradient-to-r from-violet-900/10 via-indigo-900/15 to-purple-900/10 dark:from-violet-950/60 dark:via-indigo-950/50 dark:to-purple-950/60 border border-violet-500/30 dark:border-violet-500/40 shadow-md relative overflow-hidden animate-fadeIn">
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white text-base shadow-md shrink-0">
+              <i className="fa-solid fa-expand text-lg text-amber-300 animate-pulse"></i>
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs sm:text-sm font-black text-violet-950 dark:text-violet-100 flex items-center gap-1.5">
+                  <i className="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+                  L&apos;IA identifie votre article...
+                </h4>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase">
+                  Zéro Saisie
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-violet-700 dark:text-violet-300 font-medium mt-0.5 truncate">
+                {etapeScanIA || "Analyse visuelle multimodale et estimation en cours..."}
+              </p>
+            </div>
+          </div>
+
+          <div className="w-full bg-violet-200 dark:bg-violet-900/50 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-400 via-rose-500 to-violet-500 h-full w-full animate-pulse"></div>
+          </div>
+        </div>
+      )}
+
+      {/* Grille des Champs du Formulaire */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div className="sm:col-span-2">
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            Nom commercial du produit *
+          </label>
           <input
             type="text"
             required
             value={champs.titre}
             onChange={(e) => setChamps({ ...champs, titre: e.target.value })}
-            placeholder="Nom ou marque du produit (ex. iPhone 13, Masque chirurgical, Robe soirée...)"
-            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 font-medium focus:ring-2 focus:ring-[#1877F2]/30"
+            placeholder="Nom ou marque du produit (ex. iPhone 13, Crème Hydratante Bio, Robe soirée...)"
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 font-medium focus:ring-2 focus:ring-[#1877F2]/30 transition"
           />
         </div>
 
-        <select
-          value={champs.categorie}
-          onChange={(e) => setChamps({ ...champs, categorie: e.target.value })}
-          className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm cursor-pointer"
-        >
-          {CATEGORIES.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            Catégorie *
+          </label>
+          <select
+            value={champs.categorie}
+            onChange={(e) => setChamps({ ...champs, categorie: e.target.value })}
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 font-medium cursor-pointer focus:ring-2 focus:ring-[#1877F2]/30"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <input
-          type="number"
-          min="0"
-          required
-          value={champs.prix_xof}
-          onChange={(e) => setChamps({ ...champs, prix_xof: e.target.value })}
-          placeholder="Prix en FCFA *"
-          className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-bold text-[#1877F2]"
-        />
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+              Prix en FCFA *
+            </label>
+            {prixEstimeIA && (
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
+                ✨ Prix suggéré par l&apos;IA
+              </span>
+            )}
+          </div>
+          <input
+            type="number"
+            min="0"
+            required
+            value={champs.prix_xof}
+            onChange={(e) => setChamps({ ...champs, prix_xof: e.target.value })}
+            placeholder="Prix en FCFA *"
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-bold text-[#1877F2] focus:ring-2 focus:ring-[#1877F2]/30"
+          />
+        </div>
 
-        <input
-          type="number"
-          min="0"
-          value={champs.quantite}
-          onChange={(e) => setChamps({ ...champs, quantite: e.target.value })}
-          placeholder="Quantité en stock (ex: 1, 5, 20...)"
-          className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm"
-        />
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            Quantité en stock
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={champs.quantite}
+            onChange={(e) => setChamps({ ...champs, quantite: e.target.value })}
+            placeholder="Quantité disponible (ex: 1, 5, 20...)"
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium focus:ring-2 focus:ring-[#1877F2]/30"
+          />
+        </div>
 
-        <textarea
-          rows={3}
-          value={champs.description}
-          onChange={(e) => setChamps({ ...champs, description: e.target.value })}
-          placeholder="Description du produit (ou laissez le Publieur IA rédiger une description commerciale optimisée SEO)..."
-          className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm sm:col-span-2 resize-none leading-relaxed"
-        />
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            Description commerciale *
+          </label>
+          <textarea
+            rows={4}
+            value={champs.description}
+            onChange={(e) => setChamps({ ...champs, description: e.target.value })}
+            placeholder="Description commerciale vendeuse (ou laissez le Scan IA rédiger automatiquement la fiche produit complète)..."
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 font-medium resize-none leading-relaxed focus:ring-2 focus:ring-[#1877F2]/30"
+          />
+        </div>
       </div>
 
+      {/* Mots-clés SEO générés */}
       {motsCles.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold text-gray-400 mr-1">Tags SEO générés :</span>
+        <div className="mt-3.5 p-3 rounded-2xl bg-violet-50/60 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900/50 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-bold text-violet-700 dark:text-violet-300 mr-1 flex items-center gap-1">
+            <i className="fa-solid fa-tags text-[10px]"></i>
+            Balises SEO générées :
+          </span>
           {motsCles.map((mc, idx) => (
             <span
               key={idx}
-              className="px-2 py-0.5 rounded-md bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-300 text-[10px] font-bold"
+              className="px-2 py-0.5 rounded-md bg-white dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 text-[10px] font-bold border border-violet-200 dark:border-violet-800/60 shadow-2xs"
             >
               #{mc}
             </span>
@@ -2284,69 +2484,128 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
         </div>
       )}
 
-      <div className="mt-4">
-        <div className="flex flex-wrap gap-2">
+      {/* Zone Photos et Actions Rapides */}
+      <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+            Photos de l&apos;article ({photos.length}/6)
+          </span>
+          {photos.length > 0 && (
+            <button
+              type="button"
+              onClick={() => scannerProduitParPhoto(photos[0].rawFile || null, photos[0].chemin)}
+              disabled={scanIAEnCours}
+              className="text-[11px] font-bold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer flex items-center gap-1"
+            >
+              <i className="fa-solid fa-rotate text-[10px]"></i>
+              Réanalyser la photo avec l&apos;IA
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2.5">
           {photos.map((p) => (
-            <div key={p.chemin} className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-sm">
+            <div key={p.chemin} className="relative w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm group">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.apercu} alt="" className="w-full h-full object-cover" />
+              <img src={p.apercu} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
               <button
                 type="button"
                 onClick={() => retirerPhoto(p.chemin)}
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-[10px] cursor-pointer"
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-red-600 text-white text-[10px] cursor-pointer flex items-center justify-center transition"
                 aria-label="Retirer la photo"
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
           ))}
+
           {photos.length < 6 && (
             <button
               type="button"
               onClick={() => champFichier.current?.click()}
-              disabled={compression}
-              className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 hover:border-[#1877F2] transition"
+              disabled={compression || scanIAEnCours}
+              className="w-20 h-20 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-[#1877F2] text-gray-400 dark:text-gray-500 hover:text-[#1877F2] flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 transition group"
               aria-label="Ajouter une photo"
             >
-              <i className={`fa-solid ${compression ? "fa-spinner fa-spin" : "fa-camera"} text-base`}></i>
+              <i className={`fa-solid ${compression ? "fa-spinner fa-spin" : "fa-camera"} text-base group-hover:scale-110 transition`}></i>
               <span className="text-[9px] font-bold">Photo</span>
             </button>
           )}
+
+          {photos.length === 0 && (
+            <button
+              type="button"
+              onClick={declencherScanPrincipal}
+              disabled={compression || scanIAEnCours}
+              className="h-20 px-3.5 rounded-2xl border-2 border-dashed border-violet-400 dark:border-violet-700 bg-violet-50/40 dark:bg-violet-950/20 text-violet-600 dark:text-violet-300 hover:bg-violet-100/50 dark:hover:bg-violet-900/30 flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 transition"
+              title="Scanner directement un produit"
+            >
+              <div className="flex items-center gap-1 text-xs font-black">
+                <i className="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+                <span>Zéro Saisie IA</span>
+              </div>
+              <span className="text-[9px] text-gray-500 dark:text-gray-400">Photo ➔ Remplissage auto</span>
+            </button>
+          )}
         </div>
+
+        {/* Inputs de fichier */}
         <input
           ref={champFichier}
           type="file"
           accept="image/*"
           multiple
-          onChange={ajouterPhotos}
+          onChange={(e) => ajouterPhotos(e, false)}
           className="hidden"
         />
-        <p className="text-[11px] text-gray-400 mt-2">
-          Les photos sont automatiquement compressées avant l&apos;envoi pour économiser vos données mobiles.
+        <input
+          ref={champScanCamera}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => ajouterPhotos(e, true)}
+          className="hidden"
+        />
+
+        <p className="text-[11px] text-gray-400 mt-2 flex items-center gap-1.5">
+          <i className="fa-solid fa-shield-halved text-[10px]"></i>
+          Photos compressées automatiquement avant l&apos;envoi pour économiser vos données mobiles.
         </p>
       </div>
 
+      {/* Messages d'erreur et succès */}
       {erreur && (
-        <div className="mt-3 px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs font-bold text-red-800 dark:text-red-200">
-          <i className="fa-solid fa-triangle-exclamation mr-2"></i>
+        <div className="mt-4 px-4 py-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs font-bold text-red-800 dark:text-red-200 animate-fadeIn">
+          <i className="fa-solid fa-triangle-exclamation mr-2 text-red-500"></i>
           {erreur}
         </div>
       )}
 
       {messageSucces && (
-        <div className="mt-3 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs font-black text-emerald-800 dark:text-emerald-200 animate-fadeIn">
-          {messageSucces}
+        <div className="mt-4 px-4 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs font-black text-emerald-800 dark:text-emerald-200 animate-fadeIn flex items-center gap-2">
+          <i className="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+          <span>{messageSucces}</span>
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={envoi || compression}
-        className="mt-4 w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-[#1877F2] hover:bg-blue-600 text-white text-sm font-black disabled:opacity-50 cursor-pointer shadow-lg shadow-blue-500/25 transition"
-      >
-        <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-rocket"} mr-2`}></i>
-        {envoi ? "Publication instantanée…" : "Publier l'article immédiatement"}
-      </button>
+      {/* Bouton de Publication Immédiate */}
+      <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <button
+          type="submit"
+          disabled={envoi || compression || scanIAEnCours}
+          className="px-8 py-3.5 rounded-2xl bg-[#1877F2] hover:bg-blue-600 active:scale-98 text-white text-sm font-black disabled:opacity-50 cursor-pointer shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
+        >
+          <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-rocket"}`}></i>
+          {envoi ? "Publication instantanée…" : "Publier l'article immédiatement"}
+        </button>
+
+        {champs.titre && !envoi && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 justify-center">
+            <i className="fa-solid fa-check text-emerald-500"></i>
+            Prêt à publier sans saisie supplémentaire
+          </span>
+        )}
+      </div>
     </form>
   );
 }

@@ -1516,7 +1516,7 @@ export default function Header() {
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          router.push("/");
+                          router.push("/profil");
                         }}
                         className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 group"
                       >
@@ -1551,7 +1551,7 @@ export default function Header() {
                         </div>
 
                         <span className="text-[10px] font-bold text-gray-400 group-hover:text-emerald-600 transition shrink-0 flex items-center gap-1">
-                          Basculer <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                          Mon profil <i className="fa-solid fa-arrow-right text-[8px]"></i>
                         </span>
                       </button>
                     </>
@@ -1562,9 +1562,9 @@ export default function Header() {
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          router.push("/");
+                          router.push("/profil");
                         }}
-                        className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-100/90 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-2xs"
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-100/90 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-2xs hover:border-emerald-500/50"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="relative shrink-0">
@@ -1867,7 +1867,7 @@ export default function Header() {
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        router.push("/");
+                        router.push("/profil");
                       }}
                       className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/40"
                     >
@@ -1898,7 +1898,7 @@ export default function Header() {
                       </div>
 
                       <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1 shrink-0">
-                        Basculer <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                        Mon profil <i className="fa-solid fa-arrow-right text-[8px]"></i>
                       </span>
                     </button>
                   </>
@@ -1909,7 +1909,7 @@ export default function Header() {
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        router.push("/");
+                        router.push("/profil");
                       }}
                       className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                     >

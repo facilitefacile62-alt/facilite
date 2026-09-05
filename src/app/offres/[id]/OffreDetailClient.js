@@ -270,13 +270,14 @@ export default function OffreDetailClient({ initialOffer }) {
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8">
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
           {/* S'il n'est pas en cours d'édition, on affiche la galerie d'images de l'offre */}
-          {!isEditing && offer.image_url && (
+          {!isEditing && (offer.photos || offer.images || offer.image_url || offer.image) && (
             <div className="w-full">
               <OfferMediaGallery
-                media={offer.image_url}
+                media={offer.photos || offer.images || offer.image_url || offer.image}
                 title={offer.title}
                 maxHeight="max-h-[580px]"
                 className="rounded-none border-x-0 border-t-0"
+                offer={offer}
               />
             </div>
           )}

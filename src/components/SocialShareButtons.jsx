@@ -218,6 +218,34 @@ export default function SocialShareButtons({
   if (variant === "feed") {
     return (
       <div className={`relative w-full ${className}`} ref={dropdownRef}>
+        {/* Barre de Stats d'Engagement Réseau Social (Style LinkedIn / 1:1 Capture : 👍 5 · 1 republication) */}
+        <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 font-medium px-1 pb-2 pt-0.5 border-b border-gray-100 dark:border-gray-800 mb-2">
+          <div className="flex items-center gap-1.5 cursor-pointer select-none">
+            <div className="flex items-center -space-x-1">
+              <span className="w-4 h-4 rounded-full bg-[#0A66C2] flex items-center justify-center text-[9px] text-white shadow-xs">
+                👍
+              </span>
+              <span className="w-4 h-4 rounded-full bg-rose-500 flex items-center justify-center text-[9px] text-white shadow-xs">
+                ❤️
+              </span>
+              <span className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] text-white shadow-xs">
+                👏
+              </span>
+            </div>
+            <span className="font-semibold text-gray-700 dark:text-gray-300 hover:text-[#0A66C2] transition">
+              {likesCount}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px]">
+            <span>{commentsCount} commentaires</span>
+            <span>·</span>
+            <span className="hover:text-[#0A66C2] transition cursor-pointer">
+              {sharesCount} republication{sharesCount > 1 ? "s" : ""}
+            </span>
+          </div>
+        </div>
+
         {/* Ligne d'actions 3 boutons alignés au même endroit : [ 👍 J'aime ] [ 📤 Partager ] [ ↗ Postuler sur le site officiel ] [ 🔖 Bookmark ] */}
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Bouton 1 : J'aime avec Barre de Réactions Flottante */}
