@@ -1433,7 +1433,7 @@ export default function Header() {
                   {isBusinessActive ? (
                     <img
                       src="/business_avatar.jpg"
-                      alt="Facilité Business"
+                      alt={maBoutiqueInfo?.nom || "Créer sa propre boutique"}
                       className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-[#1877F2] shadow-xs"
                     />
                   ) : authProfile?.avatar_url && authProfile.avatar_url !== "/logo.jpeg" ? (
@@ -1456,19 +1456,27 @@ export default function Header() {
 
                 <span className="hidden sm:inline-block max-w-[105px] truncate text-xs font-black text-gray-800 dark:text-gray-200">
                   {isBusinessActive
-                    ? maBoutiqueInfo?.nom || "Business"
+                    ? maBoutiqueInfo?.nom || "Ma boutique"
                     : authProfile?.full_name?.split(" ")[0] || "Candidat"}
                 </span>
               </button>
 
               {/* Menu Switcher d'Espace 1:1 Pixel Perfect (Exact Image 2) */}
               {profileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans">
-                  
+                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans space-y-1.5">
+                  <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                      Vos Espaces
+                    </span>
+                    <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                      {isBusinessActive ? "Mode Vendeur" : "Mode Candidat"}
+                    </span>
+                  </div>
+
                   {/* L'espace sélectionné est TOUJOURS en haut, l'autre en dessous avec l'icône de bascule ⟲ */}
                   {isBusinessActive ? (
                     <>
-                      {/* 1. SÉLECTIONNÉ EN HAUT : Facilité Business */}
+                      {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Vendeur */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1481,13 +1489,13 @@ export default function Header() {
                           <div className="relative shrink-0">
                             <img
                               src="/business_avatar.jpg"
-                              alt="Facilité Business"
+                              alt={maBoutiqueInfo?.nom || "Créer sa propre boutique"}
                               className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs"
                             />
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate">
-                              {maBoutiqueInfo?.nom ? `${maBoutiqueInfo.nom} (Business)` : "Facilite Business"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Créer sa propre boutique"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Espace Vendeur &amp; Marketplace
@@ -1591,7 +1599,7 @@ export default function Header() {
                       {/* Ligne de séparation */}
                       <div className="my-1 border-t border-gray-200/70 dark:border-gray-800"></div>
 
-                      {/* 2. ALTERNATIF EN BAS : Facilité Business (avec icône de synchronisation ⟲) */}
+                      {/* 2. ALTERNATIF EN BAS : Créer sa propre boutique / Boutique personnalisée */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1604,7 +1612,7 @@ export default function Header() {
                           <div className="relative shrink-0">
                             <img
                               src="/business_avatar.jpg"
-                              alt="Facilité Business"
+                              alt={maBoutiqueInfo?.nom || "Créer sa propre boutique"}
                               className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs"
                             />
 
@@ -1616,7 +1624,7 @@ export default function Header() {
 
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition">
-                              {maBoutiqueInfo?.nom ? `${maBoutiqueInfo.nom} (Business)` : "Facilite Business"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Créer sa propre boutique"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Espace Vendeur &amp; Marketplace
@@ -1631,8 +1639,28 @@ export default function Header() {
                     </>
                   )}
 
+                  {/* Liens d'action rapides : Gérer mon profil & Ma boutique */}
+                  <div className="flex items-center justify-between px-1.5 py-1 pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px] font-bold">
+                    <Link
+                      href="/profil"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
+                    >
+                      <i className="fa-solid fa-id-card text-xs"></i>
+                      <span>Gérer mon profil</span>
+                    </Link>
+                    <Link
+                      href="/marketplace"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
+                    >
+                      <i className="fa-solid fa-store text-xs"></i>
+                      <span>Ma boutique</span>
+                    </Link>
+                  </div>
+
                   {/* Déconnexion */}
-                  <div className="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-800">
+                  <div className="pt-1 border-t border-gray-100 dark:border-gray-800">
                     <button
                       type="button"
                       onClick={async () => {
@@ -1804,7 +1832,7 @@ export default function Header() {
                 {/* L'espace sélectionné est TOUJOURS en haut, l'autre en dessous avec l'icône de bascule ⟲ */}
                 {isBusinessActive ? (
                   <>
-                    {/* 1. SÉLECTIONNÉ EN HAUT : Facilité Business */}
+                    {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Vendeur */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1816,12 +1844,12 @@ export default function Header() {
                       <div className="flex items-center gap-3 min-w-0">
                         <img
                           src="/business_avatar.jpg"
-                          alt="Facilité Business"
+                          alt={maBoutiqueInfo?.nom || "Créer sa propre boutique"}
                           className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs shrink-0"
                         />
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {maBoutiqueInfo?.nom ? `${maBoutiqueInfo.nom} (Business)` : "Facilite Business"}
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Créer sa propre boutique"}
                           </h4>
                           <p className="text-[10px] text-gray-500 font-medium">Espace Vendeur &amp; Marketplace</p>
                         </div>
@@ -1916,7 +1944,7 @@ export default function Header() {
                     {/* Séparateur */}
                     <div className="border-t border-gray-100 dark:border-gray-800 my-0.5"></div>
 
-                    {/* 2. ALTERNATIF EN BAS : Facilité Business (avec icône ⟲) */}
+                    {/* 2. ALTERNATIF EN BAS : Créer sa propre boutique / Boutique personnalisée */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1929,7 +1957,7 @@ export default function Header() {
                         <div className="relative shrink-0">
                           <img
                             src="/business_avatar.jpg"
-                            alt="Facilité Business"
+                            alt={maBoutiqueInfo?.nom || "Créer sa propre boutique"}
                             className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs shrink-0"
                           />
                           <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 flex items-center justify-center shadow-xs">
@@ -1938,7 +1966,7 @@ export default function Header() {
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {maBoutiqueInfo?.nom ? `${maBoutiqueInfo.nom} (Business)` : "Facilite Business"}
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Créer sa propre boutique"}
                           </h4>
                           <p className="text-[10px] text-gray-500 font-medium">Espace Vendeur &amp; Marketplace</p>
                         </div>

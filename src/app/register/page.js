@@ -123,49 +123,24 @@ function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col justify-between items-center relative overflow-hidden">
-      {/* Grille de fond subtile */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-40" 
-        style={{
-          backgroundImage: `radial-[#0000000a] 1px, transparent 1px), linear-gradient(to right, #00000008 1px, transparent 1px), linear-gradient(to bottom, #00000008 1px, transparent 1px)`,
-          backgroundSize: "24px 24px"
-        }}
-      ></div>
-
-      {/* Navigation En-tête */}
-      <header className="w-full max-w-[1180px] px-6 py-5 flex items-center justify-between z-10">
-        <Link href="/" className="flex items-center space-x-2.5 hover:opacity-85 transition">
-          <img src="/logo.jpeg" alt="Logo Facilité" className="w-9 h-9 rounded-full object-cover shadow-sm border border-gray-200" />
-          <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilité</span>
-        </Link>
-
-        <Link
-          href={`/login${redirectUrl && redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
-          className="text-xs font-bold text-gray-600 hover:text-gray-900 bg-white border border-gray-200 px-4 py-2 rounded-full shadow-xs hover:shadow-sm transition flex items-center space-x-1.5"
-        >
-          <i className="fa-solid fa-arrow-left text-[11px]"></i>
-          <span>Retour au Login</span>
-        </Link>
-      </header>
-
+    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/50 font-sans flex flex-col justify-start items-center pt-4 sm:pt-6 pb-8 px-3 sm:px-4 relative select-none">
       {/* Conteneur Principal / Carte d'Inscription */}
-      <main className="w-full max-w-md px-4 py-8 z-10">
-        <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300">
+      <main className="w-full max-w-md px-2 py-4 z-10">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-100 backdrop-blur-xs transition-all duration-300">
           
-          {/* Logo officiel du site au-dessus de la carte */}
-          <div className="flex justify-center mb-5">
+          {/* Logo officiel du site au-dessus du formulaire */}
+          <div className="flex justify-center mb-4">
             <Link href="/" className="cursor-pointer hover:opacity-85 transition" title="Retour à l'accueil Facilité">
-              <img src="/logo.jpeg" alt="Logo Facilité" className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
+              <img src="/logo.jpeg" alt="Logo Facilité" className="w-12 h-12 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-gray-100" />
             </Link>
           </div>
 
           {/* Titre & Sous-titre */}
           <div className="text-center mb-6">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1">
               Sign Up
             </h1>
-            <p className="text-sm font-medium text-gray-500">
+            <p className="text-xs sm:text-sm font-medium text-gray-500">
               Create your account to get started.
             </p>
           </div>
