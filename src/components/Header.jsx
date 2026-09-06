@@ -1721,23 +1721,6 @@ export default function Header() {
             <span className="text-[9px] font-bold tracking-tight truncate w-full">Accueil</span>
           </Link>
 
-          {/* Bouton + Publier sur Mobile & Tablette dans l'espace Marketplace */}
-          {isBusinessActive && (
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "vendre" }));
-                }
-              }}
-              className="flex items-center justify-center gap-1 bg-[#10E688] hover:bg-[#0fd27c] text-gray-950 font-black px-3 py-1 rounded-full text-[10px] sm:text-xs shadow-xs active:scale-95 transition cursor-pointer flex-shrink-0"
-              title="Publier un nouvel article sur la Marketplace"
-            >
-              <i className="fa-solid fa-plus text-[9px] font-black"></i>
-              <span>Publier</span>
-            </button>
-          )}
-
           {!isBusinessActive && (
             <>
               {userSession && (
@@ -1777,6 +1760,7 @@ export default function Header() {
               )}
             </>
           )}
+
           {userSession && (
             <button
               type="button"
@@ -1795,7 +1779,27 @@ export default function Header() {
               <span className="text-[9px] font-bold tracking-tight truncate w-full">Notifs</span>
             </button>
           )}
+
           <RoleNavLink session={userSession} variant="bottom-bar" />
+
+          {/* Bouton + Publier toujours placé tout au fond (à l'extrême droite) dans l'espace Marketplace */}
+          {isBusinessActive && (
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "vendre" }));
+                }
+              }}
+              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] text-gray-700 dark:text-gray-200 hover:text-emerald-600 transition group"
+              title="Publier un nouvel article sur la Marketplace"
+            >
+              <div className="w-5 h-5 rounded-full border border-gray-400 dark:border-gray-500 group-hover:border-emerald-500 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950 flex items-center justify-center transition shadow-2xs">
+                <i className="fa-solid fa-plus text-[10px] text-gray-700 dark:text-gray-200 group-hover:text-emerald-600"></i>
+              </div>
+              <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Publier</span>
+            </button>
+          )}
         </div>
       )}
 

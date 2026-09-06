@@ -466,6 +466,26 @@ export default function MarketplaceClient() {
             onFermer={() => setBoutiqueModal(null)}
           />
         )}
+
+        {/* Bouton Flottant circulaire "Toujours au fond" pour publier (Mobile, Tablette & Desktop) */}
+        {onglet === "acheter" && (
+          <button
+            type="button"
+            onClick={() => {
+              setOnglet("vendre");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="fixed bottom-6 right-4 sm:right-6 z-40 bg-[#10E688] hover:bg-[#0fd27c] text-gray-950 font-black p-3 sm:px-4 sm:py-2.5 rounded-full shadow-2xl flex items-center gap-2 border-2 border-white dark:border-gray-900 cursor-pointer active:scale-95 transition hover:shadow-emerald-500/25 group"
+            title="Publier un nouvel article sur la Marketplace"
+          >
+            <div className="w-6 h-6 rounded-full border border-gray-950/40 flex items-center justify-center font-bold text-sm bg-white/30">
+              <i className="fa-solid fa-plus text-xs"></i>
+            </div>
+            <span className="text-xs font-black uppercase tracking-wider hidden xs:inline sm:inline">
+              Publier
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
