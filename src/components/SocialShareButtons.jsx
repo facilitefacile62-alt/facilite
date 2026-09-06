@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
 import { isOfferExpired } from "@/lib/offerExpiration";
 
@@ -48,11 +49,55 @@ export default function SocialShareButtons({
   const strOfferId = offerId ? String(offerId) : "";
   const hash = strOfferId ? strOfferId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) : 42;
   const initialLikes = (hash * 17) % 800 + 45;
-  const commentsCount = (hash * 7) % 350 + 12;
   const initialShares = (hash * 3) % 80 + 5;
 
   const [likesCount, setLikesCount] = useState(initialLikes);
   const [sharesCount, setSharesCount] = useState(initialShares);
+
+  const [applicantsCount, setApplicantsCount] = useState(
+    offer?.applications_count ?? offer?.candidatures_count ?? offer?.applicants_count ?? 0
+  );
+
+  useEffect(() => {
+    if (
+      offer?.applications_count !== undefined ||
+      offer?.candidatures_count !== undefined ||
+      offer?.applicants_count !== undefined
+    ) {
+      setApplicantsCount(Number(offer.applications_count ?? offer.candidatures_count ?? offer.applicants_count) || 0);
+      return;
+    }
+    const currentId = offer?.id;
+    if (!currentId) {
+      setApplicantsCount(0);
+      return;
+    }
+
+    let annule = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc("compter_candidatures_par_offre", {
+          p_offres: [String(currentId)],
+        });
+        if (annule) return;
+        if (!error && Array.isArray(data) && data.length > 0 && data[0]?.nombre !== undefined) {
+          setApplicantsCount(Number(data[0].nombre) || 0);
+          return;
+        }
+      } catch (err) {
+        console.warn("Erreur comptage candidatures :", err);
+      }
+      if (!annule) {
+        setApplicantsCount(0);
+      }
+    })();
+
+    return () => {
+      annule = true;
+    };
+  }, [offer?.id, offer?.applications_count, offer?.candidatures_count, offer?.applicants_count]);
+
+  const displayApplicantsCount = typeof applicantsCount === "number" ? applicantsCount : 0;
 
   const getBaseUrl = () => {
     if (typeof window !== "undefined" && window.location.origin) {
@@ -218,32 +263,17 @@ export default function SocialShareButtons({
   if (variant === "feed") {
     return (
       <div className={`relative w-full ${className}`} ref={dropdownRef}>
-        {/* Barre de Stats d'Engagement Réseau Social (Style LinkedIn / 1:1 Capture : 👍 5 · 1 republication) */}
-        <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 font-medium px-1 pb-2 pt-0.5 border-b border-gray-100 dark:border-gray-800 mb-2">
-          <div className="flex items-center gap-1.5 cursor-pointer select-none">
-            <div className="flex items-center -space-x-1">
-              <span className="w-4 h-4 rounded-full bg-[#0A66C2] flex items-center justify-center text-[9px] text-white shadow-xs">
-                👍
-              </span>
-              <span className="w-4 h-4 rounded-full bg-rose-500 flex items-center justify-center text-[9px] text-white shadow-xs">
-                ❤️
-              </span>
-              <span className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] text-white shadow-xs">
-                👏
-              </span>
-            </div>
-            <span className="font-semibold text-gray-700 dark:text-gray-300 hover:text-[#0A66C2] transition">
-              {likesCount}
+        {/* Nombre de personnes qui ont postulé */}
+        <div className="flex items-center text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium px-1 pb-2 pt-0.5 border-b border-gray-100 dark:border-gray-800 mb-2">
+          <span className="inline-flex items-center gap-1.5">
+            <i className="fa-solid fa-user-group text-blue-600 dark:text-blue-400 text-xs"></i>
+            <span>
+              <strong className="text-gray-900 dark:text-white font-bold tabular-nums">
+                {displayApplicantsCount}
+              </strong>{" "}
+              {displayApplicantsCount > 1 ? "personnes ont postulé" : "personne a postulé"}
             </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-[11px]">
-            <span>{commentsCount} commentaires</span>
-            <span>·</span>
-            <span className="hover:text-[#0A66C2] transition cursor-pointer">
-              {sharesCount} republication{sharesCount > 1 ? "s" : ""}
-            </span>
-          </div>
+          </span>
         </div>
 
         {/* Ligne d'actions 3 boutons alignés au même endroit : [ 👍 J'aime ] [ 📤 Partager ] [ ↗ Postuler sur le site officiel ] [ 🔖 Bookmark ] */}
