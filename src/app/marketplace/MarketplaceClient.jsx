@@ -271,142 +271,144 @@ export default function MarketplaceClient() {
           </div>
         </header>
 
-        {/* Layout avec barre latérale 1:1 identique à la Capture 2 (Accueil) et zone principale */}
-        <div className="flex flex-col md:flex-row gap-6 items-start w-full">
-          {/* BARRE DU PROFIL GAUCHE : Taille 1:1 identique à la Capture 2 (md:w-[215px]) */}
-          <aside className={`w-full md:w-[215px] flex-shrink-0 flex flex-col gap-2 ${onglet === "vendre" ? "flex" : "hidden md:flex"}`}>
-            {chargementBoutique ? (
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse space-y-3">
-                <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
-                <div className="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto -mt-6"></div>
-                <div className="h-4 w-28 bg-gray-200 dark:bg-gray-800 rounded mx-auto"></div>
-                <div className="h-3 w-40 bg-gray-100 dark:bg-gray-800/60 rounded mx-auto"></div>
-              </div>
-            ) : userId || profile ? (
-              <>
-                {/* 1. Carte de Profil Boutique (Format compact 215px avec son propre profil boutique) */}
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
-                  {/* Bannière Boutique Cliquable (Ouvre la fiche boutique) */}
-                  <div
-                    onClick={() => {
-                      if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
-                      else setOnglet("vendre");
-                    }}
-                    className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
-                    style={{ backgroundImage: `url('${profile?.cover_url || '/stellar-cover.png'}')` }}
-                    title="Voir le profil de ma boutique"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
-                    <div className="absolute inset-0 flex items-center justify-end px-3 pointer-events-none">
-                      <span className="text-white/20 font-black text-xs uppercase tracking-widest select-none">
-                        BOUTIQUE
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
-                    {/* Avatar / Logo de la Boutique Cliquable */}
+        {/* Layout avec barre latérale (mode Catalogue/Acheteur) et zone principale */}
+        <div className={`flex flex-col md:flex-row gap-6 items-start w-full ${onglet === "vendre" ? "justify-center" : ""}`}>
+          {/* BARRE DU PROFIL & CATÉGORIES : Affichée UNIQUEMENT en mode Catalogue (Acheter) */}
+          {onglet === "acheter" && (
+            <aside className="w-full md:w-[215px] flex-shrink-0 flex flex-col gap-2 hidden md:flex">
+              {chargementBoutique ? (
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse space-y-3">
+                  <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                  <div className="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto -mt-6"></div>
+                  <div className="h-4 w-28 bg-gray-200 dark:bg-gray-800 rounded mx-auto"></div>
+                  <div className="h-3 w-40 bg-gray-100 dark:bg-gray-800/60 rounded mx-auto"></div>
+                </div>
+              ) : userId || profile ? (
+                <>
+                  {/* 1. Carte de Profil Boutique (Format compact 215px avec son propre profil boutique) */}
+                  <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
+                    {/* Bannière Boutique Cliquable (Ouvre la fiche boutique) */}
                     <div
                       onClick={() => {
                         if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
                         else setOnglet("vendre");
                       }}
-                      className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
+                      className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
+                      style={{ backgroundImage: `url('${profile?.cover_url || '/stellar-cover.png'}')` }}
                       title="Voir le profil de ma boutique"
                     >
-                      {maBoutiqueActive?.nom ? (
-                        maBoutiqueActive.nom.substring(0, 2).toUpperCase()
-                      ) : profile?.avatar_url ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={profile.avatar_url}
-                          alt="Boutique"
-                          className="w-full h-full object-cover group-hover:scale-105 transition"
-                        />
-                      ) : (
-                        <i className="fa-solid fa-store text-xl"></i>
-                      )}
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
+                      <div className="absolute inset-0 flex items-center justify-end px-3 pointer-events-none">
+                        <span className="text-white/20 font-black text-xs uppercase tracking-widest select-none">
+                          BOUTIQUE
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Nom de la Boutique (Propre à la boutique) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
-                        else setOnglet("vendre");
-                      }}
-                      className="group cursor-pointer bg-transparent border-none p-0 text-center"
-                      title="Voir le profil de ma boutique"
-                    >
-                      <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
-                        {maBoutiqueActive?.nom || "Ma Boutique Facilité"}
-                      </h2>
-                    </button>
+                    <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
+                      {/* Avatar / Logo de la Boutique Cliquable */}
+                      <div
+                        onClick={() => {
+                          if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
+                          else setOnglet("vendre");
+                        }}
+                        className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
+                        title="Voir le profil de ma boutique"
+                      >
+                        {maBoutiqueActive?.nom ? (
+                          maBoutiqueActive.nom.substring(0, 2).toUpperCase()
+                        ) : profile?.avatar_url ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={profile.avatar_url}
+                            alt="Boutique"
+                            className="w-full h-full object-cover group-hover:scale-105 transition"
+                          />
+                        ) : (
+                          <i className="fa-solid fa-store text-xl"></i>
+                        )}
+                      </div>
 
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
-                      {maBoutiqueActive
-                        ? `Boutique Officielle · ${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville || "Dakar"}`
-                        : "Vendeur Facilité Marketplace"}
-                    </p>
+                      {/* Nom de la Boutique (Propre à la boutique) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
+                          else setOnglet("vendre");
+                        }}
+                        className="group cursor-pointer bg-transparent border-none p-0 text-center"
+                        title="Voir le profil de ma boutique"
+                      >
+                        <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
+                          {maBoutiqueActive?.nom || "Ma Boutique Facilité"}
+                        </h2>
+                      </button>
 
-                    <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
-                      {maBoutiqueActive?.ville
-                        ? `${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville}, Sénégal`
-                        : (profile?.location || "Dakar, Sénégal")}
-                    </p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
+                        {maBoutiqueActive
+                          ? `Boutique Officielle · ${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville || "Dakar"}`
+                          : "Vendeur Facilité Marketplace"}
+                      </p>
 
-                    <button
-                      type="button"
-                      onClick={() => setOnglet("vendre")}
-                      className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
-                    >
-                      <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
-                      <span>Publier un article</span>
-                    </button>
+                      <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
+                        {maBoutiqueActive?.ville
+                          ? `${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville}, Sénégal`
+                          : (profile?.location || "Dakar, Sénégal")}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => setOnglet("vendre")}
+                        className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
+                      >
+                        <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
+                        <span>Publier un article</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* 2. Menu Toutes les catégories (1:1 Identique à la capture d'écran) */}
-                <MenuCategoriesSidebar
-                  categorieActive={categorie}
-                  onSelectCategorie={(cat) => {
-                    setCategorie(cat);
-                    if (onglet !== "acheter") setOnglet("acheter");
-                  }}
-                />
-              </>
-            ) : (
-              <>
-                <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
-                  <div className="flex items-center space-x-2">
-                    <span className="p-1.5 bg-[#10E688]/20 text-[#10E688] rounded-lg text-sm">🚀</span>
-                    <h3 className="text-xs font-black text-white leading-tight">Vendez sur Facilité</h3>
+                  {/* 2. Menu Toutes les catégories (1:1 Identique à la capture d'écran) */}
+                  <MenuCategoriesSidebar
+                    categorieActive={categorie}
+                    onSelectCategorie={(cat) => {
+                      setCategorie(cat);
+                      if (onglet !== "acheter") setOnglet("acheter");
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
+                    <div className="flex items-center space-x-2">
+                      <span className="p-1.5 bg-[#10E688]/20 text-[#10E688] rounded-lg text-sm">🚀</span>
+                      <h3 className="text-xs font-black text-white leading-tight">Vendez sur Facilité</h3>
+                    </div>
+                    <p className="text-[11px] text-gray-300 font-medium leading-relaxed">
+                      Ouvrez votre boutique gratuitement, publiez vos articles avec l&apos;Assistant IA et recevez les commandes sur WhatsApp.
+                    </p>
+                    <Link
+                      href="/login?redirect=%2Fmarketplace"
+                      className="block w-full py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs text-center rounded-xl transition shadow-sm"
+                    >
+                      Se connecter / Créer un compte
+                    </Link>
                   </div>
-                  <p className="text-[11px] text-gray-300 font-medium leading-relaxed">
-                    Ouvrez votre boutique gratuitement, publiez vos articles avec l&apos;Assistant IA et recevez les commandes sur WhatsApp.
-                  </p>
-                  <Link
-                    href="/login?redirect=%2Fmarketplace"
-                    className="block w-full py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs text-center rounded-xl transition shadow-sm"
-                  >
-                    Se connecter / Créer un compte
-                  </Link>
-                </div>
 
-                {/* Menu Toutes les catégories aussi disponible pour les visiteurs */}
-                <MenuCategoriesSidebar
-                  categorieActive={categorie}
-                  onSelectCategorie={(cat) => {
-                    setCategorie(cat);
-                    if (onglet !== "acheter") setOnglet("acheter");
-                  }}
-                />
-              </>
-            )}
-          </aside>
+                  {/* Menu Toutes les catégories aussi disponible pour les visiteurs */}
+                  <MenuCategoriesSidebar
+                    categorieActive={categorie}
+                    onSelectCategorie={(cat) => {
+                      setCategorie(cat);
+                      if (onglet !== "acheter") setOnglet("acheter");
+                    }}
+                  />
+                </>
+              )}
+            </aside>
+          )}
 
-          {/* ZONE PRINCIPALE : Reste de la largeur disponible (flex-1) */}
-          <main className="flex-1 min-w-0 w-full">
+          {/* ZONE PRINCIPALE : Reste de la largeur disponible (flex-1) ou centré max-w-4xl en mode Vendeur */}
+          <main className={`min-w-0 w-full ${onglet === "vendre" ? "max-w-4xl mx-auto" : "flex-1"}`}>
             {onglet === "acheter" ? (
               <VueAcheteur
                 onVoirBoutique={(b) => setBoutiqueModal(b)}
