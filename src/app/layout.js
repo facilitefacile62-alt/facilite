@@ -217,6 +217,7 @@ export default function RootLayout({ children }) {
             rapport avec le contenu affiché mais un vrai doublon de
             balisage, retiré le 2026-08-21. */}
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD_DATA) }}

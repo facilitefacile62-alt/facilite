@@ -80,6 +80,8 @@ export default function GlobeExplorateurBoutiques({
   // 1. Initialisation Leaflet robuste & garantie zéro écran blanc
   useEffect(() => {
     let annule = false;
+    let observer = null;
+    const timers = [];
 
     (async () => {
       if (!conteneurRef.current) return;
@@ -87,7 +89,7 @@ export default function GlobeExplorateurBoutiques({
         const L = (await import("leaflet")).default;
         if (annule || !conteneurRef.current) return;
 
-        // Détruire ancienne carte
+        // Détruire ancienne carte si existante
         if (carteRef.current) {
           carteRef.current.remove();
           carteRef.current = null;
@@ -102,6 +104,7 @@ export default function GlobeExplorateurBoutiques({
           zoom: 13,
           zoomControl: false,
           attributionControl: false,
+          preferCanvas: true,
         });
 
         carteRef.current = carte;
@@ -118,18 +121,33 @@ export default function GlobeExplorateurBoutiques({
           maxZoom: 19,
           subdomains: ["a", "b", "c", "d"],
           errorTileUrl: TUILES_OSM,
+          crossOrigin: true,
         }).addTo(carte);
 
         coucheTuilesRef.current = couche;
         groupeMarqueursRef.current = L.layerGroup().addTo(carte);
 
-        // Forcer le redimensionnement
-        setTimeout(() => {
+        // Forcer le rafraîchissement des dimensions à plusieurs intervalles
+        const forcerTaille = () => {
           if (carteRef.current) {
-            carteRef.current.invalidateSize();
+            carteRef.current.invalidateSize({ pan: false });
             setCartePrete(true);
           }
-        }, 100);
+        };
+
+        [50, 150, 300, 600, 1200].forEach((ms) => {
+          const t = setTimeout(forcerTaille, ms);
+          timers.push(t);
+        });
+
+        if (typeof ResizeObserver !== "undefined" && conteneurRef.current) {
+          observer = new ResizeObserver(() => {
+            forcerTaille();
+          });
+          observer.observe(conteneurRef.current);
+        }
+
+        window.addEventListener("resize", forcerTaille);
       } catch (err) {
         console.error("Erreur initialisation Leaflet:", err);
       }
@@ -137,6 +155,11 @@ export default function GlobeExplorateurBoutiques({
 
     return () => {
       annule = true;
+      timers.forEach(clearTimeout);
+      if (observer) observer.disconnect();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("resize", () => {});
+      }
       if (carteRef.current) {
         carteRef.current.remove();
         carteRef.current = null;
