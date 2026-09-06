@@ -12,7 +12,7 @@ import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
 import { useOffresReelles, type OffreReelle } from '@/lib/useOffresReelles';
 
 // Reproduction pixel-perfect de design_handoff_facilite/pages/01-accueil.html
-// (thème clair #F2F0EA, cartes blanches, palette Bleu Royal/Vert Menthe du
+// (thème clair #FAF6F1, cartes blanches, palette Bleu Royal/Vert Menthe du
 // handoff) — remplace la précédente version en thème sombre de cet écran,
 // direction supplantée par ce dossier de design "hifi" fourni pour l'app
 // mobile. Données réelles conservées (useOffresReelles,
@@ -31,7 +31,7 @@ export default function AccueilScreen() {
   const candidateMatchScores = useCandidateMatchScores(user?.id);
 
   return (
-    <View className="flex-1 bg-[#F2F0EA]">
+    <View className="flex-1 bg-[#FAF6F1]">
       <SafeAreaView className="flex-1" edges={['top']}>
         <FaciliteHeader ecranActif="accueil" />
 

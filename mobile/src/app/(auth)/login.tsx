@@ -105,7 +105,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#F2F0EA]">
+    <View className="flex-1 bg-[#FAF6F1]">
       <SafeAreaView className="flex-1">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
           <ScrollView contentContainerClassName="px-5 pt-6 pb-10 grow justify-center" keyboardShouldPersistTaps="handled">
