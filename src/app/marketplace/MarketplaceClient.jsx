@@ -189,8 +189,27 @@ export default function MarketplaceClient() {
         getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
       })
       .subscribe();
+
+    // Vérifier les paramètres URL au montage (?onglet=vendre ou ?action=publier)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const o = params.get("onglet") || (params.get("action") === "publier" ? "vendre" : null);
+      if (o === "vendre" || o === "acheter") {
+        setOnglet(o);
+      }
+    }
+
+    const handleSetOnglet = (e) => {
+      if (e?.detail && (e.detail === "vendre" || e.detail === "acheter")) {
+        setOnglet(e.detail);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+    window.addEventListener("marketplace_set_onglet", handleSetOnglet);
+
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener("marketplace_set_onglet", handleSetOnglet);
     };
   }, []);
 

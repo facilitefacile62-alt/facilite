@@ -1707,7 +1707,12 @@ export default function Header() {
         <div className="flex lg:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1 bg-[#FAF6F1]/95 dark:bg-gray-900/95 overflow-hidden px-0.5">
           <Link
             href={isBusinessActive ? "/marketplace" : "/"}
-            onClick={handleLogoOrHomeClick}
+            onClick={(e) => {
+              if (isBusinessActive && typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "acheter" }));
+              }
+              handleLogoOrHomeClick(e);
+            }}
             className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
               pathname === "/" || (isBusinessActive && pathname?.startsWith("/marketplace")) ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
             }`}
@@ -1715,6 +1720,24 @@ export default function Header() {
             <i className="fa-solid fa-house text-sm sm:text-base"></i>
             <span className="text-[9px] font-bold tracking-tight truncate w-full">Accueil</span>
           </Link>
+
+          {/* Bouton + Publier sur Mobile & Tablette dans l'espace Marketplace */}
+          {isBusinessActive && (
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "vendre" }));
+                }
+              }}
+              className="flex items-center justify-center gap-1 bg-[#10E688] hover:bg-[#0fd27c] text-gray-950 font-black px-3 py-1 rounded-full text-[10px] sm:text-xs shadow-xs active:scale-95 transition cursor-pointer flex-shrink-0"
+              title="Publier un nouvel article sur la Marketplace"
+            >
+              <i className="fa-solid fa-plus text-[9px] font-black"></i>
+              <span>Publier</span>
+            </button>
+          )}
+
           {!isBusinessActive && (
             <>
               {userSession && (
