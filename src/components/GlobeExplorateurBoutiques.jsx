@@ -4,12 +4,21 @@ import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import { positionActuelle } from "@/lib/marketplaceData";
 
-// Tuiles Carto Dark Matter (Élégant Dark Snap Map), Voyager (Clair) et Satellite HD
-// IMPORTANT : sans {r} pour éviter les erreurs 400 Bad Request
-const TUILES_DARK_MATTER = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png";
-const TUILES_SNAP_VOYAGER = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png";
+// Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
+// anonyme à ces tuiles (elles renvoient un placeholder "API KEY REQUIRED" en
+// HTTP 200 — un vrai succès réseau mais une image inutilisable, donc invisible
+// pour errorTileUrl qui ne réagit qu'aux échecs de requête). OpenStreetMap
+// (déjà dans la CSP, déjà utilisé ici comme repli) sert maintenant les styles
+// "dark" et "voyager" ; le rendu sombre est simulé par un filtre CSS
+// appliqué uniquement au pane des tuiles (voir plus bas), pas par une tuile
+// pré-assombrie. Satellite (ArcGIS) n'est pas concerné, inchangé.
 const TUILES_SATELLITE = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-const TUILES_OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+// Sous-domaine {s} indispensable : la CSP n'autorise que
+// "https://*.tile.openstreetmap.org" (voir next.config.mjs), qui ne
+// matche pas le domaine nu "tile.openstreetmap.org" — même convention
+// que CarteBoutiques.jsx, qui utilise déjà ce schéma avec succès.
+const TUILES_OSM = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const FILTRE_TUILES_SOMBRE = "invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9)";
 
 const CENTRE_SENEGAL = [14.6937, -17.4441]; // [lat, lng] Dakar / Thiès
 
@@ -110,22 +119,25 @@ export default function GlobeExplorateurBoutiques({
         carteRef.current = carte;
 
         // URL de tuiles propre sans paramètre erroné
-        const urlTuiles =
-          styleActif === "satellite"
-            ? TUILES_SATELLITE
-            : styleActif === "voyager"
-            ? TUILES_SNAP_VOYAGER
-            : TUILES_DARK_MATTER;
+        const urlTuiles = styleActif === "satellite" ? TUILES_SATELLITE : TUILES_OSM;
 
         const couche = L.tileLayer(urlTuiles, {
           maxZoom: 19,
-          subdomains: ["a", "b", "c", "d"],
-          errorTileUrl: TUILES_OSM,
           crossOrigin: true,
         }).addTo(carte);
 
         coucheTuilesRef.current = couche;
         groupeMarqueursRef.current = L.layerGroup().addTo(carte);
+
+        // Rendu "sombre" simulé par filtre CSS sur le seul pane des tuiles
+        // (getPane("tilePane") renvoie le conteneur DOM des images raster,
+        // séparé du markerPane qui héberge les avatars/divIcon — donc les
+        // pins restent intacts par construction, sans sélecteur CSS global
+        // qui risquerait d'affecter d'autres cartes Leaflet du site).
+        const paneTuiles = carte.getPane("tilePane");
+        if (paneTuiles) {
+          paneTuiles.style.filter = styleActif === "dark" ? FILTRE_TUILES_SOMBRE : "";
+        }
 
         // Forcer le rafraîchissement des dimensions à plusieurs intervalles
         const forcerTaille = () => {
