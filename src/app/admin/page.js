@@ -22,12 +22,14 @@ import AvatarImage from "@/components/AvatarImage";
 import AdminAIStudio from "@/components/AdminAIStudio";
 import AdminSecurityLab from "@/components/AdminSecurityLab";
 import AdminLiveDashboard from "@/components/AdminLiveDashboard";
+import AdminMarketplaceStores from "@/components/AdminMarketplaceStores";
 
 // "Utilisateurs", "Tarification" et "Messagerie Support" ont migré dans
 // NAV_SECTIONS (sidebar catégorisée) — les garder ici aurait recréé le
 // doublon d'accès trouvé en B0 (deux chemins vers /admin/messages).
 const TABS = [
   { id: "dashboard", label: "Tableau de bord", icon: "📊" },
+  { id: "boutiques", label: "Boutiques Marketplace", icon: "🏪" },
   { id: "securite", label: "Sécurité & Failles", icon: "🛡️" },
   { id: "fonctionnalites", label: "Fonctionnalités", icon: "✨" },
   { id: "ia_studio", label: "Entraînement IA", icon: "🧠" },
@@ -70,6 +72,7 @@ const NAV_SECTIONS = [
   {
     label: "Gestion",
     items: [
+      { type: "tab", id: "boutiques", icon: "🏪", label: "Boutiques Marketplace", badge: "Live" },
       { type: "tab", id: "fonctionnalites", icon: "✨", label: "Fonctionnalités" },
       { type: "tab", id: "ia_studio", icon: "🧠", label: "Entraînement IA", badge: "Studio" },
       { type: "tab", id: "securite", icon: "🛡️", label: "Sécurité & Failles", badge: "Live" },
@@ -2155,6 +2158,10 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === "boutiques" && (
+            <AdminMarketplaceStores triggerToast={triggerToast} />
           )}
 
           {activeTab === "tarification" && (

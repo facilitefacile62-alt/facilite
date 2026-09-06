@@ -326,28 +326,47 @@ export default function AdminLiveDashboard({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           
           {/* Action 1 : Demandes de Badges */}
           <div
             onClick={() => onNavigateTab?.("badges")}
             className="group bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xs hover:shadow-md hover:border-amber-400 transition cursor-pointer flex items-center justify-between"
           >
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center text-lg shadow-2xs group-hover:scale-105 transition-transform">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center text-base shadow-2xs group-hover:scale-105 transition-transform shrink-0">
                 <i className="fa-solid fa-certificate"></i>
               </div>
-              <div>
-                <span className="text-[11px] font-bold text-gray-500 block">Demandes de Badge</span>
-                <span className="text-xl font-black text-gray-900 dark:text-white">
-                  {pendingBadgeCount} <span className="text-xs font-semibold text-gray-400">à valider</span>
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold text-gray-500 block truncate">Demandes Badge</span>
+                <span className="text-lg font-black text-gray-900 dark:text-white">
+                  {pendingBadgeCount} <span className="text-[10px] font-semibold text-gray-400">en attente</span>
                 </span>
               </div>
             </div>
             <i className="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all"></i>
           </div>
 
-          {/* Action 2 : Paiements / Commandes en attente */}
+          {/* Action 2 : Marchands & Boutiques Marketplace */}
+          <div
+            onClick={() => onNavigateTab?.("boutiques")}
+            className="group bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xs hover:shadow-md hover:border-emerald-500 transition cursor-pointer flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-base shadow-2xs group-hover:scale-105 transition-transform shrink-0">
+                <i className="fa-solid fa-store"></i>
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold text-gray-500 block truncate">Boutiques Marketplace</span>
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                  Voir marchands →
+                </span>
+              </div>
+            </div>
+            <i className="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all"></i>
+          </div>
+
+          {/* Action 3 : Paiements / Commandes en attente */}
           <div
             onClick={() => {
               const el = document.getElementById("section-finances");
@@ -356,62 +375,57 @@ export default function AdminLiveDashboard({
             }}
             className="group bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xs hover:shadow-md hover:border-emerald-400 transition cursor-pointer flex items-center justify-between"
           >
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-lg shadow-2xs group-hover:scale-105 transition-transform">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-base shadow-2xs group-hover:scale-105 transition-transform shrink-0">
                 <i className="fa-solid fa-receipt"></i>
               </div>
-              <div>
-                <span className="text-[11px] font-bold text-gray-500 block">Paiements en attente</span>
-                <span className="text-xl font-black text-gray-900 dark:text-white">
-                  {pendingOrdersCount} <span className="text-xs font-semibold text-gray-400">à vérifier</span>
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold text-gray-500 block truncate">Paiements</span>
+                <span className="text-lg font-black text-gray-900 dark:text-white">
+                  {pendingOrdersCount} <span className="text-[10px] font-semibold text-gray-400">à vérifier</span>
                 </span>
               </div>
             </div>
             <i className="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all"></i>
           </div>
 
-          {/* Action 3 : Messagerie Support */}
+          {/* Action 4 : Messagerie Support */}
           <Link
             href="/admin/messages"
             className="group bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xs hover:shadow-md hover:border-blue-400 transition flex items-center justify-between"
           >
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center text-lg shadow-2xs group-hover:scale-105 transition-transform">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center text-base shadow-2xs group-hover:scale-105 transition-transform shrink-0">
                 <i className="fa-solid fa-headset"></i>
               </div>
-              <div>
-                <span className="text-[11px] font-bold text-gray-500 block">Support Client & FAQ</span>
-                <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400">
-                  Accéder à la messagerie →
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold text-gray-500 block truncate">Support Client</span>
+                <span className="text-xs font-black text-blue-600 dark:text-blue-400">
+                  Messagerie →
                 </span>
               </div>
             </div>
             <i className="fa-solid fa-arrow-up-right-from-square text-xs text-gray-300 group-hover:text-blue-500 transition-colors"></i>
           </Link>
 
-          {/* Action 4 : Lab Sécurité & RLS */}
+          {/* Action 5 : Lab Sécurité & RLS */}
           <div
             onClick={() => onNavigateTab?.("securite")}
             className="group bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xs hover:shadow-md hover:border-purple-400 transition cursor-pointer flex items-center justify-between"
           >
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center text-lg shadow-2xs group-hover:scale-105 transition-transform">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center text-base shadow-2xs group-hover:scale-105 transition-transform shrink-0">
                 <i className="fa-solid fa-shield-halved"></i>
               </div>
-              <div>
-                <span className="text-[11px] font-bold text-gray-500 block">Sécurité & Audits</span>
-                <span className="text-xl font-black text-gray-900 dark:text-white">
-                  {recentSecurityCount > 0 ? (
-                    <span className="text-rose-600">{recentSecurityCount} alerte(s)</span>
-                  ) : (
-                    <span className="text-emerald-600 text-sm">Système sain ✅</span>
-                  )}
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold text-gray-500 block truncate">Lab Sécurité</span>
+                <span className="text-xs font-black text-purple-600 dark:text-purple-400">
+                  {recentSecurityCount > 0 ? `${recentSecurityCount} alertes` : "Audits RLS →"}
                 </span>
               </div>
             </div>
             <i className="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-all"></i>
           </div>
-
         </div>
       </div>
 
