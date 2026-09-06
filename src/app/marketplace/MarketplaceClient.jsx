@@ -761,19 +761,28 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
           </div>
           <button
             type="button"
-            onClick={position ? reinitialiserPosition : localiser}
+            onClick={localiser}
             disabled={chargement}
-            className={`px-3.5 py-2.5 sm:px-5 sm:py-3 rounded-full sm:rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap transition cursor-pointer disabled:opacity-60 flex items-center justify-center shrink-0 shadow-xs active:scale-95 ${
+            className={`w-10 h-10 sm:w-auto sm:px-5 sm:py-3 rounded-full sm:rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition cursor-pointer disabled:opacity-60 flex items-center justify-center shrink-0 ${
               position
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
-                : "bg-[#1877F2] hover:bg-blue-600 text-white"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 sm:bg-[#1877F2] sm:text-white sm:hover:bg-blue-600 shadow-xs"
             }`}
-            title={position ? "Désactiver la géolocalisation et réinitialiser" : "Rechercher les boutiques autour de moi"}
+            title={position ? "Position active" : "Rechercher autour de moi"}
           >
-            <i className={`fa-solid ${chargement ? "fa-spinner fa-spin" : position ? "fa-location-dot" : "fa-location-crosshairs"} text-xs sm:text-sm`}></i>
-            <span className="ml-1.5 sm:ml-2">
-              {position ? "Autour de moi ✓" : "Autour de moi"}
+            <i className={`fa-solid ${chargement ? "fa-spinner fa-spin" : position ? "fa-location-dot" : "fa-location-crosshairs"}`}></i>
+            <span className="hidden sm:inline ml-2">
+              {position ? "Actualiser ma position" : "Autour de moi"}
             </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setGlobeOuvert(true)}
+            className="w-10 h-10 sm:w-auto sm:px-4 sm:py-3 rounded-full sm:rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition cursor-pointer flex items-center justify-center shrink-0 bg-gray-900 hover:bg-black text-white shadow-xs"
+            title="Explorer les boutiques sur le globe"
+          >
+            <span aria-hidden="true">🌍</span>
+            <span className="hidden sm:inline ml-2">Explorer</span>
           </button>
         </div>
 
