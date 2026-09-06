@@ -49,7 +49,7 @@ export default function MessagesScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#FAF6F1]">
+    <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1" edges={['top']}>
         <FaciliteHeader ecranActif="messages" />
 

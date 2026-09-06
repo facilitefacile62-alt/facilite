@@ -105,11 +105,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#FAF6F1]">
+    <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
           <ScrollView contentContainerClassName="px-5 pt-6 pb-10 grow justify-center" keyboardShouldPersistTaps="handled">
-            <View className="bg-white rounded-[22px] px-6 py-7 items-center shadow-xs">
+            <View className="bg-white rounded-[22px] px-6 py-7 items-center border border-gray-200 shadow-xs">
               <View className="w-14 h-14 rounded-full bg-white border-2 border-[#085041] items-center justify-center">
                 <Image
                   source={require('@/assets/images/login_key_teal.png')}

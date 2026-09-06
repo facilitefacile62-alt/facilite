@@ -45,7 +45,7 @@ export default function OffresScreen() {
   }, []);
 
   return (
-    <View className="flex-1 bg-[#FAF6F1]">
+    <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1" edges={['top']}>
         <FaciliteHeader ecranActif="offres" />
 
@@ -89,7 +89,7 @@ export default function OffresScreen() {
                   <Pressable
                     onPress={() => setFiltre('disponibles')}
                     className={`flex-1 flex-row items-center gap-2 rounded-2xl px-3 py-3 ${
-                      filtre === 'disponibles' ? 'bg-white shadow-xs' : 'bg-white/40'
+                      filtre === 'disponibles' ? 'bg-white border border-gray-200 shadow-xs' : 'bg-white/40'
                     }`}>
                     <IconEtincelle color="#10B981" size={16} />
                     <Text className="text-[12px] font-semibold text-[#1A1A1A] flex-1">Offres disponibles</Text>
@@ -100,7 +100,7 @@ export default function OffresScreen() {
                   <Pressable
                     onPress={() => setFiltre('expirees')}
                     className={`flex-1 flex-row items-center gap-2 rounded-2xl px-3 py-3 ${
-                      filtre === 'expirees' ? 'bg-white shadow-xs' : 'bg-white/40'
+                      filtre === 'expirees' ? 'bg-white border border-gray-200 shadow-xs' : 'bg-white/40'
                     }`}>
                     <IconClotureExpiree />
                     <Text className="text-[12px] font-semibold text-[#1A1A1A] flex-1">Offres expirées</Text>
@@ -129,7 +129,7 @@ export default function OffresScreen() {
             }
             ListEmptyComponent={
               filtre === 'expirees' ? (
-                <View className="bg-white rounded-2xl px-5 py-8 items-center gap-2.5 shadow-xs">
+                <View className="bg-white rounded-2xl px-5 py-8 items-center gap-2.5 border border-gray-200 shadow-xs">
                   <View className="w-[52px] h-[52px] rounded-2xl bg-[#ECECEC] items-center justify-center">
                     <IconClotureExpiree size={24} color="rgba(0,0,0,0.35)" />
                   </View>
@@ -186,7 +186,7 @@ function CarteOffreDetaillee({ offre, matchScore }: { offre: OffreReelle; matchS
   return (
     <Pressable
       onPress={() => Alert.alert('Fiche offre', 'La fiche détaillée arrive dans une prochaine mise à jour.')}
-      className="bg-white rounded-2xl p-3.5 shadow-xs">
+      className="bg-white rounded-2xl p-3.5 border border-gray-200 shadow-xs">
       <View className="flex-row items-center gap-2.5">
         <View className={`w-[38px] h-[38px] rounded-full ${offre.logoTeinte} items-center justify-center`}>
           <Text className="text-white font-bold text-[13px]">{offre.logoInitiales}</Text>

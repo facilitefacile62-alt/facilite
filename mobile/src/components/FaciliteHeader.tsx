@@ -34,7 +34,7 @@ export default function FaciliteHeader({ ecranActif }: { ecranActif: EcranActif 
   const noir = '#1A1A1A';
 
   return (
-    <View className="bg-white border-b border-[#E3DBCC]">
+    <View className="bg-[#FAF6F1] border-b border-gray-200">
       <View className="flex-row items-center justify-between px-4 pt-3.5 pb-2.5">
         <Pressable
           onPress={() => BIENTOT('Profil')}

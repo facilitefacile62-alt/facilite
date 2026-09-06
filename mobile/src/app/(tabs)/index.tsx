@@ -31,7 +31,7 @@ export default function AccueilScreen() {
   const candidateMatchScores = useCandidateMatchScores(user?.id);
 
   return (
-    <View className="flex-1 bg-[#FAF6F1]">
+    <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1" edges={['top']}>
         <FaciliteHeader ecranActif="accueil" />
 
@@ -54,7 +54,7 @@ export default function AccueilScreen() {
             contentContainerClassName="pb-8"
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
-              <View className="bg-white mx-3 mt-2.5 mb-3 rounded-2xl px-3 py-3.5 flex-row gap-4 shadow-xs">
+              <View className="bg-white mx-3 mt-2.5 mb-3 rounded-2xl px-3 py-3.5 flex-row gap-4 border border-gray-200 shadow-xs">
                 {MODELES.map((modele) => (
                   <View key={modele.id} className="items-center gap-1.5">
                     <View className="w-14 h-14 rounded-full border-[2.5px] border-blue-600 p-0.5">
@@ -99,7 +99,7 @@ export default function AccueilScreen() {
 
 function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: number | null }) {
   return (
-    <View className="bg-white mx-3 rounded-2xl p-3.5 shadow-xs">
+    <View className="bg-white mx-3 rounded-2xl p-3.5 border border-gray-200 shadow-xs">
       <View className="flex-row items-center gap-2.5">
         <View className="w-[38px] h-[38px] rounded-[10px] bg-[#E5E2DA]" />
         <View className="flex-1">

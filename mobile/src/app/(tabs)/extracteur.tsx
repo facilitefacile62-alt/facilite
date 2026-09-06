@@ -53,7 +53,7 @@ export default function ExtracteurScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#FAF6F1]">
+    <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1" edges={['top']}>
         <FaciliteHeader ecranActif="extracteur" />
 
@@ -109,7 +109,7 @@ export default function ExtracteurScreen() {
           </LinearGradient>
 
           {etape === 'select' && (
-            <View className="bg-white rounded-2xl p-4 mt-3.5 shadow-xs">
+            <View className="bg-white rounded-2xl p-4 mt-3.5 border border-gray-200 shadow-xs">
               <Text className="text-[11.5px] font-bold tracking-wide text-black/55">
                 CHOISISSEZ VOTRE MÉTHODE D&apos;IMPORTATION :
               </Text>
