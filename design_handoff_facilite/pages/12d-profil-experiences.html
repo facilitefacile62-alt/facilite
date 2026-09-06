@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facilité — Profil — Expériences professionnelles</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#3a3a3a;font-family:'Roboto',system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px;box-sizing:border-box}
+  .note{position:fixed;top:12px;left:12px;color:#fff;font-size:12px;opacity:.6;max-width:280px}
+  .phone{width:412px;min-height:892px;background:#F2F0EA;border-radius:36px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative}
+  .screen{height:100%;display:flex;flex-direction:column;color:#1A1A1A;box-sizing:border-box;position:relative;overflow:auto}
+</style>
+</head>
+<body>
+<div class="note">Référence statique — {{ }} = valeur dynamique, sc-for/sc-if = listes et états gérés par l'app (voir README).</div>
+<div class="phone"><div class="screen">
+    <div onClick="{{ closeAdminSection }}" style="display:flex;align-items:center;gap:10px;padding:16px 20px;font-size:16px;font-weight:800;cursor:pointer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 5L8 12L15 19" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Langues
+    </div>
+    <div style="margin:0 20px 14px;border-top:1px solid rgba(0,0,0,0.08)"></div>
+    <div style="margin:0 20px 20px;background:#fff;border-radius:14px;padding:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;font-weight:700;color:#1A1A1A">🌐 Langues du profil</span>
+        <span style="font-size:12px;font-weight:600;color:#10B981;border:1px solid rgba(16,185,129,0.4);border-radius:100px;padding:6px 12px">+ Ajouter une langue</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+        <sc-for list="{{ languageRows }}" as="l" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:12px;background:#f7faf9;border-radius:12px;padding:12px">
+            <div style="width:30px;height:30px;border-radius:15px;background:#d7f2ea;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🌐</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px">{{ l.name }}
+                <sc-if value="{{ l.principal }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:10px;font-weight:600;color:#10B981;background:#d7f2ea;padding:2px 7px;border-radius:100px">Principal</span>
+                </sc-if>
+              </div>
+              <div style="font-size:12px;color:rgba(0,0,0,0.5);margin-top:2px">{{ l.level }}</div>
+            </div>
+            <sc-if value="{{ l.deletable }}" hint-placeholder-val="{{ true }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 6H19M9 6V4H15V6M8 6L9 19H15L16 6" stroke="rgba(0,0,0,0.35)" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+</div></div>
+</body>
+</html>

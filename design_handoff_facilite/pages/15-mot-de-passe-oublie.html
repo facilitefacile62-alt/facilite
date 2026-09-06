@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facilité — Mot de passe oublié</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#3a3a3a;font-family:'Roboto',system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px;box-sizing:border-box}
+  .note{position:fixed;top:12px;left:12px;color:#fff;font-size:12px;opacity:.6;max-width:280px}
+  .phone{width:412px;min-height:892px;background:#F2F0EA;border-radius:36px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative}
+  .screen{height:100%;display:flex;flex-direction:column;color:#1A1A1A;box-sizing:border-box;position:relative}
+</style>
+</head>
+<body>
+<div class="note">Référence statique — champs de saisie non fonctionnels (voir README).</div>
+<div class="phone"><div class="screen">
+
+  <div style="flex-shrink:0;background:#fff;border-bottom:1px solid rgba(0,0,0,0.06)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px">
+      <div style="width:34px;height:34px;border-radius:17px;border:1.6px solid rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="#1A1A1A" stroke-width="1.8"/><path d="M4.5 20C5.5 15.8 8.4 14 12 14C15.6 14 18.5 15.8 19.5 20" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="1.8"/><line x1="15.5" y1="15.5" x2="20.5" y2="20.5" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <div style="background:#10B981;color:#fff;border-radius:100px;padding:9px 16px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 4H19V20H14" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="M4 12H16M16 12L12 8M16 12L12 16" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Connexion
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><line x1="4" y1="6" x2="20" y2="6" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/><line x1="4" y1="12" x2="20" y2="12" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/><line x1="4" y1="18" x2="20" y2="18" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+    <div style="display:flex;padding:2px 4px 10px">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="#1A1A1A" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <span style="font-size:10px;font-weight:600;color:#1A1A1A">Accueil</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><line x1="5" y1="7" x2="19" y2="7" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/><line x1="5" y1="17" x2="14" y2="17" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span style="font-size:10px;font-weight:600;color:#1A1A1A">Offres</span>
+      </div>
+    </div>
+  </div>
+<div style="flex:1;overflow:auto;padding:16px 20px 24px;display:flex;flex-direction:column;align-items:center">
+    <div style="background:#fff;border-radius:22px;padding:26px 22px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;text-align:center">
+      <div style="width:56px;height:56px;border-radius:28px;background:#fff;border:2px solid #10B981;box-shadow:0 0 0 6px rgba(16,185,129,0.12);display:flex;align-items:center;justify-content:center;font-size:22px">🗝️</div>
+        <div style="font-size:19px;font-weight:800;margin-top:14px">Réinitialiser le mot de passe</div>
+        <div style="font-size:13px;color:rgba(0,0,0,0.5);margin-top:6px">Entrez votre e-mail pour recevoir un lien de réinitialisation.</div>
+        <div style="width:100%;text-align:left;font-size:13px;font-weight:700;margin-top:20px">Adresse e-mail</div>
+        <input placeholder="nom@exemple.com" style="width:100%;box-sizing:border-box;border:1.6px solid #10B981;border-radius:100px;padding:13px 16px;margin-top:6px;font-size:13.5px;font-family:inherit;color:#1A1A1A;outline:none"></input>
+        <div style="background:#10B981;color:#fff;border-radius:100px;padding:14px;text-align:center;font-size:14px;font-weight:700;width:100%;margin-top:14px;cursor:pointer">Envoyer le lien</div>
+        <div style="font-size:13px;font-weight:700;color:#10B981;margin-top:16px;cursor:pointer">← Retour à la connexion</div>
+    </div>
+    <div style="font-size:11.5px;color:rgba(0,0,0,0.35);margin-top:18px">© 2026 Facilité · Tous droits réservés.</div>
+  </div>
+</div></div>
+</body>
+</html>

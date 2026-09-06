@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facilité — Profil — Formation</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#3a3a3a;font-family:'Roboto',system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px;box-sizing:border-box}
+  .note{position:fixed;top:12px;left:12px;color:#fff;font-size:12px;opacity:.6;max-width:280px}
+  .phone{width:412px;min-height:892px;background:#F2F0EA;border-radius:36px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative}
+  .screen{height:100%;display:flex;flex-direction:column;color:#1A1A1A;box-sizing:border-box;position:relative;overflow:auto}
+</style>
+</head>
+<body>
+<div class="note">Référence statique — {{ }} = valeur dynamique, sc-for/sc-if = listes et états gérés par l'app (voir README).</div>
+<div class="phone"><div class="screen">
+    <div onClick="{{ closeAdminSection }}" style="display:flex;align-items:center;gap:10px;padding:16px 20px;font-size:16px;font-weight:800;cursor:pointer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 5L8 12L15 19" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Expériences professionnelles
+    </div>
+    <div style="margin:0 20px 14px;border-top:1px solid rgba(0,0,0,0.08)"></div>
+    <div style="margin:0 20px 20px;background:#fff;border-radius:14px;padding:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;font-weight:700;color:#1A1A1A">💼 Expérience professionnelle</span>
+        <span style="font-size:12px;font-weight:600;color:#2563EB;border:1px solid rgba(37,99,235,0.35);border-radius:100px;padding:6px 12px">+ Ajouter une expérience</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+        <sc-for list="{{ experienceRows }}" as="x" hint-placeholder-count="6">
+          <div style="display:flex;align-items:flex-start;gap:12px;padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,0.06)">
+            <div style="width:34px;height:34px;border-radius:9px;background:{{ x.avatarBg }};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px;flex-shrink:0">{{ x.initials }}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:700;color:#1A1A1A">{{ x.role }}</div>
+              <div style="font-size:12px;color:rgba(0,0,0,0.5);margin-top:2px">{{ x.org }} •</div>
+              <div style="font-size:11.5px;color:rgba(0,0,0,0.4);margin-top:2px">— Terminé — ()</div>
+            </div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 6H19M9 6V4H15V6M8 6L9 19H15L16 6" stroke="rgba(0,0,0,0.35)" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+</div></div>
+</body>
+</html>

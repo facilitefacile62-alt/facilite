@@ -8,7 +8,9 @@ export function useColorScheme() {
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
-    setHasHydrated(true);
+    // setState différé : corps de l'effet, pas un callback d'un système
+    // externe — exigé par la règle react-hooks correspondante.
+    queueMicrotask(() => setHasHydrated(true));
   }, []);
 
   const colorScheme = useRNColorScheme();

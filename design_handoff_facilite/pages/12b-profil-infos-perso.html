@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facilité — Profil — Informations personnelles</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#3a3a3a;font-family:'Roboto',system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px;box-sizing:border-box}
+  .note{position:fixed;top:12px;left:12px;color:#fff;font-size:12px;opacity:.6;max-width:280px}
+  .phone{width:412px;min-height:892px;background:#F2F0EA;border-radius:36px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative}
+  .screen{height:100%;display:flex;flex-direction:column;color:#1A1A1A;box-sizing:border-box;position:relative;overflow:auto}
+</style>
+</head>
+<body>
+<div class="note">Référence statique — {{ }} = valeur dynamique, sc-for/sc-if = listes et états gérés par l'app (voir README).</div>
+<div class="phone"><div class="screen">
+    <div style="padding:16px 20px 4px;display:flex;align-items:center;gap:6px;font-size:16px;font-weight:800">À propos <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9L12 15L18 9" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div style="display:flex;gap:8px;padding:8px 20px 16px">
+      <div style="font-size:12.5px;font-weight:600;color:#1A1A1A;background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:100px;padding:8px 14px;display:flex;align-items:center;gap:5px">Rubriques <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 9L12 15L18 9" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div style="flex:1;font-size:12.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,#10B981,#0ea975);border-radius:100px;padding:8px 14px;display:flex;align-items:center;justify-content:center;gap:6px">⛶ Scanner Document (CV, CNI, Passeport)</div>
+    </div>
+    <div onClick="{{ closeAdminSection }}" style="display:flex;align-items:center;gap:8px;padding:8px 20px 16px;color:#1A1A1A;font-size:14px;font-weight:700;cursor:pointer">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M15 5L8 12L15 19" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Intro
+    </div>
+    <div style="margin:0 20px 14px;border-top:1px solid rgba(0,0,0,0.08)"></div>
+    <div style="margin:0 20px 16px;background:#eef3fd;border-radius:14px;padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;font-weight:700;color:#2563EB">PHRASE D'ACCROCHE BIO</span>
+        <span style="font-size:11px;font-weight:600;color:#2563EB;background:#dbe8fc;padding:3px 8px;border-radius:100px">🌐 Public</span>
+      </div>
+      <div style="font-size:13.5px;font-weight:700;line-height:1.5;color:#1A1A1A;margin-top:8px">🤝 Juriste spécialisée en droits humains, titulaire d'un Master 2 en droit des affaires, avec une expérience au sein d'organisations de la société civile.</div>
+    </div>
+    <div style="margin:0 20px 16px;background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:14px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:rgba(0,0,0,0.4);letter-spacing:0.03em">INFORMATIONS PERSONNELLES &amp; CV</div>
+      <div style="margin-top:10px"><div style="font-size:10.5px;color:rgba(0,0,0,0.4)">NOM COMPLET</div><div style="font-size:14px;font-weight:700;margin-top:2px">facile demo</div></div>
+      <div style="margin-top:10px"><div style="font-size:10.5px;color:rgba(0,0,0,0.4)">TITRE PROFESSIONNEL</div><div style="font-size:14px;font-weight:700;margin-top:2px">Juriste Droit Privé &amp; Droits Humains</div></div>
+      <div style="margin-top:10px"><div style="font-size:10.5px;color:rgba(0,0,0,0.4)">VILLE ACTUELLE</div><div style="font-size:14px;font-weight:700;color:#2563EB;margin-top:2px">Dakar</div></div>
+      <div style="margin-top:10px"><div style="font-size:10.5px;color:rgba(0,0,0,0.4)">PAYS / ORIGINE</div><div style="font-size:14px;font-weight:700;color:#2563EB;margin-top:2px">Sénégal</div></div>
+    </div>
+    <div style="margin:0 20px 16px;background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:14px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:rgba(0,0,0,0.4);letter-spacing:0.03em">COORDONNÉES DE CONTACT</div>
+      <div style="margin-top:10px"><div style="font-size:10.5px;color:rgba(0,0,0,0.4)">TÉLÉPHONE</div><div style="font-size:14px;font-weight:700;margin-top:2px">+221 77 301 45 10</div></div>
+      <div style="margin-top:10px"><div style="font-size:10.5px;color:rgba(0,0,0,0.4)">E-MAIL</div><div style="font-size:14px;font-weight:700;margin-top:2px">facilitefacile62@gmail.com</div></div>
+    </div>
+    <div style="margin:0 20px 20px;display:flex;justify-content:flex-end">
+      <div style="font-size:13px;font-weight:700;color:#fff;background:#2563EB;border-radius:100px;padding:11px 18px;display:flex;align-items:center;gap:6px">✎ Modifier mon profil Intro</div>
+    </div>
+    <div style="margin:0 20px 16px;display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-size:12px;color:rgba(0,0,0,0.45)">Lien d'invitation</div><div style="font-size:13px;font-weight:700;color:#2563EB">https://ffacilite.com</div></div>
+      <div style="font-size:12.5px;font-weight:600;color:#1A1A1A;background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:100px;padding:8px 14px">📋 Copier</div>
+    </div>
+    <div style="margin:0 20px 24px">
+      <div onClick="{{ closeAdminSection }}" style="font-size:13.5px;font-weight:700;color:#1A1A1A;padding:8px 0;cursor:pointer">← Retour à l'accueil des offres</div>
+      <div style="font-size:13.5px;font-weight:700;color:#DC2626;padding:8px 0">↪ Déconnexion</div>
+    </div>
+</div></div>
+</body>
+</html>

@@ -1,92 +1,49 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import BadgeMatchingOffre from '@/components/BadgeMatchingOffre';
+import FaciliteHeader from '@/components/FaciliteHeader';
+import { IconEnvoyer, IconPartager, IconPouceLeve } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
 import { useOffresReelles, type OffreReelle } from '@/lib/useOffresReelles';
 
-// Fil d'actualité natif, branché sur les vraies données (offres réelles +
-// score de compatibilité réel) — reproduit la mise en page de ffacilite.com
-// en thème sombre dédié avec l'accent Bleu Roi validé pour l'app mobile.
-const MODELES: { id: string; label: string; teinte: string }[] = [
-  { id: 'moderne', label: 'Moderne', teinte: 'bg-blue-500' },
-  { id: 'minimaliste', label: 'Minimaliste', teinte: 'bg-emerald-500' },
-  { id: 'classique', label: 'Classique', teinte: 'bg-amber-500' },
+// Reproduction pixel-perfect de design_handoff_facilite/pages/01-accueil.html
+// (thème clair #F2F0EA, cartes blanches, palette Bleu Royal/Vert Menthe du
+// handoff) — remplace la précédente version en thème sombre de cet écran,
+// direction supplantée par ce dossier de design "hifi" fourni pour l'app
+// mobile. Données réelles conservées (useOffresReelles,
+// useCandidateMatchScores) : le handoff ne fixe que la mise en page, pas
+// les libellés d'annonces d'exemple qu'il contient (README : "Aucune image
+// réelle... placeholders").
+const MODELES = [
+  { id: 'moderne', label: 'Moderne' },
+  { id: 'minimaliste', label: 'Minimaliste' },
+  { id: 'classique', label: 'Classique' },
 ];
 
-type NavItem = {
-  id: string;
-  label: string;
-  icone: keyof typeof Ionicons.glyphMap;
-  badge?: number;
-};
-
-const NAV_RAPIDE: NavItem[] = [
-  { id: 'accueil', label: 'Accueil', icone: 'home' },
-  { id: 'offres', label: 'Offres', icone: 'briefcase-outline' },
-  { id: 'messages', label: 'Messages', icone: 'chatbubble-outline' },
-  { id: 'notifications', label: 'Notifs', icone: 'notifications-outline', badge: 2 },
-];
-
-export default function HomeScreen() {
-  const { user, profile } = useAuth();
+export default function AccueilScreen() {
+  const { user } = useAuth();
   const { offres, erreur } = useOffresReelles();
   const candidateMatchScores = useCandidateMatchScores(user?.id);
 
-  const initialeAvatar = (profile?.full_name || user?.email || 'F').charAt(0).toUpperCase();
-
   return (
-    <View className="flex-1 bg-[#0B0F17]">
+    <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center justify-between px-4 pt-1 pb-3">
-          <Text className="text-lg font-extrabold text-blue-500">Facilité</Text>
-          <View className="flex-row items-center gap-3">
-            <Pressable className="w-9 h-9 rounded-full bg-[#161E2E] items-center justify-center">
-              <Ionicons name="notifications-outline" size={16} color="#94a3b8" />
-              <View className="absolute top-1 right-1.5 w-2 h-2 rounded-full bg-red-500" />
-            </Pressable>
-            <View className="w-9 h-9 rounded-full bg-amber-500 items-center justify-center">
-              <Text className="text-xs font-extrabold text-white">{initialeAvatar}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View className="flex-row justify-around border-b border-[#1B2434] pb-3 mb-1 px-2">
-          {NAV_RAPIDE.map((item) => (
-            <Pressable key={item.id} className="items-center gap-1">
-              <View>
-                <Ionicons
-                  name={item.icone}
-                  size={19}
-                  color={item.id === 'accueil' ? '#2563EB' : '#94a3b8'}
-                />
-                {item.badge ? (
-                  <View className="absolute -top-1 -right-2 min-w-[13px] h-[13px] px-0.5 rounded-full bg-red-500 items-center justify-center">
-                    <Text className="text-[8px] font-bold text-white">{item.badge}</Text>
-                  </View>
-                ) : null}
-              </View>
-              <Text
-                className={`text-[9.5px] font-semibold ${
-                  item.id === 'accueil' ? 'text-blue-500' : 'text-gray-500'
-                }`}>
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <FaciliteHeader ecranActif="accueil" />
 
         {offres === null ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color="#2563EB" />
-            <Text className="text-[12px] text-gray-500 font-medium mt-3">Chargement des offres…</Text>
+            <Text className="text-[12px] text-black/50 font-medium mt-3">Chargement des offres…</Text>
           </View>
         ) : erreur ? (
           <View className="flex-1 items-center justify-center px-8">
-            <Ionicons name="cloud-offline-outline" size={28} color="#3d4a61" />
-            <Text className="text-[12.5px] text-gray-400 font-medium mt-3 text-center">
+            <Ionicons name="cloud-offline-outline" size={28} color="rgba(0,0,0,0.3)" />
+            <Text className="text-[12.5px] text-black/50 font-medium mt-3 text-center">
               Impossible de charger les offres pour le moment.
             </Text>
           </View>
@@ -94,39 +51,47 @@ export default function HomeScreen() {
           <FlatList
             data={offres}
             keyExtractor={(item) => item.id}
-            contentContainerClassName="px-4 pb-10"
+            contentContainerClassName="pb-8"
             showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View className="h-3" />}
+            ListHeaderComponent={
+              <View className="bg-white mx-3 mt-2.5 mb-3 rounded-2xl px-3 py-3.5 flex-row gap-4 shadow-xs">
+                {MODELES.map((modele) => (
+                  <View key={modele.id} className="items-center gap-1.5">
+                    <View className="w-14 h-14 rounded-full border-[2.5px] border-blue-600 p-0.5">
+                      <View className="w-full h-full rounded-full bg-[#e8c77a]" />
+                    </View>
+                    <Text className="text-[11px] font-semibold text-blue-600">{modele.label}</Text>
+                  </View>
+                ))}
+              </View>
+            }
             ListEmptyComponent={
-              <Text className="text-[12.5px] text-gray-500 font-medium text-center mt-10">
+              <Text className="text-[12.5px] text-black/40 font-medium text-center mt-10">
                 Aucune offre active pour l&apos;instant.
               </Text>
             }
-            ListHeaderComponent={
-              <View className="mb-4">
-                <Text className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2.5 mt-1">
-                  Modèles de CV
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
-                  {MODELES.map((modele) => (
-                    <View key={modele.id} className="items-center mx-2 w-16">
-                      <View
-                        className={`w-14 h-14 rounded-full ${modele.teinte} items-center justify-center border-2 border-[#0B0F17]`}>
-                        <Ionicons name="document-text-outline" size={20} color="#ffffff" />
-                      </View>
-                      <Text className="text-[10px] font-semibold text-gray-300 mt-1.5" numberOfLines={1}>
-                        {modele.label}
-                      </Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            }
+            ItemSeparatorComponent={() => <View className="h-3" />}
             renderItem={({ item }) => (
               <CarteOffre offre={item} matchScore={candidateMatchScores?.[item.id] ?? null} />
             )}
+            ListFooterComponent={
+              offres.length > 0 ? (
+                <View className="flex-row items-center justify-center gap-2 py-5">
+                  <ActivityIndicator size="small" color="#2563EB" />
+                  <Text className="text-black/40 text-[12.5px]">Chargement de nouvelles offres…</Text>
+                </View>
+              ) : null
+            }
           />
         )}
+
+        <Pressable className="absolute right-4 bottom-4 w-[52px] h-[52px] rounded-full overflow-hidden shadow-lg">
+          <LinearGradient
+            colors={['#10B981', '#0ea975']}
+            className="w-full h-full items-center justify-center">
+            <Ionicons name="mic-outline" size={22} color="#fff" />
+          </LinearGradient>
+        </Pressable>
       </SafeAreaView>
     </View>
   );
@@ -134,33 +99,25 @@ export default function HomeScreen() {
 
 function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: number | null }) {
   return (
-    <View className="bg-[#161E2E] rounded-2xl border border-[#232D40] p-3.5">
-      <View className="flex-row items-center gap-2.5 mb-3">
-        <View className={`w-9 h-9 rounded-xl ${offre.logoTeinte} items-center justify-center`}>
-          <Text className="text-[11px] font-extrabold text-white">{offre.logoInitiales}</Text>
-        </View>
+    <View className="bg-white mx-3 rounded-2xl p-3.5 shadow-xs">
+      <View className="flex-row items-center gap-2.5">
+        <View className="w-[38px] h-[38px] rounded-[10px] bg-[#E5E2DA]" />
         <View className="flex-1">
-          <Text className="text-[12.5px] font-bold text-white" numberOfLines={1}>
+          <Text className="text-[14px] font-bold text-blue-600" numberOfLines={1}>
             {offre.entreprise}
           </Text>
-          <Text className="text-[10.5px] text-gray-500">{offre.date}</Text>
+          <Text className="text-[11.5px] text-black/45 mt-0.5">{offre.date}</Text>
         </View>
       </View>
 
-      <BadgeMatchingOffre score={matchScore} />
-
-      <Text className="text-[14.5px] font-bold text-white leading-5 mb-2">{offre.titre}</Text>
-
-      <View className="flex-row flex-wrap gap-1.5 mb-3">
-        <View className="flex-row items-center gap-1 bg-[#0B0F17] px-2 py-1 rounded-full">
-          <Ionicons name="location-outline" size={11} color="#94a3b8" />
-          <Text className="text-[10.5px] font-medium text-gray-400">{offre.localisation}</Text>
-        </View>
-        <View className="flex-row items-center gap-1 bg-[#0B0F17] px-2 py-1 rounded-full">
-          <Ionicons name="briefcase-outline" size={11} color="#94a3b8" />
-          <Text className="text-[10.5px] font-medium text-gray-400">{offre.contrat}</Text>
-        </View>
+      <View className="mt-2.5">
+        <BadgeMatchingOffre score={matchScore} />
       </View>
+
+      <Text className="text-[15.5px] font-extrabold text-[#1A1A1A] leading-5 mt-1">{offre.titre}</Text>
+      <Text className="text-[12.5px] text-black/55 mt-1.5">
+        💼 {offre.localisation} · Opportunité · {offre.contrat}
+      </Text>
 
       {offre.posterUri ? (
         <Image
@@ -168,29 +125,20 @@ function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: num
           alt={`Affiche de l'offre : ${offre.titre}`}
           contentFit="cover"
           transition={150}
-          className="w-full h-48 rounded-xl bg-[#0B0F17] mb-3.5"
+          className="w-full h-48 rounded-xl bg-black/5 mt-3"
         />
-      ) : (
-        <View className="rounded-xl bg-[#0B0F17] border border-dashed border-[#232D40] h-36 items-center justify-center mb-3.5">
-          <Ionicons name="image-outline" size={22} color="#3d4a61" />
-          <Text className="text-[10px] font-medium text-gray-600 mt-1">Affiche du recrutement</Text>
+      ) : null}
+
+      <View className="flex-row gap-2 mt-3">
+        <View className="w-[38px] h-[38px] rounded-full border-[1.5px] border-black/10 items-center justify-center">
+          <IconPouceLeve />
         </View>
-      )}
-
-      <Pressable className="flex-row items-center justify-center gap-2 bg-blue-600 rounded-xl py-3 mb-2.5">
-        <Ionicons name="send" size={14} color="#ffffff" />
-        <Text className="text-[13px] font-bold text-white">Postuler via Facilité</Text>
-      </Pressable>
-
-      <View className="flex-row items-center justify-around pt-1">
-        <Pressable className="py-1 px-4">
-          <Ionicons name="thumbs-up-outline" size={15} color="#94a3b8" />
-        </Pressable>
-        <Pressable className="py-1 px-4">
-          <Ionicons name="share-social-outline" size={15} color="#94a3b8" />
-        </Pressable>
-        <Pressable className="py-1 px-4">
-          <Ionicons name="bookmark-outline" size={15} color="#94a3b8" />
+        <View className="w-[38px] h-[38px] rounded-full border-[1.5px] border-black/10 items-center justify-center">
+          <IconPartager />
+        </View>
+        <Pressable className="flex-1 bg-blue-600 rounded-full flex-row items-center justify-center gap-2">
+          <IconEnvoyer />
+          <Text className="text-white text-[14px] font-bold">Postuler via Facilité</Text>
         </Pressable>
       </View>
     </View>

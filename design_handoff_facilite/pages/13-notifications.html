@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facilité — Notifications (panneau)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#3a3a3a;font-family:'Roboto',system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px;box-sizing:border-box}
+  .note{position:fixed;top:12px;left:12px;color:#fff;font-size:12px;opacity:.6;max-width:280px}
+  .phone{width:412px;min-height:892px;background:#0B0D10;border-radius:36px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative}
+  .screen{height:100%;display:flex;flex-direction:column;background:#0B0D10;color:#F5F6F7;box-sizing:border-box;position:relative}
+</style>
+</head>
+<body>
+<div class="note">Référence statique — {{ }} = valeur dynamique, sc-for/sc-if = listes et états gérés par l'app (voir README).</div>
+<div class="phone"><div class="screen">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,0.4);z-index:20;display:flex;justify-content:center;padding-top:40px" onClick="{{ toggleNotifs }}">
+  <div style="background:#fff;border-radius:18px;width:88%;max-height:78%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.3)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 10px">
+      <span style="font-size:18px;font-weight:800;color:#1A1A1A">Notifications</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#1A1A1A"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+    </div>
+    <div style="display:flex;gap:20px;padding:0 16px 10px;border-bottom:1px solid rgba(0,0,0,0.06)">
+      <div style="font-size:13px;font-weight:700;color:#2563EB;background:#e6f0fd;padding:7px 14px;border-radius:100px">Tout</div>
+      <div style="font-size:13px;font-weight:600;color:rgba(0,0,0,0.5);padding:7px 4px">Non lu (28)</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px">
+      <span style="font-size:13px;font-weight:700;color:#1A1A1A">Nouveau</span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:12.5px;font-weight:600;color:#2563EB">Voir tout</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 20L5 16L16 5L19 8L8 19L4 20Z" stroke="#1A1A1A" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="#1A1A1A"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+      </div>
+    </div>
+    <div style="flex:1;overflow:auto;padding:0 8px 10px">
+      <sc-for list="{{ notifications }}" as="n" hint-placeholder-count="5">
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 8px;border-radius:10px">
+          <div style="width:34px;height:34px;border-radius:17px;border:1.5px solid rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="#1A1A1A" stroke-width="1.8"/><path d="M4.5 20C5.5 15.8 8.4 14 12 14C15.6 14 18.5 15.8 19.5 20" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <div style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-radius:8px;background:{{ n.badgeColor }};border:2px solid #fff"></div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12.5px;line-height:1.4;color:#1A1A1A"><b>{{ n.text }}</b></div>
+            <div style="font-size:11px;color:#2563EB;margin-top:3px">{{ n.time }}</div>
+          </div>
+          <div style="width:7px;height:7px;border-radius:4px;background:#2563EB;flex-shrink:0;margin-top:4px"></div>
+        </div>
+</div></div>
+</body>
+</html>

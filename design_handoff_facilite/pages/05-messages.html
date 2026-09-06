@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facilité — Messages (liste)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#3a3a3a;font-family:'Roboto',system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px;box-sizing:border-box}
+  .note{position:fixed;top:12px;left:12px;color:#fff;font-size:12px;opacity:.6;max-width:280px}
+  .phone{width:412px;min-height:892px;background:#0B0D10;border-radius:36px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative}
+  .screen{height:100%;display:flex;flex-direction:column;background:#0B0D10;color:#F5F6F7;box-sizing:border-box;position:relative}
+</style>
+</head>
+<body>
+<div class="note">Référence statique — {{ }} = valeur dynamique, sc-for/sc-if = listes et états gérés par l'app (voir README).</div>
+<div class="phone"><div class="screen">
+<div data-screen-label="Messages" style="flex:1;position:relative;display:flex;flex-direction:column;background:#F2F0EA;color:#1A1A1A;overflow:hidden">
+  <div style="flex-shrink:0;background:#fff;border-bottom:1px solid rgba(0,0,0,0.06)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px">
+      <div style="width:34px;height:34px;border-radius:17px;border:1.6px solid rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="#1A1A1A" stroke-width="1.8"/><path d="M4.5 20C5.5 15.8 8.4 14 12 14C15.6 14 18.5 15.8 19.5 20" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="1.8"/><line x1="15.5" y1="15.5" x2="20.5" y2="20.5" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <div style="width:28px;height:28px;border-radius:14px;background:#8B5CF6"></div>
+        <svg onClick="{{ openMenu }}" width="20" height="20" viewBox="0 0 24 24" fill="none" style="cursor:pointer"><line x1="4" y1="6" x2="20" y2="6" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/><line x1="4" y1="12" x2="20" y2="12" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/><line x1="4" y1="18" x2="20" y2="18" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+    <div style="display:flex;padding:2px 4px 10px">
+      <div onClick="{{ goHome }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="#1A1A1A" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <span style="font-size:10px;font-weight:600;color:#1A1A1A">Accueil</span>
+      </div>
+      <div onClick="{{ goExtracteur }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M13 2L4 14H11L10 22L20 9H13L13 2Z" stroke="#1A1A1A" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <span style="font-size:10px;font-weight:600;color:#1A1A1A">Extracteur</span>
+      </div>
+      <div onClick="{{ goOffres }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><line x1="5" y1="7" x2="19" y2="7" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/><line x1="5" y1="17" x2="14" y2="17" stroke="#1A1A1A" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span style="font-size:10px;font-weight:600;color:#1A1A1A">Offres</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 5H20V16H9L5 19.5V16H4V5Z" stroke="#10B981" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <span style="font-size:10px;font-weight:700;color:#10B981">Messages</span>
+      </div>
+      <div onClick="{{ toggleNotifs }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;cursor:pointer">
+        <div style="position:relative">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 0112 0v4l1.5 2.5h-15L6 14v-4z" stroke="#1A1A1A" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 19a2 2 0 004 0" stroke="#1A1A1A" stroke-width="1.6"/></svg>
+          <div style="position:absolute;top:-4px;right:-9px;background:#DC2626;color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:8px;line-height:1.3">8+</div>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#1A1A1A">Notifs</span>
+      </div>
+      <div onClick="{{ goAdmin }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 3L19 6V11C19 15.4 16 18.9 12 20C8 18.9 5 15.4 5 11V6L12 3Z" stroke="#EA580C" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <span style="font-size:10px;font-weight:600;color:#EA580C">Admin</span>
+      </div>
+    </div>
+  </div>
+<div data-screen-label="Messages-body" style="flex:1;overflow:auto;background:#F2F0EA">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 4px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:19px;font-weight:800;color:#1A1A1A">Discussions</span>
+      <span style="font-size:11px;font-weight:700;color:#fff;background:#10B981;padding:2px 8px;border-radius:100px">4</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 20L5 16L16 5L19 8L8 19L4 20Z" stroke="#1A1A1A" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#1A1A1A"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+    </div>
+  </div>
+  <div style="padding:12px 16px 10px">
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:100px;padding:11px 16px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="rgba(0,0,0,0.4)" stroke-width="1.8"/><line x1="15.5" y1="15.5" x2="20.5" y2="20.5" stroke="rgba(0,0,0,0.4)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span style="font-size:13px;color:rgba(0,0,0,0.4)">Rechercher ou démarrer une discussion...</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;overflow-x:auto;padding:0 16px 14px">
+    <div style="font-size:12.5px;font-weight:700;padding:8px 16px;border-radius:100px;background:#1A1A1A;color:#fff;white-space:nowrap">Toutes</div>
+    <div style="font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:100px;background:#fff;border:1px solid rgba(0,0,0,0.1);color:#1A1A1A;white-space:nowrap">Non lues</div>
+    <div style="font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:100px;background:#fff;border:1px solid rgba(0,0,0,0.1);color:#1A1A1A;white-space:nowrap">Offres</div>
+    <div style="font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:100px;background:#fff;border:1px solid rgba(0,0,0,0.1);color:#1A1A1A;white-space:nowrap">Support</div>
+    <div style="font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:100px;background:#fff;border:1px solid rgba(0,0,0,0.1);color:#1A1A1A;white-space:nowrap">Stages</div>
+  </div>
+  <div style="border-top:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column">
+    <div onClick="{{ openSupportChat }}" style="display:flex;gap:12px;align-items:center;padding:13px 16px;border-bottom:1px solid rgba(0,0,0,0.06);cursor:pointer;background:#fff">
+      <div style="width:46px;height:46px;border-radius:23px;background:#e8f8f1;border:1.5px solid #10B981;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3L19 6V11C19 15.4 16 18.9 12 20C8 18.9 5 15.4 5 11V6L12 3Z" stroke="#10B981" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <div style="position:absolute;bottom:1px;right:1px;width:10px;height:10px;border-radius:5px;background:#10B981;border:2px solid #fff"></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14.5px;font-weight:700;color:#1A1A1A">Support RH Facilité 📌</div>
+        <div style="font-size:12.5px;color:rgba(0,0,0,0.45);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔗 Disponible 24/7 pour vos CV et démarches</div>
+      </div>
+      <span style="font-size:11.5px;font-weight:600;color:#10B981;flex-shrink:0">Disponible</span>
+    </div>
+    <sc-for list="{{ conversations }}" as="c" hint-placeholder-count="3">
+      <div onClick="{{ c.open }}" style="display:flex;gap:12px;align-items:center;padding:13px 16px;border-bottom:1px solid rgba(0,0,0,0.06);cursor:pointer;background:#fff">
+        <div style="width:46px;height:46px;border-radius:23px;background:#10B981;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0">{{ c.avatarLetter }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14.5px;font-weight:700;color:#1A1A1A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</div>
+          <div style="font-size:12.5px;color:rgba(0,0,0,0.45);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✅✅ {{ c.lastText }}</div>
+        </div>
+        <span style="font-size:11.5px;color:rgba(0,0,0,0.35);flex-shrink:0">{{ c.time }}</span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</div>
+</div></div>
+</body>
+</html>

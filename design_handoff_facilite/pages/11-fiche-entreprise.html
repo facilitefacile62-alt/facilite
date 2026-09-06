@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facilité — Fiche détail d'une entreprise</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#3a3a3a;font-family:'Roboto',system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px;box-sizing:border-box}
+  .note{position:fixed;top:12px;left:12px;color:#fff;font-size:12px;opacity:.6;max-width:280px}
+  .phone{width:412px;min-height:892px;background:#0B0D10;border-radius:36px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative}
+  .screen{height:100%;display:flex;flex-direction:column;background:#0B0D10;color:#F5F6F7;box-sizing:border-box;position:relative}
+</style>
+</head>
+<body>
+<div class="note">Référence statique — {{ }} = valeur dynamique, sc-for/sc-if = listes et états gérés par l'app (voir README).</div>
+<div class="phone"><div class="screen">
+  <div style="position:absolute;inset:0;background:#F2F0EA;overflow:auto;z-index:10">
+    <div onClick="{{ closeCompany }}" style="display:flex;align-items:center;gap:8px;padding:14px 16px;color:#1A1A1A;font-size:14px;font-weight:700;cursor:pointer;background:#fff">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 5L8 12L15 19" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Retour
+    </div>
+    <div style="height:180px;background:repeating-linear-gradient(135deg,#dce8f5,#dce8f5 10px,#cdddef 10px,#cdddef 20px)"></div>
+    <div style="padding:18px 20px">
+      <div style="display:inline-block;font-size:11px;font-weight:700;color:#0d3b34;background:#d7f2ea;padding:5px 11px;border-radius:100px">{{ selectedCompany.contract }}</div>
+      <div style="font-size:22px;font-weight:800;margin-top:10px">{{ selectedCompany.name }}</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.03em;color:#0d3b34;margin-top:18px">DOMAINES &amp; POSTES :</div>
+      <div style="background:#fff;border-radius:12px;padding:12px;margin-top:8px;font-size:13.5px;line-height:1.5;color:#1A1A1A">{{ selectedCompany.domains }}</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:0.03em;color:#0d3b34;margin-top:16px">📄 DOCUMENTS REQUIS :</div>
+      <div style="font-size:13.5px;margin-top:4px">{{ selectedCompany.documents }}</div>
+      <div style="background:#d7f2ea;border-radius:14px;padding:14px;margin-top:16px">
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:0.03em;color:#0d3b34">CANAL DE CANDIDATURE DIRECT :</div>
+        <div style="font-size:14px;font-weight:700;color:#0d3b34;margin-top:4px">{{ selectedCompany.channel }}</div>
+      </div>
+      <div style="background:#10B981;color:#fff;border-radius:100px;padding:14px;text-align:center;font-size:14.5px;font-weight:700;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px">↗ Postuler sur le site officiel</div>
+      <sc-if value="{{ selectedCompany.hasEmail }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px solid #10B981;color:#0d3b34;border-radius:100px;padding:12px;text-align:center;font-size:13.5px;font-weight:700;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px">✉ Email Direct</div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</div></div>
+</body>
+</html>

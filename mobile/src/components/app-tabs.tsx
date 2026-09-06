@@ -1,32 +1,50 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 
-import { Colors } from '@/constants/theme';
-
+// Barre d'onglets réelle de l'app (remplace le gabarit "Expo Starter"
+// Home/Explore jamais personnalisé). La navigation "hifi" pixel-perfect du
+// dossier de design vit dans FaciliteHeader (rangée d'icônes en haut de
+// chaque écran, fidèle au HTML fourni) ; cette barre native du bas reste la
+// convention de plateforme habituelle et un filet de secours si jamais
+// FaciliteHeader n'est pas affiché. Les deux naviguent vers les mêmes
+// routes, donc toujours synchronisées.
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#10B981',
+        tabBarInactiveTintColor: '#1A1A1A',
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
+      }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Accueil',
+          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="extracteur"
+        options={{
+          title: 'Extracteur',
+          tabBarIcon: ({ color, size }) => <Ionicons name="flash-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="offres"
+        options={{
+          title: 'Offres',
+          tabBarIcon: ({ color, size }) => <Ionicons name="briefcase-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: 'Messages',
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-outline" size={size} color={color} />,
+        }}
+      />
+    </Tabs>
   );
 }

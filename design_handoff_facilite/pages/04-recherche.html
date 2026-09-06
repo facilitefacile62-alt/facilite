@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facilité — Recherche</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#3a3a3a;font-family:'Roboto',system-ui,sans-serif;display:flex;justify-content:center;padding:40px 16px;box-sizing:border-box}
+  .note{position:fixed;top:12px;left:12px;color:#fff;font-size:12px;opacity:.6;max-width:280px}
+  .phone{width:412px;min-height:892px;background:#0B0D10;border-radius:36px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative}
+  .screen{height:100%;display:flex;flex-direction:column;background:#0B0D10;color:#F5F6F7;box-sizing:border-box;position:relative}
+</style>
+</head>
+<body>
+<div class="note">Référence statique — {{ }} = valeur dynamique, sc-for/sc-if = listes et états gérés par l'app (voir README).</div>
+<div class="phone"><div class="screen">
+<div data-screen-label="Search" style="flex:1;overflow:auto">
+  <div style="padding:20px 20px 12px;font-size:20px;font-weight:800">Rechercher</div>
+  <div style="padding:0 20px 8px">
+    <div style="display:flex;align-items:center;gap:10px;background:#15181D;border:1px solid rgba(255,255,255,0.07);border-radius:100px;padding:13px 16px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="rgba(245,246,247,0.4)" stroke-width="1.8"/><line x1="15.5" y1="15.5" x2="20.5" y2="20.5" stroke="rgba(245,246,247,0.4)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <input value="{{ queryValue }}" onChange="{{ setQuery }}" placeholder="Titre, entreprise, secteur..." style="border:none;outline:none;background:transparent;color:#F5F6F7;font-size:14.5px;flex:1;font-family:inherit"></input>
+    </div>
+  </div>
+
+  <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:12px;padding:16px 20px 24px">
+      <sc-for list="{{ searchResults }}" as="job" hint-placeholder-count="3">
+        <div onClick="{{ job.open }}" style="background:#15181D;border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:16px;cursor:pointer">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:40px;height:40px;border-radius:12px;background:{{ job.logoBg }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#0B0D10;flex-shrink:0">{{ job.logo }}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15px;font-weight:700">{{ job.title }}</div>
+              <div style="font-size:13px;color:rgba(245,246,247,0.56);margin-top:2px">{{ job.company }} · {{ job.location }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:40px 0;color:rgba(245,246,247,0.4);font-size:14px">Aucun résultat pour cette recherche.</div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <div style="{{ browseSectionsStyle }}">
+    <div style="padding:18px 20px 10px;font-size:13px;font-weight:700;color:rgba(245,246,247,0.5);text-transform:uppercase;letter-spacing:0.04em">Recherches récentes</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 6px">
+      <sc-for list="{{ recentSearches }}" as="r" hint-placeholder-count="4">
+        <div onClick="{{ r.select }}" style="font-size:13px;padding:8px 14px;border-radius:100px;background:#15181D;border:1px solid rgba(255,255,255,0.07);cursor:pointer">{{ r.label }}</div>
+      </sc-for>
+    </div>
+    <div style="padding:20px 20px 10px;font-size:13px;font-weight:700;color:rgba(245,246,247,0.5);text-transform:uppercase;letter-spacing:0.04em">Catégories populaires</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px 24px">
+      <sc-for list="{{ categories }}" as="cat" hint-placeholder-count="6">
+        <div onClick="{{ cat.select }}" style="background:#15181D;border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:20px;cursor:pointer">
+          <div style="width:36px;height:36px;border-radius:11px;background:{{ cat.color }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#0B0D10">{{ cat.code }}</div>
+          <div style="font-size:14px;font-weight:600">{{ cat.label }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</div></div>
+</body>
+</html>
