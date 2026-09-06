@@ -1,35 +1,54 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { IconGoogle } from '@/components/facilite-icons';
 import { seConnecterAvecGoogle } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
 
-// Port simplifié de src/app/login/page.js (723 lignes sur le web : magic
-// link, connexion par téléphone désactivée côté web, récupération de mot de
-// passe...). Ce point ne porte que le chemin principal : email/mot de passe,
-// Google, et le cas « email non confirmé » — les autres méthodes suivront
-// avec des points dédiés si besoin. Aucune navigation manuelle après succès :
-// AuthGate (src/app/_layout.tsx) redirige tout seul dès que la session
-// change dans AuthContext.
+// Reproduit design_handoff_facilite/pages/14-connexion.html ET, surtout, le
+// vrai flux à 2 étapes déjà en place côté web (src/app/login/page.js) :
+// étape 1 = e-mail seul (+ Google, + mot de passe oublié) ; étape 2 = mot de
+// passe (+ lien magique, + retour "Modifier"). La version précédente de cet
+// écran affichait email ET mot de passe d'un coup, sans lien avec ni le
+// design fourni ni le comportement réel du site — signalé en capture par
+// l'utilisateur en comparant avec ffacilite.com. Couleur de marque #085041
+// (teal), pas le #0d3b34 approché par le mockup HTML statique : le vrai
+// code web fait foi sur les couleurs exactes.
+const TEAL = '#085041';
+
 export default function LoginScreen() {
+  const [etape, setEtape] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
+  const emailPropre = () => email.trim().toLowerCase();
+
+  const validerEtape1 = () => {
+    if (!emailPropre() || !emailPropre().includes('@')) {
+      setErrorMessage('Veuillez saisir une adresse e-mail valide.');
+      return;
+    }
+    setErrorMessage('');
+    setEtape(2);
+  };
+
   const seConnecter = async () => {
-    if (!email.trim() || !password) return;
     setErrorMessage('');
     setNeedsConfirmation(false);
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      const { error } = await supabase.auth.signInWithPassword({ email: emailPropre(), password });
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           setErrorMessage('Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.');
@@ -46,14 +65,30 @@ export default function LoginScreen() {
   };
 
   const renvoyerConfirmation = async () => {
-    if (!email.trim()) return;
+    if (!emailPropre()) return;
     setIsResending(true);
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim().toLowerCase() });
+      const { error } = await supabase.auth.resend({ type: 'signup', email: emailPropre() });
       setErrorMessage(error ? error.message || "Impossible de renvoyer l'email." : 'Un nouvel email a été envoyé.');
       if (!error) setNeedsConfirmation(false);
     } finally {
       setIsResending(false);
+    }
+  };
+
+  const envoyerLienMagique = async () => {
+    if (!emailPropre() || !emailPropre().includes('@')) {
+      setErrorMessage('Veuillez saisir une adresse e-mail valide.');
+      return;
+    }
+    setMagicLinkLoading(true);
+    setErrorMessage('');
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email: emailPropre() });
+      if (error) setErrorMessage(error.message || "Impossible d'envoyer le lien magique.");
+      else setMagicLinkSent(true);
+    } finally {
+      setMagicLinkLoading(false);
     }
   };
 
@@ -70,100 +105,177 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#0B0F17]">
+    <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-          <ScrollView contentContainerClassName="px-6 pt-6 pb-10 grow justify-center" keyboardShouldPersistTaps="handled">
-            <Text className="text-2xl font-extrabold text-blue-500 text-center mb-1">Facilité</Text>
-            <Text className="text-[13px] font-medium text-gray-400 text-center mb-8">
-              Connectez-vous pour continuer
-            </Text>
-
-            <View className="bg-[#161E2E] border border-[#232D40] rounded-2xl p-5">
-              <Text className="text-[11px] font-bold text-gray-400 mb-1.5">Email</Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                autoComplete="email"
-                keyboardType="email-address"
-                placeholder="vous@exemple.com"
-                placeholderTextColor="#5b6577"
-                className="bg-[#0B0F17] border border-[#232D40] rounded-xl px-3.5 py-3 text-[13.5px] text-white mb-3.5"
-              />
-
-              <Text className="text-[11px] font-bold text-gray-400 mb-1.5">Mot de passe</Text>
-              <View className="flex-row items-center bg-[#0B0F17] border border-[#232D40] rounded-xl px-3.5">
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  placeholder="••••••••"
-                  placeholderTextColor="#5b6577"
-                  className="flex-1 py-3 text-[13.5px] text-white"
+          <ScrollView contentContainerClassName="px-5 pt-6 pb-10 grow justify-center" keyboardShouldPersistTaps="handled">
+            <View className="bg-white rounded-[22px] px-6 py-7 items-center shadow-xs">
+              <View className="w-14 h-14 rounded-full bg-white border-2 border-[#085041] items-center justify-center">
+                <Image
+                  source={require('@/assets/images/login_key_teal.png')}
+                  style={{ width: 28, height: 28 }}
+                  contentFit="contain"
+                  alt="Facilité"
                 />
-                <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={16} color="#94a3b8" />
-                </Pressable>
               </View>
+              <Text className="text-[20px] font-black text-[#0F172A] mt-3.5">Connexion</Text>
+              <Text className="text-[13px] text-black/50 font-medium mt-1.5 text-center">
+                Saisissez vos identifiants pour vous connecter.
+              </Text>
 
-              <View className="items-end mt-2 mb-1">
-                <Link href="/forgot-password" className="text-[11.5px] font-semibold text-blue-400">
-                  Mot de passe oublié ?
-                </Link>
-              </View>
+              {etape === 1 ? (
+                <View className="w-full mt-5 gap-2.5">
+                  <Pressable
+                    onPress={continuerAvecGoogle}
+                    disabled={googleLoading}
+                    className="w-full flex-row items-center justify-center gap-2.5 border border-black/15 rounded-full py-3.5"
+                    style={{ opacity: googleLoading ? 0.6 : 1 }}>
+                    <IconGoogle />
+                    <Text className="text-[13.5px] font-bold text-[#1A1A1A]">
+                      {googleLoading ? 'Redirection…' : 'Continuer avec Google'}
+                    </Text>
+                  </Pressable>
 
-              {errorMessage ? (
-                <Text className="text-[11.5px] font-semibold text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mt-3">
-                  {errorMessage}
-                </Text>
-              ) : null}
-
-              {needsConfirmation && (
-                <Pressable
-                  onPress={renvoyerConfirmation}
-                  disabled={isResending}
-                  className="mt-2.5 py-2.5 rounded-xl border border-emerald-500 items-center">
-                  <Text className="text-[12px] font-bold text-emerald-400">
-                    {isResending ? 'Envoi en cours…' : "Renvoyer l'email de confirmation"}
+                  <Text className="text-center text-[11.5px] font-semibold text-black/40 my-1 uppercase tracking-wider">
+                    OU
                   </Text>
-                </Pressable>
+
+                  <TextInput
+                    value={email}
+                    onChangeText={(t) => {
+                      setEmail(t);
+                      if (errorMessage) setErrorMessage('');
+                    }}
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    keyboardType="email-address"
+                    placeholder="nom@exemple.com"
+                    placeholderTextColor="rgba(0,0,0,0.35)"
+                    className="w-full border-[1.6px] border-[#085041] rounded-full px-4 py-3 text-[13.5px] text-[#1A1A1A]"
+                  />
+
+                  {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
+
+                  <Pressable onPress={validerEtape1} className="w-full bg-[#085041] rounded-full py-3.5 items-center">
+                    <Text className="text-white text-[14px] font-bold">Continuer avec l&apos;e-mail</Text>
+                  </Pressable>
+
+                  <Link href="/forgot-password" className="self-end text-[13px] font-semibold text-[#085041] mt-1">
+                    Mot de passe oublié ?
+                  </Link>
+                </View>
+              ) : (
+                <View className="w-full mt-5 gap-2.5">
+                  <View className="w-full flex-row items-center justify-between bg-black/[0.03] px-3.5 py-2.5 rounded-xl border border-black/10">
+                    <Text className="text-[12.5px] font-semibold text-[#1A1A1A] flex-1 mr-2" numberOfLines={1}>
+                      {email}
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        setEtape(1);
+                        setPassword('');
+                        setErrorMessage('');
+                        setMagicLinkSent(false);
+                      }}>
+                      <Text className="text-[11.5px] font-semibold text-black/45">Modifier</Text>
+                    </Pressable>
+                  </View>
+
+                  {magicLinkSent ? (
+                    <View className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                      <Text className="text-[12px] font-bold text-emerald-800">
+                        ✉️ Lien de connexion envoyé !
+                      </Text>
+                      <Text className="text-[11.5px] text-emerald-800 mt-0.5">
+                        Vérifiez votre boîte de réception pour vous connecter en 1 clic.
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      <View className="w-full flex-row items-center border-[1.6px] border-[#085041] rounded-full px-4">
+                        <TextInput
+                          value={password}
+                          onChangeText={(t) => {
+                            setPassword(t);
+                            if (errorMessage) setErrorMessage('');
+                          }}
+                          secureTextEntry={!showPassword}
+                          autoCapitalize="none"
+                          placeholder="Saisissez votre mot de passe"
+                          placeholderTextColor="rgba(0,0,0,0.35)"
+                          className="flex-1 py-3 text-[13.5px] text-[#1A1A1A]"
+                        />
+                        <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                          <Ionicons
+                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                            size={16}
+                            color="rgba(0,0,0,0.4)"
+                          />
+                        </Pressable>
+                      </View>
+
+                      <View className="w-full flex-row items-center justify-between">
+                        <Pressable onPress={envoyerLienMagique} disabled={magicLinkLoading}>
+                          <Text className="text-[11.5px] font-semibold text-black/45">
+                            {magicLinkLoading ? 'Envoi…' : 'Lien magique'}
+                          </Text>
+                        </Pressable>
+                        <Link href="/forgot-password" className="text-[11.5px] font-semibold text-[#085041]">
+                          Mot de passe oublié ?
+                        </Link>
+                      </View>
+
+                      {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
+
+                      {needsConfirmation && (
+                        <Pressable
+                          onPress={renvoyerConfirmation}
+                          disabled={isResending}
+                          className="py-2.5 rounded-xl border border-[#085041] items-center">
+                          <Text className="text-[12px] font-bold text-[#085041]">
+                            {isResending ? 'Envoi en cours…' : "Renvoyer l'email de confirmation"}
+                          </Text>
+                        </Pressable>
+                      )}
+
+                      <Pressable
+                        onPress={seConnecter}
+                        disabled={loading || !password}
+                        className="w-full bg-[#085041] rounded-full py-3.5 items-center"
+                        style={{ opacity: loading || !password ? 0.6 : 1 }}>
+                        {loading ? (
+                          <ActivityIndicator color="#ffffff" />
+                        ) : (
+                          <Text className="text-white text-[14px] font-bold">Se connecter</Text>
+                        )}
+                      </Pressable>
+                    </>
+                  )}
+                </View>
               )}
 
-              <Pressable
-                onPress={seConnecter}
-                disabled={loading || !email.trim() || !password}
-                className="bg-blue-600 disabled:opacity-50 rounded-xl py-3.5 items-center mt-4">
-                {loading ? <ActivityIndicator color="#ffffff" /> : <Text className="text-[13.5px] font-bold text-white">Se connecter</Text>}
-              </Pressable>
-
-              <View className="flex-row items-center gap-3 my-5">
-                <View className="flex-1 h-px bg-[#232D40]" />
-                <Text className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Ou</Text>
-                <View className="flex-1 h-px bg-[#232D40]" />
+              <View className="w-full border-t border-black/[0.08] mt-5 pt-3.5 flex-row justify-center gap-1.5">
+                <Text className="text-[13px] text-[#1A1A1A]">Pas encore de compte ?</Text>
+                <Link href="/register" className="text-[13px] font-bold text-blue-600">
+                  Inscrivez-vous
+                </Link>
               </View>
-
-              <Pressable
-                onPress={continuerAvecGoogle}
-                disabled={googleLoading}
-                className="flex-row items-center justify-center gap-2.5 bg-[#0B0F17] border border-[#232D40] rounded-xl py-3">
-                <Ionicons name="logo-google" size={15} color="#e5e7eb" />
-                <Text className="text-[13px] font-bold text-white">
-                  {googleLoading ? 'Redirection…' : 'Continuer avec Google'}
-                </Text>
-              </Pressable>
             </View>
 
-            <View className="flex-row justify-center gap-1.5 mt-6">
-              <Text className="text-[12.5px] text-gray-500">Pas encore de compte ?</Text>
-              <Link href="/register" className="text-[12.5px] font-bold text-blue-400">
-                Créer un compte
-              </Link>
-            </View>
+            <Text className="text-center text-[11.5px] text-black/35 mt-4">
+              © 2026 Facilité · Tous droits réservés.
+            </Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+    </View>
+  );
+}
+
+function BoiteErreur({ texte }: { texte: string }) {
+  return (
+    <View className="w-full bg-red-50 border border-red-200 rounded-xl p-2.5">
+      <Text className="text-[11px] font-bold text-red-600">{texte}</Text>
     </View>
   );
 }
