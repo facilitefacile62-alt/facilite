@@ -247,49 +247,6 @@ export default function MarketplaceClient() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-3 sm:px-5 py-5">
-        <header className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-              Marketplace
-            </h1>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Trouvez ce qu&apos;il vous faut, en stock, dans une boutique près de chez vous.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { id: "acheter", label: "Acheter (Catalogue)", icon: "fa-magnifying-glass" },
-              { id: "vendre", label: "Ma Boutique (Vendre)", icon: "fa-store" },
-            ].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setOnglet(t.id)}
-                className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition cursor-pointer flex items-center ${
-                  onglet === t.id
-                    ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md"
-                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
-                }`}
-              >
-                <i className={`fa-solid ${t.icon} mr-2`}></i>
-                {t.label}
-              </button>
-            ))}
-
-            {/* Bouton + Publier (Ajout d'article rapide) */}
-            <button
-              type="button"
-              onClick={() => setOnglet("vendre")}
-              className="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black bg-[#10E688] hover:bg-[#0fd27c] text-gray-950 transition cursor-pointer flex items-center shadow-md active:scale-95 border border-emerald-400/40"
-              title="Publier un nouvel article sur la Marketplace"
-            >
-              <i className="fa-solid fa-plus mr-1.5 text-xs font-black"></i>
-              <span>Publier</span>
-            </button>
-          </div>
-        </header>
-
         {/* Layout avec barre latérale (mode Catalogue/Acheteur) et zone principale */}
         <div className={`flex flex-col md:flex-row gap-6 items-start w-full ${onglet === "vendre" ? "justify-center" : ""}`}>
           {/* BARRE DU PROFIL & CATÉGORIES : Affichée UNIQUEMENT en mode Catalogue (Acheter) */}
