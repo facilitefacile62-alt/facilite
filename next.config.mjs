@@ -45,14 +45,21 @@ const contentSecurityPolicy = [
   "worker-src 'self' blob: https://cdnjs.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
   "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com https://*.clarity.ms https://c.clarity.ms https://*.tile.openstreetmap.org",
+  // *.basemaps.cartocdn.com (tuiles Voyager/Dark) et server.arcgisonline.com
+  // (tuiles satellite) : ajoutés le 2026-09-06, la carte Leaflet "Explorer"
+  // du Marketplace (GlobeExplorateurBoutiques.jsx) chargeait ses tuiles via
+  // de vraies balises <img> (contrairement à MapLibre, qui passe par
+  // fetch/XHR) — sans ces hôtes dans img-src, chaque tuile était bloquée
+  // silencieusement par la CSP, laissant la carte vide malgré un code
+  // fonctionnel. Confirmé par les violations CSP réelles observées en
+  // production avant ce correctif.
+  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com https://*.clarity.ms https://c.clarity.ms https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com",
   "media-src 'self' blob: data: https://*.supabase.co",
   // Clarity renvoie ses mesures par fetch/beacon vers *.clarity.ms : sans
   // cette entrée, le script se chargerait mais n'enverrait toujours rien.
-  // tiles.openfreemap.org : tuiles vectorielles, sprite et polices du globe
-  // MapLibre du Marketplace — MapLibre récupère tout via fetch/XHR (même les
-  // tuiles "raster"), donc connect-src est la directive qui s'applique, pas
-  // img-src.
+  // tiles.openfreemap.org : conservé même si GlobeExplorateurBoutiques.jsx
+  // n'utilise plus MapLibre — retiré seulement si plus aucun composant du
+  // site ne s'en sert.
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co https://plausible.io https://*.clarity.ms https://tiles.openfreemap.org",
   "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co https://www.youtube.com https://www.youtube-nocookie.com https://maps.google.com https://*.google.com",
   "object-src 'self' blob: data: https://*.supabase.co",
