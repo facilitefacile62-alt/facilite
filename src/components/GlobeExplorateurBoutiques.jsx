@@ -1,22 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
-import * as maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import "leaflet/dist/leaflet.css";
 import { positionActuelle } from "@/lib/marketplaceData";
 
-const STYLE_OPENFREEMAP = "https://tiles.openfreemap.org/styles/liberty";
-const STYLE_POSITRON = "https://tiles.openfreemap.org/styles/bright";
-const CENTRE_SENEGAL = [-17.4441, 14.6937]; // Dakar par défaut
+// Styles de tuiles ultra fluides & compatibles 100% mobiles (zéro WebGL crash)
+const TUILES_SNAP_MAP = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const TUILES_SATELLITE = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const TUILES_DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 
-// Collection de Bitmojis / Avatars stylisés inspirés de l'univers Snap Map
+const CENTRE_SENEGAL = [14.6937, -17.4441]; // [lat, lng] Dakar
+
+// Avatars Bitmoji stylisés universels
 const AVATARS_SNAP = [
-  { id: "femme1", emoji: "👩🏾‍🦱", style: "bg-emerald-500", label: "Mode & Tendance" },
-  { id: "homme1", emoji: "👨🏾‍💼", style: "bg-blue-500", label: "Tech & Business" },
-  { id: "femme2", emoji: "👩🏾‍💼", style: "bg-purple-500", label: "Beauté & Soins" },
-  { id: "homme2", emoji: "🧑🏾‍💻", style: "bg-indigo-500", label: "Électronique" },
-  { id: "femme3", emoji: "🧕🏾", style: "bg-amber-500", label: "Maison & Déco" },
-  { id: "homme3", emoji: "🧢", style: "bg-rose-500", label: "Sport & Style" },
+  { id: "femme1", emoji: "👩🏾‍🦱", label: "Mode & Tendance" },
+  { id: "homme1", emoji: "👨🏾‍💼", label: "Tech & Business" },
+  { id: "femme2", emoji: "👩🏾‍💼", label: "Beauté & Soins" },
+  { id: "homme2", emoji: "🧑🏾‍💻", label: "Électronique" },
+  { id: "femme3", emoji: "🧕🏾", label: "Maison & Déco" },
+  { id: "homme3", emoji: "🧢", label: "Sport & Style" },
 ];
 
 function urlPhoto(chemin) {
@@ -41,231 +43,239 @@ export default function GlobeExplorateurBoutiques({
 }) {
   const conteneurRef = useRef(null);
   const carteRef = useRef(null);
-  const marqueursInstances = useRef([]);
+  const coucheTuilesRef = useRef(null);
+  const groupeMarqueursRef = useRef(null);
+  const marqueurMoiRef = useRef(null);
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
-  const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'visites' | 'populaires' | 'live'
-  const [mode3DGlobe, setMode3DGlobe] = useState(false);
-  const [styleActuel, setStyleActuel] = useState(STYLE_OPENFREEMAP);
+  const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
+  const [styleActif, setStyleActif] = useState("snap"); // 'snap' | 'satellite' | 'dark'
   const [localisationEnCours, setLocalisationEnCours] = useState(false);
   const [erreurLocalisation, setErreurLocalisation] = useState("");
-  const [maPosition, setMaPosition] = useState(null);
   const [vueBoutiqueDetails, setVueBoutiqueDetails] = useState(false);
+  const [carteChargee, setCarteChargee] = useState(false);
 
-  // Filtrer les boutiques ayant des coordonnées valides
+  // Filtrer les boutiques avec coordonnées valides
   const marqueurs = useMemo(() => {
     return boutiques.filter(
       (b) => Number.isFinite(b.lat) && Number.isFinite(b.lng) && (b.lat !== 0 || b.lng !== 0)
     );
   }, [boutiques]);
 
-  // Initialisation de la carte MapLibre GL
-  useEffect(() => {
-    if (!conteneurRef.current) return;
-
-    let carte;
-    try {
-      carte = new maplibregl.Map({
-        container: conteneurRef.current,
-        style: styleActuel,
-        center: marqueurs[0] ? [marqueurs[0].lng, marqueurs[0].lat] : CENTRE_SENEGAL,
-        zoom: 12.8,
-        pitch: 45, // Vue 3D inclinée style Snap Map
-        bearing: -10,
-        attributionControl: false,
-        preserveDrawingBuffer: true,
-      });
-    } catch {
-      return;
+  // Boutiques filtrées par pilule
+  const boutiquesAffichees = useMemo(() => {
+    if (filtreActif === "live") {
+      return marqueurs.filter((b) => b.statut === "en_stock" || (b.articles && b.articles.some((a) => a.statut === "en_stock")));
     }
+    if (filtreActif === "populaires") {
+      return marqueurs.slice(0, Math.max(3, Math.ceil(marqueurs.length / 2)));
+    }
+    return marqueurs;
+  }, [marqueurs, filtreActif]);
 
-    carteRef.current = carte;
+  // 1. Initialisation de la carte Leaflet (Universelle, zéro écran blanc)
+  useEffect(() => {
+    let annule = false;
 
-    carte.on("load", () => {
-      if (mode3DGlobe) {
-        carte.setProjection({ type: "globe" });
+    (async () => {
+      if (!conteneurRef.current) return;
+      try {
+        const L = (await import("leaflet")).default;
+        if (annule || !conteneurRef.current) return;
+
+        // Détruire ancienne instance si existante
+        if (carteRef.current) {
+          carteRef.current.remove();
+          carteRef.current = null;
+        }
+
+        const centreInitial = marqueurs[0]
+          ? [marqueurs[0].lat, marqueurs[0].lng]
+          : CENTRE_SENEGAL;
+
+        const carte = L.map(conteneurRef.current, {
+          center: centreInitial,
+          zoom: 13,
+          zoomControl: false,
+          attributionControl: false,
+        });
+
+        carteRef.current = carte;
+
+        // Couche de tuiles initiale
+        const urlTuiles =
+          styleActif === "satellite"
+            ? TUILES_SATELLITE
+            : styleActif === "dark"
+            ? TUILES_DARK
+            : TUILES_SNAP_MAP;
+
+        const couche = L.tileLayer(urlTuiles, {
+          maxZoom: 19,
+          subdomains: "abcd",
+        }).addTo(carte);
+
+        coucheTuilesRef.current = couche;
+
+        // Groupe pour les marqueurs
+        groupeMarqueursRef.current = L.layerGroup().addTo(carte);
+
+        // Forcer le redimensionnement pour éviter tout bug d'affichage
+        setTimeout(() => {
+          if (carteRef.current) {
+            carteRef.current.invalidateSize();
+            setCarteChargee(true);
+          }
+        }, 150);
+      } catch {
+        // En cas d'erreur de bundle, ignorer
       }
-    });
+    })();
 
     return () => {
-      marqueursInstances.current.forEach((m) => m.remove());
-      marqueursInstances.current = [];
-      carte.remove();
+      annule = true;
+      if (carteRef.current) {
+        carteRef.current.remove();
+        carteRef.current = null;
+      }
     };
-  }, [styleActuel, mode3DGlobe, marqueurs]);
+  }, [styleActif, marqueurs]);
 
-  // Ajout et mise à jour des marqueurs stylisés Snap Map
-  useEffect(() => {
+  // 2. Rendu des Marqueurs Snap Map (Bitmojis, Story Rings & Bulles de Statut)
+  const rafraichirMarqueurs = useCallback(async () => {
     const carte = carteRef.current;
-    if (!carte) return;
+    const groupe = groupeMarqueursRef.current;
+    if (!carte || !groupe) return;
 
-    // Nettoyer anciens marqueurs
-    marqueursInstances.current.forEach((m) => m.remove());
-    marqueursInstances.current = [];
+    const L = (await import("leaflet")).default;
+    groupe.clearLayers();
 
-    marqueurs.forEach((b, idx) => {
+    boutiquesAffichees.forEach((b, idx) => {
       const avatarInfo = AVATARS_SNAP[idx % AVATARS_SNAP.length];
       const aPhoto = b.photo ? urlPhoto(b.photo) : null;
-      const nomCourt = b.nom || "Boutique Facilité";
+      const nomCourt = b.nom || "Boutique";
       const quartier = b.quartier || b.ville || "Dakar";
+      const estSelectionne = boutiqueSelectionnee?.id === b.id;
 
-      // Conteneur principal du Bitmoji / Marqueur Snap Map
-      const el = document.createElement("div");
-      el.className = "snap-marker-container group relative cursor-pointer select-none transition-transform duration-300 hover:scale-110";
-      el.style.display = "flex";
-      el.style.flexDirection = "column";
-      el.style.alignItems = "center";
+      const htmlMarqueur = `
+        <div class="snap-marker flex flex-col items-center select-none cursor-pointer transform transition-transform duration-200 hover:scale-110 ${
+          estSelectionne ? "scale-115 z-50" : "z-10"
+        }">
+          <!-- 1. Bulle de statut blanche style Snap Map -->
+          <div class="mb-1 px-2.5 py-0.8 bg-white text-gray-900 rounded-full text-[10px] font-black shadow-lg border border-gray-200 flex items-center gap-1.5 whitespace-nowrap">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="font-extrabold max-w-[100px] truncate">${nomCourt}</span>
+            <span class="text-[8px] font-bold text-gray-500">· ${quartier}</span>
+          </div>
 
-      // 1. Bulle de statut / Nom de la boutique (Style Snap Map Pill)
-      const bulle = document.createElement("div");
-      bulle.className =
-        "mb-1 px-2.5 py-1 bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-white rounded-full text-[10px] font-black shadow-lg border border-gray-200/80 dark:border-gray-700/80 flex items-center gap-1.5 whitespace-nowrap backdrop-blur-xs transition-all transform group-hover:-translate-y-1";
-      bulle.innerHTML = `
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span class="font-extrabold max-w-[110px] truncate">${nomCourt}</span>
-        <span class="text-[8px] font-bold text-gray-500">· ${quartier}</span>
+          <!-- 2. Story Ring Vert Pulsant avec Photo / Avatar -->
+          <div class="relative w-12 h-12 rounded-full p-[2.5px] bg-gradient-to-tr from-emerald-400 to-green-500 shadow-xl flex items-center justify-center">
+            <div class="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center border-2 border-white shadow-xs">
+              ${
+                aPhoto
+                  ? `<img src="${aPhoto}" alt="${nomCourt}" class="w-full h-full object-cover" />`
+                  : `<span class="text-xl">${avatarInfo.emoji}</span>`
+              }
+            </div>
+            <div class="absolute -bottom-1 bg-red-600 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">
+              LIVE
+            </div>
+          </div>
+
+          <!-- 3. Ombre portée au sol -->
+          <div class="w-7 h-1.5 bg-black/40 rounded-full blur-[1px] mt-0.5"></div>
+        </div>
       `;
-      el.appendChild(bulle);
 
-      // 2. Story Ring avec Photo du produit ou Logo (Cercle Vert Pulsant Snap Map)
-      const storyRing = document.createElement("div");
-      storyRing.className =
-        "relative w-12 h-12 rounded-full p-[2.5px] bg-gradient-to-tr from-emerald-400 to-green-500 shadow-xl flex items-center justify-center animate-bounce-subtle";
-      
-      const innerAvatar = document.createElement("div");
-      innerAvatar.className = "w-full h-full rounded-full overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center border-2 border-white dark:border-gray-900";
-      
-      if (aPhoto) {
-        innerAvatar.innerHTML = `<img src="${aPhoto}" alt="${nomCourt}" class="w-full h-full object-cover" />`;
-      } else {
-        innerAvatar.innerHTML = `<span class="text-xl">${avatarInfo.emoji}</span>`;
-      }
-      storyRing.appendChild(innerAvatar);
-
-      // Badge LIVE sur le cercle de story
-      const badgeLive = document.createElement("div");
-      badgeLive.className =
-        "absolute -bottom-1 bg-red-600 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs";
-      badgeLive.innerText = "LIVE";
-      storyRing.appendChild(badgeLive);
-
-      el.appendChild(storyRing);
-
-      // 3. Ombre portée au sol style Bitmoji 3D
-      const ombre = document.createElement("div");
-      ombre.className = "w-8 h-2 bg-black/35 rounded-full blur-[1.5px] mt-0.5";
-      el.appendChild(ombre);
-
-      // Clic sur le marqueur : centrer et ouvrir la boutique
-      el.addEventListener("click", () => {
-        setBoutiqueSelectionnee(b);
-        setVueBoutiqueDetails(true);
-        carte.flyTo({
-          center: [b.lng, b.lat],
-          zoom: 15.5,
-          pitch: 55,
-          bearing: -15,
-          speed: 1.2,
-          curve: 1.4,
-          essential: true,
-        });
+      const icone = L.divIcon({
+        html: htmlMarqueur,
+        className: "snap-custom-icon",
+        iconSize: [120, 80],
+        iconAnchor: [60, 75],
       });
 
-      const marqueur = new maplibregl.Marker({ element: el, anchor: "bottom" })
-        .setLngLat([b.lng, b.lat])
-        .addTo(carte);
+      const marqueur = L.marker([b.lat, b.lng], { icon: icone }).addTo(groupe);
 
-      marqueursInstances.current.push(marqueur);
+      marqueur.on("click", () => {
+        setBoutiqueSelectionnee(b);
+        setVueBoutiqueDetails(true);
+        carte.flyTo([b.lat, b.lng], 15, { duration: 1.2 });
+      });
     });
-  }, [marqueurs]);
+  }, [boutiquesAffichees, boutiqueSelectionnee]);
 
-  // Navigation vers la position de l'utilisateur
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    rafraichirMarqueurs();
+  }, [rafraichirMarqueurs, carteChargee]);
+
+  // Centrer sur la position de l'utilisateur
   const allerAMaPosition = async () => {
     setErreurLocalisation("");
     setLocalisationEnCours(true);
     try {
       const pos = await positionActuelle();
-      setMaPosition(pos);
+      const L = (await import("leaflet")).default;
+      const carte = carteRef.current;
 
-      // Création du marqueur "Moi" style Bitmoji avec faisceau radar
-      const elMoi = document.createElement("div");
-      elMoi.className = "relative flex flex-col items-center select-none cursor-pointer";
-      elMoi.innerHTML = `
-        <div class="absolute -inset-4 bg-sky-500/20 rounded-full animate-ping pointer-events-none"></div>
-        <div class="relative w-12 h-12 rounded-full bg-gradient-to-tr from-sky-400 to-blue-600 p-0.5 shadow-2xl border-2 border-white flex items-center justify-center text-xl">
-          <span>🧑🏾</span>
-        </div>
-        <div class="mt-1 px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-md border border-white">
-          Vous êtes ici
+      if (!carte) return;
+
+      if (marqueurMoiRef.current) {
+        marqueurMoiRef.current.remove();
+      }
+
+      const htmlMoi = `
+        <div class="relative flex flex-col items-center select-none cursor-pointer">
+          <div class="absolute -inset-3 bg-sky-500/30 rounded-full animate-ping pointer-events-none"></div>
+          <div class="relative w-11 h-11 rounded-full bg-gradient-to-tr from-sky-400 to-blue-600 p-0.5 shadow-2xl border-2 border-white flex items-center justify-center text-lg">
+            <span>🧑🏾</span>
+          </div>
+          <div class="mt-1 px-2 py-0.5 bg-blue-600 text-white text-[8px] font-black rounded-full shadow-md border border-white whitespace-nowrap">
+            Vous êtes ici
+          </div>
         </div>
       `;
 
-      new maplibregl.Marker({ element: elMoi, anchor: "bottom" })
-        .setLngLat([pos.longitude, pos.latitude])
-        .addTo(carteRef.current);
-
-      carteRef.current?.flyTo({
-        center: [pos.longitude, pos.latitude],
-        zoom: 15,
-        pitch: 50,
-        bearing: 0,
-        speed: 1.3,
-        curve: 1.4,
-        essential: true,
+      const iconeMoi = L.divIcon({
+        html: htmlMoi,
+        className: "snap-custom-moi",
+        iconSize: [100, 70],
+        iconAnchor: [50, 65],
       });
+
+      marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi }).addTo(carte);
+      carte.flyTo([pos.latitude, pos.longitude], 15, { duration: 1.3 });
     } catch (err) {
-      setErreurLocalisation(err.message || "Impossible de récupérer votre position.");
+      setErreurLocalisation(err.message || "Impossible d'obtenir votre position GPS.");
     } finally {
       setLocalisationEnCours(false);
     }
   };
 
-  // Sélection rapide d'une boutique depuis le carrousel inférieur
+  // Sélection rapide depuis le carrousel inférieur
   const selectionnerBoutiqueCarousel = (b) => {
     setBoutiqueSelectionnee(b);
     setVueBoutiqueDetails(true);
-    carteRef.current?.flyTo({
-      center: [b.lng, b.lat],
-      zoom: 15.5,
-      pitch: 55,
-      bearing: -15,
-      speed: 1.2,
-      curve: 1.4,
-      essential: true,
-    });
+    carteRef.current?.flyTo([b.lat, b.lng], 15, { duration: 1.2 });
   };
 
-  // Basculer la projection 3D Globe / Plan Mercator
-  const toggleGlobe = () => {
-    const nouveauMode = !mode3DGlobe;
-    setMode3DGlobe(nouveauMode);
-    if (carteRef.current) {
-      carteRef.current.setProjection({ type: nouveauMode ? "globe" : "mercator" });
-      if (nouveauMode) {
-        carteRef.current.flyTo({ zoom: 3, pitch: 20 });
-      } else {
-        carteRef.current.flyTo({ zoom: 13, pitch: 45 });
-      }
-    }
-  };
-
-  // Basculer le style de carte
-  const toggleStyle = () => {
-    const nouveauStyle = styleActuel === STYLE_OPENFREEMAP ? STYLE_POSITRON : STYLE_OPENFREEMAP;
-    setStyleActuel(nouveauStyle);
+  // Basculer style de carte (Snap Pastel ↔ Satellite ↔ Nuit)
+  const changerStyle = () => {
+    const suivant = styleActif === "snap" ? "satellite" : styleActif === "satellite" ? "dark" : "snap";
+    setStyleActif(suivant);
   };
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex flex-col bg-[#0B0F17] overflow-hidden select-none font-sans"
+      className="fixed inset-0 z-[70] flex flex-col bg-[#F3F4F6] dark:bg-[#0B0F17] overflow-hidden select-none font-sans"
       role="dialog"
       aria-modal="true"
-      aria-label="Snap Map Explorateur des Boutiques"
+      aria-label="Explorateur Snap Map"
     >
       {/* 1. EN-TÊTE SUPÉRIEUR SNAP MAP (Translucide avec Météo, Titre & Filtres) */}
       <header className="absolute top-0 inset-x-0 z-20 pt-3 pb-2 px-3 sm:px-5 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          {/* Avatar Utilisateur Gauche */}
+          {/* Avatar Utilisateur Gauche + Météo */}
           <div className="pointer-events-auto flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-full border-2 border-white/90 bg-gradient-to-tr from-amber-400 to-orange-500 shadow-md flex items-center justify-center text-lg">
               <span>👤</span>
@@ -284,7 +294,7 @@ export default function GlobeExplorateurBoutiques({
             </div>
           </div>
 
-          {/* Boutons d'action en haut à droite */}
+          {/* Bouton Fermer (Croix en haut à droite) */}
           <div className="pointer-events-auto flex items-center gap-2">
             <button
               type="button"
@@ -298,7 +308,7 @@ export default function GlobeExplorateurBoutiques({
           </div>
         </div>
 
-        {/* Pilules de filtres thématiques (Style Snap Map : Souvenirs, Les plus visités, Visité...) */}
+        {/* Pilules de filtres thématiques (Style 1:1 Snap Map) */}
         <div className="pointer-events-auto flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
           <button
             type="button"
@@ -344,24 +354,24 @@ export default function GlobeExplorateurBoutiques({
             onClick={allerAMaPosition}
             className="px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap bg-black/50 hover:bg-black/70 text-white border border-white/15 transition cursor-pointer flex items-center gap-1.5 shadow-md backdrop-blur-md"
           >
-            <i className="fa-solid fa-clock-rotate-left text-xs text-emerald-400"></i>
+            <i className="fa-solid fa-location-crosshairs text-xs text-emerald-400"></i>
             <span>Autour de moi</span>
           </button>
         </div>
       </header>
 
-      {/* 2. CONTENEUR DE LA CARTE VECTORIELLE */}
-      <div className="relative flex-1 w-full h-full">
-        <div ref={conteneurRef} className="absolute inset-0 w-full h-full" />
+      {/* 2. CONTENEUR CARTE LEAFLET */}
+      <div className="relative flex-1 w-full h-full min-h-0">
+        <div ref={conteneurRef} className="absolute inset-0 w-full h-full z-0" />
 
         {/* 3. CONTRÔLES FLOTTANTS SNAP MAP (À droite) */}
         <aside className="absolute right-3.5 top-28 sm:top-24 z-20 flex flex-col gap-2.5">
-          {/* Bouton Localisation "Ma position" */}
+          {/* Bouton Ma Position */}
           <button
             type="button"
             onClick={allerAMaPosition}
             disabled={localisationEnCours}
-            className="w-11 h-11 rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center shadow-xl border border-gray-200 dark:border-gray-700 hover:scale-105 active:scale-95 transition cursor-pointer relative group"
+            className="w-11 h-11 rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center shadow-xl border border-gray-200 dark:border-gray-700 hover:scale-105 active:scale-95 transition cursor-pointer relative"
             title="Centrer sur ma position"
             aria-label="Ma position"
           >
@@ -373,40 +383,51 @@ export default function GlobeExplorateurBoutiques({
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-900 animate-pulse" />
           </button>
 
-          {/* Bouton Bascule Globe 3D / Plan 2D */}
+          {/* Bouton Thème / Style Carte (Snap / Satellite / Sombre) */}
           <button
             type="button"
-            onClick={toggleGlobe}
+            onClick={changerStyle}
             className="w-11 h-11 rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center shadow-xl border border-gray-200 dark:border-gray-700 hover:scale-105 active:scale-95 transition cursor-pointer"
-            title={mode3DGlobe ? "Bascule Vue Rue Mercator" : "Bascule Vue Globe 3D"}
-            aria-label="Vue Globe / Rue"
-          >
-            <span className="text-lg">{mode3DGlobe ? "🗺️" : "🌐"}</span>
-          </button>
-
-          {/* Bouton Thème Carte (Satellite / Clair) */}
-          <button
-            type="button"
-            onClick={toggleStyle}
-            className="w-11 h-11 rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center shadow-xl border border-gray-200 dark:border-gray-700 hover:scale-105 active:scale-95 transition cursor-pointer"
-            title="Changer de vue"
+            title="Changer de vue (Plan / Satellite)"
             aria-label="Style de carte"
           >
-            <i className="fa-solid fa-layer-group text-sm text-gray-700 dark:text-gray-300"></i>
+            <span className="text-base">
+              {styleActif === "snap" ? "🛰️" : styleActif === "satellite" ? "🌙" : "🗺️"}
+            </span>
+          </button>
+
+          {/* Zoom In & Out */}
+          <button
+            type="button"
+            onClick={() => carteRef.current?.zoomIn()}
+            className="w-11 h-11 rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center shadow-xl border border-gray-200 dark:border-gray-700 hover:scale-105 active:scale-95 transition cursor-pointer"
+            title="Zoomer"
+            aria-label="Zoom avant"
+          >
+            <i className="fa-solid fa-plus text-sm"></i>
+          </button>
+          <button
+            type="button"
+            onClick={() => carteRef.current?.zoomOut()}
+            className="w-11 h-11 rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center shadow-xl border border-gray-200 dark:border-gray-700 hover:scale-105 active:scale-95 transition cursor-pointer"
+            title="Dézoomer"
+            aria-label="Zoom arrière"
+          >
+            <i className="fa-solid fa-minus text-sm"></i>
           </button>
         </aside>
 
         {/* Message d'erreur géolocalisation */}
         {erreurLocalisation && (
-          <div className="absolute top-28 left-1/2 -translate-x-1/2 z-30 bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-2xl shadow-xl animate-fadeIn max-w-[85%] text-center">
+          <div className="absolute top-28 left-1/2 -translate-x-1/2 z-30 bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-2xl shadow-xl max-w-[85%] text-center">
             {erreurLocalisation}
           </div>
         )}
 
         {/* 4. CARROUSEL INFÉRIEUR DE STORIES & BOUTIQUES (Style Snap Map Dock) */}
         <div className="absolute bottom-4 inset-x-0 z-20 px-3 sm:px-6 flex flex-col items-center gap-2 pointer-events-none">
-          {/* Pilule d'information active (Style Snap Map "Just_Adama est à son domicile") */}
-          <div className="pointer-events-auto px-4 py-2 rounded-full bg-[#1877F2]/90 hover:bg-[#1877F2] text-white text-xs font-extrabold shadow-xl backdrop-blur-md border border-white/20 flex items-center gap-2 cursor-pointer transition transform hover:scale-102">
+          {/* Pilule d'information active */}
+          <div className="pointer-events-auto px-4 py-2 rounded-full bg-[#1877F2]/95 hover:bg-[#1877F2] text-white text-xs font-extrabold shadow-xl backdrop-blur-md border border-white/20 flex items-center gap-2 cursor-pointer transition transform hover:scale-102">
             <i className="fa-solid fa-house text-xs"></i>
             <span>
               {boutiqueSelectionnee
@@ -416,7 +437,7 @@ export default function GlobeExplorateurBoutiques({
           </div>
 
           {/* Barre des Avatars Snap Map Défilable Horizontalement */}
-          <div className="pointer-events-auto w-full max-w-lg bg-white/90 dark:bg-gray-950/90 rounded-3xl p-2 sm:p-2.5 shadow-2xl border border-gray-200/80 dark:border-gray-800/80 backdrop-blur-md flex items-center gap-3 overflow-x-auto no-scrollbar">
+          <div className="pointer-events-auto w-full max-w-lg bg-white/95 dark:bg-gray-950/95 rounded-3xl p-2 sm:p-2.5 shadow-2xl border border-gray-200/80 dark:border-gray-800/80 backdrop-blur-md flex items-center gap-3 overflow-x-auto no-scrollbar">
             {marqueurs.map((b, idx) => {
               const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
               const aPhoto = b.photo ? urlPhoto(b.photo) : null;
