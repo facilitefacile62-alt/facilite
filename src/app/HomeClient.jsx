@@ -192,7 +192,7 @@ export default function Home({ initialOffers = [] }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Bloc "Fil d'attente des offres d'emploi" (recherche + filtres ville/contrat) :
   // masqué du flux mobile par défaut, affiché via cette modale déclenchée par
-  // l'icône loupe du header. Le bloc desktop inline reste inchangé (hidden md:flex).
+  // l'icône loupe du header. Le bloc desktop inline reste inchangé (hidden xl:flex).
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState("FR");
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -757,7 +757,7 @@ export default function Home({ initialOffers = [] }) {
             </div>
 
             {/* Barre de recherche de la Navbar */}
-            <div className="hidden md:block relative w-60 lg:w-72">
+            <div className="hidden xl:block relative w-60 lg:w-72">
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
                   <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
@@ -774,7 +774,7 @@ export default function Home({ initialOffers = [] }) {
           </div>
 
           {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Recrutement, Plus) */}
-          <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
+          <div className="hidden xl:flex items-center space-x-4 lg:space-x-8">
             {/* Accueil */}
             <Link
               href="/"
@@ -955,7 +955,7 @@ export default function Home({ initialOffers = [] }) {
               S'inscrire" avant que la session (déjà connue) ne s'affiche —
               seul endroit de la page où ce basculement est directement
               visible au premier écran. */}
-          <div className="hidden md:flex items-center space-x-3">
+          <div className="hidden xl:flex items-center space-x-3">
             {authLoading ? (
               <div className="w-24 h-8" aria-hidden="true" />
             ) : userSession ? (
@@ -1028,7 +1028,7 @@ export default function Home({ initialOffers = [] }) {
               été retirée. Accueil/Messagerie/Notifications/Profil en accès
               direct ; Offres et Service rejoignent le tiroir "Plus" (icône
               grille) pour tenir dans la largeur d'un mobile à 320px. */}
-          <div className="flex md:hidden items-center space-x-1">
+          <div className="flex xl:hidden items-center space-x-1">
             <button
               type="button"
               onClick={() => setMobileSearchOpen(true)}
@@ -1102,7 +1102,7 @@ export default function Home({ initialOffers = [] }) {
             secondaires centralisés ici, ouvert depuis l'icône grille du
             header — plus de barre de navigation fixe en bas de l'écran). */}
         {mobileMenuOpen && (
-          <div className="fixed inset-0 z-[600] bg-[#F4F2EE] flex flex-col md:hidden animate-fade-in-up">
+          <div className="fixed inset-0 z-[600] bg-[#F4F2EE] flex flex-col xl:hidden animate-fade-in-up">
             {/* Entête du Menu */}
             <div className="bg-white px-4 py-3 border-b border-gray-200 flex items-center justify-between shadow-xs">
               <div className="flex items-center space-x-3">
@@ -1367,10 +1367,10 @@ export default function Home({ initialOffers = [] }) {
 
       {/* Main Job Board Feed (LinkedIn Style) */}
       <main className="min-h-screen bg-[#F4F2EE] pt-4 pb-8 md:pb-16 px-4 md:px-6" suppressHydrationWarning>
-        <div className="max-w-[1180px] mx-auto flex flex-col md:flex-row gap-6 items-start justify-center">
+        <div className="max-w-[1180px] mx-auto flex flex-col xl:flex-row gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
-          <aside className="hidden md:flex md:w-[215px] flex-shrink-0 flex-col gap-2 md:pr-0.5 md:sticky md:top-[72px] md:h-fit md:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
+          <aside className="hidden xl:flex xl:w-[215px] flex-shrink-0 flex-col gap-2 xl:pr-0.5 xl:sticky xl:top-[72px] xl:h-fit xl:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
 
             {authLoading && !userProfile ? (
               /* Squelette de chargement doux pour éviter les 3 états sautillants */
@@ -1610,7 +1610,7 @@ export default function Home({ initialOffers = [] }) {
           </aside>
 
           {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
-          <section className="w-full md:w-[555px] flex-shrink-0 flex flex-col space-y-4">
+          <section className="w-full xl:w-[555px] flex-shrink-0 flex flex-col space-y-4">
 
             {/* Carrousel "Stories" des modèles de CV — tout en haut du fil,
                 juste sous la navbar. Le clic ouvre TemplatePreviewModal (même
@@ -1820,7 +1820,7 @@ export default function Home({ initialOffers = [] }) {
           </section>
 
           {/* --- COLONNE DE DROITE : Offres recommandées & Publicité (Visible uniquement sur Desktop) --- */}
-          <aside className="hidden md:flex md:w-[260px] flex-shrink-0 flex-col space-y-3 md:pr-0.5 md:sticky md:top-[72px] md:h-fit md:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
+          <aside className="hidden xl:flex xl:w-[260px] flex-shrink-0 flex-col space-y-3 xl:pr-0.5 xl:sticky xl:top-[72px] xl:h-fit xl:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
             
             {/* Offres Recommandées */}
             <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">

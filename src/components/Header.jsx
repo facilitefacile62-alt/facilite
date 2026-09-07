@@ -919,7 +919,7 @@ export default function Header() {
         
         {/* Brand Logo & Name */}
         <div className={`items-center space-x-2.5 flex-shrink-0 ${
-          isMobileSearchOpen ? "hidden md:flex" : "flex"
+          isMobileSearchOpen ? "hidden xl:flex" : "flex"
         }`}>
           <Link
             href={isBusinessActive ? "/marketplace" : "/"}
@@ -1083,7 +1083,7 @@ export default function Header() {
                 setIsMobileSearchOpen(false);
                 setIsOpen(false);
               }}
-              className="md:hidden flex items-center gap-1 px-3 py-2 text-xs font-extrabold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition shadow-2xs flex-shrink-0"
+              className="xl:hidden flex items-center gap-1 px-3 py-2 text-xs font-extrabold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition shadow-2xs flex-shrink-0"
               aria-label="Fermer la recherche"
             >
               <span>Annuler</span>
@@ -1094,7 +1094,7 @@ export default function Header() {
 
 
         {/* Navigation Links (Desktop & Tablette - Regroupement propre sans saturation de la barre) */}
-        <nav className="hidden md:flex items-center space-x-2.5 lg:space-x-5 flex-shrink-0">
+        <nav className="hidden xl:flex items-center space-x-2.5 lg:space-x-5 flex-shrink-0">
           <Link
             href={isBusinessActive ? "/marketplace" : "/"}
             onClick={handleLogoOrHomeClick}
@@ -1382,7 +1382,7 @@ export default function Header() {
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
-        <div className={`items-center gap-1.5 sm:gap-2 flex-shrink-0 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
+        <div className={`items-center gap-1.5 sm:gap-2 flex-shrink-0 ${isMobileSearchOpen ? "hidden xl:flex" : "flex"}`}>
           {/* Liens Admin (si role='admin') et Recruteur (si has_badge='verified_recruiter') */}
           {userSession && (
             <div className="hidden sm:flex items-center">
@@ -1395,7 +1395,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setNotificationsModalOpen(true)}
-              className="hidden md:flex p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative items-center justify-center flex-shrink-0 cursor-pointer"
+              className="hidden xl:flex p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative items-center justify-center flex-shrink-0 cursor-pointer"
               title="Centre de notifications"
               aria-label="Ouvrir les notifications"
             >
@@ -1412,7 +1412,7 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setIsMobileSearchOpen(true)}
-            className="md:hidden p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none transition flex-shrink-0"
+            className="xl:hidden p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none transition flex-shrink-0"
             title="Rechercher"
             aria-label="Ouvrir la recherche"
           >
@@ -1694,7 +1694,7 @@ export default function Header() {
           {/* Mobile Menu Toggle (Hamburger - Uniquement pour mobile < 768px) */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none flex-shrink-0"
+            className="xl:hidden p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none flex-shrink-0"
             aria-label="Toggle menu"
           >
             <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-base sm:text-lg`}></i>
@@ -1704,7 +1704,7 @@ export default function Header() {
 
       {/* Barre d'onglets horizontale sur mobile (sous-header uniquement pour smartphones < 768px) */}
       {!isMobileSearchOpen && (
-        <div className="flex md:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1 bg-[#FAF6F1]/95 dark:bg-gray-900/95 overflow-hidden px-0.5">
+        <div className="flex xl:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1 bg-[#FAF6F1]/95 dark:bg-gray-900/95 overflow-hidden px-0.5">
           <Link
             href={isBusinessActive ? "/marketplace" : "/"}
             onClick={(e) => {
@@ -1805,7 +1805,7 @@ export default function Header() {
 
       {/* Mobile Drawer Menu (Menu Hub Facebook 1:1 via React Portal pour mobile < 768px) */}
       {mounted && mobileMenuOpen && typeof document !== "undefined" && createPortal(
-        <div className="md:hidden fixed inset-0 z-[99999] bg-[#F0F2F5] dark:bg-gray-950 flex flex-col h-[100dvh] w-screen overflow-hidden animate-in fade-in duration-200">
+        <div className="xl:hidden fixed inset-0 z-[99999] bg-[#F0F2F5] dark:bg-gray-950 flex flex-col h-[100dvh] w-screen overflow-hidden animate-in fade-in duration-200">
           
           {/* 1. Header fixe du Menu (Style Facebook : < Menu + Recherche rapide + Fermer) */}
           <div className="bg-white dark:bg-gray-900 border-b border-gray-200/80 dark:border-gray-800 px-4 py-3 flex items-center justify-between flex-shrink-0 shadow-2xs z-10">
