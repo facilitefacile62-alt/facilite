@@ -3,7 +3,6 @@ import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
 import GlobalModals from "@/components/GlobalModals";
-import DiagnosticViewport from "@/components/DiagnosticViewport";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
@@ -233,7 +232,6 @@ export default function RootLayout({ children }) {
           </AuthProvider>
         </ThemeProvider>
         <ServiceWorkerRegistration />
-        <DiagnosticViewport />
         {process.env.NODE_ENV === "production" && (
           <Script id="clarity-script" strategy="afterInteractive">
             {`
