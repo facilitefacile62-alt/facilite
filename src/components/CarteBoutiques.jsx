@@ -17,6 +17,7 @@
 // Un point par BOUTIQUE, pas par article : trois articles de la même échoppe
 // produiraient trois cercles superposés et un compteur illisible.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { echapperHtml } from "@/lib/marketplaceData";
 
 const COULEUR = "#1877F2";
 
@@ -118,8 +119,8 @@ export default function CarteBoutiques({ articles, depart, onChoisirBoutique }) 
           }).addTo(carte);
 
           const lignes = [
-            `<strong>${b.nom}</strong>`,
-            b.quartier ? b.quartier : null,
+            `<strong>${echapperHtml(b.nom)}</strong>`,
+            b.quartier ? echapperHtml(b.quartier) : null,
             `${b.articles.length} article${b.articles.length > 1 ? "s" : ""} · ${distanceLisible(b.distance_km)}`,
           ].filter(Boolean);
           marqueur.bindTooltip(lignes.join("<br>"));

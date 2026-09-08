@@ -302,9 +302,9 @@ export default function MarketplaceClient() {
       <div className="max-w-7xl mx-auto px-3 sm:px-5 py-5">
         {/* Layout avec barre latérale (mode Catalogue/Acheteur) et zone principale */}
         <div className={`flex flex-col md:flex-row gap-6 items-start w-full ${onglet === "vendre" ? "justify-center" : ""}`}>
-          {/* BARRE DU PROFIL & CATÉGORIES : Affichée UNIQUEMENT en mode Catalogue (Acheter) */}
+          {/* BARRE DU PROFIL & CATÉGORIES : Fixe (sticky) au défilement en mode Catalogue (Acheter) */}
           {onglet === "acheter" && (
-            <aside className="w-full md:w-[215px] flex-shrink-0 flex flex-col gap-2 hidden md:flex">
+            <aside className="w-full md:w-[215px] flex-shrink-0 flex flex-col gap-2 hidden md:flex sticky top-20 self-start max-h-[calc(100vh-90px)] overflow-y-auto no-scrollbar pr-0.5 z-20">
               {chargementBoutique ? (
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse space-y-3">
                   <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
@@ -354,15 +354,15 @@ export default function MarketplaceClient() {
                         className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
                         title="Voir le profil de ma boutique"
                       >
-                        {maBoutiqueActive?.nom ? (
-                          maBoutiqueActive.nom.substring(0, 2).toUpperCase()
-                        ) : profile?.avatar_url ? (
+                        {profile?.avatar_url || maBoutiqueActive?.avatar_url ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
-                            src={profile.avatar_url}
+                            src={profile?.avatar_url || maBoutiqueActive?.avatar_url}
                             alt="Boutique"
                             className="w-full h-full object-cover group-hover:scale-105 transition"
                           />
+                        ) : maBoutiqueActive?.nom ? (
+                          maBoutiqueActive.nom.substring(0, 2).toUpperCase()
                         ) : (
                           <i className="fa-solid fa-store text-xl"></i>
                         )}

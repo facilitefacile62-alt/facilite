@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { urlPhoto, normaliserWhatsapp } from "@/lib/marketplaceData";
+import { echapperHtml, urlPhoto, normaliserWhatsapp } from "@/lib/marketplaceData";
 
 const distanceLisible = (km) =>
   km == null || !Number.isFinite(Number(km))
@@ -101,7 +101,11 @@ export default function CarteMobileAutourDeMoi({
   const cibleCourante = useMemo(() => {
     if (ongletVue === "produits" && articleActif) {
       const pos = point(articleActif.boutique_lat, articleActif.boutique_lng);
-      const km = articleActif.distance_km || 1.2;
+      // ?? et non || : une vraie distance de 0 (acheteur au même point que
+      // la boutique) est une valeur falsy en JS, donc "0 || 1.2" retombait
+      // à tort sur la distance de secours au lieu d'afficher "0 m" — bug
+      // confirmé lors d'un audit du Marketplace le 2026-09-08.
+      const km = articleActif.distance_km ?? 1.2;
       const min = Math.max(3, Math.round(km * 3));
       return {
         titre: articleActif.titre,
@@ -117,7 +121,7 @@ export default function CarteMobileAutourDeMoi({
       };
     }
     if (boutiqueActive) {
-      const km = boutiqueActive.distance_km || 1.5;
+      const km = boutiqueActive.distance_km ?? 1.5;
       const min = Math.max(4, Math.round(km * 3));
       return {
         titre: boutiqueActive.nom,
@@ -237,9 +241,10 @@ export default function CarteMobileAutourDeMoi({
           });
 
           const mDest = L.marker(destPos, { icon: destIcon }).addTo(map);
-          mDest.bindTooltip(`<strong>${cibleCourante.nomVendeur}</strong><br/>${cibleCourante.quartier}`, {
-            permanent: false,
-          });
+          mDest.bindTooltip(
+            `<strong>${echapperHtml(cibleCourante.nomVendeur)}</strong><br/>${echapperHtml(cibleCourante.quartier)}`,
+            { permanent: false }
+          );
           marqueursRef.current.push(mDest);
 
           // 3. Tracé d'itinéraire multi-segments cinématique (Vert -> Orange -> Vert comme Yango)
@@ -654,7 +659,7 @@ export default function CarteMobileAutourDeMoi({
                         {nbArticles} article{nbArticles > 1 ? "s" : ""} dispo
                       </p>
                       <p className="text-[9px] text-zinc-400 mt-0.5">
-                        Distance : {distanceLisible(b.distance_km || 1.2)}
+                        Distance : {distanceLisible(b.distance_km ?? 1.2)}
                       </p>
                     </div>
                   </div>

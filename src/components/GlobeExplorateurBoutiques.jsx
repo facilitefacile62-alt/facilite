@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
-import { positionActuelle } from "@/lib/marketplaceData";
+import { echapperHtml, positionActuelle } from "@/lib/marketplaceData";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
 // anonyme à ces tuiles (elles renvoient un placeholder "API KEY REQUIRED" en
@@ -91,6 +91,11 @@ export default function GlobeExplorateurBoutiques({
     let annule = false;
     let observer = null;
     const timers = [];
+    // Déclarée ici (portée de l'effet) plutôt qu'en `const` dans le bloc
+    // async ci-dessous : le nettoyage doit retirer l'écouteur "resize" avec
+    // la MÊME référence de fonction que celle passée à addEventListener,
+    // ce qui suppose qu'il puisse y accéder.
+    let forcerTaille = null;
 
     (async () => {
       if (!conteneurRef.current) return;
@@ -140,7 +145,7 @@ export default function GlobeExplorateurBoutiques({
         }
 
         // Forcer le rafraîchissement des dimensions à plusieurs intervalles
-        const forcerTaille = () => {
+        forcerTaille = () => {
           if (carteRef.current) {
             carteRef.current.invalidateSize({ pan: false });
             setCartePrete(true);
@@ -169,9 +174,13 @@ export default function GlobeExplorateurBoutiques({
       annule = true;
       timers.forEach(clearTimeout);
       if (observer) observer.disconnect();
-      if (typeof window !== "undefined") {
-        window.removeEventListener("resize", () => {});
-      }
+      // removeEventListener exige la MÊME référence de fonction que celle
+      // passée à addEventListener — une nouvelle arrow function ici ne
+      // retire rien : l'ancien écouteur "resize" restait accumulé à chaque
+      // ré-exécution de l'effet (changement de styleActif/marqueurs) ou
+      // fermeture/réouverture du globe. Confirmé lors d'un audit du
+      // Marketplace le 2026-09-08.
+      if (forcerTaille) window.removeEventListener("resize", forcerTaille);
       if (carteRef.current) {
         carteRef.current.remove();
         carteRef.current = null;
@@ -191,8 +200,13 @@ export default function GlobeExplorateurBoutiques({
     boutiquesAffichees.forEach((b, idx) => {
       const avatarInfo = AVATARS_SNAP[idx % AVATARS_SNAP.length];
       const aPhoto = b.photo ? urlPhoto(b.photo) : null;
-      const nomCourt = b.nom || "Boutique Facilité";
-      const quartier = b.quartier || b.ville || "Dakar";
+      // Échappés dès ici : injectés plus bas en HTML brut (L.divIcon({ html
+      // })), y compris dans un attribut alt="..." — un nom de boutique
+      // contenant des guillemets ou des balises casserait sinon hors de
+      // l'attribut et s'exécuterait dans le navigateur de tout acheteur
+      // ouvrant le globe (faille XSS stockée, atteignable en libre-service).
+      const nomCourt = echapperHtml(b.nom || "Boutique Facilité");
+      const quartier = echapperHtml(b.quartier || b.ville || "Dakar");
       const estCertifie = Boolean(b.estCertifie || idx % 2 === 0);
       const estActif = b.statut === "en_stock" || (b.articles && b.articles.length > 0);
       const estSelectionne = boutiqueSelectionnee?.id === b.id;

@@ -17,6 +17,29 @@ import { supabase } from "@/lib/supabase";
 export const BUCKET = "marketplace-photos";
 
 /**
+ * Échappe le texte fourni par un vendeur (nom de boutique, quartier) avant
+ * de l'insérer dans un fragment HTML brut.
+ *
+ * Les cartes Leaflet (CarteBoutiques, CarteMobileAutourDeMoi,
+ * GlobeExplorateurBoutiques) construisent leurs tooltips/marqueurs via des
+ * template strings passées directement à `bindTooltip`/`L.divIcon({ html })`
+ * — ces API injectent le texte en HTML brut (innerHTML), pas en texte. Un
+ * nom de boutique saisi comme `<img src=x onerror=...>` s'exécuterait donc
+ * dans le navigateur de tout acheteur ouvrant la carte : faille XSS stockée,
+ * atteignable en libre-service via la création de boutique. Confirmé le
+ * 2026-09-08 lors d'un audit du Marketplace.
+ */
+export function echapperHtml(texte) {
+  return String(texte ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[c]);
+}
+
+/**
  * Une coordonnée absente doit ressortir `null`, jamais 0.
  *
  * `Number(null)` vaut 0, et 0 passe `Number.isFinite` sans broncher. Écrite

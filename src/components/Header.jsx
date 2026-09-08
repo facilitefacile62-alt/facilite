@@ -2197,10 +2197,21 @@ export default function Header() {
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        if (typeof window !== "undefined") {
-                          window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "boutique" }));
+                        // "marketplace_set_onglet" ne gère que "vendre"/
+                        // "acheter" côté MarketplaceClient.jsx — un detail
+                        // "boutique" y était silencieusement ignoré, donc ce
+                        // bouton ne faisait jamais rien de plus qu'ouvrir
+                        // l'onglet déjà actif. Même schéma que les AUTRES
+                        // liens "Ma boutique" du menu (ligne ~1482) : événement
+                        // direct si déjà sur /marketplace, sinon navigation
+                        // avec le paramètre que la page lit à son montage.
+                        // Bug confirmé lors d'un audit du Marketplace le
+                        // 2026-09-08.
+                        if (pathname?.startsWith("/marketplace")) {
+                          window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
+                        } else {
+                          router.push("/marketplace?action=voir_boutique");
                         }
-                        router.push("/marketplace");
                       }}
                       className="rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md cursor-pointer text-left"
                     >
