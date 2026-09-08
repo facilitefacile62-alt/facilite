@@ -328,12 +328,21 @@ export default function CarteMobileAutourDeMoi({
 
   // Empêche le défilement de la page derrière la vue plein écran — sans ça,
   // le geste de scroll sur le panneau du bas fait aussi défiler la page
-  // Marketplace en arrière-plan, invisible mais désorientant au relâchement.
+  // Marketplace en arrière-plan. Verrouillé sur <html> ET <body> : un seul
+  // des deux ne suffit pas sur tous les navigateurs, et un ascenseur de
+  // navigateur visible sur le bord droit était pris à tort pour un bouton
+  // de l'app par un utilisateur (signalé en capture) — il doit disparaître
+  // complètement, pas juste être neutralisé côté body.
   useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const html = document.documentElement;
+    const { body } = document;
+    const overflowHtmlOriginal = html.style.overflow;
+    const overflowBodyOriginal = body.style.overflow;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = original;
+      html.style.overflow = overflowHtmlOriginal;
+      body.style.overflow = overflowBodyOriginal;
     };
   }, []);
 
@@ -404,7 +413,7 @@ export default function CarteMobileAutourDeMoi({
       {/* doit rester visible, comme sur la capture de référence, plutôt que le    */}
       {/* panneau ne prenne tout l'écran.                                          */}
       {/* ========================================================================= */}
-      <div className="shrink-0 max-h-[58vh] overflow-y-auto bg-white dark:bg-zinc-900 px-4 pt-2.5 pb-4 rounded-t-3xl -mt-4 relative z-10 shadow-2xl border-t border-gray-100 dark:border-zinc-800">
+      <div className="shrink-0 max-h-[58vh] overflow-y-auto no-scrollbar bg-white dark:bg-zinc-900 px-4 pt-2.5 pb-4 rounded-t-3xl -mt-4 relative z-10 shadow-2xl border-t border-gray-100 dark:border-zinc-800">
         {/* Poignée de tiroir / Drag handle */}
         <div className="w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-3"></div>
 
@@ -511,7 +520,10 @@ export default function CarteMobileAutourDeMoi({
               return (
                 <div
                   key={art.id}
-                  onClick={() => setArticleActifId(art.id)}
+                  onClick={() => {
+                    setArticleActifId(art.id);
+                    onVoirArticle?.(art);
+                  }}
                   className={`group relative rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-800/80 border transition-all duration-200 cursor-pointer p-2 flex flex-col justify-between ${
                     estActif
                       ? "border-[#FF3B30] dark:border-[#FF3B30] ring-2 ring-red-500/20 shadow-md bg-red-50/10"
@@ -603,6 +615,7 @@ export default function CarteMobileAutourDeMoi({
                   onClick={() => {
                     setBoutiqueActiveId(b.id);
                     if (b.articles[0]) setArticleActifId(b.articles[0].id);
+                    onVoirBoutique?.(b);
                   }}
                   className={`group relative rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-800/80 border transition-all duration-200 cursor-pointer p-2.5 flex flex-col justify-between ${
                     estActif
@@ -659,70 +672,6 @@ export default function CarteMobileAutourDeMoi({
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* D. BANDEAU DE RÉSUMÉ DE SÉLECTION (1:1 Capture 1)                         */}
-        {/* ========================================================================= */}
-        <div
-          onClick={() => {
-            if (ongletVue === "produits" && articleActif) onVoirArticle?.(articleActif);
-            else if (boutiqueActive) onVoirBoutique?.(boutiqueActive);
-          }}
-          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800/90 mb-3 cursor-pointer hover:bg-zinc-200/80 transition"
-        >
-          <div className="min-w-0 flex-1 pr-2">
-            <p className="text-xs font-black text-zinc-900 dark:text-white truncate">
-              {ongletVue === "produits"
-                ? `Sélectionné : ${cibleCourante.titre}`
-                : `Boutique : ${cibleCourante.nomVendeur}`}
-            </p>
-            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
-              {cibleCourante.quartier} · {distanceLisible(cibleCourante.distanceKm)} · {cibleCourante.dureeMin} min
-            </p>
-          </div>
-          <i className="fa-solid fa-chevron-right text-xs text-zinc-400"></i>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* E. BARRE D'ACTION INFÉRIEURE AVEC BOUTON CTA ROUGE/ORANGE (1:1 Capture 1) */}
-        {/* ========================================================================= */}
-        <div className="flex items-center gap-2.5">
-          {/* Icône Paiement Espèces / Wave */}
-          <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400 text-lg shadow-xs" title="Paiement à la livraison / Wave / OM">
-            <i className="fa-solid fa-money-bill-wave"></i>
-          </div>
-
-          {/* Gros Bouton CTA Rouge / Orange style 1:1 Capture 1 ("Choisir / Commander") */}
-          <button
-            type="button"
-            onClick={() => {
-              if (cibleCourante.whatsappUrl) {
-                window.open(cibleCourante.whatsappUrl, "_blank", "noopener,noreferrer");
-              } else if (ongletVue === "produits" && articleActif) {
-                onVoirArticle?.(articleActif);
-              } else if (boutiqueActive) {
-                onVoirBoutique?.(boutiqueActive);
-              }
-            }}
-            className="flex-1 py-3 px-4 rounded-2xl bg-[#FF3B30] hover:bg-[#E02D22] text-white font-black text-xs sm:text-sm tracking-wide shadow-lg shadow-red-500/30 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2"
-          >
-            <i className="fa-brands fa-whatsapp text-base"></i>
-            <span>
-              {ongletVue === "produits"
-                ? `Commander (${prixLisible(cibleCourante.prix || 0)} F)`
-                : `Contacter le vendeur`}
-            </span>
-          </button>
-
-          {/* Bouton Filtres / Options */}
-          <button
-            type="button"
-            onClick={recentrerCarte}
-            className="w-11 h-11 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-gray-200 dark:border-zinc-700 flex items-center justify-center shrink-0 cursor-pointer active:scale-90 transition"
-            title="Itinéraire"
-          >
-            <i className="fa-solid fa-sliders text-sm"></i>
-          </button>
-        </div>
       </div>
     </div>
   );
