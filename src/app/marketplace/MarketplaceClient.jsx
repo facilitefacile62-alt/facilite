@@ -2251,13 +2251,13 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
         </div>
 
         {/* ========================================================================= */}
-        {/* 4. CONTENU DE L'ONGLET SÉLECTIONNÉ                                        */}
+        {/* 4. CONTENU DE L'ONGLET SÉLECTIONNÉ : GRILLE STANDARD CARTEARTICLE FACILITÉ */}
         {/* ========================================================================= */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
           {ongletActif === "produits" && (
             <div>
               {chargement ? (
-                <div className="text-center py-12 text-zinc-400">
+                <div className="text-center py-16 text-zinc-400">
                   <i className="fa-solid fa-spinner fa-spin text-2xl text-blue-600"></i>
                   <p className="text-xs font-bold mt-2">Chargement des articles de la boutique...</p>
                 </div>
@@ -2272,10 +2272,23 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
                   </p>
                 </div>
               ) : (
-                <div className="py-8 text-center text-zinc-500 dark:text-zinc-400">
-                  <p className="text-xs font-semibold">
-                    {listeArticles.length} article{listeArticles.length > 1 ? "s" : ""} enregistré{listeArticles.length > 1 ? "s" : ""} dans cette boutique.
-                  </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
+                  {listeArticles.map((art) => (
+                    <CarteArticle
+                      key={art.id}
+                      article={{
+                        ...art,
+                        boutique_id: boutique?.id || art.boutique_id || art.store_id,
+                        boutique_nom: nom,
+                        quartier: quartier || art.quartier,
+                        ville: ville || art.ville,
+                        telephone_whatsapp: telephone || art.telephone_whatsapp,
+                        whatsappUrl: whatsappUrl || art.whatsappUrl,
+                      }}
+                      onVoirArticle={onVoirArticle}
+                      onVoirBoutique={() => {}}
+                    />
+                  ))}
                 </div>
               )}
             </div>
