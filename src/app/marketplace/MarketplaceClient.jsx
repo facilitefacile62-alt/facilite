@@ -490,6 +490,10 @@ export default function MarketplaceClient() {
             articles={mesArticles}
             profile={profile}
             userId={userId}
+            onPublierArticle={() => {
+              setBoutiqueModal(null);
+              setOnglet("vendre");
+            }}
             onBoutiqueUpdate={rechargerBoutique}
             onFermer={() => setBoutiqueModal(null)}
             onVoirArticle={(art) => {
@@ -680,10 +684,22 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           {CATEGORIES_DEFILEMENT_MOBILE.map((cat) => {
+            // Plusieurs puces (mode_hommes/chaussures/beaute -> "mode",
+            // jouets -> "autre", meubles -> "maison") retombent sur la MÊME
+            // valeur de catégorie de base au clic (voir onSelectCategorie
+            // ci-dessous) : la contrainte CHECK de la table ne connaît pas
+            // ces sous-catégories, donc `categorie` ne peut de toute façon
+            // pas distinguer laquelle a été cliquée. Le cas particulier
+            // précédent ("mode_hommes" ? ... : false) ne faisait que cacher
+            // ce constat pour UNE puce sans le résoudre pour les autres, ce
+            // qui allumait la mauvaise puce. Aligné sur MenuCategoriesSidebar
+            // (version bureau) : toutes les puces d'une même famille
+            // s'allument ensemble, honnêtement. Bug confirmé lors d'un audit
+            // du Marketplace le 2026-09-08.
             const estActif =
               (categorie === null && cat.id === null) ||
               categorie === cat.id ||
-              (cat.baseCategory && categorie === cat.baseCategory && (cat.id === "mode_hommes" ? categorie === "mode" : false));
+              (cat.baseCategory && categorie === cat.baseCategory);
             return (
               <button
                 key={cat.label}
@@ -2056,13 +2072,14 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
 }
 
 /**
- * Modal Fiche Boutique Complète & Profil Commerçant (1:1 Inspiré de la capture Profil avec bannière couverture, badges, onglets, grille de tous les produits & modification complète)
+ * Modal Fiche Boutique Complète & Profil Commerçant (1:1 Inspiré de la capture Profil avec bannière couverture, badges, onglets, grille de tous les produits, publication d'articles & modification complète)
  */
 function ModalFicheBoutique({
   boutique,
   articles = [],
   profile = null,
   userId = null,
+  onPublierArticle,
   onBoutiqueUpdate,
   onFermer,
   onVoirArticle,
@@ -2299,7 +2316,7 @@ function ModalFicheBoutique({
       {/* ========================================================================= */}
       {/* CONTENEUR PRINCIPAL DE LA PAGE BOUTIQUE (100% Opaque, aucun fond visible)  */}
       {/* ========================================================================= */}
-      <div className="w-full max-w-4xl mx-auto flex-1 bg-white dark:bg-zinc-900 sm:my-4 sm:rounded-3xl sm:border sm:border-gray-200 sm:dark:border-zinc-800 sm:shadow-xl overflow-hidden flex flex-col min-h-[calc(100vh-60px)]">
+      <div className="w-full max-w-4xl mx-auto flex-1 bg-white dark:bg-zinc-900 sm:my-4 sm:rounded-3xl sm:border sm:border-gray-200 sm:dark:border-zinc-800 sm:shadow-xl overflow-hidden flex flex-col min-h-[calc(100vh-60px)] relative">
         {/* ========================================================================= */}
         {/* 1. BANNIÈRE DE COUVERTURE AVEC CHANGEMENT INTERACTIF (Photo / CV)         */}
         {/* ========================================================================= */}
@@ -2361,19 +2378,34 @@ function ModalFicheBoutique({
               </button>
             </div>
 
-            {/* Bouton Contact WhatsApp Direct */}
-            {whatsappUrl && (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black flex items-center gap-2 shadow-md shadow-emerald-600/20 transition cursor-pointer"
-              >
-                <i className="fa-brands fa-whatsapp text-base"></i>
-                <span className="hidden sm:inline">Contacter sur WhatsApp</span>
-                <span className="sm:hidden">WhatsApp</span>
-              </a>
-            )}
+            {/* Boutons d'action : Publier un article (Plus) & WhatsApp */}
+            <div className="flex items-center gap-2">
+              {onPublierArticle && (
+                <button
+                  type="button"
+                  onClick={onPublierArticle}
+                  className="px-3.5 sm:px-4 py-2 rounded-full bg-gray-950 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-950 text-xs sm:text-sm font-black flex items-center gap-1.5 shadow-md hover:shadow-lg transition cursor-pointer active:scale-95"
+                  title="Publier un nouvel article dans cette boutique"
+                >
+                  <i className="fa-solid fa-plus text-xs sm:text-sm text-[#10E688]"></i>
+                  <span className="hidden sm:inline">Publier un article</span>
+                  <span className="sm:hidden">Publier</span>
+                </button>
+              )}
+
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 sm:px-4 py-2 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black flex items-center gap-2 shadow-md shadow-emerald-600/20 transition cursor-pointer"
+                >
+                  <i className="fa-brands fa-whatsapp text-base"></i>
+                  <span className="hidden sm:inline">Contacter sur WhatsApp</span>
+                  <span className="sm:hidden">WhatsApp</span>
+                </a>
+              )}
+            </div>
           </div>
 
           {/* Titre de la Boutique & Badges en ligne (1:1 Capture) */}
@@ -2498,23 +2530,78 @@ function ModalFicheBoutique({
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
           {ongletActif === "produits" && (
             <div>
+              {/* En-tête de section avec bouton Plus / Ajouter un article */}
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">
+                <div>
+                  <h3 className="text-sm font-black text-zinc-900 dark:text-white">
+                    Catalogue des articles ({listeArticles.length})
+                  </h3>
+                  <p className="text-[11px] text-zinc-500">
+                    Articles enregistrés et prêts pour la vente en ligne
+                  </p>
+                </div>
+
+                {onPublierArticle && (
+                  <button
+                    type="button"
+                    onClick={onPublierArticle}
+                    className="px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95"
+                  >
+                    <i className="fa-solid fa-plus text-xs"></i>
+                    <span>Ajouter un article</span>
+                  </button>
+                )}
+              </div>
+
               {chargement ? (
                 <div className="text-center py-16 text-zinc-400">
                   <i className="fa-solid fa-spinner fa-spin text-2xl text-blue-600"></i>
                   <p className="text-xs font-bold mt-2">Chargement des articles de la boutique...</p>
                 </div>
               ) : listeArticles.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl border border-gray-200 dark:border-zinc-800 p-6">
-                  <i className="fa-solid fa-box-open text-3xl text-zinc-300 dark:text-zinc-600 mb-2"></i>
-                  <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                    Aucun article publié pour le moment
-                  </p>
-                  <p className="text-xs text-zinc-400 mt-1">
-                    Les articles insérés dans cette boutique apparaîtront ici.
-                  </p>
+                <div className="text-center py-12 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl border border-gray-200 dark:border-zinc-800 p-6 space-y-3">
+                  <i className="fa-solid fa-box-open text-4xl text-zinc-300 dark:text-zinc-600"></i>
+                  <div>
+                    <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                      Aucun article publié pour le moment
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Commencez dès maintenant en publiant vos premiers articles dans votre boutique.
+                    </p>
+                  </div>
+                  {onPublierArticle && (
+                    <button
+                      type="button"
+                      onClick={onPublierArticle}
+                      className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-md transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-plus"></i>
+                      <span>Publier mon premier article</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
+                  {/* Carte interactive "+ Publier un article" intégrée en tête de liste */}
+                  {onPublierArticle && (
+                    <button
+                      type="button"
+                      onClick={onPublierArticle}
+                      className="group flex flex-col items-center justify-center min-h-[220px] sm:min-h-[260px] rounded-2xl sm:rounded-3xl border-2 border-dashed border-blue-400/80 dark:border-blue-600/80 bg-blue-50/40 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 p-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer shadow-xs"
+                      title="Ajouter un article à la boutique"
+                    >
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md group-hover:scale-110 transition-transform mb-3">
+                        <i className="fa-solid fa-plus"></i>
+                      </div>
+                      <span className="text-xs sm:text-sm font-black text-center text-zinc-900 dark:text-white">
+                        Publier un article
+                      </span>
+                      <span className="text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 text-center mt-1">
+                        Ajouter un nouveau produit
+                      </span>
+                    </button>
+                  )}
+
                   {listeArticles.map((art) => (
                     <CarteArticle
                       key={art.id}
@@ -2744,6 +2831,21 @@ function ModalFicheBoutique({
           )}
         </div>
       </div>
+
+      {/* Bouton Flottant (FAB) Publier un Article */}
+      {onPublierArticle && (
+        <button
+          type="button"
+          onClick={onPublierArticle}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-300 group shadow-emerald-600/30"
+          title="Publier un nouvel article dans cette boutique"
+        >
+          <div className="w-6 h-6 rounded-full bg-gray-950 text-[#10E688] flex items-center justify-center text-xs group-hover:rotate-90 transition-transform duration-300">
+            <i className="fa-solid fa-plus"></i>
+          </div>
+          <span className="text-xs sm:text-sm font-extrabold tracking-tight">Publier un article</span>
+        </button>
+      )}
     </div>
   );
 }
