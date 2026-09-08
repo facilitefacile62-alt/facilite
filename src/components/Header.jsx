@@ -1780,9 +1780,9 @@ export default function Header() {
             </button>
           )}
 
-          <RoleNavLink session={userSession} variant="bottom-bar" />
-
-          {/* Bouton + Publier toujours placé tout au fond (à l'extrême droite) dans l'espace Marketplace */}
+          {/* + Publier repositionné au milieu de la rangée (demande explicite :
+              Notifs reste à sa place, Publier ne doit plus être à l'extrémité
+              droite) — rendu avant RoleNavLink au lieu d'après. */}
           {isBusinessActive && (
             <button
               type="button"
@@ -1800,6 +1800,8 @@ export default function Header() {
               <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Publier</span>
             </button>
           )}
+
+          <RoleNavLink session={userSession} variant="bottom-bar" />
         </div>
       )}
 

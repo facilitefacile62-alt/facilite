@@ -72,14 +72,18 @@ export default function CarteMobileAutourDeMoi({
     return [...map.values()];
   }, [articles]);
 
-  // Initialisation de la sélection par défaut (premier article ou première boutique)
+  // Initialisation de la sélection par défaut (premier article ou première
+  // boutique) — setState différé : corps de l'effet, pas un callback d'un
+  // système externe, exigé par la règle react-hooks correspondante.
   useEffect(() => {
-    if (articles.length > 0 && !articleActifId) {
-      setArticleActifId(articles[0].id);
-    }
-    if (boutiques.length > 0 && !boutiqueActiveId) {
-      setBoutiqueActiveId(boutiques[0].id);
-    }
+    queueMicrotask(() => {
+      if (articles.length > 0 && !articleActifId) {
+        setArticleActifId(articles[0].id);
+      }
+      if (boutiques.length > 0 && !boutiqueActiveId) {
+        setBoutiqueActiveId(boutiques[0].id);
+      }
+    });
   }, [articles, boutiques, articleActifId, boutiqueActiveId]);
 
   // Élément actuellement sélectionné
@@ -322,6 +326,17 @@ export default function CarteMobileAutourDeMoi({
     };
   }, [cibleCourante, boutiques, depart]);
 
+  // Empêche le défilement de la page derrière la vue plein écran — sans ça,
+  // le geste de scroll sur le panneau du bas fait aussi défiler la page
+  // Marketplace en arrière-plan, invisible mais désorientant au relâchement.
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
+
   // Recentre la carte
   const recentrerCarte = () => {
     if (carteRef.current && cibleCourante?.position) {
@@ -330,11 +345,17 @@ export default function CarteMobileAutourDeMoi({
   };
 
   return (
-    <div className="w-full bg-gray-50 dark:bg-zinc-950 rounded-3xl overflow-hidden border border-gray-200 dark:border-zinc-800 shadow-xl mb-6">
+    // Plein écran véritable (fixed inset-0), pas une carte de hauteur fixe
+    // intégrée à la page : demande explicite de l'utilisateur en comparant
+    // avec une capture d'une app de VTC (carte qui occupe tout l'écran du
+    // téléphone, panneau du bas par-dessus). z-[600] : au-dessus de l'en-tête
+    // (z-50) et du tiroir de menu mobile (z-[99999] réservé au menu lui-même,
+    // qu'on ne peut pas ouvrir en même temps que cette vue de toute façon).
+    <div className="fixed inset-0 z-[600] bg-gray-50 dark:bg-zinc-950 flex flex-col overflow-hidden">
       {/* ========================================================================= */}
-      {/* 1. HAUTEUR CARTE INTERACTIVE STYLE YANGO / TAXI (1:1 Capture 1)           */}
+      {/* 1. CARTE INTERACTIVE PLEIN ÉCRAN STYLE YANGO / TAXI (1:1 Capture 1)       */}
       {/* ========================================================================= */}
-      <div className="relative w-full h-[250px] sm:h-[280px] bg-slate-200 dark:bg-zinc-900 overflow-hidden select-none">
+      <div className="relative flex-1 min-h-0 w-full bg-slate-200 dark:bg-zinc-900 overflow-hidden select-none">
         {/* Conteneur Leaflet */}
         <div ref={conteneurRef} className="w-full h-full z-0" />
 
@@ -379,8 +400,11 @@ export default function CarteMobileAutourDeMoi({
 
       {/* ========================================================================= */}
       {/* 2. PANNEAU INFÉRIEUR / BOTTOM SHEET (Inspiré de la Capture 1 & 2)         */}
+      {/* Hauteur plafonnée + défilement propre : la carte au-dessus (flex-1)     */}
+      {/* doit rester visible, comme sur la capture de référence, plutôt que le    */}
+      {/* panneau ne prenne tout l'écran.                                          */}
       {/* ========================================================================= */}
-      <div className="bg-white dark:bg-zinc-900 px-4 pt-2.5 pb-4 rounded-t-3xl -mt-4 relative z-10 shadow-2xl border-t border-gray-100 dark:border-zinc-800">
+      <div className="shrink-0 max-h-[58vh] overflow-y-auto bg-white dark:bg-zinc-900 px-4 pt-2.5 pb-4 rounded-t-3xl -mt-4 relative z-10 shadow-2xl border-t border-gray-100 dark:border-zinc-800">
         {/* Poignée de tiroir / Drag handle */}
         <div className="w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-3"></div>
 
