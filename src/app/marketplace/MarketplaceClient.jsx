@@ -2244,70 +2244,10 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                  {listeArticles.map((art) => {
-                    const enStock = art.statut === "en_stock" || (Number(art.quantite) > 0);
-                    const photo = art.photos?.[0] || null;
-
-                    return (
-                      <div
-                        key={art.id}
-                        onClick={() => onVoirArticle?.(art)}
-                        className="group flex flex-col rounded-2xl overflow-hidden bg-gray-50 dark:bg-zinc-800/90 border border-gray-200 dark:border-zinc-700/80 shadow-xs hover:shadow-lg transition-all duration-200 cursor-pointer"
-                      >
-                        {/* Image produit */}
-                        <div className="relative aspect-square w-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
-                          {photo ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={urlPhoto(photo)}
-                              alt={art.titre}
-                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 p-2 text-center">
-                              <i className="fa-solid fa-bag-shopping text-2xl mb-1"></i>
-                              <span className="text-[10px] font-bold line-clamp-1">{art.titre}</span>
-                            </div>
-                          )}
-
-                          {/* Badge LIVE / EN STOCK */}
-                          <span className={`absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                            enStock ? "bg-red-600 text-white" : "bg-black/75 text-zinc-300"
-                          }`}>
-                            {enStock ? "LIVE" : "Épuisé"}
-                          </span>
-                        </div>
-
-                        {/* Informations : Titre & Prix */}
-                        <div className="p-2.5 sm:p-3 flex flex-col justify-between flex-1 gap-1">
-                          <h4 className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white line-clamp-2 leading-tight group-hover:text-blue-600 transition">
-                            {art.titre}
-                          </h4>
-
-                          <div className="flex items-end justify-between mt-auto pt-1.5 border-t border-gray-200/60 dark:border-zinc-700/60">
-                            <div>
-                              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
-                                {nom}
-                              </p>
-                              <p className="text-xs sm:text-sm font-black text-zinc-950 dark:text-white">
-                                {prixLisible(art.prix_xof)}{" "}
-                                <span className="text-[10px] font-bold text-zinc-500">FCFA</span>
-                              </p>
-                            </div>
-
-                            <button
-                              type="button"
-                              className="w-7 h-7 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center text-xs group-hover:scale-110 transition shadow-xs"
-                              title="Voir le produit"
-                            >
-                              <i className="fa-solid fa-arrow-right text-[10px]"></i>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="py-8 text-center text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs font-semibold">
+                    {listeArticles.length} article{listeArticles.length > 1 ? "s" : ""} enregistré{listeArticles.length > 1 ? "s" : ""} dans cette boutique.
+                  </p>
                 </div>
               )}
             </div>
