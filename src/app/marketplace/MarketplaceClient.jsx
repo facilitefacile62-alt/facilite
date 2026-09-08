@@ -2038,6 +2038,14 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
   const [chargement, setChargement] = useState(false);
 
   useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
     if (articles && articles.length > 0 && (!boutique?.id || articles[0]?.boutique_id === boutique?.id || articles[0]?.store_id === boutique?.id)) {
       setListeArticles(articles);
     } else if (boutique?.id) {
@@ -2059,18 +2067,48 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
   const initiales = nom.substring(0, 2).toUpperCase();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn"
-      onClick={onFermer}
-    >
-      <div
-        className="w-full sm:max-w-2xl md:max-w-3xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-zinc-800 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-slideUp"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-[99999] bg-gray-100 dark:bg-zinc-950 text-zinc-900 dark:text-white overflow-y-auto w-full h-full flex flex-col animate-fadeIn">
+      {/* ========================================================================= */}
+      {/* 0. BARRE SUPÉRIEURE DE NAVIGATION DÉDIÉE (Pleine largeur, opaque)         */}
+      {/* ========================================================================= */}
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-gray-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between shadow-xs shrink-0">
+        <button
+          type="button"
+          onClick={onFermer}
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 text-xs font-bold transition cursor-pointer"
+        >
+          <i className="fa-solid fa-arrow-left text-xs"></i>
+          <span>Retour au marketplace</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white truncate max-w-[140px] sm:max-w-xs">
+            {nom}
+          </span>
+          <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase">
+            Boutique Officielle
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={onFermer}
+          className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center transition cursor-pointer"
+          title="Fermer la page boutique"
+          aria-label="Fermer"
+        >
+          <i className="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </header>
+
+      {/* ========================================================================= */}
+      {/* CONTENEUR PRINCIPAL DE LA PAGE BOUTIQUE (100% Opaque, aucun fond visible)  */}
+      {/* ========================================================================= */}
+      <div className="w-full max-w-4xl mx-auto flex-1 bg-white dark:bg-zinc-900 sm:my-4 sm:rounded-3xl sm:border sm:border-gray-200 sm:dark:border-zinc-800 sm:shadow-xl overflow-hidden flex flex-col min-h-[calc(100vh-60px)]">
         {/* ========================================================================= */}
-        {/* 1. BANNIÈRE DE COUVERTURE (1:1 Capture 2 avec monogramme & icône caméra) */}
+        {/* 1. BANNIÈRE DE COUVERTURE (1:1 Capture avec monogramme & icône caméra)    */}
         {/* ========================================================================= */}
-        <div className="relative h-32 sm:h-44 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 overflow-hidden flex-shrink-0">
+        <div className="relative h-36 sm:h-52 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 overflow-hidden flex-shrink-0">
           {/* Filigrane décoratif grand format style CV / Boutique */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25">
             <span className="text-white font-black text-7xl sm:text-9xl tracking-tighter select-none">
@@ -2081,29 +2119,19 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
           {/* Calque de dégradé supérieur */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
 
-          {/* Bouton de fermeture en haut à gauche */}
-          <button
-            type="button"
-            onClick={onFermer}
-            className="absolute top-3 left-3 z-20 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-xs transition cursor-pointer"
-            aria-label="Fermer"
-          >
-            <i className="fa-solid fa-xmark text-sm"></i>
-          </button>
-
-          {/* Icône Appareil Photo / Couverture en haut à droite (1:1 Capture 2) */}
+          {/* Icône Appareil Photo / Couverture en haut à droite (1:1 Capture) */}
           <div className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-black/60 text-zinc-800 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs">
             <i className="fa-solid fa-camera text-xs"></i>
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* 2. SECTION PROFIL & BADGES PILULES (1:1 Capture 2)                        */}
+        {/* 2. SECTION PROFIL & BADGES PILULES (1:1 Capture)                          */}
         {/* ========================================================================= */}
         <div className="px-4 sm:px-6 pt-0 pb-3 border-b border-gray-100 dark:border-zinc-800 flex-shrink-0">
-          {/* Avatar circulaire chevauchant la bannière (1:1 Capture 2) */}
-          <div className="flex items-end justify-between -mt-12 sm:-mt-14 mb-3">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center text-2xl sm:text-3xl font-black shadow-xl shrink-0">
+          {/* Avatar circulaire chevauchant la bannière (1:1 Capture) */}
+          <div className="flex items-end justify-between -mt-12 sm:-mt-16 mb-3">
+            <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center text-2xl sm:text-4xl font-black shadow-xl shrink-0">
               {initiales}
             </div>
 
@@ -2113,25 +2141,25 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3.5 py-1.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition cursor-pointer"
+                className="px-4 py-2 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black flex items-center gap-2 shadow-md shadow-emerald-600/20 transition cursor-pointer"
               >
-                <i className="fa-brands fa-whatsapp text-sm"></i>
+                <i className="fa-brands fa-whatsapp text-base"></i>
                 <span className="hidden sm:inline">Contacter sur WhatsApp</span>
                 <span className="sm:hidden">WhatsApp</span>
               </a>
             )}
           </div>
 
-          {/* Titre de la Boutique & Badges en ligne (1:1 Capture 2) */}
+          {/* Titre de la Boutique & Badges en ligne (1:1 Capture) */}
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <h2 className="text-lg sm:text-2xl font-black tracking-tight text-zinc-950 dark:text-white">
+            <h1 className="text-xl sm:text-3xl font-black tracking-tight text-zinc-950 dark:text-white">
               {nom}
-            </h2>
-            <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
               BOUTIQUE
             </span>
-            <span className="px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10px] font-black flex items-center gap-1">
+            <span className="px-2.5 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10px] font-black flex items-center gap-1">
               <i className="fa-solid fa-shield-halved text-[9px]"></i>
               COMMERÇANT
             </span>
@@ -2146,26 +2174,26 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
             Boutique Officielle Partenaire Facilité · Vente d&apos;articles &amp; livraison express
           </p>
 
-          {/* Liste des Badges / Métadonnées Pilules (1:1 Identique à la capture 2) */}
+          {/* Liste des Badges / Métadonnées Pilules (1:1 Identique à la capture) */}
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-bold border border-gray-200/60 dark:border-zinc-700/60">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold border border-gray-200/60 dark:border-zinc-700/60">
               <i className="fa-regular fa-folder text-zinc-400"></i>
               <span>Commerce &amp; Vente au détail</span>
             </span>
 
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-bold border border-gray-200/60 dark:border-zinc-700/60">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold border border-gray-200/60 dark:border-zinc-700/60">
               <i className="fa-solid fa-location-dot text-red-500"></i>
               <span>{quartier ? `${quartier}, ` : ""}{ville} · Sénégal</span>
             </span>
 
             {telephone && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-bold border border-gray-200/60 dark:border-zinc-700/60">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold border border-gray-200/60 dark:border-zinc-700/60">
                 <i className="fa-brands fa-whatsapp text-emerald-500"></i>
                 <span>{telephone}</span>
               </span>
             )}
 
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] text-[11px] font-black border border-blue-200 dark:border-blue-900/50">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] text-xs font-black border border-blue-200 dark:border-blue-900/50">
               <i className="fa-solid fa-box-open"></i>
               <span>{listeArticles.length} produit{listeArticles.length > 1 ? "s" : ""} disponible{listeArticles.length > 1 ? "s" : ""}</span>
             </span>
@@ -2173,13 +2201,13 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
         </div>
 
         {/* ========================================================================= */}
-        {/* 3. BARRE D'ONGLETS DE NAVIGATION (1:1 Capture 2 : À propos, Documents...) */}
+        {/* 3. BARRE D'ONGLETS DE NAVIGATION (Tous les produits, À propos, Contact)    */}
         {/* ========================================================================= */}
         <div className="flex items-center gap-6 px-4 sm:px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 flex-shrink-0">
           <button
             type="button"
             onClick={() => setOngletActif("produits")}
-            className={`py-3 text-xs sm:text-sm font-black transition relative cursor-pointer ${
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer ${
               ongletActif === "produits"
                 ? "text-blue-600 dark:text-blue-400"
                 : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
@@ -2194,7 +2222,7 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
           <button
             type="button"
             onClick={() => setOngletActif("apropos")}
-            className={`py-3 text-xs sm:text-sm font-black transition relative cursor-pointer ${
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer ${
               ongletActif === "apropos"
                 ? "text-blue-600 dark:text-blue-400"
                 : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
@@ -2209,7 +2237,7 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
           <button
             type="button"
             onClick={() => setOngletActif("contact")}
-            className={`py-3 text-xs sm:text-sm font-black transition relative cursor-pointer ${
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer ${
               ongletActif === "contact"
                 ? "text-blue-600 dark:text-blue-400"
                 : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
@@ -2223,7 +2251,7 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
         </div>
 
         {/* ========================================================================= */}
-        {/* 4. CONTENU DE L'ONGLET SÉLECTIONNÉ : GRILLE DE TOUS LES PRODUITS DU STORE */}
+        {/* 4. CONTENU DE L'ONGLET SÉLECTIONNÉ                                        */}
         {/* ========================================================================= */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
           {ongletActif === "produits" && (
