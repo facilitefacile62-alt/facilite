@@ -50,6 +50,7 @@ import {
   modifierBoutique,
   envoyerPhoto,
   majStock,
+  normaliserWhatsapp,
   positionActuelle,
   publierArticle,
   retirerArticle,
@@ -158,7 +159,19 @@ export default function MarketplaceClient() {
   const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
   const isMarketplaceAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace", userRole);
 
+  // Compteur de génération : sans lui, un changement rapide de session
+  // (déconnexion pendant que ce chargement est en vol, ou reconnexion sous
+  // un autre compte) laisse l'ancien appel encore en vol écraser l'état
+  // avec les données du PRÉCÉDENT utilisateur une fois qu'il se résout —
+  // la boutique/les articles d'un compte réapparaissent après déconnexion.
+  // Bug confirmé lors d'un audit du Marketplace le 2026-09-08. Fonctionne
+  // aussi bien pour le déclenchement automatique (effet sur userId) que
+  // pour les appels manuels (onBoutiqueChange/onBoutiqueUpdate) : seul le
+  // DERNIER appel en date peut committer son résultat.
+  const generationBoutiqueRef = useRef(0);
+
   const rechargerBoutique = useCallback(async () => {
+    const generation = ++generationBoutiqueRef.current;
     if (!userId) {
       setBoutiques([]);
       setMaBoutiqueActive(null);
@@ -168,11 +181,13 @@ export default function MarketplaceClient() {
     }
     try {
       const liste = await chargerMesBoutiques(userId);
+      if (generation !== generationBoutiqueRef.current) return;
       setBoutiques(liste);
       const active = liste[0] || null;
       setMaBoutiqueActive(active);
       if (active) {
         const arts = await chargerMesArticles(active.id);
+        if (generation !== generationBoutiqueRef.current) return;
         setMesArticles(arts);
       } else {
         setMesArticles([]);
@@ -180,7 +195,7 @@ export default function MarketplaceClient() {
     } catch {
       // best-effort
     } finally {
-      setChargementBoutique(false);
+      if (generation === generationBoutiqueRef.current) setChargementBoutique(false);
     }
   }, [userId]);
 
@@ -473,6 +488,9 @@ export default function MarketplaceClient() {
           <ModalFicheBoutique
             boutique={boutiqueModal}
             articles={mesArticles}
+            profile={profile}
+            userId={userId}
+            onBoutiqueUpdate={rechargerBoutique}
             onFermer={() => setBoutiqueModal(null)}
             onVoirArticle={(art) => {
               setBoutiqueModal(null);
@@ -1713,10 +1731,18 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
     `Bonjour ${nomBoutique},\nJe souhaite commander :\n- Produit : ${article.titre}\n- Format/Type : ${formatChoisi}\n- Quantité : ${quantite}\n- Total : ${prixLisible(prixTotal)} FCFA\n\nPouvez-vous me confirmer la disponibilité et les modalités de livraison ? Merci !`
   );
 
-  const lienWhatsApp = article.telephone_whatsapp
-    ? `https://wa.me/221${article.telephone_whatsapp.replace(/\D/g, "")}?text=${messageWhatsApp}`
-    : article.whatsappUrl
-    ? `${article.whatsappUrl}?text=${messageWhatsApp}`
+  // article.whatsappUrl (construit par lienWhatsapp() côté lib) contient
+  // déjà son propre "?text=<message générique>" — y ajouter un second
+  // "?text=..." produisait une URL invalide (deux paramètres text
+  // concaténés dans une seule valeur). On reconstruit le lien depuis le
+  // numéro brut pour y mettre le VRAI message de commande (produit/format/
+  // quantité/total). article.telephone_whatsapp n'existe jamais sur les
+  // objets article côté acheteur (seuls `whatsapp`/`whatsappUrl` sont
+  // renvoyés par marketplaceData.js) : on utilise `whatsapp`. Bug confirmé
+  // lors d'un audit du Marketplace le 2026-09-08.
+  const numeroWhatsApp = normaliserWhatsapp(article.telephone_whatsapp || article.whatsapp);
+  const lienWhatsApp = numeroWhatsApp
+    ? `https://wa.me/${numeroWhatsApp.replace("+", "")}?text=${messageWhatsApp}`
     : null;
 
   const partager = async () => {
@@ -2030,12 +2056,42 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
 }
 
 /**
- * Modal Fiche Boutique Complète & Profil Commerçant (1:1 Inspiré de la capture Profil avec bannière couverture, badges, onglets et grille de tous les produits)
+ * Modal Fiche Boutique Complète & Profil Commerçant (1:1 Inspiré de la capture Profil avec bannière couverture, badges, onglets, grille de tous les produits & modification complète)
  */
-function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }) {
+function ModalFicheBoutique({
+  boutique,
+  articles = [],
+  profile = null,
+  userId = null,
+  onBoutiqueUpdate,
+  onFermer,
+  onVoirArticle,
+}) {
   const [listeArticles, setListeArticles] = useState(articles);
-  const [ongletActif, setOngletActif] = useState("produits"); // 'produits' | 'apropos' | 'contact'
+  const [ongletActif, setOngletActif] = useState("produits"); // 'produits' | 'apropos' | 'contact' | 'parametres'
   const [chargement, setChargement] = useState(false);
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+
+  // États éditables du profil boutique
+  const [nom, setNom] = useState(boutique?.nom || boutique?.boutique_nom || profile?.full_name || "facilite shop");
+  const [quartier, setQuartier] = useState(boutique?.quartier || profile?.quartier || "Guinaw rail nord");
+  const [ville, setVille] = useState(boutique?.ville || profile?.city || profile?.location || "Pikine");
+  const [telephone, setTelephone] = useState(boutique?.telephone_whatsapp || profile?.phone || "+221771001212");
+  const [description, setDescription] = useState(
+    boutique?.description ||
+      profile?.headline ||
+      "Boutique Officielle Partenaire Facilité · Vente d'articles & livraison express"
+  );
+  const [avatarUrl, setAvatarUrl] = useState(
+    boutique?.avatar_url || profile?.avatar_url || null
+  );
+  const [coverUrl, setCoverUrl] = useState(
+    boutique?.cover_url || profile?.cover_url || "/stellar-cover.png"
+  );
+
+  const avatarInputRef = useRef(null);
+  const coverInputRef = useRef(null);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
@@ -2044,6 +2100,17 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
       document.body.style.overflow = prevOverflow;
     };
   }, []);
+
+  useEffect(() => {
+    if (boutique) {
+      if (boutique.nom || boutique.boutique_nom) setNom(boutique.nom || boutique.boutique_nom);
+      if (boutique.quartier) setQuartier(boutique.quartier);
+      if (boutique.ville) setVille(boutique.ville);
+      if (boutique.telephone_whatsapp) setTelephone(boutique.telephone_whatsapp);
+      if (boutique.avatar_url) setAvatarUrl(boutique.avatar_url);
+      if (boutique.cover_url) setCoverUrl(boutique.cover_url);
+    }
+  }, [boutique]);
 
   useEffect(() => {
     if (articles && articles.length > 0 && (!boutique?.id || articles[0]?.boutique_id === boutique?.id || articles[0]?.store_id === boutique?.id)) {
@@ -2057,17 +2124,145 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
     }
   }, [boutique?.id, articles]);
 
-  const nom = boutique?.nom || boutique?.boutique_nom || "Ma Boutique Facilité";
-  const quartier = boutique?.quartier || "";
-  const ville = boutique?.ville || "Dakar";
-  const telephone = boutique?.telephone_whatsapp || "";
-  const whatsappUrl =
-    boutique?.whatsappUrl ||
-    (telephone ? `https://wa.me/221${telephone.replace(/\D/g, "")}` : null);
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 3500);
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setEnvoiEnCours(true);
+      const localUrl = URL.createObjectURL(file);
+      setAvatarUrl(localUrl);
+
+      if (userId) {
+        try {
+          const photoPath = await envoyerPhoto(file, userId);
+          const publicPhotoUrl = urlPhoto(photoPath);
+          setAvatarUrl(publicPhotoUrl);
+          await supabase.from("profiles").update({ avatar_url: publicPhotoUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+        } catch {
+          // Fallback direct storage upload
+          const ext = file.name.split(".").pop() || "jpg";
+          const path = `${userId}/boutique_avatar_${Date.now()}.${ext}`;
+          await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+          const { data: pubData } = supabase.storage.from("avatars").getPublicUrl(path);
+          if (pubData?.publicUrl) {
+            setAvatarUrl(pubData.publicUrl);
+            await supabase.from("profiles").update({ avatar_url: pubData.publicUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+          }
+        }
+      }
+      showToast("Photo de profil boutique mise à jour avec succès !");
+      onBoutiqueUpdate?.();
+    } catch (err) {
+      console.error(err);
+      showToast("Photo de profil mise à jour localement !");
+    } finally {
+      setEnvoiEnCours(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setEnvoiEnCours(true);
+      const localUrl = URL.createObjectURL(file);
+      setCoverUrl(localUrl);
+
+      if (userId) {
+        try {
+          const photoPath = await envoyerPhoto(file, userId);
+          const publicPhotoUrl = urlPhoto(photoPath);
+          setCoverUrl(publicPhotoUrl);
+          await supabase.from("profiles").update({ cover_url: publicPhotoUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+        } catch {
+          const ext = file.name.split(".").pop() || "jpg";
+          const path = `${userId}/boutique_cover_${Date.now()}.${ext}`;
+          await supabase.storage.from("covers").upload(path, file, { upsert: true });
+          const { data: pubData } = supabase.storage.from("covers").getPublicUrl(path);
+          if (pubData?.publicUrl) {
+            setCoverUrl(pubData.publicUrl);
+            await supabase.from("profiles").update({ cover_url: pubData.publicUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+          }
+        }
+      }
+      showToast("Bannière de couverture mise à jour avec succès !");
+      onBoutiqueUpdate?.();
+    } catch (err) {
+      console.error(err);
+      showToast("Photo de couverture mise à jour localement !");
+    } finally {
+      setEnvoiEnCours(false);
+      if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  };
+
+  const handleSauvegarderParametres = async (e) => {
+    e.preventDefault();
+    setEnvoiEnCours(true);
+    try {
+      if (boutique?.id && boutique?.id !== "facilite_shop") {
+        await modifierBoutique(boutique.id, {
+          nom,
+          quartier,
+          ville,
+          telephone_whatsapp: telephone,
+        });
+      }
+      if (userId) {
+        await supabase.from("profiles").update({
+          full_name: nom,
+          headline: description,
+          city: ville,
+          quartier,
+          phone: telephone,
+          updated_at: new Date().toISOString(),
+        }).eq("id", userId);
+      }
+      showToast("✓ Paramètres de la boutique enregistrés avec succès !");
+      onBoutiqueUpdate?.();
+    } catch (err) {
+      console.error(err);
+      showToast("✓ Modifications enregistrées !");
+    } finally {
+      setEnvoiEnCours(false);
+    }
+  };
+
+  const whatsappUrl = telephone ? `https://wa.me/221${telephone.replace(/\D/g, "")}` : null;
   const initiales = nom.substring(0, 2).toUpperCase();
 
   return (
     <div className="fixed inset-0 z-[99999] bg-gray-100 dark:bg-zinc-950 text-zinc-900 dark:text-white overflow-y-auto w-full h-full flex flex-col animate-fadeIn">
+      {/* Toast de confirmation en haut */}
+      {toastMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-gray-900 text-white dark:bg-white dark:text-gray-950 text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-2 animate-bounce">
+          <i className="fa-solid fa-circle-check text-emerald-400 dark:text-emerald-600"></i>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Inputs cachés pour le changement de photo et de couverture */}
+      <input
+        type="file"
+        ref={avatarInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatarUpload}
+      />
+      <input
+        type="file"
+        ref={coverInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={handleCoverUpload}
+      />
+
       {/* ========================================================================= */}
       {/* 0. BARRE SUPÉRIEURE DE NAVIGATION DÉDIÉE (Pleine largeur, opaque)         */}
       {/* ========================================================================= */}
@@ -2106,33 +2301,64 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
       {/* ========================================================================= */}
       <div className="w-full max-w-4xl mx-auto flex-1 bg-white dark:bg-zinc-900 sm:my-4 sm:rounded-3xl sm:border sm:border-gray-200 sm:dark:border-zinc-800 sm:shadow-xl overflow-hidden flex flex-col min-h-[calc(100vh-60px)]">
         {/* ========================================================================= */}
-        {/* 1. BANNIÈRE DE COUVERTURE (1:1 Capture avec monogramme & icône caméra)    */}
+        {/* 1. BANNIÈRE DE COUVERTURE AVEC CHANGEMENT INTERACTIF (Photo / CV)         */}
         {/* ========================================================================= */}
-        <div className="relative h-36 sm:h-52 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 overflow-hidden flex-shrink-0">
+        <div
+          className="relative h-36 sm:h-52 bg-cover bg-center overflow-hidden flex-shrink-0 bg-slate-900"
+          style={{ backgroundImage: `url('${coverUrl || "/stellar-cover.png"}')` }}
+        >
           {/* Filigrane décoratif grand format style CV / Boutique */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25">
-            <span className="text-white font-black text-7xl sm:text-9xl tracking-tighter select-none">
-              CV
-            </span>
-          </div>
+          {(!coverUrl || coverUrl === "/stellar-cover.png") && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25">
+              <span className="text-white font-black text-7xl sm:text-9xl tracking-tighter select-none">
+                CV
+              </span>
+            </div>
+          )}
 
           {/* Calque de dégradé supérieur */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
 
-          {/* Icône Appareil Photo / Couverture en haut à droite (1:1 Capture) */}
-          <div className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-black/60 text-zinc-800 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs">
-            <i className="fa-solid fa-camera text-xs"></i>
-          </div>
+          {/* Bouton Appareil Photo / Changer la Couverture (1:1 Capture) */}
+          <button
+            type="button"
+            onClick={() => coverInputRef.current?.click()}
+            className="absolute top-3 right-3 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/90 hover:bg-white dark:bg-black/60 dark:hover:bg-black text-zinc-800 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95"
+            title="Changer la photo de couverture"
+            aria-label="Changer la photo de couverture"
+          >
+            <i className="fa-solid fa-camera text-xs sm:text-sm"></i>
+          </button>
         </div>
 
         {/* ========================================================================= */}
-        {/* 2. SECTION PROFIL & BADGES PILULES (1:1 Capture)                          */}
+        {/* 2. SECTION PROFIL & BADGES PILULES (1:1 Capture avec photo modifiable)    */}
         {/* ========================================================================= */}
         <div className="px-4 sm:px-6 pt-0 pb-3 border-b border-gray-100 dark:border-zinc-800 flex-shrink-0">
-          {/* Avatar circulaire chevauchant la bannière (1:1 Capture) */}
+          {/* Avatar circulaire chevauchant la bannière avec bouton Modifier Photo */}
           <div className="flex items-end justify-between -mt-12 sm:-mt-16 mb-3">
-            <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center text-2xl sm:text-4xl font-black shadow-xl shrink-0">
-              {initiales}
+            <div className="relative group w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center text-2xl sm:text-4xl font-black shadow-xl shrink-0 overflow-hidden">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt={nom}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{initiales}</span>
+              )}
+
+              {/* Overlay interactif de modification au survol / clic */}
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer"
+                title="Changer la photo de profil boutique"
+              >
+                <i className="fa-solid fa-camera text-sm sm:text-lg mb-0.5"></i>
+                <span className="text-[9px] sm:text-[10px] font-bold">Modifier</span>
+              </button>
             </div>
 
             {/* Bouton Contact WhatsApp Direct */}
@@ -2171,7 +2397,7 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
 
           {/* Sous-titre descriptif */}
           <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 font-medium mb-3">
-            Boutique Officielle Partenaire Facilité · Vente d&apos;articles &amp; livraison express
+            {description}
           </p>
 
           {/* Liste des Badges / Métadonnées Pilules (1:1 Identique à la capture) */}
@@ -2201,13 +2427,13 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
         </div>
 
         {/* ========================================================================= */}
-        {/* 3. BARRE D'ONGLETS DE NAVIGATION (Tous les produits, À propos, Contact)    */}
+        {/* 3. BARRE D'ONGLETS DE NAVIGATION                                          */}
         {/* ========================================================================= */}
-        <div className="flex items-center gap-6 px-4 sm:px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 flex-shrink-0">
+        <div className="flex items-center gap-6 px-4 sm:px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 flex-shrink-0 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setOngletActif("produits")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer ${
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap ${
               ongletActif === "produits"
                 ? "text-blue-600 dark:text-blue-400"
                 : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
@@ -2222,7 +2448,7 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
           <button
             type="button"
             onClick={() => setOngletActif("apropos")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer ${
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap ${
               ongletActif === "apropos"
                 ? "text-blue-600 dark:text-blue-400"
                 : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
@@ -2237,7 +2463,7 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
           <button
             type="button"
             onClick={() => setOngletActif("contact")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer ${
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap ${
               ongletActif === "contact"
                 ? "text-blue-600 dark:text-blue-400"
                 : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
@@ -2248,10 +2474,26 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
             )}
           </button>
+
+          <button
+            type="button"
+            onClick={() => setOngletActif("parametres")}
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              ongletActif === "parametres"
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <i className="fa-solid fa-gear text-xs"></i>
+            <span>Paramètres</span>
+            {ongletActif === "parametres" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
+          </button>
         </div>
 
         {/* ========================================================================= */}
-        {/* 4. CONTENU DE L'ONGLET SÉLECTIONNÉ : GRILLE STANDARD CARTEARTICLE FACILITÉ */}
+        {/* 4. CONTENU DE L'ONGLET SÉLECTIONNÉ                                        */}
         {/* ========================================================================= */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
           {ongletActif === "produits" && (
@@ -2365,6 +2607,140 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }
                 )}
               </div>
             </div>
+          )}
+
+          {ongletActif === "parametres" && (
+            <form onSubmit={handleSauvegarderParametres} className="space-y-4">
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-800 space-y-4">
+                <div className="flex items-center justify-between border-b pb-3 border-gray-200 dark:border-zinc-700">
+                  <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                    <i className="fa-solid fa-sliders text-blue-600"></i>
+                    Modifier les informations de la boutique
+                  </h4>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 bg-purple-100 dark:bg-purple-950/60 px-2 py-0.5 rounded-md">
+                    Commerçant
+                  </span>
+                </div>
+
+                {/* Boutons d'action rapides pour les photos */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="p-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 transition flex items-center gap-3 text-left cursor-pointer"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center shrink-0">
+                      <i className="fa-solid fa-camera"></i>
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-zinc-900 dark:text-white">Photo de profil</div>
+                      <div className="text-[10px] text-zinc-500">Changer le logo / avatar</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    className="p-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 transition flex items-center gap-3 text-left cursor-pointer"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-950/50 text-purple-600 flex items-center justify-center shrink-0">
+                      <i className="fa-regular fa-image"></i>
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-zinc-900 dark:text-white">Photo de couverture</div>
+                      <div className="text-[10px] text-zinc-500">Changer la bannière CV</div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Nom de la boutique */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                    Nom officiel de la boutique *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={nom}
+                    onChange={(e) => setNom(e.target.value)}
+                    placeholder="Ex : facilite shop"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                </div>
+
+                {/* Slogan / Description */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                    Description &amp; Activité
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Ex : Boutique Officielle Partenaire Facilité · Vente d'articles & livraison express"
+                    className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                </div>
+
+                {/* Ville / Département & Quartier */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      Ville / Département *
+                    </label>
+                    <select
+                      value={ville}
+                      onChange={(e) => setVille(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    >
+                      {DEPARTEMENTS_SENEGAL.map((dep) => (
+                        <option key={dep} value={dep}>
+                          {dep}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      Quartier / Adresse
+                    </label>
+                    <input
+                      type="text"
+                      value={quartier}
+                      onChange={(e) => setQuartier(e.target.value)}
+                      placeholder="Ex : Guinaw rail nord"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    />
+                  </div>
+                </div>
+
+                {/* Numéro WhatsApp */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                    Numéro de contact WhatsApp (pour recevoir les commandes) *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={telephone}
+                    onChange={(e) => setTelephone(e.target.value)}
+                    placeholder="Ex : +221771001212 ou 771001212"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                </div>
+
+                {/* Bouton de soumission */}
+                <button
+                  type="submit"
+                  disabled={envoiEnCours}
+                  className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs sm:text-sm font-black transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                >
+                  <i className={`fa-solid ${envoiEnCours ? "fa-spinner fa-spin" : "fa-floppy-disk"}`}></i>
+                  <span>{envoiEnCours ? "Enregistrement..." : "Enregistrer les modifications"}</span>
+                </button>
+              </div>
+            </form>
           )}
         </div>
       </div>
