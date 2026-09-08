@@ -418,12 +418,16 @@ export default function MarketplaceClient() {
           />
         )}
 
-        {/* Modal / Bottom Sheet Boutique (Style WhatsApp / Topwork) */}
+        {/* Modal / Fiche Profil Boutique (Style Profil & Catalogue complet) */}
         {boutiqueModal && (
           <ModalFicheBoutique
             boutique={boutiqueModal}
             articles={mesArticles}
             onFermer={() => setBoutiqueModal(null)}
+            onVoirArticle={(art) => {
+              setBoutiqueModal(null);
+              setArticleSelectionne(art);
+            }}
           />
         )}
       </div>
@@ -1976,20 +1980,26 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
 }
 
 /**
- * Modal Fiche Boutique Dédiée (Style WhatsApp / Bottom Sheet - Inspiré Image 1)
+ * Modal Fiche Boutique Complète & Profil Commerçant (1:1 Inspiré de la capture Profil avec bannière couverture, badges, onglets et grille de tous les produits)
  */
-function ModalFicheBoutique({ boutique, articles = [], onFermer }) {
+function ModalFicheBoutique({ boutique, articles = [], onFermer, onVoirArticle }) {
   const [listeArticles, setListeArticles] = useState(articles);
+  const [ongletActif, setOngletActif] = useState("produits"); // 'produits' | 'apropos' | 'contact'
+  const [chargement, setChargement] = useState(false);
 
   useEffect(() => {
-    if (articles && articles.length > 0) {
+    if (articles && articles.length > 0 && (!boutique?.id || articles[0]?.boutique_id === boutique?.id || articles[0]?.store_id === boutique?.id)) {
       setListeArticles(articles);
     } else if (boutique?.id) {
-      chargerMesArticles(boutique.id).then(setListeArticles).catch(() => {});
+      setChargement(true);
+      chargerMesArticles(boutique.id)
+        .then((data) => setListeArticles(data || []))
+        .catch(() => setListeArticles([]))
+        .finally(() => setChargement(false));
     }
   }, [boutique?.id, articles]);
 
-  const nom = boutique?.nom || boutique?.boutique_nom || "Boutique";
+  const nom = boutique?.nom || boutique?.boutique_nom || "Ma Boutique Facilité";
   const quartier = boutique?.quartier || "";
   const ville = boutique?.ville || "Dakar";
   const telephone = boutique?.telephone_whatsapp || "";
@@ -1999,97 +2009,333 @@ function ModalFicheBoutique({ boutique, articles = [], onFermer }) {
   const initiales = nom.substring(0, 2).toUpperCase();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full sm:max-w-lg bg-[#0F172A] text-white rounded-t-3xl sm:rounded-3xl border border-gray-800 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-slideUp">
-        {/* Poignée de drag mobile */}
-        <div className="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mt-3 sm:hidden"></div>
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn"
+      onClick={onFermer}
+    >
+      <div
+        className="w-full sm:max-w-2xl md:max-w-3xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-zinc-800 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* ========================================================================= */}
+        {/* 1. BANNIÈRE DE COUVERTURE (1:1 Capture 2 avec monogramme & icône caméra) */}
+        {/* ========================================================================= */}
+        <div className="relative h-32 sm:h-44 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 overflow-hidden flex-shrink-0">
+          {/* Filigrane décoratif grand format style CV / Boutique */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25">
+            <span className="text-white font-black text-7xl sm:text-9xl tracking-tighter select-none">
+              CV
+            </span>
+          </div>
 
-        {/* Bouton Fermer */}
-        <div className="flex justify-between items-center px-5 pt-3">
+          {/* Calque de dégradé supérieur */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+
+          {/* Bouton de fermeture en haut à gauche */}
           <button
             type="button"
             onClick={onFermer}
-            className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition cursor-pointer"
+            className="absolute top-3 left-3 z-20 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-xs transition cursor-pointer"
             aria-label="Fermer"
           >
             <i className="fa-solid fa-xmark text-sm"></i>
           </button>
-          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2.5 py-0.5 rounded-full">
-            Boutique Vérifiée
-          </span>
+
+          {/* Icône Appareil Photo / Couverture en haut à droite (1:1 Capture 2) */}
+          <div className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-black/60 text-zinc-800 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs">
+            <i className="fa-solid fa-camera text-xs"></i>
+          </div>
         </div>
 
-        {/* Contenu Profil Boutique */}
-        <div className="p-6 text-center flex flex-col items-center">
-          {/* Logo / Avatar Circulaire */}
-          <div className="w-20 h-20 rounded-full border-4 border-gray-800 bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-2xl font-black shadow-xl mb-3 text-white">
-            {initiales}
+        {/* ========================================================================= */}
+        {/* 2. SECTION PROFIL & BADGES PILULES (1:1 Capture 2)                        */}
+        {/* ========================================================================= */}
+        <div className="px-4 sm:px-6 pt-0 pb-3 border-b border-gray-100 dark:border-zinc-800 flex-shrink-0">
+          {/* Avatar circulaire chevauchant la bannière (1:1 Capture 2) */}
+          <div className="flex items-end justify-between -mt-12 sm:-mt-14 mb-3">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center text-2xl sm:text-3xl font-black shadow-xl shrink-0">
+              {initiales}
+            </div>
+
+            {/* Bouton Contact WhatsApp Direct */}
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-1.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition cursor-pointer"
+              >
+                <i className="fa-brands fa-whatsapp text-sm"></i>
+                <span className="hidden sm:inline">Contacter sur WhatsApp</span>
+                <span className="sm:hidden">WhatsApp</span>
+              </a>
+            )}
           </div>
 
-          <h3 className="text-xl font-black tracking-tight text-white">{nom}</h3>
-          <p className="text-xs text-gray-400 mt-1 flex items-center gap-1.5">
-            <i className="fa-solid fa-location-dot text-[#1877F2]"></i>
-            {quartier ? `${quartier}, ` : ""}{ville} · Sénégal
+          {/* Titre de la Boutique & Badges en ligne (1:1 Capture 2) */}
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <h2 className="text-lg sm:text-2xl font-black tracking-tight text-zinc-950 dark:text-white">
+              {nom}
+            </h2>
+            <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+              BOUTIQUE
+            </span>
+            <span className="px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10px] font-black flex items-center gap-1">
+              <i className="fa-solid fa-shield-halved text-[9px]"></i>
+              COMMERÇANT
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 text-[10px] font-black border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
+              <i className="fa-solid fa-circle-check text-[9px]"></i>
+              Profil Vérifié
+            </span>
+          </div>
+
+          {/* Sous-titre descriptif */}
+          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 font-medium mb-3">
+            Boutique Officielle Partenaire Facilité · Vente d&apos;articles &amp; livraison express
           </p>
 
-          <p className="text-xs text-gray-300 font-medium mt-3 max-w-sm leading-relaxed">
-            Bienvenue dans notre boutique officielle Facilité. Retrouvez tous nos articles en stock et commandez directement par message WhatsApp.
-          </p>
+          {/* Liste des Badges / Métadonnées Pilules (1:1 Identique à la capture 2) */}
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-bold border border-gray-200/60 dark:border-zinc-700/60">
+              <i className="fa-regular fa-folder text-zinc-400"></i>
+              <span>Commerce &amp; Vente au détail</span>
+            </span>
 
-          {/* Bouton WhatsApp Vert Grand Format */}
-          {whatsappUrl ? (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 w-full py-3.5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-sm font-black flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-900/40 transition cursor-pointer"
-            >
-              <i className="fa-brands fa-whatsapp text-lg"></i>
-              Discuter avec le boutiquier sur WhatsApp
-            </a>
-          ) : (
-            <p className="mt-4 text-xs text-gray-400">WhatsApp non disponible</p>
-          )}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-bold border border-gray-200/60 dark:border-zinc-700/60">
+              <i className="fa-solid fa-location-dot text-red-500"></i>
+              <span>{quartier ? `${quartier}, ` : ""}{ville} · Sénégal</span>
+            </span>
+
+            {telephone && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-bold border border-gray-200/60 dark:border-zinc-700/60">
+                <i className="fa-brands fa-whatsapp text-emerald-500"></i>
+                <span>{telephone}</span>
+              </span>
+            )}
+
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] text-[11px] font-black border border-blue-200 dark:border-blue-900/50">
+              <i className="fa-solid fa-box-open"></i>
+              <span>{listeArticles.length} produit{listeArticles.length > 1 ? "s" : ""} disponible{listeArticles.length > 1 ? "s" : ""}</span>
+            </span>
+          </div>
         </div>
 
-        {/* Articles de la boutique */}
-        {listeArticles.length > 0 && (
-          <div className="px-5 pb-6 overflow-y-auto flex-1">
-            <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3 border-t border-gray-800 pt-4 flex items-center gap-2">
-              <i className="fa-solid fa-box-open text-[#1877F2]"></i>
-              Articles disponibles ({listeArticles.length})
-            </h4>
-            <div className="space-y-2">
-              {listeArticles.map((art) => (
-                <div
-                  key={art.id}
-                  className="p-2.5 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-400 shrink-0 overflow-hidden">
-                      {art.photos?.[0] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={urlPhoto(art.photos[0])} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        art.titre.substring(0, 2).toUpperCase()
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{art.titre}</p>
-                      <p className="text-[11px] font-black text-[#1877F2]">
-                        {prixLisible(art.prix_xof)} FCFA
-                      </p>
-                    </div>
+        {/* ========================================================================= */}
+        {/* 3. BARRE D'ONGLETS DE NAVIGATION (1:1 Capture 2 : À propos, Documents...) */}
+        {/* ========================================================================= */}
+        <div className="flex items-center gap-6 px-4 sm:px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setOngletActif("produits")}
+            className={`py-3 text-xs sm:text-sm font-black transition relative cursor-pointer ${
+              ongletActif === "produits"
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <span>Tous les produits ({listeArticles.length})</span>
+            {ongletActif === "produits" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setOngletActif("apropos")}
+            className={`py-3 text-xs sm:text-sm font-black transition relative cursor-pointer ${
+              ongletActif === "apropos"
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <span>À propos &amp; Infos</span>
+            {ongletActif === "apropos" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setOngletActif("contact")}
+            className={`py-3 text-xs sm:text-sm font-black transition relative cursor-pointer ${
+              ongletActif === "contact"
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <span>Contact &amp; Livraison</span>
+            {ongletActif === "contact" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
+          </button>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 4. CONTENU DE L'ONGLET SÉLECTIONNÉ : GRILLE DE TOUS LES PRODUITS DU STORE */}
+        {/* ========================================================================= */}
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
+          {ongletActif === "produits" && (
+            <div>
+              {chargement ? (
+                <div className="text-center py-12 text-zinc-400">
+                  <i className="fa-solid fa-spinner fa-spin text-2xl text-blue-600"></i>
+                  <p className="text-xs font-bold mt-2">Chargement des articles de la boutique...</p>
+                </div>
+              ) : listeArticles.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl border border-gray-200 dark:border-zinc-800 p-6">
+                  <i className="fa-solid fa-box-open text-3xl text-zinc-300 dark:text-zinc-600 mb-2"></i>
+                  <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                    Aucun article publié pour le moment
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Les articles insérés dans cette boutique apparaîtront ici.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                  {listeArticles.map((art) => {
+                    const enStock = art.statut === "en_stock" || (Number(art.quantite) > 0);
+                    const photo = art.photos?.[0] || null;
+
+                    return (
+                      <div
+                        key={art.id}
+                        onClick={() => onVoirArticle?.(art)}
+                        className="group flex flex-col rounded-2xl overflow-hidden bg-gray-50 dark:bg-zinc-800/90 border border-gray-200 dark:border-zinc-700/80 shadow-xs hover:shadow-lg transition-all duration-200 cursor-pointer"
+                      >
+                        {/* Image produit */}
+                        <div className="relative aspect-square w-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                          {photo ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={urlPhoto(photo)}
+                              alt={art.titre}
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 p-2 text-center">
+                              <i className="fa-solid fa-bag-shopping text-2xl mb-1"></i>
+                              <span className="text-[10px] font-bold line-clamp-1">{art.titre}</span>
+                            </div>
+                          )}
+
+                          {/* Badge LIVE / EN STOCK */}
+                          <span className={`absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                            enStock ? "bg-red-600 text-white" : "bg-black/75 text-zinc-300"
+                          }`}>
+                            {enStock ? "LIVE" : "Épuisé"}
+                          </span>
+                        </div>
+
+                        {/* Informations : Titre & Prix */}
+                        <div className="p-2.5 sm:p-3 flex flex-col justify-between flex-1 gap-1">
+                          <h4 className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white line-clamp-2 leading-tight group-hover:text-blue-600 transition">
+                            {art.titre}
+                          </h4>
+
+                          <div className="flex items-end justify-between mt-auto pt-1.5 border-t border-gray-200/60 dark:border-zinc-700/60">
+                            <div>
+                              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
+                                {nom}
+                              </p>
+                              <p className="text-xs sm:text-sm font-black text-zinc-950 dark:text-white">
+                                {prixLisible(art.prix_xof)}{" "}
+                                <span className="text-[10px] font-bold text-zinc-500">FCFA</span>
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              className="w-7 h-7 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center text-xs group-hover:scale-110 transition shadow-xs"
+                              title="Voir le produit"
+                            >
+                              <i className="fa-solid fa-arrow-right text-[10px]"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {ongletActif === "apropos" && (
+            <div className="space-y-4 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-800 space-y-2">
+                <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                  <i className="fa-solid fa-store text-blue-600"></i>
+                  Présentation de la boutique
+                </h4>
+                <p>
+                  Bienvenue dans la boutique officielle <strong>{nom}</strong> sur Facilité. Nous mettons à votre disposition des produits de qualité avec un stock constamment actualisé en temps réel.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-1">
+                  <h5 className="font-extrabold text-zinc-900 dark:text-white flex items-center gap-1.5 text-xs">
+                    <i className="fa-solid fa-truck text-emerald-600"></i>
+                    Livraison Directe
+                  </h5>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                    Livraison rapide disponible à {ville} et ses environs.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 space-y-1">
+                  <h5 className="font-extrabold text-zinc-900 dark:text-white flex items-center gap-1.5 text-xs">
+                    <i className="fa-solid fa-money-bill-wave text-blue-600"></i>
+                    Paiements Acceptés
+                  </h5>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                    Paiement à la livraison, Wave, Orange Money et espèces.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {ongletActif === "contact" && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-800 space-y-3">
+                <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                  <i className="fa-solid fa-address-book text-blue-600"></i>
+                  Coordonnées directes
+                </h4>
+
+                <div className="space-y-2 text-xs sm:text-sm">
+                  <div className="flex items-center gap-2.5 text-zinc-700 dark:text-zinc-300">
+                    <i className="fa-solid fa-location-dot text-red-500 w-4 text-center"></i>
+                    <span>{quartier ? `${quartier}, ` : ""}{ville}, Sénégal</span>
                   </div>
 
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-950 text-emerald-400 shrink-0">
-                    En stock
-                  </span>
+                  {telephone && (
+                    <div className="flex items-center gap-2.5 text-zinc-700 dark:text-zinc-300">
+                      <i className="fa-brands fa-whatsapp text-emerald-500 w-4 text-center"></i>
+                      <span>WhatsApp : {telephone}</span>
+                    </div>
+                  )}
                 </div>
-              ))}
+
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 w-full py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition cursor-pointer"
+                  >
+                    <i className="fa-brands fa-whatsapp text-base"></i>
+                    Échanger directement avec le boutiquier
+                  </a>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
