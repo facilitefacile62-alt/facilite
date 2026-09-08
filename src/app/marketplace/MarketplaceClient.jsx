@@ -388,13 +388,7 @@ export default function MarketplaceClient() {
                         </h2>
                       </button>
 
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
-                        {maBoutiqueActive
-                          ? `Boutique Officielle · ${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville || "Dakar"}`
-                          : "Vendeur Facilité Marketplace"}
-                      </p>
-
-                      <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-1.5">
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 font-normal mt-1 mb-2">
                         {maBoutiqueActive?.ville
                           ? `${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville}, Sénégal`
                           : (profile?.location || "Dakar, Sénégal")}
@@ -1529,11 +1523,13 @@ function CarteProfilBoutique({ profile, boutique, onAjouterArticle, onBoutiqueCl
           {nom}
         </button>
 
-        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
-          {titre}
-        </p>
+        {(!boutique && profile?.headline) && (
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
+            {profile.headline}
+          </p>
+        )}
 
-        <p className="text-[9px] text-gray-400 font-normal mt-0.5 mb-2">
+        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-normal mt-1 mb-2">
           {localisation}
         </p>
 
