@@ -32,6 +32,9 @@ import CapturePosition from "@/components/CapturePosition";
 const GlobeExplorateurBoutiques = dynamic(() => import("@/components/GlobeExplorateurBoutiques"), {
   ssr: false,
 });
+const CarteMobileAutourDeMoi = dynamic(() => import("@/components/CarteMobileAutourDeMoi"), {
+  ssr: false,
+});
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
   chargerMesBoutiques,
@@ -882,18 +885,34 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       )}
 
       {position && resultats.length > 0 && (
-        <CarteBoutiques
-          articles={resultats}
-          depart={position}
-          onChoisirBoutique={(id) => {
-            const cible = document.getElementById(`boutique-${id}`);
-            if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
-          }}
-        />
+        <>
+          {/* VUE MOBILE CINÉMATIQUE (TÉLÉPHONE) : CARTE ITINÉRAIRE STYLE YANGO + 4 CASES PRODUITS OU VENDEURS */}
+          <div className="block md:hidden">
+            <CarteMobileAutourDeMoi
+              articles={resultats}
+              depart={position}
+              onVoirArticle={onVoirArticle}
+              onVoirBoutique={onVoirBoutique}
+              onFermerProximite={reinitialiserPosition}
+            />
+          </div>
+
+          {/* VUE PC / DESKTOP : CARTE STANDARD LEAFLET DES BOUTIQUES */}
+          <div className="hidden md:block">
+            <CarteBoutiques
+              articles={resultats}
+              depart={position}
+              onChoisirBoutique={(id) => {
+                const cible = document.getElementById(`boutique-${id}`);
+                if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            />
+          </div>
+        </>
       )}
 
-      {/* Grille de produits : 2 colonnes côte à côte sur mobile (phone), 3 à 5 colonnes sur PC/Desktop */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 w-full">
+      {/* Grille de produits : visible par défaut, ou en dessous sur PC quand position est active */}
+      <div className={`${position ? "hidden md:grid" : "grid"} grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 w-full`}>
         {resultats.map((a, i) => (
           <CarteArticle
             key={a.id}
