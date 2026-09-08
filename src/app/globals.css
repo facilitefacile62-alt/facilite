@@ -245,15 +245,26 @@ html.dark .bg-whatsapp-chat {
   min-height: 112px !important;
 }
 
-/* Styles indispensables Leaflet Map & Snap Map */
-.leaflet-container {
+/* Styles indispensables à la carte "Snap Map" plein écran mobile
+   (CarteMobileAutourDeMoi.jsx) — SCOPÉS sous .snap-map-plein-ecran :
+   ".leaflet-container" tout court visait TOUTE carte Leaflet du site (la
+   classe est générique, ajoutée par Leaflet lui-même à chaque instance),
+   donc "height: 100% !important" cassait aussi la carte "Autour de moi" du
+   bureau (CarteBoutiques.jsx) — son conteneur parent n'a pas de hauteur
+   explicite (dimensionné par Tailwind, ex. h-[220px]), donc "100%" s'y
+   résolvait en 0px. Bug confirmé par mesure directe : les tuiles se
+   chargeaient (requêtes 200 OK) mais le conteneur mesurait 0px de haut.
+   La carte plein écran mobile, elle, a un parent flex-1 dont la hauteur
+   EST résolue par le layout — "100%" y fonctionne, d'où l'absence de
+   symptôme là-bas. */
+.snap-map-plein-ecran .leaflet-container {
   width: 100% !important;
   height: 100% !important;
   background-color: #0b0f17 !important;
   font-family: inherit !important;
 }
 
-.leaflet-container img {
+.snap-map-plein-ecran .leaflet-container img {
   max-width: none !important;
   max-height: none !important;
   display: inline-block !important;

@@ -360,7 +360,11 @@ export default function CarteMobileAutourDeMoi({
     // téléphone, panneau du bas par-dessus). z-[600] : au-dessus de l'en-tête
     // (z-50) et du tiroir de menu mobile (z-[99999] réservé au menu lui-même,
     // qu'on ne peut pas ouvrir en même temps que cette vue de toute façon).
-    <div className="fixed inset-0 z-[600] bg-gray-50 dark:bg-zinc-950 flex flex-col overflow-hidden">
+    // snap-map-plein-ecran : cible les styles globaux Leaflet (globals.css)
+    // spécifiques à cette carte plein écran (fond sombre #0b0f17, 100% de
+    // la hauteur du parent flex) — scopés pour ne plus affecter les autres
+    // cartes Leaflet du site (voir commentaire dans globals.css).
+    <div className="snap-map-plein-ecran fixed inset-0 z-[600] bg-gray-50 dark:bg-zinc-950 flex flex-col overflow-hidden">
       {/* ========================================================================= */}
       {/* 1. CARTE INTERACTIVE PLEIN ÉCRAN STYLE YANGO / TAXI (1:1 Capture 1)       */}
       {/* ========================================================================= */}

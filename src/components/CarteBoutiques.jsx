@@ -85,6 +85,18 @@ export default function CarteBoutiques({ articles, depart, onChoisirBoutique }) 
         await import("leaflet/dist/leaflet.css");
         if (annule || !conteneur.current) return;
 
+        // Bug confirmé (mesure directe : conteneur à 0px de haut malgré des
+        // tuiles chargées avec succès) : `boutiques`/`depart` changent à
+        // chaque nouvelle recherche (nouvelle référence de tableau via
+        // useMemo), donc cet effet se rejoue souvent — sans ce nettoyage,
+        // L.map() était appelé une seconde fois sur le même élément DOM
+        // avant que le nettoyage de l'exécution précédente n'ait eu lieu,
+        // ce que Leaflet gère mal (état interne corrompu, hauteur effondrée).
+        if (carteRef.current) {
+          carteRef.current.remove();
+          carteRef.current = null;
+        }
+
         carte = L.map(conteneur.current, { scrollWheelZoom: false, attributionControl: true });
         carteRef.current = carte;
 
