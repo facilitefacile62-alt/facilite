@@ -193,12 +193,17 @@ export default function MarketplaceClient() {
       })
       .subscribe();
 
-    // Vérifier les paramètres URL au montage (?onglet=vendre ou ?action=publier)
+    // Vérifier les paramètres URL au montage (?onglet=vendre ou ?action=publier ou ?action=voir_boutique)
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const o = params.get("onglet") || (params.get("action") === "publier" ? "vendre" : null);
       if (o === "vendre" || o === "acheter") {
         setOnglet(o);
+      }
+      if (params.get("action") === "voir_boutique" || params.get("boutique")) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
+        }, 150);
       }
     }
 
@@ -208,13 +213,43 @@ export default function MarketplaceClient() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     };
+
+    const handleOuvrirBoutique = (e) => {
+      const b = e?.detail || maBoutiqueActive || boutiques[0] || {
+        id: "facilite_shop",
+        nom: "facilite shop",
+        quartier: "Guinaw rail nord",
+        ville: "Pikine",
+        telephone_whatsapp: "770000000",
+      };
+      setBoutiqueModal(b);
+    };
+
     window.addEventListener("marketplace_set_onglet", handleSetOnglet);
+    window.addEventListener("marketplace_ouvrir_ma_boutique", handleOuvrirBoutique);
 
     return () => {
       supabase.removeChannel(channel);
       window.removeEventListener("marketplace_set_onglet", handleSetOnglet);
+      window.removeEventListener("marketplace_ouvrir_ma_boutique", handleOuvrirBoutique);
     };
-  }, []);
+  }, [maBoutiqueActive, boutiques]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("action") === "voir_boutique" || params.get("boutique")) {
+        const b = maBoutiqueActive || boutiques[0] || {
+          id: "facilite_shop",
+          nom: "facilite shop",
+          quartier: "Guinaw rail nord",
+          ville: "Pikine",
+          telephone_whatsapp: "770000000",
+        };
+        setBoutiqueModal(b);
+      }
+    }
+  }, [maBoutiqueActive, boutiques]);
 
   useEffect(() => {
     rechargerBoutique();
@@ -269,8 +304,13 @@ export default function MarketplaceClient() {
                     {/* Bannière Boutique Cliquable (Ouvre la fiche boutique) */}
                     <div
                       onClick={() => {
-                        if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
-                        else setOnglet("vendre");
+                        setBoutiqueModal(maBoutiqueActive || boutiques[0] || {
+                          id: "facilite_shop",
+                          nom: "facilite shop",
+                          quartier: "Guinaw rail nord",
+                          ville: "Pikine",
+                          telephone_whatsapp: "770000000",
+                        });
                       }}
                       className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
                       style={{ backgroundImage: `url('${profile?.cover_url || '/stellar-cover.png'}')` }}
@@ -288,8 +328,13 @@ export default function MarketplaceClient() {
                       {/* Avatar / Logo de la Boutique Cliquable */}
                       <div
                         onClick={() => {
-                          if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
-                          else setOnglet("vendre");
+                          setBoutiqueModal(maBoutiqueActive || boutiques[0] || {
+                            id: "facilite_shop",
+                            nom: "facilite shop",
+                            quartier: "Guinaw rail nord",
+                            ville: "Pikine",
+                            telephone_whatsapp: "770000000",
+                          });
                         }}
                         className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
                         title="Voir le profil de ma boutique"
@@ -312,14 +357,19 @@ export default function MarketplaceClient() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (maBoutiqueActive) setBoutiqueModal(maBoutiqueActive);
-                          else setOnglet("vendre");
+                          setBoutiqueModal(maBoutiqueActive || boutiques[0] || {
+                            id: "facilite_shop",
+                            nom: "facilite shop",
+                            quartier: "Guinaw rail nord",
+                            ville: "Pikine",
+                            telephone_whatsapp: "770000000",
+                          });
                         }}
                         className="group cursor-pointer bg-transparent border-none p-0 text-center"
                         title="Voir le profil de ma boutique"
                       >
                         <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
-                          {maBoutiqueActive?.nom || "Ma Boutique Facilité"}
+                          {maBoutiqueActive?.nom || "facilite shop"}
                         </h2>
                       </button>
 

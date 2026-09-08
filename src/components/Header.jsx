@@ -1481,9 +1481,13 @@ export default function Header() {
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          router.push("/marketplace");
+                          if (pathname?.startsWith("/marketplace")) {
+                            window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
+                          } else {
+                            router.push("/marketplace?action=voir_boutique");
+                          }
                         }}
-                        className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-100/90 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-2xs"
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-100/90 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-2xs hover:border-blue-500/50"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="relative shrink-0">
@@ -1495,7 +1499,7 @@ export default function Header() {
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate">
-                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Créer sa propre boutique"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Espace Vendeur &amp; Marketplace
@@ -1604,7 +1608,11 @@ export default function Header() {
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          router.push("/marketplace");
+                          if (pathname?.startsWith("/marketplace")) {
+                            window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
+                          } else {
+                            router.push("/marketplace?action=voir_boutique");
+                          }
                         }}
                         className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 group"
                       >
@@ -1624,7 +1632,7 @@ export default function Header() {
 
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition">
-                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Créer sa propre boutique"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Espace Vendeur &amp; Marketplace
@@ -1633,7 +1641,7 @@ export default function Header() {
                         </div>
 
                         <span className="text-[10px] font-bold text-gray-400 group-hover:text-blue-600 transition shrink-0 flex items-center gap-1">
-                          Basculer <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                          Voir boutique <i className="fa-solid fa-arrow-right text-[8px]"></i>
                         </span>
                       </button>
                     </>
@@ -1649,14 +1657,21 @@ export default function Header() {
                       <i className="fa-solid fa-id-card text-xs"></i>
                       <span>Gérer mon profil</span>
                     </Link>
-                    <Link
-                      href="/marketplace"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        if (pathname?.startsWith("/marketplace")) {
+                          window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
+                        } else {
+                          router.push("/marketplace?action=voir_boutique");
+                        }
+                      }}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition cursor-pointer bg-transparent border-none"
                     >
                       <i className="fa-solid fa-store text-xs"></i>
                       <span>Ma boutique</span>
-                    </Link>
+                    </button>
                   </div>
 
                   {/* Déconnexion */}
