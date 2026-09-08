@@ -55,7 +55,7 @@ export default function ExtracteurScreen() {
   return (
     <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <FaciliteHeader ecranActif="extracteur" />
+        <FaciliteHeader />
 
         <ScrollView className="flex-1 px-3 pt-3.5" contentContainerClassName="pb-8" showsVerticalScrollIndicator={false}>
           <Pressable onPress={() => router.replace('/')} className="flex-row items-center gap-2 pb-3.5">

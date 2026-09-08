@@ -33,7 +33,7 @@ export default function AccueilScreen() {
   return (
     <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <FaciliteHeader ecranActif="accueil" />
+        <FaciliteHeader />
 
         {offres === null ? (
           <View className="flex-1 items-center justify-center">

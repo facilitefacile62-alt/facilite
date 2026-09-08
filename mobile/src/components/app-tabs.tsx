@@ -1,13 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-// Barre d'onglets réelle de l'app (remplace le gabarit "Expo Starter"
-// Home/Explore jamais personnalisé). La navigation "hifi" pixel-perfect du
-// dossier de design vit dans FaciliteHeader (rangée d'icônes en haut de
-// chaque écran, fidèle au HTML fourni) ; cette barre native du bas reste la
-// convention de plateforme habituelle et un filet de secours si jamais
-// FaciliteHeader n'est pas affiché. Les deux naviguent vers les mêmes
-// routes, donc toujours synchronisées.
+// Barre d'onglets réelle de l'app. Ordre demandé explicitement : Accueil,
+// Offres, Extracteur (au milieu), Messages, Profil — Notifications n'est
+// plus un onglet, elle vit désormais dans l'en-tête (FaciliteHeader), en
+// haut, à la place de l'avatar (Profil ayant sa propre place ici en bas).
 export default function AppTabs() {
   return (
     <Tabs
@@ -25,13 +22,6 @@ export default function AppTabs() {
         }}
       />
       <Tabs.Screen
-        name="extracteur"
-        options={{
-          title: 'Extracteur',
-          tabBarIcon: ({ color, size }) => <Ionicons name="flash-outline" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="offres"
         options={{
           title: 'Offres',
@@ -39,10 +29,24 @@ export default function AppTabs() {
         }}
       />
       <Tabs.Screen
+        name="extracteur"
+        options={{
+          title: 'Extracteur',
+          tabBarIcon: ({ color, size }) => <Ionicons name="flash-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="messages"
         options={{
           title: 'Messages',
           tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profil"
+        options={{
+          title: 'Profil',
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
         }}
       />
     </Tabs>
