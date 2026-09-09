@@ -15,8 +15,8 @@ import PanneauNotifications from '@/components/PanneauNotifications';
 //
 // Notifications et Menu s'ouvrent en <Modal> (couvrent tout l'écran quelle
 // que soit la taille réelle de ce header) plutôt qu'en overlay positionné
-// localement — Recherche reste un stub, son écran (04-recherche) est un
-// point à part de la feuille de route.
+// localement. Recherche pousse /recherche (écran à part, voir
+// app/recherche.tsx) via le Stack racine.
 const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
 
 export default function FaciliteHeader() {
@@ -31,7 +31,7 @@ export default function FaciliteHeader() {
           <Text className="text-blue-600 text-[18px] font-black">Facilité</Text>
         </Pressable>
         <View className="flex-row items-center gap-3.5">
-          <Pressable onPress={() => BIENTOT('Recherche')}>
+          <Pressable onPress={() => router.push('/recherche')}>
             <IconRecherche />
           </Pressable>
           <Pressable onPress={() => setNotifsOuvertes(true)}>

@@ -123,7 +123,10 @@ const RACCOURCIS: Raccourci[] = [
     bg: '#DBEAFE',
     titre: 'Recherche',
     sous: 'Offres, entreprises...',
-    action: () => BIENTOT('Recherche'),
+    action: ({ router, fermer }) => {
+      fermer();
+      router.push('/recherche');
+    },
   },
   {
     id: 'diagnostic_cv',
