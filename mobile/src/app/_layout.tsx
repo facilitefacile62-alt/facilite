@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, Slot, ThemeProvider, useRouter, useSegments } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
@@ -42,7 +42,12 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
         <AuthGate>
-          <Slot />
+          {/* Stack (pas Slot) requis à partir de ce point : les écrans
+              poussés hors des onglets (offre/[id], chat/[id]...) ont besoin
+              d'une navigation native (retour, geste de balayage, transition)
+              par-dessus (auth)/(tabs). headerShown:false partout — chaque
+              écran construit son propre en-tête, comme le reste de l'app. */}
+          <Stack screenOptions={{ headerShown: false }} />
         </AuthGate>
       </ThemeProvider>
     </AuthProvider>

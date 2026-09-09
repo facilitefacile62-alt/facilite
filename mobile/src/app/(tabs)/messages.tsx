@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -5,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import { IconCrayon, IconMessages, IconPoints, IconRecherche } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
+import { resolveSupportConversation } from '@/lib/messages';
 import { useConversationsReelles, type ConversationReelle } from '@/lib/useConversationsReelles';
 
 // Reproduction de design_handoff_facilite/pages/05-messages.html. La ligne
@@ -27,9 +29,11 @@ const PUCES: { id: FiltrePuce; label: string; cablee: boolean }[] = [
 
 export default function MessagesScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const conversations = useConversationsReelles(user?.id);
   const [recherche, setRecherche] = useState('');
   const [puceActive, setPuceActive] = useState<FiltrePuce>('toutes');
+  const [ouvertureSupportEnCours, setOuvertureSupportEnCours] = useState(false);
 
   const conversationsFiltrees = useMemo(() => {
     if (!conversations) return null;
@@ -44,8 +48,27 @@ export default function MessagesScreen() {
     return liste;
   }, [conversations, puceActive, recherche]);
 
-  function ouvrirChat(nom: string) {
-    Alert.alert(nom, 'La conversation détaillée arrive dans une prochaine mise à jour.');
+  // La ligne "Support RH Facilité" est fixe (pas une vraie conversation) —
+  // resolveSupportConversation (déjà utilisée côté web) retrouve ou crée la
+  // conversation avec un compte admin avant de naviguer, pour qu'un vrai
+  // destinataire existe dès le premier message envoyé.
+  async function ouvrirSupport() {
+    if (!user?.id || ouvertureSupportEnCours) return;
+    setOuvertureSupportEnCours(true);
+    try {
+      const resolu = await resolveSupportConversation(user.id);
+      if (resolu) {
+        router.push(`/chat/${resolu.conversationId}`);
+      } else {
+        Alert.alert('Support RH Facilité', "Impossible d'ouvrir la discussion pour le moment.");
+      }
+    } finally {
+      setOuvertureSupportEnCours(false);
+    }
+  }
+
+  function ouvrirConversation(conversation: ConversationReelle) {
+    router.push(`/chat/${conversation.id}`);
   }
 
   return (
@@ -117,7 +140,7 @@ export default function MessagesScreen() {
             ListHeaderComponent={
               puceActive === 'toutes' || puceActive === 'non_lues' ? (
                 <Pressable
-                  onPress={() => ouvrirChat('Support RH Facilité')}
+                  onPress={ouvrirSupport}
                   className="flex-row gap-3 items-center px-4 py-3.5 border-b border-black/[0.06] bg-white">
                   <View className="w-[46px] h-[46px] rounded-full bg-[#e8f8f1] border-[1.5px] border-emerald-500 items-center justify-center">
                     <IconMessages color="#10B981" />
@@ -138,7 +161,7 @@ export default function MessagesScreen() {
                 Aucune discussion pour l&apos;instant.
               </Text>
             }
-            renderItem={({ item }) => <LigneConversation conversation={item} onPress={() => ouvrirChat(item.name)} />}
+            renderItem={({ item }) => <LigneConversation conversation={item} onPress={() => ouvrirConversation(item)} />}
           />
         )}
       </SafeAreaView>

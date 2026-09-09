@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -183,9 +184,10 @@ export default function OffresScreen() {
 }
 
 function CarteOffreDetaillee({ offre, matchScore }: { offre: OffreReelle; matchScore: number | null }) {
+  const router = useRouter();
   return (
     <Pressable
-      onPress={() => Alert.alert('Fiche offre', 'La fiche détaillée arrive dans une prochaine mise à jour.')}
+      onPress={() => router.push(`/offre/${offre.id}`)}
       className="bg-white rounded-2xl p-3.5 border border-gray-200 shadow-xs">
       <View className="flex-row items-center gap-2.5">
         <View className={`w-[38px] h-[38px] rounded-full ${offre.logoTeinte} items-center justify-center`}>

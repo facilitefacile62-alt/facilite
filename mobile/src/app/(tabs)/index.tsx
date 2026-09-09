@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -98,8 +99,11 @@ export default function AccueilScreen() {
 }
 
 function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: number | null }) {
+  const router = useRouter();
   return (
-    <View className="bg-white mx-3 rounded-2xl p-3.5 border border-gray-200 shadow-xs">
+    <Pressable
+      onPress={() => router.push(`/offre/${offre.id}`)}
+      className="bg-white mx-3 rounded-2xl p-3.5 border border-gray-200 shadow-xs">
       <View className="flex-row items-center gap-2.5">
         <View className="w-[38px] h-[38px] rounded-[10px] bg-[#E5E2DA]" />
         <View className="flex-1">
@@ -141,6 +145,6 @@ function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: num
           <Text className="text-white text-[14px] font-bold">Postuler via Facilité</Text>
         </Pressable>
       </View>
-    </View>
+    </Pressable>
   );
 }
