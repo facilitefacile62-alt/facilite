@@ -2515,6 +2515,27 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
 
           {/* Liste des options avec les séparateurs de la capture d'écran */}
           <div className="border-t border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200">
+            {/* 0. Publier un article (Assistant IA) */}
+            <div className="p-2.5 border-b border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("publier")}
+                className={`w-full px-4 py-3 rounded-xl flex items-center justify-between gap-3 text-left transition cursor-pointer shadow-sm ${
+                  ongletVendeur === "publier"
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/20 font-black"
+                    : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200/60 dark:border-emerald-800/50"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <i className="fa-solid fa-circle-plus text-base text-emerald-500"></i>
+                  <span className="font-extrabold text-xs sm:text-sm">Publier un article</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-[9px] font-black uppercase tracking-wider">
+                  IA
+                </span>
+              </button>
+            </div>
+
             {/* 1. Faire profit */}
             <div className="border-b border-gray-100 dark:border-gray-800">
               <button
@@ -4026,16 +4047,36 @@ function ModalFicheBoutique({
             </button>
           </div>
 
-          {/* Liste des 8 options du menu (1:1 Identique à la capture Aperçu) */}
+          {/* Liste des options du menu */}
           <div className="p-2 space-y-1 text-xs font-bold">
+            {estProprietaire && (
+              <button
+                type="button"
+                onClick={() => setOngletActif("publier")}
+                className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center justify-between gap-2.5 transition cursor-pointer text-left shadow-xs mb-1.5 ${
+                  ongletActif === "publier"
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/20"
+                    : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200/60 dark:border-emerald-800/50"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-circle-plus text-sm text-emerald-500"></i>
+                  <span>Publier un article</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[9px] font-black uppercase">
+                  IA
+                </span>
+              </button>
+            )}
+
             <button
-              type="button"
-              onClick={() => setOngletActif("produits")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletActif === "produits"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }`}
+                type="button"
+                onClick={() => setOngletActif("produits")}
+                className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                  ongletActif === "produits"
+                    ? "bg-[#1877F2] text-white shadow-md"
+                    : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+                }`}
             >
               <i
                 className={`${estEtablissement ? "fa-solid fa-clock" : estService ? "fa-solid fa-screwdriver-wrench" : "fa-regular fa-calendar-days"} text-sm`}
