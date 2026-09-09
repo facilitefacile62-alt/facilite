@@ -2946,6 +2946,33 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
           </div>
         </div>
       </div>
+
+      {/* Modal Aperçu Public de ma boutique */}
+      {modalApercuOuverte && (
+        <ModalFicheBoutique
+          boutique={
+            boutiqueActive || {
+              id: "facilite_shop",
+              nom: nomVendeur || "facilite shop",
+              quartier: "Guinaw rail nord",
+              ville: "Pikine",
+              telephone_whatsapp: telephoneVendeur || "770000000",
+              cover_url: profile?.cover_url || "/stellar-cover.png",
+              avatar_url: profile?.avatar_url,
+            }
+          }
+          articles={articles}
+          profile={profile}
+          userId={userId}
+          onPublierArticle={() => {
+            setModalApercuOuverte(false);
+            setOngletVendeur("publier");
+          }}
+          onBoutiqueUpdate={recharger}
+          onFermer={() => setModalApercuOuverte(false)}
+          onVoirArticle={(art) => {}}
+        />
+      )}
     </div>
   );
 }
