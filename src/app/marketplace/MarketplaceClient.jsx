@@ -3662,7 +3662,7 @@ function ModalFicheBoutique({
   onVoirArticle,
 }) {
   const [listeArticles, setListeArticles] = useState(articles);
-  const [ongletActif, setOngletActif] = useState("produits"); // 'produits' | 'apropos' | 'contact' | 'parametres'
+  const [ongletActif, setOngletActif] = useState("apercu"); // 'apercu' | 'produits' | 'profit' | 'abonnes' | 'avis' | 'faq' | 'apropos' | 'contact' | 'parametres'
   const [chargement, setChargement] = useState(false);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
