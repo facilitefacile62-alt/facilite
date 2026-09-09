@@ -217,7 +217,11 @@ export default function RootLayout({ children }) {
             rapport avec le contenu affiché mais un vrai doublon de
             balisage, retiré le 2026-08-21. */}
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        {/* Pas de <link> Leaflet ici : unpkg.com n'est pas dans le style-src
+            de la CSP (next.config.mjs) et cette balise était donc bloquée
+            sans effet. Chaque composant carte importe déjà sa propre CSS
+            Leaflet depuis node_modules (`await import("leaflet/dist/leaflet.css")`),
+            servie en same-origin par le bundler — aucun <link> global requis. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD_DATA) }}

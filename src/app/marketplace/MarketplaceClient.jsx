@@ -3718,6 +3718,10 @@ function ModalFicheBoutique({
   const typeBoutique = boutique?.type_boutique || "produit";
   const estService = typeBoutique === "service";
   const estEtablissement = typeBoutique === "etablissement";
+  // Cette fiche sert aussi bien à afficher SA propre boutique (bouton "Ma
+  // boutique") qu'à consulter celle d'un tiers depuis la carte/recherche —
+  // seul le premier cas doit proposer "Publier un article".
+  const estProprietaire = Boolean(userId && boutique?.owner_id && boutique.owner_id === userId);
   const [horairesEtablissement, setHorairesEtablissement] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
 
