@@ -20,6 +20,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml } from "@/lib/marketplaceData";
 
 const COULEUR = "#1877F2";
+const COULEUR_SERVICE = "#F59E0B";
+const COULEUR_ETABLISSEMENT = "#8B5CF6";
+const LIBELLES_CATEGORIE_ETABLISSEMENT = {
+  sante: "Santé",
+  finance: "Finance",
+  beaute: "Beauté",
+  autre: "Établissement",
+};
 
 /** Une coordonnée absente doit ressortir null, jamais 0 — `Number(null)` vaut 0. */
 function point(lat, lng) {
@@ -36,16 +44,21 @@ const distanceLisible = (km) =>
       ? `${Math.round(Number(km) * 1000)} m`
       : `${String(Number(km)).replace(".", ",")} km`;
 
-export default function CarteBoutiques({ articles, depart, onChoisirBoutique }) {
+export default function CarteBoutiques({ articles, boutiquesSansArticles = [], depart, onChoisirBoutique }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const [echec, setEchec] = useState(false);
-  
+
   // États de contrôle : Pliée / Dépliée et Mode Gain d'espace (Compact)
   const [estPliee, setEstPliee] = useState(false);
   const [modeCompact, setModeCompact] = useState(false);
 
-  // Regroupement par boutique
+  // Regroupement par boutique. Un seul pin par boutique quel que soit son
+  // type_boutique (demande explicite) : les boutiques service/établissement
+  // (sans aucun article — voir boutiquesSansArticles, déjà dédupliquées et
+  // positionnées par le parent) rejoignent la même liste que les boutiques
+  // produit ci-dessous, sans traitement spécial ici hormis le type qui
+  // détermine l'icône (voir plus bas).
   const boutiques = useMemo(() => {
     const par = new Map();
     for (const a of articles || []) {
@@ -59,13 +72,31 @@ export default function CarteBoutiques({ articles, depart, onChoisirBoutique }) 
           quartier: a.quartier || null,
           distance_km: a.distance_km,
           position: p,
+          type_boutique: "produit",
           articles: [],
         });
       }
       par.get(cle).articles.push(a);
     }
+    for (const s of boutiquesSansArticles || []) {
+      const p = point(s.lat, s.lng);
+      if (!p || par.has(s.id)) continue;
+      par.set(s.id, {
+        id: s.id,
+        nom: s.nom || "Boutique",
+        quartier: s.quartier || null,
+        distance_km: s.distance_km,
+        position: p,
+        type_boutique: s.type_boutique,
+        metier: s.metier,
+        description_prestation: s.description_prestation,
+        categorie_etablissement: s.categorie_etablissement,
+        whatsappUrl: s.whatsappUrl,
+        articles: [],
+      });
+    }
     return [...par.values()];
-  }, [articles]);
+  }, [articles, boutiquesSansArticles]);
 
   useEffect(() => {
     let annule = false;
@@ -109,19 +140,39 @@ export default function CarteBoutiques({ articles, depart, onChoisirBoutique }) 
         const points = [];
 
         for (const b of boutiques) {
-          const enStock = b.articles.some((a) => a.statut === "en_stock");
+          // Couleur par type : produit garde le bleu historique (avec le
+          // gris "hors stock" existant), service/établissement ont leur
+          // propre couleur fixe — "en stock" n'a pas de sens pour eux (zéro
+          // article par construction, pas par rupture).
+          let couleur = COULEUR;
+          if (b.type_boutique === "service") {
+            couleur = COULEUR_SERVICE;
+          } else if (b.type_boutique === "etablissement") {
+            couleur = COULEUR_ETABLISSEMENT;
+          } else {
+            const enStock = b.articles.some((a) => a.statut === "en_stock");
+            couleur = enStock ? COULEUR : "#6b7280";
+          }
+
           const marqueur = L.circleMarker(b.position, {
             radius: 9,
-            color: enStock ? COULEUR : "#6b7280",
+            color: couleur,
             weight: 3,
-            fillColor: enStock ? COULEUR : "#9ca3af",
+            fillColor: couleur,
             fillOpacity: 0.85,
           }).addTo(carte);
+
+          const ligneDetail =
+            b.type_boutique === "service"
+              ? echapperHtml(b.metier || "Service")
+              : b.type_boutique === "etablissement"
+              ? echapperHtml(LIBELLES_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "Établissement")
+              : `${b.articles.length} article${b.articles.length > 1 ? "s" : ""} · ${distanceLisible(b.distance_km)}`;
 
           const lignes = [
             `<strong>${echapperHtml(b.nom)}</strong>`,
             b.quartier ? echapperHtml(b.quartier) : null,
-            `${b.articles.length} article${b.articles.length > 1 ? "s" : ""} · ${distanceLisible(b.distance_km)}`,
+            ligneDetail,
           ].filter(Boolean);
           marqueur.bindTooltip(lignes.join("<br>"));
 

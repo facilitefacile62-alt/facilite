@@ -46,6 +46,7 @@ import {
   chargerMesArticles,
   chargerTousLesArticles,
   chercherAutourDeMoi,
+  chercherServicesEtEtablissements,
   creerBoutique,
   modifierBoutique,
   envoyerPhoto,
@@ -547,6 +548,13 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   const [rayonKm, setRayonKm] = useState(10);
   const [seulementEnStock, setSeulementEnStock] = useState(false);
   const [resultats, setResultats] = useState([]);
+  // Boutiques 'service'/'etablissement' à proximité — séparées de
+  // `resultats` car sans article : chercherAutourDeMoi/chargerTousLesArticles
+  // partent tous deux de marketplace_items, donc une boutique sans aucun
+  // article y est structurellement invisible, quel que soit son statut.
+  // Uniquement peuplé en mode proximité (nécessite une position) : pas de
+  // pendant "catalogue global" pour l'instant.
+  const [resultatsServices, setResultatsServices] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
   const [globeOuvert, setGlobeOuvert] = useState(false);
@@ -583,15 +591,28 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       try {
         if (pos?.latitude && pos?.longitude) {
           // Mode Proximité : trié par distance géographique (les plus proches en tête)
-          const r = await chercherAutourDeMoi({
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-            rayonKm,
-            categorie,
-            texte: texte.trim() || null,
-            seulementEnStock,
-          });
+          const [r, rServices] = await Promise.all([
+            chercherAutourDeMoi({
+              latitude: pos.latitude,
+              longitude: pos.longitude,
+              rayonKm,
+              categorie,
+              texte: texte.trim() || null,
+              seulementEnStock,
+            }),
+            // "plombier" doit remonter les boutiques service dont le métier
+            // matche, en plus des résultats produits habituels — recherche
+            // séparée, résultats fusionnés uniquement pour la carte (voir
+            // boutiquesPourGlobe plus bas), pas dans la grille d'articles.
+            chercherServicesEtEtablissements({
+              latitude: pos.latitude,
+              longitude: pos.longitude,
+              rayonKm,
+              texte: texte.trim() || null,
+            }).catch(() => []),
+          ]);
           setResultats(r);
+          setResultatsServices(rServices);
         } else {
           // Mode Global : affiche tous les articles de la plateforme (les plus récents en premier)
           const r = await chargerTousLesArticles({
@@ -600,6 +621,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
             seulementEnStock,
           });
           setResultats(r);
+          setResultatsServices([]);
         }
       } catch (e) {
         setErreur(e.message || "Erreur lors du chargement des articles.");
@@ -661,6 +683,38 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       statut: a.statut,
       articlesCount: articlesDeBoutique.length,
       articles: articlesDeBoutique,
+      type_boutique: "produit",
+    });
+  }
+
+  // Un seul pin par boutique quel que soit son type (demande explicite) :
+  // les boutiques service/établissement rejoignent la même liste que les
+  // boutiques produit ci-dessus, jamais un pin par article. idsVus protège
+  // aussi contre un doublon si une boutique remonte des deux côtés (ne
+  // devrait pas arriver — type_boutique gate les deux recherches — mais
+  // resterait inoffensif si jamais les données divergent).
+  for (const s of resultatsServices) {
+    if (s.lat == null || s.lng == null || idsVus.has(s.id)) continue;
+    idsVus.add(s.id);
+    boutiquesPourGlobe.push({
+      id: s.id,
+      lat: s.lat,
+      lng: s.lng,
+      nom: s.nom,
+      quartier: s.quartier,
+      ville: s.ville,
+      telephone_whatsapp: s.telephone_whatsapp,
+      whatsappUrl: s.whatsappUrl,
+      photo: null,
+      titre: null,
+      prix_xof: null,
+      statut: null,
+      articlesCount: 0,
+      articles: [],
+      type_boutique: s.type_boutique,
+      metier: s.metier,
+      description_prestation: s.description_prestation,
+      categorie_etablissement: s.categorie_etablissement,
     });
   }
 
@@ -1002,12 +1056,16 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </div>
       )}
 
-      {position && resultats.length > 0 && (
+      {/* resultatsServices inclus dans la condition : sans ça, une recherche
+          du type "plombier" avec zéro PRODUIT à proximité mais des services
+          correspondants ferait disparaître la carte entière. */}
+      {position && (resultats.length > 0 || resultatsServices.length > 0) && (
         <>
           {/* VUE MOBILE CINÉMATIQUE (TÉLÉPHONE) : CARTE ITINÉRAIRE STYLE YANGO + 4 CASES PRODUITS OU VENDEURS */}
           <div className="block md:hidden">
             <CarteMobileAutourDeMoi
               articles={resultats}
+              boutiquesSansArticles={resultatsServices}
               depart={position}
               onVoirArticle={onVoirArticle}
               onVoirBoutique={onVoirBoutique}
@@ -1019,6 +1077,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
           <div className="hidden md:block">
             <CarteBoutiques
               articles={resultats}
+              boutiquesSansArticles={resultatsServices}
               depart={position}
               onChoisirBoutique={(id) => {
                 const cible = document.getElementById(`boutique-${id}`);
@@ -3339,6 +3398,7 @@ function ModalFicheBoutique({
             </form>
           )}
         </div>
+      </div>
       </div>
 
       {/* Bouton Flottant (FAB) Publier un Article */}

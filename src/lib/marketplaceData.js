@@ -548,6 +548,64 @@ export async function chercherAutourDeMoi({
   }));
 }
 
+/**
+ * Boutiques de type 'service' ou 'etablissement' autour d'une position —
+ * pendant de chercherAutourDeMoi pour les boutiques SANS aucun article.
+ *
+ * rechercher_articles_proches part de marketplace_items : une boutique
+ * service/établissement (pas de catalogue produits) y est structurellement
+ * invisible, quel que soit son statut. D'où cette fonction séparée, qui
+ * interroge rechercher_boutiques_proches (SQL) directement sur
+ * marketplace_stores.
+ *
+ * Forme de retour compatible avec un "regroupement par boutique" comme
+ * celui déjà fait par les composants carte pour les articles (id, nom,
+ * quartier, position, distance_km, articles: []) : ces boutiques peuvent
+ * être fusionnées avec la liste de boutiques dérivée des articles sans
+ * traitement spécial côté carte, seul le type_boutique varie l'icône/la
+ * fiche affichée.
+ */
+export async function chercherServicesEtEtablissements({
+  latitude,
+  longitude,
+  rayonKm = 10,
+  texte = null,
+  type = null, // 'service' | 'etablissement' | null (les deux)
+  limite = 40,
+} = {}) {
+  if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude))) {
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc("rechercher_boutiques_proches", {
+    p_lat: Number(latitude),
+    p_lng: Number(longitude),
+    p_rayon_km: rayonKm,
+    p_texte: texte,
+    p_type: type,
+    p_limite: limite,
+  });
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((r) => ({
+    id: r.id,
+    nom: r.nom,
+    quartier: r.quartier,
+    ville: r.ville,
+    type_boutique: r.type_boutique,
+    metier: r.metier,
+    description_prestation: r.description_prestation,
+    categorie_etablissement: r.categorie_etablissement,
+    telephone_whatsapp: r.telephone_whatsapp,
+    whatsappUrl: lienWhatsapp(r.telephone_whatsapp, r.nom),
+    distance_km: r.distance_km,
+    distanceLisible: r.distance_km == null ? "" : r.distance_km < 1 ? `${Math.round(r.distance_km * 1000)} m` : `${r.distance_km} km`,
+    lat: r.latitude,
+    lng: r.longitude,
+    articles: [],
+  }));
+}
+
 /** Position du navigateur, en promesse. */
 export function positionActuelle() {
   return new Promise((resolve, reject) => {
