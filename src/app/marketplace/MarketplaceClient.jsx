@@ -2643,9 +2643,67 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
           </div>
 
           <div className="p-6">
-            {/* VUE 1 : MES ANNONCES (1:1 Capture avec avion en papier quand vide) */}
+            {/* VUE 1 : MES ANNONCES (1:1 Capture avec bannière et annonces) */}
             {ongletVendeur === "annonces" && (
               <div>
+                {boutiqueActive && (
+                  <div className="mb-6">
+                    {/* Grande Bannière Panoramique Widescreen HD */}
+                    <div
+                      className="relative w-full h-44 sm:h-56 md:h-64 rounded-2xl sm:rounded-3xl overflow-hidden shadow-md bg-cover bg-center border border-gray-100 dark:border-zinc-800 group"
+                      style={{ backgroundImage: `url('${boutiqueActive?.cover_url || profile?.cover_url || "/stellar-cover.png"}')` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
+
+                      <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-5 right-3 sm:right-5 z-10 flex items-end justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-full border-2 sm:border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 shrink-0">
+                            {boutiqueActive?.avatar_url || profile?.avatar_url ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={boutiqueActive?.avatar_url || profile?.avatar_url} alt={nomVendeur} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white text-xl font-black">
+                                {nomVendeur.substring(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="text-white drop-shadow-md">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-base sm:text-2xl font-black leading-tight tracking-tight">
+                                {nomVendeur}
+                              </h3>
+                              <span className="px-2.5 py-0.5 rounded-full bg-purple-600/90 text-white text-[9px] font-black uppercase tracking-wider backdrop-blur-xs shadow-xs">
+                                BOUTIQUE OFFICIELLE
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-zinc-200 font-medium line-clamp-1 mt-0.5">
+                              {boutiqueActive?.description || profile?.headline || "Boutique Officielle Partenaire Facilité"}
+                            </p>
+                            <div className="flex items-center gap-2 text-[11px] text-zinc-300 font-medium mt-1">
+                              <span>📍 {boutiqueActive?.quartier ? `${boutiqueActive.quartier}, ` : ""}{boutiqueActive?.ville || "Sénégal"}</span>
+                              <span>•</span>
+                              <span className="text-emerald-300 font-bold">✓ Vendeur Vérifié</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {telephoneVendeur && (
+                          <a
+                            href={`https://wa.me/221${telephoneVendeur.replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg transition cursor-pointer shrink-0"
+                          >
+                            <i className="fa-brands fa-whatsapp text-base"></i>
+                            <span>WhatsApp</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {!boutiqueActive ? (
                   <FormulaireBoutique
                     userId={userId}
@@ -4124,6 +4182,83 @@ function ModalFicheBoutique({
           </div>
 
           <div className="p-4 sm:p-6">
+          {ongletActif === "produits" && (
+            <div className="mb-6 space-y-4">
+              {/* Grand Bandeau Bannière Panoramique Widescreen HD (1:1 Capture exacte) */}
+              <div
+                className="relative w-full h-44 sm:h-56 md:h-64 rounded-2xl sm:rounded-3xl overflow-hidden shadow-md bg-cover bg-center border border-gray-100 dark:border-zinc-800 group"
+                style={{ backgroundImage: `url('${coverUrl || "/stellar-cover.png"}')` }}
+              >
+                {/* Dégradé cinématographique pour lisibilité */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
+
+                {/* Bouton pour modifier la photo de couverture au clic */}
+                <button
+                  type="button"
+                  onClick={() => coverInputRef.current?.click()}
+                  className="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-full bg-white/90 hover:bg-white dark:bg-black/75 dark:hover:bg-black text-zinc-900 dark:text-white text-xs font-bold flex items-center gap-1.5 shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95"
+                  title="Changer la photo de couverture"
+                >
+                  <i className="fa-solid fa-camera text-xs"></i>
+                  <span className="hidden sm:inline">Changer la bannière</span>
+                </button>
+
+                {/* Profil et Titre intégrés sur la bannière */}
+                <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-5 right-3 sm:right-5 z-10 flex items-end justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="relative group w-14 h-14 sm:w-18 sm:h-18 rounded-full border-2 sm:border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 shrink-0">
+                      {avatarUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={avatarUrl} alt={nom} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white text-xl font-black">{initiales}</div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white cursor-pointer"
+                        title="Changer la photo de profil"
+                      >
+                        <i className="fa-solid fa-camera text-xs"></i>
+                      </button>
+                    </div>
+
+                    <div className="text-white drop-shadow-md">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base sm:text-2xl font-black leading-tight tracking-tight">
+                          {nom}
+                        </h3>
+                        <span className="px-2.5 py-0.5 rounded-full bg-purple-600/90 text-white text-[9px] font-black uppercase tracking-wider backdrop-blur-xs shadow-xs">
+                          BOUTIQUE OFFICIELLE
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-zinc-200 font-medium line-clamp-1 mt-0.5">
+                        {description}
+                      </p>
+                      <div className="flex items-center gap-2 text-[11px] text-zinc-300 font-medium mt-1">
+                        <span>📍 {quartier ? `${quartier}, ` : ""}{ville || "Sénégal"}</span>
+                        <span>•</span>
+                        <span className="text-emerald-300 font-bold">✓ Vendeur Vérifié</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {whatsappUrl && (
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg transition cursor-pointer shrink-0"
+                    >
+                      <i className="fa-brands fa-whatsapp text-base"></i>
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {ongletActif === "produits" && estService && (
             <div className="max-w-lg space-y-4">
               <div>
