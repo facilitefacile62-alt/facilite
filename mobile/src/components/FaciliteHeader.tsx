@@ -1,7 +1,10 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
 import { IconMenuHamburger, IconNotifs, IconRecherche } from '@/components/facilite-icons';
+import PanneauMenuProfil from '@/components/PanneauMenuProfil';
+import PanneauNotifications from '@/components/PanneauNotifications';
 
 // En-tête partagé, simplifié : la navigation principale vit maintenant dans
 // la barre d'onglets native du bas (app-tabs.tsx : Accueil/Offres/
@@ -9,10 +12,17 @@ import { IconMenuHamburger, IconNotifs, IconRecherche } from '@/components/facil
 // design (redondante avec cette barre) est retirée. Profil a sa place dans
 // les onglets ; Notifications prend sa place ici, en haut à droite, à
 // l'emplacement où était l'avatar — badges à ajouter dans un point séparé.
+//
+// Notifications et Menu s'ouvrent en <Modal> (couvrent tout l'écran quelle
+// que soit la taille réelle de ce header) plutôt qu'en overlay positionné
+// localement — Recherche reste un stub, son écran (04-recherche) est un
+// point à part de la feuille de route.
 const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
 
 export default function FaciliteHeader() {
   const router = useRouter();
+  const [notifsOuvertes, setNotifsOuvertes] = useState(false);
+  const [menuOuvert, setMenuOuvert] = useState(false);
 
   return (
     <View className="bg-white border-b border-black/[0.06]">
@@ -24,14 +34,17 @@ export default function FaciliteHeader() {
           <Pressable onPress={() => BIENTOT('Recherche')}>
             <IconRecherche />
           </Pressable>
-          <Pressable onPress={() => BIENTOT('Notifications')}>
+          <Pressable onPress={() => setNotifsOuvertes(true)}>
             <IconNotifs />
           </Pressable>
-          <Pressable onPress={() => BIENTOT('Menu')}>
+          <Pressable onPress={() => setMenuOuvert(true)}>
             <IconMenuHamburger />
           </Pressable>
         </View>
       </View>
+
+      <PanneauNotifications visible={notifsOuvertes} onFermer={() => setNotifsOuvertes(false)} />
+      <PanneauMenuProfil visible={menuOuvert} onFermer={() => setMenuOuvert(false)} />
     </View>
   );
 }
