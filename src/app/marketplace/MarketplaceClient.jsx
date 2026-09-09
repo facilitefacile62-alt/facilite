@@ -300,6 +300,42 @@ export default function MarketplaceClient() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-3 sm:px-5 py-5">
+        {/* Barre de Bascule Rapide : Acheter (Catalogue) vs Vendre (Espace Vendeur) */}
+        <div className="flex items-center justify-between mb-4 bg-white dark:bg-gray-900 p-1.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setOnglet("acheter")}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition cursor-pointer ${
+                onglet === "acheter"
+                  ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-xs"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-bag-shopping text-sm"></i>
+              <span>Acheter (Catalogue)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOnglet("vendre")}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition cursor-pointer ${
+                onglet === "vendre"
+                  ? "bg-[#1877F2] text-white shadow-xs"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-store text-sm"></i>
+              <span>Vendre (Mon Espace Vendeur)</span>
+            </button>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 pr-2 text-xs font-bold text-gray-500 dark:text-gray-400">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Marketplace Facilité en direct</span>
+          </div>
+        </div>
+
         {/* Layout avec barre latérale (mode Catalogue/Acheteur) et zone principale */}
         <div className={`flex flex-col md:flex-row gap-6 items-start w-full ${onglet === "vendre" ? "justify-center" : ""}`}>
           {/* BARRE DU PROFIL & CATÉGORIES : Fixe (sticky) au défilement en mode Catalogue (Acheter) */}
