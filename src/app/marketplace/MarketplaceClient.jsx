@@ -4010,16 +4010,16 @@ function ModalFicheBoutique({
               </span>
             </div>
 
-            {/* Bouton Aperçu Boutique très visible */}
+            {/* Bouton Aperçu Boutique très visible (Séparé du menu) */}
             <button
               type="button"
-              onClick={() => setOngletActif("produits")}
-              className={`w-full mt-2 py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer border shadow-2xs ${
-                ongletActif === "produits"
+              onClick={() => setOngletActif("apercu")}
+              className={`w-full mt-2 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer border shadow-2xs ${
+                ongletActif === "apercu"
                   ? "bg-[#1877F2] text-white border-blue-500 shadow-blue-500/20"
                   : "bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/50"
               }`}
-              title="Voir l'aperçu de ma boutique (profil & annonces)"
+              title="Voir l'aperçu public de ma boutique (bannière & vitrine)"
             >
               <i className="fa-regular fa-eye text-sm"></i>
               <span>Aperçu de la boutique</span>
@@ -4041,7 +4041,7 @@ function ModalFicheBoutique({
                 className={`${estEtablissement ? "fa-solid fa-clock" : estService ? "fa-solid fa-screwdriver-wrench" : "fa-regular fa-calendar-days"} text-sm`}
               ></i>
               <span className="flex-1">
-                {estEtablissement ? "Aperçu (Horaires)" : estService ? "Aperçu (Prestation)" : "Aperçu (Mes annonces)"}
+                {estEtablissement ? "Horaires" : estService ? "Ma prestation" : "Mes annonces"}
               </span>
               {!estService && !estEtablissement && listeArticles.length > 0 && (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${ongletActif === "produits" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"}`}>
@@ -4148,7 +4148,8 @@ function ModalFicheBoutique({
         {/* ========================================================================= */}
         <div className="flex-1 min-w-0 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden min-h-[calc(100vh-120px)]">
           <div className="p-4 sm:p-6">
-          {ongletActif === "produits" && (
+          {/* VUE APERÇU : Grande Bannière Panoramique HD Widescreen + Profil + Contact */}
+          {ongletActif === "apercu" && (
             <div className="mb-6 space-y-4">
               {/* Grand Bandeau Bannière Panoramique Widescreen HD (1:1 Capture exacte) */}
               <div
@@ -4225,7 +4226,7 @@ function ModalFicheBoutique({
             </div>
           )}
 
-          {ongletActif === "produits" && estService && (
+          {(ongletActif === "produits" || ongletActif === "apercu") && estService && (
             <div className="max-w-lg space-y-4">
               <div>
                 <h3 className="text-sm font-black text-zinc-900 dark:text-white">Métier</h3>
@@ -4251,7 +4252,7 @@ function ModalFicheBoutique({
             </div>
           )}
 
-          {ongletActif === "produits" && estEtablissement && (
+          {(ongletActif === "produits" || ongletActif === "apercu") && estEtablissement && (
             <div className="max-w-lg space-y-4">
               <div>
                 <h3 className="text-sm font-black text-zinc-900 dark:text-white">Horaires d&apos;ouverture</h3>
@@ -4288,7 +4289,7 @@ function ModalFicheBoutique({
             </div>
           )}
 
-          {ongletActif === "produits" && !estService && !estEtablissement && (
+          {(ongletActif === "produits" || ongletActif === "apercu") && !estService && !estEtablissement && (
             <div>
               {/* En-tête de section avec bouton Plus / Ajouter un article */}
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">
