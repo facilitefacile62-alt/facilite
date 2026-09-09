@@ -17,12 +17,12 @@ import { resolveSupportConversation } from '@/lib/messages';
 //
 // menuShortcuts : le mock ne fournit pas de données d'exemple pour ce
 // sc-for (aucune cible précisée). Les 10 raccourcis ci-dessous pointent
-// vers les écrans réellement disponibles à ce stade du dépôt (onglets +
-// Aide/Assistance qui rouvre le Support déjà câblé au Point A) ; les
-// autres (Candidature Spontanée, Fonctionnalités, Recherche, Diagnostic
-// CV) arrivent aux points suivants de la feuille de route — alerte
-// honnête en attendant, comme le reste des raccourcis non câblés de
-// l'app (cf. FaciliteHeader, messages.tsx).
+// vers les écrans réellement disponibles à ce stade du dépôt (onglets,
+// Aide/Assistance qui rouvre le Support déjà câblé au Point A,
+// Candidature Spontanée/Fonctionnalités/Recherche câblés aux points
+// suivants) ; seul "Diagnostic CV Gratuit" n'a encore aucun écran —
+// alerte honnête en attendant, comme le reste des raccourcis non câblés
+// de l'app (cf. FaciliteHeader, messages.tsx).
 type Raccourci = {
   id: string;
   icone: string;
@@ -107,7 +107,10 @@ const RACCOURCIS: Raccourci[] = [
     bg: '#EDE9FE',
     titre: 'Candidature Spontanée',
     sous: 'Répertoire des entreprises',
-    action: () => BIENTOT('Candidature Spontanée'),
+    action: ({ router, fermer }) => {
+      fermer();
+      router.push('/candidature-spontanee');
+    },
   },
   {
     id: 'fonctionnalites',
