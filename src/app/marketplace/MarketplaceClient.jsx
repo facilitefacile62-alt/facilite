@@ -3827,6 +3827,19 @@ function ModalFicheBoutique({
         </button>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOngletActif("produits")}
+            className={`px-3 py-1.5 rounded-full text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-xs ${
+              ongletActif === "produits"
+                ? "bg-[#1877F2] text-white"
+                : "bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50"
+            }`}
+            title="Aperçu public de la boutique"
+          >
+            <i className="fa-regular fa-eye text-xs"></i>
+            <span>Aperçu</span>
+          </button>
           <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white truncate max-w-[140px] sm:max-w-xs">
             {nom}
           </span>
@@ -3921,6 +3934,21 @@ function ModalFicheBoutique({
                 <span className="truncate">Commerce &amp; Vente au détail</span>
               </span>
             </div>
+
+            {/* Bouton Aperçu Boutique très visible */}
+            <button
+              type="button"
+              onClick={() => setOngletActif("produits")}
+              className={`w-full mt-2 py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer border shadow-2xs ${
+                ongletActif === "produits"
+                  ? "bg-[#1877F2] text-white border-blue-500 shadow-blue-500/20"
+                  : "bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/50"
+              }`}
+              title="Voir l'aperçu de ma boutique (profil & annonces)"
+            >
+              <i className="fa-regular fa-eye text-sm"></i>
+              <span>Aperçu de la boutique</span>
+            </button>
           </div>
 
           {/* Liste des 8 options du menu (1:1 Identique à la capture Aperçu) */}
@@ -3938,7 +3966,7 @@ function ModalFicheBoutique({
                 className={`${estEtablissement ? "fa-solid fa-clock" : estService ? "fa-solid fa-screwdriver-wrench" : "fa-regular fa-calendar-days"} text-sm`}
               ></i>
               <span className="flex-1">
-                {estEtablissement ? "Horaires" : estService ? "Ma prestation" : "Mes annonces"}
+                {estEtablissement ? "Aperçu (Horaires)" : estService ? "Aperçu (Prestation)" : "Aperçu (Mes annonces)"}
               </span>
               {!estService && !estEtablissement && listeArticles.length > 0 && (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${ongletActif === "produits" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"}`}>
