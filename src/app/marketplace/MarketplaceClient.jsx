@@ -1461,6 +1461,14 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
   const [telephone, setTelephone] = useState(boutique?.telephone_whatsapp || profile?.phone || "+221771001212");
   const [email, setEmail] = useState(profile?.email || "");
 
+  // Champs spécifiques au type_boutique (jamais le type lui-même, choisi une
+  // seule fois à la création — voir FormulaireBoutique).
+  const estService = boutique?.type_boutique === "service";
+  const estEtablissement = boutique?.type_boutique === "etablissement";
+  const [metier, setMetier] = useState(boutique?.metier || "");
+  const [descriptionPrestation, setDescriptionPrestation] = useState(boutique?.description_prestation || "");
+  const [categorieEtablissement, setCategorieEtablissement] = useState(boutique?.categorie_etablissement || "sante");
+
   // Toggles de Préférences
   const [chatDesactive, setChatDesactive] = useState(false);
   const [commentairesDesactives, setCommentairesDesactives] = useState(false);
@@ -1550,6 +1558,9 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
           ville,
           quartier,
           telephone_whatsapp: telephone,
+          metier,
+          description_prestation: descriptionPrestation,
+          categorie_etablissement: categorieEtablissement,
         });
       }
       if (userId) {
@@ -2003,6 +2014,56 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
                 />
               </div>
 
+              {estService && (
+                <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-zinc-800">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Métier</label>
+                    <input
+                      type="text"
+                      value={metier}
+                      onChange={(e) => setMetier(e.target.value)}
+                      placeholder="Ex : Plombier, Électricien..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Description de la prestation</label>
+                    <textarea
+                      rows={2}
+                      value={descriptionPrestation}
+                      onChange={(e) => setDescriptionPrestation(e.target.value)}
+                      placeholder="Spécialités, expérience, zone d'intervention..."
+                      className="w-full px-3.5 py-2 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {estEtablissement && (
+                <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-zinc-800">
+                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Catégorie d&apos;établissement</label>
+                  <select
+                    value={categorieEtablissement}
+                    onChange={(e) => setCategorieEtablissement(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  >
+                    <option value="sante">Santé (clinique, pharmacie...)</option>
+                    <option value="finance">Finance (point Wave/Orange Money...)</option>
+                    <option value="beaute">Beauté (salon, barbier...)</option>
+                    <option value="autre">Autre établissement</option>
+                  </select>
+                  {["sante", "finance"].includes(categorieEtablissement) && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                      <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                      <span>
+                        Catégorie sensible : la fiche reste masquée du public jusqu&apos;à sa vérification par un
+                        administrateur{categorieEtablissement !== boutique?.categorie_etablissement ? " (une nouvelle vérification sera nécessaire)" : ""}.
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={enCours}
@@ -2011,6 +2072,8 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
                 {enCours ? "Enregistrement..." : "Enregistrer les détails"}
               </button>
             </form>
+
+            {estEtablissement && boutique?.id && <EditeurHoraires storeId={boutique.id} />}
           </div>
         </div>
       )}
@@ -2519,7 +2582,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
             </div>
 
             {/* Séparateur / Bloc 5 */}
-            <div className="border-t border-gray-100 dark:border-gray-800">
+            <div className="border-t border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
               {/* 5. Foire aux questions */}
               <button
                 type="button"
@@ -2532,6 +2595,20 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
               >
                 <i className="fa-regular fa-circle-question text-lg text-gray-800 dark:text-gray-200"></i>
                 <span className="flex-1 text-sm font-bold">Foire aux questions</span>
+              </button>
+
+              {/* 6. Réglages */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("parametres")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletVendeur === "parametres"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-solid fa-gear text-lg text-gray-800 dark:text-gray-200"></i>
+                <span className="flex-1 text-sm font-bold">Réglages</span>
               </button>
             </div>
           </div>
