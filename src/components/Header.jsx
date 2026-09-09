@@ -562,10 +562,6 @@ export default function Header() {
   };
 
   const handleLogoOrHomeClick = (e) => {
-    if (isBusinessActive) {
-      handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace");
-      return;
-    }
     handleNavClick(e, "/", "nav_home", "Accueil");
   };
 
@@ -922,7 +918,7 @@ export default function Header() {
           isMobileSearchOpen ? "hidden xl:flex" : "flex"
         }`}>
           <Link
-            href={isBusinessActive ? "/marketplace" : "/"}
+            href="/"
             onClick={handleLogoOrHomeClick}
             className="flex items-center space-x-2 group flex-shrink-0 cursor-pointer"
           >
@@ -1096,10 +1092,10 @@ export default function Header() {
         {/* Navigation Links (Desktop & Tablette - Regroupement propre sans saturation de la barre) */}
         <nav className="hidden xl:flex items-center space-x-2.5 lg:space-x-5 flex-shrink-0">
           <Link
-            href={isBusinessActive ? "/marketplace" : "/"}
+            href="/"
             onClick={handleLogoOrHomeClick}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              pathname === "/" || (isBusinessActive && pathname?.startsWith("/marketplace"))
+              pathname === "/"
                 ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             }`}
@@ -1721,15 +1717,12 @@ export default function Header() {
       {!isMobileSearchOpen && (
         <div className="flex xl:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1 bg-[#FAF6F1]/95 dark:bg-gray-900/95 overflow-hidden px-0.5">
           <Link
-            href={isBusinessActive ? "/marketplace" : "/"}
+            href="/"
             onClick={(e) => {
-              if (isBusinessActive && typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "acheter" }));
-              }
               handleLogoOrHomeClick(e);
             }}
             className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-              pathname === "/" || (isBusinessActive && pathname?.startsWith("/marketplace")) ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+              pathname === "/" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
             }`}
           >
             <i className="fa-solid fa-house text-sm sm:text-base"></i>
