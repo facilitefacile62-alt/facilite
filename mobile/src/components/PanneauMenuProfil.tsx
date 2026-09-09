@@ -115,7 +115,10 @@ const RACCOURCIS: Raccourci[] = [
     bg: '#F3F4F6',
     titre: 'Fonctionnalités',
     sous: 'Tous les outils',
-    action: () => BIENTOT('Fonctionnalités'),
+    action: ({ router, fermer }) => {
+      fermer();
+      router.push('/fonctionnalites');
+    },
   },
   {
     id: 'recherche',

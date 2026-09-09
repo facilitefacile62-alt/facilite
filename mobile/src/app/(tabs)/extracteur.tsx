@@ -58,10 +58,16 @@ export default function ExtracteurScreen() {
         <FaciliteHeader />
 
         <ScrollView className="flex-1 px-3 pt-3.5" contentContainerClassName="pb-8" showsVerticalScrollIndicator={false}>
-          <Pressable onPress={() => router.replace('/')} className="flex-row items-center gap-2 pb-3.5">
-            <IconChevronGauche />
-            <Text className="text-blue-600 text-[13.5px] font-semibold">Retour à l&apos;accueil</Text>
-          </Pressable>
+          <View className="flex-row items-center justify-between pb-3.5">
+            <Pressable onPress={() => router.replace('/')} className="flex-row items-center gap-2">
+              <IconChevronGauche />
+              <Text className="text-blue-600 text-[13.5px] font-semibold">Retour à l&apos;accueil</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push('/fonctionnalites')} className="flex-row items-center gap-1.5">
+              <Text className="text-[13.5px]">🛠️</Text>
+              <Text className="text-blue-600 text-[13.5px] font-semibold">Fonctionnalités</Text>
+            </Pressable>
+          </View>
 
           <LinearGradient colors={['#0d3b34', '#0f4f42']} className="rounded-2xl p-4">
             <View className="flex-row items-center gap-2">
