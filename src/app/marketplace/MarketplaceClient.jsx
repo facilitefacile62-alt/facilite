@@ -1499,194 +1499,130 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
         </div>
       )}
 
-      {/* Disposition en 2 colonnes (1:1 Identique aux captures d'écran) */}
+      {/* Disposition en 2 colonnes (1:1 Identique à la capture d'écran) */}
       <div className="flex flex-col md:flex-row gap-6 items-start w-full">
         {/* ========================================================================= */}
-        {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU D'ACTIONS (1:1 Capture 1)  */}
+        {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU (1:1 Capture exacte)      */}
         {/* ========================================================================= */}
-        <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-          {/* Bannière de couverture en haut */}
-          <div
-            className="h-16 bg-cover bg-center bg-no-repeat relative block bg-slate-900"
-            style={{ backgroundImage: `url('${profile?.cover_url || "/stellar-cover.png"}')` }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-slate-900/90"></div>
-          </div>
-
-          {/* Profil : Avatar avec overlay Modifier + Nom + Titre + Badges */}
-          <div className="px-4 pb-3 pt-0 relative flex flex-col items-start text-left border-b border-gray-100 dark:border-gray-800">
-            {/* Avatar avec bouton appareil photo / Modifier */}
-            <div className="relative group -mt-10 mb-2.5 w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-md overflow-hidden shrink-0">
-              {profile?.avatar_url || boutiqueActive?.avatar_url ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={profile?.avatar_url || boutiqueActive?.avatar_url}
-                  alt={nomVendeur}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span>{nomVendeur.substring(0, 2).toUpperCase()}</span>
-              )}
-
-              {/* Overlay interactif de modification au survol / clic */}
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("parametres")}
-                className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer"
-                title="Modifier la photo"
-              >
-                <i className="fa-solid fa-camera text-sm mb-0.5"></i>
-                <span className="text-[9px] font-bold">Modifier</span>
-              </button>
-            </div>
-
-            {/* Nom de la Boutique & Badge BOUTIQUE */}
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <h3 className="text-xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">
-                {nomVendeur}
-              </h3>
-              <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
-                BOUTIQUE
-              </span>
-            </div>
-
-            {/* Headline / Profession */}
-            <p className="text-xs text-gray-600 dark:text-gray-300 font-medium mb-2.5 line-clamp-1">
-              {profile?.headline || "Juriste Droit Privé & Droits Humains"}
-            </p>
-
-            {/* Tag Pilule Métier / Secteur */}
-            <div className="w-full mb-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold border border-gray-200/60 dark:border-gray-700/60 w-full">
-                <i className="fa-regular fa-folder text-gray-400"></i>
-                <span className="truncate">Commerce &amp; Vente au détail</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Liste des options du menu (1:1 Identique à la capture 1) */}
-          <div className="p-2 space-y-1 text-xs font-bold">
-            {/* 1. Mes annonces (Onglet principal avec style bleu actif de la capture) */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("annonces")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletVendeur === "annonces"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <i className="fa-regular fa-calendar-days text-sm"></i>
-              <span className="flex-1">Mes annonces</span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                  ongletVendeur === "annonces"
-                    ? "bg-white/20 text-white"
-                    : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
-                }`}
-              >
-                {articles.length}
-              </span>
-            </button>
-
-            {/* 2. Faire profit */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("profit")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletVendeur === "profit"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <span className="text-sm">🤑</span>
-              <span className="flex-1">Faire profit</span>
-            </button>
-
-            {/* 3. Abonnés */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("abonnes")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletVendeur === "abonnes"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <i className="fa-solid fa-users text-sm"></i>
-              <span className="flex-1">Abonnés</span>
-            </button>
-
-            {/* 4. Avis */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("avis")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletVendeur === "avis"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <i className="fa-regular fa-face-smile text-sm"></i>
-              <span className="flex-1">Avis</span>
-            </button>
-
-            {/* 5. Foire aux questions */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("faq")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletVendeur === "faq"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <i className="fa-regular fa-circle-question text-sm"></i>
-              <span className="flex-1">Foire aux questions</span>
-            </button>
-
-            {/* 6. À propos & Infos */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("apropos")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletVendeur === "apropos"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <i className="fa-solid fa-store text-sm"></i>
-              <span className="flex-1">À propos &amp; Infos</span>
-            </button>
-
-            {/* 7. Contact & Livraison */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("contact")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletVendeur === "contact"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <i className="fa-solid fa-truck-fast text-sm"></i>
-              <span className="flex-1">Contact &amp; Livraison</span>
-            </button>
-
-            {/* 8. Réglages */}
+        <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden sticky top-20">
+          {/* Header de la carte avec lien RÉGLAGES */}
+          <div className="p-5 pt-4 pb-4 flex flex-col items-center text-center relative">
             <button
               type="button"
               onClick={() => setOngletVendeur("parametres")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletVendeur === "parametres"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
+              className="absolute top-4 right-4 text-[11px] font-black uppercase text-gray-700 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1.5 transition cursor-pointer tracking-wider"
+              title="Paramètres de la boutique"
             >
+              <span>RÉGLAGES</span>
               <i className="fa-solid fa-gear text-sm"></i>
-              <span className="flex-1">Réglages</span>
             </button>
+
+            {/* Avatar vert rond (1:1 Capture exacte) */}
+            <div className="w-24 h-24 rounded-full bg-[#86EFAC] text-white flex items-center justify-center text-5xl mt-3 mb-3 shadow-xs">
+              <svg className="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+            </div>
+
+            {/* Nom du commerçant / Boutique */}
+            <h3 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight">
+              {nomVendeur}
+            </h3>
+
+            {/* Lien / Statut Numéro de Téléphone */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("parametres")}
+              className="text-[11px] font-bold text-[#718096] dark:text-gray-400 hover:text-blue-600 uppercase tracking-wider mt-1.5 transition cursor-pointer"
+            >
+              {telephoneVendeur ? `TÉL : ${telephoneVendeur}` : "AJOUTER LE NUMÉRO DE TÉLÉPHONE"}
+            </button>
+          </div>
+
+          {/* Liste des options avec les séparateurs de la capture d'écran */}
+          <div className="border-t border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200">
+            {/* 1. Faire profit */}
+            <div className="border-b border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("profit")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletVendeur === "profit"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <span className="text-lg">🤑</span>
+                <span className="flex-1 text-sm font-bold">Faire profit</span>
+              </button>
+            </div>
+
+            {/* Séparateur / Bloc 2, 3, 4 */}
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {/* 2. Abonnés */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("abonnes")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletVendeur === "abonnes"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-address-card text-lg text-gray-800 dark:text-gray-200"></i>
+                <span className="flex-1 text-sm font-bold">Abonnés</span>
+              </button>
+
+              {/* 3. Mes annonces */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("annonces")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletVendeur === "annonces"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-calendar-days text-lg text-gray-800 dark:text-gray-200"></i>
+                <span className="flex-1 text-sm font-bold">Mes annonces</span>
+                {articles.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
+                    {articles.length}
+                  </span>
+                )}
+              </button>
+
+              {/* 4. Avis */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("avis")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletVendeur === "avis"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-face-smile text-lg text-gray-800 dark:text-gray-200"></i>
+                <span className="flex-1 text-sm font-bold">Avis</span>
+              </button>
+            </div>
+
+            {/* Séparateur / Bloc 5 */}
+            <div className="border-t border-gray-100 dark:border-gray-800">
+              {/* 5. Foire aux questions */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("faq")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletVendeur === "faq"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-circle-question text-lg text-gray-800 dark:text-gray-200"></i>
+                <span className="flex-1 text-sm font-bold">Foire aux questions</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2926,30 +2862,23 @@ function ModalFicheBoutique({
       {/* ========================================================================= */}
       <div className="w-full max-w-[1400px] mx-auto flex-1 p-2 sm:p-4 flex flex-col md:flex-row gap-6 items-start">
         {/* ========================================================================= */}
-        {/* 1. COLONNE GAUCHE : CARTE PROFIL BOUTIQUE & MENU (1:1 Capture 1)           */}
+        {/* 1. COLONNE GAUCHE : CARTE PROFIL BOUTIQUE & MENU (1:1 Capture exacte)      */}
         {/* ========================================================================= */}
-        <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden sticky top-16">
-          {/* Bannière de couverture en haut de la carte latérale */}
-          <div
-            className="h-20 bg-cover bg-center bg-no-repeat relative block bg-slate-900"
-            style={{ backgroundImage: `url('${coverUrl || "/stellar-cover.png"}')` }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-slate-900/90"></div>
-            {/* Bouton Appareil Photo pour changer la couverture */}
+        <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden sticky top-16">
+          {/* Header de la carte avec lien RÉGLAGES en haut à droite */}
+          <div className="p-5 pt-4 pb-4 flex flex-col items-center text-center relative">
             <button
               type="button"
-              onClick={() => coverInputRef.current?.click()}
-              className="absolute top-2 right-2 z-20 w-7 h-7 rounded-full bg-white/90 hover:bg-white dark:bg-black/60 dark:hover:bg-black text-zinc-800 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95"
-              title="Changer la couverture"
+              onClick={() => setOngletActif("parametres")}
+              className="absolute top-4 right-4 text-[11px] font-black uppercase text-gray-700 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1.5 transition cursor-pointer tracking-wider"
+              title="Paramètres de la boutique"
             >
-              <i className="fa-solid fa-camera text-[10px]"></i>
+              <span>RÉGLAGES</span>
+              <i className="fa-solid fa-gear text-sm"></i>
             </button>
-          </div>
 
-          {/* Profil : Avatar avec overlay Modifier + Nom + Titre + Badges */}
-          <div className="px-4 pb-3 pt-0 relative flex flex-col items-start text-left border-b border-gray-100 dark:border-zinc-800">
-            {/* Avatar avec bouton Modifier */}
-            <div className="relative group -mt-10 mb-2 w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-md overflow-hidden shrink-0">
+            {/* Avatar vert rond (1:1 Capture exacte) */}
+            <div className="relative group w-24 h-24 rounded-full bg-[#86EFAC] text-white flex items-center justify-center text-5xl mt-3 mb-3 shadow-xs overflow-hidden">
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -2958,7 +2887,9 @@ function ModalFicheBoutique({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span>{initiales}</span>
+                <svg className="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
               )}
 
               {/* Overlay interactif de modification au survol / clic */}
@@ -2973,145 +2904,107 @@ function ModalFicheBoutique({
               </button>
             </div>
 
-            {/* Nom de la Boutique & Badge BOUTIQUE */}
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <h3 className="text-xl font-black text-zinc-900 dark:text-white leading-tight tracking-tight">
-                {nom}
-              </h3>
-              <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
-                BOUTIQUE
-              </span>
-            </div>
+            {/* Nom du commerçant / Boutique */}
+            <h3 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight">
+              {nom}
+            </h3>
 
-            {/* Headline / Profession */}
-            <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium mb-2.5 line-clamp-1">
-              {description}
-            </p>
-
-            {/* Tag Pilule Métier / Secteur */}
-            <div className="w-full mb-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold border border-gray-200/60 dark:border-zinc-700/60 w-full">
-                <i className="fa-regular fa-folder text-zinc-400"></i>
-                <span className="truncate">Commerce &amp; Vente au détail</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Liste des options du menu (1:1 Identique à la capture 1) */}
-          <div className="p-2 space-y-1 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => setOngletActif("produits")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletActif === "produits"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <i
-                className={`${estEtablissement ? "fa-solid fa-clock" : estService ? "fa-solid fa-screwdriver-wrench" : "fa-regular fa-calendar-days"} text-sm`}
-              ></i>
-              <span className="flex-1">
-                {estEtablissement ? "Horaires" : estService ? "Ma prestation" : "Mes annonces"}
-              </span>
-              {!estService && !estEtablissement && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${ongletActif === "produits" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"}`}>
-                  {listeArticles.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOngletActif("profit")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletActif === "profit"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <span className="text-sm">🤑</span>
-              <span className="flex-1">Faire profit</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOngletActif("abonnes")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletActif === "abonnes"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <i className="fa-solid fa-users text-sm"></i>
-              <span className="flex-1">Abonnés</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOngletActif("avis")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletActif === "avis"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <i className="fa-regular fa-face-smile text-sm"></i>
-              <span className="flex-1">Avis</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOngletActif("faq")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletActif === "faq"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <i className="fa-regular fa-circle-question text-sm"></i>
-              <span className="flex-1">Foire aux questions</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOngletActif("apropos")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletActif === "apropos"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <i className="fa-solid fa-store text-sm"></i>
-              <span className="flex-1">À propos &amp; Infos</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOngletActif("contact")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletActif === "contact"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <i className="fa-solid fa-truck-fast text-sm"></i>
-              <span className="flex-1">Contact &amp; Livraison</span>
-            </button>
-
+            {/* Lien / Statut Numéro de Téléphone */}
             <button
               type="button"
               onClick={() => setOngletActif("parametres")}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
-                ongletActif === "parametres"
-                  ? "bg-[#1877F2] text-white shadow-md"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }`}
+              className="text-[11px] font-bold text-[#718096] dark:text-gray-400 hover:text-blue-600 uppercase tracking-wider mt-1.5 transition cursor-pointer"
             >
-              <i className="fa-solid fa-gear text-sm"></i>
-              <span className="flex-1">Réglages</span>
+              {telephone ? (telephone.startsWith("+") ? telephone : `+221 ${telephone}`) : "AJOUTER LE NUMÉRO DE TÉLÉPHONE"}
             </button>
+          </div>
+
+          {/* Liste des 5 options avec les séparateurs de la capture d'écran */}
+          <div className="border-t border-gray-100 dark:border-zinc-800 text-xs font-bold text-gray-800 dark:text-gray-200">
+            {/* 1. Faire profit */}
+            <div className="border-b border-gray-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setOngletActif("profit")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletActif === "profit"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                }`}
+              >
+                <span className="text-lg">🤑</span>
+                <span className="flex-1 text-sm font-bold">Faire profit</span>
+              </button>
+            </div>
+
+            {/* Séparateur / Bloc 2, 3, 4 */}
+            <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+              {/* 2. Abonnés */}
+              <button
+                type="button"
+                onClick={() => setOngletActif("abonnes")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletActif === "abonnes"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-address-card text-lg text-gray-800 dark:text-gray-200"></i>
+                <span className="flex-1 text-sm font-bold">Abonnés</span>
+              </button>
+
+              {/* 3. Mes annonces */}
+              <button
+                type="button"
+                onClick={() => setOngletActif("produits")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletActif === "produits"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-calendar-days text-lg text-gray-800 dark:text-gray-200"></i>
+                <span className="flex-1 text-sm font-bold">
+                  {estEtablissement ? "Horaires" : estService ? "Ma prestation" : "Mes annonces"}
+                </span>
+                {!estService && !estEtablissement && listeArticles.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
+                    {listeArticles.length}
+                  </span>
+                )}
+              </button>
+
+              {/* 4. Avis */}
+              <button
+                type="button"
+                onClick={() => setOngletActif("avis")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletActif === "avis"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-face-smile text-lg text-gray-800 dark:text-gray-200"></i>
+                <span className="flex-1 text-sm font-bold">Avis</span>
+              </button>
+            </div>
+
+            {/* Séparateur / Bloc 5 */}
+            <div className="border-t border-gray-100 dark:border-zinc-800">
+              {/* 5. Foire aux questions */}
+              <button
+                type="button"
+                onClick={() => setOngletActif("faq")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletActif === "faq"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-circle-question text-lg text-gray-800 dark:text-gray-200"></i>
+                <span className="flex-1 text-sm font-bold">Foire aux questions</span>
+              </button>
+            </div>
           </div>
         </div>
 
