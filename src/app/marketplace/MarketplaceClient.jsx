@@ -2706,7 +2706,7 @@ function ModalFicheBoutique({
               </button>
             </div>
 
-            {/* Boutons d'action : Publier un article (Plus) & WhatsApp */}
+            {/* Boutons d'action : Publier un article (Plus) & WhatsApp & Réglages */}
             <div className="flex items-center gap-2">
               {onPublierArticle && (
                 <button
@@ -2733,6 +2733,16 @@ function ModalFicheBoutique({
                   <span className="sm:hidden">WhatsApp</span>
                 </a>
               )}
+
+              <button
+                type="button"
+                onClick={() => setOngletActif("parametres")}
+                className="px-3 py-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-black flex items-center gap-1.5 transition cursor-pointer"
+                title="Paramètres de la boutique"
+              >
+                <i className="fa-solid fa-gear text-xs"></i>
+                <span className="hidden sm:inline">Réglages</span>
+              </button>
             </div>
           </div>
 
@@ -2772,11 +2782,20 @@ function ModalFicheBoutique({
               <span>{quartier ? `${quartier}, ` : ""}{ville} · Sénégal</span>
             </span>
 
-            {telephone && (
+            {telephone ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold border border-gray-200/60 dark:border-zinc-700/60">
                 <i className="fa-brands fa-whatsapp text-emerald-500"></i>
                 <span>{telephone}</span>
               </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setOngletActif("parametres")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-200 dark:border-amber-800 cursor-pointer"
+              >
+                <i className="fa-solid fa-phone text-amber-600"></i>
+                <span>Ajouter le numéro de téléphone</span>
+              </button>
             )}
 
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] text-xs font-black border border-blue-200 dark:border-blue-900/50">
@@ -2787,9 +2806,10 @@ function ModalFicheBoutique({
         </div>
 
         {/* ========================================================================= */}
-        {/* 3. BARRE D'ONGLETS DE NAVIGATION                                          */}
+        {/* 3. BARRE D'ONGLETS DE NAVIGATION COMPLÈTE (1:1 Capture)                   */}
         {/* ========================================================================= */}
-        <div className="flex items-center gap-6 px-4 sm:px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 flex-shrink-0 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-4 sm:gap-6 px-4 sm:px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 flex-shrink-0 overflow-x-auto no-scrollbar">
+          {/* 1. Tous les produits */}
           <button
             type="button"
             onClick={() => setOngletActif("produits")}
@@ -2805,6 +2825,75 @@ function ModalFicheBoutique({
             )}
           </button>
 
+          {/* 2. Faire profit */}
+          <button
+            type="button"
+            onClick={() => setOngletActif("profit")}
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              ongletActif === "profit"
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <span>🤑</span>
+            <span>Faire profit</span>
+            {ongletActif === "profit" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
+          </button>
+
+          {/* 3. Abonnés */}
+          <button
+            type="button"
+            onClick={() => setOngletActif("abonnes")}
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              ongletActif === "abonnes"
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <i className="fa-solid fa-users text-xs"></i>
+            <span>Abonnés</span>
+            {ongletActif === "abonnes" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
+          </button>
+
+          {/* 4. Avis */}
+          <button
+            type="button"
+            onClick={() => setOngletActif("avis")}
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              ongletActif === "avis"
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <i className="fa-regular fa-face-smile text-xs"></i>
+            <span>Avis</span>
+            {ongletActif === "avis" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
+          </button>
+
+          {/* 5. Foire aux questions */}
+          <button
+            type="button"
+            onClick={() => setOngletActif("faq")}
+            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              ongletActif === "faq"
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <i className="fa-regular fa-circle-question text-xs"></i>
+            <span>FAQ</span>
+            {ongletActif === "faq" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
+          </button>
+
+          {/* 6. À propos & Infos */}
           <button
             type="button"
             onClick={() => setOngletActif("apropos")}
@@ -2820,6 +2909,7 @@ function ModalFicheBoutique({
             )}
           </button>
 
+          {/* 7. Contact & Livraison */}
           <button
             type="button"
             onClick={() => setOngletActif("contact")}
@@ -2835,6 +2925,7 @@ function ModalFicheBoutique({
             )}
           </button>
 
+          {/* 8. Paramètres */}
           <button
             type="button"
             onClick={() => setOngletActif("parametres")}
@@ -2948,6 +3039,122 @@ function ModalFicheBoutique({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {ongletActif === "profit" && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/60 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🤑</span>
+                  <h3 className="text-sm font-black text-amber-950 dark:text-amber-100">
+                    Faire profit &amp; Multiplier vos ventes
+                  </h3>
+                </div>
+                <p className="text-xs text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
+                  Boostez la visibilité de vos articles, obtenez le badge Commerçant Certifié et recevez les commandes directement sur WhatsApp.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/50 space-y-2">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-base">
+                    <i className="fa-brands fa-whatsapp"></i>
+                  </div>
+                  <h4 className="text-xs font-black text-zinc-900 dark:text-white">Commandes Directes WhatsApp</h4>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Les clients discutent directement avec vous sur WhatsApp pour finaliser l&apos;achat et la livraison.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/50 space-y-2">
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-base">
+                    <i className="fa-solid fa-crown"></i>
+                  </div>
+                  <h4 className="text-xs font-black text-zinc-900 dark:text-white">Badge Boutique Officielle</h4>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Gagnez la confiance immédiate des acheteurs partout au Sénégal.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {ongletActif === "abonnes" && (
+            <div className="py-12 text-center space-y-3">
+              <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-2xl mx-auto">
+                <i className="fa-solid fa-users"></i>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Vos abonnés &amp; clients fidèles</h3>
+                <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                  Vos clients peuvent s&apos;abonner à votre boutique pour être notifiés de vos nouveaux arrivages en priorité.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {ongletActif === "avis" && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-800 flex items-center justify-between">
+                <div>
+                  <div className="text-xl font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
+                    <span>5.0</span>
+                    <div className="flex text-amber-400 text-xs">
+                      <i className="fa-solid fa-star"></i>
+                      <i className="fa-solid fa-star"></i>
+                      <i className="fa-solid fa-star"></i>
+                      <i className="fa-solid fa-star"></i>
+                      <i className="fa-solid fa-star"></i>
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-0.5">Note moyenne de satisfaction</p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 text-[10px] font-black uppercase">
+                  100% Positif
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl border border-gray-100 dark:border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-zinc-900 dark:text-white">Acheteur Vérifié</span>
+                  <span className="text-zinc-400 text-[10px]">Récemment</span>
+                </div>
+                <div className="flex text-amber-400 text-[10px]">
+                  <i className="fa-solid fa-star"></i>
+                  <i className="fa-solid fa-star"></i>
+                  <i className="fa-solid fa-star"></i>
+                  <i className="fa-solid fa-star"></i>
+                  <i className="fa-solid fa-star"></i>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                  « Produit conforme à la description et vendeur très réactif sur WhatsApp. Livraison rapide à Dakar ! »
+                </p>
+              </div>
+            </div>
+          )}
+
+          {ongletActif === "faq" && (
+            <div className="space-y-3">
+              <details className="p-3.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 text-xs group">
+                <summary className="font-bold text-zinc-900 dark:text-white cursor-pointer list-none flex items-center justify-between">
+                  <span>Comment commander un article ?</span>
+                  <i className="fa-solid fa-chevron-down text-[10px] text-zinc-400 group-open:rotate-180 transition"></i>
+                </summary>
+                <p className="mt-2 text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  Cliquez sur un article ou sur le bouton « Contacter sur WhatsApp » pour discuter en direct avec le commerçant et organiser la livraison.
+                </p>
+              </details>
+
+              <details className="p-3.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 text-xs group">
+                <summary className="font-bold text-zinc-900 dark:text-white cursor-pointer list-none flex items-center justify-between">
+                  <span>Quels sont les modes de paiement acceptés ?</span>
+                  <i className="fa-solid fa-chevron-down text-[10px] text-zinc-400 group-open:rotate-180 transition"></i>
+                </summary>
+                <p className="mt-2 text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  Vous pouvez régler à la livraison, par Wave, Orange Money ou en espèces selon les modalités convenues avec la boutique.
+                </p>
+              </details>
             </div>
           )}
 
