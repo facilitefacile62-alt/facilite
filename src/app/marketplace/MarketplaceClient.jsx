@@ -52,6 +52,8 @@ import {
   envoyerPhoto,
   majStock,
   normaliserWhatsapp,
+  obtenirHorairesBoutique,
+  JOURS_SEMAINE,
   positionActuelle,
   publierArticle,
   retirerArticle,
@@ -2458,6 +2460,13 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
   );
 }
 
+const LIBELLES_CATEGORIE_ETABLISSEMENT = {
+  sante: "Santé",
+  finance: "Finance",
+  beaute: "Beauté",
+  autre: "Établissement",
+};
+
 /**
  * Modal Fiche Boutique Complète & Profil Commerçant (1:1 Inspiré de la capture Profil avec bannière couverture, badges, onglets, grille de tous les produits, publication d'articles & modification complète)
  */
@@ -2496,6 +2505,37 @@ function ModalFicheBoutique({
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
+
+  // La fiche s'adapte au type_boutique : un service (plombier, etc.) n'a pas
+  // de catalogue d'articles, un établissement (clinique, salon...) affiche
+  // ses horaires à la place — même onglet "produits", contenu différent.
+  const typeBoutique = boutique?.type_boutique || "produit";
+  const estService = typeBoutique === "service";
+  const estEtablissement = typeBoutique === "etablissement";
+  const [horairesEtablissement, setHorairesEtablissement] = useState([]);
+  const [horairesChargement, setHorairesChargement] = useState(false);
+
+  useEffect(() => {
+    if (!estEtablissement || !boutique?.id) {
+      queueMicrotask(() => setHorairesEtablissement([]));
+      return;
+    }
+    let annule = false;
+    queueMicrotask(() => setHorairesChargement(true));
+    obtenirHorairesBoutique(boutique.id)
+      .then((data) => {
+        if (!annule) setHorairesEtablissement(data);
+      })
+      .catch(() => {
+        if (!annule) setHorairesEtablissement([]);
+      })
+      .finally(() => {
+        if (!annule) setHorairesChargement(false);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [estEtablissement, boutique?.id]);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
@@ -2879,11 +2919,17 @@ function ModalFicheBoutique({
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
-              <i className="fa-regular fa-calendar-days text-sm"></i>
-              <span className="flex-1">Mes annonces</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${ongletActif === "produits" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"}`}>
-                {listeArticles.length}
+              <i
+                className={`${estEtablissement ? "fa-solid fa-clock" : estService ? "fa-solid fa-screwdriver-wrench" : "fa-regular fa-calendar-days"} text-sm`}
+              ></i>
+              <span className="flex-1">
+                {estEtablissement ? "Horaires" : estService ? "Ma prestation" : "Mes annonces"}
               </span>
+              {!estService && !estEtablissement && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${ongletActif === "produits" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"}`}>
+                  {listeArticles.length}
+                </span>
+              )}
             </button>
 
             <button
@@ -2980,7 +3026,70 @@ function ModalFicheBoutique({
 
           {/* Zone de contenu principal à droite */}
           <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
-          {ongletActif === "produits" && (
+          {ongletActif === "produits" && estService && (
+            <div className="max-w-lg space-y-4">
+              <div>
+                <h3 className="text-sm font-black text-zinc-900 dark:text-white">Métier</h3>
+                <p className="text-xs text-zinc-500">Ce que ce prestataire propose</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50">
+                <p className="text-sm font-black text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                  <i className="fa-solid fa-screwdriver-wrench"></i>
+                  {boutique?.metier || "Non renseigné"}
+                </p>
+              </div>
+              {boutique?.description_prestation && (
+                <div>
+                  <h3 className="text-sm font-black text-zinc-900 dark:text-white mb-1.5">Description</h3>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed whitespace-pre-line">
+                    {boutique.description_prestation}
+                  </p>
+                </div>
+              )}
+              <p className="text-[11px] text-zinc-400 italic">
+                Zone d&apos;intervention : {quartier || ville || "non renseignée"}
+              </p>
+            </div>
+          )}
+
+          {ongletActif === "produits" && estEtablissement && (
+            <div className="max-w-lg space-y-4">
+              <div>
+                <h3 className="text-sm font-black text-zinc-900 dark:text-white">Horaires d&apos;ouverture</h3>
+                <p className="text-xs text-zinc-500">Jours et heures d&apos;accueil du public</p>
+              </div>
+              {horairesChargement ? (
+                <p className="text-xs text-zinc-400 italic">Chargement…</p>
+              ) : horairesEtablissement.length === 0 ? (
+                <p className="text-xs text-zinc-400 italic">Horaires non renseignés.</p>
+              ) : (
+                <ul className="text-xs divide-y divide-gray-100 dark:divide-zinc-800 rounded-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden">
+                  {horairesEtablissement.map((h) => (
+                    <li
+                      key={h.jour_semaine}
+                      className="flex items-center justify-between px-3.5 py-2 bg-white dark:bg-zinc-900"
+                    >
+                      <span className="font-bold text-zinc-700 dark:text-zinc-300">{JOURS_SEMAINE[h.jour_semaine]}</span>
+                      <span className={h.ferme_ce_jour ? "text-zinc-400" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
+                        {h.ferme_ce_jour
+                          ? "Fermé"
+                          : `${h.heure_ouverture?.slice(0, 5) || "?"} – ${h.heure_fermeture?.slice(0, 5) || "?"}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div>
+                <h3 className="text-sm font-black text-zinc-900 dark:text-white mb-1.5">Infos pratiques</h3>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                  Catégorie : {LIBELLES_CATEGORIE_ETABLISSEMENT[boutique?.categorie_etablissement] || "Établissement"}
+                  {boutique?.verifie && <span className="ml-2 text-emerald-600 font-bold">✓ Vérifié</span>}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {ongletActif === "produits" && !estService && !estEtablissement && (
             <div>
               {/* En-tête de section avec bouton Plus / Ajouter un article */}
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">

@@ -606,6 +606,25 @@ export async function chercherServicesEtEtablissements({
   }));
 }
 
+// ---------------------------------------------------------------------------
+// Horaires (établissements)
+// ---------------------------------------------------------------------------
+
+/** jour_semaine suit la convention JS `Date.getDay()` : 0 = dimanche. */
+export const JOURS_SEMAINE = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+
+/** Horaires d'ouverture d'un établissement, un par jour (0-6), triés. */
+export async function obtenirHorairesBoutique(storeId) {
+  if (!storeId) return [];
+  const { data, error } = await supabase
+    .from("marketplace_horaires")
+    .select("jour_semaine, heure_ouverture, heure_fermeture, ferme_ce_jour")
+    .eq("store_id", storeId)
+    .order("jour_semaine", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
 /** Position du navigateur, en promesse. */
 export function positionActuelle() {
   return new Promise((resolve, reject) => {

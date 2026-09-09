@@ -12,6 +12,15 @@ const distanceLisible = (km) =>
 
 const prixLisible = (v) => new Intl.NumberFormat("fr-FR").format(Number(v) || 0);
 
+const COULEUR_SERVICE = "#F59E0B";
+const COULEUR_ETABLISSEMENT = "#8B5CF6";
+const LIBELLES_CATEGORIE_ETABLISSEMENT = {
+  sante: "Santé",
+  finance: "Finance",
+  beaute: "Beauté",
+  autre: "Établissement",
+};
+
 function point(lat, lng) {
   const a = lat === null || lat === undefined || lat === "" ? null : Number(lat);
   const b = lng === null || lng === undefined || lng === "" ? null : Number(lng);
@@ -30,6 +39,7 @@ function calculerHeureArrivee(minutes = 4) {
 
 export default function CarteMobileAutourDeMoi({
   articles = [],
+  boutiquesSansArticles = [],
   depart = null,
   onVoirArticle,
   onVoirBoutique,
@@ -47,7 +57,9 @@ export default function CarteMobileAutourDeMoi({
   const [boutiqueActiveId, setBoutiqueActiveId] = useState(null);
   const [carteChargee, setCarteChargee] = useState(false);
 
-  // Regroupement des boutiques uniques avec leurs articles associés
+  // Regroupement des boutiques uniques avec leurs articles associés, plus
+  // les boutiques service/établissement (sans stock, un seul pin chacune)
+  // reçues séparément depuis MarketplaceClient.
   const boutiques = useMemo(() => {
     const map = new Map();
     for (const a of articles) {
@@ -64,13 +76,34 @@ export default function CarteMobileAutourDeMoi({
           position: p,
           telephone_whatsapp: a.telephone_whatsapp,
           whatsappUrl: a.whatsappUrl,
+          type_boutique: "produit",
           articles: [],
         });
       }
       map.get(id).articles.push(a);
     }
+    for (const s of boutiquesSansArticles) {
+      if (map.has(s.id)) continue;
+      const p = point(s.lat, s.lng);
+      if (!p) continue;
+      map.set(s.id, {
+        id: s.id,
+        nom: s.nom || "Boutique",
+        quartier: s.quartier || "Dakar",
+        ville: s.ville || "Dakar",
+        distance_km: s.distance_km,
+        position: p,
+        telephone_whatsapp: s.telephone_whatsapp,
+        whatsappUrl: s.whatsappUrl,
+        type_boutique: s.type_boutique,
+        metier: s.metier,
+        description_prestation: s.description_prestation,
+        categorie_etablissement: s.categorie_etablissement,
+        articles: [],
+      });
+    }
     return [...map.values()];
-  }, [articles]);
+  }, [articles, boutiquesSansArticles]);
 
   // Initialisation de la sélection par défaut (premier article ou première
   // boutique) — setState différé : corps de l'effet, pas un callback d'un
@@ -289,14 +322,22 @@ export default function CarteMobileAutourDeMoi({
           polylineRef.current = L.featureGroup([borderLine, mainLine, trafficLine]);
         }
 
-        // 4. Autres boutiques environnantes (petits points)
+        // 4. Autres boutiques environnantes (petits points) — couleur selon
+        // le type_boutique : un seul pin par boutique quel que soit son
+        // type, jamais un pin par article individuel.
         for (const b of boutiques) {
           if (b.position && (!destPos || b.position[0] !== destPos[0] || b.position[1] !== destPos[1])) {
             points.push(b.position);
+            const couleurPoint =
+              b.type_boutique === "service"
+                ? COULEUR_SERVICE
+                : b.type_boutique === "etablissement"
+                  ? COULEUR_ETABLISSEMENT
+                  : "#1E293B";
             const otherIcon = L.divIcon({
               className: "custom-small-store",
               html: `
-                <div style="width: 14px; height: 14px; background: #1E293B; border: 2px solid white; border-radius: 9999px; box-shadow: 0 2px 4px rgba(0,0,0,0.25);"></div>
+                <div style="width: 14px; height: 14px; background: ${couleurPoint}; border: 2px solid white; border-radius: 9999px; box-shadow: 0 2px 4px rgba(0,0,0,0.25);"></div>
               `,
               iconSize: [14, 14],
               iconAnchor: [7, 7],
@@ -617,6 +658,8 @@ export default function CarteMobileAutourDeMoi({
             {LISTE_AFFICHEE_4.map((b) => {
               const estActif = boutiqueActiveId === b.id;
               const nbArticles = b.articles.length;
+              const estService = b.type_boutique === "service";
+              const estEtablissement = b.type_boutique === "etablissement";
 
               return (
                 <div
@@ -652,12 +695,26 @@ export default function CarteMobileAutourDeMoi({
                       </div>
                     </div>
 
-                    {/* Badge Disponibilité & Stock */}
+                    {/* Badge Disponibilité & Stock — s'adapte au type_boutique */}
                     <div className="bg-white dark:bg-zinc-900 rounded-xl p-1.5 border border-gray-100 dark:border-zinc-800 mb-2">
-                      <p className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        {nbArticles} article{nbArticles > 1 ? "s" : ""} dispo
-                      </p>
+                      {estService ? (
+                        <p className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1 truncate">
+                          <i className="fa-solid fa-screwdriver-wrench text-[9px]"></i>
+                          <span className="truncate">{b.metier || "Service"}</span>
+                        </p>
+                      ) : estEtablissement ? (
+                        <p className="text-[10px] font-extrabold text-violet-600 dark:text-violet-400 flex items-center gap-1 truncate">
+                          <i className="fa-solid fa-building text-[9px]"></i>
+                          <span className="truncate">
+                            {LIBELLES_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "Établissement"}
+                          </span>
+                        </p>
+                      ) : (
+                        <p className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          {nbArticles} article{nbArticles > 1 ? "s" : ""} dispo
+                        </p>
+                      )}
                       <p className="text-[9px] text-zinc-400 mt-0.5">
                         Distance : {distanceLisible(b.distance_km ?? 1.2)}
                       </p>

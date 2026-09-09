@@ -341,7 +341,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           
           <div className="px-3.5 sm:px-4 py-1.5 text-[11px] text-gray-500 dark:text-gray-400 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/40">
             <span>
-              {boutiques.length} boutique{boutiques.length > 1 ? "s" : ""} dans le rayon choisi. Touchez un marqueur pour voir ses articles.
+              {boutiques.length} boutique{boutiques.length > 1 ? "s" : ""} dans le rayon choisi. Touchez un marqueur pour voir le détail.
             </span>
             {modeCompact && (
               <span className="text-blue-600 dark:text-blue-400 font-bold text-[10px]">

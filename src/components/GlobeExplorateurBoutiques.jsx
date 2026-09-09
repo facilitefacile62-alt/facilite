@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
-import { echapperHtml, positionActuelle } from "@/lib/marketplaceData";
+import { echapperHtml, positionActuelle, obtenirHorairesBoutique, JOURS_SEMAINE } from "@/lib/marketplaceData";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
 // anonyme à ces tuiles (elles renvoient un placeholder "API KEY REQUIRED" en
@@ -21,6 +21,24 @@ const TUILES_OSM = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const FILTRE_TUILES_SOMBRE = "invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9)";
 
 const CENTRE_SENEGAL = [14.6937, -17.4441]; // [lat, lng] Dakar / Thiès
+
+// Un seul pin par boutique quel que soit son type_boutique — l'icône varie,
+// jamais le nombre de pins (une boutique service/établissement n'a par
+// construction aucun article, donc aucune multiplication possible).
+const COULEUR_SERVICE = "#F59E0B";
+const COULEUR_ETABLISSEMENT = "#8B5CF6";
+const EMOJI_CATEGORIE_ETABLISSEMENT = {
+  sante: "🏥",
+  finance: "🏦",
+  beaute: "💇🏾",
+  autre: "🏢",
+};
+const LIBELLES_CATEGORIE_ETABLISSEMENT = {
+  sante: "Santé",
+  finance: "Finance",
+  beaute: "Beauté",
+  autre: "Établissement",
+};
 
 // Avatars de démonstration pour commerçants / candidats
 const AVATARS_SNAP = [
@@ -65,6 +83,8 @@ export default function GlobeExplorateurBoutiques({
   const [erreurLocalisation, setErreurLocalisation] = useState("");
   const [vueBoutiqueDetails, setVueBoutiqueDetails] = useState(false);
   const [cartePrete, setCartePrete] = useState(false);
+  const [horaires, setHoraires] = useState([]);
+  const [horairesChargement, setHorairesChargement] = useState(false);
 
   // Filtrer les boutiques avec coordonnées valides
   const marqueurs = useMemo(() => {
@@ -210,9 +230,31 @@ export default function GlobeExplorateurBoutiques({
       const estCertifie = Boolean(b.estCertifie || idx % 2 === 0);
       const estActif = b.statut === "en_stock" || (b.articles && b.articles.length > 0);
       const estSelectionne = boutiqueSelectionnee?.id === b.id;
+      const typeBoutique = b.type_boutique || "produit";
 
-      // Couleur de bordure : Vert Menthe #10B981 si actif, Bleu Roi #2563EB si certifié
-      const bordureCouleur = estCertifie ? "#2563EB" : estActif ? "#10B981" : "#10B981";
+      // Couleur de bordure et contenu de l'avatar selon le type : produit
+      // garde le rendu photo/emoji existant (Vert Menthe #10B981 si actif,
+      // Bleu Roi #2563EB si certifié) ; service/établissement ont leur
+      // propre couleur fixe et une icône dédiée — "en stock" et "certifié"
+      // n'ont pas de sens pour eux (zéro article par construction).
+      let bordureCouleur;
+      let contenuAvatar;
+      let badgeLive = "";
+      if (typeBoutique === "service") {
+        bordureCouleur = COULEUR_SERVICE;
+        contenuAvatar = `<span class="text-2xl">🔧</span>`;
+      } else if (typeBoutique === "etablissement") {
+        bordureCouleur = COULEUR_ETABLISSEMENT;
+        contenuAvatar = `<span class="text-2xl">${EMOJI_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "🏢"}</span>`;
+      } else {
+        bordureCouleur = estCertifie ? "#2563EB" : "#10B981";
+        contenuAvatar = aPhoto
+          ? `<img src="${aPhoto}" alt="${nomCourt}" class="w-full h-full object-cover" />`
+          : `<span class="text-2xl">${avatarInfo.emoji}</span>`;
+        badgeLive = estActif
+          ? `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">LIVE</div>`
+          : "";
+      }
 
       const htmlMarqueur = `
         <div class="snap-marker-pin group flex flex-col items-center select-none cursor-pointer transform transition-all duration-300 hover:scale-115 ${
@@ -228,17 +270,9 @@ export default function GlobeExplorateurBoutiques({
           <!-- Avatar Circulaire avec Bordure Colorée (#10B981 ou #2563EB) & Story Ring -->
           <div class="relative w-13 h-13 rounded-full p-[3px] shadow-2xl flex items-center justify-center" style="background: ${bordureCouleur}; box-shadow: 0 4px 14px ${bordureCouleur}60;">
             <div class="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border-2 border-white dark:border-gray-950 shadow-inner">
-              ${
-                aPhoto
-                  ? `<img src="${aPhoto}" alt="${nomCourt}" class="w-full h-full object-cover" />`
-                  : `<span class="text-2xl">${avatarInfo.emoji}</span>`
-              }
+              ${contenuAvatar}
             </div>
-            ${
-              estActif
-                ? `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">LIVE</div>`
-                : ""
-            }
+            ${badgeLive}
           </div>
 
           <!-- Ombre portée 3D au sol -->
@@ -267,6 +301,31 @@ export default function GlobeExplorateurBoutiques({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     rafraichirMarqueurs();
   }, [rafraichirMarqueurs, cartePrete]);
+
+  // Horaires d'ouverture, chargés seulement pour un établissement dont la
+  // fiche est ouverte — inutile pour produit/service, qui n'ont pas de
+  // marketplace_horaires.
+  useEffect(() => {
+    if (!vueBoutiqueDetails || boutiqueSelectionnee?.type_boutique !== "etablissement") {
+      queueMicrotask(() => setHoraires([]));
+      return;
+    }
+    let annule = false;
+    queueMicrotask(() => setHorairesChargement(true));
+    obtenirHorairesBoutique(boutiqueSelectionnee.id)
+      .then((data) => {
+        if (!annule) setHoraires(data);
+      })
+      .catch(() => {
+        if (!annule) setHoraires([]);
+      })
+      .finally(() => {
+        if (!annule) setHorairesChargement(false);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [vueBoutiqueDetails, boutiqueSelectionnee]);
 
   // Centrer sur la position GPS de l'utilisateur avec indicateur "Vous êtes ici"
   const allerAMaPosition = async () => {
@@ -598,7 +657,11 @@ export default function GlobeExplorateurBoutiques({
                     className="w-full py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40 transition cursor-pointer"
                   >
                     <i className="fa-brands fa-whatsapp text-lg"></i>
-                    Discuter et commander sur WhatsApp
+                    {boutiqueSelectionnee.type_boutique === "service"
+                      ? "Décrire votre besoin sur WhatsApp"
+                      : boutiqueSelectionnee.type_boutique === "etablissement"
+                        ? "Contacter sur WhatsApp"
+                        : "Discuter et commander sur WhatsApp"}
                   </a>
                 ) : (
                   <p className="text-xs text-gray-400 text-center font-bold">
@@ -607,66 +670,126 @@ export default function GlobeExplorateurBoutiques({
                 )}
               </div>
 
-              {/* Articles disponibles dans cette boutique */}
-              <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
-                <div className="flex items-center justify-between">
+              {/* Contenu de la fiche, adapté au type_boutique */}
+              {boutiqueSelectionnee.type_boutique === "service" ? (
+                <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
                   <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                    <i className="fa-solid fa-store text-[#1877F2]"></i>
-                    Articles en rayon ({boutiqueSelectionnee.articles?.length || 0})
+                    <i className="fa-solid fa-screwdriver-wrench text-amber-400"></i>
+                    Métier
                   </h4>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setVueBoutiqueDetails(false);
-                      onVoirBoutique?.(boutiqueSelectionnee);
-                    }}
-                    className="text-xs font-bold text-sky-400 hover:underline cursor-pointer"
-                  >
-                    Voir la boutique
-                  </button>
-                </div>
-
-                {boutiqueSelectionnee.articles && boutiqueSelectionnee.articles.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {boutiqueSelectionnee.articles.map((art) => (
-                      <div
-                        key={art.id}
-                        onClick={() => {
-                          setVueBoutiqueDetails(false);
-                          onVoirArticle?.(art);
-                        }}
-                        className="group p-2 rounded-2xl border border-gray-800 bg-gray-950/70 hover:border-gray-700 transition cursor-pointer flex flex-col justify-between"
-                      >
-                        <div className="aspect-square w-full rounded-xl overflow-hidden bg-gray-800 mb-1.5">
-                          {art.photos?.[0] ? (
-                            <img
-                              src={urlPhoto(art.photos[0])}
-                              alt={art.titre}
-                              className="w-full h-full object-cover group-hover:scale-105 transition"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
-                              🛍️
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-bold text-gray-100 line-clamp-1">
-                            {art.titre}
-                          </p>
-                          <p className="text-[11px] font-black text-[#10B981] mt-0.5">
-                            {prixLisible(art.prix_xof)} FCFA
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400 text-center py-4">
-                    Aucun article publié pour le moment.
+                  <p className="text-sm font-bold text-white">
+                    {boutiqueSelectionnee.metier || "Service"}
                   </p>
-                )}
-              </div>
+                  {boutiqueSelectionnee.description_prestation && (
+                    <>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 mt-4">
+                        Description
+                      </h4>
+                      <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-line">
+                        {boutiqueSelectionnee.description_prestation}
+                      </p>
+                    </>
+                  )}
+                  <p className="text-xs text-gray-500 italic pt-2">
+                    Zone d&apos;intervention : {boutiqueSelectionnee.quartier || boutiqueSelectionnee.ville || "Dakar"}
+                  </p>
+                </div>
+              ) : boutiqueSelectionnee.type_boutique === "etablissement" ? (
+                <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                    <i className="fa-solid fa-clock text-violet-400"></i>
+                    Horaires d&apos;ouverture
+                  </h4>
+                  {horairesChargement ? (
+                    <p className="text-xs text-gray-500 italic">Chargement…</p>
+                  ) : horaires.length === 0 ? (
+                    <p className="text-xs text-gray-500 italic">Horaires non renseignés.</p>
+                  ) : (
+                    <ul className="text-xs text-gray-200 divide-y divide-gray-800/80">
+                      {horaires.map((h) => (
+                        <li key={h.jour_semaine} className="flex items-center justify-between py-1.5">
+                          <span className="font-bold">{JOURS_SEMAINE[h.jour_semaine]}</span>
+                          <span className={h.ferme_ce_jour ? "text-gray-500" : "text-emerald-400 font-bold"}>
+                            {h.ferme_ce_jour
+                              ? "Fermé"
+                              : `${h.heure_ouverture?.slice(0, 5) || "?"} – ${h.heure_fermeture?.slice(0, 5) || "?"}`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 mt-4">
+                    Infos pratiques
+                  </h4>
+                  <p className="text-xs text-gray-300">
+                    Catégorie :{" "}
+                    {LIBELLES_CATEGORIE_ETABLISSEMENT[boutiqueSelectionnee.categorie_etablissement] || "Établissement"}
+                    {boutiqueSelectionnee.verifie && (
+                      <span className="ml-2 text-emerald-400 font-bold">✓ Vérifié</span>
+                    )}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                      <i className="fa-solid fa-store text-[#1877F2]"></i>
+                      Articles en rayon ({boutiqueSelectionnee.articles?.length || 0})
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVueBoutiqueDetails(false);
+                        onVoirBoutique?.(boutiqueSelectionnee);
+                      }}
+                      className="text-xs font-bold text-sky-400 hover:underline cursor-pointer"
+                    >
+                      Voir la boutique
+                    </button>
+                  </div>
+
+                  {boutiqueSelectionnee.articles && boutiqueSelectionnee.articles.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {boutiqueSelectionnee.articles.map((art) => (
+                        <div
+                          key={art.id}
+                          onClick={() => {
+                            setVueBoutiqueDetails(false);
+                            onVoirArticle?.(art);
+                          }}
+                          className="group p-2 rounded-2xl border border-gray-800 bg-gray-950/70 hover:border-gray-700 transition cursor-pointer flex flex-col justify-between"
+                        >
+                          <div className="aspect-square w-full rounded-xl overflow-hidden bg-gray-800 mb-1.5">
+                            {art.photos?.[0] ? (
+                              <img
+                                src={urlPhoto(art.photos[0])}
+                                alt={art.titre}
+                                className="w-full h-full object-cover group-hover:scale-105 transition"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                                🛍️
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-bold text-gray-100 line-clamp-1">
+                              {art.titre}
+                            </p>
+                            <p className="text-[11px] font-black text-[#10B981] mt-0.5">
+                              {prixLisible(art.prix_xof)} FCFA
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 text-center py-4">
+                      Aucun article publié pour le moment.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
