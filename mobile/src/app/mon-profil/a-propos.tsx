@@ -13,13 +13,12 @@ import { useAuth } from '@/context/AuthContext';
 // (tabs)/profil.tsx qui possède déjà la route `/profil`, même précaution
 // que offre/[id].tsx vis-à-vis de (tabs)/offres.tsx.
 //
-// Les onglets "Mes documents" / "Paramètres" et le bouton "Scanner
-// Document" n'ont pas d'écran/service réel derrière eux (aucune fonction
-// de scan CV/CNI/Passeport dans ce dépôt, l'Extracteur ne fait que
-// l'OCR d'annonces) : alerte honnête, comme "Mes CV et documents" /
-// "Paramètres" déjà stub dans (tabs)/profil.tsx. Seule "À propos" (les 3
-// rubriques ci-dessous) a un vrai contenu à ce point de la feuille de
-// route.
+// Les onglets "Mes documents" / "Paramètres" n'ont pas d'écran réel
+// derrière eux (comme "Mes CV et documents" / "Paramètres" déjà stub
+// dans (tabs)/profil.tsx) : alerte honnête. "Scanner Document" pousse
+// vers scanner-document.tsx, un vrai flux (CNI/passeport + CV, voir
+// lib/scanDocument.ts) qui réutilise les endpoints déjà déployés côté
+// web (/api/profil/scan-identity-document, /api/parse-document).
 const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
 
 const RUBRIQUES = [
@@ -94,7 +93,7 @@ export default function ProfilAProposScreen() {
 
           <View className="px-5 pt-4 pb-1">
             <Pressable
-              onPress={() => BIENTOT('Scanner Document')}
+              onPress={() => router.push('/mon-profil/scanner-document')}
               className="bg-emerald-500 rounded-full py-2.5 items-center flex-row justify-center gap-2">
               <Text className="text-white text-[12.5px] font-bold">⛶ Scanner Document (CV, CNI, Passeport)</Text>
             </Pressable>
