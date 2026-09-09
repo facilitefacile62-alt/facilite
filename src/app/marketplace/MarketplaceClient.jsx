@@ -4302,16 +4302,14 @@ function ModalFicheBoutique({
                   </p>
                 </div>
 
-                {onPublierArticle && (
-                  <button
-                    type="button"
-                    onClick={onPublierArticle}
-                    className="px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95"
-                  >
-                    <i className="fa-solid fa-plus text-xs"></i>
-                    <span>Ajouter un article</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setOngletActif("publier")}
+                  className="px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95"
+                >
+                  <i className="fa-solid fa-plus text-xs"></i>
+                  <span>Ajouter un article</span>
+                </button>
               </div>
 
               {chargement ? (
@@ -4326,38 +4324,34 @@ function ModalFicheBoutique({
                     <h3 className="text-sm sm:text-base font-normal text-zinc-700 dark:text-zinc-300">
                       Il n&apos;y a pas encore d&apos;annonces.
                     </h3>
-                    {onPublierArticle && (
-                      <button
-                        type="button"
-                        onClick={onPublierArticle}
-                        className="text-sm sm:text-base font-medium text-zinc-900 dark:text-white hover:text-blue-600 transition cursor-pointer pt-1 block mx-auto"
-                      >
-                        Créez-en une maintenant !
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setOngletActif("publier")}
+                      className="text-sm sm:text-base font-medium text-zinc-900 dark:text-white hover:text-blue-600 transition cursor-pointer pt-1 block mx-auto"
+                    >
+                      Créez-en une maintenant !
+                    </button>
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
                   {/* Carte interactive "+ Publier un article" intégrée en tête de liste */}
-                  {onPublierArticle && (
-                    <button
-                      type="button"
-                      onClick={onPublierArticle}
-                      className="group flex flex-col items-center justify-center min-h-[220px] sm:min-h-[260px] rounded-2xl sm:rounded-3xl border-2 border-dashed border-blue-400/80 dark:border-blue-600/80 bg-blue-50/40 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 p-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer shadow-xs"
-                      title="Ajouter un article à la boutique"
-                    >
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md group-hover:scale-110 transition-transform mb-3">
-                        <i className="fa-solid fa-plus"></i>
-                      </div>
-                      <span className="text-xs sm:text-sm font-black text-center text-zinc-900 dark:text-white">
-                        Publier un article
-                      </span>
-                      <span className="text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 text-center mt-1">
-                        Ajouter un nouveau produit
-                      </span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setOngletActif("publier")}
+                    className="group flex flex-col items-center justify-center min-h-[220px] sm:min-h-[260px] rounded-2xl sm:rounded-3xl border-2 border-dashed border-blue-400/80 dark:border-blue-600/80 bg-blue-50/40 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 p-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer shadow-xs"
+                    title="Ajouter un article à la boutique"
+                  >
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md group-hover:scale-110 transition-transform mb-3">
+                      <i className="fa-solid fa-plus"></i>
+                    </div>
+                    <span className="text-xs sm:text-sm font-black text-center text-zinc-900 dark:text-white">
+                      Publier un article
+                    </span>
+                    <span className="text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 text-center mt-1">
+                      Ajouter un nouveau produit
+                    </span>
+                  </button>
 
                   {listeArticles.map((art) => (
                     <CarteArticle
@@ -4569,6 +4563,41 @@ function ModalFicheBoutique({
             </div>
           )}
 
+          {/* VUE PUBLIER UN ARTICLE DANS LA BOUTIQUE */}
+          {ongletActif === "publier" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setOngletActif("apercu")}
+                  className="text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-arrow-left"></i>
+                  <span>Retour à l&apos;aperçu</span>
+                </button>
+                <h3 className="text-sm font-black text-zinc-900 dark:text-white">
+                  Publier un nouvel article
+                </h3>
+              </div>
+
+              <FormulaireArticle
+                userId={userId}
+                storeId={boutique?.id || "facilite_shop"}
+                onPublie={async () => {
+                  if (boutique?.id && boutique?.id !== "facilite_shop") {
+                    try {
+                      const nouveaux = await chargerMesArticles(boutique.id);
+                      setListeArticles(nouveaux);
+                    } catch {}
+                  }
+                  onBoutiqueUpdate?.();
+                  setOngletActif("apercu");
+                  showToast("✓ Article publié avec succès dans votre boutique !");
+                }}
+              />
+            </div>
+          )}
+
           {ongletActif === "parametres" && (
             <VueReglages
               userId={userId}
@@ -4585,19 +4614,17 @@ function ModalFicheBoutique({
       </div>
 
       {/* Bouton Flottant (FAB) Publier un Article */}
-      {onPublierArticle && (
-        <button
-          type="button"
-          onClick={onPublierArticle}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-300 group shadow-emerald-600/30"
-          title="Publier un nouvel article dans cette boutique"
-        >
-          <div className="w-6 h-6 rounded-full bg-gray-950 text-[#10E688] flex items-center justify-center text-xs group-hover:rotate-90 transition-transform duration-300">
-            <i className="fa-solid fa-plus"></i>
-          </div>
-          <span className="text-xs sm:text-sm font-extrabold tracking-tight">Publier un article</span>
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setOngletActif("publier")}
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-300 group shadow-emerald-600/30"
+        title="Publier un nouvel article dans cette boutique"
+      >
+        <div className="w-6 h-6 rounded-full bg-gray-950 text-[#10E688] flex items-center justify-center text-xs group-hover:rotate-90 transition-transform duration-300">
+          <i className="fa-solid fa-plus"></i>
+        </div>
+        <span className="text-xs sm:text-sm font-extrabold tracking-tight">Publier un article</span>
+      </button>
     </div>
   );
 }
