@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 
-// Écran Profil minimal (aucune maquette hifi fournie pour ce point — le
-// dossier de design a bien 12a-12e/08-menu-profil, hors périmètre de cette
-// passe). Données réelles (AuthContext) + déconnexion fonctionnelle ; le
-// détail (sous-sections À propos/Documents/Paramètres) viendra dans un
-// point séparé.
+// Écran Profil minimal. "Informations personnelles" pousse vers le hub
+// mon-profil/a-propos.tsx (12a-profil-a-propos.html et sous-écrans —
+// Point F de la feuille de route). "Mes CV et documents" et "Paramètres"
+// restent des Alert.alert stub : aucun écran de référence construit pour
+// eux dans ce point (voir le hub, qui les stub pareillement sous forme
+// d'onglets).
 const LIBELLES_ROLE: Record<string, string> = {
   admin: 'Administrateur',
   publisher: 'Recruteur',
@@ -17,6 +19,7 @@ const LIBELLES_ROLE: Record<string, string> = {
 };
 
 export default function ProfilScreen() {
+  const router = useRouter();
   const { user, profile, role, signOut } = useAuth();
   const initiale = (profile?.full_name || user?.email || 'F').charAt(0).toUpperCase();
 
@@ -50,7 +53,7 @@ export default function ProfilScreen() {
             <LigneMenu
               icone="person-outline"
               label="Informations personnelles"
-              onPress={() => Alert.alert('Bientôt disponible', 'Cet écran arrive dans une prochaine mise à jour.')}
+              onPress={() => router.push('/mon-profil/a-propos')}
             />
             <LigneMenu
               icone="document-text-outline"
