@@ -338,13 +338,20 @@ export default function CarteMobileAutourDeMoi({
                   ? COULEUR_ETABLISSEMENT
                   : "#1E293B";
             // Avatar façon Bitmoji en priorité (SVG DiceBear local, inline,
-            // aucune URL externe) ; sinon le petit point coloré habituel.
+            // aucune URL externe) ; sinon le petit point coloré habituel. Le
+            // nom est affiché en permanence sous l'avatar — sur mobile,
+            // personne ne "survole" un pin pour voir un tooltip.
             const otherIcon = b.avatar_config
               ? L.divIcon({
                   className: "custom-small-store",
-                  html: `<div style="width:22px;height:22px;border-radius:9999px;border:2px solid ${couleurPoint};overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.25);background:#fff;">${svgAvatarBoutique(b.avatar_config, 22)}</div>`,
-                  iconSize: [22, 22],
-                  iconAnchor: [11, 11],
+                  html: `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                      <div style="width:22px;height:22px;border-radius:9999px;border:2px solid ${couleurPoint};overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.25);background:#fff;">${svgAvatarBoutique(b.avatar_config, 22)}</div>
+                      <span style="max-width:78px;padding:1px 6px;background:rgba(17,24,39,0.92);color:#fff;font-size:9px;font-weight:800;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${echapperHtml(b.nom)}</span>
+                    </div>
+                  `,
+                  iconSize: [84, 40],
+                  iconAnchor: [42, 11],
                 })
               : L.divIcon({
                   className: "custom-small-store",

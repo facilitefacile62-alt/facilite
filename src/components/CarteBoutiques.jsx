@@ -160,13 +160,21 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           // Avatar façon Bitmoji en priorité si le vendeur en a configuré un
           // (SVG DiceBear généré en local, inliné directement dans le HTML du
           // divIcon — aucune URL externe) ; sinon le point coloré habituel.
+          // Le nom est affiché en permanence sous l'avatar (pas seulement au
+          // survol via bindTooltip, invisible par défaut) — sur mobile,
+          // personne ne "survole" un pin.
           const marqueur = b.avatar_config
             ? L.marker(b.position, {
                 icon: L.divIcon({
                   className: "carte-boutiques-avatar-icon",
-                  html: `<div style="width:28px;height:28px;border-radius:9999px;border:2.5px solid ${couleur};overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.35);background:#fff;">${svgAvatarBoutique(b.avatar_config, 28)}</div>`,
-                  iconSize: [28, 28],
-                  iconAnchor: [14, 14],
+                  html: `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                      <div style="width:28px;height:28px;border-radius:9999px;border:2.5px solid ${couleur};overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.35);background:#fff;">${svgAvatarBoutique(b.avatar_config, 28)}</div>
+                      <span style="max-width:84px;padding:1px 6px;background:rgba(17,24,39,0.92);color:#fff;font-size:9px;font-weight:800;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${echapperHtml(b.nom)}</span>
+                    </div>
+                  `,
+                  iconSize: [90, 46],
+                  iconAnchor: [45, 14],
                 }),
               }).addTo(carte)
             : L.circleMarker(b.position, {
