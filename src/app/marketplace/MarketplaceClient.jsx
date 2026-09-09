@@ -1262,13 +1262,14 @@ function DialogueSignalement({ article, onFermer }) {
 /* VENDEUR                                                                     */
 /* ========================================================================== */
 
-function VueVendeur({ userId, onBoutiqueChange }) {
-  const [boutiques, setBoutiques] = useState([]);
+function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, boutiques: boutiquesProp }) {
+  const { profile } = useAuth();
+  const [boutiques, setBoutiques] = useState(boutiquesProp || []);
   const [choisie, setChoisie] = useState(null);
   const [articles, setArticles] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
-  const [ongletVendeur, setOngletVendeur] = useState("publier"); // 'publier' | 'parametres'
+  const [ongletVendeur, setOngletVendeur] = useState("annonces"); // 'annonces' | 'publier' | 'profit' | 'abonnes' | 'avis' | 'faq' | 'parametres'
 
   const recharger = useCallback(async () => {
     if (!userId) return;
@@ -1287,7 +1288,6 @@ function VueVendeur({ userId, onBoutiqueChange }) {
   }, [userId, choisie, onBoutiqueChange]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     recharger();
   }, [recharger]);
 
@@ -1312,12 +1312,15 @@ function VueVendeur({ userId, onBoutiqueChange }) {
   if (chargement) {
     return (
       <div className="text-center py-16 text-gray-400">
-        <i className="fa-solid fa-spinner fa-spin text-2xl"></i>
+        <i className="fa-solid fa-spinner fa-spin text-2xl text-blue-600"></i>
+        <p className="text-xs font-bold mt-2">Chargement de votre espace vendeur...</p>
       </div>
     );
   }
 
   const boutiqueActive = boutiques.find((b) => b.id === choisie) || boutiques[0] || null;
+  const nomVendeur = boutiqueActive?.nom || profile?.full_name || "Facilite Facile";
+  const telephoneVendeur = boutiqueActive?.telephone_whatsapp || profile?.phone || "";
 
   return (
     <div className="space-y-5">
@@ -1327,78 +1330,371 @@ function VueVendeur({ userId, onBoutiqueChange }) {
         </div>
       )}
 
-      {/* Sélecteur si plusieurs points de vente */}
-      {boutiques.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {boutiques.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => setChoisie(b.id)}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer ${
-                choisie === b.id
-                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent shadow-sm"
-                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800"
-              }`}
-            >
-              <i className="fa-solid fa-shop mr-1.5"></i>
-              {b.nom}
-              {b.quartier ? ` · ${b.quartier}` : ""}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {boutiqueActive ? (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("publier")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                ongletVendeur === "publier"
-                  ? "bg-[#1877F2] text-white shadow-sm"
-                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
-              }`}
-            >
-              <i className="fa-solid fa-plus-circle mr-1.5"></i>
-              Publier un article (Assistant IA)
-            </button>
+      {/* Disposition en 2 colonnes (1:1 Identique à la capture d'écran) */}
+      <div className="flex flex-col md:flex-row gap-6 items-start w-full">
+        {/* ========================================================================= */}
+        {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU D'ACTIONS                 */}
+        {/* ========================================================================= */}
+        <div className="w-full md:w-64 shrink-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
+          {/* Header de la carte avec lien RÉGLAGES */}
+          <div className="p-4 flex flex-col items-center text-center relative border-b border-gray-100 dark:border-gray-800">
             <button
               type="button"
               onClick={() => setOngletVendeur("parametres")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                ongletVendeur === "parametres"
-                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm"
-                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
-              }`}
+              className="absolute top-3 right-3 text-[10px] font-black uppercase text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center gap-1 transition cursor-pointer"
+              title="Paramètres de la boutique"
             >
-              <i className="fa-solid fa-gear mr-1.5"></i>
-              Paramètres de la boutique
+              <span>RÉGLAGES</span>
+              <i className="fa-solid fa-gear text-xs"></i>
+            </button>
+
+            {/* Avatar vert rond (1:1 Capture) */}
+            <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border-2 border-emerald-400 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl my-2 shadow-xs">
+              <i className="fa-regular fa-circle-user text-3xl"></i>
+            </div>
+
+            {/* Nom du commerçant / Boutique */}
+            <h3 className="text-base font-extrabold text-gray-900 dark:text-white leading-tight">
+              {nomVendeur}
+            </h3>
+
+            {/* Lien / Statut Numéro de Téléphone */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("parametres")}
+              className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-wider mt-1.5 transition cursor-pointer"
+            >
+              {telephoneVendeur ? `TÉL : ${telephoneVendeur}` : "AJOUTER LE NUMÉRO DE TÉLÉPHONE"}
             </button>
           </div>
 
-          {ongletVendeur === "publier" ? (
-            <FormulaireArticle userId={userId} storeId={boutiqueActive.id} onPublie={recharger} />
-          ) : (
-            <FormulaireBoutique
-              userId={userId}
-              boutique={boutiqueActive}
-              nombreBoutiques={boutiques.length}
-              onEnregistre={recharger}
-            />
-          )}
+          {/* Liste des options du menu (1:1 Identique à la capture) */}
+          <div className="divide-y divide-gray-100 dark:divide-gray-800 text-xs font-bold text-gray-700 dark:text-gray-200">
+            {/* 1. Faire profit */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("profit")}
+              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
+                ongletVendeur === "profit"
+                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              }`}
+            >
+              <span className="text-base">🤑</span>
+              <span className="flex-1">Faire profit</span>
+            </button>
 
-          <ListeMesArticles articles={articles} onChange={recharger} />
+            {/* 2. Abonnés */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("abonnes")}
+              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
+                ongletVendeur === "abonnes"
+                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              }`}
+            >
+              <i className="fa-solid fa-users text-sm text-gray-500 dark:text-gray-400"></i>
+              <span className="flex-1">Abonnés</span>
+            </button>
+
+            {/* 3. Mes annonces (Onglet principal avec surbrillance) */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("annonces")}
+              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
+                ongletVendeur === "annonces"
+                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              }`}
+            >
+              <i className="fa-regular fa-calendar-days text-sm text-gray-500 dark:text-gray-400"></i>
+              <span className="flex-1">Mes annonces</span>
+              {articles.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
+                  {articles.length}
+                </span>
+              )}
+            </button>
+
+            {/* 4. Avis */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("avis")}
+              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
+                ongletVendeur === "avis"
+                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              }`}
+            >
+              <i className="fa-regular fa-face-smile text-sm text-gray-500 dark:text-gray-400"></i>
+              <span className="flex-1">Avis</span>
+            </button>
+
+            {/* 5. Foire aux questions */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("faq")}
+              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
+                ongletVendeur === "faq"
+                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              }`}
+            >
+              <i className="fa-regular fa-circle-question text-sm text-gray-500 dark:text-gray-400"></i>
+              <span className="flex-1">Foire aux questions</span>
+            </button>
+          </div>
         </div>
-      ) : (
-        <FormulaireBoutique
-          userId={userId}
-          boutique={null}
-          nombreBoutiques={boutiques.length}
-          onEnregistre={recharger}
-        />
-      )}
+
+        {/* ========================================================================= */}
+        {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE                           */}
+        {/* ========================================================================= */}
+        <div className="flex-1 min-w-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
+          {/* Header de la section principale */}
+          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <h2 className="text-base font-extrabold text-gray-900 dark:text-white">
+              {ongletVendeur === "annonces" && "Mes annonces"}
+              {ongletVendeur === "publier" && "Publier une annonce"}
+              {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
+              {ongletVendeur === "abonnes" && "Mes Abonnés & Clients"}
+              {ongletVendeur === "avis" && "Avis & Évaluations Clients"}
+              {ongletVendeur === "faq" && "Foire aux questions"}
+              {ongletVendeur === "parametres" && "Réglages de la boutique"}
+            </h2>
+
+            {ongletVendeur === "annonces" && boutiqueActive && (
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("publier")}
+                className="px-3.5 py-1.5 rounded-full bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <i className="fa-solid fa-plus text-xs"></i>
+                <span>Publier un article</span>
+              </button>
+            )}
+          </div>
+
+          <div className="p-5">
+            {/* VUE 1 : MES ANNONCES (1:1 Capture avec avion en papier quand vide) */}
+            {ongletVendeur === "annonces" && (
+              <div>
+                {!boutiqueActive ? (
+                  <FormulaireBoutique
+                    userId={userId}
+                    boutique={null}
+                    nombreBoutiques={boutiques.length}
+                    onEnregistre={recharger}
+                  />
+                ) : articles.length === 0 ? (
+                  <div className="py-16 px-4 flex flex-col items-center justify-center text-center space-y-4">
+                    {/* Illustration Avion en papier (1:1 Capture) */}
+                    <div className="w-32 h-24 relative flex items-center justify-center">
+                      <div className="absolute top-2 left-2 text-sky-200 dark:text-sky-900 text-2xl opacity-60">
+                        <i className="fa-solid fa-cloud"></i>
+                      </div>
+                      <div className="absolute bottom-1 right-2 text-sky-200 dark:text-sky-900 text-xl opacity-60">
+                        <i className="fa-solid fa-cloud"></i>
+                      </div>
+                      <div className="text-5xl text-teal-400 dark:text-teal-500 transform -rotate-12 animate-bounce duration-1000">
+                        <i className="fa-solid fa-paper-plane"></i>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h3 className="text-base font-bold text-gray-700 dark:text-gray-300">
+                        Il n&apos;y a pas encore d&apos;annonces.
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setOngletVendeur("publier")}
+                        className="text-sm font-extrabold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition cursor-pointer pt-1"
+                      >
+                        Créez-en une maintenant !
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <ListeMesArticles articles={articles} onChange={recharger} />
+                )}
+              </div>
+            )}
+
+            {/* VUE 2 : PUBLIER UN ARTICLE (Assistant IA & Zéro Saisie) */}
+            {ongletVendeur === "publier" && (
+              <div>
+                {boutiqueActive ? (
+                  <div className="space-y-4">
+                    <button
+                      type="button"
+                      onClick={() => setOngletVendeur("annonces")}
+                      className="text-xs font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-arrow-left"></i>
+                      <span>Retour à mes annonces</span>
+                    </button>
+                    <FormulaireArticle
+                      userId={userId}
+                      storeId={boutiqueActive.id}
+                      onPublie={async () => {
+                        await recharger();
+                        setOngletVendeur("annonces");
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <FormulaireBoutique
+                    userId={userId}
+                    boutique={null}
+                    nombreBoutiques={boutiques.length}
+                    onEnregistre={recharger}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* VUE 3 : FAIRE PROFIT */}
+            {ongletVendeur === "profit" && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/60 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🤑</span>
+                    <h3 className="text-sm font-black text-amber-950 dark:text-amber-100">
+                      Multipliez vos ventes avec les fonctionnalités Pro
+                    </h3>
+                  </div>
+                  <p className="text-xs text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
+                    Mettez vos annonces en tête de liste, obtenez le badge Commerçant Vérifié et touchez des milliers d&apos;acheteurs partout à Dakar et au Sénégal.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 space-y-2">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-base">
+                      <i className="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white">Commandes Directes WhatsApp</h4>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      Chaque visiteur clique et arrive directement dans votre discussion WhatsApp avec le récapitulatif du produit.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 space-y-2">
+                    <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-base">
+                      <i className="fa-solid fa-crown"></i>
+                    </div>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white">Badge Boutique Officielle</h4>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      Augmentez la confiance des acheteurs avec le profil vérifié Facilité Marketplace.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VUE 4 : ABONNÉS */}
+            {ongletVendeur === "abonnes" && (
+              <div className="py-12 text-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-2xl mx-auto">
+                  <i className="fa-solid fa-users"></i>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Vos abonnés apparaîtront ici</h3>
+                  <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                    Dès qu&apos;un client s&apos;abonne à votre boutique, il recevra automatiquement vos nouveaux articles en priorité.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* VUE 5 : AVIS */}
+            {ongletVendeur === "avis" && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                  <div>
+                    <div className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <span>5.0</span>
+                      <div className="flex text-amber-400 text-xs">
+                        <i className="fa-solid fa-star"></i>
+                        <i className="fa-solid fa-star"></i>
+                        <i className="fa-solid fa-star"></i>
+                        <i className="fa-solid fa-star"></i>
+                        <i className="fa-solid fa-star"></i>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Note moyenne de satisfaction</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 text-[10px] font-black uppercase">
+                    100% Positif
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl border border-gray-100 dark:border-gray-800 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-gray-900 dark:text-white">Acheteur Facilité</span>
+                    <span className="text-gray-400 text-[10px]">Récemment</span>
+                  </div>
+                  <div className="flex text-amber-400 text-[10px]">
+                    <i className="fa-solid fa-star"></i>
+                    <i className="fa-solid fa-star"></i>
+                    <i className="fa-solid fa-star"></i>
+                    <i className="fa-solid fa-star"></i>
+                    <i className="fa-solid fa-star"></i>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    « Produit conforme à la description et vendeur très réactif sur WhatsApp. Livraison rapide ! »
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* VUE 6 : FAQ */}
+            {ongletVendeur === "faq" && (
+              <div className="space-y-3">
+                <details className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 text-xs group">
+                  <summary className="font-bold text-gray-900 dark:text-white cursor-pointer list-none flex items-center justify-between">
+                    <span>Comment publier un article rapidement ?</span>
+                    <i className="fa-solid fa-chevron-down text-[10px] text-gray-400 group-open:rotate-180 transition"></i>
+                  </summary>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400 leading-relaxed">
+                    Cliquez sur « Publier un article » puis utilisez l&apos;Assistant Vision IA : importez une photo et l&apos;IA remplit instantanément le titre, le prix estimé et la description vendeuse.
+                  </p>
+                </details>
+
+                <details className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 text-xs group">
+                  <summary className="font-bold text-gray-900 dark:text-white cursor-pointer list-none flex items-center justify-between">
+                    <span>Comment suis-je payé ?</span>
+                    <i className="fa-solid fa-chevron-down text-[10px] text-gray-400 group-open:rotate-180 transition"></i>
+                  </summary>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400 leading-relaxed">
+                    Les acheteurs vous contactent directement sur WhatsApp. Vous convenez ensemble du paiement (Wave, Orange Money ou Espèces à la livraison). Aucune commission n&apos;est prélevée.
+                  </p>
+                </details>
+
+                <details className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 text-xs group">
+                  <summary className="font-bold text-gray-900 dark:text-white cursor-pointer list-none flex items-center justify-between">
+                    <span>Comment modifier la localisation de ma boutique ?</span>
+                    <i className="fa-solid fa-chevron-down text-[10px] text-gray-400 group-open:rotate-180 transition"></i>
+                  </summary>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400 leading-relaxed">
+                    Rendez-vous dans « RÉGLAGES » pour mettre à jour votre nom, votre quartier ou votre numéro de téléphone.
+                  </p>
+                </details>
+              </div>
+            )}
+
+            {/* VUE 7 : RÉGLAGES DE LA BOUTIQUE */}
+            {ongletVendeur === "parametres" && (
+              <FormulaireBoutique
+                userId={userId}
+                boutique={boutiqueActive}
+                nombreBoutiques={boutiques.length}
+                onEnregistre={recharger}
+              />
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
