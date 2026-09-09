@@ -342,7 +342,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                   ? "bg-[#1877F2] text-white border-[#1877F2] ring-2 ring-blue-400/30"
                   : "bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700"
               }`}
-              title={modeCompact ? "Agrandir la carte à la taille normale" : "Réduire la hauteur pour gagner de l'espace à l'écran"}
+              title={modeCompact ? "Agrandir la carte à la taille normale" : "Explorer la carte en plus grand"}
             >
               <svg
                 className={`w-3.5 h-3.5 ${modeCompact ? "text-white" : "text-[#1877F2]"}`}
@@ -357,7 +357,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                 )}
               </svg>
               <span className="font-extrabold">
-                {modeCompact ? "Agrandir" : "Gagner de l'espace"}
+                {modeCompact ? "Agrandir" : "Explorer"}
               </span>
             </button>
           )}
