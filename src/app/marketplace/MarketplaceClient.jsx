@@ -2741,7 +2741,11 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
                     </div>
                   </div>
                 ) : (
-                  <ListeMesArticles articles={articles} onChange={recharger} />
+                  <ListeMesArticles
+                    articles={articles}
+                    onChange={recharger}
+                    onPublier={() => setOngletVendeur("publier")}
+                  />
                 )}
               </div>
             )}
@@ -4376,24 +4380,6 @@ function ModalFicheBoutique({
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
-                  {/* Carte interactive "+ Publier un article" intégrée en tête de liste */}
-                  <button
-                    type="button"
-                    onClick={() => setOngletActif("publier")}
-                    className="group flex flex-col items-center justify-center min-h-[220px] sm:min-h-[260px] rounded-2xl sm:rounded-3xl border-2 border-dashed border-blue-400/80 dark:border-blue-600/80 bg-blue-50/40 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 p-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer shadow-xs"
-                    title="Ajouter un article à la boutique"
-                  >
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md group-hover:scale-110 transition-transform mb-3">
-                      <i className="fa-solid fa-plus"></i>
-                    </div>
-                    <span className="text-xs sm:text-sm font-black text-center text-zinc-900 dark:text-white">
-                      Publier un article
-                    </span>
-                    <span className="text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 text-center mt-1">
-                      Ajouter un nouveau produit
-                    </span>
-                  </button>
-
                   {listeArticles.map((art) => (
                     <CarteArticle
                       key={art.id}
@@ -5638,7 +5624,7 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
   );
 }
 
-function ListeMesArticles({ articles, onChange }) {
+function ListeMesArticles({ articles, onChange, onPublier }) {
   const [enCours, setEnCours] = useState(null);
 
   const changerStock = async (id, quantite) => {
@@ -5653,17 +5639,48 @@ function ListeMesArticles({ articles, onChange }) {
 
   if (articles.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-8 text-center">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-8 text-center space-y-3">
         <p className="text-xs text-gray-500">Aucun article publié pour l&apos;instant.</p>
+        {onPublier && (
+          <button
+            type="button"
+            onClick={onPublier}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-black shadow-md shadow-emerald-500/20 hover:opacity-95 transition cursor-pointer"
+          >
+            <i className="fa-solid fa-circle-plus"></i>
+            <span>+ Publier mon premier article</span>
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5">
-      <h2 className="text-base font-black text-gray-900 dark:text-white mb-4">
-        Mes articles <span className="text-gray-400 font-bold">({articles.length})</span>
-      </h2>
+      <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100 dark:border-gray-800 flex-wrap">
+        <div>
+          <h2 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+            Mes articles <span className="text-gray-400 font-bold text-sm">({articles.length})</span>
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Gérez vos stocks ou publiez de nouveaux produits en ligne
+          </p>
+        </div>
+
+        {onPublier && (
+          <button
+            type="button"
+            onClick={onPublier}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-emerald-500/20 transition cursor-pointer active:scale-95 shrink-0"
+          >
+            <i className="fa-solid fa-circle-plus text-sm"></i>
+            <span>+ Publier un article</span>
+            <span className="px-1.5 py-0.5 rounded bg-white/20 text-[9px] font-black uppercase">
+              IA
+            </span>
+          </button>
+        )}
+      </div>
 
       <ul className="divide-y divide-gray-100 dark:divide-gray-800">
         {articles.map((a) => (
