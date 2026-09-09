@@ -2618,29 +2618,19 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
         {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE (1:1 Capture 2 plein espace) */}
         {/* ========================================================================= */}
         <div className="flex-1 min-w-0 w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden min-h-[calc(100vh-160px)]">
-          {/* Header de la section principale */}
-          <div className="px-6 py-4.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
-              {ongletVendeur === "annonces" && "Mes annonces"}
-              {ongletVendeur === "publier" && "Publier une annonce"}
-              {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
-              {ongletVendeur === "abonnes" && "Mes Abonnés & Clients"}
-              {ongletVendeur === "avis" && "Avis & Évaluations Clients"}
-              {ongletVendeur === "faq" && "Foire aux questions"}
-              {ongletVendeur === "parametres" && "Réglages de la boutique"}
-            </h2>
-
-            {ongletVendeur === "annonces" && boutiqueActive && (
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("publier")}
-                className="px-3.5 py-1.5 rounded-full bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                <i className="fa-solid fa-plus text-xs"></i>
-                <span>Publier un article</span>
-              </button>
-            )}
-          </div>
+          {/* Header de la section principale (sauf pour annonces où la bannière fait office d'en-tête) */}
+          {ongletVendeur !== "annonces" && (
+            <div className="px-6 py-4.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+                {ongletVendeur === "publier" && "Publier une annonce"}
+                {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
+                {ongletVendeur === "abonnes" && "Mes Abonnés & Clients"}
+                {ongletVendeur === "avis" && "Avis & Évaluations Clients"}
+                {ongletVendeur === "faq" && "Foire aux questions"}
+                {ongletVendeur === "parametres" && "Réglages de la boutique"}
+              </h2>
+            </div>
+          )}
 
           <div className="p-6">
             {/* VUE 1 : MES ANNONCES (1:1 Capture avec bannière et annonces) */}
