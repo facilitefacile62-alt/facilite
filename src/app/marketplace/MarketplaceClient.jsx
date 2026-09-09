@@ -2879,18 +2879,18 @@ function ModalFicheBoutique({
         <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden sticky top-16">
           {/* Bannière de couverture en haut de la carte latérale */}
           <div
-            className="h-20 bg-cover bg-center bg-no-repeat relative block bg-slate-900"
+            className="h-28 bg-cover bg-center bg-no-repeat relative block bg-gradient-to-r from-slate-900 via-zinc-800 to-slate-900"
             style={{ backgroundImage: `url('${coverUrl || "/stellar-cover.png"}')` }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-slate-900/90"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20"></div>
             {/* Bouton Appareil Photo pour changer la couverture */}
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
-              className="absolute top-2 right-2 z-20 w-7 h-7 rounded-full bg-white/90 hover:bg-white dark:bg-black/60 dark:hover:bg-black text-zinc-800 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95"
-              title="Changer la couverture"
+              className="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white dark:bg-black/70 dark:hover:bg-black text-zinc-900 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95"
+              title="Changer la photo de couverture"
             >
-              <i className="fa-solid fa-camera text-[10px]"></i>
+              <i className="fa-solid fa-camera text-xs"></i>
             </button>
           </div>
 
