@@ -238,3 +238,28 @@ export function svgAvatarBoutique(config, taille = 96) {
 export function dataUriAvatarBoutique(config, taille = 96) {
   return createAvatar(avataaars, optionsDiceBearDepuisConfig(config, taille)).toDataUri();
 }
+
+/**
+ * Redimensionne les icônes avatar d'une carte Leaflet selon le zoom — plus
+ * grand en zoomant, plus petit en dézoomant, borné pour rester lisible aux
+ * niveaux extrêmes. Cible seulement les éléments portant la classe
+ * .avatar-boutique-zoom-scale (voir globals.css) : jamais l'élément que
+ * Leaflet positionne lui-même via son propre `transform` (translate3d),
+ * sous peine de casser le placement du marqueur sur la carte.
+ *
+ * Retourne une fonction de nettoyage (détache l'écouteur) — facultative à
+ * appeler puisque carte.remove() détache déjà tous les écouteurs de la
+ * carte, mais utile si on veut la débrancher sans détruire la carte.
+ */
+export function brancherEchelleZoomAvatars(carte, { zoomReference = 14, pas = 0.08, min = 0.7, max = 1.4 } = {}) {
+  const appliquer = () => {
+    const zoom = carte.getZoom();
+    const echelle = Math.min(max, Math.max(min, 1 + (zoom - zoomReference) * pas));
+    carte.getContainer().querySelectorAll(".avatar-boutique-zoom-scale").forEach((el) => {
+      el.style.transform = `scale(${echelle})`;
+    });
+  };
+  carte.on("zoomend", appliquer);
+  appliquer();
+  return () => carte.off("zoomend", appliquer);
+}

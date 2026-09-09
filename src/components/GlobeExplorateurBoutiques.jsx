@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import { echapperHtml, positionActuelle, obtenirHorairesBoutique, JOURS_SEMAINE } from "@/lib/marketplaceData";
-import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
+import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
 // anonyme à ces tuiles (elles renvoient un placeholder "API KEY REQUIRED" en
@@ -76,6 +76,7 @@ export default function GlobeExplorateurBoutiques({
   const coucheTuilesRef = useRef(null);
   const groupeMarqueursRef = useRef(null);
   const marqueurMoiRef = useRef(null);
+  const echelleZoomCleanupRef = useRef(null);
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
   const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
@@ -274,9 +275,13 @@ export default function GlobeExplorateurBoutiques({
             <span class="text-[9px] font-bold text-gray-400">· ${quartier}</span>
           </div>
 
-          <!-- Avatar Circulaire avec Bordure Colorée (#10B981 ou #2563EB) & Story Ring -->
-          <div class="relative w-13 h-13 rounded-full p-[3px] shadow-2xl flex items-center justify-center" style="background: ${bordureCouleur}; box-shadow: 0 4px 14px ${bordureCouleur}60;">
-            <div class="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border-2 border-white dark:border-gray-950 shadow-inner">
+          <!-- Avatar Circulaire avec Bordure Colorée (#10B981 ou #2563EB) & Story Ring.
+               avatar-boutique-zoom-scale (redimensionné en JS sur zoomend) et
+               avatar-boutique-anime (respiration CSS, sur l'enfant) doivent
+               rester deux éléments distincts — sinon l'animation qui tourne
+               écrase le transform:scale() posé par le JS. -->
+          <div class="relative w-13 h-13 rounded-full p-[3px] shadow-2xl flex items-center justify-center avatar-boutique-zoom-scale" style="background: ${bordureCouleur}; box-shadow: 0 4px 14px ${bordureCouleur}60;">
+            <div class="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border-2 border-white dark:border-gray-950 shadow-inner avatar-boutique-anime">
               ${contenuAvatar}
             </div>
             ${badgeLive}
@@ -302,6 +307,15 @@ export default function GlobeExplorateurBoutiques({
         carte.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
       });
     });
+
+    // Détache l'écouteur précédent avant d'en reposer un : ce callback est
+    // rappelé à chaque rafraîchissement des marqueurs (pas seulement à la
+    // création de la carte), sans ça chaque passage en accumulerait un de
+    // plus sur le même objet carte.
+    if (echelleZoomCleanupRef.current) {
+      echelleZoomCleanupRef.current();
+    }
+    echelleZoomCleanupRef.current = brancherEchelleZoomAvatars(carte);
   }, [boutiquesAffichees, boutiqueSelectionnee]);
 
   useEffect(() => {

@@ -18,7 +18,7 @@
 // produiraient trois cercles superposés et un compteur illisible.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml } from "@/lib/marketplaceData";
-import { svgAvatarBoutique } from "@/lib/avatarBoutique";
+import { brancherEchelleZoomAvatars, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 const COULEUR = "#1877F2";
 const COULEUR_SERVICE = "#F59E0B";
@@ -162,14 +162,22 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           // divIcon — aucune URL externe) ; sinon le point coloré habituel.
           // Le nom est affiché en permanence sous l'avatar (pas seulement au
           // survol via bindTooltip, invisible par défaut) — sur mobile,
-          // personne ne "survole" un pin.
+          // personne ne "survole" un pin. Deux wrappers imbriqués autour du
+          // cercle avatar : .avatar-boutique-zoom-scale (le JS y pose
+          // `transform: scale()` sur zoomend) et .avatar-boutique-anime, son
+          // enfant, qui porte la respiration CSS — jamais le même élément
+          // pour les deux, sinon l'un écrase le `transform` de l'autre. La
+          // position lat/lng du marqueur n'est jamais touchée, seul ce
+          // sous-élément visuel bouge.
           const marqueur = b.avatar_config
             ? L.marker(b.position, {
                 icon: L.divIcon({
                   className: "carte-boutiques-avatar-icon",
                   html: `
                     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                      <div style="width:28px;height:28px;border-radius:9999px;border:2.5px solid ${couleur};overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.35);background:#fff;">${svgAvatarBoutique(b.avatar_config, 28)}</div>
+                      <div class="avatar-boutique-zoom-scale">
+                        <div class="avatar-boutique-anime" style="width:28px;height:28px;border-radius:9999px;border:2.5px solid ${couleur};overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.35);background:#fff;">${svgAvatarBoutique(b.avatar_config, 28)}</div>
+                      </div>
                       <span style="max-width:84px;padding:1px 6px;background:rgba(17,24,39,0.92);color:#fff;font-size:9px;font-weight:800;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${echapperHtml(b.nom)}</span>
                     </div>
                   `,
@@ -218,6 +226,8 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
             .bindTooltip("Vous êtes ici");
           points.push(ici);
         }
+
+        brancherEchelleZoomAvatars(carte);
 
         carte.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 15 });
 

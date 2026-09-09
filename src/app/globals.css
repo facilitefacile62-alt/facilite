@@ -297,3 +297,28 @@ html.dark .bg-whatsapp-chat {
   z-index: 600 !important;
 }
 
+/* Avatar façon Bitmoji sur les pins de boutique (CarteBoutiques,
+   CarteMobileAutourDeMoi, GlobeExplorateurBoutiques) : légère respiration
+   sur place (jamais la position lat/lng, seulement ce sous-élément) et
+   redimensionnement au zoom. Deux éléments séparés exprès :
+   .avatar-boutique-zoom-scale (le JS y écrit `transform: scale(...)` sur
+   zoomend) et .avatar-boutique-anime, son enfant, qui porte l'animation
+   CSS de translateY — les mettre sur le MÊME élément ferait que l'un des
+   deux `transform` écrase l'autre (l'animation qui tourne l'emporterait
+   sur le style inline posé par le JS, annulant le zoom). */
+@keyframes avatar-boutique-respire {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.avatar-boutique-zoom-scale {
+  transition: transform 0.15s ease-out;
+}
+.avatar-boutique-anime {
+  animation: avatar-boutique-respire 2s ease-in-out infinite;
+}
+

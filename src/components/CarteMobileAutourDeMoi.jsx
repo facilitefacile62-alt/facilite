@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml, urlPhoto, normaliserWhatsapp } from "@/lib/marketplaceData";
-import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
+import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 const distanceLisible = (km) =>
   km == null || !Number.isFinite(Number(km))
@@ -50,6 +50,7 @@ export default function CarteMobileAutourDeMoi({
   const carteRef = useRef(null);
   const polylineRef = useRef(null);
   const marqueursRef = useRef([]);
+  const echelleZoomCleanupRef = useRef(null);
 
   // Onglet sélectionné dans le panneau inférieur : 'produits' ou 'vendeurs'
   const [ongletVue, setOngletVue] = useState("produits"); // 'produits' | 'vendeurs'
@@ -346,7 +347,9 @@ export default function CarteMobileAutourDeMoi({
                   className: "custom-small-store",
                   html: `
                     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                      <div style="width:22px;height:22px;border-radius:9999px;border:2px solid ${couleurPoint};overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.25);background:#fff;">${svgAvatarBoutique(b.avatar_config, 22)}</div>
+                      <div class="avatar-boutique-zoom-scale">
+                        <div class="avatar-boutique-anime" style="width:22px;height:22px;border-radius:9999px;border:2px solid ${couleurPoint};overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.25);background:#fff;">${svgAvatarBoutique(b.avatar_config, 22)}</div>
+                      </div>
                       <span style="max-width:78px;padding:1px 6px;background:rgba(17,24,39,0.92);color:#fff;font-size:9px;font-weight:800;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${echapperHtml(b.nom)}</span>
                     </div>
                   `,
@@ -374,6 +377,16 @@ export default function CarteMobileAutourDeMoi({
           }
         }
 
+        // Cette carte n'est jamais détruite entre deux passages de cet
+        // effet (map.remove() n'est appelé nulle part ici, contrairement à
+        // CarteBoutiques.jsx) : sans détacher l'ancien écouteur avant d'en
+        // reposer un, chaque redessin de marqueurs en accumulerait un de
+        // plus sur le même objet carte.
+        if (echelleZoomCleanupRef.current) {
+          echelleZoomCleanupRef.current();
+        }
+        echelleZoomCleanupRef.current = brancherEchelleZoomAvatars(map);
+
         if (points.length > 0) {
           map.fitBounds(L.latLngBounds(points), {
             paddingTopLeft: [40, 40],
@@ -393,6 +406,7 @@ export default function CarteMobileAutourDeMoi({
     return () => {
       annule = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cibleCourante, boutiques, depart]);
 
   // Empêche le défilement de la page derrière la vue plein écran — sans ça,
