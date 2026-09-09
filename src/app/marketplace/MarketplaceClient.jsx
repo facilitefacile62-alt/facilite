@@ -4130,57 +4130,6 @@ function ModalFicheBoutique({
         {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE (1:1 Capture 2 plein espace) */}
         {/* ========================================================================= */}
         <div className="flex-1 min-w-0 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden min-h-[calc(100vh-120px)]">
-          {/* Header de la section principale avec actions */}
-          <div className="px-6 py-4.5 border-b border-gray-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white">
-                {ongletActif === "produits" && (estEtablissement ? "Horaires d'ouverture" : estService ? "Ma prestation" : "Mes annonces")}
-                {ongletActif === "profit" && "Faire profit & Booster mes ventes"}
-                {ongletActif === "abonnes" && "Abonnés & Clients"}
-                {ongletActif === "avis" && "Avis & Évaluations Clients"}
-                {ongletActif === "faq" && "Foire aux questions"}
-                {ongletActif === "apropos" && "À propos de la boutique"}
-                {ongletActif === "contact" && "Contact & Livraison"}
-                {ongletActif === "parametres" && "Réglages de la boutique"}
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {onPublierArticle && (
-                <button
-                  type="button"
-                  onClick={onPublierArticle}
-                  className="px-3.5 py-1.5 rounded-full bg-gray-950 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-950 text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
-                >
-                  <i className="fa-solid fa-plus text-xs text-[#10E688]"></i>
-                  <span>Publier un article</span>
-                </button>
-              )}
-
-              {whatsappUrl && (
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-1.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
-                >
-                  <i className="fa-brands fa-whatsapp text-sm"></i>
-                  <span>WhatsApp</span>
-                </a>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setOngletActif("parametres")}
-                className="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
-                title="Paramètres"
-              >
-                <i className="fa-solid fa-gear text-xs"></i>
-                <span>Réglages</span>
-              </button>
-            </div>
-          </div>
-
           <div className="p-4 sm:p-6">
           {ongletActif === "produits" && (
             <div className="mb-6 space-y-4">
