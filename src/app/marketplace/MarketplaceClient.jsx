@@ -1088,8 +1088,17 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
               boutiquesSansArticles={resultatsServices}
               depart={position}
               onChoisirBoutique={(id) => {
-                const cible = document.getElementById(`boutique-${id}`);
-                if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
+                // Cliquer un pin doit amener sur la fiche de la boutique
+                // (comme sur le Globe/mobile), pas juste faire défiler la
+                // page — boutiquesPourGlobe porte déjà toutes les données
+                // nécessaires (produit ou service/établissement).
+                const b = boutiquesPourGlobe.find((x) => x.id === id);
+                if (b) {
+                  onVoirBoutique?.(b);
+                } else {
+                  const cible = document.getElementById(`boutique-${id}`);
+                  if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
               }}
             />
           </div>
@@ -3943,7 +3952,7 @@ function ModalFicheBoutique({
   const initiales = nom.substring(0, 2).toUpperCase();
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-gray-100 dark:bg-zinc-950 text-zinc-900 dark:text-white overflow-y-auto w-full h-full flex flex-col animate-fadeIn">
+    <div className="fixed inset-0 z-[99999] bg-gray-100 dark:bg-zinc-950 text-zinc-900 dark:text-white overflow-y-auto md:overflow-hidden w-full h-full flex flex-col animate-fadeIn">
       {/* Toast de confirmation en haut */}
       {toastMessage && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-gray-900 text-white dark:bg-white dark:text-gray-950 text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-2 animate-bounce">
@@ -4017,11 +4026,11 @@ function ModalFicheBoutique({
       {/* ========================================================================= */}
       {/* CONTENEUR PRINCIPAL DE LA PAGE BOUTIQUE (2 Colonnes directes comme capture) */}
       {/* ========================================================================= */}
-      <div className="w-full max-w-[1400px] mx-auto flex-1 p-2 sm:p-4 flex flex-col md:flex-row gap-6 items-start">
+      <div className="w-full max-w-[1400px] mx-auto flex-1 p-2 sm:p-4 flex flex-col md:flex-row gap-6 items-start md:overflow-hidden md:h-[calc(100vh-57px)]">
         {/* ========================================================================= */}
         {/* 1. COLONNE GAUCHE : CARTE PROFIL BOUTIQUE & MENU (1:1 Capture Aperçu)      */}
         {/* ========================================================================= */}
-        <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden sticky top-16">
+        <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden md:h-full md:overflow-y-auto">
           {/* Bannière de couverture en haut de la carte latérale */}
           <div
             className="h-28 bg-cover bg-center bg-no-repeat relative block bg-gradient-to-r from-slate-900 via-zinc-800 to-slate-900"
@@ -4247,16 +4256,15 @@ function ModalFicheBoutique({
         </div>
 
         {/* ========================================================================= */}
-        {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE (1:1 Capture 2 plein espace) */}
+        {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE (Bannière fixe & Produits scrollables) */}
         {/* ========================================================================= */}
-        <div className="flex-1 min-w-0 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden min-h-[calc(100vh-120px)]">
-          <div className="p-4 sm:p-6">
-          {/* VUE APERÇU : Grande Bannière Panoramique HD Widescreen + Profil + Contact */}
+        <div className="flex-1 min-w-0 w-full bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden md:h-full flex flex-col">
+          {/* VUE APERÇU : Grande Bannière Panoramique HD Widescreen Fixe */}
           {ongletActif === "apercu" && (
-            <div className="mb-6 space-y-4">
+            <div className="p-4 sm:p-6 pb-2 shrink-0 border-b border-gray-100 dark:border-zinc-800/80">
               {/* Grand Bandeau Bannière Panoramique Widescreen HD (1:1 Capture exacte) */}
               <div
-                className="relative w-full h-44 sm:h-56 md:h-64 rounded-2xl sm:rounded-3xl overflow-hidden shadow-md bg-cover bg-center border border-gray-100 dark:border-zinc-800 group"
+                className="relative w-full h-36 sm:h-44 md:h-48 rounded-2xl sm:rounded-3xl overflow-hidden shadow-md bg-cover bg-center border border-gray-100 dark:border-zinc-800 group"
                 style={{ backgroundImage: `url('${coverUrl || "/stellar-cover.png"}')` }}
               >
                 {/* Dégradé cinématographique pour lisibilité */}
@@ -4276,7 +4284,7 @@ function ModalFicheBoutique({
                 {/* Profil et Titre intégrés sur la bannière */}
                 <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-5 right-3 sm:right-5 z-10 flex items-end justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="relative group w-14 h-14 sm:w-18 sm:h-18 rounded-full border-2 sm:border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 shrink-0">
+                    <div className="relative group w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 sm:border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 shrink-0">
                       {avatarBitmojiUri ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={avatarBitmojiUri} alt={nom} className="w-full h-full object-cover" />
@@ -4298,14 +4306,14 @@ function ModalFicheBoutique({
 
                     <div className="text-white drop-shadow-md">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base sm:text-2xl font-black leading-tight tracking-tight">
+                        <h3 className="text-base sm:text-xl font-black leading-tight tracking-tight">
                           {nom}
                         </h3>
                         <span className="px-2.5 py-0.5 rounded-full bg-purple-600/90 text-white text-[9px] font-black uppercase tracking-wider backdrop-blur-xs shadow-xs">
                           BOUTIQUE OFFICIELLE
                         </span>
                       </div>
-                      <p className="text-xs sm:text-sm text-zinc-200 font-medium line-clamp-1 mt-0.5">
+                      <p className="text-xs text-zinc-200 font-medium line-clamp-1 mt-0.5">
                         {description}
                       </p>
                       <div className="flex items-center gap-2 text-[11px] text-zinc-300 font-medium mt-1">
@@ -4332,6 +4340,8 @@ function ModalFicheBoutique({
             </div>
           )}
 
+          {/* ZONE DÉFILANTE INDÉPENDANTE (Produits, Services, Horaires, etc.) */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {(ongletActif === "produits" || ongletActif === "apercu") && estService && (
             <div className="max-w-lg space-y-4">
               <div>
@@ -4688,8 +4698,8 @@ function ModalFicheBoutique({
               }}
             />
           )}
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

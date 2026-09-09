@@ -365,6 +365,10 @@ export default function CarteMobileAutourDeMoi({
             mOther.on("click", () => {
               setBoutiqueActiveId(b.id);
               if (b.articles[0]) setArticleActifId(b.articles[0].id);
+              // Taper un pin doit amener directement sur la fiche de la
+              // boutique, pas seulement la présélectionner en arrière-plan
+              // du panneau du bas.
+              onVoirBoutique?.(b);
             });
             marqueursRef.current.push(mOther);
           }
