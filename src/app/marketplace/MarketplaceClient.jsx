@@ -1499,106 +1499,136 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
         </div>
       )}
 
-      {/* Disposition en 2 colonnes (1:1 Identique à la capture d'écran) */}
+      {/* Disposition en 2 colonnes (1:1 Identique aux captures d'écran) */}
       <div className="flex flex-col md:flex-row gap-6 items-start w-full">
         {/* ========================================================================= */}
-        {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU D'ACTIONS                 */}
+        {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU D'ACTIONS (1:1 Capture 1)  */}
         {/* ========================================================================= */}
-        <div className="w-full md:w-[270px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-          {/* Header de la carte avec lien RÉGLAGES */}
-          <div className="p-4 pt-4 pb-4 flex flex-col items-center text-center relative border-b border-gray-100 dark:border-gray-800">
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("parametres")}
-              className="absolute top-3.5 right-3.5 text-[11px] font-black uppercase text-gray-700 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1.5 transition cursor-pointer tracking-wider"
-              title="Paramètres de la boutique"
-            >
-              <span>RÉGLAGES</span>
-              <i className="fa-solid fa-gear text-sm"></i>
-            </button>
-
-            {/* Avatar vert rond (1:1 Capture avec contour épuré) */}
-            <div className="w-20 h-20 rounded-full bg-[#86EFAC] text-white flex items-center justify-center text-4xl my-3 shadow-xs">
-              <svg className="w-11 h-11 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
-            </div>
-
-            {/* Nom du commerçant / Boutique */}
-            <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white leading-tight">
-              {nomVendeur}
-            </h3>
-
-            {/* Lien / Statut Numéro de Téléphone */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("parametres")}
-              className="text-[10px] font-bold text-[#718096] dark:text-gray-400 hover:text-blue-600 uppercase tracking-widest mt-1.5 transition cursor-pointer"
-            >
-              {telephoneVendeur ? `TÉL : ${telephoneVendeur}` : "AJOUTER LE NUMÉRO DE TÉLÉPHONE"}
-            </button>
+        <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+          {/* Bannière de couverture en haut */}
+          <div
+            className="h-16 bg-cover bg-center bg-no-repeat relative block bg-slate-900"
+            style={{ backgroundImage: `url('${profile?.cover_url || "/stellar-cover.png"}')` }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-slate-900/90"></div>
           </div>
 
-          {/* Liste des options du menu (1:1 Identique à la capture) */}
-          <div className="divide-y divide-gray-100 dark:divide-gray-800 text-xs font-bold text-gray-700 dark:text-gray-200">
-            {/* 1. Faire profit */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("profit")}
-              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
-                ongletVendeur === "profit"
-                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              }`}
-            >
-              <span className="text-base">🤑</span>
-              <span className="flex-1">Faire profit</span>
-            </button>
+          {/* Profil : Avatar avec overlay Modifier + Nom + Titre + Badges */}
+          <div className="px-4 pb-3 pt-0 relative flex flex-col items-start text-left border-b border-gray-100 dark:border-gray-800">
+            {/* Avatar avec bouton appareil photo / Modifier */}
+            <div className="relative group -mt-10 mb-2.5 w-20 h-20 rounded-full border-4 border-white dark:border-gray-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-md overflow-hidden shrink-0">
+              {profile?.avatar_url || boutiqueActive?.avatar_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={profile?.avatar_url || boutiqueActive?.avatar_url}
+                  alt={nomVendeur}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{nomVendeur.substring(0, 2).toUpperCase()}</span>
+              )}
 
-            {/* 2. Abonnés */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("abonnes")}
-              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
-                ongletVendeur === "abonnes"
-                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              }`}
-            >
-              <i className="fa-regular fa-address-card text-base text-gray-700 dark:text-gray-300"></i>
-              <span className="flex-1">Abonnés</span>
-            </button>
+              {/* Overlay interactif de modification au survol / clic */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("parametres")}
+                className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer"
+                title="Modifier la photo"
+              >
+                <i className="fa-solid fa-camera text-sm mb-0.5"></i>
+                <span className="text-[9px] font-bold">Modifier</span>
+              </button>
+            </div>
 
-            {/* 3. Mes annonces (Onglet principal avec surbrillance) */}
+            {/* Nom de la Boutique & Badge BOUTIQUE */}
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h3 className="text-xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">
+                {nomVendeur}
+              </h3>
+              <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+                BOUTIQUE
+              </span>
+            </div>
+
+            {/* Headline / Profession */}
+            <p className="text-xs text-gray-600 dark:text-gray-300 font-medium mb-2.5 line-clamp-1">
+              {profile?.headline || "Juriste Droit Privé & Droits Humains"}
+            </p>
+
+            {/* Tag Pilule Métier / Secteur */}
+            <div className="w-full mb-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold border border-gray-200/60 dark:border-gray-700/60 w-full">
+                <i className="fa-regular fa-folder text-gray-400"></i>
+                <span className="truncate">Commerce &amp; Vente au détail</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Liste des options du menu (1:1 Identique à la capture 1) */}
+          <div className="p-2 space-y-1 text-xs font-bold">
+            {/* 1. Mes annonces (Onglet principal avec style bleu actif de la capture) */}
             <button
               type="button"
               onClick={() => setOngletVendeur("annonces")}
-              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletVendeur === "annonces"
-                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
-              <i className="fa-regular fa-calendar-days text-base text-gray-700 dark:text-gray-300"></i>
+              <i className="fa-regular fa-calendar-days text-sm"></i>
               <span className="flex-1">Mes annonces</span>
-              {articles.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
-                  {articles.length}
-                </span>
-              )}
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  ongletVendeur === "annonces"
+                    ? "bg-white/20 text-white"
+                    : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                }`}
+              >
+                {articles.length}
+              </span>
+            </button>
+
+            {/* 2. Faire profit */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("profit")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletVendeur === "profit"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <span className="text-sm">🤑</span>
+              <span className="flex-1">Faire profit</span>
+            </button>
+
+            {/* 3. Abonnés */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("abonnes")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletVendeur === "abonnes"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-users text-sm"></i>
+              <span className="flex-1">Abonnés</span>
             </button>
 
             {/* 4. Avis */}
             <button
               type="button"
               onClick={() => setOngletVendeur("avis")}
-              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletVendeur === "avis"
-                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
-              <i className="fa-regular fa-face-smile text-base text-gray-700 dark:text-gray-300"></i>
+              <i className="fa-regular fa-face-smile text-sm"></i>
               <span className="flex-1">Avis</span>
             </button>
 
@@ -1606,22 +1636,64 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
             <button
               type="button"
               onClick={() => setOngletVendeur("faq")}
-              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition cursor-pointer ${
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletVendeur === "faq"
-                  ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
-              <i className="fa-regular fa-circle-question text-base text-gray-700 dark:text-gray-300"></i>
+              <i className="fa-regular fa-circle-question text-sm"></i>
               <span className="flex-1">Foire aux questions</span>
+            </button>
+
+            {/* 6. À propos & Infos */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("apropos")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletVendeur === "apropos"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-store text-sm"></i>
+              <span className="flex-1">À propos &amp; Infos</span>
+            </button>
+
+            {/* 7. Contact & Livraison */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("contact")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletVendeur === "contact"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-truck-fast text-sm"></i>
+              <span className="flex-1">Contact &amp; Livraison</span>
+            </button>
+
+            {/* 8. Réglages */}
+            <button
+              type="button"
+              onClick={() => setOngletVendeur("parametres")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletVendeur === "parametres"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <i className="fa-solid fa-gear text-sm"></i>
+              <span className="flex-1">Réglages</span>
             </button>
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE                           */}
+        {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE (1:1 Capture 2 plein espace) */}
         {/* ========================================================================= */}
-        <div className="flex-1 min-w-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden min-h-[500px]">
+        <div className="flex-1 min-w-0 w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden min-h-[calc(100vh-160px)]">
           {/* Header de la section principale */}
           <div className="px-6 py-4.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
@@ -1844,7 +1916,52 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
               </div>
             )}
 
-            {/* VUE 7 : RÉGLAGES DE LA BOUTIQUE */}
+            {/* VUE 7 : À PROPOS & INFOS */}
+            {ongletVendeur === "apropos" && (
+              <div className="space-y-4">
+                <div className="p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 space-y-3">
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                    <i className="fa-solid fa-store text-blue-600"></i>
+                    À propos de {nomVendeur}
+                  </h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                    {profile?.headline || "Boutique Officielle Partenaire Facilité. Vente d'articles & prestation de services de qualité supérieure."}
+                  </p>
+                  <div className="pt-3 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div><strong>Localisation :</strong> {boutiqueActive?.quartier ? `${boutiqueActive.quartier}, ` : ""}{boutiqueActive?.ville || "Dakar"}, Sénégal</div>
+                    <div><strong>Statut :</strong> Commerçant Vérifié Facilité</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VUE 8 : CONTACT & LIVRAISON */}
+            {ongletVendeur === "contact" && (
+              <div className="space-y-4">
+                <div className="p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 space-y-3">
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                    <i className="fa-solid fa-truck-fast text-emerald-600"></i>
+                    Coordonnées &amp; Modalités de Livraison
+                  </h3>
+                  <div className="space-y-2.5 text-xs text-gray-700 dark:text-gray-300">
+                    <div className="flex items-center gap-2">
+                      <i className="fa-brands fa-whatsapp text-emerald-500 text-sm"></i>
+                      <span>WhatsApp : {telephoneVendeur || "Non renseigné"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-location-dot text-red-500 text-sm"></i>
+                      <span>Zone de retrait &amp; expédition : {boutiqueActive?.ville || "Dakar & régions du Sénégal"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-box-open text-blue-500 text-sm"></i>
+                      <span>Délai de livraison moyen : 24h à 48h</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VUE 9 : RÉGLAGES DE LA BOUTIQUE */}
             {ongletVendeur === "parametres" && (
               <FormulaireBoutique
                 userId={userId}
@@ -2805,9 +2922,9 @@ function ModalFicheBoutique({
       </header>
 
       {/* ========================================================================= */}
-      {/* CONTENEUR PRINCIPAL DE LA PAGE BOUTIQUE (100% Opaque, aucun fond visible)  */}
+      {/* CONTENEUR PRINCIPAL DE LA PAGE BOUTIQUE (Largeur Plein Écran Capture 2)    */}
       {/* ========================================================================= */}
-      <div className="w-full max-w-4xl mx-auto flex-1 bg-white dark:bg-zinc-900 sm:my-4 sm:rounded-3xl sm:border sm:border-gray-200 sm:dark:border-zinc-800 sm:shadow-xl overflow-hidden flex flex-col min-h-[calc(100vh-60px)] relative">
+      <div className="w-full max-w-[1400px] mx-auto flex-1 bg-white dark:bg-zinc-900 sm:my-4 sm:rounded-3xl sm:border sm:border-gray-200 sm:dark:border-zinc-800 sm:shadow-xl overflow-hidden flex flex-col min-h-[calc(100vh-60px)] relative">
         {/* ========================================================================= */}
         {/* 1. BANNIÈRE DE COUVERTURE AVEC CHANGEMENT INTERACTIF (Photo / CV)         */}
         {/* ========================================================================= */}
@@ -2914,7 +3031,7 @@ function ModalFicheBoutique({
             <h1 className="text-xl sm:text-3xl font-black tracking-tight text-zinc-950 dark:text-white">
               {nom}
             </h1>
-            <span className="px-2.5 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+            <span className="px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
               BOUTIQUE
             </span>
@@ -2971,15 +3088,15 @@ function ModalFicheBoutique({
         {/* ========================================================================= */}
         {/* 3. DISPOSITION EN 2 COLONNES (BARRE LATÉRALE MENU + CONTENU DYNAMIQUE)    */}
         {/* ========================================================================= */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-h-[450px]">
-          {/* Colonne gauche : Menu latéral façon Dashboard Vendeur (1:1 Capture) */}
-          <div className="w-full md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-900/70 p-3 space-y-1">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-h-[500px]">
+          {/* Colonne gauche : Menu latéral façon Dashboard Vendeur (1:1 Capture 1) */}
+          <div className="w-full md:w-[280px] shrink-0 border-b md:border-b-0 md:border-r border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-900/70 p-3 space-y-1">
             <button
               type="button"
               onClick={() => setOngletActif("produits")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletActif === "produits"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
@@ -2990,7 +3107,7 @@ function ModalFicheBoutique({
                 {estEtablissement ? "Horaires" : estService ? "Ma prestation" : "Mes annonces"}
               </span>
               {!estService && !estEtablissement && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${ongletActif === "produits" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"}`}>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${ongletActif === "produits" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"}`}>
                   {listeArticles.length}
                 </span>
               )}
@@ -3001,7 +3118,7 @@ function ModalFicheBoutique({
               onClick={() => setOngletActif("profit")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletActif === "profit"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
@@ -3014,7 +3131,7 @@ function ModalFicheBoutique({
               onClick={() => setOngletActif("abonnes")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletActif === "abonnes"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
@@ -3027,7 +3144,7 @@ function ModalFicheBoutique({
               onClick={() => setOngletActif("avis")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletActif === "avis"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
@@ -3040,7 +3157,7 @@ function ModalFicheBoutique({
               onClick={() => setOngletActif("faq")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletActif === "faq"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
@@ -3053,7 +3170,7 @@ function ModalFicheBoutique({
               onClick={() => setOngletActif("apropos")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletActif === "apropos"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
@@ -3066,11 +3183,11 @@ function ModalFicheBoutique({
               onClick={() => setOngletActif("contact")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletActif === "contact"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
-              <i className="fa-solid fa-truck text-sm"></i>
+              <i className="fa-solid fa-truck-fast text-sm"></i>
               <span className="flex-1">Contact &amp; Livraison</span>
             </button>
 
@@ -3079,7 +3196,7 @@ function ModalFicheBoutique({
               onClick={() => setOngletActif("parametres")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletActif === "parametres"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
