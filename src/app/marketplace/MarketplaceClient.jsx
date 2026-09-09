@@ -2806,147 +2806,121 @@ function ModalFicheBoutique({
         </div>
 
         {/* ========================================================================= */}
-        {/* 3. BARRE D'ONGLETS DE NAVIGATION COMPLÈTE (1:1 Capture)                   */}
+        {/* 3. DISPOSITION EN 2 COLONNES (BARRE LATÉRALE MENU + CONTENU DYNAMIQUE)    */}
         {/* ========================================================================= */}
-        <div className="flex items-center gap-4 sm:gap-6 px-4 sm:px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 flex-shrink-0 overflow-x-auto no-scrollbar">
-          {/* 1. Tous les produits */}
-          <button
-            type="button"
-            onClick={() => setOngletActif("produits")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap ${
-              ongletActif === "produits"
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            }`}
-          >
-            <span>Tous les produits ({listeArticles.length})</span>
-            {ongletActif === "produits" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
-            )}
-          </button>
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-h-[450px]">
+          {/* Colonne gauche : Menu latéral façon Dashboard Vendeur (1:1 Capture) */}
+          <div className="w-full md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-900/70 p-3 space-y-1">
+            <button
+              type="button"
+              onClick={() => setOngletActif("produits")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "produits"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
+              }`}
+            >
+              <i className="fa-regular fa-calendar-days text-sm"></i>
+              <span className="flex-1">Mes annonces</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${ongletActif === "produits" ? "bg-white/20 text-white" : "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"}`}>
+                {listeArticles.length}
+              </span>
+            </button>
 
-          {/* 2. Faire profit */}
-          <button
-            type="button"
-            onClick={() => setOngletActif("profit")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              ongletActif === "profit"
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            }`}
-          >
-            <span>🤑</span>
-            <span>Faire profit</span>
-            {ongletActif === "profit" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setOngletActif("profit")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "profit"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
+              }`}
+            >
+              <span className="text-sm">🤑</span>
+              <span className="flex-1">Faire profit</span>
+            </button>
 
-          {/* 3. Abonnés */}
-          <button
-            type="button"
-            onClick={() => setOngletActif("abonnes")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              ongletActif === "abonnes"
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            }`}
-          >
-            <i className="fa-solid fa-users text-xs"></i>
-            <span>Abonnés</span>
-            {ongletActif === "abonnes" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setOngletActif("abonnes")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "abonnes"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
+              }`}
+            >
+              <i className="fa-solid fa-users text-sm"></i>
+              <span className="flex-1">Abonnés</span>
+            </button>
 
-          {/* 4. Avis */}
-          <button
-            type="button"
-            onClick={() => setOngletActif("avis")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              ongletActif === "avis"
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            }`}
-          >
-            <i className="fa-regular fa-face-smile text-xs"></i>
-            <span>Avis</span>
-            {ongletActif === "avis" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setOngletActif("avis")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "avis"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
+              }`}
+            >
+              <i className="fa-regular fa-face-smile text-sm"></i>
+              <span className="flex-1">Avis</span>
+            </button>
 
-          {/* 5. Foire aux questions */}
-          <button
-            type="button"
-            onClick={() => setOngletActif("faq")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              ongletActif === "faq"
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            }`}
-          >
-            <i className="fa-regular fa-circle-question text-xs"></i>
-            <span>FAQ</span>
-            {ongletActif === "faq" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setOngletActif("faq")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "faq"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
+              }`}
+            >
+              <i className="fa-regular fa-circle-question text-sm"></i>
+              <span className="flex-1">Foire aux questions</span>
+            </button>
 
-          {/* 6. À propos & Infos */}
-          <button
-            type="button"
-            onClick={() => setOngletActif("apropos")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap ${
-              ongletActif === "apropos"
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            }`}
-          >
-            <span>À propos &amp; Infos</span>
-            {ongletActif === "apropos" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setOngletActif("apropos")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "apropos"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
+              }`}
+            >
+              <i className="fa-solid fa-store text-sm"></i>
+              <span className="flex-1">À propos &amp; Infos</span>
+            </button>
 
-          {/* 7. Contact & Livraison */}
-          <button
-            type="button"
-            onClick={() => setOngletActif("contact")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap ${
-              ongletActif === "contact"
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            }`}
-          >
-            <span>Contact &amp; Livraison</span>
-            {ongletActif === "contact" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setOngletActif("contact")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "contact"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
+              }`}
+            >
+              <i className="fa-solid fa-truck text-sm"></i>
+              <span className="flex-1">Contact &amp; Livraison</span>
+            </button>
 
-          {/* 8. Paramètres */}
-          <button
-            type="button"
-            onClick={() => setOngletActif("parametres")}
-            className={`py-3.5 text-xs sm:text-sm font-black transition relative cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              ongletActif === "parametres"
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            }`}
-          >
-            <i className="fa-solid fa-gear text-xs"></i>
-            <span>Paramètres</span>
-            {ongletActif === "parametres" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
-            )}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setOngletActif("parametres")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "parametres"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
+              }`}
+            >
+              <i className="fa-solid fa-gear text-sm"></i>
+              <span className="flex-1">Réglages</span>
+            </button>
+          </div>
 
-        {/* ========================================================================= */}
-        {/* 4. CONTENU DE L'ONGLET SÉLECTIONNÉ                                        */}
-        {/* ========================================================================= */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
+          {/* Zone de contenu principal à droite */}
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
           {ongletActif === "produits" && (
             <div>
               {/* En-tête de section avec bouton Plus / Ajouter un article */}
