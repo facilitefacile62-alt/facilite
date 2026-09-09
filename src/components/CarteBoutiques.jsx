@@ -16,9 +16,15 @@
 //
 // Un point par BOUTIQUE, pas par article : trois articles de la même échoppe
 // produiraient trois cercles superposés et un compteur illisible.
+//
+// Thème et fonctionnalités alignés sur GlobeExplorateurBoutiques ("Explorer")
+// à la demande de l'utilisateur — mêmes pastilles de filtre, même marqueur
+// "Vous êtes ici" animé, même carrousel d'avatars — mais SANS passer en plein
+// écran : ce composant reste dans son cadre compact, intégré à côté de la
+// liste de résultats, c'est la différence assumée avec le Globe.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml } from "@/lib/marketplaceData";
-import { brancherEchelleZoomAvatars, svgAvatarBoutique } from "@/lib/avatarBoutique";
+import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 const COULEUR = "#1877F2";
 const COULEUR_SERVICE = "#F59E0B";
@@ -29,6 +35,17 @@ const LIBELLES_CATEGORIE_ETABLISSEMENT = {
   beaute: "Beauté",
   autre: "Établissement",
 };
+// Même filtre CSS que GlobeExplorateurBoutiques (voir ce fichier pour le
+// détail) : OpenStreetMap ne fournit pas de style sombre nativement, on le
+// simule par un filtre appliqué au seul pane des tuiles — les marqueurs
+// restent intacts, aucun sélecteur CSS global qui affecterait d'autres cartes.
+const FILTRE_TUILES_SOMBRE = "invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9)";
+
+const PASTILLES_FILTRE = [
+  { id: "tous", label: "Toutes les boutiques", icone: "fa-compass" },
+  { id: "populaires", label: "Les plus visités", icone: "fa-trophy" },
+  { id: "live", label: "En stock (LIVE)", icone: null },
+];
 
 /** Une coordonnée absente doit ressortir null, jamais 0 — `Number(null)` vaut 0. */
 function point(lat, lng) {
@@ -53,6 +70,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
   // États de contrôle : Pliée / Dépliée et Mode Gain d'espace (Compact)
   const [estPliee, setEstPliee] = useState(false);
   const [modeCompact, setModeCompact] = useState(false);
+  // Filtre façon Explorer : 'tous' | 'populaires' | 'live'. Contrairement à
+  // Explorer, "Autour de moi" n'est pas un filtre mais une action (recentrer
+  // sur `depart`, déjà connu ici — pas besoin de re-géolocaliser).
+  const [filtreActif, setFiltreActif] = useState("tous");
 
   // Regroupement par boutique. Un seul pin par boutique quel que soit son
   // type_boutique (demande explicite) : les boutiques service/établissement
@@ -101,6 +122,18 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
     return [...par.values()];
   }, [articles, boutiquesSansArticles]);
 
+  // Boutiques affichées selon la pastille active — filtre à la fois les
+  // marqueurs dessinés sur la carte et le carrousel du bas, comme Explorer.
+  const boutiquesAffichees = useMemo(() => {
+    if (filtreActif === "live") {
+      return boutiques.filter((b) => b.articles.some((a) => a.statut === "en_stock"));
+    }
+    if (filtreActif === "populaires") {
+      return boutiques.slice(0, Math.max(3, Math.ceil(boutiques.length / 2)));
+    }
+    return boutiques;
+  }, [boutiques, filtreActif]);
+
   useEffect(() => {
     let annule = false;
     let carte = null;
@@ -114,7 +147,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
     }
 
     (async () => {
-      if (!conteneur.current || boutiques.length === 0) return;
+      if (!conteneur.current || boutiquesAffichees.length === 0) return;
       try {
         const L = (await import("leaflet")).default;
         await import("leaflet/dist/leaflet.css");
@@ -140,9 +173,14 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         }).addTo(carte);
 
+        // Thème sombre façon Explorer — filtre CSS sur le seul pane des
+        // tuiles, jamais un sélecteur global (voir FILTRE_TUILES_SOMBRE).
+        const paneTuiles = carte.getPane("tilePane");
+        if (paneTuiles) paneTuiles.style.filter = FILTRE_TUILES_SOMBRE;
+
         const points = [];
 
-        for (const b of boutiques) {
+        for (const b of boutiquesAffichees) {
           // Couleur par type : produit garde le bleu historique (avec le
           // gris "hors stock" existant), service/établissement ont leur
           // propre couleur fixe — "en stock" n'a pas de sens pour eux (zéro
@@ -213,17 +251,23 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           points.push(b.position);
         }
 
+        // Marqueur "Vous êtes ici" animé (halo + icône), façon Explorer —
+        // remplace l'ancien simple point rouge.
         const ici = point(depart?.latitude, depart?.longitude);
         if (ici) {
-          L.circleMarker(ici, {
-            radius: 7,
-            color: "#dc2626",
-            weight: 3,
-            fillColor: "#dc2626",
-            fillOpacity: 0.35,
-          })
-            .addTo(carte)
-            .bindTooltip("Vous êtes ici");
+          const iconeMoi = L.divIcon({
+            className: "carte-boutiques-moi-icon",
+            html: `
+              <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+                <div class="animate-ping" style="position:absolute;inset:-6px;background:rgba(56,189,248,0.35);border-radius:9999px;pointer-events:none;"></div>
+                <div style="position:relative;width:22px;height:22px;border-radius:9999px;background:linear-gradient(135deg,#38bdf8,#2563eb);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:11px;">🧑🏾</div>
+                <div style="margin-top:2px;padding:1px 6px;background:#2563eb;color:#fff;font-size:8px;font-weight:800;border-radius:9999px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3);">Vous êtes ici</div>
+              </div>
+            `,
+            iconSize: [70, 50],
+            iconAnchor: [35, 25],
+          });
+          L.marker(ici, { icon: iconeMoi }).addTo(carte);
           points.push(ici);
         }
 
@@ -246,7 +290,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
       carteRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boutiques, depart, estPliee]);
+  }, [boutiquesAffichees, depart, estPliee]);
 
   useEffect(() => {
     if (!estPliee && carteRef.current) {
@@ -256,14 +300,20 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
     }
   }, [modeCompact, estPliee]);
 
+  const recentrerSurMoi = () => {
+    if (carteRef.current && depart) {
+      carteRef.current.flyTo([depart.latitude, depart.longitude], 15, { duration: 1 });
+    }
+  };
+
   if (boutiques.length === 0 || echec) return null;
 
   return (
-    <div className="mb-4 rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300">
-      
+    <div className="mb-4 rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-800 bg-[#0B0F17] shadow-sm transition-all duration-300">
+
       {/* 1. BARRE DE CONTRÔLE SUPÉRIEURE AVEC FLÈCHE ET BOUTONS VISIBLES */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 sm:px-4 py-2.5 bg-gradient-to-r from-gray-50 via-slate-50 to-gray-100 dark:from-gray-800/90 dark:to-gray-900/90 border-b border-gray-200 dark:border-gray-800 select-none">
-        
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 sm:px-4 py-2.5 bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 border-b border-gray-800 select-none">
+
         {/* Titre avec indicateur de position */}
         <div
           onClick={() => setEstPliee(!estPliee)}
@@ -271,9 +321,9 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           title={estPliee ? "Cliquez pour déplier la carte" : "Cliquez pour plier la carte"}
         >
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black text-gray-800 dark:text-gray-100">
+          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black text-gray-100">
             <span>Carte des boutiques</span>
-            <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-[#1877F2] dark:text-blue-400 text-[11px] font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-blue-950/60 text-blue-400 text-[11px] font-bold">
               {boutiques.length}
             </span>
           </div>
@@ -281,7 +331,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
 
         {/* Boutons d'Action : 1. Gagner de l'espace (Compact) | 2. Flèche Plier/Déplier */}
         <div className="flex items-center gap-2 ml-auto">
-          
+
           {/* BOUTON 1 : GAGNER DE L'ESPACE (Mode Compact) */}
           {!estPliee && (
             <button
@@ -290,7 +340,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border active:scale-95 ${
                 modeCompact
                   ? "bg-[#1877F2] text-white border-[#1877F2] ring-2 ring-blue-400/30"
-                  : "bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600"
+                  : "bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700"
               }`}
               title={modeCompact ? "Agrandir la carte à la taille normale" : "Réduire la hauteur pour gagner de l'espace à l'écran"}
             >
@@ -319,14 +369,14 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
             className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border active:scale-95 ${
               estPliee
                 ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
-                : "bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600"
+                : "bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700"
             }`}
             title={estPliee ? "Déplier et afficher la carte" : "Plier et masquer la carte pour voir directement les articles"}
           >
             {/* Flèche SVG très nette */}
             <svg
               className={`w-4 h-4 transition-transform duration-300 ${
-                estPliee ? "rotate-180 text-white" : "rotate-0 text-gray-600 dark:text-gray-300"
+                estPliee ? "rotate-180 text-white" : "rotate-0 text-gray-300"
               }`}
               fill="none"
               stroke="currentColor"
@@ -342,13 +392,48 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
       {/* 2. CONTENU VISUEL DE LA CARTE (SI NON PLIÉE) */}
       {!estPliee ? (
         <div className="animate-in fade-in duration-200 relative group">
-          
+
+          {/* Pastilles de filtre façon Explorer — masquées en mode compact,
+              pas la place pour elles dans une hauteur réduite. */}
+          {!modeCompact && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-3 py-2 bg-gray-950/80 border-b border-gray-800">
+              {PASTILLES_FILTRE.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setFiltreActif(p.id)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    filtreActif === p.id
+                      ? "bg-white text-gray-950"
+                      : "bg-gray-800/90 text-gray-200 hover:bg-gray-700 border border-gray-700/80"
+                  }`}
+                >
+                  {p.icone ? (
+                    <i className={`fa-solid ${p.icone} text-[10px] ${filtreActif === p.id ? "text-sky-500" : "text-sky-400"}`}></i>
+                  ) : (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
+                  )}
+                  <span>{p.label}</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={recentrerSurMoi}
+                disabled={!depart}
+                className="px-3 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap bg-gray-800/90 hover:bg-gray-700 text-gray-200 border border-gray-700/80 transition cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+              >
+                <i className="fa-solid fa-location-crosshairs text-[10px] text-emerald-400"></i>
+                <span>Autour de moi</span>
+              </button>
+            </div>
+          )}
+
           {/* Boutons flottants d'accès rapide directement sur la carte */}
           <div className="absolute top-2.5 right-2.5 z-[400] flex items-center gap-1.5 pointer-events-auto">
             <button
               type="button"
               onClick={() => setModeCompact(!modeCompact)}
-              className="px-2.5 py-1 rounded-lg bg-white/90 hover:bg-white text-gray-800 text-[10px] font-black shadow-md backdrop-blur-xs border border-gray-200 flex items-center gap-1 cursor-pointer transition active:scale-95"
+              className="px-2.5 py-1 rounded-lg bg-gray-900/90 hover:bg-gray-800 text-gray-100 text-[10px] font-black shadow-md backdrop-blur-xs border border-gray-700 flex items-center gap-1 cursor-pointer transition active:scale-95"
               title={modeCompact ? "Agrandir" : "Réduire"}
             >
               <span>{modeCompact ? "🔍 Agrandir" : "🤏 Compact"}</span>
@@ -356,7 +441,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
             <button
               type="button"
               onClick={() => setEstPliee(true)}
-              className="w-7 h-7 rounded-lg bg-white/90 hover:bg-white text-gray-800 shadow-md backdrop-blur-xs border border-gray-200 flex items-center justify-center cursor-pointer transition active:scale-95"
+              className="w-7 h-7 rounded-lg bg-gray-900/90 hover:bg-gray-800 text-gray-100 shadow-md backdrop-blur-xs border border-gray-700 flex items-center justify-center cursor-pointer transition active:scale-95"
               title="Plier la carte"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,17 +452,49 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
 
           <div
             ref={conteneur}
-            className={`w-full ${modeCompact ? "h-[135px] sm:h-[155px]" : "h-[220px] sm:h-[300px]"} z-0 transition-all duration-300`}
-            style={{ background: "#e5e7eb" }}
+            className={`w-full ${modeCompact ? "h-[135px] sm:h-[155px]" : "h-[280px] sm:h-[380px]"} z-0 transition-all duration-300 bg-[#0B0F17]`}
             aria-label="Carte des boutiques proches"
           />
-          
-          <div className="px-3.5 sm:px-4 py-1.5 text-[11px] text-gray-500 dark:text-gray-400 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/40">
+
+          {/* Carrousel d'avatars façon dock Explorer — masqué en mode compact. */}
+          {!modeCompact && boutiquesAffichees.length > 0 && (
+            <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar px-3 py-2.5 bg-gray-950/80 border-t border-gray-800">
+              {boutiquesAffichees.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => {
+                    carteRef.current?.flyTo(b.position, 15, { duration: 1 });
+                    onChoisirBoutique?.(b.id);
+                  }}
+                  className="flex flex-col items-center gap-1 shrink-0 p-1 rounded-xl hover:bg-gray-800/80 transition cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-700 bg-gray-800 flex items-center justify-center">
+                    {b.avatar_config ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={dataUriAvatarBoutique(b.avatar_config, 36)}
+                        alt={b.nom}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white text-[10px] font-black">
+                        {b.nom ? b.nom.substring(0, 2).toUpperCase() : "BT"}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[9px] font-bold text-gray-300 max-w-[52px] truncate">{b.nom}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="px-3.5 sm:px-4 py-1.5 text-[11px] text-gray-400 flex flex-wrap items-center justify-between gap-2 border-t border-gray-800 bg-gray-950/60">
             <span>
-              {boutiques.length} boutique{boutiques.length > 1 ? "s" : ""} dans le rayon choisi. Touchez un marqueur pour voir le détail.
+              {boutiquesAffichees.length} boutique{boutiquesAffichees.length > 1 ? "s" : ""} dans le rayon choisi. Touchez un marqueur pour voir le détail.
             </span>
             {modeCompact && (
-              <span className="text-blue-600 dark:text-blue-400 font-bold text-[10px]">
+              <span className="text-blue-400 font-bold text-[10px]">
                 ✓ Mode gain d&apos;espace actif
               </span>
             )}
@@ -387,13 +504,13 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
         /* Message d'état quand la carte est pliée */
         <div
           onClick={() => setEstPliee(false)}
-          className="px-4 py-3 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800/50 dark:hover:bg-gray-800 text-xs text-gray-600 dark:text-gray-300 flex items-center justify-between cursor-pointer transition"
+          className="px-4 py-3 bg-gray-900/60 hover:bg-gray-900 text-xs text-gray-300 flex items-center justify-between cursor-pointer transition"
         >
           <div className="flex items-center gap-2 font-medium">
-            <span className="text-[#1877F2] font-bold">🗺️ Carte repliée</span>
+            <span className="text-blue-400 font-bold">🗺️ Carte repliée</span>
             <span>· Cliquez sur « Déplier » ou ici pour visualiser les {boutiques.length} boutiques</span>
           </div>
-          <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-xs flex items-center gap-1">
+          <span className="text-emerald-400 font-extrabold text-xs flex items-center gap-1">
             <span>Déplier</span>
             <svg className="w-3.5 h-3.5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
