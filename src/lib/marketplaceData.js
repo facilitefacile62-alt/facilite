@@ -20,8 +20,8 @@ export const BUCKET = "marketplace-photos";
  * Échappe le texte fourni par un vendeur (nom de boutique, quartier) avant
  * de l'insérer dans un fragment HTML brut.
  *
- * Les cartes Leaflet (CarteBoutiques, CarteMobileAutourDeMoi,
- * GlobeExplorateurBoutiques) construisent leurs tooltips/marqueurs via des
+ * Les cartes Leaflet (CarteBoutiques, GlobeExplorateurBoutiques)
+ * construisent leurs tooltips/marqueurs via des
  * template strings passées directement à `bindTooltip`/`L.divIcon({ html })`
  * — ces API injectent le texte en HTML brut (innerHTML), pas en texte. Un
  * nom de boutique saisi comme `<img src=x onerror=...>` s'exécuterait donc

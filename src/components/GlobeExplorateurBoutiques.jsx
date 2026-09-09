@@ -70,6 +70,11 @@ export default function GlobeExplorateurBoutiques({
   onVoirBoutique,
   onVoirArticle,
   onFermer,
+  // Position déjà relevée par le bouton "Autour de moi" du Marketplace
+  // (avant même l'ouverture du Globe) : évite de redemander la permission
+  // de géolocalisation une seconde fois quand ce composant remplace
+  // désormais aussi la carte "Autour de moi" mobile.
+  positionInitiale = null,
 }) {
   const conteneurRef = useRef(null);
   const carteRef = useRef(null);
@@ -348,47 +353,69 @@ export default function GlobeExplorateurBoutiques({
     };
   }, [vueBoutiqueDetails, boutiqueSelectionnee]);
 
+  // Place l'indicateur "Vous êtes ici" et recentre la carte sur une position
+  // déjà connue — factorisé pour servir à la fois au bouton "Autour de moi"
+  // du Globe (qui géolocalise lui-même) et à positionInitiale (déjà
+  // géolocalisée par le Marketplace avant l'ouverture du Globe).
+  const centrerSurPosition = useCallback(async (pos, { animer = true } = {}) => {
+    const L = (await import("leaflet")).default;
+    const carte = carteRef.current;
+    if (!carte || !pos) return;
+
+    if (marqueurMoiRef.current) {
+      marqueurMoiRef.current.remove();
+    }
+
+    const htmlMoi = `
+      <div class="relative flex flex-col items-center select-none cursor-pointer">
+        <div class="absolute -inset-4 bg-sky-500/30 rounded-full animate-ping pointer-events-none"></div>
+        <div class="relative w-12 h-12 rounded-full bg-gradient-to-tr from-sky-400 to-blue-600 p-0.5 shadow-2xl border-2 border-white flex items-center justify-center text-xl">
+          <span>🧑🏾</span>
+        </div>
+        <div class="mt-1 px-2.5 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-lg border border-white whitespace-nowrap">
+          Vous êtes ici
+        </div>
+      </div>
+    `;
+
+    const iconeMoi = L.divIcon({
+      html: htmlMoi,
+      className: "snap-custom-moi",
+      iconSize: [100, 75],
+      iconAnchor: [50, 70],
+    });
+
+    marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi }).addTo(carte);
+    if (animer) {
+      carte.flyTo([pos.latitude, pos.longitude], 15.5, { duration: 1.2 });
+    } else {
+      carte.setView([pos.latitude, pos.longitude], 15.5);
+    }
+  }, []);
+
   // Centrer sur la position GPS de l'utilisateur avec indicateur "Vous êtes ici"
   const allerAMaPosition = async () => {
     setErreurLocalisation("");
     setLocalisationEnCours(true);
     try {
       const pos = await positionActuelle();
-      const L = (await import("leaflet")).default;
-      const carte = carteRef.current;
-      if (!carte) return;
-
-      if (marqueurMoiRef.current) {
-        marqueurMoiRef.current.remove();
-      }
-
-      const htmlMoi = `
-        <div class="relative flex flex-col items-center select-none cursor-pointer">
-          <div class="absolute -inset-4 bg-sky-500/30 rounded-full animate-ping pointer-events-none"></div>
-          <div class="relative w-12 h-12 rounded-full bg-gradient-to-tr from-sky-400 to-blue-600 p-0.5 shadow-2xl border-2 border-white flex items-center justify-center text-xl">
-            <span>🧑🏾</span>
-          </div>
-          <div class="mt-1 px-2.5 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-lg border border-white whitespace-nowrap">
-            Vous êtes ici
-          </div>
-        </div>
-      `;
-
-      const iconeMoi = L.divIcon({
-        html: htmlMoi,
-        className: "snap-custom-moi",
-        iconSize: [100, 75],
-        iconAnchor: [50, 70],
-      });
-
-      marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi }).addTo(carte);
-      carte.flyTo([pos.latitude, pos.longitude], 15.5, { duration: 1.2 });
+      await centrerSurPosition(pos);
     } catch (err) {
       setErreurLocalisation(err.message || "Position GPS non accessible.");
     } finally {
       setLocalisationEnCours(false);
     }
   };
+
+  // Auto-centrage si le Marketplace a déjà géolocalisé l'utilisateur avant
+  // d'ouvrir le Globe (bouton "Autour de moi") — sans animation de vol, la
+  // carte s'ouvre directement centrée, pas de second appel de géolocalisation.
+  useEffect(() => {
+    if (positionInitiale && cartePrete) {
+      centrerSurPosition(positionInitiale, { animer: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positionInitiale, cartePrete]);
 
   // Sélection rapide depuis le carrousel
   const selectionnerBoutiqueCarousel = (b) => {

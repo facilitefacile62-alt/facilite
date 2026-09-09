@@ -34,9 +34,6 @@ import { dataUriAvatarBoutique } from "@/lib/avatarBoutique";
 const GlobeExplorateurBoutiques = dynamic(() => import("@/components/GlobeExplorateurBoutiques"), {
   ssr: false,
 });
-const CarteMobileAutourDeMoi = dynamic(() => import("@/components/CarteMobileAutourDeMoi"), {
-  ssr: false,
-});
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
   chargerMesBoutiques,
@@ -646,6 +643,12 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       const p = await positionActuelle();
       setPosition(p);
       await lancerRecherche(p);
+      // "Autour de moi" ouvre désormais la carte Explorer (avatars, filtres,
+      // carrousel...) plutôt que l'ancienne carte plein écran dédiée —
+      // remplacement demandé, une seule carte plein écran à maintenir au
+      // lieu de deux. positionInitiale évite de re-géolocaliser une
+      // seconde fois à l'ouverture.
+      setGlobeOuvert(true);
     } catch (e) {
       setErreur(e.message);
       setChargement(false);
@@ -752,6 +755,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         <GlobeExplorateurBoutiques
           boutiques={boutiquesPourGlobe}
           tousArticles={resultats}
+          positionInitiale={position}
           onVoirBoutique={(b) => {
             setGlobeOuvert(false);
             onVoirBoutique?.(b);
@@ -897,107 +901,59 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </div>
       )}
 
-      {/* Barre de recherche style mobile moderne (Inspirée de la capture) */}
-      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-3 sm:p-4 mb-4 shadow-xs">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="flex-1 relative">
-            <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-            <input
-              type="text"
-              value={texte}
-              onChange={(e) => setTexte(e.target.value)}
-              placeholder="Search for products (téléphone, mode, tech…)"
-              className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-full sm:rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1877F2]/40"
-            />
-          </div>
+      {/* En-tête de résultats (1:1 Identique à la capture d'écran) */}
+      <div className="flex items-center justify-between mb-3.5 px-1">
+        <h2 className="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+          {position ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Proches de vous ({resultats.length})
+            </>
+          ) : (
+            <>
+              <i className="fa-solid fa-folder text-[#1877F2] text-sm"></i>
+              <span>Tous les produits ({resultats.length})</span>
+            </>
+          )}
+        </h2>
+
+        <div className="flex items-center gap-2">
+          {/* Bouton Autour de moi */}
           <button
             type="button"
             onClick={localiser}
             disabled={chargement}
-            className={`w-10 h-10 sm:w-auto sm:px-5 sm:py-3 rounded-full sm:rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition cursor-pointer disabled:opacity-60 flex items-center justify-center shrink-0 ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs ${
               position
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 sm:bg-[#1877F2] sm:text-white sm:hover:bg-blue-600 shadow-xs"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                : "bg-[#1877F2] hover:bg-blue-600 text-white"
             }`}
             title={position ? "Position active" : "Rechercher autour de moi"}
           >
-            <i className={`fa-solid ${chargement ? "fa-spinner fa-spin" : position ? "fa-location-dot" : "fa-location-crosshairs"}`}></i>
-            <span className="hidden sm:inline ml-2">
-              {position ? "Actualiser ma position" : "Autour de moi"}
-            </span>
+            <i className={`fa-solid ${chargement ? "fa-spinner fa-spin" : "fa-location-dot"} text-xs`}></i>
+            <span>{position ? "Position active" : "Autour de moi"}</span>
           </button>
+
+          {/* Bouton Explorer sur le globe */}
           <button
             type="button"
             onClick={() => setGlobeOuvert(true)}
-            className="w-10 h-10 sm:w-auto sm:px-4 sm:py-3 rounded-full sm:rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition cursor-pointer flex items-center justify-center shrink-0 bg-gray-900 hover:bg-black text-white shadow-xs"
+            className="px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 bg-gray-900 hover:bg-black text-white shadow-xs"
             title="Explorer les boutiques sur le globe"
           >
-            <span aria-hidden="true">🌍</span>
-            <span className="hidden sm:inline ml-2">Explorer</span>
+            <span>🌍</span>
+            <span>Explorer</span>
           </button>
-        </div>
 
-        {categorie && (
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs">
-            <span className="text-gray-500 dark:text-gray-400">Catégorie sélectionnée :</span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-[#1877F2] font-black text-xs border border-blue-200 dark:border-blue-900">
-              {LISTE_CATEGORIES_SIDEBAR.find((c) => c.id === categorie || c.baseCategory === categorie)?.label || categorie}
-              <button
-                type="button"
-                onClick={() => onSelectCategorie?.(null)}
-                className="hover:text-red-500 transition cursor-pointer ml-1 font-bold"
-                title="Afficher toutes les catégories"
-              >
-                ✕
-              </button>
-            </span>
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs">
-          <div className="flex items-center gap-3">
-            {position && (
-              <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                Rayon :
-                <select
-                  value={rayonKm}
-                  onChange={(e) => setRayonKm(Number(e.target.value))}
-                  className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg text-xs font-bold text-gray-800 dark:text-gray-200 cursor-pointer"
-                >
-                  {RAYONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r} km
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-400 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={seulementEnStock}
-                onChange={(e) => setSeulementEnStock(e.target.checked)}
-                className="w-3.5 h-3.5 accent-[#1877F2] cursor-pointer"
-              />
-              En stock uniquement
-            </label>
-          </div>
-
-          {position ? (
+          {position && (
             <button
               type="button"
               onClick={reinitialiserPosition}
-              className="text-xs font-bold text-[#1877F2] hover:underline cursor-pointer flex items-center gap-1"
+              className="text-xs font-bold text-gray-500 hover:text-red-500 transition cursor-pointer px-1.5 py-1"
+              title="Afficher tout le catalogue"
             >
-              <i className="fa-solid fa-globe"></i>
-              Tout le Sénégal
+              ✕
             </button>
-          ) : (
-            <p className="text-[10px] text-gray-500 dark:text-gray-400">
-              <i className="fa-solid fa-sparkles text-amber-500 mr-1"></i>
-              Catalogue global · Triez par proximité avec « Autour de moi »
-            </p>
           )}
         </div>
       </div>
@@ -1018,29 +974,6 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </div>
       )}
 
-      {/* En-tête de résultats */}
-      <div className="flex items-center justify-between mb-3 px-1">
-        <h2 className="text-xs sm:text-sm font-black text-gray-800 dark:text-gray-200 flex items-center gap-2">
-          {position ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Proches de vous ({resultats.length})
-            </>
-          ) : (
-            <>
-              <i className="fa-solid fa-store text-[#1877F2]"></i>
-              Tous les produits ({resultats.length})
-            </>
-          )}
-        </h2>
-        {chargement && (
-          <span className="text-xs text-gray-400 flex items-center gap-1.5">
-            <i className="fa-solid fa-spinner fa-spin"></i>
-            Chargement...
-          </span>
-        )}
-      </div>
-
       {resultats.length === 0 && !chargement && (
         <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-8 my-4">
           <i className="fa-solid fa-box-open text-4xl text-gray-300 dark:text-gray-700"></i>
@@ -1056,7 +989,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
             <button
               type="button"
               onClick={reinitialiserPosition}
-              className="mt-5 px-5 py-2.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold"
+              className="mt-5 px-5 py-2.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold cursor-pointer"
             >
               Voir tout le catalogue
             </button>
@@ -1064,22 +997,13 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </div>
       )}
 
-      {/* resultatsServices inclus dans la condition : sans ça, une recherche
-          du type "plombier" avec zéro PRODUIT à proximité mais des services
-          correspondants ferait disparaître la carte entière. */}
+      {/* resultatsServices inclus dans la condition */}
       {position && (resultats.length > 0 || resultatsServices.length > 0) && (
         <>
-          {/* VUE MOBILE CINÉMATIQUE (TÉLÉPHONE) : CARTE ITINÉRAIRE STYLE YANGO + 4 CASES PRODUITS OU VENDEURS */}
-          <div className="block md:hidden">
-            <CarteMobileAutourDeMoi
-              articles={resultats}
-              boutiquesSansArticles={resultatsServices}
-              depart={position}
-              onVoirArticle={onVoirArticle}
-              onVoirBoutique={onVoirBoutique}
-              onFermerProximite={reinitialiserPosition}
-            />
-          </div>
+          {/* Sur mobile, "Autour de moi" ouvre désormais directement la
+              carte Explorer (voir localiser() plus haut) — l'ancienne carte
+              plein écran dédiée (CarteMobileAutourDeMoi) est retirée, deux
+              cartes plein écran redondantes n'avaient plus lieu d'être. */}
 
           {/* VUE PC / DESKTOP : CARTE STANDARD LEAFLET DES BOUTIQUES */}
           <div className="hidden md:block">
@@ -1088,10 +1012,6 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
               boutiquesSansArticles={resultatsServices}
               depart={position}
               onChoisirBoutique={(id) => {
-                // Cliquer un pin doit amener sur la fiche de la boutique
-                // (comme sur le Globe/mobile), pas juste faire défiler la
-                // page — boutiquesPourGlobe porte déjà toutes les données
-                // nécessaires (produit ou service/établissement).
                 const b = boutiquesPourGlobe.find((x) => x.id === id);
                 if (b) {
                   onVoirBoutique?.(b);
@@ -1105,8 +1025,8 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </>
       )}
 
-      {/* Grille de produits : visible par défaut, ou en dessous sur PC quand position est active */}
-      <div className={`${position ? "hidden md:grid" : "grid"} grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 w-full`}>
+      {/* Grille de produits (5 Colonnes sur grand écran 1:1 Identique à la capture) */}
+      <div className={`${position ? "hidden md:grid" : "grid"} grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5 w-full`}>
         {resultats.map((a, i) => (
           <CarteArticle
             key={a.id}
@@ -1141,14 +1061,20 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
     }
   };
 
+  const localisationBadge = article.quartier
+    ? `${article.quartier}, ${article.ville || "Pikine"}`
+    : article.ville
+    ? `${article.ville}, Sénégal`
+    : "guinaw rail nord, Pikine";
+
   return (
     <article
       id={ancre ? `boutique-${article.boutique_id}` : undefined}
       onClick={ouvrirFiche}
-      className="group flex flex-col w-full cursor-pointer select-none scroll-mt-24 rounded-2xl sm:rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800/90 shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+      className="group flex flex-col w-full cursor-pointer select-none scroll-mt-24 rounded-2xl sm:rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
     >
-      {/* 1. Image produit avec badges en overlay supérieur (Format carré compact 2 colonnes) */}
-      <div className="relative aspect-square sm:aspect-square w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+      {/* 1. Image produit avec badges en overlay supérieur & inférieur (Format carré) */}
+      <div className="relative aspect-square w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -1158,99 +1084,85 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-400 p-2 sm:p-3 text-center">
-            <i className="fa-solid fa-bag-shopping text-2xl sm:text-3xl mb-1 text-zinc-300 dark:text-zinc-600"></i>
-            <span className="text-[10px] sm:text-[11px] font-bold text-zinc-500 line-clamp-2">{article.titre}</span>
+          <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-400 p-3 text-center">
+            <i className="fa-solid fa-bag-shopping text-3xl mb-1 text-zinc-300 dark:text-zinc-600"></i>
+            <span className="text-[11px] font-bold text-zinc-500 line-clamp-2">{article.titre}</span>
           </div>
         )}
 
-        {/* Dégradé supérieur pour assurer la lisibilité des badges */}
-        <div className="absolute inset-x-0 top-0 h-12 sm:h-14 bg-gradient-to-b from-black/60 via-black/20 to-transparent pointer-events-none" />
+        {/* Dégradé supérieur pour lisibilité des badges */}
+        <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/60 via-black/20 to-transparent pointer-events-none" />
 
         {/* En-tête gauche : Nom de la boutique / Vendeur avec icône */}
-        <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 z-10 flex items-center gap-1 max-w-[62%] truncate drop-shadow-sm">
-          <span className="text-white text-[11px] sm:text-[13px] font-bold truncate">
-            {article.boutique_nom || "Facilité"}
+        <div className="absolute top-2 left-2 z-10 flex items-center gap-1 max-w-[65%] truncate drop-shadow-sm">
+          <span className="text-white text-xs font-bold truncate">
+            {article.boutique_nom || "facilite shop"}
           </span>
-          <i className="fa-solid fa-circle-check text-sky-400 text-[10px] sm:text-[11px] shrink-0"></i>
+          <i className="fa-solid fa-circle-check text-sky-400 text-[10px] shrink-0"></i>
         </div>
 
         {/* En-tête droite : Badge Statut / LIVE */}
-        <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10 flex items-center gap-1">
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
           {enStock ? (
-            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-red-600 text-white text-[9px] sm:text-[11px] font-black tracking-wide uppercase flex items-center gap-1 shadow-sm">
+            <span className="px-1.5 py-0.5 rounded-md bg-[#E02424] text-white text-[9px] font-black tracking-wide uppercase flex items-center gap-1 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
               LIVE
             </span>
           ) : (
-            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-black/75 text-zinc-300 text-[9px] sm:text-[10px] font-bold backdrop-blur-xs shadow-sm">
+            <span className="px-1.5 py-0.5 rounded-md bg-black/75 text-zinc-300 text-[9px] font-bold backdrop-blur-xs shadow-sm">
               Épuisé
             </span>
           )}
-
-          {/* Bouton de signalement discret au survol */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSignalementOuvert(true);
-            }}
-            className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-black/50 hover:bg-black/80 text-white/90 hover:text-white flex items-center justify-center text-[9px] sm:text-[10px] opacity-0 group-hover:opacity-100 transition cursor-pointer"
-            title="Signaler cette annonce"
-          >
-            <i className="fa-regular fa-flag"></i>
-          </button>
         </div>
 
-        {/* Distance géolocalisée en bas à gauche de l'image */}
-        {article.distanceLisible && (
-          <span className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2.5 px-1.5 sm:px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[8px] sm:text-[10px] font-semibold flex items-center gap-1 shadow-xs">
-            <i className="fa-solid fa-location-dot text-emerald-400 text-[8px] sm:text-[9px]"></i>
-            {article.distanceLisible}
-          </span>
-        )}
+        {/* Badge de localisation en bas de l'image (1:1 Capture d'écran) */}
+        <div className="absolute bottom-2 left-2 z-10 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold flex items-center gap-1 shadow-xs max-w-[92%] truncate">
+          <i className="fa-solid fa-location-dot text-emerald-400 text-[9px] shrink-0"></i>
+          <span className="truncate">{localisationBadge}</span>
+        </div>
       </div>
 
-      {/* 2. Informations sous l'image (Titre en gras, sous-titre & bouton flèche circulaire) */}
-      <div className="p-2.5 sm:p-3.5 md:p-4 flex flex-col justify-between flex-1 bg-white dark:bg-zinc-900 gap-1.5 sm:gap-2">
-        {/* Titre : Texte fort et gras sur 2 lignes max */}
+      {/* 2. Informations sous l'image (Titre en gras, sous-titre boutique, Prix & Bouton flèche circulaire) */}
+      <div className="p-3 sm:p-3.5 flex flex-col justify-between flex-1 bg-white dark:bg-zinc-900 gap-1.5">
+        {/* Titre : Texte gras sur 2 lignes max */}
         <h3
-          className="text-xs sm:text-sm md:text-[15px] font-bold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-blue-600 transition"
+          className="text-xs sm:text-[13px] font-bold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-blue-600 transition"
           title={article.titre}
         >
           {article.titre}
         </h3>
 
-        {/* Ligne inférieure : Sous-titre / Prix à gauche et Bouton Flèche noire à droite */}
-        <div className="flex items-end justify-between gap-1.5 sm:gap-2 mt-auto pt-1">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">
-              {article.boutique_nom || article.categorie || "Boutique"}
-            </p>
-            <p className="text-xs sm:text-sm md:text-base font-extrabold text-zinc-950 dark:text-white tracking-tight mt-0.5 truncate">
+        {/* Ligne inférieure : Sous-titre boutique & Prix + Bouton flèche noire */}
+        <div className="mt-auto pt-1">
+          <p className="text-[10px] sm:text-[11px] text-zinc-400 dark:text-zinc-500 font-medium truncate mb-1">
+            {article.boutique_nom || "facilite shop"}
+          </p>
+
+          <div className="flex items-center justify-between gap-1.5">
+            <p className="text-xs sm:text-sm font-extrabold text-zinc-950 dark:text-white tracking-tight truncate">
               {prixLisible(article.prix_xof)}{" "}
-              <span className="text-[9px] sm:text-[11px] md:text-xs font-bold text-zinc-600 dark:text-zinc-400">
+              <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">
                 FCFA
               </span>
             </p>
-          </div>
 
-          {/* Bouton d'action circulaire noir avec flèche blanche */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (article.whatsappUrl) {
-                window.open(article.whatsappUrl, "_blank", "noopener,noreferrer");
-              } else {
-                ouvrirFiche();
-              }
-            }}
-            className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm shrink-0 cursor-pointer"
-            title="Voir l'article / Commander"
-          >
-            <i className="fa-solid fa-arrow-right text-[10px] sm:text-xs md:text-sm"></i>
-          </button>
+            {/* Bouton d'action circulaire noir avec flèche blanche */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (article.whatsappUrl) {
+                  window.open(article.whatsappUrl, "_blank", "noopener,noreferrer");
+                } else {
+                  ouvrirFiche();
+                }
+              }}
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm shrink-0 cursor-pointer"
+              title="Voir l'article / Commander"
+            >
+              <i className="fa-solid fa-arrow-right text-[10px] sm:text-xs"></i>
+            </button>
+          </div>
         </div>
       </div>
 
