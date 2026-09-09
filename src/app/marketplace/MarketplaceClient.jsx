@@ -53,6 +53,7 @@ import {
   majStock,
   normaliserWhatsapp,
   obtenirHorairesBoutique,
+  enregistrerHoraires,
   JOURS_SEMAINE,
   positionActuelle,
   publierArticle,
@@ -1359,6 +1360,77 @@ function DialogueSignalement({ article, onFermer }) {
 /* VENDEUR                                                                     */
 /* ========================================================================== */
 
+function IllustrationAvionPapier() {
+  return (
+    <div className="w-56 h-36 mx-auto relative flex items-center justify-center">
+      <svg
+        className="w-full h-full"
+        viewBox="0 0 260 140"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* Nuage supérieur gauche */}
+        <path
+          d="M38 48 C38 42 43 36 50 36 C54 30 62 30 68 34 C73 32 79 35 81 40 C85 40 88 44 88 49 C88 54 84 58 79 58 L44 58 C40 58 38 54 38 48 Z"
+          fill="#CFE2FE"
+          opacity="0.65"
+        />
+        {/* Nuage inférieur droit */}
+        <path
+          d="M178 68 C178 64 182 60 187 60 C190 56 196 56 200 59 C204 58 208 60 210 64 C213 64 216 67 216 71 C216 75 213 78 209 78 L183 78 C180 78 178 75 178 68 Z"
+          fill="#CFE2FE"
+          opacity="0.65"
+        />
+        {/* Traînée de vent en boucle */}
+        <path
+          d="M48 108 C65 88 85 125 110 98 C128 78 145 92 168 64"
+          stroke="#38B2AC"
+          strokeWidth="2.5"
+          strokeDasharray="4 4"
+          fill="none"
+          strokeLinecap="round"
+        />
+        {/* Petits nœuds papillon décoratifs sur la traînée */}
+        <path d="M52 102 L58 110 L58 98 Z" fill="#38B2AC" opacity="0.8" />
+        <path d="M64 106 L58 98 L58 110 Z" fill="#38B2AC" opacity="0.8" />
+        <path d="M98 94 L104 102 L104 90 Z" fill="#38B2AC" opacity="0.8" />
+        <path d="M110 98 L104 90 L104 102 Z" fill="#38B2AC" opacity="0.8" />
+
+        {/* Avion en papier (Origami style cyan / vert d'eau) */}
+        <g transform="translate(162, 34) rotate(-18)">
+          <polygon
+            points="0,32 68,0 48,42"
+            fill="#E6FFFA"
+            stroke="#2C7A7B"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <polygon
+            points="0,32 68,0 24,35"
+            fill="#B2F5EA"
+            stroke="#2C7A7B"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <polygon
+            points="24,35 68,0 42,40"
+            fill="#319795"
+            opacity="0.35"
+            strokeLinejoin="round"
+          />
+          <polygon
+            points="24,35 34,48 42,40"
+            fill="#81E6D9"
+            stroke="#2C7A7B"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, boutiques: boutiquesProp }) {
   const { profile } = useAuth();
   const [boutiques, setBoutiques] = useState(boutiquesProp || []);
@@ -1432,26 +1504,28 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
         {/* ========================================================================= */}
         {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU D'ACTIONS                 */}
         {/* ========================================================================= */}
-        <div className="w-full md:w-64 shrink-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
+        <div className="w-full md:w-[270px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
           {/* Header de la carte avec lien RÉGLAGES */}
-          <div className="p-4 flex flex-col items-center text-center relative border-b border-gray-100 dark:border-gray-800">
+          <div className="p-4 pt-4 pb-4 flex flex-col items-center text-center relative border-b border-gray-100 dark:border-gray-800">
             <button
               type="button"
               onClick={() => setOngletVendeur("parametres")}
-              className="absolute top-3 right-3 text-[10px] font-black uppercase text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center gap-1 transition cursor-pointer"
+              className="absolute top-3.5 right-3.5 text-[11px] font-black uppercase text-gray-700 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1.5 transition cursor-pointer tracking-wider"
               title="Paramètres de la boutique"
             >
               <span>RÉGLAGES</span>
-              <i className="fa-solid fa-gear text-xs"></i>
+              <i className="fa-solid fa-gear text-sm"></i>
             </button>
 
-            {/* Avatar vert rond (1:1 Capture) */}
-            <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border-2 border-emerald-400 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl my-2 shadow-xs">
-              <i className="fa-regular fa-circle-user text-3xl"></i>
+            {/* Avatar vert rond (1:1 Capture avec contour épuré) */}
+            <div className="w-20 h-20 rounded-full bg-[#86EFAC] text-white flex items-center justify-center text-4xl my-3 shadow-xs">
+              <svg className="w-11 h-11 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
             </div>
 
             {/* Nom du commerçant / Boutique */}
-            <h3 className="text-base font-extrabold text-gray-900 dark:text-white leading-tight">
+            <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white leading-tight">
               {nomVendeur}
             </h3>
 
@@ -1459,7 +1533,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
             <button
               type="button"
               onClick={() => setOngletVendeur("parametres")}
-              className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-wider mt-1.5 transition cursor-pointer"
+              className="text-[10px] font-bold text-[#718096] dark:text-gray-400 hover:text-blue-600 uppercase tracking-widest mt-1.5 transition cursor-pointer"
             >
               {telephoneVendeur ? `TÉL : ${telephoneVendeur}` : "AJOUTER LE NUMÉRO DE TÉLÉPHONE"}
             </button>
@@ -1491,7 +1565,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
                   : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
               }`}
             >
-              <i className="fa-solid fa-users text-sm text-gray-500 dark:text-gray-400"></i>
+              <i className="fa-regular fa-address-card text-base text-gray-700 dark:text-gray-300"></i>
               <span className="flex-1">Abonnés</span>
             </button>
 
@@ -1505,7 +1579,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
                   : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
               }`}
             >
-              <i className="fa-regular fa-calendar-days text-sm text-gray-500 dark:text-gray-400"></i>
+              <i className="fa-regular fa-calendar-days text-base text-gray-700 dark:text-gray-300"></i>
               <span className="flex-1">Mes annonces</span>
               {articles.length > 0 && (
                 <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
@@ -1524,7 +1598,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
                   : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
               }`}
             >
-              <i className="fa-regular fa-face-smile text-sm text-gray-500 dark:text-gray-400"></i>
+              <i className="fa-regular fa-face-smile text-base text-gray-700 dark:text-gray-300"></i>
               <span className="flex-1">Avis</span>
             </button>
 
@@ -1538,7 +1612,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
                   : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
               }`}
             >
-              <i className="fa-regular fa-circle-question text-sm text-gray-500 dark:text-gray-400"></i>
+              <i className="fa-regular fa-circle-question text-base text-gray-700 dark:text-gray-300"></i>
               <span className="flex-1">Foire aux questions</span>
             </button>
           </div>
@@ -1547,10 +1621,10 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
         {/* ========================================================================= */}
         {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE                           */}
         {/* ========================================================================= */}
-        <div className="flex-1 min-w-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
+        <div className="flex-1 min-w-0 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden min-h-[500px]">
           {/* Header de la section principale */}
-          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="text-base font-extrabold text-gray-900 dark:text-white">
+          <div className="px-6 py-4.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
               {ongletVendeur === "annonces" && "Mes annonces"}
               {ongletVendeur === "publier" && "Publier une annonce"}
               {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
@@ -1572,7 +1646,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
             )}
           </div>
 
-          <div className="p-5">
+          <div className="p-6">
             {/* VUE 1 : MES ANNONCES (1:1 Capture avec avion en papier quand vide) */}
             {ongletVendeur === "annonces" && (
               <div>
@@ -1584,28 +1658,18 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
                     onEnregistre={recharger}
                   />
                 ) : articles.length === 0 ? (
-                  <div className="py-16 px-4 flex flex-col items-center justify-center text-center space-y-4">
-                    {/* Illustration Avion en papier (1:1 Capture) */}
-                    <div className="w-32 h-24 relative flex items-center justify-center">
-                      <div className="absolute top-2 left-2 text-sky-200 dark:text-sky-900 text-2xl opacity-60">
-                        <i className="fa-solid fa-cloud"></i>
-                      </div>
-                      <div className="absolute bottom-1 right-2 text-sky-200 dark:text-sky-900 text-xl opacity-60">
-                        <i className="fa-solid fa-cloud"></i>
-                      </div>
-                      <div className="text-5xl text-teal-400 dark:text-teal-500 transform -rotate-12 animate-bounce duration-1000">
-                        <i className="fa-solid fa-paper-plane"></i>
-                      </div>
-                    </div>
+                  <div className="py-20 px-4 flex flex-col items-center justify-center text-center space-y-4">
+                    {/* Illustration Avion en papier (1:1 Capture avec SVG) */}
+                    <IllustrationAvionPapier />
 
-                    <div className="space-y-1">
-                      <h3 className="text-base font-bold text-gray-700 dark:text-gray-300">
+                    <div className="space-y-1.5 pt-2">
+                      <h3 className="text-sm sm:text-base font-normal text-gray-700 dark:text-gray-300">
                         Il n&apos;y a pas encore d&apos;annonces.
                       </h3>
                       <button
                         type="button"
                         onClick={() => setOngletVendeur("publier")}
-                        className="text-sm font-extrabold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline transition cursor-pointer pt-1"
+                        className="text-sm sm:text-base font-medium text-gray-900 dark:text-white hover:text-blue-600 transition cursor-pointer pt-1 block mx-auto"
                       >
                         Créez-en une maintenant !
                       </button>
@@ -3120,26 +3184,22 @@ function ModalFicheBoutique({
                   <p className="text-xs font-bold mt-2">Chargement des articles de la boutique...</p>
                 </div>
               ) : listeArticles.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl border border-gray-200 dark:border-zinc-800 p-6 space-y-3">
-                  <i className="fa-solid fa-box-open text-4xl text-zinc-300 dark:text-zinc-600"></i>
-                  <div>
-                    <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                      Aucun article publié pour le moment
-                    </p>
-                    <p className="text-xs text-zinc-400 mt-1">
-                      Commencez dès maintenant en publiant vos premiers articles dans votre boutique.
-                    </p>
+                <div className="py-16 px-4 flex flex-col items-center justify-center text-center space-y-3">
+                  <IllustrationAvionPapier />
+                  <div className="space-y-1.5 pt-2">
+                    <h3 className="text-sm sm:text-base font-normal text-zinc-700 dark:text-zinc-300">
+                      Il n&apos;y a pas encore d&apos;annonces.
+                    </h3>
+                    {onPublierArticle && (
+                      <button
+                        type="button"
+                        onClick={onPublierArticle}
+                        className="text-sm sm:text-base font-medium text-zinc-900 dark:text-white hover:text-blue-600 transition cursor-pointer pt-1 block mx-auto"
+                      >
+                        Créez-en une maintenant !
+                      </button>
+                    )}
                   </div>
-                  {onPublierArticle && (
-                    <button
-                      type="button"
-                      onClick={onPublierArticle}
-                      className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-md transition cursor-pointer"
-                    >
-                      <i className="fa-solid fa-plus"></i>
-                      <span>Publier mon premier article</span>
-                    </button>
-                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
@@ -3565,6 +3625,12 @@ function CarteStatistiquesBoutique({ profile, onClick }) {
 }
 
 
+const TYPES_BOUTIQUE = [
+  { id: "produit", label: "Vente de produits", icon: "fa-box-open" },
+  { id: "service", label: "Service / métier", icon: "fa-screwdriver-wrench" },
+  { id: "etablissement", label: "Établissement", icon: "fa-building" },
+];
+
 function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistre }) {
   const [champs, setChamps] = useState({
     nom: boutique?.nom || "",
@@ -3574,12 +3640,22 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
     latitude: boutique?.latitude ?? null,
     longitude: boutique?.longitude ?? null,
     precisionM: boutique?.position_precision_m ?? null,
+    type_boutique: boutique?.type_boutique || "produit",
+    metier: boutique?.metier || "",
+    description_prestation: boutique?.description_prestation || "",
+    categorie_etablissement: boutique?.categorie_etablissement || "sante",
   });
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
 
   const positionVerrouillee = !!boutique?.position_definie_le;
+  // Le type est choisi une seule fois, à la création — comme la position —
+  // et n'est plus jamais proposé à l'édition (voir migration
+  // 20260909110000) : le changer sur une boutique déjà référencée créerait
+  // un état incohérent (stock sur une boutique 'service', etc.).
+  const estService = champs.type_boutique === "service";
+  const estEtablissement = champs.type_boutique === "etablissement";
 
   const soumettre = async (e) => {
     e.preventDefault();
@@ -3589,7 +3665,9 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
 
     try {
       if (boutique) {
-        // Modification : nom, quartier, ville, WhatsApp. Jamais la position.
+        // Modification : nom, quartier, ville, WhatsApp, et selon le type
+        // déjà fixé, métier/description ou catégorie d'établissement.
+        // Jamais la position ni le type_boutique.
         await modifierBoutique(boutique.id, champs);
         setMessage("Boutique mise à jour.");
       } else {
@@ -3669,6 +3747,34 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
         {!boutique && " Le département est rempli automatiquement à partir du relevé."}
       </p>
 
+      {!boutique && (
+        <div className="mb-4">
+          <label className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5 block">
+            Type de boutique
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {TYPES_BOUTIQUE.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setChamps({ ...champs, type_boutique: t.id })}
+                className={`px-2 py-2.5 rounded-2xl text-[11px] font-bold flex flex-col items-center gap-1 border transition cursor-pointer ${
+                  champs.type_boutique === t.id
+                    ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white"
+                    : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
+                }`}
+              >
+                <i className={`fa-solid ${t.icon}`}></i>
+                <span className="text-center leading-tight">{t.label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1.5">
+            Ce choix est définitif : il ne pourra plus être modifié après la création.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <input
           type="text"
@@ -3704,6 +3810,52 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
           className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm"
         />
       </div>
+
+      {estService && (
+        <div className="mt-4 space-y-3">
+          <input
+            type="text"
+            value={champs.metier}
+            onChange={(e) => setChamps({ ...champs, metier: e.target.value })}
+            placeholder="Métier (ex. Plombier, Électricien, Coiffeur à domicile...)"
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm"
+          />
+          <textarea
+            value={champs.description_prestation}
+            onChange={(e) => setChamps({ ...champs, description_prestation: e.target.value })}
+            placeholder="Décrivez votre prestation (spécialités, expérience...)"
+            rows={3}
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm resize-none"
+          />
+          <p className="text-[11px] text-gray-400">
+            Le quartier renseigné plus haut sert de zone d&apos;intervention.
+          </p>
+        </div>
+      )}
+
+      {estEtablissement && (
+        <div className="mt-4 space-y-2">
+          <select
+            value={champs.categorie_etablissement}
+            onChange={(e) => setChamps({ ...champs, categorie_etablissement: e.target.value })}
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm cursor-pointer"
+          >
+            <option value="sante">Santé (clinique, pharmacie...)</option>
+            <option value="finance">Finance (point Wave/Orange Money...)</option>
+            <option value="beaute">Beauté (salon, barbier...)</option>
+            <option value="autre">Autre établissement</option>
+          </select>
+          {["sante", "finance"].includes(champs.categorie_etablissement) && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+              <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+              <span>
+                Catégorie sensible : votre fiche restera masquée du public jusqu&apos;à sa vérification par un
+                administrateur.
+              </span>
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-4">
         <CapturePosition
@@ -3742,7 +3894,135 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
         <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"} mr-2`}></i>
         {envoi ? "Enregistrement…" : boutique ? "Mettre à jour ma boutique" : "Créer ma boutique"}
       </button>
+
+      {/* Horaires : uniquement à l'édition (besoin d'un store_id existant),
+          jamais à la création — enregistrer_mes_horaires est un appel
+          séparé de creer_ma_boutique. */}
+      {boutique && estEtablissement && <EditeurHoraires storeId={boutique.id} />}
     </form>
+  );
+}
+
+function EditeurHoraires({ storeId }) {
+  const [lignes, setLignes] = useState(() =>
+    Array.from({ length: 7 }, (_, jour) => ({
+      jour_semaine: jour,
+      heure_ouverture: "08:00",
+      heure_fermeture: "18:00",
+      ferme_ce_jour: false,
+    }))
+  );
+  const [chargement, setChargement] = useState(true);
+  const [envoi, setEnvoi] = useState(false);
+  const [message, setMessage] = useState("");
+  const [erreur, setErreur] = useState("");
+
+  useEffect(() => {
+    let annule = false;
+    obtenirHorairesBoutique(storeId)
+      .then((data) => {
+        if (annule || !data || data.length === 0) return;
+        const parJour = new Map(data.map((h) => [h.jour_semaine, h]));
+        setLignes((prev) =>
+          prev.map((l) => {
+            const h = parJour.get(l.jour_semaine);
+            if (!h) return l;
+            return {
+              jour_semaine: l.jour_semaine,
+              heure_ouverture: h.heure_ouverture?.slice(0, 5) || "08:00",
+              heure_fermeture: h.heure_fermeture?.slice(0, 5) || "18:00",
+              ferme_ce_jour: h.ferme_ce_jour,
+            };
+          })
+        );
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!annule) setChargement(false);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [storeId]);
+
+  const modifierLigne = (idx, champs) => {
+    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, ...champs } : l)));
+  };
+
+  const soumettre = async (e) => {
+    e.preventDefault();
+    setEnvoi(true);
+    setErreur("");
+    setMessage("");
+    try {
+      await enregistrerHoraires(storeId, lignes);
+      setMessage("Horaires enregistrés.");
+    } catch (err) {
+      setErreur(err.message);
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
+      <h3 className="text-sm font-black text-gray-900 dark:text-white mb-1">Horaires d&apos;ouverture</h3>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        Affichés aux acheteurs sur la fiche de votre établissement.
+      </p>
+
+      {chargement ? (
+        <p className="text-xs text-gray-400 italic">Chargement…</p>
+      ) : (
+        <div className="space-y-1.5">
+          {lignes.map((l, idx) => (
+            <div key={l.jour_semaine} className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="w-20 font-bold text-gray-600 dark:text-gray-400 shrink-0">
+                {JOURS_SEMAINE[l.jour_semaine]}
+              </span>
+              <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={l.ferme_ce_jour}
+                  onChange={(e) => modifierLigne(idx, { ferme_ce_jour: e.target.checked })}
+                />
+                <span className="text-gray-500 dark:text-gray-400">Fermé</span>
+              </label>
+              {!l.ferme_ce_jour && (
+                <>
+                  <input
+                    type="time"
+                    value={l.heure_ouverture}
+                    onChange={(e) => modifierLigne(idx, { heure_ouverture: e.target.value })}
+                    className="px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                  />
+                  <span className="text-gray-400">–</span>
+                  <input
+                    type="time"
+                    value={l.heure_fermeture}
+                    onChange={(e) => modifierLigne(idx, { heure_fermeture: e.target.value })}
+                    className="px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                  />
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {erreur && <p className="text-xs font-bold text-red-600 mt-3">{erreur}</p>}
+      {message && <p className="text-xs font-bold text-emerald-600 mt-3">{message}</p>}
+
+      <button
+        type="button"
+        onClick={soumettre}
+        disabled={envoi || chargement}
+        className="mt-3 px-5 py-2.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-black disabled:opacity-50 cursor-pointer shadow-sm hover:opacity-95 transition"
+      >
+        <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"} mr-2`}></i>
+        {envoi ? "Enregistrement…" : "Enregistrer les horaires"}
+      </button>
+    </div>
   );
 }
 

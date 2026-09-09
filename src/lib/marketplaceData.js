@@ -287,14 +287,23 @@ export async function creerBoutique(userId, champs) {
     // tard une boutique mal placée : un relevé à 800 m n'a pas la même valeur
     // qu'un relevé à 12 m.
     p_precision_m: coordonnee(champs?.precisionM),
+    // Type figé à la création — jamais modifiable ensuite (voir
+    // modifierBoutique) : changer le type d'une boutique déjà référencée
+    // créerait un état incohérent (stock sur une boutique 'service', etc.)
+    p_type_boutique: champs?.type_boutique || "produit",
+    p_metier: champs?.metier?.trim() || null,
+    p_description_prestation: champs?.description_prestation?.trim() || null,
+    p_categorie_etablissement: champs?.categorie_etablissement || null,
   });
   if (error) throw new Error(error.message);
   return data;
 }
 
 /**
- * Corrige l'étiquette d'une boutique : nom, quartier, ville, WhatsApp.
- * La position n'en fait pas partie — elle est relevée sur place, une fois.
+ * Corrige l'étiquette d'une boutique : nom, quartier, ville, WhatsApp, et
+ * selon le type déjà fixé à la création, métier/description ou catégorie
+ * d'établissement. La position et le type_boutique n'en font pas partie —
+ * relevés/choisis une seule fois, à la création.
  */
 export async function modifierBoutique(storeId, champs) {
   const nom = String(champs?.nom || "").trim();
@@ -306,6 +315,9 @@ export async function modifierBoutique(storeId, champs) {
     p_quartier: champs?.quartier?.trim() || null,
     p_ville: champs?.ville?.trim() || null,
     p_whatsapp: normaliserWhatsapp(champs?.telephone_whatsapp),
+    p_metier: champs?.metier?.trim() || null,
+    p_description_prestation: champs?.description_prestation?.trim() || null,
+    p_categorie_etablissement: champs?.categorie_etablissement || null,
   });
   if (error) throw new Error(error.message);
   return data;
@@ -623,6 +635,21 @@ export async function obtenirHorairesBoutique(storeId) {
     .order("jour_semaine", { ascending: true });
   if (error) throw new Error(error.message);
   return data || [];
+}
+
+/**
+ * Remplace les horaires d'un établissement (les 7 jours d'un coup — voir
+ * enregistrer_mes_horaires, qui supprime puis réinsère tout pour la
+ * boutique). `horaires` : [{ jour_semaine, heure_ouverture, heure_fermeture,
+ * ferme_ce_jour }, ...].
+ */
+export async function enregistrerHoraires(storeId, horaires) {
+  if (!storeId) throw new Error("Boutique introuvable.");
+  const { error } = await supabase.rpc("enregistrer_mes_horaires", {
+    p_store_id: storeId,
+    p_horaires: horaires || [],
+  });
+  if (error) throw new Error(error.message);
 }
 
 /** Position du navigateur, en promesse. */
