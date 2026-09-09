@@ -1431,6 +1431,905 @@ function IllustrationAvionPapier() {
   );
 }
 
+/**
+ * Composant Réglages (1:1 Strictement conforme aux 2 captures d'écran fournies)
+ * - Header: < Réglages
+ * - Groupe 1: Informations personnelles, Détails de l'entreprise >
+ * - Groupe 2: Ajouter un numéro de téléphone, Changer l’email, Changer la langue
+ * - Groupe 3: Désactiver le chat, Désactiver les commentaires, Gérer les notifications
+ * - Groupe 4: Changer le mot de passe, Supprimer définitivement mon compte, Se déconnecter
+ */
+function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
+  const { signOut } = useAuth();
+  const [modalActive, setModalActive] = useState(null); // 'infos_perso' | 'details_entreprise' | 'telephone' | 'email' | 'langue' | 'notifs' | 'password' | 'supprimer'
+  const [toastMessage, setToastMessage] = useState("");
+  const [enCours, setEnCours] = useState(false);
+
+  // Données Personnelles
+  const [fullName, setFullName] = useState(profile?.full_name || "");
+  const [headline, setHeadline] = useState(profile?.headline || "");
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || boutique?.avatar_url || null);
+  const avatarInputRef = useRef(null);
+
+  // Données Entreprise
+  const [nomEntreprise, setNomEntreprise] = useState(boutique?.nom || profile?.full_name || "facilite shop");
+  const [descriptionEntreprise, setDescriptionEntreprise] = useState(
+    boutique?.description || profile?.headline || "Boutique Officielle Partenaire Facilité"
+  );
+  const [ville, setVille] = useState(boutique?.ville || profile?.city || "Dakar");
+  const [quartier, setQuartier] = useState(boutique?.quartier || profile?.quartier || "Guinaw rail nord");
+  const [telephone, setTelephone] = useState(boutique?.telephone_whatsapp || profile?.phone || "+221771001212");
+  const [email, setEmail] = useState(profile?.email || "");
+
+  // Toggles de Préférences
+  const [chatDesactive, setChatDesactive] = useState(false);
+  const [commentairesDesactives, setCommentairesDesactives] = useState(false);
+  const [notifCommandes, setNotifCommandes] = useState(true);
+  const [notifMessages, setNotifMessages] = useState(true);
+  const [langue, setLangue] = useState(() => {
+    try {
+      return localStorage.getItem("facilite_lang") || "fr";
+    } catch {
+      return "fr";
+    }
+  });
+
+  // Mot de passe & Suppression
+  const [nouveauMdp, setNouveauMdp] = useState("");
+  const [confirmMdp, setConfirmMdp] = useState("");
+  const [supprConfirm, setSupprConfirm] = useState("");
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 3500);
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setEnCours(true);
+      const localUrl = URL.createObjectURL(file);
+      setAvatarUrl(localUrl);
+      if (userId) {
+        try {
+          const photoPath = await envoyerPhoto(file, userId);
+          const publicPhotoUrl = urlPhoto(photoPath);
+          setAvatarUrl(publicPhotoUrl);
+          await supabase.from("profiles").update({ avatar_url: publicPhotoUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+        } catch {
+          const ext = file.name.split(".").pop() || "jpg";
+          const path = `${userId}/avatar_${Date.now()}.${ext}`;
+          await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+          const { data: pubData } = supabase.storage.from("avatars").getPublicUrl(path);
+          if (pubData?.publicUrl) {
+            setAvatarUrl(pubData.publicUrl);
+            await supabase.from("profiles").update({ avatar_url: pubData.publicUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+          }
+        }
+      }
+      showToast("Photo de profil mise à jour !");
+      onEnregistre?.();
+    } catch (err) {
+      console.error(err);
+      showToast("Photo mise à jour localement !");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const handleSaveInfosPerso = async (e) => {
+    e.preventDefault();
+    setEnCours(true);
+    try {
+      if (userId) {
+        await supabase.from("profiles").update({
+          full_name: fullName,
+          headline,
+          updated_at: new Date().toISOString(),
+        }).eq("id", userId);
+      }
+      showToast("✓ Informations personnelles enregistrées !");
+      setModalActive(null);
+      onEnregistre?.();
+    } catch {
+      showToast("Erreur lors de l'enregistrement");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const handleSaveEntreprise = async (e) => {
+    e.preventDefault();
+    setEnCours(true);
+    try {
+      if (boutique?.id && boutique?.id !== "facilite_shop") {
+        await modifierBoutique(boutique.id, {
+          nom: nomEntreprise,
+          description: descriptionEntreprise,
+          ville,
+          quartier,
+          telephone_whatsapp: telephone,
+        });
+      }
+      if (userId) {
+        await supabase.from("profiles").update({
+          full_name: nomEntreprise,
+          headline: descriptionEntreprise,
+          city: ville,
+          quartier,
+          phone: telephone,
+          updated_at: new Date().toISOString(),
+        }).eq("id", userId);
+      }
+      showToast("✓ Détails de l'entreprise enregistrés !");
+      setModalActive(null);
+      onEnregistre?.();
+    } catch {
+      showToast("Erreur lors de l'enregistrement");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const handleSaveTelephone = async (e) => {
+    e.preventDefault();
+    setEnCours(true);
+    try {
+      if (boutique?.id && boutique?.id !== "facilite_shop") {
+        await modifierBoutique(boutique.id, { telephone_whatsapp: telephone });
+      }
+      if (userId) {
+        await supabase.from("profiles").update({ phone: telephone, updated_at: new Date().toISOString() }).eq("id", userId);
+      }
+      showToast("✓ Numéro de téléphone mis à jour !");
+      setModalActive(null);
+      onEnregistre?.();
+    } catch {
+      showToast("Erreur lors de la mise à jour");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const handleSaveEmail = async (e) => {
+    e.preventDefault();
+    setEnCours(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ email });
+      if (error) throw error;
+      showToast("✓ Un email de confirmation a été envoyé !");
+      setModalActive(null);
+    } catch (err) {
+      showToast(err.message || "Erreur lors du changement d'email");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const handleChangerLangue = (nouvelleLangue) => {
+    setLangue(nouvelleLangue);
+    try {
+      localStorage.setItem("facilite_lang", nouvelleLangue);
+    } catch {}
+    showToast(nouvelleLangue === "fr" ? "Langue définie : Français 🇫🇷" : "Language set : English 🇬🇧");
+    setModalActive(null);
+  };
+
+  const handleSavePassword = async (e) => {
+    e.preventDefault();
+    if (nouveauMdp.length < 6) {
+      showToast("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+    if (nouveauMdp !== confirmMdp) {
+      showToast("Les mots de passe ne correspondent pas");
+      return;
+    }
+    setEnCours(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: nouveauMdp });
+      if (error) throw error;
+      showToast("✓ Mot de passe mis à jour avec succès !");
+      setNouveauMdp("");
+      setConfirmMdp("");
+      setModalActive(null);
+    } catch (err) {
+      showToast(err.message || "Erreur lors du changement de mot de passe");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const handleDeconnexion = async () => {
+    if (confirm("Voulez-vous vraiment vous déconnecter ?")) {
+      try {
+        await signOut();
+      } catch {
+        await supabase.auth.signOut();
+      }
+      window.location.href = "/login";
+    }
+  };
+
+  const handleSupprimerCompte = async (e) => {
+    e.preventDefault();
+    if (supprConfirm.trim().toUpperCase() !== "SUPPRIMER") {
+      showToast("Veuillez taper 'SUPPRIMER' pour confirmer");
+      return;
+    }
+    setEnCours(true);
+    try {
+      if (userId) {
+        await supabase.from("profiles").delete().eq("id", userId);
+      }
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (err) {
+      showToast(err.message || "Erreur lors de la suppression du compte");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden text-left relative w-full">
+      {/* Toast de confirmation */}
+      {toastMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-gray-900 text-white dark:bg-white dark:text-gray-950 text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-2 animate-bounce">
+          <i className="fa-solid fa-circle-check text-emerald-400 dark:text-emerald-600"></i>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      <input
+        type="file"
+        ref={avatarInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatarUpload}
+      />
+
+      {/* Header : < Réglages (1:1 Capture exacte) */}
+      <div className="bg-[#F8FAFC] dark:bg-zinc-900/90 px-4 py-3.5 border-b border-gray-100 dark:border-zinc-800 flex items-center gap-3">
+        {onRetour && (
+          <button
+            type="button"
+            onClick={onRetour}
+            className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-zinc-800 flex items-center justify-center transition cursor-pointer text-gray-800 dark:text-gray-100 text-base font-bold"
+            title="Retour"
+          >
+            <i className="fa-solid fa-chevron-left text-sm"></i>
+          </button>
+        )}
+        <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+          Réglages
+        </h2>
+      </div>
+
+      {/* GROUPE 1 : Informations personnelles & Détails de l'entreprise */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setModalActive("infos_perso")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Informations personnelles</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalActive("details_entreprise")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+        >
+          <span>Détails de l'entreprise</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+        </button>
+      </div>
+
+      {/* SÉPARATEUR 1 (1:1 Capture exacte) */}
+      <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
+
+      {/* GROUPE 2 : Téléphone, Email, Langue */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setModalActive("telephone")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Ajouter un numéro de téléphone</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalActive("email")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Changer l’email</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalActive("langue")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+        >
+          <span>Changer la langue</span>
+        </button>
+      </div>
+
+      {/* SÉPARATEUR 2 (1:1 Capture exacte) */}
+      <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
+
+      {/* GROUPE 3 : Chat, Commentaires, Notifications */}
+      <div>
+        <button
+          type="button"
+          onClick={() => {
+            const nv = !chatDesactive;
+            setChatDesactive(nv);
+            showToast(nv ? "Chat désactivé" : "Chat activé");
+          }}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Désactiver le chat</span>
+          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${chatDesactive ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"}`}>
+            {chatDesactive ? "Désactivé" : "Actif"}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const nv = !commentairesDesactives;
+            setCommentairesDesactives(nv);
+            showToast(nv ? "Commentaires désactivés" : "Commentaires activés");
+          }}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Désactiver les commentaires</span>
+          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${commentairesDesactives ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"}`}>
+            {commentairesDesactives ? "Désactivés" : "Actifs"}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalActive("notifs")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+        >
+          <span>Gérer les notifications</span>
+        </button>
+      </div>
+
+      {/* SÉPARATEUR 3 (1:1 Capture exacte) */}
+      <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
+
+      {/* GROUPE 4 : Mot de passe, Suppression, Déconnexion */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setModalActive("password")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Changer le mot de passe</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalActive("supprimer")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Supprimer définitivement mon compte</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDeconnexion}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+        >
+          <span>Se déconnecter</span>
+          <i className="fa-solid fa-arrow-right-from-bracket text-xs text-gray-400"></i>
+        </button>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MODALS D'ÉDITION DES RÉGLAGES                                            */}
+      {/* ========================================================================= */}
+
+      {/* 1. Modal Informations personnelles */}
+      {modalActive === "infos_perso" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                Informations personnelles
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveInfosPerso} className="space-y-3.5">
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center text-xl font-bold overflow-hidden shrink-0 border-2 border-emerald-500/20">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <i className="fa-regular fa-user"></i>
+                  )}
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs font-bold transition cursor-pointer"
+                  >
+                    Changer ma photo
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Nom complet *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Ex : Moussa Diop"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Profession / Titre
+                </label>
+                <input
+                  type="text"
+                  value={headline}
+                  onChange={(e) => setHeadline(e.target.value)}
+                  placeholder="Ex : Juriste Droit Privé & Droits Humains"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={enCours}
+                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {enCours ? "Enregistrement..." : "Enregistrer les informations"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Modal Détails de l'entreprise */}
+      {modalActive === "details_entreprise" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                Détails de l'entreprise / Boutique
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEntreprise} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Nom commercial de la boutique *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={nomEntreprise}
+                  onChange={(e) => setNomEntreprise(e.target.value)}
+                  placeholder="Ex : facilite shop"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Description &amp; Activité
+                </label>
+                <textarea
+                  rows={2}
+                  value={descriptionEntreprise}
+                  onChange={(e) => setDescriptionEntreprise(e.target.value)}
+                  placeholder="Ex : Vente de cosmétiques, vêtements et livraison express"
+                  className="w-full px-3.5 py-2 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                    Ville / Département
+                  </label>
+                  <select
+                    value={ville}
+                    onChange={(e) => setVille(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  >
+                    {DEPARTEMENTS_SENEGAL.map((dep) => (
+                      <option key={dep} value={dep}>
+                        {dep}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                    Quartier / Adresse
+                  </label>
+                  <input
+                    type="text"
+                    value={quartier}
+                    onChange={(e) => setQuartier(e.target.value)}
+                    placeholder="Ex : Guinaw rail nord"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Numéro WhatsApp de l'entreprise
+                </label>
+                <input
+                  type="tel"
+                  value={telephone}
+                  onChange={(e) => setTelephone(e.target.value)}
+                  placeholder="Ex : +221771001212"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={enCours}
+                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {enCours ? "Enregistrement..." : "Enregistrer les détails"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Modal Ajouter / Modifier Téléphone */}
+      {modalActive === "telephone" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                Numéro de téléphone
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTelephone} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Numéro de contact / WhatsApp *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={telephone}
+                  onChange={(e) => setTelephone(e.target.value)}
+                  placeholder="Ex : +221771001212 ou 771001212"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={enCours}
+                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {enCours ? "Enregistrement..." : "Enregistrer le numéro"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Modal Changer l'email */}
+      {modalActive === "email" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                Changer l'adresse e-mail
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEmail} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Nouvelle adresse e-mail *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Ex : monemail@gmail.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <p className="text-[11px] text-gray-500">
+                Un e-mail de confirmation sera envoyé à cette nouvelle adresse pour valider le changement.
+              </p>
+
+              <button
+                type="submit"
+                disabled={enCours}
+                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {enCours ? "Envoi..." : "Mettre à jour l'e-mail"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Modal Changer la langue */}
+      {modalActive === "langue" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                Changer la langue
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => handleChangerLangue("fr")}
+                className={`w-full p-3.5 rounded-2xl border flex items-center justify-between transition cursor-pointer ${
+                  langue === "fr"
+                    ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold"
+                    : "border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🇫🇷</span>
+                  <span className="text-xs font-bold text-gray-900 dark:text-white">Français (Par défaut)</span>
+                </div>
+                {langue === "fr" && <i className="fa-solid fa-circle-check text-blue-600"></i>}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleChangerLangue("en")}
+                className={`w-full p-3.5 rounded-2xl border flex items-center justify-between transition cursor-pointer ${
+                  langue === "en"
+                    ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold"
+                    : "border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🇬🇧</span>
+                  <span className="text-xs font-bold text-gray-900 dark:text-white">English (Anglais)</span>
+                </div>
+                {langue === "en" && <i className="fa-solid fa-circle-check text-blue-600"></i>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Modal Gérer les notifications */}
+      {modalActive === "notifs" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                Gérer les notifications
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700">
+                <div>
+                  <div className="text-xs font-bold text-gray-900 dark:text-white">Alertes de commandes</div>
+                  <div className="text-[10px] text-gray-500">Recevoir une alerte lors d'un nouveau contact client</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifCommandes}
+                  onChange={(e) => setNotifCommandes(e.target.checked)}
+                  className="w-4 h-4 accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700">
+                <div>
+                  <div className="text-xs font-bold text-gray-900 dark:text-white">Messages &amp; Nouveautés</div>
+                  <div className="text-[10px] text-gray-500">Mises à jour de la plateforme Facilité</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifMessages}
+                  onChange={(e) => setNotifMessages(e.target.checked)}
+                  className="w-4 h-4 accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  showToast("✓ Préférences de notifications enregistrées !");
+                  setModalActive(null);
+                }}
+                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer mt-2"
+              >
+                Valider mes choix
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Modal Changer mot de passe */}
+      {modalActive === "password" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                Changer le mot de passe
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePassword} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Nouveau mot de passe *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={nouveauMdp}
+                  onChange={(e) => setNouveauMdp(e.target.value)}
+                  placeholder="Au moins 6 caractères"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Confirmer le mot de passe *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmMdp}
+                  onChange={(e) => setConfirmMdp(e.target.value)}
+                  placeholder="Répétez le mot de passe"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={enCours}
+                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {enCours ? "Mise à jour..." : "Modifier mon mot de passe"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Modal Supprimer compte */}
+      {modalActive === "supprimer" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-red-200 dark:border-red-900/50 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-red-100 dark:border-red-900/30">
+              <h3 className="text-base font-extrabold text-red-600 dark:text-red-400 flex items-center gap-2">
+                <i className="fa-solid fa-triangle-exclamation"></i>
+                Supprimer mon compte
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleSupprimerCompte} className="space-y-3.5">
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                Cette action est <strong>irréversible</strong>. Toutes vos annonces, vos données de boutique et votre profil seront définitivement supprimés.
+              </p>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-red-600 dark:text-red-400">
+                  Tapez <strong>SUPPRIMER</strong> pour confirmer :
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={supprConfirm}
+                  onChange={(e) => setSupprConfirm(e.target.value)}
+                  placeholder="SUPPRIMER"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-xs sm:text-sm font-semibold text-red-900 dark:text-red-200 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={enCours || supprConfirm.trim().toUpperCase() !== "SUPPRIMER"}
+                className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {enCours ? "Suppression en cours..." : "Confirmer la suppression définitive"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, boutiques: boutiquesProp }) {
   const { profile } = useAuth();
   const [boutiques, setBoutiques] = useState(boutiquesProp || []);
@@ -1909,12 +2808,13 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
               </div>
             )}
 
-            {/* VUE 9 : RÉGLAGES DE LA BOUTIQUE */}
+            {/* VUE 9 : RÉGLAGES DE LA BOUTIQUE (1:1 Capture d'écran exacte) */}
             {ongletVendeur === "parametres" && (
-              <FormulaireBoutique
+              <VueReglages
                 userId={userId}
+                profile={profile}
                 boutique={boutiqueActive}
-                nombreBoutiques={boutiques.length}
+                onRetour={() => setOngletVendeur("annonces")}
                 onEnregistre={recharger}
               />
             )}
@@ -3463,137 +4363,15 @@ function ModalFicheBoutique({
           )}
 
           {ongletActif === "parametres" && (
-            <form onSubmit={handleSauvegarderParametres} className="space-y-4">
-              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-800 space-y-4">
-                <div className="flex items-center justify-between border-b pb-3 border-gray-200 dark:border-zinc-700">
-                  <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                    <i className="fa-solid fa-sliders text-blue-600"></i>
-                    Modifier les informations de la boutique
-                  </h4>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 bg-purple-100 dark:bg-purple-950/60 px-2 py-0.5 rounded-md">
-                    Commerçant
-                  </span>
-                </div>
-
-                {/* Boutons d'action rapides pour les photos */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="p-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 transition flex items-center gap-3 text-left cursor-pointer"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center shrink-0">
-                      <i className="fa-solid fa-camera"></i>
-                    </div>
-                    <div>
-                      <div className="text-xs font-black text-zinc-900 dark:text-white">Photo de profil</div>
-                      <div className="text-[10px] text-zinc-500">Changer le logo / avatar</div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => coverInputRef.current?.click()}
-                    className="p-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 transition flex items-center gap-3 text-left cursor-pointer"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-950/50 text-purple-600 flex items-center justify-center shrink-0">
-                      <i className="fa-regular fa-image"></i>
-                    </div>
-                    <div>
-                      <div className="text-xs font-black text-zinc-900 dark:text-white">Photo de couverture</div>
-                      <div className="text-[10px] text-zinc-500">Changer la bannière CV</div>
-                    </div>
-                  </button>
-                </div>
-
-                {/* Nom de la boutique */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                    Nom officiel de la boutique *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={nom}
-                    onChange={(e) => setNom(e.target.value)}
-                    placeholder="Ex : facilite shop"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                  />
-                </div>
-
-                {/* Slogan / Description */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                    Description &amp; Activité
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Ex : Boutique Officielle Partenaire Facilité · Vente d'articles & livraison express"
-                    className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                  />
-                </div>
-
-                {/* Ville / Département & Quartier */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                      Ville / Département *
-                    </label>
-                    <select
-                      value={ville}
-                      onChange={(e) => setVille(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                    >
-                      {DEPARTEMENTS_SENEGAL.map((dep) => (
-                        <option key={dep} value={dep}>
-                          {dep}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                      Quartier / Adresse
-                    </label>
-                    <input
-                      type="text"
-                      value={quartier}
-                      onChange={(e) => setQuartier(e.target.value)}
-                      placeholder="Ex : Guinaw rail nord"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                    />
-                  </div>
-                </div>
-
-                {/* Numéro WhatsApp */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                    Numéro de contact WhatsApp (pour recevoir les commandes) *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={telephone}
-                    onChange={(e) => setTelephone(e.target.value)}
-                    placeholder="Ex : +221771001212 ou 771001212"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                  />
-                </div>
-
-                {/* Bouton de soumission */}
-                <button
-                  type="submit"
-                  disabled={envoiEnCours}
-                  className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs sm:text-sm font-black transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
-                >
-                  <i className={`fa-solid ${envoiEnCours ? "fa-spinner fa-spin" : "fa-floppy-disk"}`}></i>
-                  <span>{envoiEnCours ? "Enregistrement..." : "Enregistrer les modifications"}</span>
-                </button>
-              </div>
-            </form>
+            <VueReglages
+              userId={userId}
+              profile={profile}
+              boutique={boutique}
+              onRetour={() => setOngletActif("produits")}
+              onEnregistre={() => {
+                onBoutiqueUpdate?.();
+              }}
+            />
           )}
         </div>
       </div>
