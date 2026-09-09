@@ -324,6 +324,22 @@ export async function modifierBoutique(storeId, champs) {
 }
 
 /**
+ * Enregistre l'avatar façon Bitmoji de la boutique (config DiceBear, pas une
+ * image rendue). Fonction séparée de modifierBoutique/modifier_ma_boutique :
+ * un nom de RPC neuf ne peut pas créer de collision de surcharge — voir le
+ * commentaire de la migration 20260910090000.
+ */
+export async function modifierAvatarBoutique(storeId, avatarConfig) {
+  if (!storeId) throw new Error("Boutique introuvable.");
+  const { data, error } = await supabase.rpc("modifier_mon_avatar_boutique", {
+    p_store_id: storeId,
+    p_avatar_config: avatarConfig,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
  * Un numéro sénégalais se saisit couramment « 77 123 45 67 ». Le lien wa.me
  * exige le format international sans séparateur : on normalise ici plutôt que
  * de compter sur la saisie, sinon le bouton WhatsApp ouvre une conversation
@@ -473,7 +489,8 @@ export async function chargerTousLesArticles({
         ville,
         telephone_whatsapp,
         latitude,
-        longitude
+        longitude,
+        avatar_config
       )
     `)
     .eq("actif", true)
@@ -510,6 +527,7 @@ export async function chargerTousLesArticles({
     boutique_ville: r.store?.ville,
     boutique_lat: r.store?.latitude,
     boutique_lng: r.store?.longitude,
+    boutique_avatar_config: r.store?.avatar_config || null,
     whatsapp: r.store?.telephone_whatsapp,
     whatsappUrl: lienWhatsapp(r.store?.telephone_whatsapp, r.titre),
     distance_km: null,
@@ -610,6 +628,7 @@ export async function chercherServicesEtEtablissements({
     categorie_etablissement: r.categorie_etablissement,
     telephone_whatsapp: r.telephone_whatsapp,
     whatsappUrl: lienWhatsapp(r.telephone_whatsapp, r.nom),
+    avatar_config: r.avatar_config || null,
     distance_km: r.distance_km,
     distanceLisible: r.distance_km == null ? "" : r.distance_km < 1 ? `${Math.round(r.distance_km * 1000)} m` : `${r.distance_km} km`,
     lat: r.latitude,

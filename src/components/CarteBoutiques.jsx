@@ -18,6 +18,7 @@
 // produiraient trois cercles superposés et un compteur illisible.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml } from "@/lib/marketplaceData";
+import { svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 const COULEUR = "#1877F2";
 const COULEUR_SERVICE = "#F59E0B";
@@ -73,6 +74,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           distance_km: a.distance_km,
           position: p,
           type_boutique: "produit",
+          avatar_config: a.boutique_avatar_config || null,
           articles: [],
         });
       }
@@ -92,6 +94,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
         description_prestation: s.description_prestation,
         categorie_etablissement: s.categorie_etablissement,
         whatsappUrl: s.whatsappUrl,
+        avatar_config: s.avatar_config || null,
         articles: [],
       });
     }
@@ -154,13 +157,25 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
             couleur = enStock ? COULEUR : "#6b7280";
           }
 
-          const marqueur = L.circleMarker(b.position, {
-            radius: 9,
-            color: couleur,
-            weight: 3,
-            fillColor: couleur,
-            fillOpacity: 0.85,
-          }).addTo(carte);
+          // Avatar façon Bitmoji en priorité si le vendeur en a configuré un
+          // (SVG DiceBear généré en local, inliné directement dans le HTML du
+          // divIcon — aucune URL externe) ; sinon le point coloré habituel.
+          const marqueur = b.avatar_config
+            ? L.marker(b.position, {
+                icon: L.divIcon({
+                  className: "carte-boutiques-avatar-icon",
+                  html: `<div style="width:28px;height:28px;border-radius:9999px;border:2.5px solid ${couleur};overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.35);background:#fff;">${svgAvatarBoutique(b.avatar_config, 28)}</div>`,
+                  iconSize: [28, 28],
+                  iconAnchor: [14, 14],
+                }),
+              }).addTo(carte)
+            : L.circleMarker(b.position, {
+                radius: 9,
+                color: couleur,
+                weight: 3,
+                fillColor: couleur,
+                fillOpacity: 0.85,
+              }).addTo(carte);
 
           const ligneDetail =
             b.type_boutique === "service"

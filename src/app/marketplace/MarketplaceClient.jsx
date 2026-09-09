@@ -26,6 +26,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import CarteBoutiques from "@/components/CarteBoutiques";
 import CapturePosition from "@/components/CapturePosition";
+import EditeurAvatarBoutique from "@/components/EditeurAvatarBoutique";
+import { dataUriAvatarBoutique } from "@/lib/avatarBoutique";
 // Chargé en dynamique, sans SSR : maplibre-gl (~257 Ko compressés) touche
 // `window`/WebGL et ne doit être téléchargé que par les personnes qui
 // ouvrent réellement "Explorer", pas par chaque visite du Marketplace.
@@ -49,6 +51,7 @@ import {
   chercherServicesEtEtablissements,
   creerBoutique,
   modifierBoutique,
+  modifierAvatarBoutique,
   envoyerPhoto,
   majStock,
   normaliserWhatsapp,
@@ -687,6 +690,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       articlesCount: articlesDeBoutique.length,
       articles: articlesDeBoutique,
       type_boutique: "produit",
+      avatar_config: a.boutique_avatar_config || null,
     });
   }
 
@@ -718,6 +722,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       metier: s.metier,
       description_prestation: s.description_prestation,
       categorie_etablissement: s.categorie_etablissement,
+      avatar_config: s.avatar_config || null,
     });
   }
 
@@ -1731,11 +1736,22 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
         <button
           type="button"
           onClick={() => setModalActive("details_entreprise")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
         >
           <span>Détails de l'entreprise</span>
           <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
         </button>
+
+        {boutique?.id && (
+          <button
+            type="button"
+            onClick={() => setModalActive("avatar")}
+            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+          >
+            <span>Avatar de la boutique</span>
+            <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+          </button>
+        )}
       </div>
 
       {/* SÉPARATEUR 1 (1:1 Capture exacte) */}
@@ -2074,6 +2090,37 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
             </form>
 
             {estEtablissement && boutique?.id && <EditeurHoraires storeId={boutique.id} />}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Avatar façon Bitmoji de la boutique — anonymat possible, pas de
+          vraie photo obligatoire. Enregistrement uniquement au clic explicite
+          sur "Enregistrer l'avatar" dans EditeurAvatarBoutique, jamais à
+          chaque changement de vignette. */}
+      {modalActive === "avatar" && boutique?.id && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3 mb-1 border-gray-100 dark:border-zinc-800">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Avatar de la boutique</h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+            <EditeurAvatarBoutique
+              configInitial={boutique.avatar_config}
+              onAnnuler={() => setModalActive(null)}
+              onEnregistrer={async (config) => {
+                await modifierAvatarBoutique(boutique.id, config);
+                setModalActive(null);
+                showToast("✓ Avatar de la boutique enregistré !");
+                onEnregistre?.();
+              }}
+            />
           </div>
         </div>
       )}
@@ -3722,6 +3769,10 @@ function ModalFicheBoutique({
   // boutique") qu'à consulter celle d'un tiers depuis la carte/recherche —
   // seul le premier cas doit proposer "Publier un article".
   const estProprietaire = Boolean(userId && boutique?.owner_id && boutique.owner_id === userId);
+  // Avatar façon Bitmoji en priorité sur la vraie photo si le vendeur en a
+  // configuré un (SVG DiceBear généré en local — génération synchrone bon
+  // marché, pas besoin de mémoïsation).
+  const avatarBitmojiUri = boutique?.avatar_config ? dataUriAvatarBoutique(boutique.avatar_config, 160) : null;
   const [horairesEtablissement, setHorairesEtablissement] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
 
@@ -3992,7 +4043,10 @@ function ModalFicheBoutique({
           <div className="px-4 pb-3 pt-0 relative flex flex-col items-start text-left border-b border-gray-100 dark:border-zinc-800">
             {/* Avatar avec bouton Modifier */}
             <div className="relative group -mt-10 mb-2 w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-md overflow-hidden shrink-0">
-              {avatarUrl ? (
+              {avatarBitmojiUri ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarBitmojiUri} alt={nom} className="w-full h-full object-cover" />
+              ) : avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={avatarUrl}
@@ -4223,7 +4277,10 @@ function ModalFicheBoutique({
                 <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-5 right-3 sm:right-5 z-10 flex items-end justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-3 sm:gap-4">
                     <div className="relative group w-14 h-14 sm:w-18 sm:h-18 rounded-full border-2 sm:border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 shrink-0">
-                      {avatarUrl ? (
+                      {avatarBitmojiUri ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={avatarBitmojiUri} alt={nom} className="w-full h-full object-cover" />
+                      ) : avatarUrl ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={avatarUrl} alt={nom} className="w-full h-full object-cover" />
                       ) : (
@@ -4340,8 +4397,8 @@ function ModalFicheBoutique({
 
           {(ongletActif === "produits" || ongletActif === "apercu") && !estService && !estEtablissement && (
             <div>
-              {/* En-tête de section avec bouton Plus / Ajouter un article */}
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">
+              {/* En-tête de section */}
+              <div className="mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">
                 <div>
                   <h3 className="text-sm font-black text-zinc-900 dark:text-white">
                     Catalogue des articles ({listeArticles.length})
@@ -4350,15 +4407,6 @@ function ModalFicheBoutique({
                     Articles enregistrés et prêts pour la vente en ligne
                   </p>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setOngletActif("publier")}
-                  className="px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95"
-                >
-                  <i className="fa-solid fa-plus text-xs"></i>
-                  <span>Ajouter un article</span>
-                </button>
               </div>
 
               {chargement ? (
@@ -4643,24 +4691,11 @@ function ModalFicheBoutique({
         </div>
       </div>
       </div>
-
-      {/* Bouton Flottant (FAB) Publier un Article */}
-      <button
-        type="button"
-        onClick={() => setOngletActif("publier")}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-black shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-emerald-300 group shadow-emerald-600/30"
-        title="Publier un nouvel article dans cette boutique"
-      >
-        <div className="w-6 h-6 rounded-full bg-gray-950 text-[#10E688] flex items-center justify-center text-xs group-hover:rotate-90 transition-transform duration-300">
-          <i className="fa-solid fa-plus"></i>
-        </div>
-        <span className="text-xs sm:text-sm font-extrabold tracking-tight">Publier un article</span>
-      </button>
     </div>
   );
 }
 
-/** 
+/**
  * Carte Statistiques (1:1 Identique avec Vues du profil 1030 & Impressions du post 0)
  */
 function CarteStatistiquesBoutique({ profile, onClick }) {

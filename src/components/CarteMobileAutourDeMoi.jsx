@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml, urlPhoto, normaliserWhatsapp } from "@/lib/marketplaceData";
+import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 const distanceLisible = (km) =>
   km == null || !Number.isFinite(Number(km))
@@ -77,6 +78,7 @@ export default function CarteMobileAutourDeMoi({
           telephone_whatsapp: a.telephone_whatsapp,
           whatsappUrl: a.whatsappUrl,
           type_boutique: "produit",
+          avatar_config: a.boutique_avatar_config || null,
           articles: [],
         });
       }
@@ -99,6 +101,7 @@ export default function CarteMobileAutourDeMoi({
         metier: s.metier,
         description_prestation: s.description_prestation,
         categorie_etablissement: s.categorie_etablissement,
+        avatar_config: s.avatar_config || null,
         articles: [],
       });
     }
@@ -334,14 +337,23 @@ export default function CarteMobileAutourDeMoi({
                 : b.type_boutique === "etablissement"
                   ? COULEUR_ETABLISSEMENT
                   : "#1E293B";
-            const otherIcon = L.divIcon({
-              className: "custom-small-store",
-              html: `
-                <div style="width: 14px; height: 14px; background: ${couleurPoint}; border: 2px solid white; border-radius: 9999px; box-shadow: 0 2px 4px rgba(0,0,0,0.25);"></div>
-              `,
-              iconSize: [14, 14],
-              iconAnchor: [7, 7],
-            });
+            // Avatar façon Bitmoji en priorité (SVG DiceBear local, inline,
+            // aucune URL externe) ; sinon le petit point coloré habituel.
+            const otherIcon = b.avatar_config
+              ? L.divIcon({
+                  className: "custom-small-store",
+                  html: `<div style="width:22px;height:22px;border-radius:9999px;border:2px solid ${couleurPoint};overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.25);background:#fff;">${svgAvatarBoutique(b.avatar_config, 22)}</div>`,
+                  iconSize: [22, 22],
+                  iconAnchor: [11, 11],
+                })
+              : L.divIcon({
+                  className: "custom-small-store",
+                  html: `
+                    <div style="width: 14px; height: 14px; background: ${couleurPoint}; border: 2px solid white; border-radius: 9999px; box-shadow: 0 2px 4px rgba(0,0,0,0.25);"></div>
+                  `,
+                  iconSize: [14, 14],
+                  iconAnchor: [7, 7],
+                });
             const mOther = L.marker(b.position, { icon: otherIcon }).addTo(map);
             mOther.on("click", () => {
               setBoutiqueActiveId(b.id);
@@ -678,8 +690,19 @@ export default function CarteMobileAutourDeMoi({
                   <div>
                     {/* Avatar & En-tête */}
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
-                        {b.nom ? b.nom.substring(0, 2).toUpperCase() : "BT"}
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-xs overflow-hidden shrink-0">
+                        {b.avatar_config ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={dataUriAvatarBoutique(b.avatar_config, 64)}
+                            alt={b.nom}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : b.nom ? (
+                          b.nom.substring(0, 2).toUpperCase()
+                        ) : (
+                          "BT"
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">

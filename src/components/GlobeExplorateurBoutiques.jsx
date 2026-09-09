@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import { echapperHtml, positionActuelle, obtenirHorairesBoutique, JOURS_SEMAINE } from "@/lib/marketplaceData";
+import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
 // anonyme à ces tuiles (elles renvoient un placeholder "API KEY REQUIRED" en
@@ -240,17 +241,23 @@ export default function GlobeExplorateurBoutiques({
       let bordureCouleur;
       let contenuAvatar;
       let badgeLive = "";
+      // Avatar façon Bitmoji en priorité, quel que soit le type_boutique :
+      // seule la couleur de bordure reste liée au type. SVG DiceBear généré
+      // en local et inliné directement — aucune URL externe.
+      const avatarBitmoji = b.avatar_config ? svgAvatarBoutique(b.avatar_config, 52) : null;
       if (typeBoutique === "service") {
         bordureCouleur = COULEUR_SERVICE;
-        contenuAvatar = `<span class="text-2xl">🔧</span>`;
+        contenuAvatar = avatarBitmoji || `<span class="text-2xl">🔧</span>`;
       } else if (typeBoutique === "etablissement") {
         bordureCouleur = COULEUR_ETABLISSEMENT;
-        contenuAvatar = `<span class="text-2xl">${EMOJI_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "🏢"}</span>`;
+        contenuAvatar = avatarBitmoji || `<span class="text-2xl">${EMOJI_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "🏢"}</span>`;
       } else {
         bordureCouleur = estCertifie ? "#2563EB" : "#10B981";
-        contenuAvatar = aPhoto
-          ? `<img src="${aPhoto}" alt="${nomCourt}" class="w-full h-full object-cover" />`
-          : `<span class="text-2xl">${avatarInfo.emoji}</span>`;
+        contenuAvatar =
+          avatarBitmoji ||
+          (aPhoto
+            ? `<img src="${aPhoto}" alt="${nomCourt}" class="w-full h-full object-cover" />`
+            : `<span class="text-2xl">${avatarInfo.emoji}</span>`);
         badgeLive = estActif
           ? `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">LIVE</div>`
           : "";
@@ -574,7 +581,13 @@ export default function GlobeExplorateurBoutiques({
                   {/* Cercle Avatar avec contour Vert Menthe ou Bleu Roi */}
                   <div className="relative w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 shadow-md flex items-center justify-center">
                     <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
-                      {aPhoto ? (
+                      {b.avatar_config ? (
+                        <img
+                          src={dataUriAvatarBoutique(b.avatar_config, 48)}
+                          alt={b.nom}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : aPhoto ? (
                         <img src={aPhoto} alt={b.nom} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-xl">{avatar.emoji}</span>
@@ -612,7 +625,13 @@ export default function GlobeExplorateurBoutiques({
               <div className="p-4 sm:p-5 border-b border-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black flex items-center justify-center text-lg shadow-md shrink-0 overflow-hidden">
-                    {boutiqueSelectionnee.photo ? (
+                    {boutiqueSelectionnee.avatar_config ? (
+                      <img
+                        src={dataUriAvatarBoutique(boutiqueSelectionnee.avatar_config, 48)}
+                        alt={boutiqueSelectionnee.nom}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : boutiqueSelectionnee.photo ? (
                       <img
                         src={urlPhoto(boutiqueSelectionnee.photo)}
                         alt={boutiqueSelectionnee.nom}
