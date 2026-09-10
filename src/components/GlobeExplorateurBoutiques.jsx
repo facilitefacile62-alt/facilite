@@ -124,6 +124,21 @@ export default function GlobeExplorateurBoutiques({
     // ce qui suppose qu'il puisse y accéder.
     let forcerTaille = null;
 
+    // Cet effet DÉTRUIT ET RECRÉE toute la carte à chaque changement de
+    // styleActif (bouton satellite/sombre/clair) ou de marqueurs (les
+    // boutiques arrivent après l'ouverture du Globe, ex. restauration
+    // d'URL au rechargement — voir Marketplace). Sans remettre cartePrete
+    // à false ici, il restait déjà à true depuis la carte précédente : les
+    // futurs setCartePrete(true) plus bas (une fois la NOUVELLE carte
+    // prête) ne changent alors rien pour React (même valeur, aucun
+    // re-rendu), donc les effets qui dépendent de cartePrete pour
+    // (re)dessiner les marqueurs et repositionner "Vous êtes ici" (lignes
+    // ~326 et ~413) ne se redéclenchaient jamais sur la carte fraîchement
+    // recréée — d'où boutiques et position disparues au changement de
+    // style ou après un rechargement de page.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCartePrete(false);
+
     (async () => {
       if (!conteneurRef.current) return;
       try {
