@@ -82,6 +82,24 @@ export default function GlobeExplorateurBoutiques({
   const groupeMarqueursRef = useRef(null);
   const marqueurMoiRef = useRef(null);
   const echelleZoomCleanupRef = useRef(null);
+  // Toujours la dernière version de rafraichirMarqueurs (assigné à chaque
+  // rendu, voir plus bas) — permet à l'effet d'initialisation de la carte
+  // de dessiner les marqueurs directement dès que SA PROPRE carte est
+  // prête, sans dépendre de l'effet réactif [rafraichirMarqueurs,
+  // cartePrete] qui s'est avéré capable de rater sa fenêtre : entre la
+  // destruction de l'ancienne carte et la création de la nouvelle,
+  // carteRef.current passe par un état transitoire (null, ou incohérent
+  // avec groupeMarqueursRef.current) pendant lequel cet effet réactif peut
+  // se déclencher et abandonner silencieusement, sans être ensuite
+  // regaranti de se redéclencher une fois la nouvelle carte réellement
+  // prête (reproduit de façon fiable en local : les marqueurs restaient
+  // absents après un rechargement de page avec Explorer restauré depuis
+  // l'URL, alors que carte et données étaient toutes deux correctes).
+  const rafraichirMarqueursRef = useRef(() => {});
+  // Même raisonnement que rafraichirMarqueursRef ci-dessus, pour le
+  // marqueur "Vous êtes ici" : l'effet réactif [positionInitiale,
+  // cartePrete] plus bas peut rater la même fenêtre transitoire.
+  const centrerSurPositionRef = useRef(() => {});
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
   const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
@@ -186,11 +204,22 @@ export default function GlobeExplorateurBoutiques({
           paneTuiles.style.filter = styleActif === "dark" ? FILTRE_TUILES_SOMBRE : "";
         }
 
-        // Forcer le rafraîchissement des dimensions à plusieurs intervalles
+        // Forcer le rafraîchissement des dimensions à plusieurs intervalles.
+        // Dessine aussi les marqueurs directement ici (via la ref vers la
+        // dernière version de rafraichirMarqueurs) plutôt que de compter
+        // uniquement sur l'effet réactif [rafraichirMarqueurs, cartePrete]
+        // plus bas : cette carte (`carte`, capturée par fermeture) est
+        // garantie d'être la carte ACTUELLE à cet instant précis — `carte
+        // === carteRef.current` un peu plus bas l'assure — alors que
+        // l'effet réactif peut se déclencher pendant la fenêtre transitoire
+        // où l'ancienne carte vient d'être détruite et la nouvelle pas
+        // encore prête, y voir un état incohérent, abandonner, et ne pas
+        // être regaranti de se redéclencher ensuite.
         forcerTaille = () => {
-          if (carteRef.current) {
-            carteRef.current.invalidateSize({ pan: false });
+          if (carteRef.current === carte) {
+            carte.invalidateSize({ pan: false });
             setCartePrete(true);
+            rafraichirMarqueursRef.current();
           }
         };
 
@@ -337,7 +366,12 @@ export default function GlobeExplorateurBoutiques({
     }
     echelleZoomCleanupRef.current = brancherEchelleZoomAvatars(carte);
   }, [boutiquesAffichees, boutiqueSelectionnee]);
+  rafraichirMarqueursRef.current = rafraichirMarqueurs;
 
+  // Complète l'appel direct fait dans forcerTaille (voir plus haut) pour le
+  // cas où boutiquesAffichees/boutiqueSelectionnee changent SANS que la
+  // carte soit recréée (ex. clic sur une pastille de filtre) — la carte
+  // existante reste alors valide, seul son contenu doit se rafraîchir.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     rafraichirMarqueurs();
@@ -407,6 +441,7 @@ export default function GlobeExplorateurBoutiques({
       carte.setView([pos.latitude, pos.longitude], 15.5);
     }
   }, []);
+  centrerSurPositionRef.current = centrerSurPosition;
 
   // Centrer sur la position GPS de l'utilisateur avec indicateur "Vous êtes ici"
   const allerAMaPosition = async () => {
@@ -425,6 +460,9 @@ export default function GlobeExplorateurBoutiques({
   // Auto-centrage si le Marketplace a déjà géolocalisé l'utilisateur avant
   // d'ouvrir le Globe (bouton "Autour de moi") — sans animation de vol, la
   // carte s'ouvre directement centrée, pas de second appel de géolocalisation.
+  // Complète l'appel direct fait dans forcerTaille (voir plus haut) pour le
+  // cas où positionInitiale arrive/change alors qu'une carte valide existe
+  // déjà (rare, mais possible).
   useEffect(() => {
     if (positionInitiale && cartePrete) {
       centrerSurPosition(positionInitiale, { animer: false });

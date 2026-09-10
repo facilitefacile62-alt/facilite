@@ -3715,6 +3715,8 @@ function ModalFicheBoutique({
   const avatarBitmojiUri = boutique?.avatar_config ? dataUriAvatarBoutique(boutique.avatar_config, 160) : null;
   const [horairesEtablissement, setHorairesEtablissement] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
+  const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
+  const [ongletMobile, setOngletMobile] = useState("article"); // "article" | "activite" | "domaine"
 
   useEffect(() => {
     if (!estEtablissement || !boutique?.id) {
@@ -3909,9 +3911,9 @@ function ModalFicheBoutique({
       />
 
       {/* ========================================================================= */}
-      {/* 0. BARRE SUPÉRIEURE DE NAVIGATION DÉDIÉE (Pleine largeur, opaque)         */}
+      {/* 0. BARRE SUPÉRIEURE DESKTOP (Cachée sur mobile)                          */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-gray-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between shadow-xs shrink-0">
+      <header className="hidden md:flex sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-gray-200 dark:border-zinc-800 px-4 py-3 items-center justify-between shadow-xs shrink-0">
         <button
           type="button"
           onClick={onFermer}
@@ -3955,9 +3957,467 @@ function ModalFicheBoutique({
       </header>
 
       {/* ========================================================================= */}
-      {/* CONTENEUR PRINCIPAL DE LA PAGE BOUTIQUE (2 Colonnes directes comme capture) */}
+      {/* 📱 VUE MOBILE (PHONE) : DESIGN 1:1 CONFORME À LA MAQUETTE                 */}
       {/* ========================================================================= */}
-      <div className="w-full max-w-[1400px] mx-auto flex-1 p-2 sm:p-4 flex flex-col md:flex-row gap-6 items-start md:overflow-hidden md:h-[calc(100vh-57px)]">
+      <div className="block md:hidden w-full flex-1 pb-20">
+        {/* Header Mobile minimaliste : Crayon à gauche, Nom au centre, Menu & Fermer à droite */}
+        <div className="sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (ongletActif === "parametres" || ongletActif === "publier") {
+                  setOngletActif("produits");
+                } else {
+                  setOngletActif("parametres");
+                }
+              }}
+              className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer active:scale-95"
+              title="Modifier les infos de la boutique"
+            >
+              <i className="fa-solid fa-pen text-sm"></i>
+            </button>
+          </div>
+
+          <span className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white truncate max-w-[150px]">
+            {nom}
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setMenuMobileOuvert(true)}
+              className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer active:scale-95"
+              title="Ouvrir le menu vendeur"
+            >
+              <i className="fa-solid fa-bars text-sm"></i>
+            </button>
+            <button
+              type="button"
+              onClick={onFermer}
+              className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer active:scale-95"
+              title="Retourner au marketplace"
+            >
+              <i className="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        {/* Bannière rectangulaire beige + Avatar circulaire en bas à droite */}
+        <div className="relative w-full px-3 pt-3 mb-12">
+          <div
+            className="relative w-full h-40 sm:h-44 rounded-2xl sm:rounded-3xl overflow-hidden bg-[#C5BBAF] dark:bg-zinc-800 bg-cover bg-center shadow-xs border border-gray-200/60 dark:border-zinc-800"
+            style={{ backgroundImage: `url('${coverUrl || "/stellar-cover.png"}')` }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+            {/* Bouton pour changer la bannière */}
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              className="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white dark:bg-black/80 text-zinc-900 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95"
+              title="Changer la photo de couverture"
+            >
+              <i className="fa-solid fa-camera text-xs"></i>
+            </button>
+          </div>
+
+          {/* Avatar circulaire placé sur la droite et chevauchant le bas de la bannière */}
+          <div className="absolute right-7 -bottom-8 w-20 h-20 rounded-full border-4 border-white dark:border-zinc-950 bg-black shadow-xl overflow-hidden flex items-center justify-center shrink-0 z-10 group">
+            {avatarBitmojiUri ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarBitmojiUri} alt={nom} className="w-full h-full object-cover" />
+            ) : avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt={nom} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-white text-xl font-black">{initiales}</span>
+            )}
+
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white cursor-pointer"
+              title="Changer la photo de profil"
+            >
+              <i className="fa-solid fa-camera text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        {/* Nom de la boutique en gras à gauche */}
+        <div className="px-4 pb-2 text-left">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-lg sm:text-xl font-black uppercase tracking-wider text-zinc-900 dark:text-white leading-tight">
+              {nom}
+            </h1>
+            <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider">
+              Boutique
+            </span>
+          </div>
+          {description && (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium line-clamp-1 mt-0.5">
+              {description}
+            </p>
+          )}
+        </div>
+
+        {/* Pilules d'onglets (ARTICLE | ACTIVITE | DOMAINE) */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-zinc-800/80 overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => {
+              setOngletMobile("article");
+              setOngletActif("produits");
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
+              ongletMobile === "article" && ongletActif === "produits"
+                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs"
+                : "bg-gray-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 hover:bg-gray-200"
+            }`}
+          >
+            Article
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOngletMobile("activite");
+              setOngletActif("profit");
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
+              ongletMobile === "activite"
+                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs"
+                : "bg-gray-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 hover:bg-gray-200"
+            }`}
+          >
+            Activité
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOngletMobile("domaine");
+              setOngletActif("apropos");
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
+              ongletMobile === "domaine"
+                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs"
+                : "bg-gray-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 hover:bg-gray-200"
+            }`}
+          >
+            Domaine
+          </button>
+        </div>
+
+        {/* Contenu de l'onglet Mobile */}
+        <div className="w-full">
+          {/* Si formulaire de publication ou réglages ouverts */}
+          {ongletActif === "publier" && (
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setOngletActif("produits")}
+                  className="text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-arrow-left"></i>
+                  <span>Retour aux articles</span>
+                </button>
+                <h3 className="text-sm font-black text-zinc-900 dark:text-white">
+                  Publier un article
+                </h3>
+              </div>
+              <FormulaireArticle
+                userId={userId}
+                storeId={boutique?.id || "facilite_shop"}
+                onPublie={async () => {
+                  if (boutique?.id && boutique?.id !== "facilite_shop") {
+                    try {
+                      const nouveaux = await chargerMesArticles(boutique.id);
+                      setListeArticles(nouveaux);
+                    } catch {}
+                  }
+                  onBoutiqueUpdate?.();
+                  setOngletActif("produits");
+                  setOngletMobile("article");
+                  showToast("✓ Article publié avec succès !");
+                }}
+              />
+            </div>
+          )}
+
+          {ongletActif === "parametres" && (
+            <div className="p-4">
+              <VueReglages
+                userId={userId}
+                profile={profile}
+                boutique={boutique}
+                onRetour={() => setOngletActif("produits")}
+                onEnregistre={() => {
+                  onBoutiqueUpdate?.();
+                }}
+              />
+            </div>
+          )}
+
+          {/* Grille de 2 colonnes de PRODUITS */}
+          {ongletActif === "produits" && ongletMobile === "article" && (
+            <div className="p-3">
+              {chargement ? (
+                <div className="text-center py-12 text-zinc-400">
+                  <i className="fa-solid fa-spinner fa-spin text-2xl text-blue-600"></i>
+                  <p className="text-xs font-bold mt-2">Chargement des articles...</p>
+                </div>
+              ) : listeArticles.length === 0 ? (
+                <div className="py-12 px-4 flex flex-col items-center justify-center text-center space-y-3">
+                  <IllustrationAvionPapier />
+                  <p className="text-sm text-zinc-500">Aucun article dans cette boutique.</p>
+                  <button
+                    type="button"
+                    onClick={() => setOngletActif("publier")}
+                    className="mt-2 px-4 py-2 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold"
+                  >
+                    + Publier un article
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2.5 w-full">
+                  {listeArticles.map((art) => (
+                    <CarteArticle
+                      key={art.id}
+                      article={{
+                        ...art,
+                        boutique_id: boutique?.id || art.boutique_id || art.store_id,
+                        boutique_nom: nom,
+                        quartier: quartier || art.quartier,
+                        ville: ville || art.ville,
+                        telephone_whatsapp: telephone || art.telephone_whatsapp,
+                        whatsappUrl: whatsappUrl || art.whatsappUrl,
+                      }}
+                      onVoirArticle={onVoirArticle}
+                      onVoirBoutique={() => {}}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contenu Activité Mobile */}
+          {ongletMobile === "activite" && ongletActif !== "publier" && ongletActif !== "parametres" && (
+            <div className="p-4 space-y-4">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/60 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🤑</span>
+                  <h3 className="text-sm font-black text-amber-950 dark:text-amber-100">
+                    Faire profit &amp; Multiplier vos ventes
+                  </h3>
+                </div>
+                <p className="text-xs text-amber-900/80 dark:text-amber-200/80">
+                  Boostez la visibilité de vos articles et recevez vos commandes directement sur WhatsApp.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-500">Total annonces actives</span>
+                  <span className="text-sm font-black text-zinc-900 dark:text-white">{listeArticles.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-500">Commandes reçues</span>
+                  <span className="text-sm font-black text-emerald-600">WhatsApp Live</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Contenu Domaine / Infos Mobile */}
+          {ongletMobile === "domaine" && ongletActif !== "publier" && ongletActif !== "parametres" && (
+            <div className="p-4 space-y-4 text-xs">
+              <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-2">
+                <h4 className="text-xs font-black uppercase text-zinc-500 tracking-wider">
+                  À propos de {nom}
+                </h4>
+                <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                  {description || "Boutique officielle sur Facilité Sénégal."}
+                </p>
+                <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex flex-col gap-1.5 text-zinc-600 dark:text-zinc-400">
+                  <span>📍 {quartier ? `${quartier}, ` : ""}{ville || "Sénégal"}</span>
+                  {telephone && <span>📞 {telephone}</span>}
+                </div>
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 w-full py-2.5 px-4 rounded-xl bg-[#25D366] text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <i className="fa-brands fa-whatsapp text-sm"></i>
+                    <span>Contacter sur WhatsApp</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bouton flottant d'ajout rapide + pour mobile */}
+        {estProprietaire && (
+          <button
+            type="button"
+            onClick={() => setOngletActif("publier")}
+            className="fixed bottom-6 right-5 z-40 w-13 h-13 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-2xl active:scale-95 text-2xl font-black shadow-black/40 cursor-pointer"
+            title="Publier un nouvel article"
+          >
+            <i className="fa-solid fa-plus"></i>
+          </button>
+        )}
+
+        {/* Menu Tiroir (Drawer) Mobile pour toutes les options */}
+        {menuMobileOuvert && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end animate-fadeIn">
+            <div
+              className="w-[82%] max-w-sm h-full bg-white dark:bg-zinc-900 p-4 flex flex-col shadow-2xl overflow-y-auto animate-slideInRight"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-800">
+                <span className="text-sm font-black text-zinc-900 dark:text-white">Menu Vendeur</span>
+                <button
+                  type="button"
+                  onClick={() => setMenuMobileOuvert(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300"
+                >
+                  <i className="fa-solid fa-xmark text-sm"></i>
+                </button>
+              </div>
+
+              <div className="py-3 space-y-1.5 flex-1">
+                {estProprietaire && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOngletActif("publier");
+                      setMenuMobileOuvert(false);
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 mb-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-circle-plus text-emerald-500"></i>
+                      <span>Publier un article</span>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[9px] font-black uppercase">IA</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletMobile("article");
+                    setOngletActif("produits");
+                    setMenuMobileOuvert(false);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-left"
+                >
+                  <i className="fa-regular fa-calendar-days text-sm"></i>
+                  <span className="flex-1">Mes annonces</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">{listeArticles.length}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletMobile("activite");
+                    setOngletActif("profit");
+                    setMenuMobileOuvert(false);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-left"
+                >
+                  <span className="text-sm">🤑</span>
+                  <span className="flex-1">Faire profit</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletActif("abonnes");
+                    setMenuMobileOuvert(false);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-left"
+                >
+                  <i className="fa-solid fa-users text-sm"></i>
+                  <span className="flex-1">Abonnés</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletActif("avis");
+                    setMenuMobileOuvert(false);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-left"
+                >
+                  <span className="text-sm">😃</span>
+                  <span className="flex-1">Avis</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletActif("faq");
+                    setMenuMobileOuvert(false);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-left"
+                >
+                  <i className="fa-regular fa-circle-question text-sm"></i>
+                  <span className="flex-1">Foire aux questions</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletMobile("domaine");
+                    setOngletActif("apropos");
+                    setMenuMobileOuvert(false);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-left"
+                >
+                  <i className="fa-solid fa-store text-sm"></i>
+                  <span className="flex-1">À propos &amp; Infos</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletActif("contact");
+                    setMenuMobileOuvert(false);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-left"
+                >
+                  <i className="fa-solid fa-truck-fast text-sm"></i>
+                  <span className="flex-1">Contact &amp; Livraison</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletActif("parametres");
+                    setMenuMobileOuvert(false);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-left"
+                >
+                  <i className="fa-solid fa-gear text-sm"></i>
+                  <span className="flex-1">Réglages</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 🖥️ VUE DESKTOP (2 Colonnes directes pour grands écrans)                   */}
+      {/* ========================================================================= */}
+      <div className="hidden md:flex w-full max-w-[1400px] mx-auto flex-1 p-2 sm:p-4 flex-col md:flex-row gap-6 items-start md:overflow-hidden md:h-[calc(100vh-57px)]">
         {/* ========================================================================= */}
         {/* 1. COLONNE GAUCHE : CARTE PROFIL BOUTIQUE & MENU (1:1 Capture Aperçu)      */}
         {/* ========================================================================= */}
