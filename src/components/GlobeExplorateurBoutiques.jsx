@@ -220,6 +220,9 @@ export default function GlobeExplorateurBoutiques({
             carte.invalidateSize({ pan: false });
             setCartePrete(true);
             rafraichirMarqueursRef.current();
+            if (positionInitiale) {
+              centrerSurPositionRef.current(positionInitiale, { animer: false });
+            }
           }
         };
 
@@ -256,7 +259,20 @@ export default function GlobeExplorateurBoutiques({
         carteRef.current.remove();
         carteRef.current = null;
       }
+      // Ne pas laisser une référence vers un layerGroup/marqueur détruit
+      // avec la carte : sans ça, une fenêtre transitoire existe où
+      // carteRef.current est déjà null mais groupeMarqueursRef.current
+      // pointe encore vers l'ancien groupe, ce qui peut faire paraître
+      // cohérent un état qui ne l'est pas pour tout code lisant les deux.
+      groupeMarqueursRef.current = null;
+      coucheTuilesRef.current = null;
+      marqueurMoiRef.current = null;
     };
+    // positionInitiale est lu (via forcerTaille) mais volontairement absent
+    // des dépendances : la carte ne doit se recréer que sur un changement
+    // de styleActif/marqueurs, jamais parce que la position a changé — ce
+    // serait précisément l'instabilité que ce correctif élimine.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleActif, marqueurs]);
 
   // 2. Rendu des Marqueurs Snap Map (Bordure Vert Menthe #10B981 ou Bleu Roi #2563EB)
@@ -366,7 +382,13 @@ export default function GlobeExplorateurBoutiques({
     }
     echelleZoomCleanupRef.current = brancherEchelleZoomAvatars(carte);
   }, [boutiquesAffichees, boutiqueSelectionnee]);
-  rafraichirMarqueursRef.current = rafraichirMarqueurs;
+  // Mise à jour hors rendu (règle react-hooks/refs) : un effet sans
+  // dépendances s'exécute après chaque rendu, donc toujours à temps avant
+  // que les timers de forcerTaille (au plus tôt 50 ms plus tard) ne lisent
+  // cette ref.
+  useEffect(() => {
+    rafraichirMarqueursRef.current = rafraichirMarqueurs;
+  });
 
   // Complète l'appel direct fait dans forcerTaille (voir plus haut) pour le
   // cas où boutiquesAffichees/boutiqueSelectionnee changent SANS que la
@@ -441,7 +463,10 @@ export default function GlobeExplorateurBoutiques({
       carte.setView([pos.latitude, pos.longitude], 15.5);
     }
   }, []);
-  centrerSurPositionRef.current = centrerSurPosition;
+  // Même raisonnement que rafraichirMarqueursRef ci-dessus.
+  useEffect(() => {
+    centrerSurPositionRef.current = centrerSurPosition;
+  });
 
   // Centrer sur la position GPS de l'utilisateur avec indicateur "Vous êtes ici"
   const allerAMaPosition = async () => {

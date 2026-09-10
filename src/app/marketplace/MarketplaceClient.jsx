@@ -4061,18 +4061,18 @@ function ModalFicheBoutique({
           )}
         </div>
 
-        {/* Pilules d'onglets (ARTICLE | ACTIVITE | DOMAINE) */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-zinc-800/80 overflow-x-auto no-scrollbar">
+        {/* Pilules d'onglets parfaitement harmonisées (ARTICLE | ACTIVITE | DOMAINE) */}
+        <div className="flex items-center gap-2.5 px-4 py-3 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800">
           <button
             type="button"
             onClick={() => {
               setOngletMobile("article");
               setOngletActif("produits");
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
+            className={`flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-all cursor-pointer active:scale-95 border ${
               ongletMobile === "article" && ongletActif === "produits"
-                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs"
-                : "bg-gray-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 hover:bg-gray-200"
+                ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white shadow-sm"
+                : "bg-[#E3DBCC]/50 hover:bg-[#E3DBCC]/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-[#D5CCBC]/60 dark:border-zinc-700/60"
             }`}
           >
             Article
@@ -4084,10 +4084,10 @@ function ModalFicheBoutique({
               setOngletMobile("activite");
               setOngletActif("profit");
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
+            className={`flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-all cursor-pointer active:scale-95 border ${
               ongletMobile === "activite"
-                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs"
-                : "bg-gray-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 hover:bg-gray-200"
+                ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white shadow-sm"
+                : "bg-[#E3DBCC]/50 hover:bg-[#E3DBCC]/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-[#D5CCBC]/60 dark:border-zinc-700/60"
             }`}
           >
             Activité
@@ -4099,10 +4099,10 @@ function ModalFicheBoutique({
               setOngletMobile("domaine");
               setOngletActif("apropos");
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
+            className={`flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-all cursor-pointer active:scale-95 border ${
               ongletMobile === "domaine"
-                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs"
-                : "bg-gray-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 hover:bg-gray-200"
+                ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white shadow-sm"
+                : "bg-[#E3DBCC]/50 hover:bg-[#E3DBCC]/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-[#D5CCBC]/60 dark:border-zinc-700/60"
             }`}
           >
             Domaine
