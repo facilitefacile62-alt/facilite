@@ -3716,7 +3716,7 @@ function ModalFicheBoutique({
   const [horairesEtablissement, setHorairesEtablissement] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
-  const [ongletMobile, setOngletMobile] = useState("activite"); // Activité par défaut
+  const [ongletMobile, setOngletMobile] = useState("article"); // Articles par défaut : c'est ce qu'on vient voir en ouvrant une boutique
 
   useEffect(() => {
     if (!estEtablissement || !boutique?.id) {
