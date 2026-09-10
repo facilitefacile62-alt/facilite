@@ -620,6 +620,58 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     lancerRecherche(null);
   };
 
+  // Restaure l'état "Autour de moi" / recherche / Explorer depuis l'URL au
+  // montage — sans ça, actualiser la page revenait toujours au catalogue
+  // par défaut (aucun état React ne survit à un rechargement complet).
+  // Ne couvre pas `categorie` (gérée par le composant parent, hors
+  // périmètre ici) ni `rayonKm` (réglage secondaire, pas la "page" vue par
+  // l'utilisateur). Même géolocalisation déjà connue : pas besoin de
+  // re-déclencher la demande de permission au navigateur après un refresh.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const lat = parseFloat(params.get("lat"));
+    const lng = parseFloat(params.get("lng"));
+    const q = params.get("q");
+    const stock = params.get("stock") === "1";
+    const explorer = params.get("explorer") === "1";
+    queueMicrotask(() => {
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        setPosition({ latitude: lat, longitude: lng });
+      }
+      if (q) setTexte(q);
+      if (stock) setSeulementEnStock(true);
+      if (explorer) setGlobeOuvert(true);
+    });
+  }, []);
+
+  // Répercute ce même état dans l'URL à chaque changement (remplace
+  // l'entrée d'historique courante, n'empile pas de nouvelle entrée à
+  // chaque frappe/filtre) — c'est ce que l'effet ci-dessus relit au
+  // prochain chargement de page. Fusionne avec les paramètres déjà
+  // présents (onglet/action/boutique, gérés ailleurs dans ce fichier) au
+  // lieu de les écraser.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (position) {
+      params.set("lat", position.latitude);
+      params.set("lng", position.longitude);
+    } else {
+      params.delete("lat");
+      params.delete("lng");
+    }
+    if (texte.trim()) params.set("q", texte.trim());
+    else params.delete("q");
+    if (seulementEnStock) params.set("stock", "1");
+    else params.delete("stock");
+    if (globeOuvert) params.set("explorer", "1");
+    else params.delete("explorer");
+    const query = params.toString();
+    const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
+    window.history.replaceState(window.history.state, "", url);
+  }, [position, texte, seulementEnStock, globeOuvert]);
+
   // Chargement automatique au démarrage et lors de la modification des filtres
   useEffect(() => {
     const t = setTimeout(() => {
