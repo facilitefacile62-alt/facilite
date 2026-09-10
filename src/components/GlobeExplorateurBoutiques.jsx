@@ -432,7 +432,16 @@ export default function GlobeExplorateurBoutiques({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex flex-col bg-[#0B0F17] overflow-hidden select-none font-sans"
+      // z-[70] laissait passer les éléments z-[400] de CarteBoutiques
+      // (boutons flottants + dock avatars) à travers ce plein écran — la
+      // carte compacte reste montée derrière (position ne devient pas
+      // fausse à l'ouverture d'Explorer), seul le z-index empêchait ce
+      // plein écran de vraiment tout recouvrir. z-[2000] : marge
+      // confortable au-dessus des contrôles Leaflet eux-mêmes (leur
+      // z-index par défaut atteint 1000), sous les modales vraiment
+      // globales (ex. AuthRequiredModal, z-[9999]) qui doivent pouvoir
+      // s'afficher par-dessus même Explorer.
+      className="fixed inset-0 z-[2000] flex flex-col bg-[#0B0F17] overflow-hidden select-none font-sans"
       role="dialog"
       aria-modal="true"
       aria-label="Facilité Snap Map Sénégal"
