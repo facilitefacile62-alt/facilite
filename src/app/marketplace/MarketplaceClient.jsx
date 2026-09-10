@@ -3716,7 +3716,7 @@ function ModalFicheBoutique({
   const [horairesEtablissement, setHorairesEtablissement] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
-  const [ongletMobile, setOngletMobile] = useState("article"); // "article" | "activite" | "domaine"
+  const [ongletMobile, setOngletMobile] = useState("activite"); // Activité par défaut
 
   useEffect(() => {
     if (!estEtablissement || !boutique?.id) {
@@ -4203,30 +4203,74 @@ function ModalFicheBoutique({
             </div>
           )}
 
-          {/* Contenu Activité Mobile */}
+          {/* Contenu Activité Mobile (Page par défaut de la boutique) */}
           {ongletMobile === "activite" && ongletActif !== "publier" && ongletActif !== "parametres" && (
             <div className="p-4 space-y-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/60 space-y-2">
+              {/* Carte Chiffres & Activité en temps réel */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletMobile("article");
+                    setOngletActif("produits");
+                  }}
+                  className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 text-left shadow-2xs hover:border-blue-400 transition cursor-pointer"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-bold text-zinc-500">Mes Annonces</span>
+                    <i className="fa-regular fa-calendar-days text-blue-500 text-xs"></i>
+                  </div>
+                  <div className="text-xl font-black text-zinc-900 dark:text-white">{listeArticles.length}</div>
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5">
+                    Voir la vitrine ➔
+                  </span>
+                </button>
+
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 text-left shadow-2xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-bold text-zinc-500">Ventes WhatsApp</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  </div>
+                  <div className="text-xl font-black text-emerald-600">Direct Live</div>
+                  <span className="text-[10px] font-bold text-zinc-400">Clients connectés</span>
+                </div>
+              </div>
+
+              {/* Bannière Faire Profit & Boost Commercial */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/60 space-y-2.5 shadow-2xs">
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🤑</span>
                   <h3 className="text-sm font-black text-amber-950 dark:text-amber-100">
                     Faire profit &amp; Multiplier vos ventes
                   </h3>
                 </div>
-                <p className="text-xs text-amber-900/80 dark:text-amber-200/80">
-                  Boostez la visibilité de vos articles et recevez vos commandes directement sur WhatsApp.
+                <p className="text-xs text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
+                  Boostez la visibilité de vos articles au sommet de la Marketplace pour recevoir un flux continu de commandes directes sur votre WhatsApp.
                 </p>
+                {estProprietaire && (
+                  <button
+                    type="button"
+                    onClick={() => setOngletActif("publier")}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm transition active:scale-95 cursor-pointer"
+                  >
+                    <i className="fa-solid fa-circle-plus"></i>
+                    <span>Publier un nouvel article (IA)</span>
+                  </button>
+                )}
               </div>
 
-              <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-2">
+              {/* Avis clients & Abonnés */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-3 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-500">Total annonces actives</span>
-                  <span className="text-sm font-black text-zinc-900 dark:text-white">{listeArticles.length}</span>
+                  <div className="flex items-center gap-2">
+                    <i className="fa-solid fa-star text-amber-400 text-sm"></i>
+                    <span className="text-xs font-black text-zinc-900 dark:text-white">Note &amp; Réputation</span>
+                  </div>
+                  <span className="text-xs font-black text-amber-500">5.0 / 5 ★</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-500">Commandes reçues</span>
-                  <span className="text-sm font-black text-emerald-600">WhatsApp Live</span>
-                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  « Vendeur vérifié et très réactif. Produits conformes et livraison rapide. »
+                </p>
               </div>
             </div>
           )}
