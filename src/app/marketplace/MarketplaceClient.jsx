@@ -19,7 +19,7 @@
 // La logique d'accès aux données vit dans src/lib/marketplaceData.js : ce
 // fichier ne fait que de l'interface.
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
@@ -680,65 +680,80 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     return () => clearTimeout(t);
   }, [categorie, rayonKm, seulementEnStock, texte, position, lancerRecherche]);
 
-  const boutiquesPourGlobe = [];
-  const idsVus = new Set();
-  for (const a of resultats) {
-    const lat = coordonnee(a.boutique_lat);
-    const lng = coordonnee(a.boutique_lng);
-    if (lat == null || lng == null || idsVus.has(a.boutique_id)) continue;
-    idsVus.add(a.boutique_id);
-    const articlesDeBoutique = resultats.filter((r) => r.boutique_id === a.boutique_id);
-    boutiquesPourGlobe.push({
-      id: a.boutique_id,
-      lat,
-      lng,
-      nom: a.boutique_nom,
-      quartier: a.quartier,
-      ville: a.ville,
-      telephone_whatsapp: a.telephone_whatsapp,
-      whatsappUrl: a.whatsappUrl,
-      photo: a.photos?.[0] || null,
-      titre: a.titre,
-      prix_xof: a.prix_xof,
-      statut: a.statut,
-      articlesCount: articlesDeBoutique.length,
-      articles: articlesDeBoutique,
-      type_boutique: "produit",
-      avatar_config: a.boutique_avatar_config || null,
-    });
-  }
+  // Mémoïsé : sans ça, une nouvelle référence de tableau était produite à
+  // CHAQUE rendu de VueAcheteur (peu importe si resultats/resultatsServices
+  // avaient réellement changé), ce qui repassait un nouveau `boutiques`
+  // prop à GlobeExplorateurBoutiques en continu — sa carte Leaflet
+  // détruit et recrée toute sa carte à chaque changement de cette prop
+  // (voir GlobeExplorateurBoutiques.jsx), donc elle ne restait jamais
+  // stable assez longtemps pour finir son initialisation : boutiques et
+  // position "Vous êtes ici" n'apparaissaient jamais, surtout juste après
+  // un rechargement de page (Explorer s'ouvre immédiatement via l'URL
+  // restaurée, pendant que resultats est encore en train de charger et
+  // déclenche plusieurs rendus rapprochés).
+  const boutiquesPourGlobe = useMemo(() => {
+    const liste = [];
+    const idsVus = new Set();
+    for (const a of resultats) {
+      const lat = coordonnee(a.boutique_lat);
+      const lng = coordonnee(a.boutique_lng);
+      if (lat == null || lng == null || idsVus.has(a.boutique_id)) continue;
+      idsVus.add(a.boutique_id);
+      const articlesDeBoutique = resultats.filter((r) => r.boutique_id === a.boutique_id);
+      liste.push({
+        id: a.boutique_id,
+        lat,
+        lng,
+        nom: a.boutique_nom,
+        quartier: a.quartier,
+        ville: a.ville,
+        telephone_whatsapp: a.telephone_whatsapp,
+        whatsappUrl: a.whatsappUrl,
+        photo: a.photos?.[0] || null,
+        titre: a.titre,
+        prix_xof: a.prix_xof,
+        statut: a.statut,
+        articlesCount: articlesDeBoutique.length,
+        articles: articlesDeBoutique,
+        type_boutique: "produit",
+        avatar_config: a.boutique_avatar_config || null,
+      });
+    }
 
-  // Un seul pin par boutique quel que soit son type (demande explicite) :
-  // les boutiques service/établissement rejoignent la même liste que les
-  // boutiques produit ci-dessus, jamais un pin par article. idsVus protège
-  // aussi contre un doublon si une boutique remonte des deux côtés (ne
-  // devrait pas arriver — type_boutique gate les deux recherches — mais
-  // resterait inoffensif si jamais les données divergent).
-  for (const s of resultatsServices) {
-    if (s.lat == null || s.lng == null || idsVus.has(s.id)) continue;
-    idsVus.add(s.id);
-    boutiquesPourGlobe.push({
-      id: s.id,
-      lat: s.lat,
-      lng: s.lng,
-      nom: s.nom,
-      quartier: s.quartier,
-      ville: s.ville,
-      telephone_whatsapp: s.telephone_whatsapp,
-      whatsappUrl: s.whatsappUrl,
-      photo: null,
-      titre: null,
-      prix_xof: null,
-      statut: null,
-      articlesCount: 0,
-      articles: [],
-      type_boutique: s.type_boutique,
-      metier: s.metier,
-      description_prestation: s.description_prestation,
-      categorie_etablissement: s.categorie_etablissement,
-      avatar_config: s.avatar_config || null,
-    });
-  }
+    // Un seul pin par boutique quel que soit son type (demande explicite) :
+    // les boutiques service/établissement rejoignent la même liste que les
+    // boutiques produit ci-dessus, jamais un pin par article. idsVus
+    // protège aussi contre un doublon si une boutique remonte des deux
+    // côtés (ne devrait pas arriver — type_boutique gate les deux
+    // recherches — mais resterait inoffensif si jamais les données
+    // divergent).
+    for (const s of resultatsServices) {
+      if (s.lat == null || s.lng == null || idsVus.has(s.id)) continue;
+      idsVus.add(s.id);
+      liste.push({
+        id: s.id,
+        lat: s.lat,
+        lng: s.lng,
+        nom: s.nom,
+        quartier: s.quartier,
+        ville: s.ville,
+        telephone_whatsapp: s.telephone_whatsapp,
+        whatsappUrl: s.whatsappUrl,
+        photo: null,
+        titre: null,
+        prix_xof: null,
+        statut: null,
+        articlesCount: 0,
+        articles: [],
+        type_boutique: s.type_boutique,
+        metier: s.metier,
+        description_prestation: s.description_prestation,
+        categorie_etablissement: s.categorie_etablissement,
+        avatar_config: s.avatar_config || null,
+      });
+    }
+    return liste;
+  }, [resultats, resultatsServices]);
 
   // Liste complète des catégories affichées dans la barre horizontale mobile (1:1 Identique à la capture et au menu)
   const CATEGORIES_DEFILEMENT_MOBILE = [
