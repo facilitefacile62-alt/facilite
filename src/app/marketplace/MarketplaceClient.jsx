@@ -972,6 +972,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
                 if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
               }
             }}
+            onOuvrirExplorer={() => setGlobeOuvert(true)}
           />
         </div>
       )}

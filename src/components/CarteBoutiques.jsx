@@ -62,7 +62,7 @@ const distanceLisible = (km) =>
       ? `${Math.round(Number(km) * 1000)} m`
       : `${String(Number(km)).replace(".", ",")} km`;
 
-export default function CarteBoutiques({ articles, boutiquesSansArticles = [], depart, onChoisirBoutique }) {
+export default function CarteBoutiques({ articles, boutiquesSansArticles = [], depart, onChoisirBoutique, onOuvrirExplorer }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const [echec, setEchec] = useState(false);
@@ -332,33 +332,21 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
         {/* Boutons d'Action : 1. Gagner de l'espace (Compact) | 2. Flèche Plier/Déplier */}
         <div className="flex items-center gap-2 ml-auto">
 
-          {/* BOUTON 1 : GAGNER DE L'ESPACE (Mode Compact) */}
+          {/* BOUTON 1 : OUVRIR LA CARTE EXPLORER PLEIN ÉCRAN — anciennement un
+              toggle du mode compact réutilisant le libellé "Explorer" sans
+              jamais ouvrir le vrai Explorer (GlobeExplorateurBoutiques),
+              source de confusion signalée par l'utilisateur. Le mode
+              compact reste accessible via le bouton flottant "🤏 Compact"
+              directement sur la carte (ligne ~435), donc rien n'est perdu. */}
           {!estPliee && (
             <button
               type="button"
-              onClick={() => setModeCompact(!modeCompact)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border active:scale-95 ${
-                modeCompact
-                  ? "bg-[#1877F2] text-white border-[#1877F2] ring-2 ring-blue-400/30"
-                  : "bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700"
-              }`}
-              title={modeCompact ? "Agrandir la carte à la taille normale" : "Explorer la carte en plus grand"}
+              onClick={() => onOuvrirExplorer?.()}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border active:scale-95 bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700"
+              title="Ouvrir la carte Explorer en plein écran"
             >
-              <svg
-                className={`w-3.5 h-3.5 ${modeCompact ? "text-white" : "text-[#1877F2]"}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                {modeCompact ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 4v4H5m0 0l4-4M15 4v4h4m0 0l-4-4M9 20v-4H5m0 0l4 4M15 20v-4h4m0 0l-4 4" />
-                )}
-              </svg>
-              <span className="font-extrabold">
-                {modeCompact ? "Agrandir" : "Explorer"}
-              </span>
+              <span>🌍</span>
+              <span className="font-extrabold">Explorer</span>
             </button>
           )}
 
