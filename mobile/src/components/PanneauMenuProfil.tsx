@@ -266,7 +266,11 @@ export default function PanneauMenuProfil({ visible, onFermer }: { visible: bool
                 }}>
                 <Text className="text-[12.5px] font-semibold text-[#1A1A1A]">📄 Gérer mon profil</Text>
               </Pressable>
-              <Pressable onPress={() => BIENTOT('Ma boutique')}>
+              <Pressable
+                onPress={() => {
+                  onFermer();
+                  router.push('/web/marketplace');
+                }}>
                 <Text className="text-[12.5px] font-semibold text-[#1A1A1A]">🔗 Ma boutique</Text>
               </Pressable>
             </View>
