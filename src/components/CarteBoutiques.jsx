@@ -452,7 +452,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
 
           <div
             ref={conteneur}
-            className={`w-full ${modeCompact ? "h-[135px] sm:h-[155px]" : "h-[280px] sm:h-[380px]"} z-0 transition-all duration-300 bg-[#0B0F17]`}
+            className={`w-full ${modeCompact ? "h-[120px] sm:h-[155px]" : "h-[200px] sm:h-[320px]"} z-0 transition-all duration-300 bg-[#0B0F17]`}
             aria-label="Carte des boutiques proches"
           />
 

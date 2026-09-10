@@ -607,14 +607,9 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       const p = await positionActuelle();
       setPosition(p);
       await lancerRecherche(p);
-      // "Autour de moi" ouvre désormais la carte Explorer (avatars, filtres,
-      // carrousel...) plutôt que l'ancienne carte plein écran dédiée —
-      // remplacement demandé, une seule carte plein écran à maintenir au
-      // lieu de deux. positionInitiale évite de re-géolocaliser une
-      // seconde fois à l'ouverture.
-      setGlobeOuvert(true);
     } catch (e) {
       setErreur(e.message);
+    } finally {
       setChargement(false);
     }
   };
@@ -963,34 +958,26 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
 
       {/* resultatsServices inclus dans la condition */}
       {position && (resultats.length > 0 || resultatsServices.length > 0) && (
-        <>
-          {/* Sur mobile, "Autour de moi" ouvre désormais directement la
-              carte Explorer (voir localiser() plus haut) — l'ancienne carte
-              plein écran dédiée (CarteMobileAutourDeMoi) est retirée, deux
-              cartes plein écran redondantes n'avaient plus lieu d'être. */}
-
-          {/* VUE PC / DESKTOP : CARTE STANDARD LEAFLET DES BOUTIQUES */}
-          <div className="hidden md:block">
-            <CarteBoutiques
-              articles={resultats}
-              boutiquesSansArticles={resultatsServices}
-              depart={position}
-              onChoisirBoutique={(id) => {
-                const b = boutiquesPourGlobe.find((x) => x.id === id);
-                if (b) {
-                  onVoirBoutique?.(b);
-                } else {
-                  const cible = document.getElementById(`boutique-${id}`);
-                  if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
-                }
-              }}
-            />
-          </div>
-        </>
+        <div className="w-full mb-3.5">
+          <CarteBoutiques
+            articles={resultats}
+            boutiquesSansArticles={resultatsServices}
+            depart={position}
+            onChoisirBoutique={(id) => {
+              const b = boutiquesPourGlobe.find((x) => x.id === id);
+              if (b) {
+                onVoirBoutique?.(b);
+              } else {
+                const cible = document.getElementById(`boutique-${id}`);
+                if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+            }}
+          />
+        </div>
       )}
 
-      {/* Grille de produits (5 Colonnes sur grand écran 1:1 Identique à la capture) */}
-      <div className={`${position ? "hidden md:grid" : "grid"} grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5 w-full`}>
+      {/* Grille de produits (Toujours visible sous la carte sur PC et Mobile) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5 w-full">
         {resultats.map((a, i) => (
           <CarteArticle
             key={a.id}
