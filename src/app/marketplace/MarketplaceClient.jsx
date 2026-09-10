@@ -4070,7 +4070,7 @@ function ModalFicheBoutique({
               setOngletActif("produits");
             }}
             className={`flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-all cursor-pointer active:scale-95 border ${
-              ongletMobile === "article" && ongletActif === "produits"
+              ongletMobile === "article" && (ongletActif === "produits" || ongletActif === "apercu")
                 ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white shadow-sm"
                 : "bg-[#E3DBCC]/50 hover:bg-[#E3DBCC]/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-[#D5CCBC]/60 dark:border-zinc-700/60"
             }`}
@@ -4160,8 +4160,13 @@ function ModalFicheBoutique({
             </div>
           )}
 
-          {/* Grille de 2 colonnes de PRODUITS */}
-          {ongletActif === "produits" && ongletMobile === "article" && (
+          {/* Grille de 2 colonnes de PRODUITS. "apercu" est l'état initial de
+              ongletActif (voir sa déclaration) — accepté ici au même titre
+              que "produits" (déjà le cas ailleurs dans ce fichier, ex.
+              lignes ~4780+ : `ongletActif === "produits" || ongletActif
+              === "apercu"`), sans quoi l'onglet Article par défaut
+              affichait une page blanche jusqu'à ce qu'on reclique dessus. */}
+          {(ongletActif === "produits" || ongletActif === "apercu") && ongletMobile === "article" && (
             <div className="p-3">
               {chargement ? (
                 <div className="text-center py-12 text-zinc-400">
