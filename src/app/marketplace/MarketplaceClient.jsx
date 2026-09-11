@@ -847,55 +847,70 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         />
       )}
 
-      {/* 1. BARRE DE CATÉGORIES HORIZONTALE DÉFILABLE — EXCLUSIVEMENT POUR UTILISATEUR TÉLÉPHONE (MOBILE ONLY) */}
-      <div className="block md:hidden w-full mb-2.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-3 pt-2.5 pb-1.5 shadow-xs overflow-hidden">
+      {/* 📍 CARTE FIXE EN MODE AUTOUR DE MOI (Immédiatement ancrée et fixe sous le header) */}
+      {position && (resultats.length > 0 || resultatsServices.length > 0) && (
         <div
-          ref={categoriesScrollRef}
-          onMouseDown={handleCatMouseDown}
-          onMouseMove={handleCatMouseMove}
-          onMouseUp={handleCatMouseUp}
-          onMouseLeave={handleCatMouseUp}
-          className="flex items-center gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-1 select-none cursor-grab active:cursor-grabbing"
-          style={{ WebkitOverflowScrolling: "touch" }}
+          style={{ position: "sticky", top: "64px", zIndex: 30 }}
+          className="w-full mb-3 shadow-2xl backdrop-blur-md rounded-2xl sm:rounded-3xl"
         >
-          {CATEGORIES_DEFILEMENT_MOBILE.map((cat) => {
-            // Plusieurs puces (mode_hommes/chaussures/beaute -> "mode",
-            // jouets -> "autre", meubles -> "maison") retombent sur la MÊME
-            // valeur de catégorie de base au clic (voir onSelectCategorie
-            // ci-dessous) : la contrainte CHECK de la table ne connaît pas
-            // ces sous-catégories, donc `categorie` ne peut de toute façon
-            // pas distinguer laquelle a été cliquée. Le cas particulier
-            // précédent ("mode_hommes" ? ... : false) ne faisait que cacher
-            // ce constat pour UNE puce sans le résoudre pour les autres, ce
-            // qui allumait la mauvaise puce. Aligné sur MenuCategoriesSidebar
-            // (version bureau) : toutes les puces d'une même famille
-            // s'allument ensemble, honnêtement. Bug confirmé lors d'un audit
-            // du Marketplace le 2026-09-08.
-            const estActif =
-              (categorie === null && cat.id === null) ||
-              categorie === cat.id ||
-              (cat.baseCategory && categorie === cat.baseCategory);
-            return (
-              <button
-                key={cat.label}
-                type="button"
-                onClick={() => onSelectCategorie?.(cat.baseCategory || cat.id)}
-                className={`shrink-0 flex items-center gap-1.5 text-xs sm:text-sm font-black transition-all pb-2 relative cursor-pointer whitespace-nowrap ${
-                  estActif
-                    ? "text-gray-950 dark:text-white"
-                    : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 font-bold"
-                }`}
-              >
-                <i className={`fa-solid ${cat.icon} text-[11px] ${estActif ? "text-[#1877F2]" : "text-gray-400"}`}></i>
-                <span>{cat.label}</span>
-                {estActif && (
-                  <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-black dark:bg-white rounded-full transition-all" />
-                )}
-              </button>
-            );
-          })}
+          <CarteBoutiques
+            articles={resultats}
+            boutiquesSansArticles={resultatsServices}
+            depart={position}
+            onChoisirBoutique={(id) => {
+              const b = boutiquesPourGlobe.find((x) => x.id === id);
+              if (b) {
+                onVoirBoutique?.(b);
+              } else {
+                const cible = document.getElementById(`boutique-${id}`);
+                if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+            }}
+            onOuvrirExplorer={() => setGlobeOuvert(true)}
+            onReinitialiserPosition={reinitialiserPosition}
+          />
         </div>
-      </div>
+      )}
+
+      {/* 1. BARRE DE CATÉGORIES HORIZONTALE DÉFILABLE — EXCLUSIVEMENT POUR UTILISATEUR TÉLÉPHONE (MOBILE ONLY) */}
+      {!position && (
+        <div className="block md:hidden w-full mb-2.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-3 pt-2.5 pb-1.5 shadow-xs overflow-hidden">
+          <div
+            ref={categoriesScrollRef}
+            onMouseDown={handleCatMouseDown}
+            onMouseMove={handleCatMouseMove}
+            onMouseUp={handleCatMouseUp}
+            onMouseLeave={handleCatMouseUp}
+            className="flex items-center gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-1 select-none cursor-grab active:cursor-grabbing"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            {CATEGORIES_DEFILEMENT_MOBILE.map((cat) => {
+              const estActif =
+                (categorie === null && cat.id === null) ||
+                categorie === cat.id ||
+                (cat.baseCategory && categorie === cat.baseCategory);
+              return (
+                <button
+                  key={cat.label}
+                  type="button"
+                  onClick={() => onSelectCategorie?.(cat.baseCategory || cat.id)}
+                  className={`shrink-0 flex items-center gap-1.5 text-xs sm:text-sm font-black transition-all pb-2 relative cursor-pointer whitespace-nowrap ${
+                    estActif
+                      ? "text-gray-950 dark:text-white"
+                      : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 font-bold"
+                  }`}
+                >
+                  <i className={`fa-solid ${cat.icon} text-[11px] ${estActif ? "text-[#1877F2]" : "text-gray-400"}`}></i>
+                  <span>{cat.label}</span>
+                  {estActif && (
+                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-black dark:bg-white rounded-full transition-all" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* En-tête de résultats (1:1 Identique à la capture d'écran) */}
       <div className="flex items-center justify-between mb-3.5 px-1">
@@ -950,28 +965,6 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
               Voir tout le catalogue
             </button>
           )}
-        </div>
-      )}
-
-      {/* resultatsServices inclus dans la condition — Carte fixe (sticky) pour que les articles défilent en dessous */}
-      {position && (resultats.length > 0 || resultatsServices.length > 0) && (
-        <div className="w-full mb-3.5 sticky top-[68px] sm:top-[76px] z-30 shadow-2xl backdrop-blur-md rounded-2xl sm:rounded-3xl transition-all">
-          <CarteBoutiques
-            articles={resultats}
-            boutiquesSansArticles={resultatsServices}
-            depart={position}
-            onChoisirBoutique={(id) => {
-              const b = boutiquesPourGlobe.find((x) => x.id === id);
-              if (b) {
-                onVoirBoutique?.(b);
-              } else {
-                const cible = document.getElementById(`boutique-${id}`);
-                if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
-              }
-            }}
-            onOuvrirExplorer={() => setGlobeOuvert(true)}
-            onReinitialiserPosition={reinitialiserPosition}
-          />
         </div>
       )}
 
