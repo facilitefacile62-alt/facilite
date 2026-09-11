@@ -3786,6 +3786,33 @@ function ModalFicheBoutique({
     window.history.replaceState(window.history.state, "", url);
   }, [ongletMobile, ongletActif]);
 
+  // Fond noir glissant des pastilles Article/Activité/Domaine : mesuré via
+  // refs plutôt qu'un pourcentage fixe, pour rester juste malgré le gap et
+  // le padding du conteneur (voir le rendu des 3 boutons plus bas).
+  const pistePilulesRef = useRef(null);
+  const pilleArticleRef = useRef(null);
+  const pilleActiviteRef = useRef(null);
+  const pilleDomaineRef = useRef(null);
+  const [stylePastilleActive, setStylePastilleActive] = useState({ left: 0, width: 0, opacity: 0 });
+
+  useEffect(() => {
+    const refActif =
+      ongletMobile === "article" ? pilleArticleRef : ongletMobile === "activite" ? pilleActiviteRef : pilleDomaineRef;
+    const mesurer = () => {
+      const piste = pistePilulesRef.current;
+      const pilule = refActif.current;
+      if (!piste || !pilule) return;
+      setStylePastilleActive({
+        left: pilule.offsetLeft - piste.clientLeft,
+        width: pilule.offsetWidth,
+        opacity: 1,
+      });
+    };
+    queueMicrotask(mesurer);
+    window.addEventListener("resize", mesurer);
+    return () => window.removeEventListener("resize", mesurer);
+  }, [ongletMobile, ongletActif]);
+
   useEffect(() => {
     if (!estEtablissement || !boutique?.id) {
       queueMicrotask(() => setHorairesEtablissement([]));
@@ -4129,48 +4156,61 @@ function ModalFicheBoutique({
           )}
         </div>
 
-        {/* Pilules d'onglets parfaitement harmonisées (ARTICLE | ACTIVITE | DOMAINE) */}
-        <div className="flex items-center gap-2.5 px-4 py-3 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800">
+        {/* Pilules d'onglets parfaitement harmonisées (ARTICLE | ACTIVITE | DOMAINE)
+            — le fond noir actif est un unique bloc positionné en absolu qui
+            glisse (transition sur left/width, mesurés via refs) d'une
+            pastille à l'autre au lieu de sauter instantanément d'un bouton à
+            l'autre : demande explicite de l'utilisateur ("le fond noir glisse
+            en douceur"). */}
+        <div ref={pistePilulesRef} className="relative flex items-center gap-2.5 px-4 py-3 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800">
+          <div
+            className="absolute top-3 bottom-3 rounded-2xl bg-zinc-950 dark:bg-white shadow-sm transition-[left,width] duration-300 ease-out pointer-events-none"
+            style={stylePastilleActive}
+          />
+
           <button
+            ref={pilleArticleRef}
             type="button"
             onClick={() => {
               setOngletMobile("article");
               setOngletActif("produits");
             }}
-            className={`flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-all cursor-pointer active:scale-95 border ${
+            className={`relative z-10 flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-colors cursor-pointer active:scale-95 border border-transparent ${
               ongletMobile === "article" && (ongletActif === "produits" || ongletActif === "apercu")
-                ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white shadow-sm"
-                : "bg-[#E3DBCC]/50 hover:bg-[#E3DBCC]/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-[#D5CCBC]/60 dark:border-zinc-700/60"
+                ? "text-white dark:text-zinc-950"
+                : "text-zinc-700 dark:text-zinc-200 hover:bg-[#E3DBCC]/40 dark:hover:bg-zinc-800/60"
             }`}
           >
             Article
           </button>
 
           <button
+            ref={pilleActiviteRef}
             type="button"
             onClick={() => {
               setOngletMobile("activite");
               setOngletActif("profit");
             }}
-            className={`flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-all cursor-pointer active:scale-95 border ${
+            className={`relative z-10 flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-colors cursor-pointer active:scale-95 border border-transparent ${
               ongletMobile === "activite"
-                ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white shadow-sm"
-                : "bg-[#E3DBCC]/50 hover:bg-[#E3DBCC]/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-[#D5CCBC]/60 dark:border-zinc-700/60"
+                ? "text-white dark:text-zinc-950"
+                : "text-zinc-700 dark:text-zinc-200 hover:bg-[#E3DBCC]/40 dark:hover:bg-zinc-800/60"
             }`}
           >
             Activité
           </button>
 
           <button
+            ref={pilleDomaineRef}
             type="button"
             onClick={() => {
               setOngletMobile("domaine");
               setOngletActif("apropos");
             }}
-            className={`flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-all cursor-pointer active:scale-95 border ${
+            className={`relative z-10 flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-colors cursor-pointer active:scale-95 border border-transparent ${
               ongletMobile === "domaine"
-                ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white shadow-sm"
-                : "bg-[#E3DBCC]/50 hover:bg-[#E3DBCC]/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-[#D5CCBC]/60 dark:border-zinc-700/60"
+                ? "text-white dark:text-zinc-950"
+                : "text-zinc-700 dark:text-zinc-200 hover:bg-[#E3DBCC]/40 dark:hover:bg-zinc-800/60"
             }`}
           >
             Domaine
