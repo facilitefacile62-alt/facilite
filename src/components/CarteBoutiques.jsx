@@ -343,22 +343,20 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                   <button
                     type="button"
                     onClick={() => onOuvrirExplorer()}
-                    className="px-3 py-1.5 rounded-full text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95"
+                    className="w-8 h-8 rounded-full text-sm font-black transition cursor-pointer flex items-center justify-center shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95 shrink-0"
                     title="Ouvrir la carte Explorer en plein écran"
                   >
                     <span>🌍</span>
-                    <span>Explorer</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => setModeCompact(!modeCompact)}
-                  className="px-2.5 py-1.5 rounded-full text-xs font-black transition cursor-pointer flex items-center gap-1 shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95"
+                  className="w-8 h-8 rounded-full text-xs font-black transition cursor-pointer flex items-center justify-center shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95 shrink-0"
                   title={modeCompact ? "Agrandir" : "Mode compact"}
                 >
                   <span>{modeCompact ? "🔍" : "🤏"}</span>
-                  <span className="hidden sm:inline">{modeCompact ? "Agrandir" : "Compact"}</span>
                 </button>
 
                 <button
@@ -370,11 +368,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                       setEstPliee(true);
                     }
                   }}
-                  className="px-3 py-1.5 rounded-full text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95"
+                  className="w-8 h-8 rounded-full text-sm font-black transition cursor-pointer flex items-center justify-center shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95 shrink-0"
                   title="Effacer le filtre de position et revenir à tout le catalogue"
                 >
-                  <i className="fa-solid fa-xmark text-xs text-red-400"></i>
-                  <span>Effacer filtre de position</span>
+                  <i className="fa-solid fa-xmark text-sm text-red-400"></i>
                 </button>
               </div>
             </div>
