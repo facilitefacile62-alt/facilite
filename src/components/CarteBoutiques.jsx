@@ -65,15 +65,33 @@ const distanceLisible = (km) =>
 export default function CarteBoutiques({ articles, boutiquesSansArticles = [], depart, onChoisirBoutique, onOuvrirExplorer, onReinitialiserPosition }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
+  const menuFiltresRef = useRef(null);
   const [echec, setEchec] = useState(false);
 
-  // États de contrôle : Pliée / Dépliée et Mode Gain d'espace (Compact)
+  // États de contrôle : Pliée / Dépliée, Mode Gain d'espace (Compact) et Menu Déroulant des Filtres
   const [estPliee, setEstPliee] = useState(false);
   const [modeCompact, setModeCompact] = useState(false);
+  const [menuFiltresOuvert, setMenuFiltresOuvert] = useState(false);
   // Filtre façon Explorer : 'tous' | 'populaires' | 'live'. Contrairement à
   // Explorer, "Autour de moi" n'est pas un filtre mais une action (recentrer
   // sur `depart`, déjà connu ici — pas besoin de re-géolocaliser).
   const [filtreActif, setFiltreActif] = useState("tous");
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuFiltresRef.current && !menuFiltresRef.current.contains(event.target)) {
+        setMenuFiltresOuvert(false);
+      }
+    }
+    if (menuFiltresOuvert) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [menuFiltresOuvert]);
 
   // Regroupement par boutique. Un seul pin par boutique quel que soit son
   // type_boutique (demande explicite) : les boutiques service/établissement
@@ -322,19 +340,76 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
 
           {/* OVERLAY SUPÉRIEUR TRANSPARENT PAR-DESSUS LA CARTE (HUD / Glassmorphism) */}
           <div className="absolute inset-x-0 top-0 z-[400] p-2.5 sm:p-3.5 flex flex-col gap-2 bg-gradient-to-b from-black/85 via-black/40 to-transparent pointer-events-none">
-            {/* Ligne 1 : Titre & Actions principales (Transparentes avec flou d'arrière-plan) */}
+            {/* Ligne 1 : Titre / Menu Déroulant (avec 3 traits ☰) & Actions principales */}
             <div className="flex items-center justify-between gap-2">
-              {/* Badge Titre */}
-              <div
-                onClick={() => setEstPliee(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white cursor-pointer pointer-events-auto shadow-md transition active:scale-95 select-none"
-                title="Cliquez pour plier la carte"
-              >
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
-                <span className="text-xs sm:text-sm font-black text-white">Carte des boutiques</span>
-                <span className="px-2 py-0.2 rounded-full bg-blue-500/30 text-blue-300 text-[10px] font-black border border-blue-400/20">
-                  {boutiques.length}
-                </span>
+              {/* Badge Titre avec 3 traits & Menu Déroulant */}
+              <div className="relative pointer-events-auto" ref={menuFiltresRef}>
+                <button
+                  type="button"
+                  onClick={() => setMenuFiltresOuvert(!menuFiltresOuvert)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white cursor-pointer shadow-md transition active:scale-95 select-none"
+                  title="Ouvrir les filtres de la carte"
+                >
+                  <i className="fa-solid fa-bars text-xs text-emerald-400"></i>
+                  <span className="text-xs sm:text-sm font-black text-white">Carte des boutiques</span>
+                  <span className="px-2 py-0.2 rounded-full bg-blue-500/30 text-blue-300 text-[10px] font-black border border-blue-400/20">
+                    {boutiques.length}
+                  </span>
+                  <i className={`fa-solid fa-chevron-down text-[10px] text-gray-300 transition-transform ${menuFiltresOuvert ? "rotate-180" : ""}`}></i>
+                </button>
+
+                {/* Menu Déroulant avec tous les filtres */}
+                {menuFiltresOuvert && (
+                  <div className="absolute left-0 top-full mt-2 w-56 rounded-2xl bg-black/90 backdrop-blur-xl border border-white/20 p-1.5 shadow-2xl z-[500] space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Filtres de la carte
+                    </div>
+                    {PASTILLES_FILTRE.map((p) => {
+                      const estActif = filtreActif === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setFiltreActif(p.id);
+                            setMenuFiltresOuvert(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition text-left cursor-pointer ${
+                            estActif
+                              ? "bg-white/20 text-white font-black"
+                              : "text-gray-200 hover:bg-white/10 hover:text-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {p.icone ? (
+                              <i className={`fa-solid ${p.icone} text-xs ${estActif ? "text-sky-400" : "text-gray-400"}`}></i>
+                            ) : (
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            )}
+                            <span>{p.label}</span>
+                          </div>
+                          {estActif && <i className="fa-solid fa-check text-emerald-400 text-xs"></i>}
+                        </button>
+                      );
+                    })}
+
+                    <div className="h-px bg-white/10 my-1"></div>
+
+                    {/* Action Autour de moi */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        recentrerSurMoi();
+                        setMenuFiltresOuvert(false);
+                      }}
+                      disabled={!depart}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-emerald-400 hover:bg-white/10 transition text-left cursor-pointer disabled:opacity-40"
+                    >
+                      <i className="fa-solid fa-location-crosshairs text-xs"></i>
+                      <span>Autour de moi</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Boutons d'action droite */}
@@ -375,42 +450,6 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                 </button>
               </div>
             </div>
-
-            {/* Ligne 2 : Pastilles de filtres transparentes (Glassmorphism) */}
-            {!modeCompact && (
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto pt-0.5">
-                {PASTILLES_FILTRE.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setFiltreActif(p.id)}
-                    className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 shrink-0 shadow-md backdrop-blur-md border active:scale-95 ${
-                      filtreActif === p.id
-                        ? "bg-white text-gray-950 border-white font-black"
-                        : "bg-black/60 hover:bg-black/80 text-white/90 border-white/15"
-                    }`}
-                  >
-                    {p.icone ? (
-                      <i className={`fa-solid ${p.icone} text-[10px] ${filtreActif === p.id ? "text-sky-500" : "text-sky-400"}`}></i>
-                    ) : (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    )}
-                    <span>{p.label}</span>
-                  </button>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={recentrerSurMoi}
-                  disabled={!depart}
-                  className="px-3 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/90 border border-white/15 shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95 disabled:opacity-40"
-                  title="Recentrer la carte sur ma position"
-                >
-                  <i className="fa-solid fa-location-crosshairs text-[10px] text-emerald-400"></i>
-                  <span>Autour de moi</span>
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Carrousel d'avatars + légende, en survol de la carte (dégradé
