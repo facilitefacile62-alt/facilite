@@ -4701,20 +4701,6 @@ function ModalFicheBoutique({
                   <i className="fa-solid fa-gear text-sm"></i>
                   <span className="flex-1">Réglages</span>
                 </button>
-
-                {onFermer && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuMobileOuvert(false);
-                      onFermer();
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2.5 text-left border-t border-gray-100 dark:border-zinc-800 mt-2 pt-3"
-                  >
-                    <i className="fa-solid fa-arrow-right-from-bracket text-sm"></i>
-                    <span className="flex-1">Retour au Marketplace</span>
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -4950,18 +4936,6 @@ function ModalFicheBoutique({
               <i className="fa-solid fa-gear text-sm"></i>
               <span className="flex-1">Réglages</span>
             </button>
-
-            {onFermer && (
-              <button
-                type="button"
-                onClick={onFermer}
-                className="w-full px-3.5 py-2 rounded-xl text-xs font-bold text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2.5 transition cursor-pointer text-left border-t border-gray-100 dark:border-zinc-800 mt-2 pt-2.5"
-                title="Quitter la boutique et revenir au catalogue"
-              >
-                <i className="fa-solid fa-arrow-left text-xs"></i>
-                <span className="flex-1">Retour au Marketplace</span>
-              </button>
-            )}
           </div>
         </div>
 
