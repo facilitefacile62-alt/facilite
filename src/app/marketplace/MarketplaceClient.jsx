@@ -953,9 +953,9 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </div>
       )}
 
-      {/* resultatsServices inclus dans la condition */}
+      {/* resultatsServices inclus dans la condition — Carte fixe (sticky) pour que les articles défilent en dessous */}
       {position && (resultats.length > 0 || resultatsServices.length > 0) && (
-        <div className="w-full mb-3.5">
+        <div className="w-full mb-3.5 sticky top-[52px] sm:top-[60px] z-30 shadow-2xl backdrop-blur-md rounded-2xl sm:rounded-3xl">
           <CarteBoutiques
             articles={resultats}
             boutiquesSansArticles={resultatsServices}

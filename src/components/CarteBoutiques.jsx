@@ -327,7 +327,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
   if (boutiques.length === 0 || echec) return null;
 
   return (
-    <div className="mb-4 rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-800/80 bg-[#0B0F17] shadow-xl relative transition-all duration-300">
+    <div className="mb-2 rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-800/80 bg-[#0B0F17] shadow-xl relative transition-all duration-300">
       {/* CONTENU VISUEL DE LA CARTE (SI NON PLIÉE) */}
       {!estPliee ? (
         <div className="relative w-full overflow-hidden group">
