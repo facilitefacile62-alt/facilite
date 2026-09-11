@@ -183,7 +183,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           carteRef.current = null;
         }
 
-        carte = L.map(conteneur.current, { scrollWheelZoom: false, attributionControl: true });
+        carte = L.map(conteneur.current, { scrollWheelZoom: true, attributionControl: true });
         carteRef.current = carte;
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
