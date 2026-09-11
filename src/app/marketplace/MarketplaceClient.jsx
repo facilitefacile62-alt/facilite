@@ -997,29 +997,19 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
           )}
         </h2>
 
-        <div className="flex items-center gap-2">
-          {/* Bouton Explorer sur le globe */}
-          <button
-            type="button"
-            onClick={() => setGlobeOuvert(true)}
-            className="px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 bg-gray-900 hover:bg-black text-white shadow-xs"
-            title="Explorer les boutiques sur le globe"
-          >
-            <span>🌍</span>
-            <span>Explorer</span>
-          </button>
-
-          {position && (
+        {position && (
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={reinitialiserPosition}
-              className="text-xs font-bold text-gray-500 hover:text-red-500 transition cursor-pointer px-1.5 py-1"
+              className="text-xs font-bold text-gray-500 hover:text-red-500 transition cursor-pointer px-2 py-1 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center gap-1"
               title="Afficher tout le catalogue"
             >
-              ✕
+              <i className="fa-solid fa-xmark text-xs"></i>
+              <span>Effacer filtre de position</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {erreur && (
