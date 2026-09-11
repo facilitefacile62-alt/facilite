@@ -6015,10 +6015,10 @@ function EditeurHoraires({ storeId, boutique, onEnregistre, onFermer, estModal =
       )}
 
       {/* ========================================================================= */}
-      {/* ÉTAPE 2 : SÉLECTION DES 7 JOURS (1:1 Capture Écran 2)                     */}
+      {/* ÉTAPE 2 : SÉLECTION DES 7 JOURS (1:1 Compact & Scrollable)                */}
       {/* ========================================================================= */}
       {etape === 2 && (
-        <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-1 select-none custom-scrollbar">
+        <div className="space-y-1.5 max-h-[48vh] sm:max-h-[52vh] overflow-y-auto pr-1 select-none custom-scrollbar">
           {[1, 2, 3, 4, 5, 6, 0].map((jour) => {
             const l = lignes.find((item) => item.jour_semaine === jour) || {
               jour_semaine: jour,
@@ -6035,14 +6035,14 @@ function EditeurHoraires({ storeId, boutique, onEnregistre, onFermer, estModal =
             return (
               <div
                 key={jour}
-                className="py-3 px-2 border-b border-zinc-100 dark:border-zinc-900/80 transition"
+                className="p-2.5 rounded-xl bg-zinc-50/60 dark:bg-zinc-900/40 border border-zinc-200/60 dark:border-zinc-800/60 transition"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white capitalize">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white capitalize truncate">
                       {NOMS_JOURS_MINUSCULES[jour]}
                     </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                       {!estOuvert
                         ? "Fermé"
                         : est24h
@@ -6051,19 +6051,19 @@ function EditeurHoraires({ storeId, boutique, onEnregistre, onFermer, estModal =
                     </p>
                   </div>
 
-                  {/* Switch iOS toggle bouton on/off */}
+                  {/* Switch iOS toggle bouton compact on/off */}
                   <button
                     type="button"
                     onClick={() =>
                       modifierLigne(jour, { ferme_ce_jour: !l.ferme_ce_jour })
                     }
-                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                       estOuvert ? "bg-black dark:bg-white" : "bg-zinc-300 dark:bg-zinc-700"
                     }`}
                     title={estOuvert ? "Marquer comme fermé" : "Marquer comme ouvert"}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full shadow-md ring-0 transition duration-200 ease-in-out ${
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full shadow-md ring-0 transition duration-200 ease-in-out ${
                         estOuvert
                           ? "translate-x-5 bg-white dark:bg-black"
                           : "translate-x-0 bg-white"
@@ -6072,17 +6072,17 @@ function EditeurHoraires({ storeId, boutique, onEnregistre, onFermer, estModal =
                   </button>
                 </div>
 
-                {/* Sélecteur de créneaux personnalisés quand ouvert */}
+                {/* Sélecteur de créneaux personnalisés ultra-compact quand ouvert */}
                 {estOuvert && (
-                  <div className="mt-3 pt-2.5 flex flex-wrap items-center gap-2 text-xs bg-zinc-50 dark:bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-200/80 dark:border-zinc-800 animate-fadeIn">
-                    <span className="text-zinc-500 dark:text-zinc-400 text-[11px]">Créneau :</span>
+                  <div className="mt-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 flex flex-wrap items-center gap-1.5 text-[11px] animate-fadeIn">
+                    <span className="text-zinc-500 dark:text-zinc-400 text-[10px] font-medium">Créneau :</span>
                     <input
                       type="time"
                       value={l.heure_ouverture}
                       onChange={(e) =>
                         modifierLigne(jour, { heure_ouverture: e.target.value })
                       }
-                      className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white font-bold text-xs"
+                      className="px-1.5 py-0.5 rounded bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white font-bold text-[11px] focus:outline-none"
                     />
                     <span className="text-zinc-400">–</span>
                     <input
@@ -6091,7 +6091,7 @@ function EditeurHoraires({ storeId, boutique, onEnregistre, onFermer, estModal =
                       onChange={(e) =>
                         modifierLigne(jour, { heure_fermeture: e.target.value })
                       }
-                      className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white font-bold text-xs"
+                      className="px-1.5 py-0.5 rounded bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white font-bold text-[11px] focus:outline-none"
                     />
                     <button
                       type="button"
@@ -6101,7 +6101,7 @@ function EditeurHoraires({ storeId, boutique, onEnregistre, onFermer, estModal =
                           heure_fermeture: "23:59",
                         })
                       }
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
                         est24h
                           ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
                           : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700"
@@ -6117,9 +6117,9 @@ function EditeurHoraires({ storeId, boutique, onEnregistre, onFermer, estModal =
                           heure_fermeture: "18:00",
                         })
                       }
-                      className="px-2 py-1 rounded-lg text-[10px] font-bold border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition cursor-pointer"
+                      className="px-2 py-0.5 rounded text-[10px] font-bold border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition cursor-pointer"
                     >
-                      Standard (8h-18h)
+                      8h-18h
                     </button>
                   </div>
                 )}
@@ -6131,19 +6131,25 @@ function EditeurHoraires({ storeId, boutique, onEnregistre, onFermer, estModal =
 
       {/* Messages de statut */}
       {erreur && (
-        <p className="text-xs font-bold text-rose-500 mt-3">{erreur}</p>
+        <div className="mt-3 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-xs text-rose-700 dark:text-rose-300 font-bold flex items-center gap-2">
+          <i className="fa-solid fa-circle-exclamation shrink-0"></i>
+          <span>{erreur}</span>
+        </div>
       )}
       {message && (
-        <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400 mt-3">{message}</p>
+        <div className="mt-3 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-xs text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-2">
+          <i className="fa-solid fa-circle-check shrink-0"></i>
+          <span>{message}</span>
+        </div>
       )}
 
       {/* Bouton Suivant / Enregistrer en bas (1:1 Gros bouton arrondi) */}
-      <div className="pt-5 mt-4 border-t border-zinc-200 dark:border-zinc-800/80">
+      <div className="pt-4 mt-3 border-t border-zinc-200 dark:border-zinc-800/80">
         <button
           type="button"
           onClick={gererActionBouton}
           disabled={envoi || chargement}
-          className="w-full py-3.5 px-6 rounded-full bg-black dark:bg-white text-white dark:text-black hover:opacity-90 text-sm font-black transition shadow-xl active:scale-[0.98] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full py-3 px-6 rounded-full bg-black dark:bg-white text-white dark:text-black hover:opacity-90 text-xs sm:text-sm font-black transition shadow-lg active:scale-[0.98] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {envoi ? (
             <>

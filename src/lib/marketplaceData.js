@@ -682,13 +682,24 @@ export async function obtenirHorairesBoutique(storeId) {
  * heure_ouverture, heure_fermeture, ferme_ce_jour }, ...].
  */
 export async function enregistrerHoraires(storeId, horaires, modeHoraires = "indiques") {
-  if (!storeId) throw new Error("Boutique introuvable.");
-  const { error } = await supabase.rpc("enregistrer_mes_horaires", {
-    p_store_id: storeId,
-    p_horaires: horaires || [],
-    p_mode_horaires: modeHoraires || "indiques",
-  });
-  if (error) throw new Error(error.message);
+  if (!storeId || storeId === "facilite_shop") return;
+  try {
+    const { error } = await supabase.rpc("enregistrer_mes_horaires", {
+      p_store_id: storeId,
+      p_horaires: horaires || [],
+      p_mode_horaires: modeHoraires || "indiques",
+    });
+    if (error) {
+      // Fallback si signature à 2 arguments
+      const { error: errorFallback } = await supabase.rpc("enregistrer_mes_horaires", {
+        p_store_id: storeId,
+        p_horaires: horaires || [],
+      });
+      if (errorFallback) throw new Error(error.message || errorFallback.message);
+    }
+  } catch (err) {
+    throw err;
+  }
 }
 
 /**
