@@ -62,7 +62,7 @@ const distanceLisible = (km) =>
       ? `${Math.round(Number(km) * 1000)} m`
       : `${String(Number(km)).replace(".", ",")} km`;
 
-export default function CarteBoutiques({ articles, boutiquesSansArticles = [], depart, onChoisirBoutique, onOuvrirExplorer }) {
+export default function CarteBoutiques({ articles, boutiquesSansArticles = [], depart, onChoisirBoutique, onOuvrirExplorer, onReinitialiserPosition }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const [echec, setEchec] = useState(false);
@@ -363,14 +363,18 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
 
                 <button
                   type="button"
-                  onClick={() => setEstPliee(true)}
+                  onClick={() => {
+                    if (onReinitialiserPosition) {
+                      onReinitialiserPosition();
+                    } else {
+                      setEstPliee(true);
+                    }
+                  }}
                   className="px-3 py-1.5 rounded-full text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95"
-                  title="Plier la carte"
+                  title="Effacer le filtre de position et revenir à tout le catalogue"
                 >
-                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-                  </svg>
-                  <span>Plier la carte</span>
+                  <i className="fa-solid fa-xmark text-xs text-red-400"></i>
+                  <span>Effacer filtre de position</span>
                 </button>
               </div>
             </div>

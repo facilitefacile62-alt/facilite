@@ -996,20 +996,6 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
             </>
           )}
         </h2>
-
-        {position && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={reinitialiserPosition}
-              className="text-xs font-bold text-gray-500 hover:text-red-500 transition cursor-pointer px-2 py-1 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center gap-1"
-              title="Afficher tout le catalogue"
-            >
-              <i className="fa-solid fa-xmark text-xs"></i>
-              <span>Effacer filtre de position</span>
-            </button>
-          </div>
-        )}
       </div>
 
       {erreur && (
@@ -1068,6 +1054,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
               }
             }}
             onOuvrirExplorer={() => setGlobeOuvert(true)}
+            onReinitialiserPosition={reinitialiserPosition}
           />
         </div>
       )}
