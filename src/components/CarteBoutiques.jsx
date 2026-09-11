@@ -309,140 +309,108 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
   if (boutiques.length === 0 || echec) return null;
 
   return (
-    <div className="mb-4 rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-800 bg-[#0B0F17] shadow-sm transition-all duration-300">
-
-      {/* 1. BARRE DE CONTRÔLE SUPÉRIEURE AVEC FLÈCHE ET BOUTONS VISIBLES */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 sm:px-4 py-2.5 bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 border-b border-gray-800 select-none">
-
-        {/* Titre avec indicateur de position */}
-        <div
-          onClick={() => setEstPliee(!estPliee)}
-          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition"
-          title={estPliee ? "Cliquez pour déplier la carte" : "Cliquez pour plier la carte"}
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black text-gray-100">
-            <span>Carte des boutiques</span>
-            <span className="px-2 py-0.5 rounded-full bg-blue-950/60 text-blue-400 text-[11px] font-bold">
-              {boutiques.length}
-            </span>
-          </div>
-        </div>
-
-        {/* Boutons d'Action : 1. Gagner de l'espace (Compact) | 2. Flèche Plier/Déplier */}
-        <div className="flex items-center gap-2 ml-auto">
-
-          {/* BOUTON 1 : OUVRIR LA CARTE EXPLORER PLEIN ÉCRAN — anciennement un
-              toggle du mode compact réutilisant le libellé "Explorer" sans
-              jamais ouvrir le vrai Explorer (GlobeExplorateurBoutiques),
-              source de confusion signalée par l'utilisateur. Le mode
-              compact reste accessible via le bouton flottant "🤏 Compact"
-              directement sur la carte (ligne ~435), donc rien n'est perdu. */}
-          {!estPliee && (
-            <button
-              type="button"
-              onClick={() => onOuvrirExplorer?.()}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border active:scale-95 bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700"
-              title="Ouvrir la carte Explorer en plein écran"
-            >
-              <span>🌍</span>
-              <span className="font-extrabold">Explorer</span>
-            </button>
-          )}
-
-          {/* BOUTON 2 : FLÈCHE POUR PLIER / DÉPLIER LA CARTE */}
-          <button
-            type="button"
-            onClick={() => setEstPliee(!estPliee)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border active:scale-95 ${
-              estPliee
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
-                : "bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700"
-            }`}
-            title={estPliee ? "Déplier et afficher la carte" : "Plier et masquer la carte pour voir directement les articles"}
-          >
-            {/* Flèche SVG très nette */}
-            <svg
-              className={`w-4 h-4 transition-transform duration-300 ${
-                estPliee ? "rotate-180 text-white" : "rotate-0 text-gray-300"
-              }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-            </svg>
-            <span>{estPliee ? "Déplier la carte" : "Plier la carte"}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. CONTENU VISUEL DE LA CARTE (SI NON PLIÉE) */}
+    <div className="mb-4 rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-800/80 bg-[#0B0F17] shadow-xl relative transition-all duration-300">
+      {/* CONTENU VISUEL DE LA CARTE (SI NON PLIÉE) */}
       {!estPliee ? (
-        <div className="animate-in fade-in duration-200 relative group">
-
-          {/* Pastilles de filtre façon Explorer — masquées en mode compact,
-              pas la place pour elles dans une hauteur réduite. */}
-          {!modeCompact && (
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-3 py-2 bg-gray-950/80 border-b border-gray-800">
-              {PASTILLES_FILTRE.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setFiltreActif(p.id)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                    filtreActif === p.id
-                      ? "bg-white text-gray-950"
-                      : "bg-gray-800/90 text-gray-200 hover:bg-gray-700 border border-gray-700/80"
-                  }`}
-                >
-                  {p.icone ? (
-                    <i className={`fa-solid ${p.icone} text-[10px] ${filtreActif === p.id ? "text-sky-500" : "text-sky-400"}`}></i>
-                  ) : (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
-                  )}
-                  <span>{p.label}</span>
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={recentrerSurMoi}
-                disabled={!depart}
-                className="px-3 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap bg-gray-800/90 hover:bg-gray-700 text-gray-200 border border-gray-700/80 transition cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-40"
-              >
-                <i className="fa-solid fa-location-crosshairs text-[10px] text-emerald-400"></i>
-                <span>Autour de moi</span>
-              </button>
-            </div>
-          )}
-
-          {/* Boutons flottants d'accès rapide directement sur la carte */}
-          <div className="absolute top-2.5 right-2.5 z-[400] flex items-center gap-1.5 pointer-events-auto">
-            <button
-              type="button"
-              onClick={() => setModeCompact(!modeCompact)}
-              className="px-2.5 py-1 rounded-lg bg-gray-900/90 hover:bg-gray-800 text-gray-100 text-[10px] font-black shadow-md backdrop-blur-xs border border-gray-700 flex items-center gap-1 cursor-pointer transition active:scale-95"
-              title={modeCompact ? "Agrandir" : "Réduire"}
-            >
-              <span>{modeCompact ? "🔍 Agrandir" : "🤏 Compact"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setEstPliee(true)}
-              className="w-7 h-7 rounded-lg bg-gray-900/90 hover:bg-gray-800 text-gray-100 shadow-md backdrop-blur-xs border border-gray-700 flex items-center justify-center cursor-pointer transition active:scale-95"
-              title="Plier la carte"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-              </svg>
-            </button>
-          </div>
-
+        <div className="relative w-full overflow-hidden group">
+          {/* CARTE LEAFLET EN ARRIÈRE-PLAN COMPLET */}
           <div
             ref={conteneur}
-            className={`w-full ${modeCompact ? "h-[120px] sm:h-[155px]" : "h-[200px] sm:h-[320px]"} z-0 transition-all duration-300 bg-[#0B0F17]`}
+            className={`w-full ${modeCompact ? "h-[190px] sm:h-[240px]" : "h-[290px] sm:h-[390px]"} z-0 transition-all duration-300 bg-[#0B0F17]`}
             aria-label="Carte des boutiques proches"
           />
+
+          {/* OVERLAY SUPÉRIEUR TRANSPARENT PAR-DESSUS LA CARTE (HUD / Glassmorphism) */}
+          <div className="absolute inset-x-0 top-0 z-[400] p-2.5 sm:p-3.5 flex flex-col gap-2 bg-gradient-to-b from-black/85 via-black/40 to-transparent pointer-events-none">
+            {/* Ligne 1 : Titre & Actions principales (Transparentes avec flou d'arrière-plan) */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Badge Titre */}
+              <div
+                onClick={() => setEstPliee(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white cursor-pointer pointer-events-auto shadow-md transition active:scale-95 select-none"
+                title="Cliquez pour plier la carte"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                <span className="text-xs sm:text-sm font-black text-white">Carte des boutiques</span>
+                <span className="px-2 py-0.2 rounded-full bg-blue-500/30 text-blue-300 text-[10px] font-black border border-blue-400/20">
+                  {boutiques.length}
+                </span>
+              </div>
+
+              {/* Boutons d'action droite */}
+              <div className="flex items-center gap-1.5 pointer-events-auto">
+                {onOuvrirExplorer && (
+                  <button
+                    type="button"
+                    onClick={() => onOuvrirExplorer()}
+                    className="px-3 py-1.5 rounded-full text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95"
+                    title="Ouvrir la carte Explorer en plein écran"
+                  >
+                    <span>🌍</span>
+                    <span>Explorer</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setModeCompact(!modeCompact)}
+                  className="px-2.5 py-1.5 rounded-full text-xs font-black transition cursor-pointer flex items-center gap-1 shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95"
+                  title={modeCompact ? "Agrandir" : "Mode compact"}
+                >
+                  <span>{modeCompact ? "🔍" : "🤏"}</span>
+                  <span className="hidden sm:inline">{modeCompact ? "Agrandir" : "Compact"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEstPliee(true)}
+                  className="px-3 py-1.5 rounded-full text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95"
+                  title="Plier la carte"
+                >
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                  </svg>
+                  <span>Plier la carte</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Ligne 2 : Pastilles de filtres transparentes (Glassmorphism) */}
+            {!modeCompact && (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto pt-0.5">
+                {PASTILLES_FILTRE.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setFiltreActif(p.id)}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 shrink-0 shadow-md backdrop-blur-md border active:scale-95 ${
+                      filtreActif === p.id
+                        ? "bg-white text-gray-950 border-white font-black"
+                        : "bg-black/60 hover:bg-black/80 text-white/90 border-white/15"
+                    }`}
+                  >
+                    {p.icone ? (
+                      <i className={`fa-solid ${p.icone} text-[10px] ${filtreActif === p.id ? "text-sky-500" : "text-sky-400"}`}></i>
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    )}
+                    <span>{p.label}</span>
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={recentrerSurMoi}
+                  disabled={!depart}
+                  className="px-3 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/90 border border-white/15 shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95 disabled:opacity-40"
+                  title="Recentrer la carte sur ma position"
+                >
+                  <i className="fa-solid fa-location-crosshairs text-[10px] text-emerald-400"></i>
+                  <span>Autour de moi</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Carrousel d'avatars + légende, en survol de la carte (dégradé
               plutôt qu'un fond opaque) — la carte reste visible en
