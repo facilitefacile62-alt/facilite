@@ -568,6 +568,25 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   const [globeOuvert, setGlobeOuvert] = useState(false);
   const [modalEasyReturn, setModalEasyReturn] = useState(false);
 
+  // La carte "Autour de moi" doit rester épinglée juste sous la barre de
+  // navigation, jamais dessous elle — un top codé en dur (64px, hauteur
+  // desktop du header) laissait la carte remonter de ~50px SOUS le header
+  // sur mobile (header réel mesuré à 113,5px avec la barre d'icônes
+  // Accueil/Autour/Notifs/Publier/Admin), coupant la carte au défilement.
+  // Même patron de mesure dynamique que ModalFicheBoutique (hauteurHeader).
+  const [hauteurHeaderCarte, setHauteurHeaderCarte] = useState(64);
+  useEffect(() => {
+    const mesurer = () => {
+      const header = document.querySelector("#main-site-header") || document.querySelector("header");
+      if (header) {
+        setHauteurHeaderCarte(header.getBoundingClientRect().height);
+      }
+    };
+    queueMicrotask(mesurer);
+    window.addEventListener("resize", mesurer);
+    return () => window.removeEventListener("resize", mesurer);
+  }, []);
+
   const categoriesScrollRef = useRef(null);
   const isDraggingCat = useRef(false);
   const startXCat = useRef(0);
@@ -850,7 +869,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       {/* 📍 CARTE FIXE EN MODE AUTOUR DE MOI (Immédiatement ancrée et fixe sous le header) */}
       {position && (resultats.length > 0 || resultatsServices.length > 0) && (
         <div
-          style={{ position: "sticky", top: "64px", zIndex: 30 }}
+          style={{ position: "sticky", top: `${hauteurHeaderCarte}px`, zIndex: 30 }}
           className="w-full mb-3 shadow-2xl backdrop-blur-md rounded-2xl sm:rounded-3xl"
         >
           <CarteBoutiques
@@ -1014,16 +1033,16 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
     <article
       id={ancre ? `boutique-${article.boutique_id}` : undefined}
       onClick={ouvrirFiche}
-      className="group flex flex-col w-full cursor-pointer select-none scroll-mt-24 rounded-2xl sm:rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+      className="group flex flex-col w-full cursor-pointer select-none scroll-mt-24 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800 shadow-xs hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
     >
-      {/* 1. Image produit avec badges en overlay supérieur & inférieur (Format carré) */}
+      {/* 1. Image produit avec badge supérieur (1:1 Capture d'écran utilisateur) */}
       <div className="relative aspect-square w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={urlPhoto(photo)}
             alt={article.titre}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300 ease-out"
             loading="lazy"
           />
         ) : (
@@ -1033,80 +1052,53 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
           </div>
         )}
 
-        {/* Dégradé supérieur pour lisibilité des badges */}
-        <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/60 via-black/20 to-transparent pointer-events-none" />
-
-        {/* En-tête gauche : Nom de la boutique / Vendeur avec icône */}
-        <div className="absolute top-2 left-2 z-10 flex items-center gap-1 max-w-[65%] truncate drop-shadow-sm">
-          <span className="text-white text-xs font-bold truncate">
-            {article.boutique_nom || "facilite shop"}
-          </span>
-          <i className="fa-solid fa-circle-check text-sky-400 text-[10px] shrink-0"></i>
-        </div>
-
-        {/* En-tête droite : Badge Statut / LIVE */}
-        <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-          {enStock ? (
-            <span className="px-1.5 py-0.5 rounded-md bg-[#E02424] text-white text-[9px] font-black tracking-wide uppercase flex items-center gap-1 shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-              LIVE
-            </span>
-          ) : (
-            <span className="px-1.5 py-0.5 rounded-md bg-black/75 text-zinc-300 text-[9px] font-bold backdrop-blur-xs shadow-sm">
-              Épuisé
-            </span>
-          )}
-        </div>
-
-        {/* Badge de localisation en bas de l'image (1:1 Capture d'écran) */}
-        <div className="absolute bottom-2 left-2 z-10 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold flex items-center gap-1 shadow-xs max-w-[92%] truncate">
-          <i className="fa-solid fa-location-dot text-emerald-400 text-[9px] shrink-0"></i>
-          <span className="truncate">{localisationBadge}</span>
-        </div>
-      </div>
-
-      {/* 2. Informations sous l'image (Titre en gras, sous-titre boutique, Prix & Bouton flèche circulaire) */}
-      <div className="p-3 sm:p-3.5 flex flex-col justify-between flex-1 bg-white dark:bg-zinc-900 gap-1.5">
-        {/* Titre : Texte gras sur 2 lignes max */}
-        <h3
-          className="text-xs sm:text-[13px] font-bold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2 group-hover:text-blue-600 transition"
-          title={article.titre}
-        >
-          {article.titre}
-        </h3>
-
-        {/* Ligne inférieure : Sous-titre boutique & Prix + Bouton flèche noire */}
-        <div className="mt-auto pt-1">
-          <p className="text-[10px] sm:text-[11px] text-zinc-400 dark:text-zinc-500 font-medium truncate mb-1">
-            {article.boutique_nom || "facilite shop"}
-          </p>
-
-          <div className="flex items-center justify-between gap-1.5">
-            <p className="text-xs sm:text-sm font-extrabold text-zinc-950 dark:text-white tracking-tight truncate">
-              {prixLisible(article.prix_xof)}{" "}
-              <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">
-                FCFA
-              </span>
-            </p>
-
-            {/* Bouton d'action circulaire noir avec flèche blanche */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (article.whatsappUrl) {
-                  window.open(article.whatsappUrl, "_blank", "noopener,noreferrer");
-                } else {
-                  ouvrirFiche();
-                }
-              }}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm shrink-0 cursor-pointer"
-              title="Voir l'article / Commander"
-            >
-              <i className="fa-solid fa-arrow-right text-[10px] sm:text-xs"></i>
-            </button>
+        {/* Badge supérieur gauche : Offre / LIVE (1:1 Identique à la capture) */}
+        <div className="absolute top-2 left-2 z-10">
+          <div className="flex flex-col items-start bg-emerald-900/90 backdrop-blur-xs rounded-md px-1.5 py-0.5 shadow-sm border border-emerald-500/30">
+            <span className="text-emerald-400 text-[9px] font-black leading-none uppercase tracking-wider">Offre</span>
+            <span className="text-amber-300 text-[7px] font-extrabold leading-none mt-0.5">spéciale été</span>
           </div>
         </div>
+
+        {/* Statut Stock si non dispo */}
+        {!enStock && (
+          <div className="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/80 text-zinc-300 text-[9px] font-bold">
+            Épuisé
+          </div>
+        )}
+      </div>
+
+      {/* 2. Pied de carte ultra-compact : Prix & Titre à gauche, Bouton Acheter à droite (1:1 Capture) */}
+      <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2 bg-white dark:bg-zinc-900">
+        {/* Colonne gauche : Prix en gros + Titre tronqué en dessous */}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm sm:text-[15px] font-black text-gray-950 dark:text-white leading-tight truncate">
+            {prixLisible(article.prix_xof)}{" "}
+            <span className="text-xs sm:text-[13px] font-black">CFA</span>
+          </p>
+          <p
+            className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium truncate mt-0.5"
+            title={article.titre}
+          >
+            {article.titre}
+          </p>
+        </div>
+
+        {/* Colonne droite : Bouton gris 'Acheter' (1:1 Capture) */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (article.whatsappUrl) {
+              window.open(article.whatsappUrl, "_blank", "noopener,noreferrer");
+            } else {
+              ouvrirFiche();
+            }
+          }}
+          className="px-3.5 py-1.5 rounded-lg bg-[#E2E8F0] hover:bg-[#CBD5E1] dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-xs font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-2xs"
+        >
+          Acheter
+        </button>
       </div>
 
       {signalementOuvert && (
