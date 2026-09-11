@@ -3759,6 +3759,33 @@ function ModalFicheBoutique({
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
   const [ongletMobile, setOngletMobile] = useState("article"); // Articles par défaut : c'est ce qu'on vient voir en ouvrant une boutique
 
+  // Persiste l'onglet interne de la fiche boutique (Article/Activité/
+  // Domaine, ET le sous-état associé — formulaire de publication,
+  // réglages, etc.) dans l'URL, même principe que boutique_id plus haut :
+  // un rechargement ne doit jamais ramener l'utilisateur ailleurs que là
+  // où il se trouvait, quel que soit l'onglet ou le sous-onglet actif au
+  // moment d'actualiser.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const om = params.get("onglet_boutique");
+    const oa = params.get("sous_onglet_boutique");
+    queueMicrotask(() => {
+      if (om) setOngletMobile(om);
+      if (oa) setOngletActif(oa);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    params.set("onglet_boutique", ongletMobile);
+    params.set("sous_onglet_boutique", ongletActif);
+    const query = params.toString();
+    const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
+    window.history.replaceState(window.history.state, "", url);
+  }, [ongletMobile, ongletActif]);
+
   useEffect(() => {
     if (!estEtablissement || !boutique?.id) {
       queueMicrotask(() => setHorairesEtablissement([]));
