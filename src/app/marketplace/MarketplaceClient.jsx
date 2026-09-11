@@ -1052,13 +1052,7 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
           </div>
         )}
 
-        {/* Badge supérieur gauche : Offre / LIVE (1:1 Identique à la capture) */}
-        <div className="absolute top-2 left-2 z-10">
-          <div className="flex flex-col items-start bg-emerald-900/90 backdrop-blur-xs rounded-md px-1.5 py-0.5 shadow-sm border border-emerald-500/30">
-            <span className="text-emerald-400 text-[9px] font-black leading-none uppercase tracking-wider">Offre</span>
-            <span className="text-amber-300 text-[7px] font-extrabold leading-none mt-0.5">spéciale été</span>
-          </div>
-        </div>
+
 
         {/* Statut Stock si non dispo */}
         {!enStock && (

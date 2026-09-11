@@ -455,10 +455,18 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           {/* Carrousel d'avatars + légende, en survol de la carte (dégradé
               plutôt qu'un fond opaque) — la carte reste visible en
               arrière-plan au lieu d'être poussée par deux bandes noires
-              pleines, demande explicite de l'utilisateur. */}
+              pleines, demande explicite de l'utilisateur.
+              Empreinte verticale volontairement réduite (avatars 28px au
+              lieu de 36px, paddings resserrés) : ce bloc est ancré en bas
+              (bottom-0) et grandit vers le haut selon son propre contenu —
+              le réduire fait donc descendre le carrousel plus près du bord
+              bas, ce qui dégage davantage d'espace de carte pure au-dessus
+              (les marqueurs, dont "Vous êtes ici", s'y superposaient sinon),
+              plutôt qu'un simple padding-top qui n'aurait rien changé à sa
+              position réelle. */}
           <div className="absolute inset-x-0 bottom-0 z-[400] pt-6 bg-gradient-to-t from-black/75 via-black/40 to-transparent pointer-events-none">
             {!modeCompact && boutiquesAffichees.length > 0 && (
-              <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar px-3 pb-1.5 pointer-events-auto">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-3 pb-1 pointer-events-auto">
                 {boutiquesAffichees.map((b) => (
                   <button
                     key={b.id}
@@ -467,18 +475,18 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                       carteRef.current?.flyTo(b.position, 15, { duration: 1 });
                       onChoisirBoutique?.(b.id);
                     }}
-                    className="flex flex-col items-center gap-1 shrink-0 p-1 rounded-xl hover:bg-gray-800/80 transition cursor-pointer"
+                    className="flex flex-col items-center gap-0.5 shrink-0 p-0.5 rounded-xl hover:bg-gray-800/80 transition cursor-pointer"
                   >
-                    <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-700 bg-gray-800 flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-full overflow-hidden border-2 border-gray-700 bg-gray-800 flex items-center justify-center">
                       {b.avatar_config ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={dataUriAvatarBoutique(b.avatar_config, 36)}
+                          src={dataUriAvatarBoutique(b.avatar_config, 28)}
                           alt={b.nom}
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="text-white text-[10px] font-black">
+                        <span className="text-white text-[9px] font-black">
                           {b.nom ? b.nom.substring(0, 2).toUpperCase() : "BT"}
                         </span>
                       )}
@@ -489,7 +497,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
               </div>
             )}
 
-            <div className="px-3.5 sm:px-4 pb-1.5 pt-1 text-[11px] text-gray-200 flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
+            <div className="px-3.5 sm:px-4 pb-1 pt-0.5 text-[11px] text-gray-200 flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
               <span>
                 {boutiquesAffichees.length} boutique{boutiquesAffichees.length > 1 ? "s" : ""} dans le rayon choisi. Touchez un marqueur pour voir le détail.
               </span>
