@@ -112,7 +112,9 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           quartier: a.quartier || null,
           distance_km: a.distance_km,
           position: p,
-          type_boutique: "produit",
+          type_boutique: a.type_boutique || "produit",
+          mode_horaires: a.boutique_mode_horaires || a.mode_horaires || "indiques",
+          horaires: a.horaires || a.boutique_horaires || [],
           avatar_config: a.boutique_avatar_config || null,
           articles: [],
         });
@@ -133,6 +135,8 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
         description_prestation: s.description_prestation,
         categorie_etablissement: s.categorie_etablissement,
         whatsappUrl: s.whatsappUrl,
+        mode_horaires: s.mode_horaires || "indiques",
+        horaires: s.horaires || [],
         avatar_config: s.avatar_config || null,
         articles: [],
       });
@@ -171,13 +175,6 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
         await import("leaflet/dist/leaflet.css");
         if (annule || !conteneur.current) return;
 
-        // Bug confirmé (mesure directe : conteneur à 0px de haut malgré des
-        // tuiles chargées avec succès) : `boutiques`/`depart` changent à
-        // chaque nouvelle recherche (nouvelle référence de tableau via
-        // useMemo), donc cet effet se rejoue souvent — sans ce nettoyage,
-        // L.map() était appelé une seconde fois sur le même élément DOM
-        // avant que le nettoyage de l'exécution précédente n'ait eu lieu,
-        // ce que Leaflet gère mal (état interne corrompu, hauteur effondrée).
         if (carteRef.current) {
           carteRef.current.remove();
           carteRef.current = null;
@@ -199,60 +196,51 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
         const points = [];
 
         for (const b of boutiquesAffichees) {
-          // Couleur par type : produit garde le bleu historique (avec le
-          // gris "hors stock" existant), service/établissement ont leur
-          // propre couleur fixe — "en stock" n'a pas de sens pour eux (zéro
-          // article par construction, pas par rupture).
           let couleur = COULEUR;
-          let pointStatutHtml = "";
-          let badgeTooltip = null;
-
           if (b.type_boutique === "service") {
             couleur = COULEUR_SERVICE;
           } else if (b.type_boutique === "etablissement") {
             couleur = COULEUR_ETABLISSEMENT;
-            const modeH = b.mode_horaires || "indiques";
-            if (modeH === "toujours_ouvert") {
-              pointStatutHtml = `<span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#10B981;margin-right:3px;"></span>`;
-              badgeTooltip = "🟢 Ouvert 24h/24";
-            } else if (modeH === "sur_rendez_vous") {
-              pointStatutHtml = `<span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#0284C7;margin-right:3px;"></span>`;
-              badgeTooltip = "🔵 Sur rendez-vous";
-            } else if (Array.isArray(b.horaires) && b.horaires.length > 0) {
-              const st = calculerStatutOuverture(b, b.horaires);
-              if (st?.ouvert) {
-                pointStatutHtml = `<span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#10B981;margin-right:3px;"></span>`;
-                badgeTooltip = `🟢 Ouvert (${st.texteDetail})`;
-              } else if (st && !st.ouvert) {
-                pointStatutHtml = `<span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#F43F5E;margin-right:3px;"></span>`;
-                badgeTooltip = `🔴 Fermé (${st.texteDetail})`;
-              }
-            }
           } else {
             const enStock = b.articles.some((a) => a.statut === "en_stock");
             couleur = enStock ? COULEUR : "#6b7280";
           }
 
-          // Avatar façon Bitmoji en priorité si le vendeur en a configuré un
-          // (SVG DiceBear généré en local, inliné directement dans le HTML du
-          // divIcon — aucune URL externe) ; sinon le point coloré habituel.
-          // Le nom est affiché en permanence sous l'avatar (pas seulement au
-          // survol via bindTooltip, invisible par défaut) — sur mobile,
-          // personne ne "survole" un pin. Deux wrappers imbriqués autour du
-          // cercle avatar : .avatar-boutique-zoom-scale (le JS y pose
-          // `transform: scale()` sur zoomend) et .avatar-boutique-anime, son
-          // enfant, qui porte la respiration CSS — jamais le même élément
-          // pour les deux, sinon l'un écrase le `transform` de l'autre. La
-          // position lat/lng du marqueur n'est jamais touchée, seul ce
-          // sous-élément visuel bouge.
+          // Calcul universel du statut d'ouverture en direct
+          const st = calculerStatutOuverture(b, b.horaires);
+          let pointStatutHtml = "";
+          let badgeTooltip = null;
+          let pointAlarmeBadgeHtml = "";
+
+          if (st) {
+            if (st.mode === "toujours_ouvert") {
+              pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#10B981;margin-right:4px;box-shadow:0 0 6px #10B981;"></span>`;
+              badgeTooltip = `<span style="display:inline-flex;align-items:center;gap:4px;color:#10B981;font-weight:900;font-size:11px;">🟢 Ouvert 24h/24</span>`;
+              pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#10B981;color:#000;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">24/7</div>`;
+            } else if (st.mode === "sur_rendez_vous") {
+              pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#0284C7;margin-right:4px;box-shadow:0 0 6px #0284C7;"></span>`;
+              badgeTooltip = `<span style="display:inline-flex;align-items:center;gap:4px;color:#0284C7;font-weight:900;font-size:11px;">🔵 Sur rendez-vous</span>`;
+              pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#0284C7;color:#fff;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">RDV</div>`;
+            } else if (st.ouvert) {
+              pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#10B981;margin-right:4px;box-shadow:0 0 6px #10B981;"></span>`;
+              badgeTooltip = `<span style="display:inline-flex;align-items:center;gap:4px;color:#10B981;font-weight:900;font-size:11px;">🟢 Ouvert${st.texteDetail ? ` · ${echapperHtml(st.texteDetail)}` : ""}</span>`;
+              pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#10B981;color:#000;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">OUVERT</div>`;
+            } else {
+              pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#F43F5E;margin-right:4px;box-shadow:0 0 6px #F43F5E;"></span>`;
+              badgeTooltip = `<span style="display:inline-flex;align-items:center;gap:4px;color:#F43F5E;font-weight:900;font-size:11px;">🔴 Fermé${st.texteDetail ? ` · ${echapperHtml(st.texteDetail)}` : ""}</span>`;
+              pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#F43F5E;color:#fff;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">FERMÉ</div>`;
+            }
+          }
+
           const marqueur = b.avatar_config
             ? L.marker(b.position, {
                 icon: L.divIcon({
                   className: "carte-boutiques-avatar-icon",
                   html: `
                     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                      <div class="avatar-boutique-zoom-scale">
+                      <div class="avatar-boutique-zoom-scale" style="position:relative;">
                         <div class="avatar-boutique-anime" style="width:28px;height:28px;border-radius:9999px;border:2.5px solid ${couleur};overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.35);background:#fff;">${svgAvatarBoutique(b.avatar_config, 28)}</div>
+                        ${pointAlarmeBadgeHtml}
                       </div>
                       <span style="display:flex;align-items:center;max-width:96px;padding:1px 6px;background:rgba(17,24,39,0.92);color:#fff;font-size:9px;font-weight:800;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${pointStatutHtml}${echapperHtml(b.nom)}</span>
                     </div>
@@ -277,7 +265,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
               : `${b.articles.length} article${b.articles.length > 1 ? "s" : ""} · ${distanceLisible(b.distance_km)}`;
 
           const lignes = [
-            `<strong>${echapperHtml(b.nom)}</strong>`,
+            `<strong style="font-size:12px;">${echapperHtml(b.nom)}</strong>`,
             badgeTooltip,
             b.quartier ? echapperHtml(b.quartier) : null,
             ligneDetail,

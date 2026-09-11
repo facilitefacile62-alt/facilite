@@ -322,30 +322,9 @@ export default function GlobeExplorateurBoutiques({
       if (typeBoutique === "service") {
         bordureCouleur = COULEUR_SERVICE;
         contenuAvatar = avatarBitmoji || `<span class="text-2xl">🔧</span>`;
-        pointStatutTooltip = "bg-amber-400";
       } else if (typeBoutique === "etablissement") {
         bordureCouleur = COULEUR_ETABLISSEMENT;
         contenuAvatar = avatarBitmoji || `<span class="text-2xl">${EMOJI_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "🏢"}</span>`;
-
-        const modeH = b.mode_horaires || "indiques";
-        if (modeH === "toujours_ouvert") {
-          pointStatutTooltip = "bg-[#10B981] animate-pulse";
-          badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">24/7</div>`;
-        } else if (modeH === "sur_rendez_vous") {
-          pointStatutTooltip = "bg-sky-400";
-          badgeLive = `<div class="absolute -bottom-1 bg-sky-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">RDV</div>`;
-        } else if (Array.isArray(b.horaires) && b.horaires.length > 0) {
-          const st = calculerStatutOuverture(b, b.horaires);
-          if (st?.ouvert) {
-            pointStatutTooltip = "bg-[#10B981] animate-pulse";
-            badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">OUVERT</div>`;
-          } else {
-            pointStatutTooltip = "bg-rose-500";
-            badgeLive = `<div class="absolute -bottom-1 bg-rose-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">FERMÉ</div>`;
-          }
-        } else {
-          pointStatutTooltip = "bg-violet-400";
-        }
       } else {
         bordureCouleur = estCertifie ? "#2563EB" : "#10B981";
         contenuAvatar =
@@ -353,9 +332,25 @@ export default function GlobeExplorateurBoutiques({
           (aPhoto
             ? `<img src="${aPhoto}" alt="${nomCourt}" class="w-full h-full object-cover" />`
             : `<span class="text-2xl">${avatarInfo.emoji}</span>`);
-        badgeLive = estActif
-          ? `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">LIVE</div>`
-          : "";
+      }
+
+      // Calcul universel du statut d'ouverture en direct
+      const modeH = b.mode_horaires || "indiques";
+      if (modeH === "toujours_ouvert") {
+        pointStatutTooltip = "bg-[#10B981] animate-pulse";
+        badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">24/7</div>`;
+      } else if (modeH === "sur_rendez_vous") {
+        pointStatutTooltip = "bg-sky-400";
+        badgeLive = `<div class="absolute -bottom-1 bg-sky-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">RDV</div>`;
+      } else {
+        const st = calculerStatutOuverture(b, b.horaires);
+        if (st?.ouvert) {
+          pointStatutTooltip = "bg-[#10B981] animate-pulse";
+          badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">OUVERT</div>`;
+        } else {
+          pointStatutTooltip = "bg-rose-500";
+          badgeLive = `<div class="absolute -bottom-1 bg-rose-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">FERMÉ</div>`;
+        }
       }
 
       const htmlMarqueur = `
