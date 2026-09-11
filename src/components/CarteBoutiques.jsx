@@ -209,25 +209,43 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           // Calcul universel du statut d'ouverture en direct
           const st = calculerStatutOuverture(b, b.horaires);
           let pointStatutHtml = "";
-          let badgeTooltip = null;
+          let alarmeBadgeHtml = "";
           let pointAlarmeBadgeHtml = "";
 
           if (st) {
             if (st.mode === "toujours_ouvert") {
               pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#10B981;margin-right:4px;box-shadow:0 0 6px #10B981;"></span>`;
-              badgeTooltip = `<span style="display:inline-flex;align-items:center;gap:4px;color:#10B981;font-weight:900;font-size:11px;">🟢 Ouvert 24h/24</span>`;
+              alarmeBadgeHtml = `
+                <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;background:#ECFDF5;border:1px solid #A7F3D0;margin:3px 0;">
+                  <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;"></span>
+                  <span style="font-size:10px;font-weight:900;color:#065F46;text-transform:uppercase;">🟢 Ouvert 24h/24</span>
+                </div>`;
               pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#10B981;color:#000;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">24/7</div>`;
             } else if (st.mode === "sur_rendez_vous") {
               pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#0284C7;margin-right:4px;box-shadow:0 0 6px #0284C7;"></span>`;
-              badgeTooltip = `<span style="display:inline-flex;align-items:center;gap:4px;color:#0284C7;font-weight:900;font-size:11px;">🔵 Sur rendez-vous</span>`;
+              alarmeBadgeHtml = `
+                <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;background:#F0F9FF;border:1px solid #BAE6FD;margin:3px 0;">
+                  <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:#0284C7;box-shadow:0 0 6px #0284C7;"></span>
+                  <span style="font-size:10px;font-weight:900;color:#075985;text-transform:uppercase;">🔵 Sur rendez-vous</span>
+                </div>`;
               pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#0284C7;color:#fff;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">RDV</div>`;
             } else if (st.ouvert) {
               pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#10B981;margin-right:4px;box-shadow:0 0 6px #10B981;"></span>`;
-              badgeTooltip = `<span style="display:inline-flex;align-items:center;gap:4px;color:#10B981;font-weight:900;font-size:11px;">🟢 Ouvert${st.texteDetail ? ` · ${echapperHtml(st.texteDetail)}` : ""}</span>`;
+              alarmeBadgeHtml = `
+                <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;background:#ECFDF5;border:1px solid #A7F3D0;margin:3px 0;">
+                  <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;"></span>
+                  <span style="font-size:10px;font-weight:900;color:#065F46;text-transform:uppercase;">🟢 Ouvert</span>
+                  <span style="font-size:9px;font-weight:700;color:#047857;">· ${echapperHtml(st.texteDetail || "")}</span>
+                </div>`;
               pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#10B981;color:#000;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">OUVERT</div>`;
             } else {
               pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#F43F5E;margin-right:4px;box-shadow:0 0 6px #F43F5E;"></span>`;
-              badgeTooltip = `<span style="display:inline-flex;align-items:center;gap:4px;color:#F43F5E;font-weight:900;font-size:11px;">🔴 Fermé${st.texteDetail ? ` · ${echapperHtml(st.texteDetail)}` : ""}</span>`;
+              alarmeBadgeHtml = `
+                <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;background:#FFF1F2;border:1px solid #FECDD3;margin:3px 0;">
+                  <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:#F43F5E;box-shadow:0 0 6px #F43F5E;"></span>
+                  <span style="font-size:10px;font-weight:900;color:#9F1239;text-transform:uppercase;">🔴 Fermé</span>
+                  <span style="font-size:9px;font-weight:700;color:#BE123C;">· ${echapperHtml(st.texteDetail || "")}</span>
+                </div>`;
               pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#F43F5E;color:#fff;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">FERMÉ</div>`;
             }
           }
@@ -264,13 +282,17 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
               ? echapperHtml(LIBELLES_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "Établissement")
               : `${b.articles.length} article${b.articles.length > 1 ? "s" : ""} · ${distanceLisible(b.distance_km)}`;
 
-          const lignes = [
-            `<strong style="font-size:12px;">${echapperHtml(b.nom)}</strong>`,
-            badgeTooltip,
-            b.quartier ? echapperHtml(b.quartier) : null,
-            ligneDetail,
-          ].filter(Boolean);
-          marqueur.bindTooltip(lignes.join("<br>"));
+          const contenuBulle = `
+            <div style="min-width:130px;padding:2px 0;">
+              <div style="font-size:12px;font-weight:900;color:#111827;line-height:1.2;margin-bottom:2px;">${echapperHtml(b.nom)}</div>
+              ${alarmeBadgeHtml}
+              ${b.quartier ? `<div style="font-size:10px;color:#6B7280;margin-top:2px;">📍 ${echapperHtml(b.quartier)}</div>` : ""}
+              <div style="font-size:10px;color:#4B5563;font-weight:600;margin-top:2px;">${ligneDetail}</div>
+            </div>
+          `;
+
+          marqueur.bindTooltip(contenuBulle, { direction: "top", opacity: 0.98 });
+          marqueur.bindPopup(contenuBulle, { closeButton: false, offset: [0, -10] });
 
           if (typeof onChoisirBoutique === "function") {
             marqueur.on("click", () => onChoisirBoutique(b.id));
