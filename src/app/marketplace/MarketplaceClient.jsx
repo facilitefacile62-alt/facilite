@@ -998,22 +998,6 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </h2>
 
         <div className="flex items-center gap-2">
-          {/* Bouton Autour de moi */}
-          <button
-            type="button"
-            onClick={localiser}
-            disabled={chargement}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs ${
-              position
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                : "bg-[#1877F2] hover:bg-blue-600 text-white"
-            }`}
-            title={position ? "Position active" : "Rechercher autour de moi"}
-          >
-            <i className={`fa-solid ${chargement ? "fa-spinner fa-spin" : "fa-location-dot"} text-xs`}></i>
-            <span>{position ? "Position active" : "Autour de moi"}</span>
-          </button>
-
           {/* Bouton Explorer sur le globe */}
           <button
             type="button"
