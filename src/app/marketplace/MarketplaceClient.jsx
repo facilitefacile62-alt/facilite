@@ -4087,14 +4087,6 @@ function ModalFicheBoutique({
             >
               <i className="fa-solid fa-bars text-sm"></i>
             </button>
-            <button
-              type="button"
-              onClick={onFermer}
-              className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer active:scale-95"
-              title="Retourner au marketplace"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
           </div>
         </div>
 
@@ -4432,7 +4424,10 @@ function ModalFicheBoutique({
 
         {/* Menu Tiroir (Drawer) Mobile pour toutes les options */}
         {menuMobileOuvert && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end animate-fadeIn">
+          <div 
+            onClick={() => setMenuMobileOuvert(false)}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end animate-fadeIn"
+          >
             <div
               className="w-[82%] max-w-sm h-full bg-white dark:bg-zinc-900 p-4 flex flex-col shadow-2xl overflow-y-auto animate-slideInRight"
               onClick={(e) => e.stopPropagation()}
@@ -4442,7 +4437,7 @@ function ModalFicheBoutique({
                 <button
                   type="button"
                   onClick={() => setMenuMobileOuvert(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300"
+                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition cursor-pointer active:scale-95"
                 >
                   <i className="fa-solid fa-xmark text-sm"></i>
                 </button>
@@ -4565,6 +4560,20 @@ function ModalFicheBoutique({
                   <i className="fa-solid fa-gear text-sm"></i>
                   <span className="flex-1">Réglages</span>
                 </button>
+
+                {onFermer && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuMobileOuvert(false);
+                      onFermer();
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2.5 text-left border-t border-gray-100 dark:border-zinc-800 mt-2 pt-3"
+                  >
+                    <i className="fa-solid fa-arrow-right-from-bracket text-sm"></i>
+                    <span className="flex-1">Retour au Marketplace</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
