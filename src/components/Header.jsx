@@ -1090,7 +1090,7 @@ export default function Header() {
 
 
         {/* Navigation Links (Desktop & Tablette - Regroupement propre sans saturation de la barre) */}
-        <nav className="hidden xl:flex items-center space-x-2.5 lg:space-x-5 flex-shrink-0">
+        <nav className="hidden lg:flex items-center space-x-2 lg:space-x-3.5 xl:space-x-5 flex-shrink-0">
           <Link
             href="/"
             onClick={handleLogoOrHomeClick}
@@ -1395,7 +1395,7 @@ export default function Header() {
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
-        <div className={`items-center gap-1.5 sm:gap-2 flex-shrink-0 ${isMobileSearchOpen ? "hidden xl:flex" : "flex"}`}>
+        <div className={`items-center gap-1.5 sm:gap-2 flex-shrink-0 ${isMobileSearchOpen ? "hidden lg:flex" : "flex"}`}>
           {/* Liens Admin (si role='admin') et Recruteur (si has_badge='verified_recruiter') */}
           {userSession && (
             <div className="hidden sm:flex items-center">
@@ -1408,7 +1408,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setNotificationsModalOpen(true)}
-              className="hidden xl:flex p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative items-center justify-center flex-shrink-0 cursor-pointer"
+              className="hidden lg:flex p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative items-center justify-center flex-shrink-0 cursor-pointer"
               title="Centre de notifications"
               aria-label="Ouvrir les notifications"
             >
@@ -1425,7 +1425,7 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setIsMobileSearchOpen(true)}
-            className="xl:hidden p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none transition flex-shrink-0"
+            className="lg:hidden p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none transition flex-shrink-0"
             title="Rechercher"
             aria-label="Ouvrir la recherche"
           >
