@@ -1786,6 +1786,25 @@ export default function Header() {
             </>
           )}
 
+          {/* 📍 Bouton Autour de moi harmonisé dans la barre mobile */}
+          {isBusinessActive && (
+            <button
+              type="button"
+              onClick={() => {
+                if (pathname?.startsWith("/marketplace")) {
+                  window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
+                } else {
+                  router.push("/marketplace?autour_de_moi=1");
+                }
+              }}
+              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] text-gray-700 dark:text-gray-200 hover:text-[#1877F2] transition group"
+              title="Rechercher autour de moi"
+            >
+              <i className="fa-solid fa-location-dot text-sm sm:text-base text-[#1877F2] group-hover:scale-110 transition-transform"></i>
+              <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-[#1877F2]">Autour</span>
+            </button>
+          )}
+
           {userSession && (
             <button
               type="button"
