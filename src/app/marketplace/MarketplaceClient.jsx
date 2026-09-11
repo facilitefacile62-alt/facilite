@@ -3720,21 +3720,15 @@ function ModalFicheBoutique({
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
-  // Sur mobile, la fiche boutique laisse maintenant la barre de navigation
-  // du site (Accueil/Notifs/Publier/Admin, <header> sticky z-50 de
-  // Header.jsx) visible au-dessus d'elle au lieu de la recouvrir
-  // entièrement — demande explicite de l'utilisateur, qui veut pouvoir
-  // revenir sans passer par le menu vendeur. Mesurée dynamiquement (plutôt
-  // qu'une hauteur fixe devinée) : la hauteur réelle du header varie selon
-  // les bannières conditionnelles qu'il peut afficher (vérification
-  // téléphone, etc.). Inchangé sur desktop, où l'en-tête interne de cette
-  // fiche a déjà son propre "Retour au marketplace".
-  const [hauteurHeaderMobile, setHauteurHeaderMobile] = useState(0);
+  // La barre de navigation globale du site (<header id="main-site-header"> sticky z-50 de Header.jsx)
+  // reste TOUJOURS visible au-dessus de la fiche boutique sur tous les écrans (Desktop et Mobile).
+  const [hauteurHeader, setHauteurHeader] = useState(64);
   useEffect(() => {
     const mesurer = () => {
-      const header = document.querySelector("header");
-      const mobile = window.innerWidth < 768;
-      setHauteurHeaderMobile(mobile && header ? header.getBoundingClientRect().height : 0);
+      const header = document.querySelector("#main-site-header") || document.querySelector("header");
+      if (header) {
+        setHauteurHeader(header.getBoundingClientRect().height);
+      }
     };
     queueMicrotask(mesurer);
     window.addEventListener("resize", mesurer);
@@ -4002,8 +3996,8 @@ function ModalFicheBoutique({
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-[99999] bg-gray-100 dark:bg-zinc-950 text-zinc-900 dark:text-white overflow-y-auto md:overflow-hidden w-full flex flex-col animate-fadeIn"
-      style={{ top: hauteurHeaderMobile }}
+      className="fixed inset-x-0 bottom-0 z-40 bg-gray-100 dark:bg-zinc-950 text-zinc-900 dark:text-white overflow-y-auto md:overflow-hidden w-full flex flex-col animate-fadeIn"
+      style={{ top: hauteurHeader || 64 }}
     >
       {/* Toast de confirmation en haut */}
       {toastMessage && (
@@ -4030,9 +4024,9 @@ function ModalFicheBoutique({
       />
 
       {/* ========================================================================= */}
-      {/* 0. BARRE SUPÉRIEURE DESKTOP (Cachée sur mobile)                          */}
+      {/* 0. BARRE SUPÉRIEURE DESKTOP (Sous la barre de navigation principale)      */}
       {/* ========================================================================= */}
-      <header className="hidden md:flex sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-gray-200 dark:border-zinc-800 px-4 py-3 items-center justify-between shadow-xs shrink-0">
+      <div className="hidden md:flex sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-gray-200 dark:border-zinc-800 px-4 py-2.5 items-center justify-between shadow-2xs shrink-0">
         <button
           type="button"
           onClick={onFermer}
@@ -4073,7 +4067,7 @@ function ModalFicheBoutique({
         >
           <i className="fa-solid fa-xmark text-sm"></i>
         </button>
-      </header>
+      </div>
 
       {/* ========================================================================= */}
       {/* 📱 VUE MOBILE (PHONE) : DESIGN 1:1 CONFORME À LA MAQUETTE                 */}
@@ -4607,7 +4601,7 @@ function ModalFicheBoutique({
       {/* ========================================================================= */}
       {/* 🖥️ VUE DESKTOP (2 Colonnes directes pour grands écrans)                   */}
       {/* ========================================================================= */}
-      <div className="hidden md:flex w-full max-w-[1400px] mx-auto flex-1 p-2 sm:p-4 flex-col md:flex-row gap-6 items-start md:overflow-hidden md:h-[calc(100vh-57px)]">
+      <div className="hidden md:flex w-full max-w-[1400px] mx-auto flex-1 p-2 sm:p-4 flex-col md:flex-row gap-6 items-start md:overflow-hidden md:h-[calc(100vh-120px)]">
         {/* ========================================================================= */}
         {/* 1. COLONNE GAUCHE : CARTE PROFIL BOUTIQUE & MENU (1:1 Capture Aperçu)      */}
         {/* ========================================================================= */}
