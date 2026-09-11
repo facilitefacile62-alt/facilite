@@ -738,12 +738,22 @@ export function obtenirDateHeureDakar(date = new Date()) {
  *   renseigne: boolean
  * }
  */
-export function calculerStatutOuverture(boutique, horaires = [], dateReference = new Date()) {
-  if (!boutique || boutique.type_boutique !== "etablissement") {
-    return null;
-  }
+export const HORAIRES_DEFAUT = [
+  { jour_semaine: 1, heure_ouverture: "08:00:00", heure_fermeture: "18:00:00", ferme_ce_jour: false },
+  { jour_semaine: 2, heure_ouverture: "08:00:00", heure_fermeture: "18:00:00", ferme_ce_jour: false },
+  { jour_semaine: 3, heure_ouverture: "08:00:00", heure_fermeture: "18:00:00", ferme_ce_jour: false },
+  { jour_semaine: 4, heure_ouverture: "08:00:00", heure_fermeture: "18:00:00", ferme_ce_jour: false },
+  { jour_semaine: 5, heure_ouverture: "08:00:00", heure_fermeture: "18:00:00", ferme_ce_jour: false },
+  { jour_semaine: 6, heure_ouverture: "09:00:00", heure_fermeture: "17:00:00", ferme_ce_jour: false },
+  { jour_semaine: 0, heure_ouverture: "10:00:00", heure_fermeture: "15:00:00", ferme_ce_jour: true },
+];
 
-  const mode = boutique.mode_horaires || "indiques";
+/**
+ * Détermine en direct si une boutique/établissement est ouvert(e), fermé(e),
+ * ouvert(e) 24h/24 ou sur rendez-vous à une heure donnée (fuseau Africa/Dakar).
+ */
+export function calculerStatutOuverture(boutique, horaires = [], dateReference = new Date()) {
+  const mode = boutique?.mode_horaires || "indiques";
 
   if (mode === "toujours_ouvert") {
     return {
@@ -767,20 +777,11 @@ export function calculerStatutOuverture(boutique, horaires = [], dateReference =
     };
   }
 
-  // Mode "indiques"
-  if (!Array.isArray(horaires) || horaires.length === 0) {
-    return {
-      ouvert: null,
-      mode: "indiques",
-      couleur: "zinc",
-      texteBadge: null,
-      texteDetail: "Horaires non renseignés",
-      renseigne: false,
-    };
-  }
+  // Mode "indiques" : s'appuie sur les horaires renseignés ou la grille par défaut
+  const horairesEffectifs = Array.isArray(horaires) && horaires.length > 0 ? horaires : HORAIRES_DEFAUT;
 
   const { jourSemaine, minutesActuelles } = obtenirDateHeureDakar(dateReference);
-  const hJour = horaires.find((h) => Number(h.jour_semaine) === jourSemaine);
+  const hJour = horairesEffectifs.find((h) => Number(h.jour_semaine) === jourSemaine);
 
   if (!hJour || hJour.ferme_ce_jour || !hJour.heure_ouverture || !hJour.heure_fermeture) {
     return {

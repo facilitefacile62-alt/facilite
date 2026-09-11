@@ -58,6 +58,7 @@ import {
   calculerStatutOuverture,
   obtenirDateHeureDakar,
   JOURS_SEMAINE,
+  HORAIRES_DEFAUT,
   positionActuelle,
   publierArticle,
   retirerArticle,
@@ -1317,7 +1318,7 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
   // Données Entreprise
   const [nomEntreprise, setNomEntreprise] = useState(boutique?.nom || profile?.full_name || "facilite shop");
   const [descriptionEntreprise, setDescriptionEntreprise] = useState(
-    boutique?.description || profile?.headline || "Boutique Officielle Partenaire Facilité"
+    boutique?.description || "Boutique Officielle Partenaire Facilité"
   );
   const [ville, setVille] = useState(boutique?.ville || profile?.city || "Dakar");
   const [quartier, setQuartier] = useState(boutique?.quartier || profile?.quartier || "Guinaw rail nord");
@@ -2820,7 +2821,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
                               </span>
                             </div>
                             <p className="text-xs sm:text-sm text-zinc-200 font-medium line-clamp-1 mt-0.5">
-                              {boutiqueActive?.description || profile?.headline || "Boutique Officielle Partenaire Facilité"}
+                              {boutiqueActive?.description || "Boutique Officielle Partenaire Facilité"}
                             </p>
                             <div className="flex items-center gap-2 text-[11px] text-zinc-300 font-medium mt-1">
                               <span>📍 {boutiqueActive?.quartier ? `${boutiqueActive.quartier}, ` : ""}{boutiqueActive?.ville || "Sénégal"}</span>
@@ -3053,7 +3054,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
                     À propos de {nomVendeur}
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                    {profile?.headline || "Boutique Officielle Partenaire Facilité. Vente d'articles & prestation de services de qualité supérieure."}
+                    {boutiqueActive?.description || "Boutique Officielle Partenaire Facilité. Vente d'articles & prestation de services de qualité supérieure."}
                   </p>
                   <div className="pt-3 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2 text-xs text-gray-600 dark:text-gray-400">
                     <div><strong>Localisation :</strong> {boutiqueActive?.quartier ? `${boutiqueActive.quartier}, ` : ""}{boutiqueActive?.ville || "Dakar"}, Sénégal</div>
@@ -3209,7 +3210,7 @@ function CarteProfilBoutique({ profile, boutique, onAjouterArticle, onBoutiqueCl
   const nom = boutique?.nom || profile?.full_name || "Ma boutique";
   const titre = boutique
     ? `Boutique Officielle · ${boutique.quartier ? `${boutique.quartier}, ` : ""}${boutique.ville || "Dakar"}`
-    : (profile?.headline || "Vendeur Facilité Marketplace");
+    : "Vendeur Facilité Marketplace";
   const localisation = boutique?.ville
     ? `${boutique.quartier ? `${boutique.quartier}, ` : ""}${boutique.ville}, Sénégal`
     : (profile?.location || "Dakar, Sénégal");
@@ -3253,9 +3254,9 @@ function CarteProfilBoutique({ profile, boutique, onAjouterArticle, onBoutiqueCl
           {nom}
         </button>
 
-        {(!boutique && profile?.headline) && (
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
-            {profile.headline}
+        {boutique?.description && (
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-0.5 line-clamp-1">
+            {boutique.description}
           </p>
         )}
 
@@ -3845,8 +3846,9 @@ function ModalFicheBoutique({
   const [telephone, setTelephone] = useState(boutique?.telephone_whatsapp || profile?.phone || "+221771001212");
   const [description, setDescription] = useState(
     boutique?.description ||
-      profile?.headline ||
-      "Boutique Officielle Partenaire Facilité · Vente d'articles & livraison express"
+      (boutique?.type_boutique === "etablissement"
+        ? "Établissement officiel partenaire sur Facilité Sénégal."
+        : "Boutique officielle partenaire sur Facilité Sénégal · Vente d'articles & livraison express")
   );
   const [avatarUrl, setAvatarUrl] = useState(
     boutique?.avatar_url || profile?.avatar_url || null
@@ -3878,9 +3880,8 @@ function ModalFicheBoutique({
   const [ongletMobile, setOngletMobile] = useState("article"); // Articles par défaut : c'est ce qu'on vient voir en ouvrant une boutique
 
   const statutOuverture = useMemo(() => {
-    if (!estEtablissement) return null;
     return calculerStatutOuverture(boutique, horairesEtablissement);
-  }, [estEtablissement, boutique, horairesEtablissement]);
+  }, [boutique, horairesEtablissement]);
 
   // Persiste l'onglet interne de la fiche boutique (Article/Activité/
   // Domaine, ET le sous-état associé — formulaire de publication,
@@ -3937,7 +3938,7 @@ function ModalFicheBoutique({
   }, [ongletMobile, ongletActif]);
 
   useEffect(() => {
-    if (!estEtablissement || !boutique?.id) {
+    if (!boutique?.id || boutique?.id === "facilite_shop") {
       queueMicrotask(() => setHorairesEtablissement([]));
       return;
     }
@@ -3945,7 +3946,7 @@ function ModalFicheBoutique({
     queueMicrotask(() => setHorairesChargement(true));
     obtenirHorairesBoutique(boutique.id)
       .then((data) => {
-        if (!annule) setHorairesEtablissement(data);
+        if (!annule) setHorairesEtablissement(data || []);
       })
       .catch(() => {
         if (!annule) setHorairesEtablissement([]);
@@ -3956,7 +3957,7 @@ function ModalFicheBoutique({
     return () => {
       annule = true;
     };
-  }, [estEtablissement, boutique?.id]);
+  }, [boutique?.id]);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
@@ -3974,6 +3975,7 @@ function ModalFicheBoutique({
       if (boutique.telephone_whatsapp) setTelephone(boutique.telephone_whatsapp);
       if (boutique.avatar_url) setAvatarUrl(boutique.avatar_url);
       if (boutique.cover_url) setCoverUrl(boutique.cover_url);
+      if (boutique.description) setDescription(boutique.description);
     }
   }, [boutique]);
 
@@ -4230,7 +4232,7 @@ function ModalFicheBoutique({
             <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider">
               {estEtablissement ? "Établissement" : estService ? "Service" : "Boutique"}
             </span>
-            {estEtablissement && <BadgeStatutOuverture statut={statutOuverture} taille="petit" />}
+            <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
           </div>
           {description && (
             <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium line-clamp-1 mt-0.5">
@@ -4466,28 +4468,26 @@ function ModalFicheBoutique({
                   <h4 className="text-xs font-black uppercase text-zinc-500 tracking-wider">
                     À propos de {nom}
                   </h4>
-                  {estEtablissement && <BadgeStatutOuverture statut={statutOuverture} taille="petit" />}
+                  <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
                 </div>
                 <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
                   {description || (estEtablissement ? "Établissement officiel sur Facilité Sénégal." : "Boutique officielle sur Facilité Sénégal.")}
                 </p>
 
-                {estEtablissement && (
-                  <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-xs font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
-                        <i className="fa-solid fa-clock text-violet-500"></i>
-                        Horaires d&apos;ouverture
-                      </h5>
-                      <span className="text-[10px] text-zinc-400">Africa/Dakar</span>
-                    </div>
-                    <GrilleHorairesEtablissement
-                      boutique={boutique}
-                      horaires={horairesEtablissement}
-                      chargement={horairesChargement}
-                    />
+                <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
+                      <i className="fa-solid fa-clock text-violet-500"></i>
+                      Horaires d&apos;ouverture
+                    </h5>
+                    <span className="text-[10px] text-zinc-400">Africa/Dakar</span>
                   </div>
-                )}
+                  <GrilleHorairesEtablissement
+                    boutique={boutique}
+                    horaires={horairesEtablissement}
+                    chargement={horairesChargement}
+                  />
+                </div>
 
                 <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex flex-col gap-1.5 text-zinc-600 dark:text-zinc-400">
                   <span>📍 {quartier ? `${quartier}, ` : ""}{ville || "Sénégal"}</span>
@@ -4742,7 +4742,7 @@ function ModalFicheBoutique({
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
                 {estEtablissement ? "ÉTABLISSEMENT" : estService ? "SERVICE" : "BOUTIQUE"}
               </span>
-              {estEtablissement && <BadgeStatutOuverture statut={statutOuverture} taille="petit" />}
+              <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
             </div>
 
             {/* Headline / Profession */}
@@ -5255,29 +5255,27 @@ function ModalFicheBoutique({
                     <i className={`fa-solid ${estEtablissement ? "fa-building-columns" : "fa-store"} text-blue-600`}></i>
                     {estEtablissement ? "Présentation de l'établissement" : "Présentation de la boutique"}
                   </h4>
-                  {estEtablissement && <BadgeStatutOuverture statut={statutOuverture} />}
+                  <BadgeStatutOuverture statut={statutOuverture} />
                 </div>
                 <p>
                   {description || (estEtablissement ? `Bienvenue chez ${nom}. Retrouvez nos services et nos horaires en temps réel.` : `Bienvenue dans la boutique officielle ${nom} sur Facilité. Nous mettons à votre disposition des produits de qualité avec un stock constamment actualisé en temps réel.`)}
                 </p>
               </div>
 
-              {estEtablissement && (
-                <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-1.5">
-                      <i className="fa-solid fa-clock text-violet-500"></i>
-                      Horaires d&apos;ouverture
-                    </h4>
-                    <span className="text-[11px] text-zinc-400">Fuseau Africa/Dakar</span>
-                  </div>
-                  <GrilleHorairesEtablissement
-                    boutique={boutique}
-                    horaires={horairesEtablissement}
-                    chargement={horairesChargement}
-                  />
+              <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-1.5">
+                    <i className="fa-solid fa-clock text-violet-500"></i>
+                    Horaires d&apos;ouverture
+                  </h4>
+                  <span className="text-[11px] text-zinc-400">Fuseau Africa/Dakar</span>
                 </div>
-              )}
+                <GrilleHorairesEtablissement
+                  boutique={boutique}
+                  horaires={horairesEtablissement}
+                  chargement={horairesChargement}
+                />
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-1">
@@ -5981,17 +5979,11 @@ function GrilleHorairesEtablissement({ boutique, horaires = [], chargement = fal
     );
   }
 
-  if (!horaires || horaires.length === 0) {
-    return (
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">
-        Horaires non renseignés par l&apos;établissement.
-      </p>
-    );
-  }
+  const horairesEffectifs = Array.isArray(horaires) && horaires.length > 0 ? horaires : HORAIRES_DEFAUT;
 
   // Ordre naturel Lundi (1) à Dimanche (0)
   const ordreJours = [1, 2, 3, 4, 5, 6, 0];
-  const parJour = new Map(horaires.map((h) => [Number(h.jour_semaine), h]));
+  const parJour = new Map(horairesEffectifs.map((h) => [Number(h.jour_semaine), h]));
 
   return (
     <div className="space-y-1 rounded-xl bg-gray-50/80 dark:bg-zinc-800/40 border border-gray-200/70 dark:border-zinc-800 p-2.5">
