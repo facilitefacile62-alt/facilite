@@ -3720,6 +3720,27 @@ function ModalFicheBoutique({
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
+  // Sur mobile, la fiche boutique laisse maintenant la barre de navigation
+  // du site (Accueil/Notifs/Publier/Admin, <header> sticky z-50 de
+  // Header.jsx) visible au-dessus d'elle au lieu de la recouvrir
+  // entièrement — demande explicite de l'utilisateur, qui veut pouvoir
+  // revenir sans passer par le menu vendeur. Mesurée dynamiquement (plutôt
+  // qu'une hauteur fixe devinée) : la hauteur réelle du header varie selon
+  // les bannières conditionnelles qu'il peut afficher (vérification
+  // téléphone, etc.). Inchangé sur desktop, où l'en-tête interne de cette
+  // fiche a déjà son propre "Retour au marketplace".
+  const [hauteurHeaderMobile, setHauteurHeaderMobile] = useState(0);
+  useEffect(() => {
+    const mesurer = () => {
+      const header = document.querySelector("header");
+      const mobile = window.innerWidth < 768;
+      setHauteurHeaderMobile(mobile && header ? header.getBoundingClientRect().height : 0);
+    };
+    queueMicrotask(mesurer);
+    window.addEventListener("resize", mesurer);
+    return () => window.removeEventListener("resize", mesurer);
+  }, []);
+
   // États éditables du profil boutique
   const [nom, setNom] = useState(boutique?.nom || boutique?.boutique_nom || profile?.full_name || "facilite shop");
   const [quartier, setQuartier] = useState(boutique?.quartier || profile?.quartier || "Guinaw rail nord");
@@ -3980,7 +4001,10 @@ function ModalFicheBoutique({
   const initiales = nom.substring(0, 2).toUpperCase();
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-gray-100 dark:bg-zinc-950 text-zinc-900 dark:text-white overflow-y-auto md:overflow-hidden w-full h-full flex flex-col animate-fadeIn">
+    <div
+      className="fixed inset-x-0 bottom-0 z-[99999] bg-gray-100 dark:bg-zinc-950 text-zinc-900 dark:text-white overflow-y-auto md:overflow-hidden w-full flex flex-col animate-fadeIn"
+      style={{ top: hauteurHeaderMobile }}
+    >
       {/* Toast de confirmation en haut */}
       {toastMessage && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-gray-900 text-white dark:bg-white dark:text-gray-950 text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-2 animate-bounce">
