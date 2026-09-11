@@ -3904,24 +3904,32 @@ function ModalFicheBoutique({
       {/* 📱 VUE MOBILE (PHONE) : DESIGN 1:1 CONFORME À LA MAQUETTE                 */}
       {/* ========================================================================= */}
       <div className="block md:hidden w-full flex-1 pb-20">
-        {/* Header Mobile minimaliste : Crayon à gauche, Nom au centre, Menu & Fermer à droite */}
-        <div className="sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 px-4 py-2.5 flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (ongletActif === "parametres" || ongletActif === "publier") {
-                  setOngletActif("produits");
-                } else {
-                  setOngletActif("parametres");
-                }
-              }}
-              className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer active:scale-95"
-              title="Modifier les infos de la boutique"
-            >
-              <i className="fa-solid fa-pen text-sm"></i>
-            </button>
-          </div>
+        {ongletActif === "parametres" ? (
+          <VueReglages
+            userId={userId}
+            profile={profile}
+            boutique={boutique}
+            onRetour={() => setOngletActif("produits")}
+            onEnregistre={() => {
+              onBoutiqueUpdate?.();
+            }}
+          />
+        ) : (
+          <>
+            {/* Header Mobile minimaliste : Crayon à gauche, Nom au centre, Menu & Fermer à droite */}
+            <div className="sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOngletActif("parametres");
+                  }}
+                  className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer active:scale-95"
+                  title="Modifier les infos de la boutique"
+                >
+                  <i className="fa-solid fa-pen text-sm"></i>
+                </button>
+              </div>
 
           <span className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white truncate max-w-[150px]">
             {nom}
@@ -4095,19 +4103,6 @@ function ModalFicheBoutique({
             </div>
           )}
 
-          {ongletActif === "parametres" && (
-            <div className="p-4">
-              <VueReglages
-                userId={userId}
-                profile={profile}
-                boutique={boutique}
-                onRetour={() => setOngletActif("produits")}
-                onEnregistre={() => {
-                  onBoutiqueUpdate?.();
-                }}
-              />
-            </div>
-          )}
 
           {/* Grille de 2 colonnes de PRODUITS. "apercu" est l'état initial de
               ongletActif (voir sa déclaration) — accepté ici au même titre
@@ -4426,6 +4421,8 @@ function ModalFicheBoutique({
               </div>
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
 
