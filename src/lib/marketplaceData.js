@@ -644,6 +644,7 @@ export async function chercherServicesEtEtablissements({
     metier: r.metier,
     description_prestation: r.description_prestation,
     categorie_etablissement: r.categorie_etablissement,
+    mode_horaires: r.mode_horaires || "indiques",
     telephone_whatsapp: r.telephone_whatsapp,
     whatsappUrl: lienWhatsapp(r.telephone_whatsapp, r.nom),
     avatar_config: r.avatar_config || null,
@@ -676,17 +677,179 @@ export async function obtenirHorairesBoutique(storeId) {
 
 /**
  * Remplace les horaires d'un établissement (les 7 jours d'un coup — voir
- * enregistrer_mes_horaires, qui supprime puis réinsère tout pour la
- * boutique). `horaires` : [{ jour_semaine, heure_ouverture, heure_fermeture,
- * ferme_ce_jour }, ...].
+ * enregistrer_mes_horaires, qui met à jour mode_horaires sur marketplace_stores
+ * puis supprime et réinsère la grille). `horaires` : [{ jour_semaine,
+ * heure_ouverture, heure_fermeture, ferme_ce_jour }, ...].
  */
-export async function enregistrerHoraires(storeId, horaires) {
+export async function enregistrerHoraires(storeId, horaires, modeHoraires = "indiques") {
   if (!storeId) throw new Error("Boutique introuvable.");
   const { error } = await supabase.rpc("enregistrer_mes_horaires", {
     p_store_id: storeId,
     p_horaires: horaires || [],
+    p_mode_horaires: modeHoraires || "indiques",
   });
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Calcule le jour de la semaine (0 = Dimanche ... 6 = Samedi) et l'heure
+ * actuelle sur le fuseau horaire officiel du Sénégal (Africa/Dakar, UTC+0).
+ */
+export function obtenirDateHeureDakar(date = new Date()) {
+  try {
+    const formateurJour = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Dakar",
+      weekday: "short",
+    });
+    const formateurHeure = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Dakar",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    });
+    const mapJours = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const jourSemaine = mapJours[formateurJour.format(date)] ?? date.getUTCDay();
+
+    const parties = formateurHeure.formatToParts(date);
+    const heure = parseInt(parties.find((p) => p.type === "hour")?.value || "0", 10);
+    const minute = parseInt(parties.find((p) => p.type === "minute")?.value || "0", 10);
+    const minutesActuelles = heure * 60 + minute;
+
+    return { jourSemaine, heure, minute, minutesActuelles };
+  } catch {
+    const jourSemaine = date.getUTCDay();
+    const heure = date.getUTCHours();
+    const minute = date.getUTCMinutes();
+    return { jourSemaine, heure, minute, minutesActuelles: heure * 60 + minute };
+  }
+}
+
+/**
+ * Détermine le statut d'ouverture en direct pour un établissement.
+ * Concerne uniquement type_boutique = 'etablissement'.
+ *
+ * Retourne un objet :
+ * {
+ *   ouvert: boolean | null,
+ *   mode: 'indiques' | 'toujours_ouvert' | 'sur_rendez_vous',
+ *   couleur: 'emerald' | 'rose' | 'sky' | 'zinc',
+ *   texteBadge: string | null,
+ *   texteDetail: string,
+ *   renseigne: boolean
+ * }
+ */
+export function calculerStatutOuverture(boutique, horaires = [], dateReference = new Date()) {
+  if (!boutique || boutique.type_boutique !== "etablissement") {
+    return null;
+  }
+
+  const mode = boutique.mode_horaires || "indiques";
+
+  if (mode === "toujours_ouvert") {
+    return {
+      ouvert: true,
+      mode: "toujours_ouvert",
+      couleur: "emerald",
+      texteBadge: "Ouvert 24h/24",
+      texteDetail: "Ouvert 24h/24, 7j/7",
+      renseigne: true,
+    };
+  }
+
+  if (mode === "sur_rendez_vous") {
+    return {
+      ouvert: null,
+      mode: "sur_rendez_vous",
+      couleur: "sky",
+      texteBadge: "Sur rendez-vous",
+      texteDetail: "Accueil uniquement sur rendez-vous",
+      renseigne: true,
+    };
+  }
+
+  // Mode "indiques"
+  if (!Array.isArray(horaires) || horaires.length === 0) {
+    return {
+      ouvert: null,
+      mode: "indiques",
+      couleur: "zinc",
+      texteBadge: null,
+      texteDetail: "Horaires non renseignés",
+      renseigne: false,
+    };
+  }
+
+  const { jourSemaine, minutesActuelles } = obtenirDateHeureDakar(dateReference);
+  const hJour = horaires.find((h) => Number(h.jour_semaine) === jourSemaine);
+
+  if (!hJour || hJour.ferme_ce_jour || !hJour.heure_ouverture || !hJour.heure_fermeture) {
+    return {
+      ouvert: false,
+      mode: "indiques",
+      couleur: "rose",
+      texteBadge: "Fermé",
+      texteDetail: "Fermé aujourd'hui",
+      renseigne: true,
+    };
+  }
+
+  const parseMinutes = (str) => {
+    if (!str) return null;
+    const [h, m] = str.slice(0, 5).split(":").map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+  };
+
+  const ouvMin = parseMinutes(hJour.heure_ouverture);
+  const fermMin = parseMinutes(hJour.heure_fermeture);
+
+  if (ouvMin === null || fermMin === null) {
+    return {
+      ouvert: false,
+      mode: "indiques",
+      couleur: "rose",
+      texteBadge: "Fermé",
+      texteDetail: "Fermé",
+      renseigne: true,
+    };
+  }
+
+  const formatHeure = (str) => str?.slice(0, 5) || "";
+
+  let estOuvert = false;
+  if (ouvMin < fermMin) {
+    // Journée standard (ex. 08:00 - 18:00)
+    estOuvert = minutesActuelles >= ouvMin && minutesActuelles < fermMin;
+  } else if (ouvMin > fermMin) {
+    // Nocturne passant minuit (ex. 20:00 - 04:00)
+    estOuvert = minutesActuelles >= ouvMin || minutesActuelles < fermMin;
+  } else {
+    // 00:00 - 00:00 (ouvert toute la journée)
+    estOuvert = true;
+  }
+
+  if (estOuvert) {
+    return {
+      ouvert: true,
+      mode: "indiques",
+      couleur: "emerald",
+      texteBadge: "Ouvert",
+      texteDetail: `Ferme à ${formatHeure(hJour.heure_fermeture)}`,
+      renseigne: true,
+    };
+  } else {
+    const detail = minutesActuelles < ouvMin
+      ? `Ouvre à ${formatHeure(hJour.heure_ouverture)}`
+      : "Fermé pour la journée";
+    return {
+      ouvert: false,
+      mode: "indiques",
+      couleur: "rose",
+      texteBadge: "Fermé",
+      texteDetail: detail,
+      renseigne: true,
+    };
+  }
 }
 
 /** Position du navigateur, en promesse. */

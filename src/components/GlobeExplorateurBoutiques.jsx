@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
-import { echapperHtml, positionActuelle, obtenirHorairesBoutique, JOURS_SEMAINE } from "@/lib/marketplaceData";
+import {
+  echapperHtml,
+  positionActuelle,
+  obtenirHorairesBoutique,
+  calculerStatutOuverture,
+  obtenirDateHeureDakar,
+  JOURS_SEMAINE,
+} from "@/lib/marketplaceData";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
@@ -307,6 +314,7 @@ export default function GlobeExplorateurBoutiques({
       let bordureCouleur;
       let contenuAvatar;
       let badgeLive = "";
+      let pointStatutTooltip = estActif ? "bg-[#10B981] animate-pulse" : "bg-gray-400";
       // Avatar façon Bitmoji en priorité, quel que soit le type_boutique :
       // seule la couleur de bordure reste liée au type. SVG DiceBear généré
       // en local et inliné directement — aucune URL externe.
@@ -314,9 +322,30 @@ export default function GlobeExplorateurBoutiques({
       if (typeBoutique === "service") {
         bordureCouleur = COULEUR_SERVICE;
         contenuAvatar = avatarBitmoji || `<span class="text-2xl">🔧</span>`;
+        pointStatutTooltip = "bg-amber-400";
       } else if (typeBoutique === "etablissement") {
         bordureCouleur = COULEUR_ETABLISSEMENT;
         contenuAvatar = avatarBitmoji || `<span class="text-2xl">${EMOJI_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "🏢"}</span>`;
+
+        const modeH = b.mode_horaires || "indiques";
+        if (modeH === "toujours_ouvert") {
+          pointStatutTooltip = "bg-[#10B981] animate-pulse";
+          badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">24/7</div>`;
+        } else if (modeH === "sur_rendez_vous") {
+          pointStatutTooltip = "bg-sky-400";
+          badgeLive = `<div class="absolute -bottom-1 bg-sky-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">RDV</div>`;
+        } else if (Array.isArray(b.horaires) && b.horaires.length > 0) {
+          const st = calculerStatutOuverture(b, b.horaires);
+          if (st?.ouvert) {
+            pointStatutTooltip = "bg-[#10B981] animate-pulse";
+            badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">OUVERT</div>`;
+          } else {
+            pointStatutTooltip = "bg-rose-500";
+            badgeLive = `<div class="absolute -bottom-1 bg-rose-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">FERMÉ</div>`;
+          }
+        } else {
+          pointStatutTooltip = "bg-violet-400";
+        }
       } else {
         bordureCouleur = estCertifie ? "#2563EB" : "#10B981";
         contenuAvatar =
@@ -335,7 +364,7 @@ export default function GlobeExplorateurBoutiques({
         }">
           <!-- Bulle Tooltip / Badge au-dessus de l'avatar -->
           <div class="mb-1.5 px-3 py-1 bg-gray-900/95 text-white rounded-full text-[10px] font-black shadow-2xl border border-gray-700/80 flex items-center gap-1.5 whitespace-nowrap backdrop-blur-md">
-            <span class="w-2 h-2 rounded-full ${estActif ? "bg-[#10B981] animate-pulse" : "bg-gray-400"}"></span>
+            <span class="w-2 h-2 rounded-full ${pointStatutTooltip}"></span>
             <span class="font-extrabold max-w-[110px] truncate text-white">${nomCourt}</span>
             <span class="text-[9px] font-bold text-gray-400">· ${quartier}</span>
           </div>
@@ -843,28 +872,96 @@ export default function GlobeExplorateurBoutiques({
                 </div>
               ) : boutiqueSelectionnee.type_boutique === "etablissement" ? (
                 <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                    <i className="fa-solid fa-clock text-violet-400"></i>
-                    Horaires d&apos;ouverture
-                  </h4>
-                  {horairesChargement ? (
-                    <p className="text-xs text-gray-500 italic">Chargement…</p>
-                  ) : horaires.length === 0 ? (
-                    <p className="text-xs text-gray-500 italic">Horaires non renseignés.</p>
-                  ) : (
-                    <ul className="text-xs text-gray-200 divide-y divide-gray-800/80">
-                      {horaires.map((h) => (
-                        <li key={h.jour_semaine} className="flex items-center justify-between py-1.5">
-                          <span className="font-bold">{JOURS_SEMAINE[h.jour_semaine]}</span>
-                          <span className={h.ferme_ce_jour ? "text-gray-500" : "text-emerald-400 font-bold"}>
-                            {h.ferme_ce_jour
-                              ? "Fermé"
-                              : `${h.heure_ouverture?.slice(0, 5) || "?"} – ${h.heure_fermeture?.slice(0, 5) || "?"}`}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  {(() => {
+                    const statut = calculerStatutOuverture(boutiqueSelectionnee, horaires);
+                    const { jourSemaine } = obtenirDateHeureDakar();
+                    const modeH = boutiqueSelectionnee.mode_horaires || "indiques";
+
+                    return (
+                      <>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                            <i className="fa-solid fa-clock text-violet-400"></i>
+                            Horaires d&apos;ouverture
+                          </h4>
+                          {statut?.texteBadge && (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                statut.mode === "toujours_ouvert" || statut.ouvert
+                                  ? "bg-emerald-950/80 text-emerald-400 border border-emerald-800/80"
+                                  : statut.mode === "sur_rendez_vous"
+                                    ? "bg-sky-950/80 text-sky-400 border border-sky-800/80"
+                                    : "bg-rose-950/80 text-rose-400 border border-rose-800/80"
+                              }`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  statut.mode === "toujours_ouvert" || statut.ouvert
+                                    ? "bg-emerald-400 animate-pulse"
+                                    : statut.mode === "sur_rendez_vous"
+                                      ? "bg-sky-400"
+                                      : "bg-rose-500"
+                                }`}
+                              ></span>
+                              <span>{statut.texteBadge}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {horairesChargement ? (
+                          <p className="text-xs text-gray-500 italic">Chargement…</p>
+                        ) : modeH === "toujours_ouvert" ? (
+                          <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/60 flex items-center gap-2.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <div>
+                              <p className="text-xs font-black text-emerald-300">Ouvert 24h/24, 7j/7</p>
+                              <p className="text-[11px] text-emerald-400/80">Accueil en continu sans interruption.</p>
+                            </div>
+                          </div>
+                        ) : modeH === "sur_rendez_vous" ? (
+                          <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-800/60 flex items-center gap-2.5">
+                            <i className="fa-regular fa-calendar-check text-sky-400 text-sm"></i>
+                            <div>
+                              <p className="text-xs font-black text-sky-300">Sur rendez-vous uniquement</p>
+                              <p className="text-[11px] text-sky-400/80">Veuillez contacter l&apos;établissement au préalable.</p>
+                            </div>
+                          </div>
+                        ) : horaires.length === 0 ? (
+                          <p className="text-xs text-gray-500 italic">Horaires non renseignés par l&apos;établissement.</p>
+                        ) : (
+                          <ul className="text-xs text-gray-200 divide-y divide-gray-800/80 rounded-xl bg-gray-950/60 border border-gray-800/80 p-2 space-y-0.5">
+                            {[1, 2, 3, 4, 5, 6, 0].map((j) => {
+                              const h = horaires.find((item) => Number(item.jour_semaine) === j);
+                              const estAujourdhui = j === jourSemaine;
+                              const ferme = !h || h.ferme_ce_jour || !h.heure_ouverture || !h.heure_fermeture;
+                              return (
+                                <li
+                                  key={j}
+                                  className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${
+                                    estAujourdhui ? "bg-gray-800/80 font-bold text-white shadow-xs" : ""
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold">{JOURS_SEMAINE[j]}</span>
+                                    {estAujourdhui && (
+                                      <span className="px-1.5 py-0.2 rounded bg-blue-900/80 text-blue-300 text-[8px] font-black uppercase">
+                                        Aujourd&apos;hui
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className={ferme ? "text-gray-500" : estAujourdhui ? "text-emerald-400 font-black" : "text-gray-300"}>
+                                    {ferme
+                                      ? "Fermé"
+                                      : `${h.heure_ouverture?.slice(0, 5) || "?"} – ${h.heure_fermeture?.slice(0, 5) || "?"}`}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </>
+                    );
+                  })()}
                   <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 mt-4">
                     Infos pratiques
                   </h4>

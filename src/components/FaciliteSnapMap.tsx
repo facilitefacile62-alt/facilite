@@ -14,6 +14,7 @@ import {
 } from "react-native";
 // react-native-maps est le standard React Native pour iOS/Android
 import MapView, { Marker, Callout, PROVIDER_GOOGLE, Region } from "react-native-maps";
+import { calculerStatutOuverture } from "@/lib/marketplaceData";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -68,6 +69,9 @@ export interface FaciliteMembreBoutique {
   id: string;
   nom: string;
   type: "boutique" | "candidat";
+  type_boutique?: string;
+  mode_horaires?: string;
+  horaires?: any[];
   statutAction: string; // Ex: "Boutique ouverte - Sea Plaza", "Cherche emploi à Keur Massar"
   photoUrl?: string;
   lat: number;
@@ -231,6 +235,20 @@ export const FaciliteSnapMap: React.FC<FaciliteSnapMapProps> = ({
           // Vert Menthe #10B981 si actif / candidat, Bleu Roi #2563EB pour boutique certifiée
           const borderColor = m.estCertifie ? "#2563EB" : m.estActif ? "#10B981" : "#10B981";
 
+          let dotColor = m.estActif ? "#10B981" : "#9CA3AF";
+          if (m.type_boutique === "etablissement") {
+            if (m.mode_horaires === "toujours_ouvert") {
+              dotColor = "#10B981";
+            } else if (m.mode_horaires === "sur_rendez_vous") {
+              dotColor = "#0284C7";
+            } else if (m.horaires && m.horaires.length > 0) {
+              const st = calculerStatutOuverture(m, m.horaires);
+              dotColor = st?.ouvert ? "#10B981" : "#F43F5E";
+            } else {
+              dotColor = "#8B5CF6";
+            }
+          }
+
           return (
             <Marker
               key={m.id}
@@ -244,7 +262,7 @@ export const FaciliteSnapMap: React.FC<FaciliteSnapMapProps> = ({
                   <View
                     style={[
                       styles.statusDot,
-                      { backgroundColor: m.estActif ? "#10B981" : "#9CA3AF" },
+                      { backgroundColor: dotColor },
                     ]}
                   />
                   <Text style={styles.markerBadgeTitle} numberOfLines={1}>

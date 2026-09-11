@@ -23,7 +23,7 @@
 // écran : ce composant reste dans son cadre compact, intégré à côté de la
 // liste de résultats, c'est la différence assumée avec le Globe.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { echapperHtml } from "@/lib/marketplaceData";
+import { echapperHtml, calculerStatutOuverture } from "@/lib/marketplaceData";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 const COULEUR = "#1877F2";
@@ -204,10 +204,30 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           // propre couleur fixe — "en stock" n'a pas de sens pour eux (zéro
           // article par construction, pas par rupture).
           let couleur = COULEUR;
+          let pointStatutHtml = "";
+          let badgeTooltip = null;
+
           if (b.type_boutique === "service") {
             couleur = COULEUR_SERVICE;
           } else if (b.type_boutique === "etablissement") {
             couleur = COULEUR_ETABLISSEMENT;
+            const modeH = b.mode_horaires || "indiques";
+            if (modeH === "toujours_ouvert") {
+              pointStatutHtml = `<span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#10B981;margin-right:3px;"></span>`;
+              badgeTooltip = "🟢 Ouvert 24h/24";
+            } else if (modeH === "sur_rendez_vous") {
+              pointStatutHtml = `<span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#0284C7;margin-right:3px;"></span>`;
+              badgeTooltip = "🔵 Sur rendez-vous";
+            } else if (Array.isArray(b.horaires) && b.horaires.length > 0) {
+              const st = calculerStatutOuverture(b, b.horaires);
+              if (st?.ouvert) {
+                pointStatutHtml = `<span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#10B981;margin-right:3px;"></span>`;
+                badgeTooltip = `🟢 Ouvert (${st.texteDetail})`;
+              } else if (st && !st.ouvert) {
+                pointStatutHtml = `<span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#F43F5E;margin-right:3px;"></span>`;
+                badgeTooltip = `🔴 Fermé (${st.texteDetail})`;
+              }
+            }
           } else {
             const enStock = b.articles.some((a) => a.statut === "en_stock");
             couleur = enStock ? COULEUR : "#6b7280";
@@ -234,11 +254,11 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                       <div class="avatar-boutique-zoom-scale">
                         <div class="avatar-boutique-anime" style="width:28px;height:28px;border-radius:9999px;border:2.5px solid ${couleur};overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.35);background:#fff;">${svgAvatarBoutique(b.avatar_config, 28)}</div>
                       </div>
-                      <span style="max-width:84px;padding:1px 6px;background:rgba(17,24,39,0.92);color:#fff;font-size:9px;font-weight:800;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${echapperHtml(b.nom)}</span>
+                      <span style="display:flex;align-items:center;max-width:96px;padding:1px 6px;background:rgba(17,24,39,0.92);color:#fff;font-size:9px;font-weight:800;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${pointStatutHtml}${echapperHtml(b.nom)}</span>
                     </div>
                   `,
-                  iconSize: [90, 46],
-                  iconAnchor: [45, 14],
+                  iconSize: [96, 46],
+                  iconAnchor: [48, 14],
                 }),
               }).addTo(carte)
             : L.circleMarker(b.position, {
@@ -258,6 +278,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
 
           const lignes = [
             `<strong>${echapperHtml(b.nom)}</strong>`,
+            badgeTooltip,
             b.quartier ? echapperHtml(b.quartier) : null,
             ligneDetail,
           ].filter(Boolean);

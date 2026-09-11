@@ -55,6 +55,8 @@ import {
   obtenirHorairesBoutique,
   obtenirBoutiqueParId,
   enregistrerHoraires,
+  calculerStatutOuverture,
+  obtenirDateHeureDakar,
   JOURS_SEMAINE,
   positionActuelle,
   publierArticle,
@@ -2006,7 +2008,13 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
               </button>
             </form>
 
-            {estEtablissement && boutique?.id && <EditeurHoraires storeId={boutique.id} />}
+            {estEtablissement && boutique?.id && (
+              <EditeurHoraires
+                storeId={boutique.id}
+                boutique={boutique}
+                onEnregistre={onBoutiqueUpdate}
+              />
+            )}
           </div>
         </div>
       )}
@@ -3869,6 +3877,11 @@ function ModalFicheBoutique({
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
   const [ongletMobile, setOngletMobile] = useState("article"); // Articles par défaut : c'est ce qu'on vient voir en ouvrant une boutique
 
+  const statutOuverture = useMemo(() => {
+    if (!estEtablissement) return null;
+    return calculerStatutOuverture(boutique, horairesEtablissement);
+  }, [estEtablissement, boutique, horairesEtablissement]);
+
   // Persiste l'onglet interne de la fiche boutique (Article/Activité/
   // Domaine, ET le sous-état associé — formulaire de publication,
   // réglages, etc.) dans l'URL, même principe que boutique_id plus haut :
@@ -4215,8 +4228,9 @@ function ModalFicheBoutique({
               {nom}
             </h1>
             <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider">
-              Boutique
+              {estEtablissement ? "Établissement" : estService ? "Service" : "Boutique"}
             </span>
+            {estEtablissement && <BadgeStatutOuverture statut={statutOuverture} taille="petit" />}
           </div>
           {description && (
             <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium line-clamp-1 mt-0.5">
@@ -4447,13 +4461,34 @@ function ModalFicheBoutique({
           {/* Contenu Domaine / Infos Mobile */}
           {ongletMobile === "domaine" && ongletActif !== "publier" && ongletActif !== "parametres" && (
             <div className="p-4 space-y-4 text-xs">
-              <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-2">
-                <h4 className="text-xs font-black uppercase text-zinc-500 tracking-wider">
-                  À propos de {nom}
-                </h4>
+              <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="text-xs font-black uppercase text-zinc-500 tracking-wider">
+                    À propos de {nom}
+                  </h4>
+                  {estEtablissement && <BadgeStatutOuverture statut={statutOuverture} taille="petit" />}
+                </div>
                 <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                  {description || "Boutique officielle sur Facilité Sénégal."}
+                  {description || (estEtablissement ? "Établissement officiel sur Facilité Sénégal." : "Boutique officielle sur Facilité Sénégal.")}
                 </p>
+
+                {estEtablissement && (
+                  <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
+                        <i className="fa-solid fa-clock text-violet-500"></i>
+                        Horaires d&apos;ouverture
+                      </h5>
+                      <span className="text-[10px] text-zinc-400">Africa/Dakar</span>
+                    </div>
+                    <GrilleHorairesEtablissement
+                      boutique={boutique}
+                      horaires={horairesEtablissement}
+                      chargement={horairesChargement}
+                    />
+                  </div>
+                )}
+
                 <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex flex-col gap-1.5 text-zinc-600 dark:text-zinc-400">
                   <span>📍 {quartier ? `${quartier}, ` : ""}{ville || "Sénégal"}</span>
                   {telephone && <span>📞 {telephone}</span>}
@@ -4698,15 +4733,16 @@ function ModalFicheBoutique({
               </button>
             </div>
 
-            {/* Nom de la Boutique & Badge BOUTIQUE */}
+            {/* Nom de la Boutique & Badge BOUTIQUE / ÉTABLISSEMENT */}
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className="text-xl font-black text-zinc-900 dark:text-white leading-tight tracking-tight">
                 {nom}
               </h3>
               <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
-                BOUTIQUE
+                {estEtablissement ? "ÉTABLISSEMENT" : estService ? "SERVICE" : "BOUTIQUE"}
               </span>
+              {estEtablissement && <BadgeStatutOuverture statut={statutOuverture} taille="petit" />}
             </div>
 
             {/* Headline / Profession */}
@@ -5214,14 +5250,34 @@ function ModalFicheBoutique({
           {ongletActif === "apropos" && (
             <div className="space-y-4 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-800 space-y-2">
-                <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                  <i className="fa-solid fa-store text-blue-600"></i>
-                  Présentation de la boutique
-                </h4>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                    <i className={`fa-solid ${estEtablissement ? "fa-building-columns" : "fa-store"} text-blue-600`}></i>
+                    {estEtablissement ? "Présentation de l'établissement" : "Présentation de la boutique"}
+                  </h4>
+                  {estEtablissement && <BadgeStatutOuverture statut={statutOuverture} />}
+                </div>
                 <p>
-                  Bienvenue dans la boutique officielle <strong>{nom}</strong> sur Facilité. Nous mettons à votre disposition des produits de qualité avec un stock constamment actualisé en temps réel.
+                  {description || (estEtablissement ? `Bienvenue chez ${nom}. Retrouvez nos services et nos horaires en temps réel.` : `Bienvenue dans la boutique officielle ${nom} sur Facilité. Nous mettons à votre disposition des produits de qualité avec un stock constamment actualisé en temps réel.`)}
                 </p>
               </div>
+
+              {estEtablissement && (
+                <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-1.5">
+                      <i className="fa-solid fa-clock text-violet-500"></i>
+                      Horaires d&apos;ouverture
+                    </h4>
+                    <span className="text-[11px] text-zinc-400">Fuseau Africa/Dakar</span>
+                  </div>
+                  <GrilleHorairesEtablissement
+                    boutique={boutique}
+                    horaires={horairesEtablissement}
+                    chargement={horairesChargement}
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-1">
@@ -5230,7 +5286,7 @@ function ModalFicheBoutique({
                     Livraison Directe
                   </h5>
                   <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                    Livraison rapide disponible à {ville} et ses environs.
+                    Livraison rapide disponible à {ville || "Sénégal"} et ses environs.
                   </p>
                 </div>
 
@@ -5652,7 +5708,8 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
   );
 }
 
-function EditeurHoraires({ storeId }) {
+function EditeurHoraires({ storeId, boutique, onEnregistre }) {
+  const [modeHoraires, setModeHoraires] = useState(() => boutique?.mode_horaires || "indiques");
   const [lignes, setLignes] = useState(() =>
     Array.from({ length: 7 }, (_, jour) => ({
       jour_semaine: jour,
@@ -5665,6 +5722,12 @@ function EditeurHoraires({ storeId }) {
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
+
+  useEffect(() => {
+    if (boutique?.mode_horaires) {
+      setModeHoraires(boutique.mode_horaires);
+    }
+  }, [boutique?.mode_horaires]);
 
   useEffect(() => {
     let annule = false;
@@ -5704,8 +5767,9 @@ function EditeurHoraires({ storeId }) {
     setErreur("");
     setMessage("");
     try {
-      await enregistrerHoraires(storeId, lignes);
-      setMessage("Horaires enregistrés.");
+      await enregistrerHoraires(storeId, lignes, modeHoraires);
+      setMessage("Horaires enregistrés avec succès.");
+      onEnregistre?.();
     } catch (err) {
       setErreur(err.message);
     } finally {
@@ -5717,46 +5781,111 @@ function EditeurHoraires({ storeId }) {
     <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
       <h3 className="text-sm font-black text-gray-900 dark:text-white mb-1">Horaires d&apos;ouverture</h3>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Affichés aux acheteurs sur la fiche de votre établissement.
+        Affichés aux visiteurs sur la fiche de votre établissement et calculés en direct (fuseau Dakar).
       </p>
 
-      {chargement ? (
-        <p className="text-xs text-gray-400 italic">Chargement…</p>
-      ) : (
-        <div className="space-y-1.5">
-          {lignes.map((l, idx) => (
-            <div key={l.jour_semaine} className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="w-20 font-bold text-gray-600 dark:text-gray-400 shrink-0">
-                {JOURS_SEMAINE[l.jour_semaine]}
-              </span>
-              <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={l.ferme_ce_jour}
-                  onChange={(e) => modifierLigne(idx, { ferme_ce_jour: e.target.checked })}
-                />
-                <span className="text-gray-500 dark:text-gray-400">Fermé</span>
-              </label>
-              {!l.ferme_ce_jour && (
-                <>
-                  <input
-                    type="time"
-                    value={l.heure_ouverture}
-                    onChange={(e) => modifierLigne(idx, { heure_ouverture: e.target.value })}
-                    className="px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                  />
-                  <span className="text-gray-400">–</span>
-                  <input
-                    type="time"
-                    value={l.heure_fermeture}
-                    onChange={(e) => modifierLigne(idx, { heure_fermeture: e.target.value })}
-                    className="px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                  />
-                </>
-              )}
-            </div>
-          ))}
+      {/* Sélecteur des 3 modes */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => setModeHoraires("indiques")}
+          className={`p-2.5 rounded-xl border text-xs font-bold text-left transition cursor-pointer flex flex-col justify-between ${
+            modeHoraires === "indiques"
+              ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 shadow-xs"
+              : "border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-black">Horaires indiqués</span>
+            <i className="fa-solid fa-clock text-xs"></i>
+          </div>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400">Planning par jour</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModeHoraires("toujours_ouvert")}
+          className={`p-2.5 rounded-xl border text-xs font-bold text-left transition cursor-pointer flex flex-col justify-between ${
+            modeHoraires === "toujours_ouvert"
+              ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 shadow-xs"
+              : "border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-black">Toujours ouvert</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          </div>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400">24h/24, 7j/7</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModeHoraires("sur_rendez_vous")}
+          className={`p-2.5 rounded-xl border text-xs font-bold text-left transition cursor-pointer flex flex-col justify-between ${
+            modeHoraires === "sur_rendez_vous"
+              ? "border-sky-600 bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 shadow-xs"
+              : "border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-black">Sur rendez-vous</span>
+            <i className="fa-regular fa-calendar-check text-xs"></i>
+          </div>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400">Contact préalable</span>
+        </button>
+      </div>
+
+      {modeHoraires === "toujours_ouvert" && (
+        <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 text-xs text-emerald-800 dark:text-emerald-300">
+          ✓ Votre établissement affichera un badge vert permanent <strong>« Ouvert 24h/24 »</strong>.
         </div>
+      )}
+
+      {modeHoraires === "sur_rendez_vous" && (
+        <div className="p-3.5 rounded-xl bg-sky-50/60 dark:bg-sky-950/20 border border-sky-200/60 dark:border-sky-900/40 text-xs text-sky-800 dark:text-sky-300">
+          ℹ️ Votre établissement affichera le badge neutre <strong>« Sur rendez-vous »</strong> (jamais « Fermé »).
+        </div>
+      )}
+
+      {modeHoraires === "indiques" && (
+        chargement ? (
+          <p className="text-xs text-gray-400 italic">Chargement…</p>
+        ) : (
+          <div className="space-y-1.5">
+            {lignes.map((l, idx) => (
+              <div key={l.jour_semaine} className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="w-20 font-bold text-gray-600 dark:text-gray-400 shrink-0">
+                  {JOURS_SEMAINE[l.jour_semaine]}
+                </span>
+                <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={l.ferme_ce_jour}
+                    onChange={(e) => modifierLigne(idx, { ferme_ce_jour: e.target.checked })}
+                  />
+                  <span className="text-gray-500 dark:text-gray-400">Fermé</span>
+                </label>
+                {!l.ferme_ce_jour && (
+                  <>
+                    <input
+                      type="time"
+                      value={l.heure_ouverture}
+                      onChange={(e) => modifierLigne(idx, { heure_ouverture: e.target.value })}
+                      className="px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                    />
+                    <span className="text-gray-400">–</span>
+                    <input
+                      type="time"
+                      value={l.heure_fermeture}
+                      onChange={(e) => modifierLigne(idx, { heure_fermeture: e.target.value })}
+                      className="px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                    />
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )
       )}
 
       {erreur && <p className="text-xs font-bold text-red-600 mt-3">{erreur}</p>}
@@ -5771,6 +5900,135 @@ function EditeurHoraires({ storeId }) {
         <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"} mr-2`}></i>
         {envoi ? "Enregistrement…" : "Enregistrer les horaires"}
       </button>
+    </div>
+  );
+}
+
+function BadgeStatutOuverture({ statut, taille = "normal", className = "" }) {
+  if (!statut || !statut.texteBadge) return null;
+
+  if (statut.mode === "toujours_ouvert" || (statut.mode === "indiques" && statut.ouvert)) {
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 ${
+          taille === "petit" ? "px-2 py-0.5 text-[9px]" : "px-2.5 py-1 text-[10px] sm:text-xs"
+        } ${className}`}
+      >
+        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+        <span>{statut.texteBadge}</span>
+      </span>
+    );
+  }
+
+  if (statut.mode === "sur_rendez_vous") {
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full font-black uppercase tracking-wider bg-sky-100 dark:bg-sky-950/70 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-800/60 ${
+          taille === "petit" ? "px-2 py-0.5 text-[9px]" : "px-2.5 py-1 text-[10px] sm:text-xs"
+        } ${className}`}
+      >
+        <i className="fa-regular fa-calendar-check text-[9px] sm:text-[10px] shrink-0"></i>
+        <span>{statut.texteBadge}</span>
+      </span>
+    );
+  }
+
+  if (statut.mode === "indiques" && !statut.ouvert) {
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full font-black uppercase tracking-wider bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 ${
+          taille === "petit" ? "px-2 py-0.5 text-[9px]" : "px-2.5 py-1 text-[10px] sm:text-xs"
+        } ${className}`}
+      >
+        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 shrink-0"></span>
+        <span>{statut.texteBadge}</span>
+      </span>
+    );
+  }
+
+  return null;
+}
+
+function GrilleHorairesEtablissement({ boutique, horaires = [], chargement = false }) {
+  const { jourSemaine } = obtenirDateHeureDakar();
+  const mode = boutique?.mode_horaires || "indiques";
+
+  if (chargement) {
+    return <p className="text-xs text-zinc-400 italic">Chargement des horaires…</p>;
+  }
+
+  if (mode === "toujours_ouvert") {
+    return (
+      <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/50 flex items-center gap-3">
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+        <div>
+          <p className="text-xs font-black text-emerald-800 dark:text-emerald-300">Ouvert 24h/24, 7j/7</p>
+          <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">Cet établissement accueille le public en continu sans interruption.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "sur_rendez_vous") {
+    return (
+      <div className="p-3.5 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/60 dark:border-sky-900/50 flex items-center gap-3">
+        <i className="fa-regular fa-calendar-check text-sky-600 dark:text-sky-400 text-base shrink-0"></i>
+        <div>
+          <p className="text-xs font-black text-sky-800 dark:text-sky-300">Uniquement sur rendez-vous</p>
+          <p className="text-[11px] text-sky-700/80 dark:text-sky-400/80">Veuillez contacter l&apos;établissement sur WhatsApp avant tout déplacement.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!horaires || horaires.length === 0) {
+    return (
+      <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">
+        Horaires non renseignés par l&apos;établissement.
+      </p>
+    );
+  }
+
+  // Ordre naturel Lundi (1) à Dimanche (0)
+  const ordreJours = [1, 2, 3, 4, 5, 6, 0];
+  const parJour = new Map(horaires.map((h) => [Number(h.jour_semaine), h]));
+
+  return (
+    <div className="space-y-1 rounded-xl bg-gray-50/80 dark:bg-zinc-800/40 border border-gray-200/70 dark:border-zinc-800 p-2.5">
+      {ordreJours.map((j) => {
+        const h = parJour.get(j);
+        const estAujourdhui = j === jourSemaine;
+        const ferme = !h || h.ferme_ce_jour || !h.heure_ouverture || !h.heure_fermeture;
+
+        return (
+          <div
+            key={j}
+            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition ${
+              estAujourdhui
+                ? "bg-white dark:bg-zinc-800 font-bold shadow-xs border border-gray-200/80 dark:border-zinc-700 text-zinc-900 dark:text-white"
+                : "text-zinc-600 dark:text-zinc-400"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-20 font-bold">{JOURS_SEMAINE[j]}</span>
+              {estAujourdhui && (
+                <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[9px] font-black uppercase">
+                  Aujourd&apos;hui
+                </span>
+              )}
+            </div>
+            <div>
+              {ferme ? (
+                <span className="text-rose-600 dark:text-rose-400 font-bold">Fermé</span>
+              ) : (
+                <span className={estAujourdhui ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-zinc-700 dark:text-zinc-300"}>
+                  {h.heure_ouverture.slice(0, 5)} – {h.heure_fermeture.slice(0, 5)}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
