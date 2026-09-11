@@ -4546,22 +4546,6 @@ function ModalFicheBoutique({
                     chargement={horairesChargement}
                   />
                 </div>
-
-                <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex flex-col gap-1.5 text-zinc-600 dark:text-zinc-400">
-                  <span>📍 {quartier ? `${quartier}, ` : ""}{ville || "Sénégal"}</span>
-                  {telephone && <span>📞 {telephone}</span>}
-                </div>
-                {whatsappUrl && (
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 w-full py-2.5 px-4 rounded-xl bg-[#25D366] text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <i className="fa-brands fa-whatsapp text-sm"></i>
-                    <span>Contacter sur WhatsApp</span>
-                  </a>
-                )}
               </div>
             </div>
           )}
