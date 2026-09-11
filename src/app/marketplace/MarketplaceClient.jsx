@@ -1579,16 +1579,8 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
         </h2>
       </div>
 
-      {/* GROUPE 1 : Informations personnelles & Détails de l'entreprise */}
+      {/* GROUPE 1 : Boutique, Vitrine & Ventes */}
       <div>
-        <button
-          type="button"
-          onClick={() => setModalActive("infos_perso")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Informations personnelles</span>
-        </button>
-
         <button
           type="button"
           onClick={() => setModalActive("details_entreprise")}
@@ -1602,18 +1594,48 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
           <button
             type="button"
             onClick={() => setModalActive("avatar")}
-            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
           >
             <span>Avatar de la boutique</span>
             <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={() => setModalActive("profit")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <span>🤑</span>
+            <span>Faire profit &amp; Boost</span>
+          </div>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalActive("abonnes")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Abonnés</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalActive("avis")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+        >
+          <span>Avis clients</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+        </button>
       </div>
 
       {/* SÉPARATEUR 1 (1:1 Capture exacte) */}
       <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
 
-      {/* GROUPE 2 : Téléphone, Email, Langue */}
+      {/* GROUPE 2 : Coordonnées, Contact, FAQ & Langue */}
       <div>
         <button
           type="button"
@@ -1629,6 +1651,24 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
           className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
         >
           <span>Changer l’email</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalActive("contact_livraison")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Contact &amp; Livraison</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalActive("faq")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Foire aux questions</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
         </button>
 
         <button
@@ -1687,8 +1727,16 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
       {/* SÉPARATEUR 3 (1:1 Capture exacte) */}
       <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
 
-      {/* GROUPE 4 : Mot de passe, Suppression, Déconnexion */}
+      {/* GROUPE 4 : Mot de passe, Suppression, Déconnexion & Sortie */}
       <div>
+        <button
+          type="button"
+          onClick={() => setModalActive("infos_perso")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Informations personnelles</span>
+        </button>
+
         <button
           type="button"
           onClick={() => setModalActive("password")}
@@ -1713,6 +1761,19 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
           <span>Se déconnecter</span>
           <i className="fa-solid fa-arrow-right-from-bracket text-xs text-gray-400"></i>
         </button>
+
+        {onRetour && (
+          <button
+            type="button"
+            onClick={onRetour}
+            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition border-t border-gray-100 dark:border-zinc-800 cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <i className="fa-solid fa-arrow-right-from-bracket rotate-180 text-sm text-red-600"></i>
+              <span>Retour au Marketplace</span>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* ========================================================================= */}
@@ -2289,6 +2350,165 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
                 {enCours ? "Suppression en cours..." : "Confirmer la suppression définitive"}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 9. Modal Faire profit */}
+      {modalActive === "profit" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🤑</span>
+                <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Faire profit &amp; Boost</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+            <div className="space-y-3 text-xs">
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                Mettez vos annonces au premier rang et multipliez vos ventes grâce aux commandes directes WhatsApp.
+              </p>
+              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 space-y-1">
+                <div className="font-bold text-amber-900 dark:text-amber-200">🚀 Visibilité Maximale</div>
+                <div className="text-amber-800/80 dark:text-amber-300/80 text-[11px]">Vos articles sont prioritaires sur le flux et la carte interactive.</div>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 space-y-1">
+                <div className="font-bold text-emerald-900 dark:text-emerald-200">💬 Contact WhatsApp Direct</div>
+                <div className="text-emerald-800/80 dark:text-emerald-300/80 text-[11px]">Recevez instantanément les messages d&apos;acheteurs intéressés.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. Modal Abonnés */}
+      {modalActive === "abonnes" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-users text-blue-600"></i>
+                <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Abonnés de la boutique</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+            <div className="py-6 text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center text-xl mx-auto">
+                <i className="fa-solid fa-bell"></i>
+              </div>
+              <p className="text-xs text-gray-500 max-w-xs mx-auto">
+                Vos abonnés reçoivent instantanément des notifications dès la publication de nouveaux articles.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 11. Modal Avis */}
+      {modalActive === "avis" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-star text-amber-400"></i>
+                <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Avis &amp; Évaluations</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-extrabold text-gray-900 dark:text-white">Note Globale</span>
+                <span className="text-amber-500 font-black text-sm">5.0 / 5 ★</span>
+              </div>
+              <p className="text-[11px] text-gray-500">Boutique recommandée avec un excellent taux de satisfaction client.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 12. Modal Contact & Livraison */}
+      {modalActive === "contact_livraison" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-truck-fast text-blue-600"></i>
+                <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Contact &amp; Livraison</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+            <div className="space-y-3 text-xs">
+              <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-zinc-800 space-y-1">
+                <div className="font-bold text-gray-900 dark:text-white">📍 Zone d&apos;expédition &amp; retrait</div>
+                <div className="text-gray-500">{quartier ? `${quartier}, ` : ""}{ville || "Dakar & Sénégal"}</div>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-zinc-800 space-y-1">
+                <div className="font-bold text-gray-900 dark:text-white">⏱️ Délais moyens</div>
+                <div className="text-gray-500">Livraison express en 24h à 48h selon la région.</div>
+              </div>
+              {telephone && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 space-y-1">
+                  <div className="font-bold text-emerald-900 dark:text-emerald-200">📞 Contact direct</div>
+                  <div className="text-emerald-800/80 dark:text-emerald-300/80 text-[11px]">{telephone}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 13. Modal Foire aux questions */}
+      {modalActive === "faq" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <i className="fa-regular fa-circle-question text-blue-600"></i>
+                <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Foire aux questions</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+            <div className="space-y-2.5 text-xs">
+              <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-zinc-800 space-y-1">
+                <div className="font-bold text-gray-900 dark:text-white">Comment commander ?</div>
+                <div className="text-gray-500">Cliquez sur « Acheter » ou le bouton WhatsApp pour contacter directement le vendeur.</div>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-zinc-800 space-y-1">
+                <div className="font-bold text-gray-900 dark:text-white">Paiement sécurisé ?</div>
+                <div className="text-gray-500">Paiement à la livraison ou via Wave / Orange Money selon accord.</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
