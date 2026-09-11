@@ -4023,51 +4023,7 @@ function ModalFicheBoutique({
         onChange={handleCoverUpload}
       />
 
-      {/* ========================================================================= */}
-      {/* 0. BARRE SUPÉRIEURE DESKTOP (Sous la barre de navigation principale)      */}
-      {/* ========================================================================= */}
-      <div className="hidden md:flex sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-gray-200 dark:border-zinc-800 px-4 py-2.5 items-center justify-between shadow-2xs shrink-0">
-        <button
-          type="button"
-          onClick={onFermer}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 text-xs font-bold transition cursor-pointer"
-        >
-          <i className="fa-solid fa-arrow-left text-xs"></i>
-          <span>Retour au marketplace</span>
-        </button>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setOngletActif("produits")}
-            className={`px-3 py-1.5 rounded-full text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-xs ${
-              ongletActif === "produits"
-                ? "bg-[#1877F2] text-white"
-                : "bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50"
-            }`}
-            title="Aperçu public de la boutique"
-          >
-            <i className="fa-regular fa-eye text-xs"></i>
-            <span>Aperçu</span>
-          </button>
-          <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white truncate max-w-[140px] sm:max-w-xs">
-            {nom}
-          </span>
-          <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase">
-            Boutique Officielle
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={onFermer}
-          className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center transition cursor-pointer"
-          title="Fermer la page boutique"
-          aria-label="Fermer"
-        >
-          <i className="fa-solid fa-xmark text-sm"></i>
-        </button>
-      </div>
 
       {/* ========================================================================= */}
       {/* 📱 VUE MOBILE (PHONE) : DESIGN 1:1 CONFORME À LA MAQUETTE                 */}
@@ -4598,10 +4554,7 @@ function ModalFicheBoutique({
         )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* 🖥️ VUE DESKTOP (2 Colonnes directes pour grands écrans)                   */}
-      {/* ========================================================================= */}
-      <div className="hidden md:flex w-full max-w-[1400px] mx-auto flex-1 p-2 sm:p-4 flex-col md:flex-row gap-6 items-start md:overflow-hidden md:h-[calc(100vh-120px)]">
+      <div className="hidden md:flex w-full max-w-[1400px] mx-auto flex-1 p-2 sm:p-4 flex-col md:flex-row gap-6 items-start md:overflow-hidden md:h-[calc(100vh-68px)]">
         {/* ========================================================================= */}
         {/* 1. COLONNE GAUCHE : CARTE PROFIL BOUTIQUE & MENU (1:1 Capture Aperçu)      */}
         {/* ========================================================================= */}
@@ -4827,6 +4780,18 @@ function ModalFicheBoutique({
               <i className="fa-solid fa-gear text-sm"></i>
               <span className="flex-1">Réglages</span>
             </button>
+
+            {onFermer && (
+              <button
+                type="button"
+                onClick={onFermer}
+                className="w-full px-3.5 py-2 rounded-xl text-xs font-bold text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2.5 transition cursor-pointer text-left border-t border-gray-100 dark:border-zinc-800 mt-2 pt-2.5"
+                title="Quitter la boutique et revenir au catalogue"
+              >
+                <i className="fa-solid fa-arrow-left text-xs"></i>
+                <span className="flex-1">Retour au Marketplace</span>
+              </button>
+            )}
           </div>
         </div>
 
