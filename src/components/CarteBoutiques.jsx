@@ -334,7 +334,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           {/* CARTE LEAFLET EN ARRIÈRE-PLAN COMPLET */}
           <div
             ref={conteneur}
-            className={`w-full ${modeCompact ? "h-[190px] sm:h-[240px]" : "h-[290px] sm:h-[390px]"} z-0 transition-all duration-300 bg-[#0B0F17]`}
+            className={`w-full ${modeCompact ? "h-[160px] sm:h-[190px]" : "h-[210px] sm:h-[270px] md:h-[310px]"} z-0 transition-all duration-300 bg-[#0B0F17]`}
             aria-label="Carte des boutiques proches"
           />
 
