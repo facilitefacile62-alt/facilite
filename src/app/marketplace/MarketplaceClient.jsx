@@ -1596,6 +1596,29 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
         {boutique?.id && (
           <button
             type="button"
+            onClick={() => setModalActive("horaires")}
+            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className="fa-solid fa-clock text-violet-600 text-sm"></i>
+              <div>
+                <span className="block font-bold">Horaires d&apos;ouverture</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  {boutique?.mode_horaires === "toujours_ouvert"
+                    ? "Toujours ouvert (24h/24)"
+                    : boutique?.mode_horaires === "sur_rendez_vous"
+                    ? "Sur rendez-vous"
+                    : "Horaires indiqués (7 jours)"}
+                </span>
+              </div>
+            </div>
+            <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+          </button>
+        )}
+
+        {boutique?.id && (
+          <button
+            type="button"
             onClick={() => setModalActive("avatar")}
             className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
           >
@@ -2009,15 +2032,37 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
               </button>
             </form>
 
-            {estEtablissement && boutique?.id && (
-              <EditeurHoraires
-                storeId={boutique.id}
-                boutique={boutique}
-                onEnregistre={onBoutiqueUpdate}
-              />
+            {boutique?.id && (
+              <div className="pt-3 border-t border-gray-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setModalActive("horaires")}
+                  className="w-full py-3 px-4 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-bold text-xs flex items-center justify-between transition cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <i className="fa-solid fa-clock text-violet-500"></i>
+                    Configurer les horaires d&apos;ouverture (7 jours)
+                  </span>
+                  <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                </button>
+              </div>
             )}
           </div>
         </div>
+      )}
+
+      {/* Modal Horaires par étapes 1:1 aux captures */}
+      {modalActive === "horaires" && boutique?.id && (
+        <ModalEditeurHoraires
+          storeId={boutique.id}
+          boutique={boutique}
+          onFermer={() => setModalActive(null)}
+          onEnregistre={() => {
+            setModalActive(null);
+            showToast("✓ Horaires mis à jour avec succès !");
+            onEnregistre?.();
+          }}
+        />
       )}
 
       {/* Modal Avatar façon Bitmoji de la boutique — anonymat possible, pas de
@@ -3876,6 +3921,7 @@ function ModalFicheBoutique({
   const avatarBitmojiUri = boutique?.avatar_config ? dataUriAvatarBoutique(boutique.avatar_config, 160) : null;
   const [horairesEtablissement, setHorairesEtablissement] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
+  const [modalHorairesOuverte, setModalHorairesOuverte] = useState(false);
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
   const [ongletMobile, setOngletMobile] = useState("article"); // Articles par défaut : c'est ce qu'on vient voir en ouvrant une boutique
 
@@ -4476,10 +4522,22 @@ function ModalFicheBoutique({
 
                 <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 space-y-2">
                   <div className="flex items-center justify-between">
-                    <h5 className="text-xs font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
-                      <i className="fa-solid fa-clock text-violet-500"></i>
-                      Horaires d&apos;ouverture
-                    </h5>
+                    <div className="flex items-center gap-2">
+                      <h5 className="text-xs font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
+                        <i className="fa-solid fa-clock text-violet-500"></i>
+                        Horaires d&apos;ouverture
+                      </h5>
+                      {estProprietaire && (
+                        <button
+                          type="button"
+                          onClick={() => setModalHorairesOuverte(true)}
+                          className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 text-[10px] font-black hover:bg-blue-100 dark:hover:bg-blue-900/60 transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-pen-to-square mr-1"></i>
+                          Modifier
+                        </button>
+                      )}
+                    </div>
                     <span className="text-[10px] text-zinc-400">Africa/Dakar</span>
                   </div>
                   <GrilleHorairesEtablissement
@@ -5264,10 +5322,22 @@ function ModalFicheBoutique({
 
               <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-1.5">
-                    <i className="fa-solid fa-clock text-violet-500"></i>
-                    Horaires d&apos;ouverture
-                  </h4>
+                  <div className="flex items-center gap-2.5">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-1.5">
+                      <i className="fa-solid fa-clock text-violet-500"></i>
+                      Horaires d&apos;ouverture
+                    </h4>
+                    {estProprietaire && (
+                      <button
+                        type="button"
+                        onClick={() => setModalHorairesOuverte(true)}
+                        className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <i className="fa-solid fa-pen-to-square"></i>
+                        <span>Modifier les horaires</span>
+                      </button>
+                    )}
+                  </div>
                   <span className="text-[11px] text-zinc-400">Fuseau Africa/Dakar</span>
                 </div>
                 <GrilleHorairesEtablissement
@@ -5387,6 +5457,21 @@ function ModalFicheBoutique({
           </div>
         </div>
       </div>
+
+      {/* Modal Horaires par étapes 1:1 aux captures */}
+      {modalHorairesOuverte && (
+        <ModalEditeurHoraires
+          storeId={boutique?.id || "facilite_shop"}
+          boutique={boutique}
+          onFermer={() => setModalHorairesOuverte(false)}
+          onEnregistre={(data) => {
+            setModalHorairesOuverte(false);
+            showToast("✓ Horaires mis à jour avec succès !");
+            if (data?.lignes) setHorairesEtablissement(data.lignes);
+            onBoutiqueUpdate?.();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -5706,20 +5791,36 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
   );
 }
 
-function EditeurHoraires({ storeId, boutique, onEnregistre }) {
+/**
+ * Éditeur d'horaires d'ouverture par étapes (1:1 Conforme aux captures d'écran)
+ * Étape 1 : Choix du mode (Horaires indiqués | Toujours ouvert | Sur rendez-vous)
+ * Étape 2 : Sélection des créneaux par jour avec switch iOS et heures personnalisables
+ */
+function EditeurHoraires({ storeId, boutique, onEnregistre, onFermer, estModal = false }) {
+  const [etape, setEtape] = useState(1); // 1: Mode | 2: Jours
   const [modeHoraires, setModeHoraires] = useState(() => boutique?.mode_horaires || "indiques");
   const [lignes, setLignes] = useState(() =>
-    Array.from({ length: 7 }, (_, jour) => ({
+    [1, 2, 3, 4, 5, 6, 0].map((jour) => ({
       jour_semaine: jour,
       heure_ouverture: "08:00",
       heure_fermeture: "18:00",
-      ferme_ce_jour: false,
+      ferme_ce_jour: jour === 0, // Dimanche fermé par défaut
     }))
   );
   const [chargement, setChargement] = useState(true);
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
+
+  const NOMS_JOURS_MINUSCULES = {
+    1: "lundi",
+    2: "mardi",
+    3: "mercredi",
+    4: "jeudi",
+    5: "vendredi",
+    6: "samedi",
+    0: "dimanche",
+  };
 
   useEffect(() => {
     if (boutique?.mode_horaires) {
@@ -5728,20 +5829,24 @@ function EditeurHoraires({ storeId, boutique, onEnregistre }) {
   }, [boutique?.mode_horaires]);
 
   useEffect(() => {
+    if (!storeId || storeId === "facilite_shop") {
+      setChargement(false);
+      return;
+    }
     let annule = false;
     obtenirHorairesBoutique(storeId)
       .then((data) => {
         if (annule || !data || data.length === 0) return;
-        const parJour = new Map(data.map((h) => [h.jour_semaine, h]));
+        const parJour = new Map(data.map((h) => [Number(h.jour_semaine), h]));
         setLignes((prev) =>
           prev.map((l) => {
-            const h = parJour.get(l.jour_semaine);
+            const h = parJour.get(Number(l.jour_semaine));
             if (!h) return l;
             return {
               jour_semaine: l.jour_semaine,
               heure_ouverture: h.heure_ouverture?.slice(0, 5) || "08:00",
               heure_fermeture: h.heure_fermeture?.slice(0, 5) || "18:00",
-              ferme_ce_jour: h.ferme_ce_jour,
+              ferme_ce_jour: Boolean(h.ferme_ce_jour),
             };
           })
         );
@@ -5755,149 +5860,323 @@ function EditeurHoraires({ storeId, boutique, onEnregistre }) {
     };
   }, [storeId]);
 
-  const modifierLigne = (idx, champs) => {
-    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, ...champs } : l)));
+  const modifierLigne = (jourSemaine, champs) => {
+    setLignes((prev) =>
+      prev.map((l) => (l.jour_semaine === jourSemaine ? { ...l, ...champs } : l))
+    );
   };
 
-  const soumettre = async (e) => {
-    e.preventDefault();
+  const sauvegarder = async () => {
     setEnvoi(true);
     setErreur("");
     setMessage("");
     try {
-      await enregistrerHoraires(storeId, lignes, modeHoraires);
-      setMessage("Horaires enregistrés avec succès.");
-      onEnregistre?.();
+      if (storeId && storeId !== "facilite_shop") {
+        await enregistrerHoraires(storeId, lignes, modeHoraires);
+      }
+      setMessage("✓ Horaires enregistrés avec succès.");
+      onEnregistre?.({ mode_horaires: modeHoraires, lignes });
     } catch (err) {
-      setErreur(err.message);
+      setErreur(err.message || "Erreur lors de l'enregistrement des horaires");
     } finally {
       setEnvoi(false);
     }
   };
 
+  const gererActionBouton = () => {
+    if (etape === 1) {
+      if (modeHoraires === "indiques") {
+        setEtape(2);
+      } else {
+        sauvegarder();
+      }
+    } else {
+      sauvegarder();
+    }
+  };
+
   return (
-    <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
-      <h3 className="text-sm font-black text-gray-900 dark:text-white mb-1">Horaires d&apos;ouverture</h3>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Affichés aux visiteurs sur la fiche de votre établissement et calculés en direct (fuseau Dakar).
-      </p>
-
-      {/* Sélecteur des 3 modes */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+    <div className="w-full text-left font-sans select-none">
+      {/* Header avec bouton retour & titre (1:1 Capture exacte) */}
+      <div className="flex items-center gap-3.5 pb-4 border-b border-zinc-200 dark:border-zinc-800/80 mb-5">
         <button
           type="button"
-          onClick={() => setModeHoraires("indiques")}
-          className={`p-2.5 rounded-xl border text-xs font-bold text-left transition cursor-pointer flex flex-col justify-between ${
-            modeHoraires === "indiques"
-              ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 shadow-xs"
-              : "border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
-          }`}
+          onClick={() => {
+            if (etape === 2) {
+              setEtape(1);
+            } else if (onFermer) {
+              onFermer();
+            }
+          }}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer active:scale-90 text-sm"
+          title="Retour"
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-black">Horaires indiqués</span>
-            <i className="fa-solid fa-clock text-xs"></i>
-          </div>
-          <span className="text-[10px] text-gray-500 dark:text-gray-400">Planning par jour</span>
+          <i className="fa-solid fa-arrow-left"></i>
         </button>
-
-        <button
-          type="button"
-          onClick={() => setModeHoraires("toujours_ouvert")}
-          className={`p-2.5 rounded-xl border text-xs font-bold text-left transition cursor-pointer flex flex-col justify-between ${
-            modeHoraires === "toujours_ouvert"
-              ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 shadow-xs"
-              : "border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
-          }`}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-black">Toujours ouvert</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          </div>
-          <span className="text-[10px] text-gray-500 dark:text-gray-400">24h/24, 7j/7</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setModeHoraires("sur_rendez_vous")}
-          className={`p-2.5 rounded-xl border text-xs font-bold text-left transition cursor-pointer flex flex-col justify-between ${
-            modeHoraires === "sur_rendez_vous"
-              ? "border-sky-600 bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 shadow-xs"
-              : "border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
-          }`}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-black">Sur rendez-vous</span>
-            <i className="fa-regular fa-calendar-check text-xs"></i>
-          </div>
-          <span className="text-[10px] text-gray-500 dark:text-gray-400">Contact préalable</span>
-        </button>
+        <div>
+          <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
+            {etape === 1 ? "Horaires d'ouverture" : "Sélectionnez des horaires"}
+          </h2>
+          {etape === 1 && (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Informez votre clientèle de vos disponibilités.
+            </p>
+          )}
+        </div>
       </div>
 
-      {modeHoraires === "toujours_ouvert" && (
-        <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 text-xs text-emerald-800 dark:text-emerald-300">
-          ✓ Votre établissement affichera un badge vert permanent <strong>« Ouvert 24h/24 »</strong>.
+      {/* ========================================================================= */}
+      {/* ÉTAPE 1 : CHOIX DU MODE (1:1 Capture Écran 1)                             */}
+      {/* ========================================================================= */}
+      {etape === 1 && (
+        <div className="space-y-4 py-2">
+          {/* Option 1 : Ouvert aux horaires indiqués */}
+          <div
+            onClick={() => setModeHoraires("indiques")}
+            className="flex items-start gap-3.5 p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition cursor-pointer group"
+          >
+            <div className="mt-0.5">
+              <span
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${
+                  modeHoraires === "indiques"
+                    ? "border-black dark:border-white bg-transparent"
+                    : "border-zinc-400 dark:border-zinc-500 bg-transparent group-hover:border-zinc-600 dark:group-hover:border-zinc-400"
+                }`}
+              >
+                {modeHoraires === "indiques" && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white animate-scaleIn"></span>
+                )}
+              </span>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                Ouvert aux horaires indiqués
+              </p>
+              {modeHoraires === "indiques" && (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Sélectionné</p>
+              )}
+            </div>
+          </div>
+
+          {/* Option 2 : Toujours ouvert */}
+          <div
+            onClick={() => setModeHoraires("toujours_ouvert")}
+            className="flex items-start gap-3.5 p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition cursor-pointer group"
+          >
+            <div className="mt-0.5">
+              <span
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${
+                  modeHoraires === "toujours_ouvert"
+                    ? "border-black dark:border-white bg-transparent"
+                    : "border-zinc-400 dark:border-zinc-500 bg-transparent group-hover:border-zinc-600 dark:group-hover:border-zinc-400"
+                }`}
+              >
+                {modeHoraires === "toujours_ouvert" && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white animate-scaleIn"></span>
+                )}
+              </span>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-zinc-900 dark:text-white">Toujours ouvert</p>
+              {modeHoraires === "toujours_ouvert" && (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Sélectionné</p>
+              )}
+            </div>
+          </div>
+
+          {/* Option 3 : Uniquement sur rendez-vous */}
+          <div
+            onClick={() => setModeHoraires("sur_rendez_vous")}
+            className="flex items-start gap-3.5 p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition cursor-pointer group"
+          >
+            <div className="mt-0.5">
+              <span
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${
+                  modeHoraires === "sur_rendez_vous"
+                    ? "border-black dark:border-white bg-transparent"
+                    : "border-zinc-400 dark:border-zinc-500 bg-transparent group-hover:border-zinc-600 dark:group-hover:border-zinc-400"
+                }`}
+              >
+                {modeHoraires === "sur_rendez_vous" && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white animate-scaleIn"></span>
+                )}
+              </span>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                Uniquement sur rendez-vous
+              </p>
+              {modeHoraires === "sur_rendez_vous" && (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Sélectionné</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
-      {modeHoraires === "sur_rendez_vous" && (
-        <div className="p-3.5 rounded-xl bg-sky-50/60 dark:bg-sky-950/20 border border-sky-200/60 dark:border-sky-900/40 text-xs text-sky-800 dark:text-sky-300">
-          ℹ️ Votre établissement affichera le badge neutre <strong>« Sur rendez-vous »</strong> (jamais « Fermé »).
-        </div>
-      )}
+      {/* ========================================================================= */}
+      {/* ÉTAPE 2 : SÉLECTION DES 7 JOURS (1:1 Capture Écran 2)                     */}
+      {/* ========================================================================= */}
+      {etape === 2 && (
+        <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-1 select-none custom-scrollbar">
+          {[1, 2, 3, 4, 5, 6, 0].map((jour) => {
+            const l = lignes.find((item) => item.jour_semaine === jour) || {
+              jour_semaine: jour,
+              heure_ouverture: "08:00",
+              heure_fermeture: "18:00",
+              ferme_ce_jour: false,
+            };
+            const estOuvert = !l.ferme_ce_jour;
+            const est24h =
+              estOuvert &&
+              l.heure_ouverture === "00:00" &&
+              (l.heure_fermeture === "23:59" || l.heure_fermeture === "00:00");
 
-      {modeHoraires === "indiques" && (
-        chargement ? (
-          <p className="text-xs text-gray-400 italic">Chargement…</p>
-        ) : (
-          <div className="space-y-1.5">
-            {lignes.map((l, idx) => (
-              <div key={l.jour_semaine} className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="w-20 font-bold text-gray-600 dark:text-gray-400 shrink-0">
-                  {JOURS_SEMAINE[l.jour_semaine]}
-                </span>
-                <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={l.ferme_ce_jour}
-                    onChange={(e) => modifierLigne(idx, { ferme_ce_jour: e.target.checked })}
-                  />
-                  <span className="text-gray-500 dark:text-gray-400">Fermé</span>
-                </label>
-                {!l.ferme_ce_jour && (
-                  <>
+            return (
+              <div
+                key={jour}
+                className="py-3 px-2 border-b border-zinc-100 dark:border-zinc-900/80 transition"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white capitalize">
+                      {NOMS_JOURS_MINUSCULES[jour]}
+                    </p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      {!estOuvert
+                        ? "Fermé"
+                        : est24h
+                        ? "Ouvert 24 heures"
+                        : `Ouvert ${l.heure_ouverture.slice(0, 5)} – ${l.heure_fermeture.slice(0, 5)}`}
+                    </p>
+                  </div>
+
+                  {/* Switch iOS toggle bouton on/off */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      modifierLigne(jour, { ferme_ce_jour: !l.ferme_ce_jour })
+                    }
+                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      estOuvert ? "bg-black dark:bg-white" : "bg-zinc-300 dark:bg-zinc-700"
+                    }`}
+                    title={estOuvert ? "Marquer comme fermé" : "Marquer comme ouvert"}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full shadow-md ring-0 transition duration-200 ease-in-out ${
+                        estOuvert
+                          ? "translate-x-5 bg-white dark:bg-black"
+                          : "translate-x-0 bg-white"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Sélecteur de créneaux personnalisés quand ouvert */}
+                {estOuvert && (
+                  <div className="mt-3 pt-2.5 flex flex-wrap items-center gap-2 text-xs bg-zinc-50 dark:bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-200/80 dark:border-zinc-800 animate-fadeIn">
+                    <span className="text-zinc-500 dark:text-zinc-400 text-[11px]">Créneau :</span>
                     <input
                       type="time"
                       value={l.heure_ouverture}
-                      onChange={(e) => modifierLigne(idx, { heure_ouverture: e.target.value })}
-                      className="px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                      onChange={(e) =>
+                        modifierLigne(jour, { heure_ouverture: e.target.value })
+                      }
+                      className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white font-bold text-xs"
                     />
-                    <span className="text-gray-400">–</span>
+                    <span className="text-zinc-400">–</span>
                     <input
                       type="time"
                       value={l.heure_fermeture}
-                      onChange={(e) => modifierLigne(idx, { heure_fermeture: e.target.value })}
-                      className="px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                      onChange={(e) =>
+                        modifierLigne(jour, { heure_fermeture: e.target.value })
+                      }
+                      className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white font-bold text-xs"
                     />
-                  </>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        modifierLigne(jour, {
+                          heure_ouverture: "00:00",
+                          heure_fermeture: "23:59",
+                        })
+                      }
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                        est24h
+                          ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
+                          : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                      }`}
+                    >
+                      24h/24
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        modifierLigne(jour, {
+                          heure_ouverture: "08:00",
+                          heure_fermeture: "18:00",
+                        })
+                      }
+                      className="px-2 py-1 rounded-lg text-[10px] font-bold border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition cursor-pointer"
+                    >
+                      Standard (8h-18h)
+                    </button>
+                  </div>
                 )}
               </div>
-            ))}
-          </div>
-        )
+            );
+          })}
+        </div>
       )}
 
-      {erreur && <p className="text-xs font-bold text-red-600 mt-3">{erreur}</p>}
-      {message && <p className="text-xs font-bold text-emerald-600 mt-3">{message}</p>}
+      {/* Messages de statut */}
+      {erreur && (
+        <p className="text-xs font-bold text-rose-500 mt-3">{erreur}</p>
+      )}
+      {message && (
+        <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400 mt-3">{message}</p>
+      )}
 
-      <button
-        type="button"
-        onClick={soumettre}
-        disabled={envoi || chargement}
-        className="mt-3 px-5 py-2.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-black disabled:opacity-50 cursor-pointer shadow-sm hover:opacity-95 transition"
+      {/* Bouton Suivant / Enregistrer en bas (1:1 Gros bouton arrondi) */}
+      <div className="pt-5 mt-4 border-t border-zinc-200 dark:border-zinc-800/80">
+        <button
+          type="button"
+          onClick={gererActionBouton}
+          disabled={envoi || chargement}
+          className="w-full py-3.5 px-6 rounded-full bg-black dark:bg-white text-white dark:text-black hover:opacity-90 text-sm font-black transition shadow-xl active:scale-[0.98] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {envoi ? (
+            <>
+              <i className="fa-solid fa-spinner fa-spin"></i>
+              <span>Enregistrement…</span>
+            </>
+          ) : (
+            <span>{etape === 1 && modeHoraires === "indiques" ? "Suivant" : "Enregistrer"}</span>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ModalEditeurHoraires({ storeId, boutique, onFermer, onEnregistre }) {
+  return (
+    <div
+      onClick={onFermer}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-[#0B0F15] text-zinc-900 dark:text-white rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800/80 max-h-[92vh] overflow-y-auto"
       >
-        <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"} mr-2`}></i>
-        {envoi ? "Enregistrement…" : "Enregistrer les horaires"}
-      </button>
+        <EditeurHoraires
+          storeId={storeId}
+          boutique={boutique}
+          onEnregistre={onEnregistre}
+          onFermer={onFermer}
+          estModal={true}
+        />
+      </div>
     </div>
   );
 }
