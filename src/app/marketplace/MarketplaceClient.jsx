@@ -53,6 +53,7 @@ import {
   majStock,
   normaliserWhatsapp,
   obtenirHorairesBoutique,
+  obtenirBoutiqueParId,
   enregistrerHoraires,
   JOURS_SEMAINE,
   positionActuelle,
@@ -269,6 +270,46 @@ export default function MarketplaceClient() {
       }
     }
   }, [maBoutiqueActive, boutiques]);
+
+  // Restaure la fiche boutique ouverte (n'importe laquelle, pas seulement
+  // "ma boutique" — voir les deux effets précédents pour ce cas déjà géré)
+  // après un rechargement de page. Sans ça, actualiser en pleine
+  // consultation d'une boutique (venue d'un clic sur la carte ou une
+  // fiche article, pas du lien "Ma boutique") renvoyait toujours au
+  // catalogue général : rien n'écrivait ni ne relisait l'identité de la
+  // boutique affichée. `obtenirBoutiqueParId` interroge directement
+  // marketplace_stores (policy "boutiques actives visibles de tous",
+  // accessible sans connexion) plutôt que de dépendre de résultats de
+  // recherche déjà en mémoire, qui peuvent ne pas inclure cette boutique
+  // précise (hors rayon "Autour de moi", filtre différent, etc.).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("boutique_id");
+    if (!id) return;
+    let annule = false;
+    obtenirBoutiqueParId(id).then((b) => {
+      if (!annule && b) setBoutiqueModal(b);
+    });
+    return () => {
+      annule = true;
+    };
+  }, []);
+
+  // Répercute la boutique actuellement ouverte dans l'URL — relu par
+  // l'effet ci-dessus au prochain chargement de page. Fusionne avec les
+  // paramètres déjà présents (onglet/action/boutique, gérés plus haut ;
+  // lat/lng/q/stock/explorer, gérés par VueAcheteur) au lieu de les
+  // écraser.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (boutiqueModal?.id) params.set("boutique_id", boutiqueModal.id);
+    else params.delete("boutique_id");
+    const query = params.toString();
+    const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
+    window.history.replaceState(window.history.state, "", url);
+  }, [boutiqueModal]);
 
   useEffect(() => {
     rechargerBoutique();

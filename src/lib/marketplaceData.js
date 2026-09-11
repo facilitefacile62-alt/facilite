@@ -260,6 +260,24 @@ export async function chargerMesBoutiques(userId) {
   return data || [];
 }
 
+/**
+ * Une boutique par son id, quel que soit son propriétaire — policy "boutiques
+ * actives visibles de tous" (RLS), pas besoin d'être connecté. Sert à
+ * restaurer la fiche boutique ouverte après un rechargement de page (voir
+ * MarketplaceClient.jsx) quand la boutique ne fait pas partie des listes déjà
+ * en mémoire (résultats de recherche, mes propres boutiques...).
+ */
+export async function obtenirBoutiqueParId(id) {
+  if (!id) return null;
+  const { data, error } = await supabase
+    .from("marketplace_stores")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return null;
+  return data || null;
+}
+
 /** Nombre de boutiques offertes avant l'option payante. */
 export const BOUTIQUES_OFFERTES = 1;
 
