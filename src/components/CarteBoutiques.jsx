@@ -498,16 +498,6 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
               </div>
             )}
 
-            <div className="px-3.5 sm:px-4 pb-0.5 pt-0 text-[11px] text-gray-200 flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
-              <span>
-                {boutiquesAffichees.length} boutique{boutiquesAffichees.length > 1 ? "s" : ""} dans le rayon choisi. Touchez un marqueur pour voir le détail.
-              </span>
-              {modeCompact && (
-                <span className="text-blue-400 font-bold text-[10px]">
-                  ✓ Mode gain d&apos;espace actif
-                </span>
-              )}
-            </div>
           </div>
         </div>
       ) : (
