@@ -1489,16 +1489,12 @@ export default function Header() {
                   {/* L'espace sélectionné est TOUJOURS en haut, l'autre en dessous avec l'icône de bascule ⟲ */}
                   {isBusinessActive ? (
                     <>
-                      {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Vendeur */}
+                      {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Marketplace */}
                       <button
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          if (pathname?.startsWith("/marketplace")) {
-                            window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
-                          } else {
-                            router.push("/marketplace?action=voir_boutique");
-                          }
+                          router.push("/marketplace");
                         }}
                         className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-100/90 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-2xs hover:border-blue-500/50"
                       >
@@ -1506,7 +1502,7 @@ export default function Header() {
                           <div className="relative shrink-0">
                             <img
                               src="/business_avatar.jpg"
-                              alt={maBoutiqueInfo?.nom || "Créer sa propre boutique"}
+                              alt={maBoutiqueInfo?.nom || "Marketplace"}
                               className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs"
                             />
                           </div>
@@ -1515,7 +1511,7 @@ export default function Header() {
                               {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
-                              Espace Vendeur &amp; Marketplace
+                              Marketplace &amp; Boutiques
                             </p>
                           </div>
                         </div>
@@ -1616,16 +1612,12 @@ export default function Header() {
                       {/* Ligne de séparation */}
                       <div className="my-1 border-t border-gray-200/70 dark:border-gray-800"></div>
 
-                      {/* 2. ALTERNATIF EN BAS : Créer sa propre boutique / Boutique personnalisée */}
+                      {/* 2. ALTERNATIF EN BAS : Facilité Shop / Marketplace */}
                       <button
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          if (pathname?.startsWith("/marketplace")) {
-                            window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
-                          } else {
-                            router.push("/marketplace?action=voir_boutique");
-                          }
+                          router.push("/marketplace");
                         }}
                         className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 group"
                       >
@@ -1633,7 +1625,7 @@ export default function Header() {
                           <div className="relative shrink-0">
                             <img
                               src="/business_avatar.jpg"
-                              alt={maBoutiqueInfo?.nom || "Créer sa propre boutique"}
+                              alt={maBoutiqueInfo?.nom || "Marketplace"}
                               className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs"
                             />
 
@@ -1648,13 +1640,13 @@ export default function Header() {
                               {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
-                              Espace Vendeur &amp; Marketplace
+                              Marketplace &amp; Boutiques
                             </p>
                           </div>
                         </div>
 
                         <span className="text-[10px] font-bold text-gray-400 group-hover:text-blue-600 transition shrink-0 flex items-center gap-1">
-                          Voir boutique <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                          Marketplace <i className="fa-solid fa-arrow-right text-[8px]"></i>
                         </span>
                       </button>
                     </>
@@ -1917,14 +1909,14 @@ export default function Header() {
                       <div className="flex items-center gap-3 min-w-0">
                         <img
                           src="/business_avatar.jpg"
-                          alt={maBoutiqueInfo?.nom || "Créer sa propre boutique"}
+                          alt={maBoutiqueInfo?.nom || "Marketplace"}
                           className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs shrink-0"
                         />
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Créer sa propre boutique"}
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                           </h4>
-                          <p className="text-[10px] text-gray-500 font-medium">Espace Vendeur &amp; Marketplace</p>
+                          <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
                         </div>
                       </div>
                       <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
@@ -2030,7 +2022,7 @@ export default function Header() {
                         <div className="relative shrink-0">
                           <img
                             src="/business_avatar.jpg"
-                            alt={maBoutiqueInfo?.nom || "Créer sa propre boutique"}
+                            alt={maBoutiqueInfo?.nom || "Marketplace"}
                             className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs shrink-0"
                           />
                           <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 flex items-center justify-center shadow-xs">
@@ -2039,14 +2031,14 @@ export default function Header() {
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Créer sa propre boutique"}
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                           </h4>
-                          <p className="text-[10px] text-gray-500 font-medium">Espace Vendeur &amp; Marketplace</p>
+                          <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
                         </div>
                       </div>
 
                       <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1 shrink-0">
-                        Basculer <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                        Marketplace <i className="fa-solid fa-arrow-right text-[8px]"></i>
                       </span>
                     </button>
                   </>

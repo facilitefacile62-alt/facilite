@@ -891,45 +891,51 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </div>
       )}
 
-      {/* 1. BARRE DE CATÉGORIES HORIZONTALE DÉFILABLE — EXCLUSIVEMENT POUR UTILISATEUR TÉLÉPHONE (MOBILE ONLY) */}
-      {!position && (
-        <div className="block md:hidden w-full mb-2.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-3 pt-2.5 pb-1.5 shadow-xs overflow-hidden">
-          <div
-            ref={categoriesScrollRef}
-            onMouseDown={handleCatMouseDown}
-            onMouseMove={handleCatMouseMove}
-            onMouseUp={handleCatMouseUp}
-            onMouseLeave={handleCatMouseUp}
-            className="flex items-center gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-1 select-none cursor-grab active:cursor-grabbing"
-            style={{ WebkitOverflowScrolling: "touch" }}
-          >
-            {CATEGORIES_DEFILEMENT_MOBILE.map((cat) => {
-              const estActif =
-                (categorie === null && cat.id === null) ||
-                categorie === cat.id ||
-                (cat.baseCategory && categorie === cat.baseCategory);
-              return (
-                <button
-                  key={cat.label}
-                  type="button"
-                  onClick={() => onSelectCategorie?.(cat.baseCategory || cat.id)}
-                  className={`shrink-0 flex items-center gap-1.5 text-xs sm:text-sm font-black transition-all pb-2 relative cursor-pointer whitespace-nowrap ${
-                    estActif
-                      ? "text-gray-950 dark:text-white"
-                      : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 font-bold"
-                  }`}
-                >
-                  <i className={`fa-solid ${cat.icon} text-[11px] ${estActif ? "text-[#1877F2]" : "text-gray-400"}`}></i>
-                  <span>{cat.label}</span>
-                  {estActif && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-black dark:bg-white rounded-full transition-all" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+      {/* 1. BARRE DE CATÉGORIES HORIZONTALE DÉFILABLE — EXCLUSIVEMENT POUR UTILISATEUR TÉLÉPHONE (MOBILE ONLY)
+          Restait cachée dès qu'une position était active (mode "Autour de
+          moi") — demande explicite de l'utilisateur : elle doit rester
+          visible aussi dans ce mode, car choisir une catégorie ici filtre
+          déjà `resultats`/`resultatsServices` via `categorie` (voir
+          lancerRecherche, qui passe `categorie` à chercherAutourDeMoi comme
+          au mode catalogue global) — donc aussi la carte "Autour de moi"
+          (CarteBoutiques, alimentée par ces mêmes résultats), sans code
+          supplémentaire nécessaire pour ce filtrage. */}
+      <div className="block md:hidden w-full mb-2.5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-3 pt-2.5 pb-1.5 shadow-xs overflow-hidden">
+        <div
+          ref={categoriesScrollRef}
+          onMouseDown={handleCatMouseDown}
+          onMouseMove={handleCatMouseMove}
+          onMouseUp={handleCatMouseUp}
+          onMouseLeave={handleCatMouseUp}
+          className="flex items-center gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-1 select-none cursor-grab active:cursor-grabbing"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {CATEGORIES_DEFILEMENT_MOBILE.map((cat) => {
+            const estActif =
+              (categorie === null && cat.id === null) ||
+              categorie === cat.id ||
+              (cat.baseCategory && categorie === cat.baseCategory);
+            return (
+              <button
+                key={cat.label}
+                type="button"
+                onClick={() => onSelectCategorie?.(cat.baseCategory || cat.id)}
+                className={`shrink-0 flex items-center gap-1.5 text-xs sm:text-sm font-black transition-all pb-2 relative cursor-pointer whitespace-nowrap ${
+                  estActif
+                    ? "text-gray-950 dark:text-white"
+                    : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 font-bold"
+                }`}
+              >
+                <i className={`fa-solid ${cat.icon} text-[11px] ${estActif ? "text-[#1877F2]" : "text-gray-400"}`}></i>
+                <span>{cat.label}</span>
+                {estActif && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-black dark:bg-white rounded-full transition-all" />
+                )}
+              </button>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* En-tête de résultats (1:1 Identique à la capture d'écran) */}
       <div className="flex items-center justify-between mb-3.5 px-1">
