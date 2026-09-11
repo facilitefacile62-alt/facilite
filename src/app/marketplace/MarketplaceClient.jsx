@@ -811,7 +811,6 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
 
   // Liste complète des catégories affichées dans la barre horizontale mobile (1:1 Identique à la capture et au menu)
   const CATEGORIES_DEFILEMENT_MOBILE = [
-    { id: null, label: "Toutes", icon: "fa-bars" },
     { id: "vehicules", label: "Automobile", icon: "fa-car" },
     { id: "maison", label: "Appareils électroménagers", icon: "fa-blender" },
     { id: "mode", label: "Vêtements pour femmes", icon: "fa-person-dress" },
