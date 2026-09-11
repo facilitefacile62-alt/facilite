@@ -676,15 +676,28 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     const q = params.get("q");
     const stock = params.get("stock") === "1";
     const explorer = params.get("explorer") === "1";
+    const autourParam = params.get("autour_de_moi") === "1";
+
     queueMicrotask(() => {
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
         setPosition({ latitude: lat, longitude: lng });
+      } else if (autourParam) {
+        localiser();
       }
       if (q) setTexte(q);
       if (stock) setSeulementEnStock(true);
       if (explorer) setGlobeOuvert(true);
     });
   }, []);
+
+  // Écoute les clics sur le bouton "Autour de moi" de la barre de navigation
+  useEffect(() => {
+    const handleAutourDeMoi = () => {
+      localiser();
+    };
+    window.addEventListener("facilite:autour-de-moi", handleAutourDeMoi);
+    return () => window.removeEventListener("facilite:autour-de-moi", handleAutourDeMoi);
+  }, [rayonKm, categorie, texte, seulementEnStock]);
 
   // Répercute ce même état dans l'URL à chaque changement (remplace
   // l'entrée d'historique courante, n'empile pas de nouvelle entrée à
