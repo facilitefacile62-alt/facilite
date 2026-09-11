@@ -6224,30 +6224,6 @@ function GrilleHorairesEtablissement({ boutique, horaires = [], chargement = fal
     return <p className="text-xs text-zinc-400 italic">Chargement des horaires…</p>;
   }
 
-  if (mode === "toujours_ouvert") {
-    return (
-      <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/50 flex items-center gap-3">
-        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-        <div>
-          <p className="text-xs font-black text-emerald-800 dark:text-emerald-300">Ouvert 24h/24, 7j/7</p>
-          <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">Cet établissement accueille le public en continu sans interruption.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === "sur_rendez_vous") {
-    return (
-      <div className="p-3.5 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/60 dark:border-sky-900/50 flex items-center gap-3">
-        <i className="fa-regular fa-calendar-check text-sky-600 dark:text-sky-400 text-base shrink-0"></i>
-        <div>
-          <p className="text-xs font-black text-sky-800 dark:text-sky-300">Uniquement sur rendez-vous</p>
-          <p className="text-[11px] text-sky-700/80 dark:text-sky-400/80">Veuillez contacter l&apos;établissement sur WhatsApp avant tout déplacement.</p>
-        </div>
-      </div>
-    );
-  }
-
   const horairesEffectifs = Array.isArray(horaires) && horaires.length > 0 ? horaires : HORAIRES_DEFAUT;
 
   // Ordre naturel Lundi (1) à Dimanche (0)
@@ -6255,7 +6231,28 @@ function GrilleHorairesEtablissement({ boutique, horaires = [], chargement = fal
   const parJour = new Map(horairesEffectifs.map((h) => [Number(h.jour_semaine), h]));
 
   return (
-    <div className="space-y-1 rounded-xl bg-gray-50/80 dark:bg-zinc-800/40 border border-gray-200/70 dark:border-zinc-800 p-2.5">
+    <div className="space-y-2">
+      {mode === "toujours_ouvert" && (
+        <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/50 flex items-center gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+          <div>
+            <p className="text-xs font-black text-emerald-800 dark:text-emerald-300">Ouvert 24h/24, 7j/7</p>
+            <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400/80">Cet établissement accueille le public en continu sans interruption.</p>
+          </div>
+        </div>
+      )}
+
+      {mode === "sur_rendez_vous" && (
+        <div className="p-3 rounded-xl bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200/60 dark:border-sky-900/50 flex items-center gap-2.5">
+          <i className="fa-regular fa-calendar-check text-sky-600 dark:text-sky-400 text-sm shrink-0"></i>
+          <div>
+            <p className="text-xs font-black text-sky-800 dark:text-sky-300">Uniquement sur rendez-vous</p>
+            <p className="text-[10px] text-sky-700/80 dark:text-sky-400/80">Veuillez contacter l&apos;établissement sur WhatsApp avant tout déplacement.</p>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-1 rounded-xl bg-gray-50/80 dark:bg-zinc-800/40 border border-gray-200/70 dark:border-zinc-800 p-2.5">
       {ordreJours.map((j) => {
         const h = parJour.get(j);
         const estAujourdhui = j === jourSemaine;
