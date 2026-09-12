@@ -397,44 +397,52 @@ export default function Header() {
     }
   }, [normalizeDbNotification]);
 
-  // Flux "offres récemment publiées" — indépendant de la table
+  // Flux "mes offres récemment publiées" — indépendant de la table
   // notifications, pas de ligne réelle donc lu/non-lu suivi via
   // localStorage (seul état persistant disponible pour ce flux).
+  //
+  // Corrigé le 12/09/2026 : incluait auparavant les 15 offres les plus
+  // récentes de TOUT LE SITE, pas seulement celles du compte connecté — les
+  // offres des AUTRES recruteurs apparaissaient dans ce flux censé être
+  // personnel, habillées en "a publié : ... Postulez dès maintenant !".
+  // Signalé par l'utilisateur comme confusion vie privée (à tort pour les
+  // notifications de candidature, qui elles n'ont jamais fui — voir
+  // notify_recruiter_new_candidature, correctement scopée sur
+  // recruiter_id — mais à raison pour ce flux-ci). Filtré sur recruiter_id
+  // = userId directement en base plutôt que côté client.
   const fetchJobOfferNotifs = useCallback(async (userId) => {
-    let readIds = [];
-    if (userId) {
-      try {
-        const stored = localStorage.getItem(`FACILITE_READ_NOTIFS_${userId}`);
-        if (stored) readIds = JSON.parse(stored);
-      } catch {}
+    if (!userId) {
+      setJobOfferNotifs([]);
+      return;
     }
+    let readIds = [];
+    try {
+      const stored = localStorage.getItem(`FACILITE_READ_NOTIFS_${userId}`);
+      if (stored) readIds = JSON.parse(stored);
+    } catch {}
 
     try {
       const { data: offersData } = await supabase
         .from("job_offers")
         .select("id, title, company, location, created_at, recruiter_id, is_active")
         .eq("is_active", true)
+        .eq("recruiter_id", userId)
         .order("created_at", { ascending: false })
         .limit(15);
 
-      const offerNotifs = (offersData || []).map((o) => {
-        const isMine = userId && o.recruiter_id === userId;
-        return {
-          id: `offer_${o.id}`,
-          type: "jobs",
-          title: isMine ? "Votre offre d'emploi est en ligne" : (o.title || "Nouvelle offre d'emploi"),
-          company: o.company || "Entreprise",
-          content: isMine
-            ? `« ${o.title} » (${o.company || "Entreprise"} - ${o.location || "Sénégal"}) est active et visible par tous les candidats.`
-            : `a publié : « ${o.title} » (${o.company || "Entreprise"} - ${o.location || "Sénégal"}). Postulez dès maintenant !`,
-          link: `/offres/${o.id}`,
-          created_at: o.created_at,
-          is_read: readIds.includes(`offer_${o.id}`),
-          avatar: "/logo.jpeg",
-          badgeIcon: "fa-briefcase",
-          badgeBg: "bg-[#1877F2]",
-        };
-      });
+      const offerNotifs = (offersData || []).map((o) => ({
+        id: `offer_${o.id}`,
+        type: "jobs",
+        title: "Votre offre d'emploi est en ligne",
+        company: o.company || "Entreprise",
+        content: `« ${o.title} » (${o.company || "Entreprise"} - ${o.location || "Sénégal"}) est active et visible par tous les candidats.`,
+        link: `/offres/${o.id}`,
+        created_at: o.created_at,
+        is_read: readIds.includes(`offer_${o.id}`),
+        avatar: "/logo.jpeg",
+        badgeIcon: "fa-briefcase",
+        badgeBg: "bg-[#1877F2]",
+      }));
       setJobOfferNotifs(offerNotifs);
     } catch (err) {
       console.warn("[Notifications] Erreur chargement offres:", err);
