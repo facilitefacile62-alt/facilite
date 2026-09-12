@@ -4566,22 +4566,66 @@ function ModalFicheBoutique({
           </div>
         </div>
 
-        {/* Nom de la boutique en gras à gauche */}
-        <div className="px-4 pb-2 text-left">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-lg sm:text-xl font-black uppercase tracking-wider text-zinc-900 dark:text-white leading-tight">
-              {nom}
-            </h1>
-            <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider">
-              {estEtablissement ? "Établissement" : estService ? "Service" : "Boutique"}
-            </span>
-            <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
+        {/* Nom de la boutique / Profil (1:1 Inspiré de la capture 3) */}
+        <div className="px-4 pb-3 text-left space-y-2">
+          <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-black tracking-tight text-zinc-900 dark:text-white leading-tight">
+                {nom}
+              </h1>
+              <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider">
+                {estEtablissement ? "Établissement" : estService ? "Service" : "Boutique"}
+              </span>
+              <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
+            </div>
+
+            {/* Boutons d'actions inspirés de la Capture 3 */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setOngletActif("publier")}
+                className="px-3 py-1.5 rounded-lg bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition active:scale-95 cursor-pointer"
+              >
+                <i className="fa-solid fa-plus text-[10px]"></i>
+                <span>Ajouter à la story</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOngletActif("parametres")}
+                className="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-900 dark:text-white text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                title="Modifier les informations du profil"
+              >
+                <i className="fa-solid fa-pen text-[10px]"></i>
+                <span>Modifier le profil</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOngletActif("parametres")}
+                className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-900 dark:text-white text-xs flex items-center justify-center transition active:scale-95 cursor-pointer"
+                title="Plus d'options"
+              >
+                <i className="fa-solid fa-chevron-down text-[10px]"></i>
+              </button>
+            </div>
           </div>
-          {description && (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium line-clamp-1 mt-0.5">
-              {description}
-            </p>
-          )}
+
+          {/* Ligne amis / abonnés */}
+          <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+            1,4 K ami(e)s
+          </p>
+
+          {/* Bio / Headline inspiré capture 3 */}
+          <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium leading-snug">
+            {description || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE"}
+          </p>
+
+          {/* Localisation */}
+          <p className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+            <i className="fa-solid fa-location-dot text-gray-500 text-[11px]"></i>
+            <span>{ville || "Dakar"}</span>
+          </p>
         </div>
 
         {/* Pilules d'onglets parfaitement harmonisées (ARTICLE | ACTIVITE | DOMAINE) */}

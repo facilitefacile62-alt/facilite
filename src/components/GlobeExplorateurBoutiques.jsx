@@ -117,6 +117,14 @@ export default function GlobeExplorateurBoutiques({
   const [cartePrete, setCartePrete] = useState(false);
   const [horaires, setHoraires] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
+  // Recherche mot-clé de la carte (Point C) — filtre local, sur les
+  // boutiques/articles déjà chargés par le Marketplace (aucun nouvel appel
+  // réseau) : cherche un article ou une boutique, jamais bloquant.
+  const [rechercheCarte, setRechercheCarte] = useState("");
+  // Bascule d'affichage du dock inférieur : liste de boutiques (existante)
+  // ou nouvelle liste d'articles individuels (Point C) — deux vues
+  // distinctes dans le même espace, pas de carrousel supplémentaire empilé.
+  const [vueCarrousel, setVueCarrousel] = useState("boutiques"); // 'boutiques' | 'articles'
 
   // Filtrer les boutiques avec coordonnées valides
   const marqueurs = useMemo(() => {
@@ -125,18 +133,54 @@ export default function GlobeExplorateurBoutiques({
     );
   }, [boutiques]);
 
-  // Boutiques filtrées selon l'onglet
+  const rechercheNormalisee = rechercheCarte.trim().toLowerCase();
+
+  // Articles correspondant à la recherche (Point C) — filtre local sur
+  // tousArticles, déjà chargé par le Marketplace (même tableau que
+  // "resultats", aucun nouvel appel réseau). Sert à la fois à la nouvelle
+  // liste d'articles du dock ET à révéler sur la carte les boutiques qui
+  // vendent un article correspondant : "Mode Loupe" (révéler au zoom les
+  // boutiques vendant un article) et "Synchronisation recherche → carte"
+  // n'ont jamais été spécifiés comme deux interactions distinctes (aucune
+  // trace dans le code, les migrations, le handoff design ni les plans
+  // existants au 12/09/2026) — un seul mécanisme couvre les deux besoins :
+  // taper/sélectionner un article filtre et recentre la carte sur ses
+  // boutiques, sans geste de zoom inventé séparément.
+  const articlesFiltres = useMemo(() => {
+    if (!rechercheNormalisee) return tousArticles;
+    return tousArticles.filter(
+      (a) =>
+        (a.titre || "").toLowerCase().includes(rechercheNormalisee) ||
+        (a.categorie || "").toLowerCase().includes(rechercheNormalisee) ||
+        (a.boutique_nom || "").toLowerCase().includes(rechercheNormalisee)
+    );
+  }, [tousArticles, rechercheNormalisee]);
+
+  const idsBoutiquesArticlesFiltres = useMemo(
+    () => new Set(articlesFiltres.map((a) => a.boutique_id).filter(Boolean)),
+    [articlesFiltres]
+  );
+
+  // Boutiques filtrées selon l'onglet, puis selon la recherche (Point C) —
+  // une boutique reste affichée si son nom correspond, OU si elle vend au
+  // moins un article qui correspond (idsBoutiquesArticlesFiltres). Sans
+  // recherche active, comportement strictement identique à avant.
   const boutiquesAffichees = useMemo(() => {
+    let base;
     if (filtreActif === "live") {
-      return marqueurs.filter(
+      base = marqueurs.filter(
         (b) => b.statut === "en_stock" || (b.articles && b.articles.some((a) => a.statut === "en_stock"))
       );
+    } else if (filtreActif === "populaires") {
+      base = marqueurs.slice(0, Math.max(3, Math.ceil(marqueurs.length / 2)));
+    } else {
+      base = marqueurs;
     }
-    if (filtreActif === "populaires") {
-      return marqueurs.slice(0, Math.max(3, Math.ceil(marqueurs.length / 2)));
-    }
-    return marqueurs;
-  }, [marqueurs, filtreActif]);
+    if (!rechercheNormalisee) return base;
+    return base.filter(
+      (b) => (b.nom || "").toLowerCase().includes(rechercheNormalisee) || idsBoutiquesArticlesFiltres.has(b.id)
+    );
+  }, [marqueurs, filtreActif, rechercheNormalisee, idsBoutiquesArticlesFiltres]);
 
   // 1. Initialisation Leaflet robuste & garantie zéro écran blanc
   useEffect(() => {
@@ -442,6 +486,34 @@ export default function GlobeExplorateurBoutiques({
     rafraichirMarqueurs();
   }, [rafraichirMarqueurs, cartePrete]);
 
+  // Recentrage automatique (fitBounds) quand une recherche ou un onglet de
+  // filtre change activement la sélection de boutiques affichées — même
+  // convention que CarteBoutiques.jsx/CarteItineraire.jsx/CarteEtablissements.jsx
+  // (padding [28,28], maxZoom 15). Volontairement PAS déclenché par
+  // boutiquesAffichees directement : ce tableau change aussi au premier
+  // chargement des données (boutiques passe de [] à la vraie liste) sans
+  // aucune action de l'utilisateur, ce qui écraserait le centrage initial
+  // existant (centreInitial, plus haut) sans que ce soit demandé ici.
+  const premierFiltreRef = useRef(true);
+  useEffect(() => {
+    if (premierFiltreRef.current) {
+      premierFiltreRef.current = false;
+      return;
+    }
+    const carte = carteRef.current;
+    if (!carte || boutiquesAffichees.length === 0) return;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      carte.fitBounds(L.latLngBounds(boutiquesAffichees.map((b) => [b.lat, b.lng])), {
+        padding: [28, 28],
+        maxZoom: 15,
+      });
+    })();
+    // boutiquesAffichees volontairement absent des dépendances — voir
+    // commentaire ci-dessus, seul le déclencheur (recherche/onglet) compte.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtreActif, rechercheNormalisee]);
+
   // Horaires d'ouverture, chargés seulement pour un établissement dont la
   // fiche est ouverte — inutile pour produit/service, qui n'ont pas de
   // marketplace_horaires.
@@ -545,6 +617,14 @@ export default function GlobeExplorateurBoutiques({
     carteRef.current?.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
   };
 
+  // Sélection depuis la nouvelle liste d'articles (Point C) — retrouve la
+  // boutique correspondante et réutilise TEL QUEL selectionnerBoutiqueCarousel
+  // (flyTo + mise en avant du marqueur) plutôt que de dupliquer ce mécanisme.
+  const selectionnerArticleCarousel = (article) => {
+    const boutique = marqueurs.find((b) => b.id === article.boutique_id);
+    if (boutique) selectionnerBoutiqueCarousel(boutique);
+  };
+
   // Basculer le style de carte (Dark Matter / Pastel / Satellite)
   const changerStyle = () => {
     const suivant = styleActif === "dark" ? "voyager" : styleActif === "voyager" ? "satellite" : "dark";
@@ -601,6 +681,30 @@ export default function GlobeExplorateurBoutiques({
               <i className="fa-solid fa-xmark text-base"></i>
             </button>
           </div>
+        </div>
+
+        {/* Recherche mot-clé (Point C) — filtre les marqueurs affichés et les
+            articles du dock inférieur, recentre la carte sur les résultats
+            (voir rechercheNormalisee/boutiquesAffichees/articlesFiltres). */}
+        <div className="pointer-events-auto relative">
+          <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+          <input
+            type="text"
+            value={rechercheCarte}
+            onChange={(e) => setRechercheCarte(e.target.value)}
+            placeholder="Rechercher un article, une boutique..."
+            className="w-full pl-9 pr-8 py-2 rounded-full bg-gray-900/80 text-white text-xs font-bold placeholder:text-gray-400 placeholder:font-medium border border-gray-700/80 backdrop-blur-md focus:outline-none focus:border-emerald-500 shadow-md"
+          />
+          {rechercheCarte && (
+            <button
+              type="button"
+              onClick={() => setRechercheCarte("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center text-[10px] cursor-pointer transition"
+              aria-label="Effacer la recherche"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          )}
         </div>
 
         {/* Pilules de filtres thématiques (Dark Snap Map) */}
@@ -731,52 +835,118 @@ export default function GlobeExplorateurBoutiques({
             </span>
           </div>
 
-          {/* Barre des Avatars Snap Map Défilable Horizontalement */}
-          <div className="pointer-events-auto w-full max-w-lg bg-gray-950/90 rounded-3xl p-2 sm:p-2.5 shadow-2xl border border-gray-800 backdrop-blur-md flex items-center gap-3 overflow-x-auto no-scrollbar">
-            {marqueurs.map((b, idx) => {
-              const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
-              const aPhoto = b.photo ? urlPhoto(b.photo) : null;
-              const estSelectionne = boutiqueSelectionnee?.id === b.id;
+          {/* Bascule Boutiques / Articles (Point C) — deux vues dans le même
+              dock, plutôt que d'empiler un second carrousel en permanence. */}
+          <div className="pointer-events-auto flex items-center gap-1 bg-gray-950/80 rounded-full p-1 border border-gray-800 backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setVueCarrousel("boutiques")}
+              className={`px-3 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
+                vueCarrousel === "boutiques" ? "bg-white text-gray-950" : "text-gray-300 hover:text-white"
+              }`}
+            >
+              Boutiques
+            </button>
+            <button
+              type="button"
+              onClick={() => setVueCarrousel("articles")}
+              className={`px-3 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
+                vueCarrousel === "articles" ? "bg-white text-gray-950" : "text-gray-300 hover:text-white"
+              }`}
+            >
+              Articles
+            </button>
+          </div>
 
-              return (
-                <button
-                  key={b.id || idx}
-                  type="button"
-                  onClick={() => selectionnerBoutiqueCarousel(b)}
-                  className={`flex flex-col items-center gap-1 shrink-0 p-1.5 rounded-2xl transition-all cursor-pointer group ${
-                    estSelectionne
-                      ? "bg-blue-950/70 border border-blue-600 scale-105"
-                      : "hover:bg-gray-800/80"
-                  }`}
-                >
-                  {/* Cercle Avatar avec contour Vert Menthe ou Bleu Roi */}
-                  <div className="relative w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 shadow-md flex items-center justify-center">
-                    <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
-                      {b.avatar_config ? (
-                        <img
-                          src={dataUriAvatarBoutique(b.avatar_config, 48)}
-                          alt={b.nom}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : aPhoto ? (
-                        <img src={aPhoto} alt={b.nom} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-xl">{avatar.emoji}</span>
+          {vueCarrousel === "boutiques" ? (
+            /* Barre des Avatars Snap Map Défilable Horizontalement */
+            <div className="pointer-events-auto w-full max-w-lg bg-gray-950/90 rounded-3xl p-2 sm:p-2.5 shadow-2xl border border-gray-800 backdrop-blur-md flex items-center gap-3 overflow-x-auto no-scrollbar">
+              {marqueurs.map((b, idx) => {
+                const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
+                const aPhoto = b.photo ? urlPhoto(b.photo) : null;
+                const estSelectionne = boutiqueSelectionnee?.id === b.id;
+
+                return (
+                  <button
+                    key={b.id || idx}
+                    type="button"
+                    onClick={() => selectionnerBoutiqueCarousel(b)}
+                    className={`flex flex-col items-center gap-1 shrink-0 p-1.5 rounded-2xl transition-all cursor-pointer group ${
+                      estSelectionne
+                        ? "bg-blue-950/70 border border-blue-600 scale-105"
+                        : "hover:bg-gray-800/80"
+                    }`}
+                  >
+                    {/* Cercle Avatar avec contour Vert Menthe ou Bleu Roi */}
+                    <div className="relative w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 shadow-md flex items-center justify-center">
+                      <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
+                        {b.avatar_config ? (
+                          <img
+                            src={dataUriAvatarBoutique(b.avatar_config, 48)}
+                            alt={b.nom}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : aPhoto ? (
+                          <img src={aPhoto} alt={b.nom} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xl">{avatar.emoji}</span>
+                        )}
+                      </div>
+                      {estSelectionne && (
+                        <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[8px] border-2 border-gray-900">
+                          ✓
+                        </span>
                       )}
                     </div>
-                    {estSelectionne && (
-                      <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[8px] border-2 border-gray-900">
-                        ✓
+                    <span className="text-[10px] font-black text-gray-200 max-w-[65px] truncate">
+                      {b.nom}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            /* Nouvelle liste d'articles individuels (Point C) — distincte du
+               carrousel de boutiques ci-dessus : sélectionner un article
+               retrouve sa boutique et réutilise le mécanisme flyTo existant
+               (selectionnerArticleCarousel → selectionnerBoutiqueCarousel). */
+            <div className="pointer-events-auto w-full max-w-lg bg-gray-950/90 rounded-3xl p-2 sm:p-2.5 shadow-2xl border border-gray-800 backdrop-blur-md flex items-center gap-3 overflow-x-auto no-scrollbar">
+              {articlesFiltres.length === 0 ? (
+                <p className="text-[11px] text-gray-400 font-bold px-2 py-2.5">
+                  Aucun article ne correspond à cette recherche.
+                </p>
+              ) : (
+                articlesFiltres.map((a) => {
+                  const photo = a.photos?.[0] || null;
+                  const estSelectionne = boutiqueSelectionnee?.id === a.boutique_id;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => selectionnerArticleCarousel(a)}
+                      className={`flex flex-col items-center gap-1 shrink-0 p-1.5 rounded-2xl transition-all cursor-pointer group w-16 ${
+                        estSelectionne ? "bg-blue-950/70 border border-blue-600 scale-105" : "hover:bg-gray-800/80"
+                      }`}
+                    >
+                      <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 flex items-center justify-center">
+                        {photo ? (
+                          <img src={photo} alt={a.titre} className="w-full h-full object-cover" />
+                        ) : (
+                          <i className="fa-solid fa-tag text-gray-500 text-sm"></i>
+                        )}
+                      </div>
+                      <span className="text-[9px] font-black text-gray-200 max-w-[65px] truncate">
+                        {a.titre}
                       </span>
-                    )}
-                  </div>
-                  <span className="text-[10px] font-black text-gray-200 max-w-[65px] truncate">
-                    {b.nom}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                      <span className="text-[8px] font-bold text-emerald-400">
+                        {prixLisible(a.prix_xof)} F
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
         {/* 5. BOTTOM SHEET / FICHE BOUTIQUE DÉDIÉE (Style Snap Map Modal) */}
