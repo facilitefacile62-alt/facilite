@@ -4765,15 +4765,6 @@ function ModalFicheBoutique({
                 <i className="fa-solid fa-pen text-[10px]"></i>
                 <span>Modifier le profil</span>
               </button>
-
-              <button
-                type="button"
-                onClick={() => setOngletActif("parametres")}
-                className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-900 dark:text-white text-xs flex items-center justify-center transition active:scale-95 cursor-pointer"
-                title="Plus d'options"
-              >
-                <i className="fa-solid fa-chevron-down text-[10px]"></i>
-              </button>
             </div>
           </div>
 
