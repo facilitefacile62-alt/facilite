@@ -1411,9 +1411,9 @@ export default function Header() {
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
         <div className={`items-center gap-1.5 sm:gap-2 flex-shrink-0 ${isMobileSearchOpen ? "hidden lg:flex" : "flex"}`}>
-          {/* Liens Admin (si role='admin') et Recruteur (si has_badge='verified_recruiter') */}
+          {/* Liens Admin (si role='admin') et Recruteur (si has_badge='verified_recruiter') — Uniquement sur desktop XL pour éviter tout doublon avec la barre mobile */}
           {userSession && (
-            <div className="hidden sm:flex items-center">
+            <div className="hidden xl:flex items-center">
               <RoleNavLink session={userSession} variant="header-desktop" />
             </div>
           )}

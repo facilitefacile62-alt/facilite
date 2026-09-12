@@ -35,8 +35,8 @@
 // À incrémenter à chaque fois qu'un déploiement doit impérativement être vu
 // tout de suite — une correction d'incident, typiquement.
 // v12 (12/09/2026) : notifications filtrees par univers (Facilite vs
-// v12 (12/09/2026) : redirection du logo et accueil vers / pour les visiteurs sur Marketplace
-const VERSION_CACHE = "facilite-v12";
+// v13 (12/09/2026) : suppression du doublon de bouton Admin entre header et barre mobile
+const VERSION_CACHE = "facilite-v13";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
