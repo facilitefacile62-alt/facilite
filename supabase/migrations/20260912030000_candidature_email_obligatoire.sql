@@ -137,7 +137,7 @@ BEGIN
     -- CV le plus récent au dossier du candidat — jamais inventé.
     SELECT id, file_url INTO v_resume_id, v_resume_url
     FROM public.resumes
-    WHERE user_id = v_user_id AND file_url IS NOT NULL AND btrim(file_url) <> ''
+    WHERE user_id = v_user_id AND file_url IS NOT NULL AND btrim(file_url) IS DISTINCT FROM ''
     ORDER BY created_at DESC
     LIMIT 1;
 
