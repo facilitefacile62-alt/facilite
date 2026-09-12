@@ -34,10 +34,9 @@
 //
 // À incrémenter à chaque fois qu'un déploiement doit impérativement être vu
 // tout de suite — une correction d'incident, typiquement.
-// v6 (12/09/2026) : correction du correctif précédent — Accueil/logo doit
-// revenir à l'accueil de l'univers COURANT (marketplace en Facilité
-// Business), pas toujours à "/". Même besoin de visibilité immédiate.
-const VERSION_CACHE = "facilite-v6";
+// v7 (12/09/2026) : menu "Vos Espaces" (Header.jsx) — pastille Mode
+// Candidat/Vendeur cliquable, lignes du switcher vers leur propre page.
+const VERSION_CACHE = "facilite-v7";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
