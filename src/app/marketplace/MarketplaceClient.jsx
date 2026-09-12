@@ -1377,6 +1377,8 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
   const [longitude, setLongitude] = useState(boutique?.longitude ?? profile?.longitude ?? null);
   const [precisionM, setPrecisionM] = useState(boutique?.position_precision_m ?? null);
   const [positionVerrouillee, setPositionVerrouillee] = useState(Boolean(boutique?.position_definie_le || (boutique?.latitude && boutique?.longitude)));
+  const [modeRecaptureGPS, setModeRecaptureGPS] = useState(false);
+  const [rechercheDep, setRechercheDep] = useState("");
   const [anniversaire, setAnniversaire] = useState(profile?.birth_date || "");
   const [sexe, setSexe] = useState(profile?.gender || "Ne pas préciser");
   const [headline, setHeadline] = useState(profile?.headline || "");
@@ -1776,47 +1778,127 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
                 </p>
               )}
 
-              {/* Tiroir d'emplacement avec Verrouillage Position GPS (1:1 Fonctionnel) */}
+              {/* Tiroir d'emplacement avec Coordonnées GPS précises et Modification/Actualisation */}
               {selecteurEmplacementOuvert && (
                 <div className="p-3.5 border border-gray-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-800 space-y-3.5 shadow-lg animate-fadeIn">
-                  {/* Module de Relevé & Verrouillage GPS précis */}
-                  <div className="bg-gray-50 dark:bg-zinc-900/80 p-3 rounded-xl border border-gray-100 dark:border-zinc-700/60 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                        <i className="fa-solid fa-crosshairs text-blue-500"></i>
-                        Verrouiller ma position GPS
-                      </span>
-                      {precisionM && (
-                        <span className="text-[10px] text-emerald-600 font-bold">
-                          Précision : ±{Math.round(precisionM)}m
+                  {/* Coordonnées GPS détaillées si disponibles */}
+                  {latitude && longitude ? (
+                    <div className="bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl p-3 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                          <i className="fa-solid fa-satellite text-emerald-600 dark:text-emerald-400"></i>
+                          Coordonnées GPS liées
                         </span>
-                      )}
-                    </div>
-                    <CapturePosition
-                      verrouillee={positionVerrouillee}
-                      definieLe={boutique?.position_definie_le}
-                      entite="boutique"
-                      onReleve={(p) => {
-                        const dep = departementLePlusProche(p.latitude, p.longitude);
-                        setLatitude(p.latitude);
-                        setLongitude(p.longitude);
-                        setPrecisionM(p.precisionM);
-                        setPositionVerrouillee(true);
-                        if (dep?.nom) {
-                          setEmplacement(dep.nom);
-                        }
-                        showToast(`✓ Position GPS relevée (${dep?.nom || "Sénégal"})`);
-                      }}
-                    />
-                  </div>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-200/70 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-[10px] font-black">
+                          {precisionM ? `Précision ±${Math.round(precisionM)}m` : "Signal Fixé"}
+                        </span>
+                      </div>
 
-                  {/* Liste des 45 Départements du Sénégal */}
-                  <div className="space-y-1">
-                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block px-1">
-                      Ou choisissez votre département
-                    </span>
+                      {/* Grille des Coordonnées (Latitude & Longitude) */}
+                      <div className="grid grid-cols-2 gap-2 bg-white/90 dark:bg-zinc-900/90 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/30 text-xs font-mono">
+                        <div>
+                          <span className="text-[10px] text-gray-400 block uppercase font-sans font-bold">Latitude</span>
+                          <span className="font-bold text-gray-900 dark:text-gray-100">{Number(latitude).toFixed(5)}° N</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-gray-400 block uppercase font-sans font-bold">Longitude</span>
+                          <span className="font-bold text-gray-900 dark:text-gray-100">{Number(longitude).toFixed(5)}° O</span>
+                        </div>
+                      </div>
+
+                      {/* Actions GPS : Actualiser / Recapturer & Voir Carte */}
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setModeRecaptureGPS(true);
+                            setPositionVerrouillee(false);
+                          }}
+                          className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm cursor-pointer"
+                        >
+                          <i className="fa-solid fa-arrows-rotate text-xs"></i>
+                          <span>Actualiser / Recalculer le GPS</span>
+                        </button>
+                        <a
+                          href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-gray-800 dark:text-gray-100 text-xs font-bold flex items-center gap-1.5 transition"
+                          title="Ouvrir dans Google Maps"
+                        >
+                          <i className="fa-solid fa-map-location-dot text-emerald-600 dark:text-emerald-400"></i>
+                          <span>Carte</span>
+                        </a>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Module de Relevé GPS (si pas encore de coordonnées OU si modeRecaptureGPS actif) */}
+                  {(!latitude || !longitude || modeRecaptureGPS) && (
+                    <div className="bg-gray-50 dark:bg-zinc-900/80 p-3 rounded-xl border border-gray-100 dark:border-zinc-700/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                          <i className="fa-solid fa-crosshairs text-blue-500"></i>
+                          Relever ma position GPS en direct
+                        </span>
+                        {modeRecaptureGPS && (
+                          <button
+                            type="button"
+                            onClick={() => setModeRecaptureGPS(false)}
+                            className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                          >
+                            Annuler
+                          </button>
+                        )}
+                      </div>
+                      <CapturePosition
+                        verrouillee={false}
+                        definieLe={null}
+                        entite="position"
+                        optionPayante={false}
+                        onReleve={(p) => {
+                          const dep = departementLePlusProche(p.latitude, p.longitude);
+                          setLatitude(p.latitude);
+                          setLongitude(p.longitude);
+                          setPrecisionM(p.precisionM);
+                          setPositionVerrouillee(true);
+                          setModeRecaptureGPS(false);
+                          if (dep?.nom) {
+                            setEmplacement(dep.nom);
+                          }
+                          showToast(`✓ Coordonnées GPS enregistrées (${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)})`);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Liste et Recherche des Départements du Sénégal */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                        Ou choisissez votre département
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {DEPARTEMENTS_SENEGAL.length} zones
+                      </span>
+                    </div>
+
+                    {/* Barre de filtre rapide */}
+                    <div className="relative">
+                      <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                      <input
+                        type="text"
+                        value={rechercheDep}
+                        onChange={(e) => setRechercheDep(e.target.value)}
+                        placeholder="Rechercher (ex: Dakar, Thiès, Touba...)"
+                        className="w-full bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-gray-900 dark:text-white outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+
                     <div className="max-h-40 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                      {DEPARTEMENTS_SENEGAL.map((dep) => (
+                      {DEPARTEMENTS_SENEGAL.filter((dep) =>
+                        dep.toLowerCase().includes(rechercheDep.toLowerCase().trim())
+                      ).map((dep) => (
                         <button
                           key={dep}
                           type="button"
@@ -1824,13 +1906,16 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
                             setEmplacement(dep);
                             setSelecteurEmplacementOuvert(false);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition ${
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
                             emplacement === dep
                               ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold"
                               : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-700"
                           }`}
                         >
-                          <span>{dep}</span>
+                          <span className="flex items-center gap-2">
+                            <i className="fa-solid fa-location-dot text-[10px] text-emerald-500"></i>
+                            {dep}
+                          </span>
                           {emplacement === dep && <i className="fa-solid fa-check text-xs text-emerald-600"></i>}
                         </button>
                       ))}
