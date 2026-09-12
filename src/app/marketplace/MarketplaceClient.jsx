@@ -4754,17 +4754,8 @@ function ModalFicheBoutique({
               <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
             </div>
 
-            {/* Boutons d'actions inspirés de la Capture 3 */}
+            {/* Boutons d'actions */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setOngletActif("publier")}
-                className="px-3 py-1.5 rounded-lg bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition active:scale-95 cursor-pointer"
-              >
-                <i className="fa-solid fa-plus text-[10px]"></i>
-                <span>Ajouter à la story</span>
-              </button>
-
               <button
                 type="button"
                 onClick={() => setOngletActif("infos_perso")}
