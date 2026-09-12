@@ -34,8 +34,9 @@
 //
 // À incrémenter à chaque fois qu'un déploiement doit impérativement être vu
 // tout de suite — une correction d'incident, typiquement.
-// v11 (12/09/2026) : suppression complete du bouton Autour de moi dans le Header de navigation
-const VERSION_CACHE = "facilite-v11";
+// v12 (12/09/2026) : notifications filtrees par univers (Facilite vs
+// Marketplace) dans la pastille du Header — correction de confidentialite.
+const VERSION_CACHE = "facilite-v12";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
