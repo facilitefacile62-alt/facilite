@@ -2011,15 +2011,6 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
       <div>
         <button
           type="button"
-          onClick={() => setModalActive("infos_perso")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-bold text-[#00c988] dark:text-[#10e688] hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Informations personnelles</span>
-          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setModalActive("details_entreprise")}
           className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
         >
