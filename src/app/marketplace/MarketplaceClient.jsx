@@ -360,23 +360,15 @@ export default function MarketplaceClient() {
                   <div className="h-4 w-28 bg-gray-200 dark:bg-gray-800 rounded mx-auto"></div>
                   <div className="h-3 w-40 bg-gray-100 dark:bg-gray-800/60 rounded mx-auto"></div>
                 </div>
-              ) : userId || profile ? (
+              ) : (userId || profile) && maBoutiqueActive ? (
                 <>
                   {/* 1. Carte de Profil Boutique (Format compact 215px avec son propre profil boutique) */}
                   <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
                     {/* Bannière Boutique Cliquable (Ouvre la fiche boutique) */}
                     <div
-                      onClick={() => {
-                        setBoutiqueModal(maBoutiqueActive || boutiques[0] || {
-                          id: "facilite_shop",
-                          nom: "facilite shop",
-                          quartier: "Guinaw rail nord",
-                          ville: "Pikine",
-                          telephone_whatsapp: "770000000",
-                        });
-                      }}
+                      onClick={() => setBoutiqueModal(maBoutiqueActive)}
                       className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
-                      style={{ backgroundImage: `url('${profile?.cover_url || '/stellar-cover.png'}')` }}
+                      style={{ backgroundImage: `url('${maBoutiqueActive.cover_url || profile?.cover_url || '/stellar-cover.png'}')` }}
                       title="Voir le profil de ma boutique"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
@@ -390,26 +382,18 @@ export default function MarketplaceClient() {
                     <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
                       {/* Avatar / Logo de la Boutique Cliquable */}
                       <div
-                        onClick={() => {
-                          setBoutiqueModal(maBoutiqueActive || boutiques[0] || {
-                            id: "facilite_shop",
-                            nom: "facilite shop",
-                            quartier: "Guinaw rail nord",
-                            ville: "Pikine",
-                            telephone_whatsapp: "770000000",
-                          });
-                        }}
+                        onClick={() => setBoutiqueModal(maBoutiqueActive)}
                         className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
                         title="Voir le profil de ma boutique"
                       >
-                        {profile?.avatar_url || maBoutiqueActive?.avatar_url ? (
+                        {maBoutiqueActive.avatar_url || profile?.avatar_url ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
-                            src={profile?.avatar_url || maBoutiqueActive?.avatar_url}
+                            src={maBoutiqueActive.avatar_url || profile?.avatar_url}
                             alt="Boutique"
                             className="w-full h-full object-cover group-hover:scale-105 transition"
                           />
-                        ) : maBoutiqueActive?.nom ? (
+                        ) : maBoutiqueActive.nom ? (
                           maBoutiqueActive.nom.substring(0, 2).toUpperCase()
                         ) : (
                           <i className="fa-solid fa-store text-xl"></i>
@@ -419,25 +403,17 @@ export default function MarketplaceClient() {
                       {/* Nom de la Boutique (Propre à la boutique) */}
                       <button
                         type="button"
-                        onClick={() => {
-                          setBoutiqueModal(maBoutiqueActive || boutiques[0] || {
-                            id: "facilite_shop",
-                            nom: "facilite shop",
-                            quartier: "Guinaw rail nord",
-                            ville: "Pikine",
-                            telephone_whatsapp: "770000000",
-                          });
-                        }}
+                        onClick={() => setBoutiqueModal(maBoutiqueActive)}
                         className="group cursor-pointer bg-transparent border-none p-0 text-center"
                         title="Voir le profil de ma boutique"
                       >
                         <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
-                          {maBoutiqueActive?.nom || "facilite shop"}
+                          {maBoutiqueActive.nom}
                         </h2>
                       </button>
 
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 font-normal mt-1 mb-2">
-                        {maBoutiqueActive?.ville
+                        {maBoutiqueActive.ville
                           ? `${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville}, Sénégal`
                           : (profile?.location || "Dakar, Sénégal")}
                       </p>
@@ -454,6 +430,39 @@ export default function MarketplaceClient() {
                   </div>
 
                   {/* 2. Menu Toutes les catégories (1:1 Identique à la capture d'écran) */}
+                  <MenuCategoriesSidebar
+                    categorieActive={categorie}
+                    onSelectCategorie={(cat) => {
+                      setCategorie(cat);
+                      if (onglet !== "acheter") setOnglet("acheter");
+                    }}
+                  />
+                </>
+              ) : userId || profile ? (
+                <>
+                  {/* Utilisateur connecté SANS boutique : jamais de fausse
+                      identité "facilite shop" (contredisait la réalité et
+                      brouillait la frontière visiteur/vendeur) — "Devenir
+                      vendeur" est une action honnête et toujours accessible,
+                      pas un statut implicite déjà acquis. Même style que la
+                      carte visiteur ci-dessous, verbe différent. */}
+                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
+                    <div className="flex items-center space-x-2">
+                      <span className="p-1.5 bg-[#10E688]/20 text-[#10E688] rounded-lg text-sm">🚀</span>
+                      <h3 className="text-xs font-black text-white leading-tight">Devenir vendeur</h3>
+                    </div>
+                    <p className="text-[11px] text-gray-300 font-medium leading-relaxed">
+                      Ouvrez votre boutique gratuitement, publiez vos articles avec l&apos;Assistant IA et recevez les commandes sur WhatsApp.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setOnglet("vendre")}
+                      className="block w-full py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs text-center rounded-xl transition shadow-sm cursor-pointer"
+                    >
+                      Ouvrir ma boutique
+                    </button>
+                  </div>
+
                   <MenuCategoriesSidebar
                     categorieActive={categorie}
                     onSelectCategorie={(cat) => {
@@ -5470,12 +5479,14 @@ const TYPES_BOUTIQUE = [
   { id: "etablissement", label: "Établissement", icon: "fa-building" },
 ];
 
-function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistre }) {
+function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistre, profile: propProfile }) {
+  const { profile: authProfile } = useAuth();
+  const profile = propProfile || authProfile;
   const [champs, setChamps] = useState({
-    nom: boutique?.nom || "",
-    quartier: boutique?.quartier || "",
-    ville: boutique?.ville || "Dakar",
-    telephone_whatsapp: boutique?.telephone_whatsapp || "",
+    nom: boutique?.nom || profile?.full_name || "",
+    quartier: boutique?.quartier || profile?.quartier || "",
+    ville: boutique?.ville || profile?.city || profile?.location || "Dakar",
+    telephone_whatsapp: boutique?.telephone_whatsapp || profile?.phone || "",
     latitude: boutique?.latitude ?? null,
     longitude: boutique?.longitude ?? null,
     precisionM: boutique?.position_precision_m ?? null,
