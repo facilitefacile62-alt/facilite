@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ApplyModal from "@/components/ApplyModal";
 import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
 import { chargerNiveauxEtudes, comparerNiveaux } from "@/lib/niveauxEtudes";
 import { isOfferExpired } from "@/lib/offerExpiration";
-import { enregistrerIntentionCandidature } from "@/lib/candidatureIntentions";
 import Link from "next/link";
 
 

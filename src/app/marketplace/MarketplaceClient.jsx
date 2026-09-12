@@ -1361,8 +1361,20 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
   const [toastMessage, setToastMessage] = useState("");
   const [enCours, setEnCours] = useState(false);
 
-  // Données Personnelles
-  const [fullName, setFullName] = useState(profile?.full_name || "");
+  // Données Personnelles (1:1 Conforme à la capture Informations personnelles)
+  const [prenom, setPrenom] = useState(() => {
+    const parts = (profile?.full_name || "facilite facile1").trim().split(" ");
+    return parts.length > 1 ? parts.slice(0, -1).join(" ") : parts[0] || "facilite";
+  });
+  const [nomFamille, setNomFamille] = useState(() => {
+    const parts = (profile?.full_name || "facilite facile1").trim().split(" ");
+    return parts.length > 1 ? parts[parts.length - 1] : "facile1";
+  });
+  const [fullName, setFullName] = useState(profile?.full_name || "facilite facile1");
+  const [emplacement, setEmplacement] = useState(profile?.city || profile?.location || profile?.quartier || "");
+  const [selecteurEmplacementOuvert, setSelecteurEmplacementOuvert] = useState(false);
+  const [anniversaire, setAnniversaire] = useState(profile?.birth_date || "");
+  const [sexe, setSexe] = useState(profile?.gender || "Ne pas préciser");
   const [headline, setHeadline] = useState(profile?.headline || "");
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || boutique?.avatar_url || null);
   const avatarInputRef = useRef(null);
@@ -1443,13 +1455,18 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
   };
 
   const handleSaveInfosPerso = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     setEnCours(true);
     try {
+      const nomComplet = `${prenom} ${nomFamille}`.trim();
+      setFullName(nomComplet);
       if (userId) {
         await supabase.from("profiles").update({
-          full_name: fullName,
-          headline,
+          full_name: nomComplet,
+          city: emplacement || "Dakar",
+          location: emplacement || "Dakar",
+          birth_date: anniversaire || null,
+          gender: sexe,
           updated_at: new Date().toISOString(),
         }).eq("id", userId);
       }
@@ -1638,6 +1655,15 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
       <div>
         <button
           type="button"
+          onClick={() => setModalActive("infos_perso")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-bold text-[#00c988] dark:text-[#10e688] hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Informations personnelles</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setModalActive("details_entreprise")}
           className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
         >
@@ -1761,37 +1787,41 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
       {/* SÉPARATEUR 2 (1:1 Capture exacte) */}
       <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
 
-      {/* GROUPE 3 : Chat, Commentaires, Notifications */}
+      {/* GROUPE 3 : Toggles Chat, Commentaires & Notifs */}
       <div>
-        <button
-          type="button"
-          onClick={() => {
-            const nv = !chatDesactive;
-            setChatDesactive(nv);
-            showToast(nv ? "Chat désactivé" : "Chat activé");
-          }}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Désactiver le chat</span>
-          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${chatDesactive ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"}`}>
+        <div className="w-full px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800">
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            Désactiver le chat
+          </span>
+          <button
+            type="button"
+            onClick={() => setChatDesactive(!chatDesactive)}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+              chatDesactive
+                ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+            }`}
+          >
             {chatDesactive ? "Désactivé" : "Actif"}
-          </span>
-        </button>
+          </button>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            const nv = !commentairesDesactives;
-            setCommentairesDesactives(nv);
-            showToast(nv ? "Commentaires désactivés" : "Commentaires activés");
-          }}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Désactiver les commentaires</span>
-          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${commentairesDesactives ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"}`}>
-            {commentairesDesactives ? "Désactivés" : "Actifs"}
+        <div className="w-full px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800">
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            Désactiver les commentaires
           </span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setCommentairesDesactives(!commentairesDesactives)}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+              commentairesDesactives
+                ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+            }`}
+          >
+            {commentairesDesactives ? "Désactivés" : "Actifs"}
+          </button>
+        </div>
 
         <button
           type="button"
@@ -1807,14 +1837,6 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
 
       {/* GROUPE 4 : Mot de passe, Suppression, Déconnexion & Sortie */}
       <div>
-        <button
-          type="button"
-          onClick={() => setModalActive("infos_perso")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Informations personnelles</span>
-        </button>
-
         <button
           type="button"
           onClick={() => setModalActive("password")}
@@ -1858,12 +1880,12 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
       {/* MODALS D'ÉDITION DES RÉGLAGES                                            */}
       {/* ========================================================================= */}
 
-      {/* 1. Modal Informations personnelles */}
+      {/* 1. Modal Informations personnelles (1:1 Conforme à la capture) */}
       {modalActive === "infos_perso" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm sm:max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
-              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+              <h3 className="text-base font-extrabold text-[#00c988] dark:text-[#10e688]">
                 Informations personnelles
               </h3>
               <button
@@ -1875,60 +1897,151 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
               </button>
             </div>
 
-            <form onSubmit={handleSaveInfosPerso} className="space-y-3.5">
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center text-xl font-bold overflow-hidden shrink-0 border-2 border-emerald-500/20">
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <i className="fa-regular fa-user"></i>
-                  )}
-                </div>
-                <div>
+            <form onSubmit={handleSaveInfosPerso} className="space-y-4 pt-2">
+              {/* Avatar Circulaire Centré avec Bouton Crayon (1:1 Capture) */}
+              <div className="flex justify-center pb-2">
+                <div className="relative">
+                  <div
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="w-24 h-24 rounded-full bg-[#86EFAC] text-white flex items-center justify-center text-4xl overflow-hidden cursor-pointer shadow-inner border-2 border-emerald-300"
+                    title="Changer mon avatar"
+                  >
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <i className="fa-solid fa-user text-white text-3xl"></i>
+                    )}
+                  </div>
+                  {/* Badge Crayon en bas à droite de l'avatar */}
                   <button
                     type="button"
                     onClick={() => avatarInputRef.current?.click()}
-                    className="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs font-bold transition cursor-pointer"
+                    className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white dark:bg-zinc-800 shadow-md border border-gray-200 dark:border-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-200 hover:scale-105 active:scale-95 transition cursor-pointer"
+                    title="Modifier l'avatar"
                   >
-                    Changer ma photo
+                    <i className="fa-solid fa-pen text-xs"></i>
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Nom complet *
-                </label>
+              {/* Champ Prénom* avec Compteur X / 20 */}
+              <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition">
+                <div className="flex justify-between items-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                  <span>Prénom*</span>
+                  <span className="text-gray-400 font-normal">{prenom.length} / 20</span>
+                </div>
                 <input
                   type="text"
                   required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Ex : Moussa Diop"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  maxLength={20}
+                  value={prenom}
+                  onChange={(e) => setPrenom(e.target.value)}
+                  placeholder="facilite"
+                  className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Profession / Titre
-                </label>
+              {/* Champ Nom* avec Compteur X / 20 */}
+              <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition">
+                <div className="flex justify-between items-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                  <span>Nom*</span>
+                  <span className="text-gray-400 font-normal">{nomFamille.length} / 20</span>
+                </div>
                 <input
                   type="text"
-                  value={headline}
-                  onChange={(e) => setHeadline(e.target.value)}
-                  placeholder="Ex : Juriste Droit Privé & Droits Humains"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  required
+                  maxLength={20}
+                  value={nomFamille}
+                  onChange={(e) => setNomFamille(e.target.value)}
+                  placeholder="facile1"
+                  className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5"
                 />
+              </div>
+
+              {/* Sélectionnez l'emplacement* */}
+              <div className="space-y-1">
+                <div
+                  onClick={() => setSelecteurEmplacementOuvert(!selecteurEmplacementOuvert)}
+                  className={`border ${!emplacement ? "border-red-500" : "border-gray-300 dark:border-zinc-700"} rounded-xl px-3.5 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition`}
+                >
+                  <span className={`text-xs sm:text-sm font-medium ${!emplacement ? "text-gray-400" : "text-gray-900 dark:text-white"}`}>
+                    {emplacement || "Sélectionnez l'emplacement*"}
+                  </span>
+                  <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                </div>
+                {!emplacement && (
+                  <p className="text-[11px] font-medium text-red-500 pl-1">
+                    Ce champ est obligatoire.
+                  </p>
+                )}
+                {selecteurEmplacementOuvert && (
+                  <div className="p-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 max-h-40 overflow-y-auto space-y-1">
+                    {DEPARTEMENTS_SENEGAL.map((dep) => (
+                      <button
+                        key={dep}
+                        type="button"
+                        onClick={() => {
+                          setEmplacement(dep);
+                          setSelecteurEmplacementOuvert(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold ${
+                          emplacement === dep
+                            ? "bg-emerald-50 text-emerald-700 font-bold"
+                            : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-700"
+                        }`}
+                      >
+                        {dep}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Anniversaire avec Icône Calendrier */}
+              <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 flex items-center justify-between">
+                <input
+                  type="date"
+                  value={anniversaire}
+                  onChange={(e) => setAnniversaire(e.target.value)}
+                  className="w-full bg-transparent text-xs sm:text-sm text-gray-700 dark:text-gray-200 outline-none cursor-pointer"
+                />
+                <i className="fa-regular fa-calendar text-gray-400 text-sm shrink-0 pointer-events-none"></i>
+              </div>
+
+              {/* Sexe */}
+              <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 flex items-center justify-between">
+                <div className="flex-1">
+                  <span className="block text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                    Sexe
+                  </span>
+                  <select
+                    value={sexe}
+                    onChange={(e) => setSexe(e.target.value)}
+                    className="w-full bg-transparent text-xs sm:text-sm font-semibold text-gray-900 dark:text-white outline-none cursor-pointer pt-0.5"
+                  >
+                    <option value="Ne pas préciser" className="dark:bg-zinc-900">Ne pas préciser</option>
+                    <option value="Homme" className="dark:bg-zinc-900">Homme</option>
+                    <option value="Femme" className="dark:bg-zinc-900">Femme</option>
+                  </select>
+                </div>
+                {sexe !== "Ne pas préciser" && (
+                  <button
+                    type="button"
+                    onClick={() => setSexe("Ne pas préciser")}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
+                  >
+                    <i className="fa-solid fa-xmark text-xs"></i>
+                  </button>
+                )}
               </div>
 
               <button
                 type="submit"
                 disabled={enCours}
-                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
+                className="w-full py-3 rounded-2xl bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 font-black text-xs sm:text-sm shadow-md transition cursor-pointer disabled:opacity-50 mt-3"
               >
-                {enCours ? "Enregistrement..." : "Enregistrer les informations"}
+                {enCours ? "Enregistrement..." : "Enregistrer les modifications"}
               </button>
             </form>
           </div>

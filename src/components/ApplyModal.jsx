@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { computeApplicationMatch } from "@/lib/matchScore";
 import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { enregistrerIntentionCandidature } from "@/lib/candidatureIntentions";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, triggerToast }) {
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [destinationEmail, setDestinationEmail] = useState("");
@@ -80,6 +83,38 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         setAuthChecked(true);
 
         if (session?.user) {
+          // Règle métier : email strictement obligatoire pour candidater.
+          // Point d'interception unique — ApplyModal est le seul composant
+          // réellement rendu derrière tous les boutons "Postuler" (offre
+          // détaillée, accueil, liste d'offres, recruteur, candidature
+          // spontanée) ; voir supabase/migrations/20260912030000_candidature_email_obligatoire.sql.
+          // L'intention est mémorisée côté serveur (jamais sessionStorage :
+          // le lien de confirmation d'email s'ouvre souvent dans un autre
+          // onglet/appareil), puis on bloque l'ouverture du formulaire et on
+          // redirige automatiquement vers l'écran de gestion de l'email.
+          if (!session.user.email_confirmed_at) {
+            try {
+              const isUuidOffer = job?.id != null && !job.isSpontaneous && UUID_RE.test(String(job.id));
+              const isLegacyOffer = job?.id != null && !job.isSpontaneous && !isUuidOffer && !Number.isNaN(Number(job.id));
+              await enregistrerIntentionCandidature({
+                userId: session.user.id,
+                jobOfferId: isUuidOffer ? job.id : null,
+                jobId: isLegacyOffer ? Number(job.id) : null,
+                jobTitle: (selectedLang === "FR" ? job?.titleFR : job?.titleEN) || job?.title || "Candidature",
+                company: job?.company || "",
+                recruiterEmail: job?.recruiterEmail || job?.contact_email || null,
+              });
+            } catch (err) {
+              console.warn("Intention de candidature non enregistrée :", err.message);
+            }
+            if (triggerToast) {
+              triggerToast("Confirmez votre adresse email pour finaliser votre candidature.", "fa-envelope-circle-check");
+            }
+            onClose();
+            router.push("/profil?section=securite");
+            return;
+          }
+
           setEmail(session.user.email || "");
           
           // Essayer de récupérer le profil complet pour pré-remplir le nom complet

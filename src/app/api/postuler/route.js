@@ -15,6 +15,8 @@ export const maxDuration = 55;
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // --- Pièce jointe de la messagerie interne (bucket privé chat-attachments) ---
 // Même convention que src/lib/chatAttachments.js (uploadChatAttachment /
 // getChatAttachmentSignedUrl), réimplémentée ici côté serveur pour rester
@@ -115,13 +117,6 @@ export async function POST(req) {
       );
     }
 
-    if (existingIds.length === 0 && uploadedFiles.length === 0) {
-      return NextResponse.json(
-        { error: "Veuillez fournir au moins un CV ou document (sélectionné ou importé)." },
-        { status: 400 }
-      );
-    }
-
     // 3. Instancier le client Supabase avec le token de l'utilisateur connecté
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
@@ -132,6 +127,46 @@ export async function POST(req) {
         },
       },
     });
+
+    // Règle métier : email strictement obligatoire pour candidater — voir
+    // supabase/migrations/20260912030000_candidature_email_obligatoire.sql.
+    // Défense en profondeur : ApplyModal.jsx bloque déjà ce cas côté client
+    // (voir son propre commentaire), mais un appel direct à cette route,
+    // sans passer par le formulaire, doit être refusé ici aussi — jamais une
+    // vérification uniquement côté client, contournable via un appel API
+    // direct. L'intention est mémorisée ici aussi, pour que même une
+    // candidature tentée hors du formulaire soit automatiquement finalisée
+    // une fois l'email confirmé (finaliser_candidatures_en_attente).
+    if (!user.email_confirmed_at) {
+      const jobIdStr = String(jobId);
+      const isUuidOffer = UUID_RE.test(jobIdStr);
+      const isLegacyOffer = !isUuidOffer && !Number.isNaN(Number(jobIdStr));
+      const { error: intentionError } = await supabase.from("candidature_intentions").insert({
+        user_id: user.id,
+        job_offer_id: isUuidOffer ? jobIdStr : null,
+        job_id: isLegacyOffer ? Number(jobIdStr) : null,
+        job_title: String(jobTitle),
+        company: String(company),
+        recruiter_email: recruiterEmail || null,
+      });
+      if (intentionError && intentionError.code !== "23505") {
+        console.warn("Intention de candidature non enregistrée (postuler):", intentionError.message);
+      }
+      return NextResponse.json(
+        {
+          error: "Votre adresse email doit être confirmée avant de postuler.",
+          code: "email_requis",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (existingIds.length === 0 && uploadedFiles.length === 0) {
+      return NextResponse.json(
+        { error: "Veuillez fournir au moins un CV ou document (sélectionné ou importé)." },
+        { status: 400 }
+      );
+    }
 
     // --- FILTRES D'ÉLIGIBILITÉ STRICTS ---
     // jobId sert deux flux distincts, jamais mélangés :

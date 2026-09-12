@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
+import { finaliserCandidaturesEnAttente } from "@/lib/candidatureIntentions";
 
 const AuthContext = createContext({
   session: null,
@@ -45,6 +46,21 @@ export function AuthProvider({ children }) {
     const currentUser = currentSession.user;
     setSession(currentSession);
     setUser(currentUser);
+
+    // Finalisation best-effort des candidatures mises en attente faute
+    // d'email confirmé (règle métier du 2026-09-12, voir
+    // src/lib/candidatureIntentions.js et la migration
+    // 20260912030000_candidature_email_obligatoire.sql). Ne fait jamais rien
+    // tant que l'email n'est pas confirmé — appelée à chaque connexion/
+    // rafraîchissement de session, sur n'importe quel appareil, pour
+    // couvrir le cas où le lien de confirmation s'ouvre ailleurs que sur
+    // l'appareil d'origine. Jamais attendue : ne doit jamais retarder le
+    // chargement du profil.
+    if (currentUser.email_confirmed_at) {
+      finaliserCandidaturesEnAttente().catch((err) => {
+        console.warn("Finalisation des candidatures en attente échouée :", err.message);
+      });
+    }
 
     try {
       const [profileRes, roleRes] = await Promise.all([
