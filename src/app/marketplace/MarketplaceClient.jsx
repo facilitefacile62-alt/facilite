@@ -4670,7 +4670,7 @@ function ModalFicheBoutique({
             userId={userId}
             profile={profile}
             boutique={boutique}
-            sectionInitiale="infos_perso"
+            sectionInitiale={ongletActif === "infos_perso" ? "infos_perso" : null}
             onRetour={() => setOngletActif("produits")}
             onEnregistre={() => {
               onBoutiqueUpdate?.();
