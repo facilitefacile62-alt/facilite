@@ -34,11 +34,8 @@
 //
 // À incrémenter à chaque fois qu'un déploiement doit impérativement être vu
 // tout de suite — une correction d'incident, typiquement.
-// v8 (12/09/2026) : notifications "offre en ligne" filtrées sur le compte
-// connecté (fetchJobOfferNotifs, Header.jsx) — incluaient auparavant les
-// offres de TOUS les recruteurs. Correction de confidentialité, à faire
-// voir immédiatement.
-const VERSION_CACHE = "facilite-v8";
+// v9 (12/09/2026) : mise a jour des reglages marketplace et suppression de l'entree informations personnelles
+const VERSION_CACHE = "facilite-v9";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
