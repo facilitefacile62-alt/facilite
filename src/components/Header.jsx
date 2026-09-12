@@ -1686,26 +1686,23 @@ export default function Header() {
                   {/* Ligne de séparation */}
                   <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
 
-                  {/* Liens d'action rapides : accès générique à chaque
-                      univers (Facilité / Marketplace) — distinct des lignes
-                      ci-dessus, qui amènent maintenant chacune sur SA propre
-                      page personnelle (profil / fiche boutique). */}
-                  <div className="flex items-center justify-between px-1 py-1 text-[11px] font-bold">
+                  {/* Liens d'action rapides : Facilité (Vert) & Marketplace (Bleu) - Exact Image */}
+                  <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-gray-800 text-xs sm:text-[13px] font-bold">
                     <Link
                       href="/"
                       onClick={() => setProfileDropdownOpen(false)}
-                      className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
+                      className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
                     >
-                      <i className="fa-solid fa-id-card text-xs text-emerald-600 dark:text-emerald-400"></i>
-                      <span>Facilité</span>
+                      <i className="fa-solid fa-id-card text-sm text-emerald-600 dark:text-emerald-400"></i>
+                      <span className="font-bold">Facilité</span>
                     </Link>
                     <Link
                       href="/marketplace"
                       onClick={() => setProfileDropdownOpen(false)}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
                     >
-                      <i className="fa-solid fa-store text-xs text-blue-600 dark:text-blue-400"></i>
-                      <span>Marketplace</span>
+                      <i className="fa-solid fa-store text-sm text-blue-600 dark:text-blue-400"></i>
+                      <span className="font-bold">Marketplace</span>
                     </Link>
                   </div>
 
@@ -2095,21 +2092,21 @@ export default function Header() {
                   </>
                 )}
 
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px] font-bold">
+                <div className="flex items-center justify-between pt-2 px-1 border-t border-gray-100 dark:border-gray-800 text-xs sm:text-[13px] font-bold">
                   <Link
                     href="/"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
+                    className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
                   >
-                    <i className="fa-solid fa-id-card text-xs"></i>
+                    <i className="fa-solid fa-id-card text-sm"></i>
                     <span>Facilité</span>
                   </Link>
                   <Link
                     href="/marketplace"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
                   >
-                    <i className="fa-solid fa-store text-xs"></i>
+                    <i className="fa-solid fa-store text-sm"></i>
                     <span>Marketplace</span>
                   </Link>
                 </div>
