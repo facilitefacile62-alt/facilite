@@ -35,7 +35,7 @@
 // À incrémenter à chaque fois qu'un déploiement doit impérativement être vu
 // tout de suite — une correction d'incident, typiquement.
 // v12 (12/09/2026) : notifications filtrees par univers (Facilite vs
-// Marketplace) dans la pastille du Header — correction de confidentialite.
+// v12 (12/09/2026) : redirection du logo et accueil vers / pour les visiteurs sur Marketplace
 const VERSION_CACHE = "facilite-v12";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
