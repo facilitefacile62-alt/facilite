@@ -25,7 +25,9 @@ function extractSendPhoneErrorMessage(err) {
 
 // Même nettoyage que ci-dessus, pour updateUser({ email }) — même famille de
 // réponses Supabase (déjà pris, rate limit, objet vide sérialisé en "{}").
-function extractSendEmailErrorMessage(err) {
+// Exporté : réutilisé tel quel par PhoneSignupEmailPrompt.jsx (même appel
+// updateUser({email}), même erreurs possibles), plutôt que dupliqué.
+export function extractSendEmailErrorMessage(err) {
   let msg = err?.message || "Impossible d'envoyer le code de vérification.";
   if (/already.*registered|already exists/i.test(msg)) {
     msg = "Cette adresse e-mail est déjà associée à un autre compte.";

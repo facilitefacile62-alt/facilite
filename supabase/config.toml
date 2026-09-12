@@ -256,13 +256,17 @@ otp_expiry = 3600
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
-enable_signup = false
+enable_signup = true
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
 # Template for sending OTP to users
-template = "Your code is {{ `{{ .Code }}` }}"
+template = "Votre code de vérification Facilité est : {{ `{{ .Code }}` }}. Expire dans 10 minutes."
 # Controls the minimum amount of time that must pass before sending another sms otp.
-max_frequency = "5s"
+# Pas de compteur natif "3 envois / 15 min" côté Supabase : ce délai minimum
+# entre deux envois (approximation la plus proche disponible) est fixé à 5
+# minutes plutôt que la valeur par défaut de 5s, à l'évidence pensée pour le
+# développement local, pas pour limiter un abus réel en production.
+max_frequency = "5m"
 
 # Use pre-defined map of phone number to OTP for testing.
 # [auth.sms.test_otp]
@@ -286,12 +290,15 @@ max_frequency = "5s"
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+# Compte Twilio dédié à l'OTP (TWILIO_OTP_*, voir .env.example) — jamais le
+# compte Twilio existant (TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN), réservé à
+# la notification WhatsApp d'achat de CV (src/lib/notifications.js).
 [auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
+enabled = true
+account_sid = "env(TWILIO_OTP_ACCOUNT_SID)"
+message_service_sid = "env(TWILIO_OTP_MESSAGING_SERVICE_SID)"
 # DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
-auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
+auth_token = "env(TWILIO_OTP_AUTH_TOKEN)"
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]

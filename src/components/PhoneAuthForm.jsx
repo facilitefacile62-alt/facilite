@@ -20,11 +20,19 @@ const COUNTRIES = [
   { code: "other", iso: "other", name: "Autre (Saisie libre)" },
 ];
 
-// Connexion UNIQUEMENT (jamais d'inscription) : seuls Google et l'e-mail
-// créent un compte (/register). Un numéro vérifié s'ajoute après coup
-// depuis le profil (Sécurité & Connexion, cf. SecurityTabContent.jsx) —
-// c'est CE flux-là qui crée la vérification, jamais signInWithOtp ici.
-export default function PhoneAuthForm({ onSuccessRedirect = "/" }) {
+// Deux modes, un seul composant :
+// - "login" (défaut, utilisé sur /login) : jamais de création de compte
+//   (shouldCreateUser: false) — inchangé depuis l'origine de ce composant.
+//   Un numéro vérifié s'ajoute après coup depuis le profil (Sécurité &
+//   Connexion, cf. SecurityTabContent.jsx).
+// - "signup" (utilisé sur /register, derrière PHONE_SIGNUP_ENABLED) :
+//   shouldCreateUser: true. Un compte créé par téléphone n'a par
+//   construction aucun email — si la session obtenue n'en a toujours pas,
+//   onNeedsEmail(session) est appelée à la place de la redirection
+//   habituelle, pour laisser l'appelant proposer PhoneSignupEmailPrompt
+//   (jamais imposé : la règle "email obligatoire pour candidater" ne
+//   bloque que la candidature, pas la création du compte).
+export default function PhoneAuthForm({ onSuccessRedirect = "/", mode = "login", onNeedsEmail }) {
   const router = useRouter();
 
   // Étape 1 : 'phone' (Saisie numéro) | Étape 2 : 'otp' (Saisie code 6 chiffres)
@@ -81,12 +89,12 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/" }) {
       const { error: supabaseError } = await supabase.auth.signInWithOtp({
         phone: fullPhoneNumber,
         options: {
-          // false : ce formulaire ne crée plus de compte (retiré comme
-          // méthode d'inscription initiale — seuls Google et l'e-mail sur
-          // /register créent un compte). Un numéro inconnu renvoie une
-          // erreur explicite ci-dessous plutôt que de créer un compte fantôme
-          // sans nom ni e-mail comme c'était le cas avant.
-          shouldCreateUser: false,
+          // mode "login" (défaut) : jamais de création de compte, un
+          // numéro inconnu renvoie une erreur explicite ci-dessous plutôt
+          // que de créer un compte fantôme sans nom ni e-mail comme
+          // c'était le cas avant. mode "signup" : autorisé, voir
+          // onNeedsEmail plus bas pour ce qui suit une vraie création.
+          shouldCreateUser: mode === "signup",
         },
       });
 
@@ -150,11 +158,20 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/" }) {
       if (supabaseError) throw supabaseError;
 
       if (data?.session) {
-        setMessage("Connexion réussie ! Redirection en cours...");
-        // Best-effort, ne bloque jamais la redirection : annule une
-        // suppression de compte en attente si la personne se reconnecte
-        // (Section 3b "Supprimer le compte" du profil).
+        // Best-effort, ne bloque jamais la suite : annule une suppression
+        // de compte en attente si la personne se reconnecte (Section 3b
+        // "Supprimer le compte" du profil).
         notifierConnexion(data.session);
+
+        // Compte tout juste créé par téléphone, toujours sans e-mail —
+        // propose l'ajout plutôt que de rediriger directement (jamais
+        // imposé, voir PhoneSignupEmailPrompt).
+        if (mode === "signup" && !data.session.user?.email && onNeedsEmail) {
+          onNeedsEmail(data.session);
+          return;
+        }
+
+        setMessage("Connexion réussie ! Redirection en cours...");
         const searchRedirect = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
         const targetUrl = searchRedirect || onSuccessRedirect || "/";
         setTimeout(() => {

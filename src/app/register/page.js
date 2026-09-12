@@ -5,6 +5,15 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import PhoneAuthForm from "@/components/PhoneAuthForm";
+import PhoneSignupEmailPrompt from "@/components/PhoneSignupEmailPrompt";
+
+// Désactivé tant que Twilio n'est pas branché en production (même
+// convention que PHONE_LOGIN_ENABLED, login/page.js) : masque l'onglet
+// Téléphone sans toucher au code, à repasser à `true` une fois un envoi
+// SMS réel testé de bout en bout. Envisager de réactiver PHONE_LOGIN_ENABLED
+// au même moment.
+const PHONE_SIGNUP_ENABLED = false;
 
 function RegisterForm() {
   const [nom, setNom] = useState("");
@@ -17,6 +26,12 @@ function RegisterForm() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
+  // Onglet Email / Téléphone (masqué tant que PHONE_SIGNUP_ENABLED est
+  // false) et étape post-inscription téléphone : 'formulaire' (saisie
+  // numéro + code) puis 'email_prompt' si le compte créé n'a pas d'e-mail
+  // (voir PhoneAuthForm mode="signup" onNeedsEmail).
+  const [authMethod, setAuthMethod] = useState("email");
+  const [phoneSignupStep, setPhoneSignupStep] = useState("formulaire");
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/";
@@ -122,6 +137,15 @@ function RegisterForm() {
     }
   };
 
+  // Fin du flux d'inscription téléphone (e-mail ajouté ou "Plus tard") —
+  // même logique de redirection que PhoneAuthForm applique déjà en interne
+  // pour le cas sans prompt d'e-mail (?redirect= prioritaire sur redirectUrl).
+  const terminerInscriptionTelephone = () => {
+    const searchRedirect = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
+    router.push(searchRedirect || redirectUrl || "/");
+    router.refresh();
+  };
+
   return (
     <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/50 font-sans flex flex-col justify-start items-center pt-4 sm:pt-6 pb-8 px-3 sm:px-4 relative select-none">
       {/* Conteneur Principal / Carte d'Inscription */}
@@ -156,6 +180,57 @@ function RegisterForm() {
             </div>
           )}
 
+          {/* Onglets E-mail / Téléphone — Téléphone masqué tant que Twilio
+              n'est pas configuré (PHONE_SIGNUP_ENABLED en tête de fichier) */}
+          {PHONE_SIGNUP_ENABLED && (
+            <div className="flex bg-gray-100 rounded-xl p-1 mb-4" role="tablist" aria-label="Méthode d'inscription">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMethod === "email"}
+                onClick={() => setAuthMethod("email")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/40 ${
+                  authMethod === "email" ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                E-mail
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authMethod === "phone"}
+                onClick={() => setAuthMethod("phone")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/40 ${
+                  authMethod === "phone" ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Téléphone
+              </button>
+            </div>
+          )}
+
+          {PHONE_SIGNUP_ENABLED && authMethod === "phone" ? (
+            <div className="space-y-2.5">
+              {phoneSignupStep === "formulaire" ? (
+                <>
+                  <p className="text-[11px] text-gray-500 font-medium text-center">
+                    Un code de vérification sera envoyé par SMS. Déjà un compte ?{" "}
+                    <Link href="/login" className="font-bold text-gray-900 hover:underline">
+                      Connectez-vous
+                    </Link>
+                    .
+                  </p>
+                  <PhoneAuthForm
+                    mode="signup"
+                    onSuccessRedirect={redirectUrl}
+                    onNeedsEmail={() => setPhoneSignupStep("email_prompt")}
+                  />
+                </>
+              ) : (
+                <PhoneSignupEmailPrompt onDone={terminerInscriptionTelephone} onSkip={terminerInscriptionTelephone} />
+              )}
+            </div>
+          ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <input
                 type="text"
@@ -319,6 +394,7 @@ function RegisterForm() {
                 </p>
               </div>
             </form>
+          )}
         </div>
       </main>
 
