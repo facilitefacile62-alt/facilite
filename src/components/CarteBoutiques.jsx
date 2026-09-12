@@ -62,7 +62,7 @@ const distanceLisible = (km) =>
       ? `${Math.round(Number(km) * 1000)} m`
       : `${String(Number(km)).replace(".", ",")} km`;
 
-export default function CarteBoutiques({ articles, boutiquesSansArticles = [], depart, onChoisirBoutique, onOuvrirExplorer, onReinitialiserPosition }) {
+export default function CarteBoutiques({ articles, boutiquesSansArticles = [], storeIdsPremium, depart, onChoisirBoutique, onOuvrirExplorer, onReinitialiserPosition }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const menuFiltresRef = useRef(null);
@@ -116,6 +116,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
           mode_horaires: a.boutique_mode_horaires || a.mode_horaires || "indiques",
           horaires: a.horaires || a.boutique_horaires || [],
           avatar_config: a.boutique_avatar_config || null,
+          estPremium: storeIdsPremium?.has(a.boutique_id) || false,
           articles: [],
         });
       }
@@ -138,11 +139,17 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
         mode_horaires: s.mode_horaires || "indiques",
         horaires: s.horaires || [],
         avatar_config: s.avatar_config || null,
+        estPremium: storeIdsPremium?.has(s.id) || false,
         articles: [],
       });
     }
-    return [...par.values()];
-  }, [articles, boutiquesSansArticles]);
+    // Priorité de position (Premium Marketplace) : tri stable, Premium
+    // d'abord — voir boutiquesPourGlobe (MarketplaceClient.jsx) pour le
+    // même raisonnement, appliqué ici au regroupement propre à ce
+    // composant (construit séparément, à partir des mêmes props articles/
+    // boutiquesSansArticles).
+    return [...par.values()].sort((a, b) => (b.estPremium ? 1 : 0) - (a.estPremium ? 1 : 0));
+  }, [articles, boutiquesSansArticles, storeIdsPremium]);
 
   // Boutiques affichées selon la pastille active — filtre à la fois les
   // marqueurs dessinés sur la carte et le carrousel du bas, comme Explorer.
@@ -206,6 +213,16 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
             couleur = enStock ? COULEUR : "#6b7280";
           }
 
+          // Badge Premium Marketplace (Point 6) — coin opposé au badge de
+          // statut d'ouverture ci-dessous pour ne jamais les superposer.
+          // Couronne discrète plutôt qu'une bordure d'avatar recolorée :
+          // la couleur de bordure porte déjà le type_boutique (produit/
+          // service/établissement), la réutiliser pour Premium aurait
+          // rendu les deux informations indistinguables.
+          const premiumBadgeHtml = b.estPremium
+            ? `<div style="position:absolute;top:-3px;left:-3px;background:#F59E0B;color:#000;font-size:8px;padding:1px 3px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">👑</div>`
+            : "";
+
           // Statut d'ouverture en direct — uniquement pour les établissements
           // (demande explicite : ne rien changer pour produit/service). Sans
           // ce filtre, calculerStatutOuverture("indiques" jamais configuré,
@@ -267,6 +284,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                       <div class="avatar-boutique-zoom-scale" style="position:relative;">
                         <div class="avatar-boutique-anime" style="width:28px;height:28px;border-radius:9999px;border:2.5px solid ${couleur};overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.35);background:#fff;">${svgAvatarBoutique(b.avatar_config, 28)}</div>
                         ${pointAlarmeBadgeHtml}
+                        ${premiumBadgeHtml}
                       </div>
                       <span style="display:flex;align-items:center;max-width:96px;padding:1px 6px;background:rgba(17,24,39,0.92);color:#fff;font-size:9px;font-weight:800;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${pointStatutHtml}${echapperHtml(b.nom)}</span>
                     </div>
@@ -528,7 +546,11 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                     }}
                     className="flex flex-col items-center gap-0 shrink-0 rounded-xl hover:bg-gray-800/80 transition cursor-pointer"
                   >
-                    <div className="w-6 h-6 rounded-full overflow-hidden border-2 border-gray-700 bg-gray-800 flex items-center justify-center">
+                    <div
+                      className={`w-6 h-6 rounded-full overflow-hidden border-2 bg-gray-800 flex items-center justify-center ${
+                        b.estPremium ? "border-amber-400" : "border-gray-700"
+                      }`}
+                    >
                       {b.avatar_config ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -542,7 +564,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
                         </span>
                       )}
                     </div>
-                    <span className="text-[8px] font-bold text-gray-300 max-w-[52px] truncate leading-tight">{b.nom}</span>
+                    <span className="text-[8px] font-bold text-gray-300 max-w-[52px] truncate leading-tight">
+                      {b.estPremium && <span className="text-amber-400">★ </span>}
+                      {b.nom}
+                    </span>
                   </button>
                 ))}
               </div>

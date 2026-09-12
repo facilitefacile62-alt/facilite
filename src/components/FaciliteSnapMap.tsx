@@ -78,6 +78,13 @@ export interface FaciliteMembreBoutique {
   lng: number;
   estCertifie?: boolean;
   estActif?: boolean;
+  // Premium Marketplace (voir premium_marketplace, migration
+  // 20260912020000_jetons_marketplace.sql) — champ ajouté pour cohérence
+  // de type avec CarteBoutiques.jsx/GlobeExplorateurBoutiques.jsx, mais ce
+  // composant n'est actuellement rendu nulle part dans le dépôt (recherche
+  // de `<FaciliteSnapMap` faite avant d'écrire ceci : aucun résultat) —
+  // aucun effet visible tant qu'il n'est pas reconnecté à un parent.
+  estPremium?: boolean;
   telephoneWhatsapp?: string;
   quartier?: string;
   ville?: string;

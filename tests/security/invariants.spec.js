@@ -387,7 +387,12 @@ test.describe("Invariants de sécurité", () => {
     // d'un marqueur de scoping par utilisateur à proximité de l'usage
     // service_role. Un fichier qui échoue ici doit être relu à la main, pas
     // automatiquement corrigé.
-    const SCOPE_MARKERS = ["user.id", "user_id", "userId", "auth.uid", "target_user_id", "actor_id"];
+    // "store_id" ajouté le 2026-09-12 (jetons Marketplace,
+    // jetons-webhook/route.js) : une boutique appartient à un utilisateur
+    // (marketplace_stores.owner_id) mais les tables jetons_* sont scopées
+    // par store_id, jamais directement par user_id — même rôle de clé de
+    // filtrage manuel, propriétaire différent du sujet de la donnée.
+    const SCOPE_MARKERS = ["user.id", "user_id", "userId", "auth.uid", "target_user_id", "actor_id", "store_id"];
 
     // Liste blanche pour les opérations SYSTÈME légitimement non scopées à
     // un utilisateur (purge en masse, maintenance planifiée) — pas une
@@ -457,6 +462,27 @@ test.describe("Invariants de sécurité", () => {
       // configuration, pas des données utilisateur. Décision écrite le
       // 2026-08-24, migration 20260824100000_niveaux_etudes.sql.
       "public.niveaux_etudes:Référentiel des niveaux lisible par tous",
+      // Taux de change des jetons Marketplace (coût FCFA/jeton, jetons requis
+      // pour 1 an de Premium) : métadonnées de configuration, aucune donnée
+      // personnelle ni liée à un utilisateur/boutique précis — même classe
+      // que feature_flags/niveaux_etudes ci-dessus. Doit être lisible par un
+      // visiteur non connecté, la page /premium affiche le tarif avant même
+      // de savoir quelle boutique achète. Écriture verrouillée : aucune
+      // policy INSERT/UPDATE/DELETE, aucun GRANT à anon/authenticated —
+      // ajusté uniquement par requête SQL directe tant qu'aucun écran admin
+      // dédié n'existe. Décision écrite le 2026-09-12, migration
+      // 20260912020000_jetons_marketplace.sql.
+      "public.jetons_config:Le taux de change des jetons est public",
+      // Statut Premium Marketplace d'une boutique (date_activation/
+      // date_expiration) : doit être visible de TOUT acheteur, pas seulement
+      // du propriétaire — la mise en avant sur la carte/recherche doit
+      // savoir, pour n'importe quelle boutique affichée, si elle est
+      // Premium. Aucune donnée personnelle (store_id + deux dates).
+      // Écriture verrouillée : aucun GRANT INSERT/UPDATE/DELETE à
+      // anon/authenticated, uniquement écrit par la fonction SECURITY
+      // DEFINER activer_premium_marketplace. Décision écrite le 2026-09-12,
+      // migration 20260912020000_jetons_marketplace.sql.
+      "public.premium_marketplace:Le statut premium est visible de tous",
     ]);
 
     const rows = await runIntrospectionSql(`

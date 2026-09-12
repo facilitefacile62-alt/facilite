@@ -61,6 +61,9 @@ import {
   HORAIRES_DEFAUT,
   METIERS_SERVICE,
   METIERS_REGLEMENTES,
+  obtenirBoutiquesPremiumActives,
+  obtenirSoldeJetons,
+  obtenirPremiumActif,
   positionActuelle,
   publierArticle,
   retirerArticle,
@@ -581,6 +584,26 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   const [erreur, setErreur] = useState("");
   const [globeOuvert, setGlobeOuvert] = useState(false);
   const [modalEasyReturn, setModalEasyReturn] = useState(false);
+  // Boutiques Premium Marketplace actives — chargé une fois, indépendamment
+  // des résultats de recherche (change rarement, pas la peine de le
+  // recharger à chaque frappe/déplacement). Set vide par défaut : le tri
+  // par estPremium (boutiquesPourGlobe) et l'affichage restent corrects
+  // même avant que cette requête ne réponde.
+  const [storeIdsPremium, setStoreIdsPremium] = useState(() => new Set());
+  useEffect(() => {
+    let annule = false;
+    obtenirBoutiquesPremiumActives()
+      .then((set) => {
+        if (!annule) setStoreIdsPremium(set);
+      })
+      .catch(() => {
+        // Best-effort : une panne ici dégrade juste la mise en avant
+        // visuelle, jamais la recherche elle-même.
+      });
+    return () => {
+      annule = true;
+    };
+  }, []);
 
   // La carte "Autour de moi" doit rester épinglée juste sous la barre de
   // navigation, jamais dessous elle — un top codé en dur (64px, hauteur
@@ -804,6 +827,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         articles: articlesDeBoutique,
         type_boutique: "produit",
         avatar_config: a.boutique_avatar_config || null,
+        estPremium: storeIdsPremium.has(a.boutique_id),
       });
     }
 
@@ -837,10 +861,26 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         description_prestation: s.description_prestation,
         categorie_etablissement: s.categorie_etablissement,
         avatar_config: s.avatar_config || null,
+        // Manquait ici jusqu'à ce point (Premium Marketplace) : Globe
+        // lisait déjà b.mode_horaires pour son badge "Ouvert/24h/24/RDV"
+        // (GlobeExplorateurBoutiques.jsx), mais ce champ n'était jamais
+        // recopié depuis les résultats de recherche — toujours undefined,
+        // donc toujours traité comme "indiques" par défaut.
+        mode_horaires: s.mode_horaires,
+        estPremium: storeIdsPremium.has(s.id),
       });
     }
+
+    // Priorité de position (Premium Marketplace, Point 6) : tri stable,
+    // les boutiques Premium actives d'abord — l'ordre relatif entre
+    // boutiques de même statut est conservé (Array.prototype.sort est
+    // stable depuis ES2019/Node 12+). Aucune logique de tri par "vérifié"
+    // n'existait déjà à réutiliser (vérifié après lecture du code : verifie
+    // n'est qu'un verrou de visibilité + un badge cosmétique, jamais une
+    // clé de tri) — celle-ci est donc nouvelle.
+    liste.sort((a, b) => (b.estPremium ? 1 : 0) - (a.estPremium ? 1 : 0));
     return liste;
-  }, [resultats, resultatsServices]);
+  }, [resultats, resultatsServices, storeIdsPremium]);
 
   // Liste complète des catégories affichées dans la barre horizontale mobile (1:1 Identique à la capture et au menu)
   const CATEGORIES_DEFILEMENT_MOBILE = [
@@ -889,6 +929,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
           <CarteBoutiques
             articles={resultats}
             boutiquesSansArticles={resultatsServices}
+            storeIdsPremium={storeIdsPremium}
             depart={position}
             onChoisirBoutique={(id) => {
               const b = boutiquesPourGlobe.find((x) => x.id === id);
@@ -2588,8 +2629,11 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
   const [articles, setArticles] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
-  const [ongletVendeur, setOngletVendeur] = useState("annonces"); // 'annonces' | 'publier' | 'profit' | 'abonnes' | 'avis' | 'faq' | 'parametres'
+  const [ongletVendeur, setOngletVendeur] = useState("annonces"); // 'annonces' | 'publier' | 'profit' | 'premium' | 'abonnes' | 'avis' | 'faq' | 'parametres'
   const [modalApercuOuverte, setModalApercuOuverte] = useState(false);
+  // Résumé Premium Marketplace pour l'onglet dédié — null tant que non
+  // chargé (distinct de {actif:false}, qui est un résultat réel).
+  const [premiumInfo, setPremiumInfo] = useState(null);
 
   const recharger = useCallback(async () => {
     if (!userId) return;
@@ -2610,6 +2654,26 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
   useEffect(() => {
     recharger();
   }, [recharger]);
+
+  // Chargé indépendamment de `recharger` (pas à chaque rechargement de
+  // boutique, seulement quand l'onglet Premium est ouvert ou que la
+  // boutique change) — évite deux requêtes supplémentaires à chaque
+  // publication d'article.
+  useEffect(() => {
+    if (!choisie || ongletVendeur !== "premium") return;
+    let annule = false;
+    Promise.all([obtenirSoldeJetons(choisie), obtenirPremiumActif(choisie)])
+      .then(([solde, actif]) => {
+        if (annule) return;
+        setPremiumInfo({ solde, actif: Boolean(actif), dateExpiration: actif?.date_expiration || null });
+      })
+      .catch(() => {
+        // Best-effort : l'onglet affiche simplement "Chargement…" en continu.
+      });
+    return () => {
+      annule = true;
+    };
+  }, [choisie, ongletVendeur]);
 
   if (!userId) {
     return (
@@ -2740,6 +2804,22 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
               </button>
             </div>
 
+            {/* 1bis. Premium Marketplace (jetons) */}
+            <div className="border-b border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("premium")}
+                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                  ongletVendeur === "premium"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <span className="text-lg">👑</span>
+                <span className="flex-1 text-sm font-bold">Premium Marketplace</span>
+              </button>
+            </div>
+
             {/* Séparateur / Bloc 2, 3, 4 */}
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
               {/* 2. Abonnés */}
@@ -2833,6 +2913,7 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
               <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
                 {ongletVendeur === "publier" && "Publier une annonce"}
                 {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
+                {ongletVendeur === "premium" && "Premium Marketplace"}
                 {ongletVendeur === "abonnes" && "Mes Abonnés & Clients"}
                 {ongletVendeur === "avis" && "Avis & Évaluations Clients"}
                 {ongletVendeur === "faq" && "Foire aux questions"}
@@ -3007,6 +3088,45 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
                     </p>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* VUE Premium Marketplace : résumé + lien vers /premium, qui
+                porte le vrai flux (solde, achat, activation) — pas
+                dupliqué ici pour garder une seule source de vérité. */}
+            {ongletVendeur === "premium" && (
+              <div className="space-y-4">
+                <div
+                  className={`rounded-2xl p-4 border ${
+                    premiumInfo?.actif
+                      ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50"
+                      : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700"
+                  }`}
+                >
+                  <p className={`text-sm font-black ${premiumInfo?.actif ? "text-emerald-700 dark:text-emerald-300" : "text-gray-700 dark:text-gray-300"}`}>
+                    {premiumInfo === null ? "Chargement…" : premiumInfo.actif ? "Premium Marketplace actif" : "Premium Marketplace non actif"}
+                  </p>
+                  {premiumInfo?.actif && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Priorité de position sur la carte jusqu&apos;au{" "}
+                      {new Date(premiumInfo.dateExpiration).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}.
+                    </p>
+                  )}
+                </div>
+
+                {premiumInfo && (
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Solde de jetons</span>
+                    <span className="text-xl font-extrabold text-gray-900 dark:text-white">{premiumInfo.solde}</span>
+                  </div>
+                )}
+
+                <Link
+                  href="/premium"
+                  className="block w-full text-center py-3.5 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm transition-colors"
+                >
+                  {premiumInfo?.actif ? "Gérer mes jetons" : "Acheter des jetons / Activer Premium"}
+                </Link>
               </div>
             )}
 

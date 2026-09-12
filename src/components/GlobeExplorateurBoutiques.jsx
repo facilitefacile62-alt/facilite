@@ -365,6 +365,12 @@ export default function GlobeExplorateurBoutiques({
         }
       }
 
+      // Badge Premium Marketplace (Point 6) — coin opposé à badgeLive
+      // (statut d'ouverture) pour ne jamais les superposer.
+      const premiumBadgeHtml = b.estPremium
+        ? `<div class="absolute -top-1 -right-1 bg-amber-400 text-gray-950 text-[9px] px-1 rounded-full border border-white shadow-xs">👑</div>`
+        : "";
+
       const htmlMarqueur = `
         <div class="snap-marker-pin group flex flex-col items-center select-none cursor-pointer transform transition-all duration-300 hover:scale-115 ${
           estSelectionne ? "scale-115 z-50" : "z-10"
@@ -386,6 +392,7 @@ export default function GlobeExplorateurBoutiques({
               ${contenuAvatar}
             </div>
             ${badgeLive}
+            ${premiumBadgeHtml}
           </div>
 
           <!-- Ombre portée 3D au sol -->
@@ -811,6 +818,11 @@ export default function GlobeExplorateurBoutiques({
                         {boutiqueSelectionnee.nom}
                       </h3>
                       <i className="fa-solid fa-circle-check text-sky-400 text-xs"></i>
+                      {boutiqueSelectionnee.estPremium && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-400 text-[9px] font-black uppercase tracking-wider shrink-0">
+                          👑 Premium
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-400 font-medium truncate flex items-center gap-1">
                       <i className="fa-solid fa-location-dot text-[#1877F2]"></i>

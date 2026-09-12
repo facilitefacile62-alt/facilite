@@ -932,3 +932,99 @@ export function positionActuelle() {
     );
   });
 }
+
+// ---------------------------------------------------------------------------
+// Jetons Marketplace (voir supabase/migrations/20260912020000_jetons_marketplace.sql)
+// ---------------------------------------------------------------------------
+
+/**
+ * Taux de change courant — coût d'un jeton en FCFA et nombre de jetons
+ * requis pour activer 1 an de Premium Marketplace. Lu depuis jetons_config
+ * (table à une seule ligne, jamais codé en dur) : ces deux chiffres restent
+ * à décider par le métier, ajustables par simple UPDATE SQL sans
+ * redéploiement.
+ */
+export async function obtenirTauxJetons() {
+  const { data, error } = await supabase
+    .from("jetons_config")
+    .select("cout_jeton_fcfa, jetons_requis_premium_an")
+    .eq("id", 1)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Solde de jetons d'une boutique — 0 si elle n'a encore jamais rien acheté. */
+export async function obtenirSoldeJetons(storeId) {
+  if (!storeId) return 0;
+  const { data, error } = await supabase
+    .from("jetons_boutique")
+    .select("solde_jetons")
+    .eq("store_id", storeId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.solde_jetons ?? 0;
+}
+
+/** Historique des mouvements de jetons d'une boutique, plus récents d'abord. */
+export async function obtenirHistoriqueJetons(storeId) {
+  if (!storeId) return [];
+  const { data, error } = await supabase
+    .from("jetons_transactions")
+    .select("id, montant, type, status, created_at")
+    .eq("store_id", storeId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/**
+ * Période Premium Marketplace en cours pour une boutique, ou null si
+ * aucune n'est active actuellement (expirée ou jamais activée). "Actif"
+ * est vérifié à la lecture (date_expiration > maintenant), jamais stocké
+ * comme booléen à tenir à jour.
+ */
+export async function obtenirPremiumActif(storeId) {
+  if (!storeId) return null;
+  const { data, error } = await supabase
+    .from("premium_marketplace")
+    .select("id, date_activation, date_expiration")
+    .eq("store_id", storeId)
+    .gt("date_expiration", new Date().toISOString())
+    .order("date_expiration", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data || null;
+}
+
+/**
+ * Active 1 an de Premium Marketplace pour une boutique en dépensant ses
+ * jetons — dépense, journal et création de la période dans une seule
+ * transaction atomique côté serveur (voir activer_premium_marketplace,
+ * SECURITY DEFINER). Lève une erreur explicite (message lisible transmis
+ * tel quel par PostgREST) si une période est déjà active, ou si le solde
+ * est insuffisant.
+ */
+export async function activerPremiumMarketplace(storeId) {
+  const { data, error } = await supabase.rpc("activer_premium_marketplace", { p_store_id: storeId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Ensemble des store_id ayant actuellement une période Premium Marketplace
+ * active — utilisé pour mettre en avant ces boutiques (tri + badge) sur la
+ * carte et dans les résultats de recherche. Une seule requête légère,
+ * jamais un JOIN ajouté aux fonctions de recherche existantes (rester au
+ * plus près de ce qui existe déjà plutôt que remanier des RPC partagées).
+ */
+export async function obtenirBoutiquesPremiumActives() {
+  const { data, error } = await supabase
+    .from("premium_marketplace")
+    .select("store_id")
+    .gt("date_expiration", new Date().toISOString());
+  if (error) throw new Error(error.message);
+  return new Set((data || []).map((r) => r.store_id));
+}
