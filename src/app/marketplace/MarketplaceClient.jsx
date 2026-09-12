@@ -4185,7 +4185,39 @@ function ModalFicheBoutique({
       {/* 📱 VUE MOBILE (PHONE) : DESIGN 1:1 CONFORME À LA MAQUETTE                 */}
       {/* ========================================================================= */}
       <div className="block md:hidden w-full flex-1 pb-20">
-        {ongletActif === "parametres" ? (
+        {ongletActif === "publier" ? (
+          <div className="p-4 space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setOngletActif("produits")}
+                className="text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <i className="fa-solid fa-arrow-left"></i>
+                <span>Retour à l&apos;aperçu</span>
+              </button>
+              <h3 className="text-sm font-black text-zinc-900 dark:text-white">
+                Publier un nouvel article
+              </h3>
+            </div>
+            <FormulaireArticle
+              userId={userId}
+              storeId={boutique?.id || "facilite_shop"}
+              onPublie={async () => {
+                if (boutique?.id && boutique?.id !== "facilite_shop") {
+                  try {
+                    const nouveaux = await chargerMesArticles(boutique.id);
+                    setListeArticles(nouveaux);
+                  } catch {}
+                }
+                onBoutiqueUpdate?.();
+                setOngletActif("produits");
+                setOngletMobile("article");
+                showToast("✓ Article publié avec succès !");
+              }}
+            />
+          </div>
+        ) : ongletActif === "parametres" ? (
           <VueReglages
             userId={userId}
             profile={profile}
@@ -4287,12 +4319,7 @@ function ModalFicheBoutique({
           )}
         </div>
 
-        {/* Pilules d'onglets parfaitement harmonisées (ARTICLE | ACTIVITE | DOMAINE)
-            — le fond noir actif est un unique bloc positionné en absolu qui
-            glisse (transition sur left/width, mesurés via refs) d'une
-            pastille à l'autre au lieu de sauter instantanément d'un bouton à
-            l'autre : demande explicite de l'utilisateur ("le fond noir glisse
-            en douceur"). */}
+        {/* Pilules d'onglets parfaitement harmonisées (ARTICLE | ACTIVITE | DOMAINE) */}
         <div ref={pistePilulesRef} className="relative flex items-center gap-2.5 px-4 py-3 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800">
           <div
             className="absolute top-3 bottom-3 rounded-2xl bg-zinc-950 dark:bg-white shadow-sm transition-[left,width] duration-300 ease-out pointer-events-none"
@@ -4350,40 +4377,6 @@ function ModalFicheBoutique({
 
         {/* Contenu de l'onglet Mobile */}
         <div className="w-full">
-          {/* Si formulaire de publication ou réglages ouverts */}
-          {ongletActif === "publier" && (
-            <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setOngletActif("produits")}
-                  className="text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1.5 transition cursor-pointer"
-                >
-                  <i className="fa-solid fa-arrow-left"></i>
-                  <span>Retour aux articles</span>
-                </button>
-                <h3 className="text-sm font-black text-zinc-900 dark:text-white">
-                  Publier un article
-                </h3>
-              </div>
-              <FormulaireArticle
-                userId={userId}
-                storeId={boutique?.id || "facilite_shop"}
-                onPublie={async () => {
-                  if (boutique?.id && boutique?.id !== "facilite_shop") {
-                    try {
-                      const nouveaux = await chargerMesArticles(boutique.id);
-                      setListeArticles(nouveaux);
-                    } catch {}
-                  }
-                  onBoutiqueUpdate?.();
-                  setOngletActif("produits");
-                  setOngletMobile("article");
-                  showToast("✓ Article publié avec succès !");
-                }}
-              />
-            </div>
-          )}
 
 
           {/* Grille de 2 colonnes de PRODUITS. "apercu" est l'état initial de
@@ -4552,7 +4545,7 @@ function ModalFicheBoutique({
         </div>
 
         {/* Bouton flottant d'ajout rapide + pour mobile */}
-        {estProprietaire && (
+        {estProprietaire && ongletActif !== "publier" && ongletActif !== "parametres" && (
           <button
             type="button"
             onClick={() => setOngletActif("publier")}
@@ -6226,6 +6219,7 @@ function GrilleHorairesEtablissement({ boutique, horaires = [], chargement = fal
         </div>
       )}
 
+      {mode === "indiques" && (
       <div className="space-y-1 rounded-xl bg-gray-50/80 dark:bg-zinc-800/40 border border-gray-200/70 dark:border-zinc-800 p-2.5">
       {ordreJours.map((j) => {
         const h = parJour.get(j);
@@ -6262,6 +6256,7 @@ function GrilleHorairesEtablissement({ boutique, horaires = [], chargement = fal
         );
       })}
     </div>
+    )}
     </div>
   );
 }
