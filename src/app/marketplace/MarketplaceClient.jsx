@@ -827,6 +827,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         articles: articlesDeBoutique,
         type_boutique: "produit",
         avatar_config: a.boutique_avatar_config || null,
+        owner_id: a.boutique_owner_id || null,
         estPremium: storeIdsPremium.has(a.boutique_id),
       });
     }
@@ -861,6 +862,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         description_prestation: s.description_prestation,
         categorie_etablissement: s.categorie_etablissement,
         avatar_config: s.avatar_config || null,
+        owner_id: s.owner_id || null,
         // Manquait ici jusqu'à ce point (Premium Marketplace) : Globe
         // lisait déjà b.mode_horaires pour son badge "Ouvert/24h/24/RDV"
         // (GlobeExplorateurBoutiques.jsx), mais ce champ n'était jamais
@@ -4203,6 +4205,22 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
               </button>
             )}
 
+            {/* Messagerie interne Facilité (Partie E) — canal alternatif à
+                WhatsApp, pas un remplacement : réutilise le mécanisme déjà
+                existant (resolveConversationWith via /messagerie?recipient=,
+                voir "Contacter le recruteur" sur la vitrine recruteur), sans
+                rien dupliquer. boutique_owner_id absent (donnée pas encore
+                remontée pour cette boutique) : bouton simplement masqué. */}
+            {article.boutique_owner_id && (
+              <Link
+                href={`/messagerie?recipient=${article.boutique_owner_id}`}
+                className="w-12 h-12 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center transition cursor-pointer shrink-0"
+                title="Envoyer un message au vendeur"
+              >
+                <i className="fa-regular fa-comment-dots text-base"></i>
+              </Link>
+            )}
+
             <button
               type="button"
               onClick={() => setAime(!aime)}
@@ -5461,6 +5479,16 @@ function ModalFicheBoutique({
                     </div>
                   </div>
 
+                  {!estProprietaire && boutique?.owner_id && (
+                    <Link
+                      href={`/messagerie?recipient=${boutique.owner_id}`}
+                      className="px-4 py-2 rounded-full bg-white/90 hover:bg-white text-gray-900 text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg transition cursor-pointer shrink-0"
+                    >
+                      <i className="fa-regular fa-comment-dots text-base"></i>
+                      <span>Message</span>
+                    </Link>
+                  )}
+
                   {whatsappUrl && (
                     <a
                       href={whatsappUrl}
@@ -5803,6 +5831,16 @@ function ModalFicheBoutique({
                     </div>
                   )}
                 </div>
+
+                {!estProprietaire && boutique?.owner_id && (
+                  <Link
+                    href={`/messagerie?recipient=${boutique.owner_id}`}
+                    className="mt-3 w-full py-3 px-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
+                  >
+                    <i className="fa-regular fa-comment-dots text-base"></i>
+                    Envoyer un message sur Facilité
+                  </Link>
+                )}
 
                 {whatsappUrl && (
                   <a

@@ -650,6 +650,7 @@ export async function chercherServicesEtEtablissements({
     telephone_whatsapp: r.telephone_whatsapp,
     whatsappUrl: lienWhatsapp(r.telephone_whatsapp, r.nom),
     avatar_config: r.avatar_config || null,
+    owner_id: r.owner_id || null,
     distance_km: r.distance_km,
     distanceLisible: r.distance_km == null ? "" : r.distance_km < 1 ? `${Math.round(r.distance_km * 1000)} m` : `${r.distance_km} km`,
     lat: r.latitude,
