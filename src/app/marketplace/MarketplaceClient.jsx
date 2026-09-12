@@ -2025,15 +2025,6 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
 
       {/* GROUPE 1 : Boutique, Vitrine & Ventes */}
       <div>
-        <button
-          type="button"
-          onClick={() => setModalActive("details_entreprise")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Détails de l'entreprise</span>
-          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
-
         {boutique?.id && (
           <button
             type="button"

@@ -36,7 +36,8 @@
 // tout de suite — une correction d'incident, typiquement.
 // v12 (12/09/2026) : notifications filtrees par univers (Facilite vs
 // v13 (12/09/2026) : suppression du doublon de bouton Admin entre header et barre mobile
-const VERSION_CACHE = "facilite-v13";
+// v14 (12/09/2026) : suppression de Détails de l'entreprise des réglages boutique
+const VERSION_CACHE = "facilite-v14";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
