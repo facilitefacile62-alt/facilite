@@ -13,7 +13,6 @@ import { notifierConnexion } from "@/lib/confirmerConnexion";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import BoutonInstallerApp from "@/components/BoutonInstallerApp";
-import { obtenirUserMode, definirUserMode } from "@/lib/userMode";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
 const QUICK_SECTIONS_INDEX = [
@@ -207,20 +206,14 @@ export default function Header() {
 
   const isBusinessActive = pathname?.startsWith("/marketplace");
 
-  // Dernier univers utilisé (Facilité / Facilité Business), persisté pour
-  // que le logo/lien Accueil y ramène l'utilisateur au lieu de toujours
-  // pointer vers "/" — voir src/lib/userMode.js. Valeur par défaut
-  // "facilite" à l'hydratation (pas de lecture localStorage avant le
-  // montage, comme le reste de ce header) : un nouvel utilisateur n'a
-  // jamais rien en storage et atterrit donc toujours sur Facilité.
-  const [dernierUserMode, setDernierUserMode] = useState("facilite");
-  useEffect(() => {
-    queueMicrotask(() => setDernierUserMode(obtenirUserMode()));
-  }, []);
-  useEffect(() => {
-    definirUserMode(isBusinessActive ? "business" : "facilite");
-  }, [isBusinessActive]);
-  const accueilHref = dernierUserMode === "business" ? "/marketplace" : "/";
+  // Accueil/logo ramène TOUJOURS à la page Facilité ("/"), quel que soit
+  // l'univers courant — signalé comme bug le 12/09/2026 : une version
+  // antérieure faisait pointer ce lien vers le dernier univers utilisé
+  // (Facilité Business inclus), ce qui, depuis une page marketplace,
+  // rechargeait silencieusement la même page marketplace au lieu de
+  // ramener au site Facilité. Changer d'univers reste un choix délibéré
+  // via le switcher de profil, jamais un effet de bord du bouton Accueil.
+  const accueilHref = "/";
 
   useEffect(() => {
     if (!userSession?.user?.id) {
