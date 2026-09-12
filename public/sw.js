@@ -34,10 +34,10 @@
 //
 // À incrémenter à chaque fois qu'un déploiement doit impérativement être vu
 // tout de suite — une correction d'incident, typiquement.
-// v5 (12/09/2026) : correctif du lien Accueil/logo (pointait vers le
-// dernier univers utilisé au lieu de "/") signalé par un utilisateur sur
-// son téléphone juste après déploiement — à faire voir immédiatement.
-const VERSION_CACHE = "facilite-v5";
+// v6 (12/09/2026) : correction du correctif précédent — Accueil/logo doit
+// revenir à l'accueil de l'univers COURANT (marketplace en Facilité
+// Business), pas toujours à "/". Même besoin de visibilité immédiate.
+const VERSION_CACHE = "facilite-v6";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
