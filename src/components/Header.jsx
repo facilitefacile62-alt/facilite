@@ -1486,29 +1486,29 @@ export default function Header() {
                 </span>
               </button>
 
-              {/* Menu Switcher d'Espace 1:1 Pixel Perfect (Exact Image 2) */}
+              {/* Menu Switcher d'Espace 1:1 Pixel Perfect (Exact Image 1, 2 & 3) */}
               {profileDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans space-y-1.5">
-                  <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
+                  <div className="flex items-center justify-between px-2 pt-1 pb-1">
                     <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
                       Vos Espaces
                     </span>
-                    <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/50 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full shadow-2xs">
                       {isBusinessActive ? "Mode Vendeur" : "Mode Candidat"}
                     </span>
                   </div>
 
-                  {/* L'espace sélectionné est TOUJOURS en haut, l'autre en dessous avec l'icône de bascule ⟲ */}
+                  {/* L'espace sélectionné est TOUJOURS en haut (Image 2), l'autre en dessous avec l'icône de bascule ⟲ (Image 3) */}
                   {isBusinessActive ? (
                     <>
-                      {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Marketplace */}
+                      {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Marketplace (Image 2) */}
                       <button
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
                           router.push("/marketplace");
                         }}
-                        className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-100/90 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-2xs hover:border-blue-500/50"
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-50/90 dark:bg-gray-800/90 border border-gray-200/90 dark:border-gray-700 shadow-2xs hover:border-blue-500/50"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="relative shrink-0">
@@ -1520,7 +1520,7 @@ export default function Header() {
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate">
-                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Marketplace &amp; Boutiques
@@ -1528,15 +1528,12 @@ export default function Header() {
                           </div>
                         </div>
 
-                        <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                        <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
                           ✓
                         </span>
                       </button>
 
-                      {/* Ligne de séparation */}
-                      <div className="my-1 border-t border-gray-200/70 dark:border-gray-800"></div>
-
-                      {/* 2. ALTERNATIF EN BAS : Facilité Facile (avec icône de synchronisation ⟲) */}
+                      {/* 2. ALTERNATIF EN BAS : Facilité Facile (avec icône de synchronisation ⟲ - Image 3) */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1567,7 +1564,7 @@ export default function Header() {
 
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate group-hover:text-emerald-600 transition">
-                              {authProfile?.full_name || "Facilite Facile"}
+                              {authProfile?.full_name || "facile demo"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Espace Candidat &amp; CV
@@ -1582,14 +1579,14 @@ export default function Header() {
                     </>
                   ) : (
                     <>
-                      {/* 1. SÉLECTIONNÉ EN HAUT : Facilité Facile */}
+                      {/* 1. SÉLECTIONNÉ EN HAUT : Facilité Facile (Image 2) */}
                       <button
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
                           router.push("/profil");
                         }}
-                        className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-100/90 dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 shadow-2xs hover:border-emerald-500/50"
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-50/90 dark:bg-gray-800/90 border border-gray-200/90 dark:border-gray-700 shadow-2xs hover:border-emerald-500/50"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="relative shrink-0">
@@ -1608,7 +1605,7 @@ export default function Header() {
 
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate">
-                              {authProfile?.full_name || "Facilite Facile"}
+                              {authProfile?.full_name || "facile demo"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Espace Candidat &amp; CV
@@ -1616,15 +1613,12 @@ export default function Header() {
                           </div>
                         </div>
 
-                        <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                        <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
                           ✓
                         </span>
                       </button>
 
-                      {/* Ligne de séparation */}
-                      <div className="my-1 border-t border-gray-200/70 dark:border-gray-800"></div>
-
-                      {/* 2. ALTERNATIF EN BAS : Facilité Shop / Marketplace */}
+                      {/* 2. ALTERNATIF EN BAS : Facilité Shop / Marketplace (Image 3) */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1649,10 +1643,10 @@ export default function Header() {
 
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition">
-                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
-                              Marketplace &amp; Boutiques
+                              Marketplace &amp; Boutiq...
                             </p>
                           </div>
                         </div>
@@ -1664,14 +1658,17 @@ export default function Header() {
                     </>
                   )}
 
-                  {/* Liens d'action rapides : Gérer mon profil & Ma boutique */}
-                  <div className="flex items-center justify-between px-1.5 py-1 pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px] font-bold">
+                  {/* Ligne de séparation */}
+                  <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
+
+                  {/* Liens d'action rapides : Gérer mon profil & Ma boutique (Image 3) */}
+                  <div className="flex items-center justify-between px-1 py-1 text-[11px] font-bold">
                     <Link
                       href="/profil"
                       onClick={() => setProfileDropdownOpen(false)}
-                      className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
+                      className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
                     >
-                      <i className="fa-solid fa-id-card text-xs"></i>
+                      <i className="fa-solid fa-id-card text-xs text-emerald-600 dark:text-emerald-400"></i>
                       <span>Gérer mon profil</span>
                     </Link>
                     <button
@@ -1684,14 +1681,14 @@ export default function Header() {
                           router.push("/marketplace?action=voir_boutique");
                         }
                       }}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition cursor-pointer bg-transparent border-none"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition cursor-pointer bg-transparent border-none"
                     >
-                      <i className="fa-solid fa-store text-xs"></i>
+                      <i className="fa-solid fa-store text-xs text-blue-600 dark:text-blue-400"></i>
                       <span>Ma boutique</span>
                     </button>
                   </div>
 
-                  {/* Déconnexion */}
+                  {/* Déconnexion (Image 3) */}
                   <div className="pt-1 border-t border-gray-100 dark:border-gray-800">
                     <button
                       type="button"
@@ -1704,7 +1701,7 @@ export default function Header() {
                         }
                         window.location.href = "/login";
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition cursor-pointer text-left"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition cursor-pointer text-left"
                     >
                       <i className="fa-solid fa-arrow-right-from-bracket text-red-500 text-xs w-4"></i>
                       <span>Se déconnecter</span>
@@ -1894,14 +1891,14 @@ export default function Header() {
           <div className="flex-1 overflow-y-auto overscroll-contain px-3.5 py-4 space-y-3.5 max-w-lg mx-auto w-full pb-36">
             
             {/* Carte Profil Utilisateur (Style Facebook 1:1) */}
-            {/* Carte Switcher Profil & Espace Mobile (1:1 Inspiré Image 1 & 2) */}
+            {/* Carte Switcher Profil & Espace Mobile (1:1 Inspiré Images 1, 2 & 3) */}
             {userSession ? (
               <div className="bg-white dark:bg-gray-900 rounded-3xl p-3 border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-2">
-                <div className="flex items-center justify-between px-2 pt-1">
+                <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
                   <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
                     Vos Espaces
                   </span>
-                  <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/50 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full shadow-2xs">
                     {isBusinessActive ? "Mode Vendeur" : "Mode Candidat"}
                   </span>
                 </div>
@@ -1909,14 +1906,14 @@ export default function Header() {
                 {/* L'espace sélectionné est TOUJOURS en haut, l'autre en dessous avec l'icône de bascule ⟲ */}
                 {isBusinessActive ? (
                   <>
-                    {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Vendeur */}
+                    {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Vendeur (Image 2) */}
                     <button
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
                         router.push("/marketplace");
                       }}
-                      className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left bg-gray-50/90 dark:bg-gray-800/90 border border-gray-200/90 dark:border-gray-700 shadow-2xs"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <img
@@ -1926,12 +1923,12 @@ export default function Header() {
                         />
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                           </h4>
                           <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
                         </div>
                       </div>
-                      <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
                         ✓
                       </span>
                     </button>
@@ -1939,14 +1936,14 @@ export default function Header() {
                     {/* Séparateur */}
                     <div className="border-t border-gray-100 dark:border-gray-800 my-0.5"></div>
 
-                    {/* 2. ALTERNATIF EN BAS : Facilité Facile (avec icône ⟲) */}
+                    {/* 2. ALTERNATIF EN BAS : Facilité Facile (avec icône ⟲ - Image 3) */}
                     <button
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
                         router.push("/profil");
                       }}
-                      className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/40 group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="relative shrink-0">
@@ -1967,28 +1964,28 @@ export default function Header() {
                         </div>
 
                         <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {authProfile?.full_name || "Facilite Facile"}
+                          <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate group-hover:text-emerald-600 transition">
+                            {authProfile?.full_name || "facile demo"}
                           </h4>
-                          <p className="text-[10px] text-gray-500 font-medium">Espace Candidature &amp; CV</p>
+                          <p className="text-[10px] text-gray-500 font-medium">Espace Candidat &amp; CV</p>
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] font-bold text-gray-400 group-hover:text-emerald-600 transition flex items-center gap-1 shrink-0">
                         Mon profil <i className="fa-solid fa-arrow-right text-[8px]"></i>
                       </span>
                     </button>
                   </>
                 ) : (
                   <>
-                    {/* 1. SÉLECTIONNÉ EN HAUT : Facilité Facile */}
+                    {/* 1. SÉLECTIONNÉ EN HAUT : Facilité Facile (Image 2) */}
                     <button
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
                         router.push("/profil");
                       }}
-                      className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left bg-gray-50/90 dark:bg-gray-800/90 border border-gray-200/90 dark:border-gray-700 shadow-2xs"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="relative shrink-0">
@@ -2007,13 +2004,13 @@ export default function Header() {
 
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {authProfile?.full_name || "Facilite Facile"}
+                            {authProfile?.full_name || "facile demo"}
                           </h4>
-                          <p className="text-[10px] text-gray-500 font-medium">Espace Candidature &amp; CV</p>
+                          <p className="text-[10px] text-gray-500 font-medium">Espace Candidat &amp; CV</p>
                         </div>
                       </div>
 
-                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
                         ✓
                       </span>
                     </button>
@@ -2021,14 +2018,14 @@ export default function Header() {
                     {/* Séparateur */}
                     <div className="border-t border-gray-100 dark:border-gray-800 my-0.5"></div>
 
-                    {/* 2. ALTERNATIF EN BAS : Créer sa propre boutique / Boutique personnalisée */}
+                    {/* 2. ALTERNATIF EN BAS : Facilité Shop / Marketplace (Image 3) */}
                     <button
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
                         router.push("/marketplace");
                       }}
-                      className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                      className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/40 group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="relative shrink-0">
@@ -2042,36 +2039,36 @@ export default function Header() {
                           </div>
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
+                          <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition">
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
                           </h4>
                           <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] font-bold text-gray-400 group-hover:text-blue-600 transition flex items-center gap-1 shrink-0">
                         Marketplace <i className="fa-solid fa-arrow-right text-[8px]"></i>
                       </span>
                     </button>
                   </>
                 )}
 
-                <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-800 text-[11px] font-bold">
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px] font-bold">
                   <Link
                     href="/profil"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-emerald-600 dark:text-emerald-400 hover:underline px-2 py-1"
+                    className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
                   >
-                    <i className="fa-solid fa-id-card mr-1"></i>
-                    Gérer mon profil
+                    <i className="fa-solid fa-id-card text-xs"></i>
+                    <span>Gérer mon profil</span>
                   </Link>
                   <Link
                     href="/marketplace"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-blue-600 dark:text-blue-400 hover:underline px-2 py-1"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
                   >
-                    <i className="fa-solid fa-store mr-1"></i>
-                    Ma boutique
+                    <i className="fa-solid fa-store text-xs"></i>
+                    <span>Ma boutique</span>
                   </Link>
                 </div>
               </div>
