@@ -108,10 +108,13 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               console.warn("Intention de candidature non enregistrée :", err.message);
             }
             if (triggerToast) {
-              triggerToast("Confirmez votre adresse email pour finaliser votre candidature.", "fa-envelope-circle-check");
+              triggerToast(
+                "Un email confirmé est obligatoire pour postuler. Ajoutez-le dans votre profil : votre candidature sera envoyée automatiquement dès qu'il sera confirmé.",
+                "fa-envelope-circle-check"
+              );
             }
             onClose();
-            router.push("/profil?section=securite");
+            router.push("/profil?section=securite&intent=candidature");
             return;
           }
 

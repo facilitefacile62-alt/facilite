@@ -154,7 +154,8 @@ export async function POST(req) {
       }
       return NextResponse.json(
         {
-          error: "Votre adresse email doit être confirmée avant de postuler.",
+          error:
+            "Un email confirmé est obligatoire pour postuler. Ajoutez-le dans votre profil (Sécurité du compte) : votre candidature sera envoyée automatiquement dès qu'il sera confirmé, sans rien refaire.",
           code: "email_requis",
         },
         { status: 403 }

@@ -115,7 +115,7 @@ const BIRTH_MONTHS = [
 ];
 const BIRTH_YEARS = Array.from({ length: 88 }, (_, i) => CURRENT_YEAR - 13 - i);
 
-export default function SecurityTabContent({ userSession }) {
+export default function SecurityTabContent({ userSession, intentCandidature = false }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -253,6 +253,15 @@ export default function SecurityTabContent({ userSession }) {
       setSkipCurrentPassword(getMostRecentAuthMethod(accessToken) === "otp");
     });
   }, [userSession]);
+
+  // Arrivée depuis ApplyModal.jsx (?intent=candidature, voir profil/page.js)
+  // : la ligne email s'ouvre directement, sans clic supplémentaire — la
+  // bannière ci-dessous explique déjà pourquoi.
+  useEffect(() => {
+    if (intentCandidature) {
+      queueMicrotask(() => setExpandedRow("email"));
+    }
+  }, [intentCandidature]);
 
   // "A un mot de passe ou non" décidé côté serveur (/api/auth/has-password,
   // service_role) — jamais déduit de user.identities côté client, qui peut
@@ -931,6 +940,29 @@ export default function SecurityTabContent({ userSession }) {
         <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-start space-x-2">
           <span>✅</span>
           <span>{message}</span>
+        </div>
+      )}
+
+      {/* Bannière contextuelle — arrivée depuis un "Postuler" bloqué faute
+          d'email confirmé (règle du 12/09/2026, voir ApplyModal.jsx et
+          supabase/migrations/20260912030000_candidature_email_obligatoire.sql).
+          Disparaît d'elle-même une fois l'email confirmé (emailConfirmed
+          repasse à true). */}
+      {intentCandidature && (!hasEmail || !emailConfirmed) && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl space-y-1.5">
+          <p className="text-sm font-extrabold text-blue-900 flex items-center gap-2">
+            <span>📧</span>
+            <span>Il vous manque un email confirmé pour postuler</span>
+          </p>
+          <p className="text-xs text-blue-800 font-semibold leading-relaxed">
+            Sur Facilité, une adresse email confirmée est obligatoire pour envoyer une candidature.{" "}
+            {hasEmail
+              ? "Confirmez votre adresse ci-dessous."
+              : "Ajoutez votre adresse email ci-dessous."}
+          </p>
+          <p className="text-xs text-blue-700 font-semibold leading-relaxed">
+            Dès qu'elle sera confirmée, votre candidature sera envoyée automatiquement — vous n'aurez rien à refaire.
+          </p>
         </div>
       )}
 

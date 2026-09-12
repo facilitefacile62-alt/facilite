@@ -92,6 +92,12 @@ export default function ProfilPage() {
   const [educationLevelCode, setEducationLevelCode] = useState("");
   const [niveauxEtudes, setNiveauxEtudes] = useState([]);
   const [activeSection, setActiveSection] = useState("info_perso");
+  // Redirection depuis ApplyModal.jsx (règle "email obligatoire pour
+  // candidater") : ?intent=candidature signale que l'utilisateur arrive ici
+  // pour débloquer une candidature en attente, pas par simple curiosité —
+  // permet à SecurityTabContent d'afficher un message contextuel au lieu du
+  // seul écran de sécurité générique.
+  const [intentCandidature, setIntentCandidature] = useState(false);
   const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
   const aboutDropdownRef = useRef(null);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -402,6 +408,10 @@ export default function ProfilPage() {
 
       if (targetTab) {
         setActiveTab(targetTab);
+      }
+
+      if (params.get("intent") === "candidature") {
+        setIntentCandidature(true);
       }
 
       const sectionParam = params.get("section");
@@ -4242,7 +4252,7 @@ export default function ProfilPage() {
 
                   {/* ONGLET SÉCURITÉ : Mot de passe et identifiants */}
                   {activeSection === "securite" && (
-                    <SecurityTabContent userSession={userSession} />
+                    <SecurityTabContent userSession={userSession} intentCandidature={intentCandidature} />
                   )}
 
                   {!["intro", "info_perso", "langues", "experiences", "formation", "competences", "interets", "coordonnees", "confidentialite", "securite"].includes(activeSection) && (
