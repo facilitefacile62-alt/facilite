@@ -242,14 +242,22 @@ export default function MarketplaceClient() {
       }
     };
 
+    // Partie E : "Ma boutique" (menu profil, Header.jsx) atteint ce
+    // gestionnaire depuis N'IMPORTE QUELLE page du site, pas seulement
+    // /marketplace. Sans vraie boutique, il ouvrait jusqu'ici une fiche
+    // FICTIVE ("facilite shop", Guinaw rail nord, faux numéro WhatsApp) —
+    // exactement la fausse identité déjà retirée de la carte "Devenir
+    // vendeur" plus bas dans ce fichier, mais oubliée ici. Un visiteur sans
+    // boutique est désormais redirigé vers le vrai flux de création
+    // (FormulaireBoutique, onglet "vendre") au lieu de voir des données
+    // inventées.
     const handleOuvrirBoutique = (e) => {
-      const b = e?.detail || maBoutiqueActive || boutiques[0] || {
-        id: "facilite_shop",
-        nom: "facilite shop",
-        quartier: "Guinaw rail nord",
-        ville: "Pikine",
-        telephone_whatsapp: "770000000",
-      };
+      const b = e?.detail || maBoutiqueActive || boutiques[0] || null;
+      if (!b) {
+        setOnglet("vendre");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
       setBoutiqueModal(b);
     };
 
@@ -267,14 +275,12 @@ export default function MarketplaceClient() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("action") === "voir_boutique" || params.get("boutique")) {
-        const b = maBoutiqueActive || boutiques[0] || {
-          id: "facilite_shop",
-          nom: "facilite shop",
-          quartier: "Guinaw rail nord",
-          ville: "Pikine",
-          telephone_whatsapp: "770000000",
-        };
-        setBoutiqueModal(b);
+        const b = maBoutiqueActive || boutiques[0] || null;
+        if (b) {
+          setBoutiqueModal(b);
+        } else {
+          setOnglet("vendre");
+        }
       }
     }
   }, [maBoutiqueActive, boutiques]);

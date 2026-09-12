@@ -1524,7 +1524,7 @@ export default function Header() {
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate">
-                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Marketplace &amp; Boutiques
@@ -1653,7 +1653,7 @@ export default function Header() {
 
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition">
-                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Marketplace &amp; Boutiques
@@ -1930,7 +1930,7 @@ export default function Header() {
                         />
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                           </h4>
                           <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
                         </div>
@@ -2047,7 +2047,7 @@ export default function Header() {
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                           </h4>
                           <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
                         </div>
