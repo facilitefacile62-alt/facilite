@@ -206,13 +206,21 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
             couleur = enStock ? COULEUR : "#6b7280";
           }
 
-          // Calcul universel du statut d'ouverture en direct
-          const st = calculerStatutOuverture(b, b.horaires);
+          // Statut d'ouverture en direct — uniquement pour les établissements
+          // (demande explicite : ne rien changer pour produit/service). Sans
+          // ce filtre, calculerStatutOuverture("indiques" jamais configuré,
+          // horaires=[]) renvoie ouvert:null pour TOUTE boutique produit ou
+          // service, et le "else" ci-dessous (branche "Fermé") l'affichait
+          // par erreur comme fermée sur la carte.
+          const st = b.type_boutique === "etablissement" ? calculerStatutOuverture(b, b.horaires) : null;
           let pointStatutHtml = "";
           let alarmeBadgeHtml = "";
           let pointAlarmeBadgeHtml = "";
 
-          if (st) {
+          // renseigne===false : mode "indiques" jamais configuré — aucun
+          // badge plutôt qu'un "Fermé" trompeur (même règle que le badge de
+          // l'onglet Domaine, voir calculerStatutOuverture).
+          if (st && st.renseigne) {
             if (st.mode === "toujours_ouvert") {
               pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#10B981;margin-right:4px;box-shadow:0 0 6px #10B981;"></span>`;
               alarmeBadgeHtml = `

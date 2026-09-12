@@ -334,22 +334,34 @@ export default function GlobeExplorateurBoutiques({
             : `<span class="text-2xl">${avatarInfo.emoji}</span>`);
       }
 
-      // Calcul universel du statut d'ouverture en direct
-      const modeH = b.mode_horaires || "indiques";
-      if (modeH === "toujours_ouvert") {
-        pointStatutTooltip = "bg-[#10B981] animate-pulse";
-        badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">24/7</div>`;
-      } else if (modeH === "sur_rendez_vous") {
-        pointStatutTooltip = "bg-sky-400";
-        badgeLive = `<div class="absolute -bottom-1 bg-sky-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">RDV</div>`;
-      } else {
-        const st = calculerStatutOuverture(b, b.horaires);
-        if (st?.ouvert) {
+      // Statut d'ouverture en direct — uniquement pour les établissements
+      // (demande explicite : ne rien changer pour produit/service). Ce bloc
+      // tournait avant pour TOUS les types, écrasant à tort l'indicateur "en
+      // stock" (pointStatutTooltip, ligne ci-dessus) des boutiques produit.
+      if (typeBoutique === "etablissement") {
+        const modeH = b.mode_horaires || "indiques";
+        if (modeH === "toujours_ouvert") {
           pointStatutTooltip = "bg-[#10B981] animate-pulse";
-          badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">OUVERT</div>`;
+          badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">24/7</div>`;
+        } else if (modeH === "sur_rendez_vous") {
+          pointStatutTooltip = "bg-sky-400";
+          badgeLive = `<div class="absolute -bottom-1 bg-sky-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">RDV</div>`;
         } else {
-          pointStatutTooltip = "bg-rose-500";
-          badgeLive = `<div class="absolute -bottom-1 bg-rose-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">FERMÉ</div>`;
+          const st = calculerStatutOuverture(b, b.horaires);
+          // renseigne===false : mode "indiques" jamais configuré — aucun
+          // badge plutôt qu'un "Fermé" trompeur (même règle que le badge de
+          // l'onglet Domaine).
+          if (st?.renseigne) {
+            if (st.ouvert) {
+              pointStatutTooltip = "bg-[#10B981] animate-pulse";
+              badgeLive = `<div class="absolute -bottom-1 bg-[#10B981] text-gray-950 text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">OUVERT</div>`;
+            } else {
+              pointStatutTooltip = "bg-rose-500";
+              badgeLive = `<div class="absolute -bottom-1 bg-rose-500 text-white text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full border border-white shadow-xs">FERMÉ</div>`;
+            }
+          } else {
+            pointStatutTooltip = "bg-gray-400";
+          }
         }
       }
 

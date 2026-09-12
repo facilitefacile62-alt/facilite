@@ -788,11 +788,25 @@ export function calculerStatutOuverture(boutique, horaires = [], dateReference =
     };
   }
 
-  // Mode "indiques" : s'appuie sur les horaires renseignés ou la grille par défaut
-  const horairesEffectifs = Array.isArray(horaires) && horaires.length > 0 ? horaires : HORAIRES_DEFAUT;
+  // Mode "indiques" sans aucune ligne configurée : aucun badge plutôt qu'un
+  // "Fermé" calculé sur une grille fictive — HORAIRES_DEFAUT ne sert que
+  // d'aperçu visuel dans GrilleHorairesEtablissement (pour donner un exemple
+  // de mise en forme au vendeur qui n'a encore rien renseigné), jamais de
+  // base pour un vrai statut affiché à l'acheteur : ce serait trompeur
+  // (établissement jamais configuré présenté comme "Fermé", donnée fausse).
+  if (!Array.isArray(horaires) || horaires.length === 0) {
+    return {
+      ouvert: null,
+      mode: "indiques",
+      couleur: "zinc",
+      texteBadge: null,
+      texteDetail: "Horaires non renseignés",
+      renseigne: false,
+    };
+  }
 
   const { jourSemaine, minutesActuelles } = obtenirDateHeureDakar(dateReference);
-  const hJour = horairesEffectifs.find((h) => Number(h.jour_semaine) === jourSemaine);
+  const hJour = horaires.find((h) => Number(h.jour_semaine) === jourSemaine);
 
   if (!hJour || hJour.ferme_ce_jour || !hJour.heure_ouverture || !hJour.heure_fermeture) {
     return {
