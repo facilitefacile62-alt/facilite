@@ -4678,38 +4678,22 @@ function ModalFicheBoutique({
           />
         ) : (
           <>
-            {/* Header Mobile minimaliste : Accueil Facilité + Mon profil à
-                gauche (demande explicite : depuis le haut de la boutique,
-                pouvoir soit revenir à l'accueil Facilité, soit aller
-                directement sur son profil Facilité — même destinations que
-                "Gérer mon profil" dans le switcher de Header.jsx, pas un
-                nouveau menu), Nom au centre, Crayon à droite. */}
+            {/* Header Mobile minimaliste : Bouton retour si applicable, Nom de la boutique au centre, Crayon de réglages à droite */}
             <div className="sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 px-4 py-2.5 flex items-center justify-between shadow-2xs">
               <div className="flex items-center gap-1.5">
-                <Link
-                  href="/"
-                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-zinc-700 flex items-center justify-center transition active:scale-95 shadow-xs"
-                  title="Accueil Facilité"
-                >
-                  <i className="fa-solid fa-house text-xs"></i>
-                </Link>
-                <Link
-                  href="/profil"
-                  className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-zinc-700 shadow-xs flex items-center justify-center bg-emerald-600 text-white shrink-0"
-                  title="Mon profil Facilité"
-                >
-                  {profile?.avatar_url && profile.avatar_url !== "/logo.jpeg" ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profile.avatar_url} alt="Mon profil" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-[10px] font-black">
-                      {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : "👤"}
-                    </span>
-                  )}
-                </Link>
+                {onFermer && (
+                  <button
+                    type="button"
+                    onClick={onFermer}
+                    className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-zinc-700 flex items-center justify-center transition active:scale-95 shadow-xs cursor-pointer"
+                    title="Retour"
+                  >
+                    <i className="fa-solid fa-arrow-left text-xs"></i>
+                  </button>
+                )}
               </div>
 
-              <span className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white truncate max-w-[180px] text-center">
+              <span className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white truncate max-w-[200px] text-center">
                 {nom}
               </span>
 
