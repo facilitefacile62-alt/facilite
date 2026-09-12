@@ -1371,8 +1371,12 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
     return parts.length > 1 ? parts[parts.length - 1] : "facile1";
   });
   const [fullName, setFullName] = useState(profile?.full_name || "facilite facile1");
-  const [emplacement, setEmplacement] = useState(profile?.city || profile?.location || profile?.quartier || "");
+  const [emplacement, setEmplacement] = useState(profile?.city || profile?.location || profile?.quartier || boutique?.ville || "Dakar");
   const [selecteurEmplacementOuvert, setSelecteurEmplacementOuvert] = useState(false);
+  const [latitude, setLatitude] = useState(boutique?.latitude ?? profile?.latitude ?? null);
+  const [longitude, setLongitude] = useState(boutique?.longitude ?? profile?.longitude ?? null);
+  const [precisionM, setPrecisionM] = useState(boutique?.position_precision_m ?? null);
+  const [positionVerrouillee, setPositionVerrouillee] = useState(Boolean(boutique?.position_definie_le || (boutique?.latitude && boutique?.longitude)));
   const [anniversaire, setAnniversaire] = useState(profile?.birth_date || "");
   const [sexe, setSexe] = useState(profile?.gender || "Ne pas préciser");
   const [headline, setHeadline] = useState(profile?.headline || "");
@@ -1470,7 +1474,16 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
           updated_at: new Date().toISOString(),
         }).eq("id", userId);
       }
-      showToast("✓ Informations personnelles enregistrées !");
+      if (boutique?.id && boutique?.id !== "facilite_shop") {
+        await modifierBoutique(boutique.id, {
+          nom: nomComplet,
+          ville: emplacement || "Dakar",
+          latitude,
+          longitude,
+          position_precision_m: precisionM,
+        });
+      }
+      showToast("✓ Informations personnelles et position enregistrées !");
       setModalActive(null);
       onEnregistre?.();
     } catch {
@@ -1736,41 +1749,93 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
               />
             </div>
 
-            {/* Sélectionnez l'emplacement* */}
-            <div className="space-y-1">
+            {/* Sélectionnez l'emplacement* avec Verrouillage GPS */}
+            <div className="space-y-2">
               <div
                 onClick={() => setSelecteurEmplacementOuvert(!selecteurEmplacementOuvert)}
                 className={`border ${!emplacement ? "border-red-500" : "border-gray-300 dark:border-zinc-700"} rounded-xl px-3.5 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition bg-white dark:bg-zinc-900`}
               >
-                <span className={`text-xs sm:text-sm font-medium ${!emplacement ? "text-gray-400" : "text-gray-900 dark:text-white"}`}>
-                  {emplacement || "Sélectionnez l'emplacement*"}
-                </span>
-                <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                <div className="flex items-center gap-2 truncate">
+                  <i className="fa-solid fa-location-dot text-emerald-500 text-xs shrink-0"></i>
+                  <span className={`text-xs sm:text-sm font-medium ${!emplacement ? "text-gray-400" : "text-gray-900 dark:text-white"}`}>
+                    {emplacement || "Sélectionnez l'emplacement*"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {latitude && longitude && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-black">
+                      GPS Verrouillé
+                    </span>
+                  )}
+                  <i className={`fa-solid fa-chevron-right text-xs text-gray-400 transition-transform ${selecteurEmplacementOuvert ? "rotate-90" : ""}`}></i>
+                </div>
               </div>
               {!emplacement && (
                 <p className="text-[11px] font-medium text-red-500 pl-1">
                   Ce champ est obligatoire.
                 </p>
               )}
+
+              {/* Tiroir d'emplacement avec Verrouillage Position GPS (1:1 Fonctionnel) */}
               {selecteurEmplacementOuvert && (
-                <div className="p-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 max-h-48 overflow-y-auto space-y-1 shadow-md">
-                  {DEPARTEMENTS_SENEGAL.map((dep) => (
-                    <button
-                      key={dep}
-                      type="button"
-                      onClick={() => {
-                        setEmplacement(dep);
-                        setSelecteurEmplacementOuvert(false);
+                <div className="p-3.5 border border-gray-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-800 space-y-3.5 shadow-lg animate-fadeIn">
+                  {/* Module de Relevé & Verrouillage GPS précis */}
+                  <div className="bg-gray-50 dark:bg-zinc-900/80 p-3 rounded-xl border border-gray-100 dark:border-zinc-700/60 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <i className="fa-solid fa-crosshairs text-blue-500"></i>
+                        Verrouiller ma position GPS
+                      </span>
+                      {precisionM && (
+                        <span className="text-[10px] text-emerald-600 font-bold">
+                          Précision : ±{Math.round(precisionM)}m
+                        </span>
+                      )}
+                    </div>
+                    <CapturePosition
+                      verrouillee={positionVerrouillee}
+                      definieLe={boutique?.position_definie_le}
+                      entite="boutique"
+                      onReleve={(p) => {
+                        const dep = departementLePlusProche(p.latitude, p.longitude);
+                        setLatitude(p.latitude);
+                        setLongitude(p.longitude);
+                        setPrecisionM(p.precisionM);
+                        setPositionVerrouillee(true);
+                        if (dep?.nom) {
+                          setEmplacement(dep.nom);
+                        }
+                        showToast(`✓ Position GPS relevée (${dep?.nom || "Sénégal"})`);
                       }}
-                      className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold ${
-                        emplacement === dep
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold"
-                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-700"
-                      }`}
-                    >
-                      {dep}
-                    </button>
-                  ))}
+                    />
+                  </div>
+
+                  {/* Liste des 45 Départements du Sénégal */}
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block px-1">
+                      Ou choisissez votre département
+                    </span>
+                    <div className="max-h-40 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                      {DEPARTEMENTS_SENEGAL.map((dep) => (
+                        <button
+                          key={dep}
+                          type="button"
+                          onClick={() => {
+                            setEmplacement(dep);
+                            setSelecteurEmplacementOuvert(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition ${
+                            emplacement === dep
+                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-700"
+                          }`}
+                        >
+                          <span>{dep}</span>
+                          {emplacement === dep && <i className="fa-solid fa-check text-xs text-emerald-600"></i>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
