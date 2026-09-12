@@ -657,6 +657,46 @@ export async function chercherServicesEtEtablissements({
 }
 
 // ---------------------------------------------------------------------------
+// Métiers (boutiques type_boutique = 'service')
+// ---------------------------------------------------------------------------
+
+/**
+ * Liste prédéfinie proposée à la création/modification d'une boutique
+ * service (voir FormulaireBoutique) — remplace l'ancien champ texte libre.
+ * "Autre (précisez)" n'est pas une valeur stockée : sélectionnée, elle fait
+ * apparaître un champ texte dont la saisie devient directement `metier`.
+ */
+export const METIERS_SERVICE = [
+  "Chauffeur",
+  "Mécanicien",
+  "Livreur",
+  "Plombier",
+  "Électricien",
+  "Maçon",
+  "Peintre bâtiment",
+  "Menuisier",
+  "Femme de ménage",
+  "Jardinier",
+  "Coiffeur/Coiffeuse",
+  "Couturier/Couturière",
+  "Pharmacien",
+  "Infirmier/Infirmière",
+  "Sage-femme",
+  "Professeur particulier",
+  "Photographe",
+];
+
+/**
+ * Métiers réglementés : mêmes chaînes EXACTES que côté serveur (policies RLS
+ * marketplace_stores/marketplace_horaires + rechercher_boutiques_proches,
+ * migration 20260912...) — une fiche portant un de ces métiers reste
+ * masquée du public tant que verifie=false, même mécanisme que
+ * categorie_etablissement IN ('sante','finance'). Toute nouvelle profession
+ * de santé ajoutée ici doit l'être aussi côté SQL, jamais l'un sans l'autre.
+ */
+export const METIERS_REGLEMENTES = ["Pharmacien", "Infirmier/Infirmière", "Sage-femme"];
+
+// ---------------------------------------------------------------------------
 // Horaires (établissements)
 // ---------------------------------------------------------------------------
 

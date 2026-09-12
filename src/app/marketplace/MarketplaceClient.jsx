@@ -59,6 +59,8 @@ import {
   obtenirDateHeureDakar,
   JOURS_SEMAINE,
   HORAIRES_DEFAUT,
+  METIERS_SERVICE,
+  METIERS_REGLEMENTES,
   positionActuelle,
   publierArticle,
   retirerArticle,
@@ -5495,6 +5497,12 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
     description_prestation: boutique?.description_prestation || "",
     categorie_etablissement: boutique?.categorie_etablissement || "sante",
   });
+  // Bascule d'affichage uniquement : le select propose la liste + "Autre",
+  // mais la valeur réellement stockée dans champs.metier est toujours le
+  // métier lui-même (jamais le mot "autre") — voir METIERS_SERVICE.
+  const [metierEstAutre, setMetierEstAutre] = useState(
+    Boolean(boutique?.metier) && !METIERS_SERVICE.includes(boutique.metier)
+  );
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
@@ -5663,13 +5671,48 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
 
       {estService && (
         <div className="mt-4 space-y-3">
-          <input
-            type="text"
-            value={champs.metier}
-            onChange={(e) => setChamps({ ...champs, metier: e.target.value })}
-            placeholder="Métier (ex. Plombier, Électricien, Coiffeur à domicile...)"
-            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm"
-          />
+          <select
+            value={metierEstAutre ? "autre" : champs.metier}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "autre") {
+                setMetierEstAutre(true);
+                setChamps({ ...champs, metier: "" });
+              } else {
+                setMetierEstAutre(false);
+                setChamps({ ...champs, metier: v });
+              }
+            }}
+            className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm cursor-pointer"
+          >
+            <option value="" disabled>
+              Choisissez votre métier
+            </option>
+            {METIERS_SERVICE.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+            <option value="autre">Autre (précisez)</option>
+          </select>
+          {metierEstAutre && (
+            <input
+              type="text"
+              value={champs.metier}
+              onChange={(e) => setChamps({ ...champs, metier: e.target.value })}
+              placeholder="Précisez votre métier"
+              className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm"
+            />
+          )}
+          {!metierEstAutre && METIERS_REGLEMENTES.includes(champs.metier) && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+              <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+              <span>
+                Métier réglementé : votre fiche restera masquée du public jusqu&apos;à sa vérification par un
+                administrateur.
+              </span>
+            </p>
+          )}
           <textarea
             value={champs.description_prestation}
             onChange={(e) => setChamps({ ...champs, description_prestation: e.target.value })}

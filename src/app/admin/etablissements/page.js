@@ -4,15 +4,24 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { METIERS_REGLEMENTES } from "@/lib/marketplaceData";
 
-// Écran de vérification des établissements sensibles (santé/finance), même
-// esprit que la file de modération des offres d'admin/page.js
-// (handleModerateOffer -> moderate_job_offer) : liste des boutiques en
-// attente, décision via l'appel RPC direct moderate_marketplace_store
-// (SECURITY DEFINER, vérifie côté serveur que l'appelant est admin — cette
-// page en est le client, pas la barrière de sécurité elle-même). Fichier
-// séparé plutôt qu'un nouvel onglet dans admin/page.js (2000+ lignes, sous
-// modification active) pour ne pas risquer d'y toucher.
+// Écran de vérification des établissements sensibles (santé/finance) ET,
+// depuis l'ajout des métiers réglementés (boutiques type_boutique='service'
+// dont le métier est Pharmacien/Infirmier(ère)/Sage-femme), même esprit que
+// la file de modération des offres d'admin/page.js (handleModerateOffer ->
+// moderate_job_offer) : liste des boutiques en attente, décision via l'appel
+// RPC direct moderate_marketplace_store (SECURITY DEFINER, vérifie côté
+// serveur que l'appelant est admin — cette page en est le client, pas la
+// barrière de sécurité elle-même). Fichier séparé plutôt qu'un nouvel onglet
+// dans admin/page.js (2000+ lignes, sous modification active) pour ne pas
+// risquer d'y toucher — même mécanisme étendu ici plutôt qu'un second écran
+// en parallèle, demande explicite.
+//
+// Deux requêtes séparées plutôt qu'un .or() PostgREST unique : les valeurs
+// de METIERS_REGLEMENTES contiennent des caractères (accents, "/") qui
+// rendent la syntaxe de filtre .or() fragile à composer/encoder à la main —
+// deux .in() simples, chacun sans ambiguïté, puis fusion côté client.
 const LIBELLES_CATEGORIE = {
   sante: "Santé",
   finance: "Finance",
@@ -26,21 +35,33 @@ export default function AdminEtablissementsPage() {
 
   const chargerFile = useCallback(async () => {
     setErreur("");
-    const { data, error } = await supabase
-      .from("marketplace_stores")
-      .select("id, nom, quartier, ville, categorie_etablissement, telephone_whatsapp, owner_id, created_at")
-      .eq("type_boutique", "etablissement")
-      .in("categorie_etablissement", ["sante", "finance"])
-      .eq("verifie", false)
-      .eq("actif", true)
-      .order("created_at", { ascending: true });
+    const colonnes = "id, nom, quartier, ville, type_boutique, categorie_etablissement, metier, telephone_whatsapp, owner_id, created_at";
+    const [etablissements, services] = await Promise.all([
+      supabase
+        .from("marketplace_stores")
+        .select(colonnes)
+        .eq("type_boutique", "etablissement")
+        .in("categorie_etablissement", ["sante", "finance"])
+        .eq("verifie", false)
+        .eq("actif", true),
+      supabase
+        .from("marketplace_stores")
+        .select(colonnes)
+        .eq("type_boutique", "service")
+        .in("metier", METIERS_REGLEMENTES)
+        .eq("verifie", false)
+        .eq("actif", true),
+    ]);
 
-    if (error) {
-      setErreur(error.message);
+    if (etablissements.error || services.error) {
+      setErreur(etablissements.error?.message || services.error?.message);
       setEnAttente([]);
       return;
     }
-    setEnAttente(data || []);
+    const fusion = [...(etablissements.data || []), ...(services.data || [])].sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    );
+    setEnAttente(fusion);
   }, []);
 
   useEffect(() => {
@@ -100,12 +121,13 @@ export default function AdminEtablissementsPage() {
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h1 className="text-lg font-extrabold text-gray-900">
-              Vérification des établissements sensibles ({enAttente?.length ?? 0})
+              Vérification des fiches sensibles ({enAttente?.length ?? 0})
             </h1>
             <p className="text-xs text-gray-500 font-medium mt-1">
-              Santé et finance uniquement — ces catégories restent invisibles du public tant qu&apos;elles ne
-              sont pas validées ici. Les autres catégories d&apos;établissement (beauté, etc.) se publient
-              immédiatement, sans passer par cette file.
+              Établissements santé/finance et métiers réglementés (Pharmacien, Infirmier/Infirmière,
+              Sage-femme) uniquement — ces fiches restent invisibles du public tant qu&apos;elles ne sont pas
+              validées ici. Les autres catégories/métiers se publient immédiatement, sans passer par cette
+              file.
             </p>
           </div>
 
@@ -120,7 +142,7 @@ export default function AdminEtablissementsPage() {
               <i className="fa-solid fa-spinner fa-spin"></i>
             </div>
           ) : enAttente.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 italic text-xs">Aucun établissement en attente.</div>
+            <div className="p-8 text-center text-gray-400 italic text-xs">Aucune fiche en attente.</div>
           ) : (
             <div className="divide-y divide-gray-100">
               {enAttente.map((store) => (
@@ -129,7 +151,9 @@ export default function AdminEtablissementsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-extrabold text-gray-900">{store.nom}</span>
                       <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black uppercase">
-                        {LIBELLES_CATEGORIE[store.categorie_etablissement] || store.categorie_etablissement}
+                        {store.type_boutique === "service"
+                          ? store.metier
+                          : LIBELLES_CATEGORIE[store.categorie_etablissement] || store.categorie_etablissement}
                       </span>
                     </div>
                     <span className="text-xs text-gray-500 font-medium">
