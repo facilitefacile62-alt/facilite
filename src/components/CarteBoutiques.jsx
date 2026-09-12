@@ -216,35 +216,35 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
             if (st.mode === "toujours_ouvert") {
               pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#10B981;margin-right:4px;box-shadow:0 0 6px #10B981;"></span>`;
               alarmeBadgeHtml = `
-                <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;background:#ECFDF5;border:1px solid #A7F3D0;margin:3px 0;">
-                  <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;"></span>
-                  <span style="font-size:10px;font-weight:900;color:#065F46;text-transform:uppercase;">🟢 Ouvert 24h/24</span>
+                <div style="display:inline-flex;align-items:center;gap:5px;padding:2.5px 8px;border-radius:9999px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);margin:2px 0;">
+                  <span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;"></span>
+                  <span style="font-size:9.5px;font-weight:900;color:#34d399;text-transform:uppercase;">Ouvert 24h/24</span>
                 </div>`;
               pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#10B981;color:#000;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">24/7</div>`;
             } else if (st.mode === "sur_rendez_vous") {
               pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#0284C7;margin-right:4px;box-shadow:0 0 6px #0284C7;"></span>`;
               alarmeBadgeHtml = `
-                <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;background:#F0F9FF;border:1px solid #BAE6FD;margin:3px 0;">
-                  <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:#0284C7;box-shadow:0 0 6px #0284C7;"></span>
-                  <span style="font-size:10px;font-weight:900;color:#075985;text-transform:uppercase;">🔵 Sur rendez-vous</span>
+                <div style="display:inline-flex;align-items:center;gap:5px;padding:2.5px 8px;border-radius:9999px;background:rgba(2,132,199,0.15);border:1px solid rgba(2,132,199,0.4);margin:2px 0;">
+                  <span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#38bdf8;box-shadow:0 0 6px #38bdf8;"></span>
+                  <span style="font-size:9.5px;font-weight:900;color:#38bdf8;text-transform:uppercase;">Sur rendez-vous</span>
                 </div>`;
               pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#0284C7;color:#fff;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">RDV</div>`;
             } else if (st.ouvert) {
               pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#10B981;margin-right:4px;box-shadow:0 0 6px #10B981;"></span>`;
               alarmeBadgeHtml = `
-                <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;background:#ECFDF5;border:1px solid #A7F3D0;margin:3px 0;">
-                  <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;"></span>
-                  <span style="font-size:10px;font-weight:900;color:#065F46;text-transform:uppercase;">🟢 Ouvert</span>
-                  <span style="font-size:9px;font-weight:700;color:#047857;">· ${echapperHtml(st.texteDetail || "")}</span>
+                <div style="display:inline-flex;align-items:center;gap:5px;padding:2.5px 8px;border-radius:9999px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);margin:2px 0;">
+                  <span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;"></span>
+                  <span style="font-size:9.5px;font-weight:900;color:#34d399;text-transform:uppercase;">Ouvert</span>
+                  <span style="font-size:9px;font-weight:700;color:#6ee7b7;">· ${echapperHtml(st.texteDetail || "")}</span>
                 </div>`;
               pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#10B981;color:#000;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">OUVERT</div>`;
             } else {
               pointStatutHtml = `<span style="display:inline-block;width:7px;height:7px;border-radius:9999px;background:#F43F5E;margin-right:4px;box-shadow:0 0 6px #F43F5E;"></span>`;
               alarmeBadgeHtml = `
-                <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;background:#FFF1F2;border:1px solid #FECDD3;margin:3px 0;">
-                  <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:#F43F5E;box-shadow:0 0 6px #F43F5E;"></span>
-                  <span style="font-size:10px;font-weight:900;color:#9F1239;text-transform:uppercase;">🔴 Fermé</span>
-                  <span style="font-size:9px;font-weight:700;color:#BE123C;">· ${echapperHtml(st.texteDetail || "")}</span>
+                <div style="display:inline-flex;align-items:center;gap:5px;padding:2.5px 8px;border-radius:9999px;background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.4);margin:2px 0;">
+                  <span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:#fb7185;box-shadow:0 0 6px #fb7185;"></span>
+                  <span style="font-size:9.5px;font-weight:900;color:#fda4af;text-transform:uppercase;">Fermé</span>
+                  <span style="font-size:9px;font-weight:700;color:#fecdd3;">· ${echapperHtml(st.texteDetail || "")}</span>
                 </div>`;
               pointAlarmeBadgeHtml = `<div style="position:absolute;bottom:-3px;right:-3px;background:#F43F5E;color:#fff;font-size:7px;font-weight:900;padding:1px 3.5px;border-radius:9999px;border:1.5px solid #fff;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,0.4);z-index:2;">FERMÉ</div>`;
             }
@@ -283,16 +283,27 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], d
               : `${b.articles.length} article${b.articles.length > 1 ? "s" : ""} · ${distanceLisible(b.distance_km)}`;
 
           const contenuBulle = `
-            <div style="min-width:130px;padding:2px 0;">
-              <div style="font-size:12px;font-weight:900;color:#111827;line-height:1.2;margin-bottom:2px;">${echapperHtml(b.nom)}</div>
+            <div style="min-width:140px;padding:2px 0;color:#fff;font-family:inherit;">
+              <div style="font-size:12px;font-weight:900;color:#ffffff;line-height:1.2;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${echapperHtml(b.nom)}</div>
               ${alarmeBadgeHtml}
-              ${b.quartier ? `<div style="font-size:10px;color:#6B7280;margin-top:2px;">📍 ${echapperHtml(b.quartier)}</div>` : ""}
-              <div style="font-size:10px;color:#4B5563;font-weight:600;margin-top:2px;">${ligneDetail}</div>
+              <div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;font-size:10px;">
+                ${b.quartier ? `<span style="color:#94a3b8;display:flex;align-items:center;gap:3px;"><span style="color:#38bdf8;">📍</span> ${echapperHtml(b.quartier)}</span>` : ""}
+                <span style="color:#cbd5e1;font-weight:700;display:flex;align-items:center;gap:3px;"><span style="color:#f59e0b;">📦</span> ${ligneDetail}</span>
+              </div>
             </div>
           `;
 
-          marqueur.bindTooltip(contenuBulle, { direction: "top", opacity: 0.98 });
-          marqueur.bindPopup(contenuBulle, { closeButton: false, offset: [0, -10] });
+          marqueur.bindTooltip(contenuBulle, {
+            direction: "top",
+            opacity: 1,
+            className: "carte-boutique-bulle-custom",
+            offset: [0, -10]
+          });
+          marqueur.bindPopup(contenuBulle, {
+            closeButton: false,
+            className: "carte-boutique-bulle-custom",
+            offset: [0, -10]
+          });
 
           if (typeof onChoisirBoutique === "function") {
             marqueur.on("click", () => onChoisirBoutique(b.id));

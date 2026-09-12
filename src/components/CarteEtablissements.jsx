@@ -68,6 +68,15 @@ export default function CarteEtablissements({ etablissements, depart }) {
 
         for (const e of points) {
           const couleur = e.is_open ? COULEURS[e.activity_type] || COULEUR_FERME : COULEUR_FERME;
+          const contenuBulle = `
+            <div style="min-width:120px;padding:2px 0;color:#fff;font-family:inherit;">
+              <div style="font-size:12px;font-weight:900;color:#ffffff;line-height:1.2;margin-bottom:4px;">${e.nom || "Établissement"}</div>
+              <div style="display:inline-flex;align-items:center;gap:5px;padding:2px 7px;border-radius:9999px;background:${e.is_open ? "rgba(16,185,129,0.15)" : "rgba(244,63,94,0.15)"};border:1px solid ${e.is_open ? "rgba(16,185,129,0.4)" : "rgba(244,63,94,0.4)"};">
+                <span style="display:inline-block;width:6px;height:6px;border-radius:9999px;background:${e.is_open ? "#10B981" : "#fb7185"};box-shadow:0 0 6px ${e.is_open ? "#10B981" : "#fb7185"};"></span>
+                <span style="font-size:9.5px;font-weight:900;color:${e.is_open ? "#34d399" : "#fda4af"};text-transform:uppercase;">${e.is_open ? "Ouvert" : "Fermé"}</span>
+              </div>
+            </div>
+          `;
           L.circleMarker(e.position, {
             radius: e.is_open ? 9 : 7,
             color: couleur,
@@ -76,9 +85,7 @@ export default function CarteEtablissements({ etablissements, depart }) {
             fillOpacity: e.is_open ? 0.85 : 0.35,
           })
             .addTo(carte)
-            .bindTooltip(
-              [`<strong>${e.nom || "Établissement"}</strong>`, e.is_open ? "Ouvert" : "Fermé"].join("<br>")
-            );
+            .bindTooltip(contenuBulle, { direction: "top", opacity: 1, className: "carte-boutique-bulle-custom", offset: [0, -8] });
           bornes.push(e.position);
         }
 
@@ -92,7 +99,7 @@ export default function CarteEtablissements({ etablissements, depart }) {
             fillOpacity: 0.35,
           })
             .addTo(carte)
-            .bindTooltip("Vous êtes ici");
+            .bindTooltip('<div style="color:#fff;font-size:10px;font-weight:800;padding:1px 4px;">📍 Vous êtes ici</div>', { direction: "top", opacity: 1, className: "carte-boutique-bulle-custom", offset: [0, -8] });
           bornes.push(ici);
         }
 
