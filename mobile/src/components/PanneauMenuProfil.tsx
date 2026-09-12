@@ -5,6 +5,7 @@ import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { useAuth } from '@/context/AuthContext';
 import { resolveSupportConversation } from '@/lib/messages';
+import { definirUserMode } from '@/lib/userMode';
 
 // Reproduction de design_handoff_facilite/pages/08-menu-profil.html.
 //
@@ -161,7 +162,14 @@ export default function PanneauMenuProfil({ visible, onFermer }: { visible: bool
   }
 
   function selectionnerBusiness() {
-    Alert.alert('Facilite Business', "L'espace vendeur & marketplace arrive dans une prochaine mise à jour.");
+    // Menait vers un Alert.alert "bientôt disponible" alors que la
+    // destination (WebView Marketplace) existe déjà et fonctionne — voir
+    // "Ma boutique" juste en dessous, qui pointe déjà vers /web/marketplace.
+    // Best-effort, jamais bloquant : la navigation se fait même si
+    // l'écriture AsyncStorage échoue.
+    definirUserMode('business').catch(() => {});
+    onFermer();
+    router.push('/web/marketplace');
   }
 
   return (
@@ -268,6 +276,7 @@ export default function PanneauMenuProfil({ visible, onFermer }: { visible: bool
               </Pressable>
               <Pressable
                 onPress={() => {
+                  definirUserMode('business').catch(() => {});
                   onFermer();
                   router.push('/web/marketplace');
                 }}>

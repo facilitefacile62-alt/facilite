@@ -1,3 +1,25 @@
+// RÉFÉRENCE NON CONNECTÉE — déplacé ici depuis src/components/ (dépôt web
+// Next.js) le 2026-09-12 : écrit en React Native pur (react-native,
+// react-native-maps), jamais rendu par aucun écran, ni ici ni dans le web.
+// Vérifié avant déplacement : aucun commit/plan n'indique d'écran mobile
+// cible précis, et le Marketplace/"Snap Map" ne fait pas partie des 16
+// écrans du handoff de design (design_handoff_facilite/pages/, racine du
+// dépôt) — probablement une exploration du style "Snap Map" (Yango-like)
+// de GlobeExplorateurBoutiques.jsx (web) portée en React Native, jamais
+// terminée ni reliée à une route.
+//
+// Gardé comme référence de design (marqueurs avatar + bordure colorée,
+// bulle de statut, style de carte sombre, bottom sheet, filtres) plutôt que
+// supprimé : travail visiblement abouti, pas une ébauche jetable. Deux
+// choses manquent avant de pouvoir le monter dans un écran réel :
+//   1. react-native-maps n'est installé dans AUCUN des deux projets
+//      (`npx expo install react-native-maps` depuis mobile/ requis) ;
+//   2. l'import ci-dessous (`@/lib/marketplaceData`) résout maintenant vers
+//      mobile/src/lib/marketplaceData.ts, qui n'existe pas — la logique de
+//      statut d'ouverture (calculerStatutOuverture) n'a jamais été portée
+//      côté mobile, seule la version web (src/lib/marketplaceData.js)
+//      existe. Le Marketplace mobile actuel passe uniquement par une
+//      WebView (mobile/src/app/web/[cle].tsx), jamais par du code natif.
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   StyleSheet,

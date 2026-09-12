@@ -13,6 +13,7 @@ import { notifierConnexion } from "@/lib/confirmerConnexion";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import BoutonInstallerApp from "@/components/BoutonInstallerApp";
+import { obtenirUserMode, definirUserMode } from "@/lib/userMode";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
 const QUICK_SECTIONS_INDEX = [
@@ -205,6 +206,21 @@ export default function Header() {
   const [maBoutiqueInfo, setMaBoutiqueInfo] = useState(null);
 
   const isBusinessActive = pathname?.startsWith("/marketplace");
+
+  // Dernier univers utilisé (Facilité / Facilité Business), persisté pour
+  // que le logo/lien Accueil y ramène l'utilisateur au lieu de toujours
+  // pointer vers "/" — voir src/lib/userMode.js. Valeur par défaut
+  // "facilite" à l'hydratation (pas de lecture localStorage avant le
+  // montage, comme le reste de ce header) : un nouvel utilisateur n'a
+  // jamais rien en storage et atterrit donc toujours sur Facilité.
+  const [dernierUserMode, setDernierUserMode] = useState("facilite");
+  useEffect(() => {
+    queueMicrotask(() => setDernierUserMode(obtenirUserMode()));
+  }, []);
+  useEffect(() => {
+    definirUserMode(isBusinessActive ? "business" : "facilite");
+  }, [isBusinessActive]);
+  const accueilHref = dernierUserMode === "business" ? "/marketplace" : "/";
 
   useEffect(() => {
     if (!userSession?.user?.id) {
@@ -562,7 +578,7 @@ export default function Header() {
   };
 
   const handleLogoOrHomeClick = (e) => {
-    handleNavClick(e, "/", "nav_home", "Accueil");
+    handleNavClick(e, accueilHref, "nav_home", "Accueil");
   };
 
   // Session/rôle ne sont plus chargés ici (voir useAuth() ci-dessus) — cet
@@ -918,7 +934,7 @@ export default function Header() {
           isMobileSearchOpen ? "hidden xl:flex" : "flex"
         }`}>
           <Link
-            href="/"
+            href={accueilHref}
             onClick={handleLogoOrHomeClick}
             className="flex items-center space-x-2 group flex-shrink-0 cursor-pointer"
           >
@@ -1092,7 +1108,7 @@ export default function Header() {
         {/* Navigation Links (Desktop & Tablette - Regroupement propre sans saturation de la barre) */}
         <nav className="hidden lg:flex items-center space-x-2 lg:space-x-3.5 xl:space-x-5 flex-shrink-0">
           <Link
-            href="/"
+            href={accueilHref}
             onClick={handleLogoOrHomeClick}
             className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
               pathname === "/"
@@ -1726,7 +1742,7 @@ export default function Header() {
       {!isMobileSearchOpen && (
         <div className="flex xl:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1 bg-[#FAF6F1]/95 dark:bg-gray-900/95 overflow-hidden px-0.5">
           <Link
-            href="/"
+            href={accueilHref}
             onClick={(e) => {
               handleLogoOrHomeClick(e);
             }}
