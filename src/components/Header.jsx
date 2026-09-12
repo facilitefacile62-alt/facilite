@@ -2318,8 +2318,32 @@ export default function Header() {
                       </div>
                     </Link>
 
-                    {/* 7. Installer l'application */}
+                    {/* 7. Installer l'application (PWA) */}
                     <BoutonInstallerApp variant="tuile" />
+
+                    {/* 7bis. Télécharger l'APK Android (Canal Direct) */}
+                    <Link
+                      href="/telecharger-android"
+                      onClick={() => setPlusDropdownOpen(false)}
+                      className="rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md cursor-pointer text-left"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm shadow-2xs">
+                          <i className="fa-brands fa-android"></i>
+                        </div>
+                        <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-[9px] font-black rounded-md uppercase">
+                          APK Direct
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">
+                          Télécharger l&apos;APK Android
+                        </h4>
+                        <p className="text-[10px] text-gray-500 font-medium truncate">
+                          Fichier .apk officiel
+                        </p>
+                      </div>
+                    </Link>
 
                     {/* 8. Boîte à idées */}
                     <Link
@@ -2612,8 +2636,32 @@ export default function Header() {
                       </div>
                     </Link>
 
-                    {/* 10bis. Installer l'application */}
+                    {/* 10bis. Installer l'application (PWA) */}
                     <BoutonInstallerApp variant="tuile" />
+
+                    {/* 10ter. Télécharger l'APK Android (Canal Direct) */}
+                    <Link
+                      href="/telecharger-android"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md cursor-pointer text-left"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm shadow-2xs">
+                          <i className="fa-brands fa-android"></i>
+                        </div>
+                        <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-[9px] font-black rounded-md uppercase">
+                          APK Direct
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">
+                          Télécharger l&apos;APK Android
+                        </h4>
+                        <p className="text-[10px] text-gray-500 font-medium truncate">
+                          Fichier .apk officiel
+                        </p>
+                      </div>
+                    </Link>
 
                     {/* 11. Boîte à idées & Suggestions */}
                     <Link

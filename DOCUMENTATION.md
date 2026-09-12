@@ -117,6 +117,11 @@ npm run start
 1. **Ajout d'un nouveau modèle Canva** : Ajouter l'entrée dans le tableau `modelsData` dans `src/app/page.js` et `src/app/service/page.js`.
 2. **Ajout d'une nouvelle notification** : Mettre à jour l'état initial `notificationsList` présent dans le state global des pages.
 3. **Traduction** : Modifier les objets `translations.FR` et `translations.GB` situés au début des fichiers de page.
+4. **Mise à jour de l'APK Android Direct (`/telecharger-android`)** :
+   - Remplacer le binaire APK compilé dans `public/facilite.apk`.
+   - Mettre à jour `VERSION_APK`, `DATE_VERSION`, `TAILLE_FICHIER` dans `src/app/telecharger-android/page.js`.
+   - Valider les invariants via `node scripts/check-invariants.mjs`.
 
 ---
-*Document généré automatiquement pour le projet Facilite – Février 2026.*
+*Document officiel du projet Facilité.*
+

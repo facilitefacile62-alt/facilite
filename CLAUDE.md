@@ -12,3 +12,10 @@ Ces règles s'appliquent à toute session travaillant sur ce dépôt, sans excep
 - **Un seul assistant actif à la fois sur le dépôt.** Avant de démarrer un nouveau chantier (nouvelle session de chat ou Claude Code), vérifier qu'aucune autre session n'est en cours dessus.
 - **Arrêt après chaque point, attendre validation** avant de passer au point suivant — sauf instruction explicite de l'utilisateur d'enchaîner sans pause.
 - **Ne jamais commiter `.claude/`.**
+
+## 📱 Distribution Directe APK Android (`/telecharger-android`)
+Pour toute nouvelle version de l'application Android distribuée via le canal direct APK :
+1. Déposer le nouveau binaire compilé `.apk` sous `public/facilite.apk`.
+2. Mettre à jour les constantes de version dans `src/app/telecharger-android/page.js` (`VERSION_APK`, `DATE_VERSION`, `TAILLE_FICHIER`).
+3. Vérifier les 13 invariants avec `node scripts/check-invariants.mjs`.
+4. Commiter et pusher les modifications sur `main`.
