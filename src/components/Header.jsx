@@ -1493,20 +1493,39 @@ export default function Header() {
                     <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
                       Vos Espaces
                     </span>
-                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/50 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full shadow-2xs">
+                    {/* Pastille cliquable : raccourci direct vers l'accueil
+                        de l'univers courant (Facilité ou Facilité Business),
+                        peu importe la sous-page où l'on se trouve — distinct
+                        de la ligne "alternatif" ci-dessous qui bascule vers
+                        l'AUTRE espace. */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        router.push(isBusinessActive ? "/marketplace" : "/");
+                      }}
+                      className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/50 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full shadow-2xs cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition"
+                    >
                       {isBusinessActive ? "Mode Vendeur" : "Mode Candidat"}
-                    </span>
+                    </button>
                   </div>
 
                   {/* L'espace sélectionné est TOUJOURS en haut (Image 2), l'autre en dessous avec l'icône de bascule ⟲ (Image 3) */}
                   {isBusinessActive ? (
                     <>
-                      {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Marketplace (Image 2) */}
+                      {/* 1. SÉLECTIONNÉ EN HAUT : amène directement sur SA
+                          propre fiche boutique (pas juste l'accueil générique
+                          du Marketplace, voir "Marketplace" dans les liens
+                          rapides plus bas pour ça) */}
                       <button
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          router.push("/marketplace");
+                          if (pathname?.startsWith("/marketplace")) {
+                            window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
+                          } else {
+                            router.push("/marketplace?action=voir_boutique");
+                          }
                         }}
                         className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left bg-gray-50/90 dark:bg-gray-800/90 border border-gray-200/90 dark:border-gray-700 shadow-2xs hover:border-blue-500/50"
                       >
@@ -1520,7 +1539,7 @@ export default function Header() {
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate">
-                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Marketplace &amp; Boutiques
@@ -1618,12 +1637,18 @@ export default function Header() {
                         </span>
                       </button>
 
-                      {/* 2. ALTERNATIF EN BAS : Facilité Shop / Marketplace (Image 3) */}
+                      {/* 2. ALTERNATIF EN BAS : amène directement sur SA
+                          propre fiche boutique — voir le commentaire
+                          symétrique ci-dessus (branche isBusinessActive). */}
                       <button
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          router.push("/marketplace");
+                          if (pathname?.startsWith("/marketplace")) {
+                            window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
+                          } else {
+                            router.push("/marketplace?action=voir_boutique");
+                          }
                         }}
                         className="w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 group"
                       >
@@ -1643,7 +1668,7 @@ export default function Header() {
 
                           <div className="min-w-0">
                             <h4 className="text-sm font-extrabold text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition">
-                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
+                              {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
                               Marketplace &amp; Boutiq...
@@ -1661,31 +1686,27 @@ export default function Header() {
                   {/* Ligne de séparation */}
                   <div className="my-1 border-t border-gray-100 dark:border-gray-800"></div>
 
-                  {/* Liens d'action rapides : Gérer mon profil & Ma boutique (Image 3) */}
+                  {/* Liens d'action rapides : accès générique à chaque
+                      univers (Facilité / Marketplace) — distinct des lignes
+                      ci-dessus, qui amènent maintenant chacune sur SA propre
+                      page personnelle (profil / fiche boutique). */}
                   <div className="flex items-center justify-between px-1 py-1 text-[11px] font-bold">
                     <Link
-                      href="/profil"
+                      href="/"
                       onClick={() => setProfileDropdownOpen(false)}
                       className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
                     >
                       <i className="fa-solid fa-id-card text-xs text-emerald-600 dark:text-emerald-400"></i>
-                      <span>Gérer mon profil</span>
+                      <span>Facilité</span>
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProfileDropdownOpen(false);
-                        if (pathname?.startsWith("/marketplace")) {
-                          window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
-                        } else {
-                          router.push("/marketplace?action=voir_boutique");
-                        }
-                      }}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition cursor-pointer bg-transparent border-none"
+                    <Link
+                      href="/marketplace"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
                     >
                       <i className="fa-solid fa-store text-xs text-blue-600 dark:text-blue-400"></i>
-                      <span>Ma boutique</span>
-                    </button>
+                      <span>Marketplace</span>
+                    </Link>
                   </div>
 
                   {/* Déconnexion (Image 3) */}
@@ -1898,20 +1919,36 @@ export default function Header() {
                   <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
                     Vos Espaces
                   </span>
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/50 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full shadow-2xs">
+                  {/* Pastille cliquable : raccourci direct vers l'accueil de
+                      l'univers courant, peu importe la sous-page — même
+                      logique que la version desktop ci-dessus. */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      router.push(isBusinessActive ? "/marketplace" : "/");
+                    }}
+                    className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/50 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full shadow-2xs cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition"
+                  >
                     {isBusinessActive ? "Mode Vendeur" : "Mode Candidat"}
-                  </span>
+                  </button>
                 </div>
 
                 {/* L'espace sélectionné est TOUJOURS en haut, l'autre en dessous avec l'icône de bascule ⟲ */}
                 {isBusinessActive ? (
                   <>
-                    {/* 1. SÉLECTIONNÉ EN HAUT : Boutique / Vendeur (Image 2) */}
+                    {/* 1. SÉLECTIONNÉ EN HAUT : amène directement sur SA
+                        propre fiche boutique — même logique que la version
+                        desktop. */}
                     <button
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        router.push("/marketplace");
+                        if (pathname?.startsWith("/marketplace")) {
+                          window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
+                        } else {
+                          router.push("/marketplace?action=voir_boutique");
+                        }
                       }}
                       className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left bg-gray-50/90 dark:bg-gray-800/90 border border-gray-200/90 dark:border-gray-700 shadow-2xs"
                     >
@@ -1923,7 +1960,7 @@ export default function Header() {
                         />
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                           </h4>
                           <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
                         </div>
@@ -2018,12 +2055,17 @@ export default function Header() {
                     {/* Séparateur */}
                     <div className="border-t border-gray-100 dark:border-gray-800 my-0.5"></div>
 
-                    {/* 2. ALTERNATIF EN BAS : Facilité Shop / Marketplace (Image 3) */}
+                    {/* 2. ALTERNATIF EN BAS : amène directement sur SA
+                        propre fiche boutique — même logique que ci-dessus. */}
                     <button
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        router.push("/marketplace");
+                        if (pathname?.startsWith("/marketplace")) {
+                          window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
+                        } else {
+                          router.push("/marketplace?action=voir_boutique");
+                        }
                       }}
                       className="w-full flex items-center justify-between p-2.5 rounded-2xl transition cursor-pointer text-left hover:bg-gray-50 dark:hover:bg-gray-800/40 group"
                     >
@@ -2040,7 +2082,7 @@ export default function Header() {
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition">
-                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "facilite shop"}
+                            {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                           </h4>
                           <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
                         </div>
@@ -2055,12 +2097,12 @@ export default function Header() {
 
                 <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px] font-bold">
                   <Link
-                    href="/profil"
+                    href="/"
                     onClick={() => setMobileMenuOpen(false)}
                     className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
                   >
                     <i className="fa-solid fa-id-card text-xs"></i>
-                    <span>Gérer mon profil</span>
+                    <span>Facilité</span>
                   </Link>
                   <Link
                     href="/marketplace"
@@ -2068,7 +2110,7 @@ export default function Header() {
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
                   >
                     <i className="fa-solid fa-store text-xs"></i>
-                    <span>Ma boutique</span>
+                    <span>Marketplace</span>
                   </Link>
                 </div>
               </div>
