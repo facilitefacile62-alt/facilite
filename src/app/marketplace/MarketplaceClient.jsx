@@ -1355,9 +1355,9 @@ function IllustrationAvionPapier() {
  * - Groupe 3: Désactiver le chat, Désactiver les commentaires, Gérer les notifications
  * - Groupe 4: Changer le mot de passe, Supprimer définitivement mon compte, Se déconnecter
  */
-function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
+function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectionInitiale = null }) {
   const { signOut } = useAuth();
-  const [modalActive, setModalActive] = useState(null); // 'infos_perso' | 'details_entreprise' | 'telephone' | 'email' | 'langue' | 'notifs' | 'password' | 'supprimer'
+  const [modalActive, setModalActive] = useState(sectionInitiale); // 'infos_perso' | 'details_entreprise' | 'telephone' | 'email' | 'langue' | 'notifs' | 'password' | 'supprimer'
   const [toastMessage, setToastMessage] = useState("");
   const [enCours, setEnCours] = useState(false);
 
@@ -1640,9 +1640,15 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setModalActive(null)}
+              onClick={() => {
+                if (sectionInitiale) {
+                  onRetour?.();
+                } else {
+                  setModalActive(null);
+                }
+              }}
               className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-zinc-800 flex items-center justify-center transition cursor-pointer text-gray-800 dark:text-gray-100 text-base font-bold"
-              title="Retour aux réglages"
+              title="Retour"
             >
               <i className="fa-solid fa-chevron-left text-sm"></i>
             </button>
@@ -1652,7 +1658,13 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre }) {
           </div>
           <button
             type="button"
-            onClick={() => setModalActive(null)}
+            onClick={() => {
+              if (sectionInitiale) {
+                onRetour?.();
+              } else {
+                setModalActive(null);
+              }
+            }}
             className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
             title="Fermer"
           >
@@ -4491,11 +4503,12 @@ function ModalFicheBoutique({
               }}
             />
           </div>
-        ) : ongletActif === "parametres" ? (
+        ) : ongletActif === "parametres" || ongletActif === "infos_perso" ? (
           <VueReglages
             userId={userId}
             profile={profile}
             boutique={boutique}
+            sectionInitiale="infos_perso"
             onRetour={() => setOngletActif("produits")}
             onEnregistre={() => {
               onBoutiqueUpdate?.();
@@ -4515,7 +4528,7 @@ function ModalFicheBoutique({
                 <button
                   type="button"
                   onClick={() => {
-                    setOngletActif("parametres");
+                    setOngletActif("infos_perso");
                   }}
                   className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer active:scale-95"
                   title="Modifier les infos de la boutique"
@@ -4592,7 +4605,7 @@ function ModalFicheBoutique({
 
               <button
                 type="button"
-                onClick={() => setOngletActif("parametres")}
+                onClick={() => setOngletActif("infos_perso")}
                 className="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-900 dark:text-white text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
                 title="Modifier les informations du profil"
               >
