@@ -4360,8 +4360,14 @@ function ModalFicheBoutique({
           />
         ) : (
           <>
-            {/* Header Mobile minimaliste : Crayon à gauche, Nom au centre, Menu & Fermer à droite */}
+            {/* Header Mobile minimaliste : Spacer à gauche, Nom au centre, Crayon à droite */}
             <div className="sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+              <div className="w-9 h-9" aria-hidden="true"></div>
+
+              <span className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white truncate max-w-[180px] text-center">
+                {nom}
+              </span>
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -4374,13 +4380,7 @@ function ModalFicheBoutique({
                   <i className="fa-solid fa-pen text-sm"></i>
                 </button>
               </div>
-
-          <span className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white truncate max-w-[150px]">
-            {nom}
-          </span>
-
-          <div className="w-9 h-9" aria-hidden="true"></div>
-        </div>
+            </div>
 
         {/* Bannière rectangulaire beige + Avatar circulaire en bas à droite */}
         <div className="relative w-full px-3 pt-3 mb-12">
