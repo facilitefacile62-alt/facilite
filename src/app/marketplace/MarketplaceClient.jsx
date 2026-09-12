@@ -1655,15 +1655,9 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => {
-                if (sectionInitiale) {
-                  onRetour?.();
-                } else {
-                  setModalActive(null);
-                }
-              }}
+              onClick={() => setModalActive(null)}
               className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-zinc-800 flex items-center justify-center transition cursor-pointer text-gray-800 dark:text-gray-100 text-base font-bold"
-              title="Retour"
+              title="Retour à tous les réglages"
             >
               <i className="fa-solid fa-chevron-left text-sm"></i>
             </button>
@@ -1673,14 +1667,8 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
           </div>
           <button
             type="button"
-            onClick={() => {
-              if (sectionInitiale) {
-                onRetour?.();
-              } else {
-                setModalActive(null);
-              }
-            }}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+            onClick={() => onRetour?.()}
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white transition"
             title="Fermer"
           >
             <i className="fa-solid fa-xmark text-sm"></i>
@@ -4678,10 +4666,10 @@ function ModalFicheBoutique({
                 <button
                   type="button"
                   onClick={() => {
-                    setOngletActif("infos_perso");
+                    setOngletActif("parametres");
                   }}
-                  className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer active:scale-95"
-                  title="Modifier les infos de la boutique"
+                  className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-zinc-700 flex items-center justify-center transition cursor-pointer active:scale-95 shadow-xs"
+                  title="Tous les réglages et paramètres"
                 >
                   <i className="fa-solid fa-pen text-sm"></i>
                 </button>

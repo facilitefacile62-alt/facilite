@@ -508,7 +508,8 @@ export async function chargerTousLesArticles({
         telephone_whatsapp,
         latitude,
         longitude,
-        avatar_config
+        avatar_config,
+        owner_id
       )
     `)
     .eq("actif", true)
@@ -546,6 +547,7 @@ export async function chargerTousLesArticles({
     boutique_lat: r.store?.latitude,
     boutique_lng: r.store?.longitude,
     boutique_avatar_config: r.store?.avatar_config || null,
+    boutique_owner_id: r.store?.owner_id || null,
     whatsapp: r.store?.telephone_whatsapp,
     whatsappUrl: lienWhatsapp(r.store?.telephone_whatsapp, r.titre),
     distance_km: null,
