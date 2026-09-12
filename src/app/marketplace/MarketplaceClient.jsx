@@ -1396,7 +1396,7 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
   // Données Entreprise
   const [nomEntreprise, setNomEntreprise] = useState(boutique?.nom || profile?.full_name || "facilite shop");
   const [descriptionEntreprise, setDescriptionEntreprise] = useState(
-    boutique?.description || "Boutique Officielle Partenaire Facilité"
+    profile?.headline || boutique?.description || "Boutique Officielle Partenaire Facilité"
   );
   const [ville, setVille] = useState(boutique?.ville || profile?.city || "Dakar");
   const [quartier, setQuartier] = useState(boutique?.quartier || profile?.quartier || "Guinaw rail nord");
@@ -1477,6 +1477,7 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
       if (userId) {
         await supabase.from("profiles").update({
           full_name: nomComplet,
+          headline: descriptionEntreprise,
           city: emplacement || "Dakar",
           location: emplacement || "Dakar",
           birth_date: anniversaire || null,
@@ -1487,6 +1488,7 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
       if (boutique?.id && boutique?.id !== "facilite_shop") {
         await modifierBoutique(boutique.id, {
           nom: nomComplet,
+          description: descriptionEntreprise,
           ville: emplacement || "Dakar",
           latitude,
           longitude,
@@ -1957,6 +1959,20 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
                   <i className="fa-solid fa-xmark text-xs"></i>
                 </button>
               )}
+            </div>
+
+            {/* Description & Activité (1:1 Conforme à la capture) */}
+            <div className="space-y-1.5 text-left">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                Description &amp; Activité
+              </label>
+              <textarea
+                rows={3}
+                value={descriptionEntreprise}
+                onChange={(e) => setDescriptionEntreprise(e.target.value)}
+                placeholder="Boutique Officielle Partenaire Facilité"
+                className="w-full border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 bg-white dark:bg-zinc-900 text-xs sm:text-sm font-medium text-gray-900 dark:text-white outline-none focus:border-emerald-500 transition resize-y"
+              />
             </div>
 
             <button
