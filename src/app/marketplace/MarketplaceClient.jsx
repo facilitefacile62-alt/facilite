@@ -6262,6 +6262,7 @@ function GrilleHorairesEtablissement({ boutique, horaires = [], chargement = fal
         );
       })}
     </div>
+    </div>
   );
 }
 
