@@ -206,14 +206,17 @@ export default function Header() {
 
   const isBusinessActive = pathname?.startsWith("/marketplace");
 
-  // Accueil/logo ramène TOUJOURS à la page Facilité ("/"), quel que soit
-  // l'univers courant — signalé comme bug le 12/09/2026 : une version
-  // antérieure faisait pointer ce lien vers le dernier univers utilisé
-  // (Facilité Business inclus), ce qui, depuis une page marketplace,
-  // rechargeait silencieusement la même page marketplace au lieu de
-  // ramener au site Facilité. Changer d'univers reste un choix délibéré
-  // via le switcher de profil, jamais un effet de bord du bouton Accueil.
-  const accueilHref = "/";
+  // Accueil/logo ramène à l'accueil de l'univers COURANT : "/marketplace"
+  // en Facilité Business, "/" en Facilité — jamais l'inverse (clarifié le
+  // 12/09/2026 : changer d'univers est un choix délibéré via le switcher de
+  // profil, pas un effet de bord du bouton Accueil). Calculé directement à
+  // partir de isBusinessActive (dérivé de pathname à chaque rendu) plutôt
+  // que d'un état persisté en localStorage relu une seule fois au montage
+  // (ancienne version, dernierUserMode) : ce dernier ne se remettait jamais
+  // à jour après une navigation interne, puisque Header ne remonte pas
+  // entre les pages (layout racine) — accueilHref restait figé sur la
+  // valeur du tout premier chargement de la session, d'où le bug initial.
+  const accueilHref = isBusinessActive ? "/marketplace" : "/";
 
   useEffect(() => {
     if (!userSession?.user?.id) {
