@@ -34,8 +34,8 @@
 //
 // À incrémenter à chaque fois qu'un déploiement doit impérativement être vu
 // tout de suite — une correction d'incident, typiquement.
-// v9 (12/09/2026) : mise a jour des reglages marketplace et suppression de l'entree informations personnelles
-const VERSION_CACHE = "facilite-v9";
+// v10 (12/09/2026) : masquage du bouton Autour de moi sur le header pour les visiteurs hors marketplace
+const VERSION_CACHE = "facilite-v10";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

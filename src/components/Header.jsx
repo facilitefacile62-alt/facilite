@@ -1396,22 +1396,24 @@ export default function Header() {
             <span>Marketplace</span>
           </Link>
 
-          {/* 📍 Bouton Autour de moi */}
-          <button
-            type="button"
-            onClick={() => {
-              if (pathname?.startsWith("/marketplace")) {
-                window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
-              } else {
-                router.push("/marketplace?autour_de_moi=1");
-              }
-            }}
-            className="hidden sm:inline-flex px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer items-center gap-1.5 bg-[#1877F2] hover:bg-blue-600 text-white shadow-xs active:scale-95 shrink-0"
-            title="Rechercher autour de moi"
-          >
-            <i className="fa-solid fa-location-dot text-xs"></i>
-            <span>Autour de moi</span>
-          </button>
+          {/* 📍 Bouton Autour de moi (Uniquement en mode Marketplace / Business) */}
+          {isBusinessActive && (
+            <button
+              type="button"
+              onClick={() => {
+                if (pathname?.startsWith("/marketplace")) {
+                  window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
+                } else {
+                  router.push("/marketplace?autour_de_moi=1");
+                }
+              }}
+              className="hidden sm:inline-flex px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer items-center gap-1.5 bg-[#1877F2] hover:bg-blue-600 text-white shadow-xs active:scale-95 shrink-0"
+              title="Rechercher autour de moi"
+            >
+              <i className="fa-solid fa-location-dot text-xs"></i>
+              <span>Autour de moi</span>
+            </button>
+          )}
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
