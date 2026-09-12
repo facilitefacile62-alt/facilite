@@ -4379,16 +4379,7 @@ function ModalFicheBoutique({
             {nom}
           </span>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setMenuMobileOuvert(true)}
-              className="w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer active:scale-95"
-              title="Ouvrir le menu vendeur"
-            >
-              <i className="fa-solid fa-bars text-sm"></i>
-            </button>
-          </div>
+          <div className="w-9 h-9" aria-hidden="true"></div>
         </div>
 
         {/* Bannière rectangulaire beige + Avatar circulaire en bas à droite */}
