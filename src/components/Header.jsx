@@ -180,6 +180,22 @@ const QUICK_SECTIONS_INDEX = [
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Chaque univers réserve ses propres notifications, jamais mélangées dans
+// la même pastille — signalé le 12/09/2026 : des notifications Facilité
+// (statut de badge, accès aux documents) apparaissaient alors que
+// l'utilisateur était sur la Marketplace. "jobs" est un type synthétique
+// (voir fetchJobOfferNotifs, jamais une ligne de la table notifications)
+// mais suit la même règle. Aucun type marketplace personnel n'existe
+// encore pour un vendeur ordinaire — marketplace_signalement est réservé
+// aux admins (public.marketplace_reports, 20260902120000) — donc côté
+// Marketplace le centre reste honnêtement vide plutôt que d'afficher des
+// notifications Facilité hors contexte.
+const TYPES_NOTIF_FACILITE = new Set([
+  "jobs", "posts", "mentions", "candidature", "reponse", "badge",
+  "message", "system", "document_access", "document_delivery", "support_escalade",
+]);
+const TYPES_NOTIF_MARKETPLACE = new Set(["marketplace_signalement"]);
+
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
@@ -301,10 +317,13 @@ export default function Header() {
   // perturber le flux d'offres.
   const [dbNotifications, setDbNotifications] = useState([]);
   const [jobOfferNotifs, setJobOfferNotifs] = useState([]);
-  const notifications = useMemo(
-    () => [...dbNotifications, ...jobOfferNotifs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
-    [dbNotifications, jobOfferNotifs]
-  );
+  const notifications = useMemo(() => {
+    const fusionnees = [...dbNotifications, ...jobOfferNotifs].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+    const typesAttendus = isBusinessActive ? TYPES_NOTIF_MARKETPLACE : TYPES_NOTIF_FACILITE;
+    return fusionnees.filter((n) => typesAttendus.has(n.type));
+  }, [dbNotifications, jobOfferNotifs, isBusinessActive]);
   const [notificationFilter, setNotificationFilter] = useState("all"); // "all" | "unread"
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [notifOptionsMenuOpen, setNotifOptionsMenuOpen] = useState(false);
@@ -1395,25 +1414,6 @@ export default function Header() {
             />
             <span>Marketplace</span>
           </Link>
-
-          {/* 📍 Bouton Autour de moi (Uniquement en mode Marketplace / Business) */}
-          {isBusinessActive && (
-            <button
-              type="button"
-              onClick={() => {
-                if (pathname?.startsWith("/marketplace")) {
-                  window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
-                } else {
-                  router.push("/marketplace?autour_de_moi=1");
-                }
-              }}
-              className="hidden sm:inline-flex px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer items-center gap-1.5 bg-[#1877F2] hover:bg-blue-600 text-white shadow-xs active:scale-95 shrink-0"
-              title="Rechercher autour de moi"
-            >
-              <i className="fa-solid fa-location-dot text-xs"></i>
-              <span>Autour de moi</span>
-            </button>
-          )}
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
@@ -1813,25 +1813,6 @@ export default function Header() {
                 </Link>
               )}
             </>
-          )}
-
-          {/* 📍 Bouton Autour de moi harmonisé dans la barre mobile */}
-          {isBusinessActive && (
-            <button
-              type="button"
-              onClick={() => {
-                if (pathname?.startsWith("/marketplace")) {
-                  window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
-                } else {
-                  router.push("/marketplace?autour_de_moi=1");
-                }
-              }}
-              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] text-gray-700 dark:text-gray-200 hover:text-[#1877F2] transition group"
-              title="Rechercher autour de moi"
-            >
-              <i className="fa-solid fa-location-dot text-sm sm:text-base text-[#1877F2] group-hover:scale-110 transition-transform"></i>
-              <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-[#1877F2]">Autour</span>
-            </button>
           )}
 
           {userSession && (
