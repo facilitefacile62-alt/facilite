@@ -14,6 +14,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 // ?redirect= porte la destination finale déjà en place avant ce chantier
 // (comportement historique inchangé) — jamais perdue, seulement reportée
 // de page en page jusqu'au bout du parcours.
+//
+// Refonte visuelle (contenu de la carte uniquement) : les deux options
+// passent de simples boutons à des tuiles icône + titre + description,
+// pour que le choix se lise comme un vrai embranchement du produit plutôt
+// que deux libellés avec tiret cadratin. Aucun changement de logique ni
+// de routage.
 function BienvenueContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,18 +40,32 @@ function BienvenueContent() {
   };
 
   return (
-    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-center items-center px-3 sm:px-4 py-6 transition-colors">
-      <main className="w-full max-w-md">
+    <div className="relative min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-center items-center px-3 sm:px-4 py-6 transition-colors overflow-hidden">
+      {/* Lueur douce en fond — seul accent atmosphérique de la page, pour ne
+          pas laisser un aplat crème totalement vide autour de la carte. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-emerald-400/10 dark:bg-emerald-500/10 rounded-full blur-3xl"
+      ></div>
+
+      <main className="relative w-full max-w-md">
         <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-100 dark:border-zinc-800 text-center space-y-6">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl mx-auto shadow-xs">
-            <i className="fa-solid fa-sparkles"></i>
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full bg-emerald-300/30 dark:bg-emerald-500/20 blur-lg"></div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.jpeg"
+              alt="Facilité"
+              className="relative w-16 h-16 rounded-full object-cover shadow-md border-2 border-white dark:border-zinc-900 ring-2 ring-emerald-100 dark:ring-emerald-900"
+            />
           </div>
+
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-2">
               Bienvenue sur Facilité !
             </h1>
             <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 leading-relaxed">
-              Par quel univers voulez-vous commencer ? Vous pourrez basculer entre les deux à tout moment.
+              Par quel univers voulez-vous commencer ? Vous pourrez changer à tout moment.
             </p>
           </div>
 
@@ -54,19 +74,32 @@ function BienvenueContent() {
               type="button"
               onClick={choisirFacilite}
               disabled={enCours}
-              className="w-full py-4 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-black text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98] cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2.5"
+              className="w-full p-4 bg-[#10E688] hover:bg-[#0ed37c] rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98] cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left"
             >
-              <i className="fa-solid fa-briefcase text-base"></i>
-              <span>Facilité — Recherche d&apos;emploi</span>
+              <div className="w-11 h-11 shrink-0 rounded-xl bg-gray-950/10 flex items-center justify-center text-gray-950 text-lg">
+                <i className="fa-solid fa-briefcase"></i>
+              </div>
+              <div className="min-w-0">
+                <p className="font-black text-sm text-gray-950">Facilité</p>
+                <p className="text-xs text-gray-950/70 font-medium">Recherche d&apos;emploi et candidatures</p>
+              </div>
+              <i className="fa-solid fa-chevron-right ml-auto text-gray-950/40 text-xs"></i>
             </button>
+
             <button
               type="button"
               onClick={choisirBusiness}
               disabled={enCours}
-              className="w-full py-4 px-4 bg-white dark:bg-zinc-800 border-2 border-gray-900 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700/80 text-gray-900 dark:text-white font-black text-sm rounded-2xl transition active:scale-[0.98] cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2.5 shadow-2xs"
+              className="w-full p-4 bg-white dark:bg-zinc-800 border-2 border-gray-900 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700/80 rounded-2xl transition active:scale-[0.98] cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left shadow-2xs"
             >
-              <i className="fa-solid fa-store text-base text-emerald-600 dark:text-emerald-400"></i>
-              <span>Facilité Business — Marketplace</span>
+              <div className="w-11 h-11 shrink-0 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-lg">
+                <i className="fa-solid fa-store"></i>
+              </div>
+              <div className="min-w-0">
+                <p className="font-black text-sm text-gray-900 dark:text-white">Facilité Business</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Achetez et vendez sur la marketplace</p>
+              </div>
+              <i className="fa-solid fa-chevron-right ml-auto text-gray-300 dark:text-zinc-600 text-xs"></i>
             </button>
           </div>
         </div>
