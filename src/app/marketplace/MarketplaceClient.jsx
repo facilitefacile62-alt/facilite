@@ -3561,10 +3561,36 @@ function VueVendeur({
           )}
 
           <div className="p-6">
-            {/* VUE 1 : MES ANNONCES (1:1 Capture avec bannière et annonces) */}
-            {/* VUE 1 : MES ANNONCES (Bannière & Catalogue des annonces) */}
+            {/* VUE 1 : MES ANNONCES (Catalogue des annonces & Message premier article si vide) */}
             {ongletVendeur === "annonces" && (
               <div>
+                {/* Message en haut pour les nouveaux : Publie ton premier article */}
+                {articles.length === 0 && (
+                  <div className="mb-6 p-4.5 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-emerald-500/10 border border-blue-200 dark:border-blue-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
+                        <i className="fa-solid fa-wand-magic-sparkles text-lg"></i>
+                      </div>
+                      <div>
+                        <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+                          Publie ton premier article
+                        </h3>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-0.5">
+                          Votre boutique est prête. Mettez en ligne votre première annonce pour commencer à vendre et toucher des milliers de clients.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setOngletVendeur("publier")}
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2 shrink-0"
+                    >
+                      <i className="fa-solid fa-plus"></i>
+                      <span>Publier un article</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Grande Bannière Panoramique Widescreen HD */}
                 <div className="mb-6">
                   <div
@@ -3622,20 +3648,24 @@ function VueVendeur({
                 </div>
 
                 {articles.length === 0 ? (
-                  <div className="py-20 px-4 flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="py-16 sm:py-20 px-4 flex flex-col items-center justify-center text-center space-y-4">
                     {/* Illustration Avion en papier (1:1 Capture avec SVG) */}
                     <IllustrationAvionPapier />
 
                     <div className="space-y-1.5 pt-2">
-                      <h3 className="text-sm sm:text-base font-normal text-gray-700 dark:text-gray-300">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-200">
                         Il n&apos;y a pas encore d&apos;annonces.
                       </h3>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                        Publiez votre première annonce pour la rendre visible auprès des acheteurs sur le Marketplace.
+                      </p>
                       <button
                         type="button"
                         onClick={() => setOngletVendeur("publier")}
-                        className="text-sm sm:text-base font-bold text-[#1877F2] hover:text-blue-700 dark:text-blue-400 transition cursor-pointer pt-1 block mx-auto hover:underline"
+                        className="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-[#1877F2] hover:text-blue-700 dark:text-blue-400 transition cursor-pointer pt-2 hover:underline"
                       >
-                        Créez-en une maintenant !
+                        <i className="fa-solid fa-circle-plus"></i>
+                        <span>Publiez votre premier article maintenant !</span>
                       </button>
                     </div>
                   </div>

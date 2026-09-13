@@ -52,7 +52,8 @@
 // v45 (13/09/2026) : ajout des boutons Service / métier et Établissement juste après Mes annonces dans le menu latéral
 // v46 (13/09/2026) : purge forcée du cache pour affichage instantané des boutons Service et Établissement
 // v47 (13/09/2026) : affichage du catalogue vide (avion en papier) pour les nouveaux vendeurs sur Mes annonces
-const VERSION_CACHE = "facilite-v47";
+// v48 (13/09/2026) : bandeau supérieur d'invitation 'Publie ton premier article' pour les nouveaux vendeurs
+const VERSION_CACHE = "facilite-v48";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
