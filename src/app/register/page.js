@@ -131,13 +131,13 @@ function RegisterForm() {
     setOauthLoading(true);
     try {
       const safeRedirect = redirectUrl.startsWith("/") ? redirectUrl : "/";
+      const nextApresConfirmation = `/bienvenue?redirect=${encodeURIComponent(safeRedirect)}`;
       // /auth/callback échange le code CÔTÉ SERVEUR avant de rediriger vers
-      // safeRedirect — voir la note détaillée dans login/page.js (même
-      // correctif, même cause : double aller-retour avant sans cette route).
+      // /bienvenue (choix Facilité / Facilité Business).
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextApresConfirmation)}`,
         },
       });
       if (error) throw error;
@@ -233,7 +233,7 @@ function RegisterForm() {
                   </p>
                   <PhoneAuthForm
                     mode="signup"
-                    onSuccessRedirect={redirectUrl}
+                    onSuccessRedirect={`/bienvenue?redirect=${encodeURIComponent(redirectUrl || "/")}`}
                     onNeedsEmail={() => setPhoneSignupStep("email_prompt")}
                   />
                 </>

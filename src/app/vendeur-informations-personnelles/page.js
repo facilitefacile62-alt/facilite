@@ -31,7 +31,7 @@ function VendeurInformationsPersonnellesContent() {
             </p>
           </div>
           <Link
-            href={safeRedirect}
+            href={safeRedirect === "/" ? "/marketplace" : safeRedirect}
             className="block w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-black text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98] cursor-pointer text-center"
           >
             Continuer

@@ -84,6 +84,7 @@ export async function GET(req) {
   const debut = Date.now();
 
   let error = null;
+  let authData = null;
   try {
     const echange = supabase.auth.exchangeCodeForSession(code);
     const resultat = await Promise.race([
@@ -98,6 +99,7 @@ export async function GET(req) {
       return NextResponse.redirect(`${origin}/login?oauth_error=timeout`);
     }
     error = resultat?.error || null;
+    authData = resultat?.data || null;
   } catch (err) {
     console.error("[Auth Callback] Exception pendant l'échange OAuth :", err?.message);
     return NextResponse.redirect(`${origin}/login?oauth_error=1`);
@@ -109,6 +111,28 @@ export async function GET(req) {
       error.message
     );
     return NextResponse.redirect(`${origin}/login?oauth_error=1`);
+  }
+
+  // Détection nouvel utilisateur : si le compte vient d'être créé via OAuth
+  // et qu'aucune redirection vers /bienvenue n'a été spécifiée explicitement,
+  // on l'envoie vers le choix Facilité / Facilité Business en préservant safeNext.
+  const user = authData?.user;
+  if (user && !safeNext.startsWith("/bienvenue") && !safeNext.startsWith("/admin")) {
+    const createdAtMs = user.created_at ? new Date(user.created_at).getTime() : 0;
+    const lastSignInMs = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
+    const estNouveauCompte =
+      createdAtMs > 0 &&
+      (Math.abs(createdAtMs - lastSignInMs) < 15000 || Date.now() - createdAtMs < 60000);
+
+    if (estNouveauCompte) {
+      const destinationBienvenue = `${origin}/bienvenue?redirect=${encodeURIComponent(safeNext)}`;
+      const resBienvenue = NextResponse.redirect(destinationBienvenue);
+      // Recopie les cookies de session posés
+      res.cookies.getAll().forEach((cookie) => {
+        resBienvenue.cookies.set(cookie.name, cookie.value, cookie);
+      });
+      return resBienvenue;
+    }
   }
 
   return res;

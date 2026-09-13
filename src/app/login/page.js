@@ -235,6 +235,14 @@ export default function LoginPage() {
               });
               if (hasVerifiedBadge === true) {
                 redirectUrl = "/recruteur";
+              } else {
+                // Nouveau compte : orienter vers le choix de plateforme (/bienvenue)
+                const createdAtMs = data?.session?.user?.created_at
+                  ? new Date(data.session.user.created_at).getTime()
+                  : 0;
+                if (createdAtMs > 0 && Date.now() - createdAtMs < 15 * 60 * 1000) {
+                  redirectUrl = "/bienvenue";
+                }
               }
             } catch (e) {
               console.warn("Impossible de vérifier le badge recruteur:", e);

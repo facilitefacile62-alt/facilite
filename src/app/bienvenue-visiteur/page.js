@@ -72,7 +72,8 @@ function BienvenueVisiteurContent() {
           })
           .eq("id", user.id);
       }
-      router.push(safeRedirect);
+      const destination = safeRedirect === "/" ? "/marketplace" : safeRedirect;
+      router.push(destination);
     } catch (err) {
       console.error("Erreur enregistrement nom/prénom (bienvenue-visiteur):", err);
       setErreur("Une erreur est survenue. Réessayez.");
