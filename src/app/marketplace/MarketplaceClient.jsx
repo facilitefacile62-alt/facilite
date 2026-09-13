@@ -1000,8 +1000,14 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         </div>
       </div>
 
-      {/* En-tête de résultats (1:1 Identique à la capture d'écran) */}
-      <div className="flex items-center justify-between mb-3.5 px-1">
+      {/* En-tête de résultats avec bouton Autour de moi et Explorer la carte.
+          Restauré le 13/09/2026 : ces deux boutons ont été déplacés vers la
+          barre de navigation mobile (commit a31ab64) puis leur déclencheur y
+          a disparu, laissant `localiser`/`setGlobeOuvert` et l'écouteur
+          "facilite:autour-de-moi" orphelins (plus aucun bouton nulle part ne
+          les appelait) — la page d'accueil du marketplace n'avait alors plus
+          aucun moyen d'activer la recherche géolocalisée ni la carte. */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3.5 px-1">
         <h2 className="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
           {position ? (
             <>
@@ -1015,6 +1021,60 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
             </>
           )}
         </h2>
+
+        {/* Boutons d'action Autour de moi & Explorer */}
+        <div className="flex items-center gap-2">
+          {position ? (
+            <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-full px-2.5 py-1 text-xs font-black text-emerald-700 dark:text-emerald-300 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Autour de moi</span>
+              <select
+                value={rayonKm}
+                onChange={(e) => setRayonKm(Number(e.target.value))}
+                className="bg-transparent border-none text-[11px] font-bold text-emerald-800 dark:text-emerald-200 focus:outline-none cursor-pointer"
+              >
+                {RAYONS.map((r) => (
+                  <option key={r} value={r} className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+                    {r} km
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={reinitialiserPosition}
+                className="ml-1 text-emerald-600 hover:text-red-500 transition cursor-pointer p-0.5"
+                title="Désactiver la géolocalisation"
+              >
+                <i className="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={localiser}
+              disabled={chargement}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 hover:border-emerald-500 text-gray-700 dark:text-gray-200 hover:text-emerald-600 font-bold text-xs shadow-xs transition cursor-pointer"
+            >
+              {chargement ? (
+                <i className="fa-solid fa-circle-notch fa-spin text-emerald-500 text-xs"></i>
+              ) : (
+                <i className="fa-solid fa-location-crosshairs text-emerald-500 text-xs"></i>
+              )}
+              <span>Autour de moi</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setGlobeOuvert(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/30 text-[#1877F2] font-black text-xs shadow-xs transition cursor-pointer"
+            title="Explorer toutes les boutiques sur la carte interactive"
+          >
+            <i className="fa-solid fa-earth-africa text-xs"></i>
+            <span className="hidden sm:inline">Explorer la carte</span>
+            <span className="sm:hidden">Carte</span>
+          </button>
+        </div>
       </div>
 
       {erreur && (
