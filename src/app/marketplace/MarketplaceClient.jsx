@@ -1692,9 +1692,9 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
             <div className="flex justify-center pb-2">
               <div className="relative">
                 <div
-                  onClick={() => avatarInputRef.current?.click()}
+                  onClick={() => setModalActive("avatar")}
                   className="w-24 h-24 rounded-full bg-[#86EFAC] text-white flex items-center justify-center text-4xl overflow-hidden cursor-pointer shadow-inner border-2 border-emerald-300"
-                  title="Changer mon avatar"
+                  title="Modifier l'avatar"
                 >
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -1706,7 +1706,7 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
                 {/* Badge Crayon en bas à droite de l'avatar */}
                 <button
                   type="button"
-                  onClick={() => avatarInputRef.current?.click()}
+                  onClick={() => setModalActive("avatar")}
                   className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white dark:bg-zinc-800 shadow-md border border-gray-200 dark:border-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-200 hover:scale-105 active:scale-95 transition cursor-pointer"
                   title="Modifier l'avatar"
                 >
@@ -2393,16 +2393,14 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
         />
       )}
 
-      {/* Modal Avatar façon Bitmoji de la boutique — anonymat possible, pas de
-          vraie photo obligatoire. Enregistrement uniquement au clic explicite
-          sur "Enregistrer les modifications" dans EditeurAvatarBoutique. */}
-      {modalActive === "avatar" && boutique?.id && (
+      {/* Modal Avatar façon Bitmoji — anonymat préservé, pas de vraie photo obligatoire */}
+      {modalActive === "avatar" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 max-h-[92vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b pb-3 mb-2 border-gray-100 dark:border-zinc-800 shrink-0">
               <h3 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
                 <i className="fa-solid fa-wand-magic-sparkles text-emerald-500"></i>
-                <span>Avatar de la boutique</span>
+                <span>Avatar anonyme</span>
               </h3>
               <button
                 type="button"
@@ -2414,12 +2412,24 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
             </div>
             <div className="flex-1 overflow-y-auto pr-1">
               <EditeurAvatarBoutique
-                configInitial={boutique.avatar_config}
+                configInitial={boutique?.avatar_config || profile?.avatar_config}
                 onAnnuler={() => setModalActive(null)}
                 onEnregistrer={async (config) => {
-                  await modifierAvatarBoutique(boutique.id, config);
+                  if (boutique?.id && boutique?.id !== "facilite_shop") {
+                    await modifierAvatarBoutique(boutique.id, config);
+                  }
+                  const { dataUriAvatarBoutique } = await import("@/lib/avatarBoutique");
+                  const svgUri = dataUriAvatarBoutique(config);
+                  setAvatarUrl(svgUri);
+                  if (userId) {
+                    await supabase.from("profiles").update({
+                      avatar_url: svgUri,
+                      avatar_config: config,
+                      updated_at: new Date().toISOString(),
+                    }).eq("id", userId);
+                  }
                   setModalActive(null);
-                  showToast("✓ Avatar de la boutique enregistré !");
+                  showToast("✓ Avatar mis à jour avec succès !");
                   onEnregistre?.();
                 }}
               />
@@ -4644,12 +4654,18 @@ function ModalFicheBoutique({
               }}
             />
           </div>
-        ) : ongletActif === "parametres" || ongletActif === "infos_perso" ? (
+        ) : ongletActif === "parametres" || ongletActif === "infos_perso" || ongletActif === "avatar" ? (
           <VueReglages
             userId={userId}
             profile={profile}
             boutique={boutique}
-            sectionInitiale={ongletActif === "infos_perso" ? "infos_perso" : null}
+            sectionInitiale={
+              ongletActif === "infos_perso"
+                ? "infos_perso"
+                : ongletActif === "avatar"
+                ? "avatar"
+                : null
+            }
             onRetour={() => setOngletActif("produits")}
             onEnregistre={() => {
               onBoutiqueUpdate?.();
@@ -4711,9 +4727,9 @@ function ModalFicheBoutique({
 
             <button
               type="button"
-              onClick={() => avatarInputRef.current?.click()}
+              onClick={() => setOngletActif("avatar")}
               className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white cursor-pointer"
-              title="Changer la photo de profil"
+              title="Modifier l'avatar"
             >
               <i className="fa-solid fa-camera text-xs"></i>
             </button>
@@ -5190,9 +5206,9 @@ function ModalFicheBoutique({
               {/* Overlay interactif de modification au survol / clic */}
               <button
                 type="button"
-                onClick={() => avatarInputRef.current?.click()}
+                onClick={() => setOngletActif("avatar")}
                 className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer"
-                title="Modifier la photo"
+                title="Modifier l'avatar"
               >
                 <i className="fa-solid fa-camera text-sm mb-0.5"></i>
                 <span className="text-[9px] font-bold">Modifier</span>
@@ -5418,9 +5434,9 @@ function ModalFicheBoutique({
                       )}
                       <button
                         type="button"
-                        onClick={() => avatarInputRef.current?.click()}
+                        onClick={() => setOngletActif("avatar")}
                         className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white cursor-pointer"
-                        title="Changer la photo de profil"
+                        title="Modifier l'avatar"
                       >
                         <i className="fa-solid fa-camera text-xs"></i>
                       </button>
