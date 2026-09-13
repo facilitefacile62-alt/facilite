@@ -3209,7 +3209,7 @@ function VueVendeur({
 
             {/* Profil : Avatar avec overlay Modifier + Nom + Titre + Badges */}
             <div className="px-4 pb-3 pt-0 relative flex flex-col items-start text-left border-b border-gray-100 dark:border-zinc-800">
-              {/* Avatar avec bouton Modifier */}
+              {/* Avatar avec bouton Modifier et badge appareil photo permanent */}
               <div className="relative group -mt-10 mb-2 w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-md overflow-hidden shrink-0">
                 {avatarBitmojiUri ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -3236,6 +3236,16 @@ function VueVendeur({
                   <span className="text-[9px] font-bold">Modifier</span>
                 </button>
               </div>
+
+              {/* Petit bouton caméra permanent en bas de l'avatar */}
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute left-18 top-4 z-20 w-6 h-6 rounded-full bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white border-2 border-white dark:border-zinc-950 flex items-center justify-center shadow-md cursor-pointer hover:scale-110 active:scale-95 transition"
+                title="Changer la photo / avatar de profil"
+              >
+                <i className="fa-solid fa-camera text-[10px]"></i>
+              </button>
 
               {/* Nom du commerçant / Boutique & Badge BOUTIQUE */}
               <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -3266,11 +3276,22 @@ function VueVendeur({
                 </span>
               </div>
 
+              {/* Bouton Modifier le profil (Visible et accessible) */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("parametres")}
+                className="w-full mt-2 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-900 dark:text-white border border-gray-200/80 dark:border-zinc-700 shadow-2xs active:scale-98"
+                title="Modifier les informations et l'avatar de la boutique"
+              >
+                <i className="fa-solid fa-pen text-xs text-gray-500"></i>
+                <span>Modifier le profil</span>
+              </button>
+
               {/* Bouton Aperçu de la boutique (Bleu vif 1:1 Capture 2) */}
               <button
                 type="button"
                 onClick={() => setModalApercuOuverte(true)}
-                className="w-full mt-2 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer bg-[#1877F2] hover:bg-blue-600 text-white shadow-md shadow-blue-500/20 active:scale-98"
+                className="w-full mt-1.5 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer bg-[#1877F2] hover:bg-blue-600 text-white shadow-md shadow-blue-500/20 active:scale-98"
                 title="Aperçu public de ma boutique"
               >
                 <i className="fa-regular fa-eye text-sm"></i>
@@ -5426,8 +5447,8 @@ function ModalFicheBoutique({
         <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden md:h-full md:overflow-y-auto">
           {/* Bannière de couverture en haut de la carte latérale */}
           <div
-            className="h-28 bg-cover bg-center bg-no-repeat relative block bg-gradient-to-r from-slate-900 via-zinc-800 to-slate-900"
-            style={{ backgroundImage: `url('${coverUrl || "/stellar-cover.png"}')` }}
+            className="h-28 bg-cover bg-center bg-no-repeat relative block bg-slate-900"
+            style={{ backgroundImage: `url('${coverUrl || "/default-cover.png"}')` }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20"></div>
             {/* Bouton Appareil Photo pour changer la couverture */}
@@ -5443,7 +5464,7 @@ function ModalFicheBoutique({
 
           {/* Profil : Avatar avec overlay Modifier + Nom + Titre + Badges */}
           <div className="px-4 pb-3 pt-0 relative flex flex-col items-start text-left border-b border-gray-100 dark:border-zinc-800">
-            {/* Avatar avec bouton Modifier */}
+            {/* Avatar avec bouton Modifier et badge appareil photo permanent */}
             <div className="relative group -mt-10 mb-2 w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-md overflow-hidden shrink-0">
               {avatarBitmojiUri ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -5471,6 +5492,16 @@ function ModalFicheBoutique({
               </button>
             </div>
 
+            {/* Petit bouton caméra permanent en bas de l'avatar */}
+            <button
+              type="button"
+              onClick={() => setOngletActif("avatar")}
+              className="absolute left-18 top-4 z-20 w-6 h-6 rounded-full bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white border-2 border-white dark:border-zinc-950 flex items-center justify-center shadow-md cursor-pointer hover:scale-110 active:scale-95 transition"
+              title="Changer la photo / avatar de profil"
+            >
+              <i className="fa-solid fa-camera text-[10px]"></i>
+            </button>
+
             {/* Nom de la Boutique & Badge BOUTIQUE / ÉTABLISSEMENT */}
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className="text-xl font-black text-zinc-900 dark:text-white leading-tight tracking-tight">
@@ -5496,11 +5527,22 @@ function ModalFicheBoutique({
               </span>
             </div>
 
+            {/* Bouton Modifier le profil (Visible et accessible) */}
+            <button
+              type="button"
+              onClick={() => setOngletActif("infos_perso")}
+              className="w-full mt-2 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-900 dark:text-white border border-gray-200/80 dark:border-zinc-700 shadow-2xs active:scale-98"
+              title="Modifier les informations et l'avatar de la boutique"
+            >
+              <i className="fa-solid fa-pen text-xs text-gray-500"></i>
+              <span>Modifier le profil</span>
+            </button>
+
             {/* Bouton Aperçu Boutique très visible (Séparé du menu) */}
             <button
               type="button"
               onClick={() => setOngletActif("apercu")}
-              className={`w-full mt-2 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer border shadow-2xs ${
+              className={`w-full mt-1.5 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer border shadow-2xs ${
                 ongletActif === "apercu"
                   ? "bg-[#1877F2] text-white border-blue-500 shadow-blue-500/20"
                   : "bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/50"
