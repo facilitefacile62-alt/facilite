@@ -26,14 +26,17 @@ function BienvenueMarketplaceContent() {
   };
 
   return (
-    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/50 font-sans flex flex-col justify-center items-center px-3 sm:px-4">
+    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-center items-center px-3 sm:px-4 py-6 transition-colors">
       <main className="w-full max-w-md">
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-100 text-center space-y-6">
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-100 dark:border-zinc-800 text-center space-y-6">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl mx-auto shadow-xs">
+            <i className="fa-solid fa-store"></i>
+          </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-2">
               Facilité Business
             </h1>
-            <p className="text-sm font-medium text-gray-500">
+            <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 leading-relaxed">
               Comment comptez-vous utiliser la Marketplace ?
             </p>
           </div>
@@ -43,18 +46,18 @@ function BienvenueMarketplaceContent() {
               type="button"
               onClick={choisirVisiteur}
               disabled={enCours}
-              className="w-full py-4 px-4 bg-white border-2 border-gray-900 hover:bg-gray-50 text-gray-900 font-extrabold text-sm rounded-2xl transition active:scale-[0.99] cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="w-full py-4 px-4 bg-white dark:bg-zinc-800 border-2 border-gray-900 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700/80 text-gray-900 dark:text-white font-black text-sm rounded-2xl transition active:scale-[0.98] cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2.5 shadow-2xs"
             >
-              <i className="fa-solid fa-bag-shopping"></i>
+              <i className="fa-solid fa-bag-shopping text-base text-gray-700 dark:text-gray-300"></i>
               <span>Visiteur — Je veux acheter</span>
             </button>
             <button
               type="button"
               onClick={choisirVendeur}
               disabled={enCours}
-              className="w-full py-4 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-900 font-extrabold text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="w-full py-4 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-black text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98] cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2.5"
             >
-              <i className="fa-solid fa-store"></i>
+              <i className="fa-solid fa-store text-base"></i>
               <span>Vendeur — Je veux vendre</span>
             </button>
           </div>
@@ -66,7 +69,7 @@ function BienvenueMarketplaceContent() {
 
 export default function BienvenueMarketplacePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FAF6F1] flex items-center justify-center"><i className="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-600"></i></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#FAF6F1] dark:bg-zinc-950 flex items-center justify-center"><i className="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-600"></i></div>}>
       <BienvenueMarketplaceContent />
     </Suspense>
   );
