@@ -44,7 +44,7 @@
 // v22 (13/09/2026) : fiabilisation du parcours d'onboarding /bienvenue après inscription & connexion
 // v23 (13/09/2026) : redirection systématique vers le choix de plateforme /bienvenue après connexion
 // v24 (13/09/2026) : implémentation complète du formulaire d'informations vendeur post-inscription
-// v25 (13/09/2026) : /bienvenue une seule fois pour un nouveau compte, plus a chaque connexion
+// v25 (13/09/2026) : atterrissage direct sur sa propre boutique vierge (0 article) après création
 const VERSION_CACHE = "facilite-v25";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 

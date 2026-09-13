@@ -103,12 +103,19 @@ function VendeurInformationsPersonnellesContent() {
         try {
           const mesBoutiques = await chargerMesBoutiques(user.id).catch(() => []);
           if (!mesBoutiques || mesBoutiques.length === 0) {
-            await creerBoutique(user.id, {
+            const nouvelleBoutique = await creerBoutique(user.id, {
               nom: nomBoutique.trim(),
               type_boutique: typeBoutique,
               telephone_whatsapp: telephone.trim() || null,
               ville: ville.trim() || null,
             });
+            if (nouvelleBoutique?.id) {
+              router.push(`/marketplace?boutique_id=${nouvelleBoutique.id}&mode=vendeur`);
+              return;
+            }
+          } else if (mesBoutiques[0]?.id) {
+            router.push(`/marketplace?boutique_id=${mesBoutiques[0].id}&mode=vendeur`);
+            return;
           }
         } catch (bErr) {
           console.warn("Création boutique reportée ou existante:", bErr);

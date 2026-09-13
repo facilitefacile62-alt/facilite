@@ -274,7 +274,7 @@ export default function MarketplaceClient() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("action") === "voir_boutique" || params.get("boutique")) {
+      if (params.get("action") === "voir_boutique" || params.get("boutique") || params.get("mode") === "vendeur") {
         const b = maBoutiqueActive || boutiques[0] || null;
         if (b) {
           setBoutiqueModal(b);
