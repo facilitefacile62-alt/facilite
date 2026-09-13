@@ -51,7 +51,8 @@
 // v44 (13/09/2026) : intégration directe du positionnement GPS déroulant sur la page Modifier le profil
 // v45 (13/09/2026) : ajout des boutons Service / métier et Établissement juste après Mes annonces dans le menu latéral
 // v46 (13/09/2026) : purge forcée du cache pour affichage instantané des boutons Service et Établissement
-const VERSION_CACHE = "facilite-v46";
+// v47 (13/09/2026) : affichage du catalogue vide (avion en papier) pour les nouveaux vendeurs sur Mes annonces
+const VERSION_CACHE = "facilite-v47";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
