@@ -1046,7 +1046,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
 
         {/* Boutons d'action Autour de moi & Explorer */}
         <div className="flex items-center gap-2">
-          {position ? (
+          {position && (
             <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-full px-2.5 py-1 text-xs font-black text-emerald-700 dark:text-emerald-300 shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Autour de moi</span>
@@ -1070,20 +1070,6 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
                 <i className="fa-solid fa-xmark text-xs"></i>
               </button>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={localiser}
-              disabled={chargement}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 hover:border-emerald-500 text-gray-700 dark:text-gray-200 hover:text-emerald-600 font-bold text-xs shadow-xs transition cursor-pointer"
-            >
-              {chargement ? (
-                <i className="fa-solid fa-circle-notch fa-spin text-emerald-500 text-xs"></i>
-              ) : (
-                <i className="fa-solid fa-location-crosshairs text-emerald-500 text-xs"></i>
-              )}
-              <span>Autour de moi</span>
-            </button>
           )}
 
           <button
