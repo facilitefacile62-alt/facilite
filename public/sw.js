@@ -50,7 +50,8 @@
 // v43 (13/09/2026) : accordéons / menus déroulants pour les consignes et autorisations de positionnement GPS
 // v44 (13/09/2026) : intégration directe du positionnement GPS déroulant sur la page Modifier le profil
 // v45 (13/09/2026) : ajout des boutons Service / métier et Établissement juste après Mes annonces dans le menu latéral
-const VERSION_CACHE = "facilite-v45";
+// v46 (13/09/2026) : purge forcée du cache pour affichage instantané des boutons Service et Établissement
+const VERSION_CACHE = "facilite-v46";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
