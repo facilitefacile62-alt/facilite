@@ -40,9 +40,9 @@
 // v15 (13/09/2026) : suppression d'Horaires d'ouverture des réglages boutique
 // v16 (13/09/2026) : éditeur d'avatar avec bouton d'enregistrement persistant sticky
 // v17 (13/09/2026) : clic sur l'avatar photo ouvre directement l'éditeur d'avatar Bitmoji
-// v19 (13/09/2026) : sélecteur de genre Femme / Garçon pour l'avatar Bitmoji
-// v20 (13/09/2026) : suppression d'Avatar de la boutique dans la liste des réglages (géré via page personnelle)
-const VERSION_CACHE = "facilite-v20";
+// v20 (13/09/2026) : suppression d'Avatar de la boutique dans la liste des réglages
+// v21 (13/09/2026) : bouton Retour au Marketplace ferme la boutique et revient au Marketplace
+const VERSION_CACHE = "facilite-v21";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

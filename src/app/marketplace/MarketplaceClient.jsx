@@ -1363,7 +1363,15 @@ function IllustrationAvionPapier() {
  * - Groupe 3: Désactiver le chat, Désactiver les commentaires, Gérer les notifications
  * - Groupe 4: Changer le mot de passe, Supprimer définitivement mon compte, Se déconnecter
  */
-function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectionInitiale = null }) {
+function VueReglages({
+  userId,
+  profile,
+  boutique,
+  onRetour,
+  onEnregistre,
+  onFermerMarketplace,
+  sectionInitiale = null,
+}) {
   const { signOut } = useAuth();
   const [modalActive, setModalActive] = useState(sectionInitiale); // 'infos_perso' | 'details_entreprise' | 'telephone' | 'email' | 'langue' | 'notifs' | 'password' | 'supprimer'
   const [toastMessage, setToastMessage] = useState("");
@@ -2182,18 +2190,22 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
           <i className="fa-solid fa-arrow-right-from-bracket text-xs text-gray-400"></i>
         </button>
 
-        {onRetour && (
-          <button
-            type="button"
-            onClick={onRetour}
-            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition border-t border-gray-100 dark:border-zinc-800 cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <i className="fa-solid fa-arrow-right-from-bracket rotate-180 text-sm text-red-600"></i>
-              <span>Retour au Marketplace</span>
-            </div>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (onFermerMarketplace) {
+              onFermerMarketplace();
+            } else if (onRetour) {
+              onRetour();
+            }
+          }}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition border-t border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <i className="fa-solid fa-arrow-right-from-bracket rotate-180 text-sm text-red-600"></i>
+            <span>Retour au Marketplace</span>
+          </div>
+        </button>
       </div>
 
       {/* ========================================================================= */}
@@ -4673,6 +4685,7 @@ function ModalFicheBoutique({
                 : null
             }
             onRetour={() => setOngletActif("produits")}
+            onFermerMarketplace={onFermer}
             onEnregistre={() => {
               onBoutiqueUpdate?.();
             }}
@@ -5887,6 +5900,7 @@ function ModalFicheBoutique({
               profile={profile}
               boutique={boutique}
               onRetour={() => setOngletActif("produits")}
+              onFermerMarketplace={onFermer}
               onEnregistre={() => {
                 onBoutiqueUpdate?.();
               }}
