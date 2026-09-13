@@ -71,6 +71,16 @@ function RegisterForm() {
         ? "https://ffacilite.com"
         : (typeof window !== "undefined" ? window.location.origin : "https://ffacilite.com");
       const safeRedirect = redirectUrl.startsWith("/") ? redirectUrl : "/";
+      // Nouveau parcours post-inscription (12/09/2026) : le lien de
+      // confirmation d'e-mail amène désormais sur /bienvenue (choix
+      // Facilité / Facilité Business) plutôt que directement sur la
+      // destination finale — celle-ci n'est que reportée, jamais perdue
+      // (portée dans ?redirect=, lue et transmise de page en page jusqu'au
+      // bout du parcours). Inchangé pour /auth/callback lui-même (ce
+      // fichier honore "next" tel quel, qu'il pointe vers /bienvenue ou
+      // ailleurs) et pour l'inscription Google (handleOAuthSignUp
+      // ci-dessous, non concernée par ce point).
+      const nextApresConfirmation = `/bienvenue?redirect=${encodeURIComponent(safeRedirect)}`;
 
       // Passe par /api/auth/register au lieu d'appeler Supabase directement.
       // C'est ce détour qui rend Vercel BotID opérant : le challenge est
@@ -85,7 +95,7 @@ function RegisterForm() {
           email: email.trim(),
           password,
           fullName,
-          emailRedirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
+          emailRedirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(nextApresConfirmation)}`,
         }),
       });
       const resultat = await reponse.json().catch(() => ({}));
@@ -138,12 +148,13 @@ function RegisterForm() {
   };
 
   // Fin du flux d'inscription téléphone (e-mail ajouté ou "Plus tard") —
-  // même logique de redirection que PhoneAuthForm applique déjà en interne
-  // pour le cas sans prompt d'e-mail (?redirect= prioritaire sur redirectUrl).
+  // même destination finale que le flux e-mail (?redirect= prioritaire sur
+  // redirectUrl), mais désormais reportée derrière /bienvenue (choix
+  // Facilité / Facilité Business, voir plus haut).
   const terminerInscriptionTelephone = () => {
     const searchRedirect = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
-    router.push(searchRedirect || redirectUrl || "/");
-    router.refresh();
+    const cible = searchRedirect || redirectUrl || "/";
+    router.push(`/bienvenue?redirect=${encodeURIComponent(cible)}`);
   };
 
   return (
