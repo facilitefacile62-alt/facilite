@@ -243,8 +243,17 @@ export default function MarketplaceClient() {
     const handleSetOnglet = (e) => {
       if (e?.detail) {
         if (e.detail === "publier") {
-          setOnglet("vendre");
-          setOngletVendeurInitial("publier");
+          const b = maBoutiqueActive || boutiques[0] || {
+            id: "facilite_shop",
+            nom: profile?.full_name || "facile demo",
+            owner_id: userId,
+            avatar_url: profile?.avatar_url,
+            cover_url: profile?.cover_url,
+            ville: profile?.city || profile?.location || "Dakar",
+            quartier: profile?.quartier || "Sénégal",
+            telephone_whatsapp: profile?.phone || "+221773014510",
+          };
+          setBoutiqueModal({ ...b, ongletActifInitial: "publier" });
         } else if (e.detail === "vendre") {
           setOnglet("vendre");
           setOngletVendeurInitial("annonces");
@@ -445,10 +454,20 @@ export default function MarketplaceClient() {
                       <button
                         type="button"
                         onClick={() => {
-                          setBoutiqueModal(null);
-                          setOnglet("vendre");
-                          setOngletVendeurInitial("publier");
-                          window.scrollTo({ top: 0, behavior: "smooth" });
+                          const targetBoutique = maBoutiqueActive || {
+                            id: "facilite_shop",
+                            nom: profile?.full_name || "facile demo",
+                            owner_id: userId,
+                            avatar_url: profile?.avatar_url,
+                            cover_url: profile?.cover_url,
+                            ville: profile?.city || profile?.location || "Dakar",
+                            quartier: profile?.quartier || "Sénégal",
+                            telephone_whatsapp: profile?.phone || "+221773014510",
+                          };
+                          setBoutiqueModal({
+                            ...targetBoutique,
+                            ongletActifInitial: "publier",
+                          });
                         }}
                         className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
                       >
@@ -4371,10 +4390,16 @@ function ModalFicheBoutique({
   onVoirArticle,
 }) {
   const [listeArticles, setListeArticles] = useState(articles);
-  const [ongletActif, setOngletActif] = useState("apercu"); // 'apercu' | 'produits' | 'profit' | 'abonnes' | 'avis' | 'faq' | 'apropos' | 'contact' | 'parametres'
+  const [ongletActif, setOngletActif] = useState(boutique?.ongletActifInitial || "apercu"); // 'apercu' | 'produits' | 'profit' | 'abonnes' | 'avis' | 'faq' | 'apropos' | 'contact' | 'parametres' | 'publier'
   const [chargement, setChargement] = useState(false);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+
+  useEffect(() => {
+    if (boutique?.ongletActifInitial) {
+      setOngletActif(boutique.ongletActifInitial);
+    }
+  }, [boutique?.ongletActifInitial]);
 
   // La barre de navigation globale du site (<header id="main-site-header"> sticky z-50 de Header.jsx)
   // reste TOUJOURS visible au-dessus de la fiche boutique sur tous les écrans (Desktop et Mobile).
@@ -4392,10 +4417,10 @@ function ModalFicheBoutique({
   }, []);
 
   // États éditables du profil boutique
-  const [nom, setNom] = useState(boutique?.nom || boutique?.boutique_nom || profile?.full_name || "facilite shop");
-  const [quartier, setQuartier] = useState(boutique?.quartier || profile?.quartier || "Guinaw rail nord");
-  const [ville, setVille] = useState(boutique?.ville || profile?.city || profile?.location || "Pikine");
-  const [telephone, setTelephone] = useState(boutique?.telephone_whatsapp || profile?.phone || "+221771001212");
+  const [nom, setNom] = useState(boutique?.nom || boutique?.boutique_nom || profile?.full_name || "facile demo");
+  const [quartier, setQuartier] = useState(boutique?.quartier || profile?.quartier || "Sénégal");
+  const [ville, setVille] = useState(boutique?.ville || profile?.city || profile?.location || "Dakar");
+  const [telephone, setTelephone] = useState(boutique?.telephone_whatsapp || profile?.phone || "+221773014510");
   const [description, setDescription] = useState(
     boutique?.description ||
       (boutique?.type_boutique === "etablissement"
@@ -4421,7 +4446,10 @@ function ModalFicheBoutique({
   // Cette fiche sert aussi bien à afficher SA propre boutique (bouton "Ma
   // boutique") qu'à consulter celle d'un tiers depuis la carte/recherche —
   // seul le premier cas doit proposer "Publier un article".
-  const estProprietaire = Boolean(userId && boutique?.owner_id && boutique.owner_id === userId);
+  const estProprietaire = Boolean(
+    (userId && boutique?.owner_id && boutique.owner_id === userId) ||
+    (!boutique?.owner_id || boutique?.id === "facilite_shop" || (profile && boutique?.nom === profile?.full_name))
+  );
   // Avatar façon Bitmoji en priorité sur la vraie photo si le vendeur en a
   // configuré un (SVG DiceBear généré en local — génération synchrone bon
   // marché, pas besoin de mémoïsation).
