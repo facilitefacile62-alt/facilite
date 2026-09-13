@@ -49,7 +49,8 @@
 // v42 (13/09/2026) : enrichissement complet du formulaire Modifier le profil avec champ WhatsApp et sauvegarde synchrone
 // v43 (13/09/2026) : accordéons / menus déroulants pour les consignes et autorisations de positionnement GPS
 // v44 (13/09/2026) : intégration directe du positionnement GPS déroulant sur la page Modifier le profil
-const VERSION_CACHE = "facilite-v44";
+// v45 (13/09/2026) : ajout des boutons Service / métier et Établissement juste après Mes annonces dans le menu latéral
+const VERSION_CACHE = "facilite-v45";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

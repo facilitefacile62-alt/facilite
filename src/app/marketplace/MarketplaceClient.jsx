@@ -3398,6 +3398,34 @@ function VueVendeur({
                 )}
               </button>
 
+              {/* 1.1 Service / métier */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("service")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "service"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-solid fa-screwdriver-wrench text-sm text-gray-700 dark:text-gray-300"></i>
+                <span className="flex-1">Service / métier</span>
+              </button>
+
+              {/* 1.2 Établissement */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("etablissement")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "etablissement"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-solid fa-building text-sm text-gray-700 dark:text-gray-300"></i>
+                <span className="flex-1">Établissement</span>
+              </button>
+
               {/* 2. Faire profit */}
               <button
                 type="button"
@@ -3521,12 +3549,13 @@ function VueVendeur({
           {ongletVendeur !== "annonces" && ongletVendeur !== "publier" && ongletVendeur !== "parametres" && (
             <div className="px-6 py-4.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
               <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+                {ongletVendeur === "service" && "Service / Métier & Prestations"}
+                {ongletVendeur === "etablissement" && "Établissement & Commerces"}
                 {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
                 {ongletVendeur === "premium" && "Premium Marketplace"}
                 {ongletVendeur === "abonnes" && "Mes Abonnés & Clients"}
                 {ongletVendeur === "avis" && "Avis & Évaluations Clients"}
                 {ongletVendeur === "faq" && "Foire aux questions"}
-                {ongletVendeur === "parametres" && "Réglages de la boutique"}
               </h2>
             </div>
           )}
@@ -3655,6 +3684,126 @@ function VueVendeur({
                     setOngletVendeur("annonces");
                   }}
                 />
+              </div>
+            )}
+
+            {/* VUE SERVICE / MÉTIER */}
+            {ongletVendeur === "service" && (
+              <div className="space-y-4">
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800/60 space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg shadow-sm">
+                      <i className="fa-solid fa-screwdriver-wrench"></i>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-gray-900 dark:text-white">
+                        Services, Métiers &amp; Prestations
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-300">
+                        Proposez vos compétences artisanales, techniques ou professionnelles aux clients.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Métier / Domaine d&apos;activité :</span>
+                    <span className="px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-bold">
+                      {boutiqueActive?.metier || "Commerce & Prestation"}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Description de la prestation :</span>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                      {boutiqueActive?.description_prestation || boutiqueActive?.description || "Prestation de service sur mesure avec déplacement rapide à Dakar et banlieue."}
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-gray-200/60 dark:border-zinc-700/60 flex items-center justify-between flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSectionReglages("details_entreprise");
+                        setOngletVendeur("parametres");
+                      }}
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-pen mr-1.5"></i>
+                      Modifier mes prestations
+                    </button>
+                    {telephoneVendeur && (
+                      <a
+                        href={`https://wa.me/221${telephoneVendeur.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <i className="fa-brands fa-whatsapp text-sm"></i>
+                        <span>WhatsApp direct</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VUE ÉTABLISSEMENT */}
+            {ongletVendeur === "etablissement" && (
+              <div className="space-y-4">
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800/60 space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-sm">
+                      <i className="fa-solid fa-building"></i>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-gray-900 dark:text-white">
+                        Établissement &amp; Commerce physique
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-300">
+                        Pharmacies, cliniques, points financiers Wave/OM, salons et commerces avec local.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Catégorie de l&apos;établissement :</span>
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase">
+                      {boutiqueActive?.categorie_etablissement || "Commerce / Local physique"}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Adresse &amp; Localisation :</span>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                      📍 {boutiqueActive?.quartier ? `${boutiqueActive.quartier}, ` : ""}{boutiqueActive?.ville || "Dakar"}, Sénégal
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-gray-200/60 dark:border-zinc-700/60 flex items-center justify-between flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSectionReglages("details_entreprise");
+                        setOngletVendeur("parametres");
+                      }}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-pen mr-1.5"></i>
+                      Modifier l&apos;établissement
+                    </button>
+                    {telephoneVendeur && (
+                      <a
+                        href={`https://wa.me/221${telephoneVendeur.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <i className="fa-brands fa-whatsapp text-sm"></i>
+                        <span>WhatsApp direct</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -5658,6 +5807,32 @@ function ModalFicheBoutique({
 
             <button
               type="button"
+              onClick={() => setOngletActif("service")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "service"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+              }`}
+            >
+              <i className="fa-solid fa-screwdriver-wrench text-sm"></i>
+              <span className="flex-1">Service / métier</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOngletActif("etablissement")}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
+                ongletActif === "etablissement"
+                  ? "bg-[#1877F2] text-white shadow-md"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+              }`}
+            >
+              <i className="fa-solid fa-building text-sm"></i>
+              <span className="flex-1">Établissement</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setOngletActif("profit")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
                 ongletActif === "profit"
@@ -6080,6 +6255,48 @@ function ModalFicheBoutique({
                   Vous pouvez régler à la livraison, par Wave, Orange Money ou en espèces selon les modalités convenues avec la boutique.
                 </p>
               </details>
+            </div>
+          )}
+
+          {ongletActif === "service" && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 space-y-2">
+                <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                  <i className="fa-solid fa-screwdriver-wrench text-blue-600"></i>
+                  Prestations de Service &amp; Métier
+                </h4>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                  {description || "Prestation de service sur mesure avec déplacement direct et intervention qualifiée."}
+                </p>
+              </div>
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                >
+                  <i className="fa-brands fa-whatsapp text-base"></i>
+                  Demander un devis ou réserver sur WhatsApp
+                </a>
+              )}
+            </div>
+          )}
+
+          {ongletActif === "etablissement" && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-2">
+                <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                  <i className="fa-solid fa-building text-emerald-600"></i>
+                  Informations de l&apos;Établissement
+                </h4>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                  {description || `Établissement et local physique situé à ${ville || "Dakar"}.`}
+                </p>
+                <div className="text-xs text-zinc-500 pt-1">
+                  <span>📍 Adresse : {quartier ? `${quartier}, ` : ""}{ville || "Dakar"}</span>
+                </div>
+              </div>
             </div>
           )}
 
