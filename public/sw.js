@@ -45,8 +45,8 @@
 // v23 (13/09/2026) : redirection systématique vers le choix de plateforme /bienvenue après connexion
 // v25 (13/09/2026) : atterrissage direct sur sa propre boutique vierge (0 article) après création
 // v26 (13/09/2026) : refonte visuelle de la page de bienvenue (logo officiel, lueur douce, tuiles enrichies)
-// v30 (13/09/2026) : alternance des boutons Publier / Autour de moi et suppression du bouton en doublon
-const VERSION_CACHE = "facilite-v30";
+// v31 (13/09/2026) : purge automatique et synchronisation immédiate du sous-menu Marketplace
+const VERSION_CACHE = "facilite-v31";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

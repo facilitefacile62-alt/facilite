@@ -20,7 +20,9 @@ export default function ServiceWorkerRegistration() {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
 
     const enregistrer = () => {
-      navigator.serviceWorker.register("/sw.js").catch((err) => {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        reg.update().catch(() => {});
+      }).catch((err) => {
         console.warn("[sw] Enregistrement impossible :", err?.message);
       });
     };
