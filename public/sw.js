@@ -45,8 +45,8 @@
 // v23 (13/09/2026) : redirection systématique vers le choix de plateforme /bienvenue après connexion
 // v25 (13/09/2026) : atterrissage direct sur sa propre boutique vierge (0 article) après création
 // v26 (13/09/2026) : refonte visuelle de la page de bienvenue (logo officiel, lueur douce, tuiles enrichies)
-// v28 (13/09/2026) : masquage de la carte profil en mode publication pour affichage direct du formulaire
-const VERSION_CACHE = "facilite-v28";
+// v29 (13/09/2026) : bouton Autour de moi dans la sous-barre de navigation mobile Marketplace
+const VERSION_CACHE = "facilite-v29";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
