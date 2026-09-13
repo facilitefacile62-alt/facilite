@@ -46,7 +46,8 @@
 // v25 (13/09/2026) : atterrissage direct sur sa propre boutique vierge (0 article) après création
 // v26 (13/09/2026) : refonte visuelle de la page de bienvenue (logo officiel, lueur douce, tuiles enrichies)
 // v40 (13/09/2026) : bouton permanent Modifier le profil et sélection rapide avatar sur toutes les cartes boutiques
-const VERSION_CACHE = "facilite-v40";
+// v41 (13/09/2026) : redirection directe vers le formulaire Modifier le profil au clic sur Modifier le profil
+const VERSION_CACHE = "facilite-v41";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

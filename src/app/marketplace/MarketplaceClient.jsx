@@ -1433,9 +1433,15 @@ function VueReglages({
   sectionInitiale = null,
 }) {
   const { signOut } = useAuth();
-  const [modalActive, setModalActive] = useState(sectionInitiale); // 'infos_perso' | 'details_entreprise' | 'telephone' | 'email' | 'langue' | 'notifs' | 'password' | 'supprimer'
+  const [modalActive, setModalActive] = useState(sectionInitiale || "infos_perso"); // 'infos_perso' | 'details_entreprise' | 'telephone' | 'email' | 'langue' | 'notifs' | 'password' | 'supprimer'
   const [toastMessage, setToastMessage] = useState("");
   const [enCours, setEnCours] = useState(false);
+
+  useEffect(() => {
+    if (sectionInitiale) {
+      setModalActive(sectionInitiale);
+    }
+  }, [sectionInitiale]);
 
   // Données Personnelles (1:1 Conforme à la capture Informations personnelles)
   const [prenom, setPrenom] = useState(() => {
@@ -1728,20 +1734,28 @@ function VueReglages({
           onChange={handleAvatarUpload}
         />
 
-        {/* Header de la page : < Informations personnelles */}
+        {/* Header de la page : < Modifier le profil */}
         <div className="bg-[#F8FAFC] dark:bg-zinc-900/90 px-4 py-3.5 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setModalActive(null)}
+              onClick={() => {
+                if (onRetour) onRetour();
+                else setModalActive(null);
+              }}
               className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-zinc-800 flex items-center justify-center transition cursor-pointer text-gray-800 dark:text-gray-100 text-base font-bold"
-              title="Retour à tous les réglages"
+              title="Retour"
             >
               <i className="fa-solid fa-chevron-left text-sm"></i>
             </button>
-            <h2 className="text-base sm:text-lg font-black text-[#00c988] dark:text-[#10e688]">
-              Informations personnelles
-            </h2>
+            <div>
+              <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+                Modifier le profil
+              </h2>
+              <span className="text-[11px] font-bold text-[#00c988] dark:text-[#10e688] block -mt-0.5">
+                Informations personnelles &amp; Localisation
+              </span>
+            </div>
           </div>
           <button
             type="button"
@@ -3005,6 +3019,7 @@ function VueVendeur({
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
   const [ongletVendeur, setOngletVendeur] = useState(ongletInitial); // 'annonces' | 'publier' | 'profit' | 'premium' | 'abonnes' | 'avis' | 'faq' | 'parametres'
+  const [sectionReglages, setSectionReglages] = useState("infos_perso");
   const [modalApercuOuverte, setModalApercuOuverte] = useState(false);
 
   useEffect(() => {
@@ -3279,7 +3294,10 @@ function VueVendeur({
               {/* Bouton Modifier le profil (Visible et accessible) */}
               <button
                 type="button"
-                onClick={() => setOngletVendeur("parametres")}
+                onClick={() => {
+                  setSectionReglages("infos_perso");
+                  setOngletVendeur("parametres");
+                }}
                 className="w-full mt-2 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-900 dark:text-white border border-gray-200/80 dark:border-zinc-700 shadow-2xs active:scale-98"
                 title="Modifier les informations et l'avatar de la boutique"
               >
@@ -3815,12 +3833,13 @@ function VueVendeur({
               </div>
             )}
 
-            {/* VUE 9 : RÉGLAGES DE LA BOUTIQUE (1:1 Capture d'écran exacte) */}
+            {/* VUE 9 : RÉGLAGES / MODIFIER LE PROFIL DE LA BOUTIQUE */}
             {ongletVendeur === "parametres" && (
               <VueReglages
                 userId={userId}
                 profile={profile}
                 boutique={boutiqueActive}
+                sectionInitiale={sectionReglages || "infos_perso"}
                 onRetour={() => setOngletVendeur("annonces")}
                 onEnregistre={recharger}
               />
