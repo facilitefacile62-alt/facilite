@@ -2395,31 +2395,35 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
 
       {/* Modal Avatar façon Bitmoji de la boutique — anonymat possible, pas de
           vraie photo obligatoire. Enregistrement uniquement au clic explicite
-          sur "Enregistrer l'avatar" dans EditeurAvatarBoutique, jamais à
-          chaque changement de vignette. */}
+          sur "Enregistrer les modifications" dans EditeurAvatarBoutique. */}
       {modalActive === "avatar" && boutique?.id && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3 mb-1 border-gray-100 dark:border-zinc-800">
-              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Avatar de la boutique</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b pb-3 mb-2 border-gray-100 dark:border-zinc-800 shrink-0">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                <i className="fa-solid fa-wand-magic-sparkles text-emerald-500"></i>
+                <span>Avatar de la boutique</span>
+              </h3>
               <button
                 type="button"
                 onClick={() => setModalActive(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white transition"
               >
                 <i className="fa-solid fa-xmark text-sm"></i>
               </button>
             </div>
-            <EditeurAvatarBoutique
-              configInitial={boutique.avatar_config}
-              onAnnuler={() => setModalActive(null)}
-              onEnregistrer={async (config) => {
-                await modifierAvatarBoutique(boutique.id, config);
-                setModalActive(null);
-                showToast("✓ Avatar de la boutique enregistré !");
-                onEnregistre?.();
-              }}
-            />
+            <div className="flex-1 overflow-y-auto pr-1">
+              <EditeurAvatarBoutique
+                configInitial={boutique.avatar_config}
+                onAnnuler={() => setModalActive(null)}
+                onEnregistrer={async (config) => {
+                  await modifierAvatarBoutique(boutique.id, config);
+                  setModalActive(null);
+                  showToast("✓ Avatar de la boutique enregistré !");
+                  onEnregistre?.();
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

@@ -349,10 +349,25 @@ export async function modifierBoutique(storeId, champs) {
  */
 export async function modifierAvatarBoutique(storeId, avatarConfig) {
   if (!storeId) throw new Error("Boutique introuvable.");
-  const { data, error } = await supabase.rpc("modifier_mon_avatar_boutique", {
-    p_store_id: storeId,
-    p_avatar_config: avatarConfig,
-  });
+  try {
+    const { data, error } = await supabase.rpc("modifier_mon_avatar_boutique", {
+      p_store_id: storeId,
+      p_avatar_config: avatarConfig,
+    });
+    if (!error) return data;
+  } catch {}
+
+  // Fallback si la RPC n'est pas disponible
+  const { dataUriAvatarBoutique } = await import("@/lib/avatarBoutique");
+  const svgUri = dataUriAvatarBoutique(avatarConfig);
+  const { data, error } = await supabase
+    .from("marketplace_stores")
+    .update({
+      avatar_config: avatarConfig,
+      avatar_url: svgUri,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", storeId);
   if (error) throw new Error(error.message);
   return data;
 }

@@ -102,23 +102,25 @@ export default function EditeurAvatarBoutique({ configInitial, onEnregistrer, on
   };
 
   return (
-    <div className="space-y-1">
-      <div className="flex flex-col items-center gap-3 pb-3">
-        <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-white dark:border-zinc-800 shadow-lg bg-gray-100 dark:bg-zinc-800 shrink-0">
+    <div className="flex flex-col h-full">
+      {/* Aperçu centré & Bouton Aléatoire */}
+      <div className="flex flex-col items-center gap-2.5 pb-3 shrink-0">
+        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-emerald-400 dark:border-emerald-500 shadow-md bg-gray-100 dark:bg-zinc-800 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={apercu} alt="Aperçu de l'avatar de la boutique" className="w-full h-full" />
+          <img src={apercu} alt="Aperçu de l'avatar de la boutique" className="w-full h-full object-cover" />
         </div>
         <button
           type="button"
           onClick={() => setConfig(configAvatarAleatoire())}
-          className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-xs font-black text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer transition"
+          className="px-3.5 py-1.5 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-xs font-black text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer transition shadow-xs"
         >
-          <i className="fa-solid fa-shuffle"></i>
+          <i className="fa-solid fa-shuffle text-emerald-500"></i>
           <span>Aléatoire</span>
         </button>
       </div>
 
-      <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+      {/* Liste des options défilable */}
+      <div className="divide-y divide-gray-100 dark:divide-zinc-800 pb-2">
         <LigneAxeCouleur label="Peau" options={OPTIONS_SKIN_COLOR} valeur={config.skinColor} onChange={definir("skinColor")} />
         <LigneAxeType label="Cheveux" options={OPTIONS_TOP} valeur={config.top} onChange={definir("top")} />
         <LigneAxeCouleur
@@ -146,14 +148,15 @@ export default function EditeurAvatarBoutique({ configInitial, onEnregistrer, on
         />
       </div>
 
-      {erreur && <p className="text-xs font-bold text-red-600 mt-3">{erreur}</p>}
+      {erreur && <p className="text-xs font-bold text-red-600 my-2">{erreur}</p>}
 
-      <div className="flex items-center gap-2 pt-4">
+      {/* Barre d'action sticky en bas (100% toujours visible pour enregistrer) */}
+      <div className="sticky bottom-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm pt-3 pb-1 border-t border-gray-100 dark:border-zinc-800 mt-2 z-20 flex items-center gap-2">
         {onAnnuler && (
           <button
             type="button"
             onClick={onAnnuler}
-            className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 text-xs font-black cursor-pointer transition"
+            className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 text-xs sm:text-sm font-black cursor-pointer transition"
           >
             Annuler
           </button>
@@ -162,10 +165,10 @@ export default function EditeurAvatarBoutique({ configInitial, onEnregistrer, on
           type="button"
           onClick={enregistrer}
           disabled={envoi}
-          className="flex-1 py-2.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-black disabled:opacity-50 cursor-pointer shadow-sm hover:opacity-95 transition"
+          className="flex-2 py-3 rounded-xl bg-[#0b1329] hover:bg-black text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-xs sm:text-sm font-black disabled:opacity-50 cursor-pointer shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2"
         >
-          <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"} mr-2`}></i>
-          {envoi ? "Enregistrement…" : "Enregistrer l'avatar"}
+          <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"}`}></i>
+          <span>{envoi ? "Enregistrement…" : "Enregistrer les modifications"}</span>
         </button>
       </div>
     </div>
