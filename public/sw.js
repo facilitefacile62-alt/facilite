@@ -53,7 +53,8 @@
 // v46 (13/09/2026) : purge forcée du cache pour affichage instantané des boutons Service et Établissement
 // v47 (13/09/2026) : affichage du catalogue vide (avion en papier) pour les nouveaux vendeurs sur Mes annonces
 // v48 (13/09/2026) : bandeau supérieur d'invitation 'Publie ton premier article' pour les nouveaux vendeurs
-const VERSION_CACHE = "facilite-v48";
+// v49 (13/09/2026) : suppression de la grande bannière dans Mes annonces pour un affichage épuré
+const VERSION_CACHE = "facilite-v49";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
