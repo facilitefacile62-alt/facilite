@@ -421,124 +421,97 @@ export default function MarketplaceClient() {
                   <div className="h-4 w-28 bg-gray-200 dark:bg-gray-800 rounded mx-auto"></div>
                   <div className="h-3 w-40 bg-gray-100 dark:bg-gray-800/60 rounded mx-auto"></div>
                 </div>
-              ) : (userId || profile) && maBoutiqueActive ? (
+              ) : (userId || profile) ? (
                 <>
-                  {/* 1. Carte de Profil Boutique (Format compact 215px avec son propre profil boutique) */}
-                  <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
-                    {/* Bannière Boutique Cliquable (Ouvre la fiche boutique) */}
-                    <div
-                      onClick={() => setBoutiqueModal(maBoutiqueActive)}
-                      className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
-                      style={{ backgroundImage: `url('${maBoutiqueActive.cover_url || profile?.cover_url || '/stellar-cover.png'}')` }}
-                      title="Voir le profil de ma boutique"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
-                      <div className="absolute inset-0 flex items-center justify-end px-3 pointer-events-none">
-                        <span className="text-white/20 font-black text-xs uppercase tracking-widest select-none">
-                          BOUTIQUE
-                        </span>
+                  {/* 1. Carte de Profil Boutique pour tout utilisateur connecté (Nouveau ou Existant) */}
+                  {(() => {
+                    const bActive = maBoutiqueActive || {
+                      id: "boutique_" + (userId || "me"),
+                      nom: profile?.full_name || "Facile demo",
+                      description: profile?.headline || "Boutique officielle partenaire sur Facilité Sénégal · Vente d'articles & livraison express",
+                      owner_id: userId,
+                      avatar_url: profile?.avatar_url,
+                      cover_url: profile?.cover_url || "/default-cover.png",
+                      ville: profile?.city || profile?.location || "Dakar",
+                      quartier: profile?.quartier || "",
+                      telephone_whatsapp: profile?.phone || "+221773014510",
+                      amis_count: "4 K",
+                    };
+                    return (
+                      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
+                        {/* Bannière Boutique Cliquable */}
+                        <div
+                          onClick={() => setBoutiqueModal(bActive)}
+                          className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
+                          style={{ backgroundImage: `url('${bActive.cover_url || profile?.cover_url || "/stellar-cover.png"}')` }}
+                          title="Voir le profil de ma boutique"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
+                          <div className="absolute inset-0 flex items-center justify-end px-3 pointer-events-none">
+                            <span className="text-white/20 font-black text-xs uppercase tracking-widest select-none">
+                              BOUTIQUE
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
+                          {/* Avatar / Logo de la Boutique */}
+                          <div
+                            onClick={() => setBoutiqueModal(bActive)}
+                            className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
+                            title="Voir le profil de ma boutique"
+                          >
+                            {bActive.avatar_url || profile?.avatar_url ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={bActive.avatar_url || profile?.avatar_url}
+                                alt="Boutique"
+                                className="w-full h-full object-cover group-hover:scale-105 transition"
+                              />
+                            ) : bActive.nom ? (
+                              bActive.nom.substring(0, 2).toUpperCase()
+                            ) : (
+                              <i className="fa-solid fa-store text-xl"></i>
+                            )}
+                          </div>
+
+                          {/* Nom de la Boutique */}
+                          <button
+                            type="button"
+                            onClick={() => setBoutiqueModal(bActive)}
+                            className="group cursor-pointer bg-transparent border-none p-0 text-center"
+                            title="Voir le profil de ma boutique"
+                          >
+                            <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
+                              {bActive.nom}
+                            </h2>
+                          </button>
+
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-normal mt-1 mb-2">
+                            {bActive.ville
+                              ? `${bActive.quartier ? `${bActive.quartier}, ` : ""}${bActive.ville}, Sénégal`
+                              : (profile?.location || "Dakar, Sénégal")}
+                          </p>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBoutiqueModal({
+                                ...bActive,
+                                ongletActifInitial: "publier",
+                              });
+                            }}
+                            className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
+                          >
+                            <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
+                            <span>Publier un article</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })()}
 
-                    <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
-                      {/* Avatar / Logo de la Boutique Cliquable */}
-                      <div
-                        onClick={() => setBoutiqueModal(maBoutiqueActive)}
-                        className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
-                        title="Voir le profil de ma boutique"
-                      >
-                        {maBoutiqueActive.avatar_url || profile?.avatar_url ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={maBoutiqueActive.avatar_url || profile?.avatar_url}
-                            alt="Boutique"
-                            className="w-full h-full object-cover group-hover:scale-105 transition"
-                          />
-                        ) : maBoutiqueActive.nom ? (
-                          maBoutiqueActive.nom.substring(0, 2).toUpperCase()
-                        ) : (
-                          <i className="fa-solid fa-store text-xl"></i>
-                        )}
-                      </div>
-
-                      {/* Nom de la Boutique (Propre à la boutique) */}
-                      <button
-                        type="button"
-                        onClick={() => setBoutiqueModal(maBoutiqueActive)}
-                        className="group cursor-pointer bg-transparent border-none p-0 text-center"
-                        title="Voir le profil de ma boutique"
-                      >
-                        <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
-                          {maBoutiqueActive.nom}
-                        </h2>
-                      </button>
-
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 font-normal mt-1 mb-2">
-                        {maBoutiqueActive.ville
-                          ? `${maBoutiqueActive.quartier ? `${maBoutiqueActive.quartier}, ` : ""}${maBoutiqueActive.ville}, Sénégal`
-                          : (profile?.location || "Dakar, Sénégal")}
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const targetBoutique = maBoutiqueActive || {
-                            id: "facilite_shop",
-                            nom: profile?.full_name || "facile demo",
-                            owner_id: userId,
-                            avatar_url: profile?.avatar_url,
-                            cover_url: profile?.cover_url,
-                            ville: profile?.city || profile?.location || "Dakar",
-                            quartier: profile?.quartier || "Sénégal",
-                            telephone_whatsapp: profile?.phone || "+221773014510",
-                          };
-                          setBoutiqueModal({
-                            ...targetBoutique,
-                            ongletActifInitial: "publier",
-                          });
-                        }}
-                        className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
-                      >
-                        <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
-                        <span>Publier un article</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 2. Menu Toutes les catégories (1:1 Identique à la capture d'écran) */}
-                  <MenuCategoriesSidebar
-                    categorieActive={categorie}
-                    onSelectCategorie={(cat) => {
-                      setCategorie(cat);
-                      if (onglet !== "acheter") setOnglet("acheter");
-                    }}
-                  />
-                </>
-              ) : userId || profile ? (
-                <>
-                  {/* Utilisateur connecté SANS boutique : jamais de fausse
-                      identité "facilite shop" (contredisait la réalité et
-                      brouillait la frontière visiteur/vendeur) — "Devenir
-                      vendeur" est une action honnête et toujours accessible,
-                      pas un statut implicite déjà acquis. Même style que la
-                      carte visiteur ci-dessous, verbe différent. */}
-                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl p-4 shadow-md space-y-3 border border-gray-700 text-left">
-                    <div className="flex items-center space-x-2">
-                      <span className="p-1.5 bg-[#10E688]/20 text-[#10E688] rounded-lg text-sm">🚀</span>
-                      <h3 className="text-xs font-black text-white leading-tight">Devenir vendeur</h3>
-                    </div>
-                    <p className="text-[11px] text-gray-300 font-medium leading-relaxed">
-                      Ouvrez votre boutique gratuitement, publiez vos articles avec l&apos;Assistant IA et recevez les commandes sur WhatsApp.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setOnglet("vendre")}
-                      className="block w-full py-2 bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold text-xs text-center rounded-xl transition shadow-sm cursor-pointer"
-                    >
-                      Ouvrir ma boutique
-                    </button>
-                  </div>
-
+                  {/* 2. Menu Toutes les catégories */}
                   <MenuCategoriesSidebar
                     categorieActive={categorie}
                     onSelectCategorie={(cat) => {
@@ -5202,10 +5175,10 @@ function ModalFicheBoutique({
               </div>
             </div>
 
-        {/* Bannière de couverture + Avatar circulaire centré (1:1 Capture exacte) */}
-        <div className="relative w-full px-3 pt-3 mb-14">
+        {/* Bannière de couverture + Avatar circulaire à droite (1:1 Capture exacte) */}
+        <div className="relative w-full px-3 pt-3 mb-12">
           <div
-            className="relative w-full h-40 sm:h-48 rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-900 bg-cover bg-center shadow-xs border border-gray-200/60 dark:border-zinc-800"
+            className="relative w-full h-44 sm:h-52 rounded-2xl sm:rounded-3xl overflow-hidden bg-black bg-cover bg-center shadow-xs border border-gray-200/60 dark:border-zinc-800"
             style={{ backgroundImage: `url('${coverUrl || "/default-cover.png"}')` }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
@@ -5213,15 +5186,15 @@ function ModalFicheBoutique({
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
-              className="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white dark:bg-black/80 text-zinc-900 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95"
+              className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white dark:bg-black/80 text-zinc-900 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95"
               title="Changer la photo de couverture"
             >
               <i className="fa-solid fa-camera text-xs"></i>
             </button>
           </div>
 
-          {/* Avatar circulaire centré et chevauchant le bas de la bannière */}
-          <div className="absolute left-1/2 -translate-x-1/2 -bottom-12 w-24 h-24 rounded-full border-4 border-white dark:border-zinc-950 bg-black shadow-xl overflow-hidden flex items-center justify-center shrink-0 z-10 group">
+          {/* Avatar circulaire à droite chevauchant le bas de la bannière */}
+          <div className="absolute right-6 -bottom-10 w-22 h-22 sm:w-24 sm:h-24 rounded-full border-4 border-white dark:border-zinc-950 bg-white shadow-xl overflow-hidden flex items-center justify-center shrink-0 z-10 group">
             {avatarBitmojiUri ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarBitmojiUri} alt={nom} className="w-full h-full object-cover" />
@@ -5229,7 +5202,7 @@ function ModalFicheBoutique({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt={nom} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-white text-2xl font-black">{initiales}</span>
+              <span className="text-zinc-900 text-2xl font-black">{initiales}</span>
             )}
 
             <button
@@ -5243,54 +5216,44 @@ function ModalFicheBoutique({
           </div>
         </div>
 
-        {/* Nom de la boutique / Profil (1:1 Inspiré de la capture fournie, centré) */}
-        <div className="px-4 pb-3 flex flex-col items-center text-center space-y-2">
+        {/* Nom de la boutique / Profil (1:1 Alignement gauche avec badges et bouton Modifier) */}
+        <div className="px-4 pb-3 flex flex-col items-start text-left space-y-2">
           {/* Titre & Badges */}
-          <div className="flex items-center justify-center gap-2 flex-wrap pt-0.5">
+          <div className="flex items-center gap-2 flex-wrap pt-0.5">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white leading-tight">
               {nom}
             </h1>
-            <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider">
+            <span className="px-2.5 py-0.5 rounded-full bg-purple-600 text-white text-[9px] font-black uppercase tracking-wider shadow-xs">
               {estEtablissement ? "Établissement" : estService ? "Service" : "Boutique"}
             </span>
             <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
           </div>
 
-          {/* Ligne amis / abonnés */}
-          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-            1,4 K ami(e)s
-          </p>
-
-          {/* Boutons d'actions (Modifier le profil + flèche chevron sans 'Ajouter à la story') */}
-          <div className="flex items-center justify-center gap-2 w-full max-w-xs pt-0.5 pb-1">
+          {/* Bouton Modifier le profil */}
+          <div className="pt-0.5 pb-0.5">
             <button
               type="button"
               onClick={() => setOngletActif("infos_perso")}
-              className="flex-1 py-2 px-4 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-900 dark:text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-2xs"
+              className="py-1.5 px-3.5 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-900 dark:text-white text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-2xs"
               title="Modifier les informations du profil"
             >
-              <i className="fa-solid fa-pen text-xs"></i>
+              <i className="fa-solid fa-pen text-xs text-gray-700 dark:text-gray-300"></i>
               <span>Modifier le profil</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMenuMobileOuvert(true)}
-              className="w-9 h-9 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-900 dark:text-white flex items-center justify-center transition active:scale-95 cursor-pointer shadow-2xs shrink-0"
-              title="Plus d'options"
-            >
-              <i className="fa-solid fa-chevron-down text-xs"></i>
             </button>
           </div>
 
-          {/* Bio / Headline */}
-          <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed max-w-md mx-auto">
-            {description || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE"}
+          {/* Ligne amis / abonnés */}
+          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+            {boutique?.amis_count || "4 K"} ami(e)s
+          </p>
+
+          {/* Bio / Description */}
+          <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed max-w-md">
+            {description || "Boutique officielle partenaire sur Facilité Sénégal · Vente d'articles & livraison express"}
           </p>
 
           {/* Localisation */}
-          <p className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center justify-center gap-1.5 pt-0.5">
-            <i className="fa-solid fa-location-dot text-gray-600 dark:text-gray-400 text-xs"></i>
+          <p className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5 pt-0.5">
             <span>{ville || "Dakar"}</span>
           </p>
         </div>

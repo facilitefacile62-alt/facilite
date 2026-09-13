@@ -55,7 +55,8 @@
 // v48 (13/09/2026) : bandeau supérieur d'invitation 'Publie ton premier article' pour les nouveaux vendeurs
 // v49 (13/09/2026) : suppression de la grande bannière dans Mes annonces pour un affichage épuré
 // v50 (13/09/2026) : persistance absolue de la page, de la vue vendeur et de l'onglet actif après rechargement (F5)
-const VERSION_CACHE = "facilite-v50";
+// v51 (13/09/2026) : fiche boutique 1:1 mobile (avatar à droite, profil complet actif pour tout nouveau compte)
+const VERSION_CACHE = "facilite-v51";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
