@@ -10,7 +10,7 @@ import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 // 2. Mettre à jour les constantes ci-dessous (VERSION_APK, DATE_VERSION, TAILLE_FICHIER)
 export const VERSION_APK = "1.0.4";
 export const DATE_VERSION = "12 septembre 2026";
-export const TAILLE_FICHIER = "18.4 Mo";
+export const TAILLE_FICHIER = "1.2 Mo";
 export const NOM_FICHIER = "facilite.apk";
 export const CHEMIN_APK = "/facilite.apk";
 
