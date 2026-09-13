@@ -222,17 +222,29 @@ export default function MarketplaceClient() {
       })
       .subscribe();
 
-    // Vérifier les paramètres URL au montage (?onglet=vendre ou ?action=publier ou ?action=voir_boutique)
+    // Vérifier les paramètres URL et le cache local au montage pour persister la page actuelle
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const actionParam = params.get("action");
-      const o = params.get("onglet") || (actionParam === "publier" ? "vendre" : null);
+      const urlOnglet = params.get("onglet");
+      const urlTab = params.get("tab");
+      const savedOnglet = localStorage.getItem("facilite_marketplace_onglet");
+      const savedTab = localStorage.getItem("facilite_vendeur_onglet");
+
+      const tabActif = urlTab || savedTab;
+      if (tabActif) {
+        setOngletVendeurInitial(tabActif);
+      }
+
       if (actionParam === "publier") {
         setOnglet("vendre");
         setOngletVendeurInitial("publier");
-      } else if (o === "vendre" || o === "acheter") {
-        setOnglet(o);
+      } else if (urlOnglet === "vendre" || urlOnglet === "acheter") {
+        setOnglet(urlOnglet);
+      } else if (savedOnglet === "vendre" || savedOnglet === "acheter") {
+        setOnglet(savedOnglet);
       }
+
       if (params.get("action") === "voir_boutique" || params.get("boutique")) {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent("marketplace_ouvrir_ma_boutique"));
@@ -346,6 +358,22 @@ export default function MarketplaceClient() {
     const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
     window.history.replaceState(window.history.state, "", url);
   }, [boutiqueModal]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("facilite_marketplace_onglet", onglet);
+    } catch {}
+    const params = new URLSearchParams(window.location.search);
+    if (onglet === "vendre") {
+      params.set("onglet", "vendre");
+    } else {
+      params.delete("onglet");
+    }
+    const query = params.toString();
+    const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
+    window.history.replaceState(window.history.state, "", url);
+  }, [onglet]);
 
   useEffect(() => {
     rechargerBoutique();
@@ -3057,8 +3085,24 @@ function VueVendeur({
   const [articles, setArticles] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
-  const [ongletVendeur, setOngletVendeur] = useState(ongletInitial); // 'annonces' | 'publier' | 'profit' | 'premium' | 'abonnes' | 'avis' | 'faq' | 'parametres'
-  const [sectionReglages, setSectionReglages] = useState("infos_perso");
+  const [ongletVendeur, setOngletVendeur] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const fromUrl = params.get("tab");
+      if (fromUrl) return fromUrl;
+      const fromStorage = localStorage.getItem("facilite_vendeur_onglet");
+      if (fromStorage) return fromStorage;
+    }
+    return ongletInitial || "annonces";
+  }); // 'annonces' | 'publier' | 'profit' | 'premium' | 'abonnes' | 'avis' | 'faq' | 'parametres' | 'service' | 'etablissement'
+
+  const [sectionReglages, setSectionReglages] = useState(() => {
+    if (typeof window !== "undefined") {
+      const fromStorage = localStorage.getItem("facilite_vendeur_section_reglages");
+      if (fromStorage) return fromStorage;
+    }
+    return "infos_perso";
+  });
   const [modalApercuOuverte, setModalApercuOuverte] = useState(false);
 
   useEffect(() => {
@@ -3066,6 +3110,27 @@ function VueVendeur({
       setOngletVendeur(ongletInitial);
     }
   }, [ongletInitial]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("facilite_vendeur_onglet", ongletVendeur);
+    } catch {}
+    const params = new URLSearchParams(window.location.search);
+    if (ongletVendeur) {
+      params.set("tab", ongletVendeur);
+    }
+    const query = params.toString();
+    const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
+    window.history.replaceState(window.history.state, "", url);
+  }, [ongletVendeur]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("facilite_vendeur_section_reglages", sectionReglages);
+    } catch {}
+  }, [sectionReglages]);
   // Résumé Premium Marketplace pour l'onglet dédié — null tant que non
   // chargé (distinct de {actif:false}, qui est un résultat réel).
   const [premiumInfo, setPremiumInfo] = useState(null);

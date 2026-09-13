@@ -54,7 +54,8 @@
 // v47 (13/09/2026) : affichage du catalogue vide (avion en papier) pour les nouveaux vendeurs sur Mes annonces
 // v48 (13/09/2026) : bandeau supérieur d'invitation 'Publie ton premier article' pour les nouveaux vendeurs
 // v49 (13/09/2026) : suppression de la grande bannière dans Mes annonces pour un affichage épuré
-const VERSION_CACHE = "facilite-v49";
+// v50 (13/09/2026) : persistance absolue de la page, de la vue vendeur et de l'onglet actif après rechargement (F5)
+const VERSION_CACHE = "facilite-v50";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

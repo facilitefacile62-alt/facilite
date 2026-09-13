@@ -38,6 +38,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "560ee29a-8c1d-40e8-bcf1-3b1218eccce5"
+      }
+    },
+    "owner": "facilite62s-team"
   }
 }
