@@ -61,15 +61,15 @@ export const OPTIONS_TOP = [
   { valeur: "sides", label: "Sur les côtés" },
   { valeur: "shavedSides", label: "Rasé sur les côtés" },
   { valeur: "curly", label: "Bouclés" },
-  { valeur: "curvy", label: "Ondulés" },
-  { valeur: "straight01", label: "Raides 1" },
-  { valeur: "straight02", label: "Raides 2" },
+  { valeur: "curvy", label: "Ondulés longs" },
+  { valeur: "straight01", label: "Raides longs 1" },
+  { valeur: "straight02", label: "Raides longs 2" },
   { valeur: "straightAndStrand", label: "Raides + mèche" },
   { valeur: "frizzle", label: "Frisottés" },
   { valeur: "bob", label: "Carré plongeant" },
   { valeur: "bun", label: "Chignon" },
   { valeur: "longButNotTooLong", label: "Mi-longs" },
-  { valeur: "miaWallace", label: "Carré (Mia Wallace)" },
+  { valeur: "miaWallace", label: "Carré frange" },
   { valeur: "bigHair", label: "Volumineux" },
   { valeur: "fro", label: "Afro" },
   { valeur: "froBand", label: "Afro + bandeau" },
@@ -79,6 +79,53 @@ export const OPTIONS_TOP = [
   { valeur: "hat", label: "Casquette" },
   { valeur: "hijab", label: "Hijab" },
   { valeur: "turban", label: "Turban" },
+  { valeur: "winterHat1", label: "Bonnet 1" },
+  { valeur: "winterHat02", label: "Bonnet 2" },
+  { valeur: "winterHat03", label: "Bonnet 3" },
+  { valeur: "winterHat04", label: "Bonnet 4" },
+];
+
+export const OPTIONS_TOP_FEMME = [
+  { valeur: "curvy", label: "Ondulés longs" },
+  { valeur: "straight01", label: "Raides longs 1" },
+  { valeur: "straight02", label: "Raides longs 2" },
+  { valeur: "straightAndStrand", label: "Raides + mèche" },
+  { valeur: "bob", label: "Carré plongeant" },
+  { valeur: "bun", label: "Chignon" },
+  { valeur: "longButNotTooLong", label: "Mi-longs" },
+  { valeur: "miaWallace", label: "Carré frange" },
+  { valeur: "bigHair", label: "Volumineux" },
+  { valeur: "fro", label: "Afro" },
+  { valeur: "froBand", label: "Afro + bandeau" },
+  { valeur: "frida", label: "Bandeau fleuri" },
+  { valeur: "curly", label: "Bouclés" },
+  { valeur: "frizzle", label: "Frisottés" },
+  { valeur: "dreads01", label: "Dreadlocks 1" },
+  { valeur: "dreads02", label: "Dreadlocks 2" },
+  { valeur: "hijab", label: "Hijab" },
+  { valeur: "turban", label: "Turban" },
+  { valeur: "hat", label: "Casquette" },
+  { valeur: "winterHat1", label: "Bonnet 1" },
+  { valeur: "winterHat02", label: "Bonnet 2" },
+];
+
+export const OPTIONS_TOP_HOMME = [
+  { valeur: "shortFlat", label: "Courts plats" },
+  { valeur: "shortRound", label: "Courts arrondis" },
+  { valeur: "shortWaved", label: "Courts ondulés" },
+  { valeur: "shortCurly", label: "Courts bouclés" },
+  { valeur: "shaggy", label: "Effilés" },
+  { valeur: "shaggyMullet", label: "Mulet effilé" },
+  { valeur: "theCaesar", label: "Coupe César" },
+  { valeur: "theCaesarAndSidePart", label: "César + raie" },
+  { valeur: "sides", label: "Sur les côtés" },
+  { valeur: "shavedSides", label: "Rasé sur les côtés" },
+  { valeur: "fro", label: "Afro" },
+  { valeur: "froBand", label: "Afro + bandeau" },
+  { valeur: "dreads01", label: "Dreadlocks 1" },
+  { valeur: "dreads02", label: "Dreadlocks 2" },
+  { valeur: "turban", label: "Turban" },
+  { valeur: "hat", label: "Casquette" },
   { valeur: "winterHat1", label: "Bonnet 1" },
   { valeur: "winterHat02", label: "Bonnet 2" },
   { valeur: "winterHat03", label: "Bonnet 3" },
@@ -165,17 +212,19 @@ export const OPTIONS_ACCESSORIES = [
   { valeur: "eyepatch", label: "Cache-œil" },
 ];
 
-/** Configuration de départ neutre, utilisée à l'ouverture de l'éditeur. */
-export function configAvatarParDefaut() {
+/** Configuration de départ neutre selon le genre (garcon / femme) */
+export function configAvatarParDefaut(genre = "femme") {
+  const estFemme = genre === "femme";
   return {
+    genre: estFemme ? "femme" : "garcon",
     skinColor: OPTIONS_SKIN_COLOR[3].valeur,
-    top: OPTIONS_TOP[0].valeur,
+    top: estFemme ? OPTIONS_TOP_FEMME[0].valeur : OPTIONS_TOP_HOMME[0].valeur,
     hairColor: OPTIONS_HAIR_COLOR[1].valeur,
     facialHair: null,
     eyebrows: OPTIONS_EYEBROWS[0].valeur,
     eyes: OPTIONS_EYES[0].valeur,
     mouth: OPTIONS_MOUTH[1].valeur,
-    clothing: OPTIONS_CLOTHING[0].valeur,
+    clothing: estFemme ? "shirtScoopNeck" : "shirtCrewNeck",
     accessories: null,
     backgroundColor: OPTIONS_BACKGROUND_COLOR[0].valeur,
   };
@@ -183,13 +232,16 @@ export function configAvatarParDefaut() {
 
 const auHasard = (liste) => liste[Math.floor(Math.random() * liste.length)].valeur;
 
-/** Tire une combinaison au hasard, point de départ pour l'éditeur. */
-export function configAvatarAleatoire() {
+/** Tire une combinaison au hasard, adaptée au genre spécifié */
+export function configAvatarAleatoire(genre = "femme") {
+  const estFemme = genre === "femme";
+  const listeCheveux = estFemme ? OPTIONS_TOP_FEMME : OPTIONS_TOP_HOMME;
   return {
+    genre: estFemme ? "femme" : "garcon",
     skinColor: auHasard(OPTIONS_SKIN_COLOR),
-    top: auHasard(OPTIONS_TOP),
+    top: auHasard(listeCheveux),
     hairColor: auHasard(OPTIONS_HAIR_COLOR),
-    facialHair: auHasard(OPTIONS_FACIAL_HAIR),
+    facialHair: estFemme ? null : auHasard(OPTIONS_FACIAL_HAIR),
     eyebrows: auHasard(OPTIONS_EYEBROWS),
     eyes: auHasard(OPTIONS_EYES),
     mouth: auHasard(OPTIONS_MOUTH),

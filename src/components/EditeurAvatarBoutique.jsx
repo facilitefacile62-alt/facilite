@@ -19,6 +19,8 @@ import {
   OPTIONS_MOUTH,
   OPTIONS_SKIN_COLOR,
   OPTIONS_TOP,
+  OPTIONS_TOP_FEMME,
+  OPTIONS_TOP_HOMME,
 } from "@/lib/avatarBoutique";
 
 function LigneAxeType({ label, options, valeur, onChange }) {
@@ -86,19 +88,53 @@ function LigneAxeCouleur({ label, options, valeur, onChange }) {
 }
 
 export default function EditeurAvatarBoutique({ configInitial, onEnregistrer, onAnnuler }) {
-  const [config, setConfig] = useState(() => ({ ...configAvatarParDefaut(), ...(configInitial || {}) }));
+  const [config, setConfig] = useState(() => ({
+    ...configAvatarParDefaut("garcon"),
+    ...(configInitial || {}),
+  }));
+  const [genre, setGenre] = useState(() => {
+    if (configInitial?.genre) return configInitial.genre;
+    if (configInitial?.facialHair) return "garcon";
+    if (configInitial?.top && OPTIONS_TOP_FEMME.some((o) => o.valeur === configInitial.top)) {
+      return "femme";
+    }
+    return "garcon";
+  });
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState("");
 
   const apercu = useMemo(() => dataUriAvatarBoutique(config, 200), [config]);
 
+  const listeCheveux = useMemo(() => {
+    return genre === "femme" ? OPTIONS_TOP_FEMME : OPTIONS_TOP_HOMME;
+  }, [genre]);
+
   const definir = (champ) => (valeur) => setConfig((c) => ({ ...c, [champ]: valeur }));
+
+  const changerGenre = (nouveauGenre) => {
+    setGenre(nouveauGenre);
+    const estFemme = nouveauGenre === "femme";
+    const listeNouveauxCheveux = estFemme ? OPTIONS_TOP_FEMME : OPTIONS_TOP_HOMME;
+    const coiffureValide = listeNouveauxCheveux.some((o) => o.valeur === config.top)
+      ? config.top
+      : listeNouveauxCheveux[0].valeur;
+
+    setConfig((prev) => ({
+      ...prev,
+      genre: nouveauGenre,
+      top: coiffureValide,
+      facialHair: estFemme ? null : prev.facialHair,
+      clothing: estFemme
+        ? (prev.clothing === "shirtCrewNeck" ? "shirtScoopNeck" : prev.clothing)
+        : prev.clothing,
+    }));
+  };
 
   const enregistrer = async () => {
     setEnvoi(true);
     setErreur("");
     try {
-      await onEnregistrer(config);
+      await onEnregistrer({ ...config, genre });
     } catch (err) {
       setErreur(err.message || "Erreur lors de l'enregistrement.");
     } finally {
@@ -118,7 +154,7 @@ export default function EditeurAvatarBoutique({ configInitial, onEnregistrer, on
           <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">Aperçu en direct</span>
           <button
             type="button"
-            onClick={() => setConfig(configAvatarAleatoire())}
+            onClick={() => setConfig(configAvatarAleatoire(genre))}
             className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-xs font-black text-gray-800 dark:text-gray-100 flex items-center gap-1.5 cursor-pointer transition shadow-2xs active:scale-95"
           >
             <i className="fa-solid fa-shuffle text-emerald-500 text-xs"></i>
@@ -127,17 +163,49 @@ export default function EditeurAvatarBoutique({ configInitial, onEnregistrer, on
         </div>
       </div>
 
-      {/* Liste des options défilable (avec barre de défilement propre et espace) */}
+      {/* Sélecteur de Genre : Femme / Garçon */}
+      <div className="px-1 shrink-0 pb-1">
+        <div className="flex items-center justify-center p-1 bg-gray-100 dark:bg-zinc-800/90 rounded-2xl gap-1 border border-gray-200/60 dark:border-zinc-700/60">
+          <button
+            type="button"
+            onClick={() => changerGenre("femme")}
+            className={`flex-1 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
+              genre === "femme"
+                ? "bg-white dark:bg-zinc-900 text-pink-600 dark:text-pink-400 shadow-xs ring-1 ring-pink-500/20"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            }`}
+          >
+            <i className="fa-solid fa-venus text-sm text-pink-500"></i>
+            <span>Femme</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => changerGenre("garcon")}
+            className={`flex-1 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
+              genre === "garcon"
+                ? "bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-xs ring-1 ring-blue-500/20"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            }`}
+          >
+            <i className="fa-solid fa-mars text-sm text-blue-500"></i>
+            <span>Garçon</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Liste des options défilable */}
       <div className="flex-1 overflow-y-auto px-1 py-1 min-h-0 space-y-0.5 custom-scrollbar">
         <LigneAxeCouleur label="Couleur de peau" options={OPTIONS_SKIN_COLOR} valeur={config.skinColor} onChange={definir("skinColor")} />
-        <LigneAxeType label="Cheveux" options={OPTIONS_TOP} valeur={config.top} onChange={definir("top")} />
+        <LigneAxeType label="Cheveux" options={listeCheveux} valeur={config.top} onChange={definir("top")} />
         <LigneAxeCouleur
           label="Couleur cheveux"
           options={OPTIONS_HAIR_COLOR}
           valeur={config.hairColor}
           onChange={definir("hairColor")}
         />
-        <LigneAxeType label="Pilosité" options={OPTIONS_FACIAL_HAIR} valeur={config.facialHair} onChange={definir("facialHair")} />
+        {genre === "garcon" && (
+          <LigneAxeType label="Pilosité" options={OPTIONS_FACIAL_HAIR} valeur={config.facialHair} onChange={definir("facialHair")} />
+        )}
         <LigneAxeType label="Sourcils" options={OPTIONS_EYEBROWS} valeur={config.eyebrows} onChange={definir("eyebrows")} />
         <LigneAxeType label="Yeux" options={OPTIONS_EYES} valeur={config.eyes} onChange={definir("eyes")} />
         <LigneAxeType label="Bouche" options={OPTIONS_MOUTH} valeur={config.mouth} onChange={definir("mouth")} />
