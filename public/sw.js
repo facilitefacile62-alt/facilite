@@ -43,7 +43,8 @@
 // v21 (13/09/2026) : bouton Retour au Marketplace ferme la boutique et revient au Marketplace
 // v22 (13/09/2026) : fiabilisation du parcours d'onboarding /bienvenue après inscription & connexion
 // v23 (13/09/2026) : redirection systématique vers le choix de plateforme /bienvenue après connexion
-const VERSION_CACHE = "facilite-v23";
+// v24 (13/09/2026) : implémentation complète du formulaire d'informations vendeur post-inscription
+const VERSION_CACHE = "facilite-v24";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
