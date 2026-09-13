@@ -48,7 +48,8 @@
 // v41 (13/09/2026) : redirection directe vers le formulaire Modifier le profil au clic sur Modifier le profil
 // v42 (13/09/2026) : enrichissement complet du formulaire Modifier le profil avec champ WhatsApp et sauvegarde synchrone
 // v43 (13/09/2026) : accordéons / menus déroulants pour les consignes et autorisations de positionnement GPS
-const VERSION_CACHE = "facilite-v43";
+// v44 (13/09/2026) : intégration directe du positionnement GPS déroulant sur la page Modifier le profil
+const VERSION_CACHE = "facilite-v44";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

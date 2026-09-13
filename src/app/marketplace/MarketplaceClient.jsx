@@ -2023,6 +2023,27 @@ function VueReglages({
               )}
             </div>
 
+            {/* Positionner ma boutique / mon profil avec menu déroulant d'informations & relevé GPS */}
+            <div>
+              <CapturePosition
+                verrouillee={false}
+                definieLe={null}
+                entite="boutique"
+                optionPayante={false}
+                onReleve={(p) => {
+                  const dep = departementLePlusProche(p.latitude, p.longitude);
+                  setLatitude(p.latitude);
+                  setLongitude(p.longitude);
+                  setPrecisionM(p.precisionM);
+                  setPositionVerrouillee(true);
+                  if (dep?.nom) {
+                    setEmplacement(dep.nom);
+                  }
+                  showToast(`✓ Position GPS relevée (${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)})`);
+                }}
+              />
+            </div>
+
             {/* Anniversaire avec Icône Calendrier */}
             <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 flex items-center justify-between bg-white dark:bg-zinc-900">
               <input
