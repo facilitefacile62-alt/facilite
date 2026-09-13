@@ -1,7 +1,6 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, type ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -36,18 +35,24 @@ function AuthGate({ children }: { children: ReactNode }) {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      {/* DefaultTheme (jamais DarkTheme) : toute l'app est pensée en thème
+          clair, aucun écran du design ne prévoit de mode sombre. Suivre
+          colorScheme rendait la navigation quasi noire par défaut sur un
+          téléphone en mode sombre système — trouvé le 13/09/2026. */}
+      <ThemeProvider value={DefaultTheme}>
         <AnimatedSplashOverlay />
         <AuthGate>
           {/* Stack (pas Slot) requis à partir de ce point : les écrans
               poussés hors des onglets (offre/[id], chat/[id]...) ont besoin
               d'une navigation native (retour, geste de balayage, transition)
               par-dessus (auth)/(tabs). headerShown:false partout — chaque
-              écran construit son propre en-tête, comme le reste de l'app. */}
-          <Stack screenOptions={{ headerShown: false }} />
+              écran construit son propre en-tête, comme le reste de l'app.
+              contentStyle : couleur de fond de secours pendant les
+              transitions/le chargement d'un écran, avant que son propre
+              contenu ne s'affiche — évite un flash noir. */}
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FAF6F1' } }} />
         </AuthGate>
       </ThemeProvider>
     </AuthProvider>
